@@ -16,7 +16,7 @@ contents of a page.
 
 
 
-Taking care of some of the necessary imports first, we'll import :api:`twisted.web.server.Site <Site>`, the :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` :
+Taking care of some of the necessary imports first, we'll import :py:class:`Site <twisted.web.server.Site>`, the :py:mod:`reactor <twisted.internet.reactor>`, and :py:mod:`endpoints <twisted.internet.endpoints>` :
 
 
 
@@ -39,7 +39,7 @@ application. Endpoints are used to create listening ports.
 
 
 Next, we'll import one more thing from Twisted
-Web: :api:`twisted.web.resource.Resource <Resource>` . An
+Web: :py:class:`Resource <twisted.web.resource.Resource>` . An
 instance of ``Resource`` (or a subclass) represents a page
 (technically, the entity addressed by a URI).
 

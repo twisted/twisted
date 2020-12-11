@@ -14,15 +14,15 @@ In the :doc:`previous example <static-dispatch>` we covered how to
 statically configure Twisted Web to serve different content at different
 URLs. The goal of this example is to show you how to do this dynamically
 instead. Reading the previous installment if you haven't already is suggested in
-order to get an overview of how URLs are treated when using Twisted Web's :api:`twisted.web.resource <resource>` APIs.
+order to get an overview of how URLs are treated when using Twisted Web's :py:mod:`resource <twisted.web.resource>` APIs.
 
 
 
 
-:api:`twisted.web.server.Site <Site>` (the object which
-associates a listening server port with the HTTP implementation), :api:`twisted.web.resource.Resource <Resource>` (a convenient base class
-to use when defining custom pages), :api:`twisted.internet.reactor <reactor>` (the object which implements the Twisted
-main loop), and :api:`twisted.internet.endpoints <endpoints>` return once again:
+:py:class:`Site <twisted.web.server.Site>` (the object which
+associates a listening server port with the HTTP implementation), :py:class:`Resource <twisted.web.resource.Resource>` (a convenient base class
+to use when defining custom pages), :py:mod:`reactor <twisted.internet.reactor>` (the object which implements the Twisted
+main loop), and :py:mod:`endpoints <twisted.internet.endpoints>` return once again:
 
 
 
@@ -85,7 +85,7 @@ by creating a suitable instance of this ``YearPage`` class:
 
 
 
-By implementing :api:`twisted.web.resource.Resource.getChild <getChild>` here, we've just defined
+By implementing :py:meth:`getChild <twisted.web.resource.Resource.getChild>` here, we've just defined
 how Twisted Web should find children of ``Calendar`` instances when
 it's resolving an URL into a resource. This implementation defines all integers
 as the children of ``Calendar`` (and punts on error handling, more on

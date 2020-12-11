@@ -21,7 +21,7 @@ and how to prematurely expire a session.
 
 Before diving into the APIs, let's look at the big picture of
 sessions in Twisted Web. Sessions are represented by instances
-of :api:`twisted.web.server.Session <Session>` . The :api:`twisted.web.server.Site <Site>` creates a new instance
+of :py:class:`Session <twisted.web.server.Session>` . The :py:class:`Site <twisted.web.server.Site>` creates a new instance
 of ``Session`` the first time an application asks for it for
 a particular session. ``Session`` instances are kept on
 the ``Site`` instance until they expire (due to inactivity or
@@ -39,7 +39,7 @@ prematurely expire the session.
 
 
 
-First, we'll import :api:`twisted.web.resource.Resource <Resource>` so we can define a couple of
+First, we'll import :py:class:`Resource <twisted.web.resource.Resource>` so we can define a couple of
 subclasses of it:
 
 
@@ -56,7 +56,7 @@ subclasses of it:
 
 Next we'll define the resource which tells the client what its session
 identifier is. This is done easily by first getting the session object
-using :api:`twisted.web.server.Request.getSession <Request.getSession>` and
+using :py:meth:`Request.getSession <twisted.web.server.Request.getSession>` and
 then getting the session object's uid attribute:
 
 
@@ -75,7 +75,7 @@ then getting the session object's uid attribute:
 
 To let the client expire its own session before it times out, we'll define
 another resource which expires whatever session it is requested with. This is
-done using the :api:`twisted.web.server.Session.expire <Session.expire>` 
+done using the :py:meth:`Session.expire <twisted.web.server.Session.expire>` 
 method:
 
 
@@ -95,7 +95,7 @@ method:
 
 Finally, to make the example an rpy script, we'll make an instance
 of ``ShowSession`` and give it an instance
-of ``ExpireSession`` as a child using :api:`twisted.web.resource.Resource.putChild <Resource.putChild>` :
+of ``ExpireSession`` as a child using :py:meth:`Resource.putChild <twisted.web.resource.Resource.putChild>` :
 
 
 

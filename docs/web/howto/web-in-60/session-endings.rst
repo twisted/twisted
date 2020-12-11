@@ -12,7 +12,7 @@ Session Endings
 
 The previous two examples introduced Twisted Web's session APIs. This
 included accessing the session object, storing state on it, and retrieving it
-later, as well as the idea that the :api:`twisted.web.server.Session <Session>` object has a lifetime which is tied to
+later, as well as the idea that the :py:class:`Session <twisted.web.server.Session>` object has a lifetime which is tied to
 the notional session it represents. This example demonstrates how to exert some
 control over that lifetime and react when it expires.
 
@@ -46,7 +46,7 @@ One way to override the value is with a subclass:
 
 To have Twisted Web actually make use of this session class, rather
 than the default, it is also necessary to override
-the ``sessionFactory`` attribute of :api:`twisted.web.server.Site <Site>` . We could do this with another
+the ``sessionFactory`` attribute of :py:class:`Site <twisted.web.server.Site>` . We could do this with another
 subclass, but we could also do it to just one instance
 of ``Site`` :
 
@@ -74,7 +74,7 @@ use ``ShortSession`` and only last one minute without activity.
 You can have arbitrary functions run when sessions expire,
 too. This can be useful for cleaning up external resources associated
 with the session, tracking usage statistics, and more. This
-functionality is provided via :api:`twisted.web.server.Session.notifyOnExpire <Session.notifyOnExpire>` . It accepts a
+functionality is provided via :py:meth:`Session.notifyOnExpire <twisted.web.server.Session.notifyOnExpire>` . It accepts a
 single argument: a function to call when the session expires. Here's a
 trivial example which prints a message whenever a session expires:
 

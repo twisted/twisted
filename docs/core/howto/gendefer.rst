@@ -14,7 +14,7 @@ Generating Deferreds
 ..  status of document: INCOMPLETE, DRAFT 
 
 
-:api:`twisted.internet.defer.Deferred <Deferred>` objects are
+:py:class:`Deferred <twisted.internet.defer.Deferred>` objects are
 signals that a function you have called does not yet have the data you want
 available. When a function returns a Deferred object, your calling function
 attaches callbacks to it to handle the data when available.
@@ -78,7 +78,7 @@ Basic Callback Functions
   
   
   Run success callbacks with the given result. *This can only be run once.* Later calls to this or
-  ``errback`` will raise :api:`twisted.internet.defer.AlreadyCalledError <twisted.internet.defer.AlreadyCalledError>` .
+  ``errback`` will raise :py:class:`twisted.internet.defer.AlreadyCalledError` .
   If further callbacks or errbacks are added after this
   point, addCallbacks will run the callbacks immediately.
   
@@ -88,7 +88,7 @@ Basic Callback Functions
   
   
   Run error callbacks with the given failure. *This can only be run once.* Later calls to this or
-  ``callback`` will raise :api:`twisted.internet.defer.AlreadyCalledError <twisted.internet.defer.AlreadyCalledError>` .
+  ``callback`` will raise :py:class:`twisted.internet.defer.AlreadyCalledError` .
   If further callbacks or errbacks are added after this
   point, addCallbacks will run the callbacks immediately.
   
@@ -263,8 +263,8 @@ following example of a synchronous function:
 
 
 While we can require that callers of our function wrap our synchronous
-result in a Deferred using :api:`twisted.internet.defer.maybeDeferred <maybeDeferred>` , for the sake of API
-compatibility it is better to return a Deferred ourselves using  :api:`twisted.internet.defer.succeed <defer.succeed>` :
+result in a Deferred using :py:func:`maybeDeferred <twisted.internet.defer.maybeDeferred>` , for the sake of API
+compatibility it is better to return a Deferred ourselves using  :py:func:`defer.succeed <twisted.internet.defer.succeed>` :
 
 
 
@@ -289,7 +289,7 @@ compatibility it is better to return a Deferred ourselves using  :api:`twisted.i
 
 
 
-There is an equivalent :api:`twisted.internet.defer.fail <defer.fail>` method to return a Deferred with the
+There is an equivalent :py:func:`defer.fail <twisted.internet.defer.fail>` method to return a Deferred with the
 errback chain already fired.
 
 
@@ -312,7 +312,7 @@ other than rewriting them.
 
 
 In this case, Twisted provides the ability to run the blocking code in a
-separate thread rather than letting it block your application. The :api:`twisted.internet.threads.deferToThread <twisted.internet.threads.deferToThread>` function will set up
+separate thread rather than letting it block your application. The :py:func:`twisted.internet.threads.deferToThread` function will set up
 a thread to run your blocking function, return a Deferred and later fire that
 Deferred when the thread completes.
 

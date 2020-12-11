@@ -62,8 +62,8 @@ error passed to it:
 
 
 
-We're passing two arguments to :api:`twisted.python.log.err <err>` here. The first is the error which is being
-passed in to the callback. This is always an object of type :api:`twisted.python.failure.Failure <Failure>` , a class which represents an
+We're passing two arguments to :py:func:`err <twisted.python.log.err>` here. The first is the error which is being
+passed in to the callback. This is always an object of type :py:class:`Failure <twisted.python.failure.Failure>` , a class which represents an
 exception and (sometimes, but not always) a traceback. ``err`` will
 format this nicely for the log. The second argument is a descriptive string that
 tells someone reading the log what the source of the error was.
