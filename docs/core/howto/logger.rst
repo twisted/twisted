@@ -267,7 +267,7 @@ System-provided event keys include:
 
 ``log_time``
 
-  The time that the event was emitted, as returned by :api:`time.time <time>` .
+  The time that the event was emitted, as returned by :py:func:`time <time.time>` .
 
 ``log_failure``
 
@@ -564,7 +564,7 @@ This module provides a number of pre-built observers for applications to use:
 Compatibility with standard library logging
 -------------------------------------------
 
-:api:`twisted.logger.STDLibLogObserver <STDLibLogObserver>` is provided for compatibility with the standard library's :api:`logging <logging>` module.
+:api:`twisted.logger.STDLibLogObserver <STDLibLogObserver>` is provided for compatibility with the standard library's :py:mod:`logging <logging>` module.
 Log levels are mapped between the two systems, and the various attributes of standard library log records are filled in properly.
 
 Note that standard library logging is a blocking API, and logging can be configured to block for long periods (eg. it may write to the network).
