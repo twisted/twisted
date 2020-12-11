@@ -182,7 +182,7 @@ the way in which warnings reporting when a test suite is running.
 
 
 
-:api:`twisted.trial.unittest.TestCase.flushWarnings <TestCase.flushWarnings>`
+:api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <TestCase.flushWarnings>`
 allows tests to be written which make assertions about what warnings have
 been emitted during a particular test method. In order to test a warning with
 ``flushWarnings`` , write a test which first invokes the code which

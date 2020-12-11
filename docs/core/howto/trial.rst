@@ -595,9 +595,9 @@ example.  Because we were careful to use ``Clock`` , we
 don't need the global reactor to run in our tests.  Instead of returning the
 Deferred with a callback attached to it which performs the necessary assertions,
 we can use a testing helper,
-:api:`twisted.trial.unittest.SynchronousTestCase.successResultOf <successResultOf>` (and
+:api:`twisted.trial._synctest._Assertions.successResultOf <successResultOf>` (and
 the corresponding error-case helper
-:api:`twisted.trial.unittest.SynchronousTestCase.failureResultOf <failureResultOf>` ), to
+:api:`twisted.trial._synctest._Assertions.failureResultOf <failureResultOf>` ), to
 extract its result and make assertions against it directly.  Compared to
 returning a Deferred, this avoids the problem of forgetting to return the
 Deferred, improves the stack trace reported when the assertion fails, and avoids
@@ -625,7 +625,7 @@ result.  Similarly, ``failureResultOf`` will raise an exception (also
 failing the test) if the ``Deferred`` passed to it does not have a
 result, or has a success result.  There is a third helper method for testing the
 final case,
-:api:`twisted.trial.unittest.SynchronousTestCase.assertNoResult <assertNoResult>` ,
+:api:`twisted.trial._synctest._Assertions.assertNoResult <assertNoResult>` ,
 which only raises an exception (failing the test) if the ``Deferred`` passed
 to it *has* a result (either success or failure).
 

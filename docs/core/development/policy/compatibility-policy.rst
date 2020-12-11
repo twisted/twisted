@@ -470,7 +470,7 @@ There are several options for checking that a code is deprecated and that using 
 
 There are helper methods available for handling deprecated callables (:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`) and deprecated classes or module attributes (:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>`).
 
-If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>` to specify the exact warning you expect.
+If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :api:`twisted.trial._synctest._Assertions.assertWarns <assertWarns>` to specify the exact warning you expect.
 
 Lastly, you can use :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>` after performing any deprecated activity.
 This is the most precise, but also the most verbose, way to assert that you've raised a ``DeprecationWarning``.
@@ -528,7 +528,7 @@ This is the most precise, but also the most verbose, way to assert that you've r
 
 
 When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
-Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
+Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>` helper.
 
 .. code-block:: python
 
