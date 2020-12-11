@@ -210,7 +210,6 @@ _source_root = pathlib.Path(__file__).parent.parent / "src"
 pydoctor_args = [
     "--quiet",
     "--make-html",
-    "--html-write-function-pages",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     "--project-name=Twisted",
     "--project-url=https://twistedmatrix.com/",
