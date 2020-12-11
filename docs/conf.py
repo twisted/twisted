@@ -43,7 +43,6 @@ try:
 except ImportError:
     pass
 
-extensions.append("apilinks")
 extensions.append("traclinks")
 
 from twisted import version as twisted_version_object
@@ -180,15 +179,15 @@ print("== Environment dump for {} ===".format(_git_reference))
 pprint(dict(os.environ))
 print("======")
 
-# Base url for apilinks extension
-apilinks_base_url = "/documents/{}/api/".format(release)
+# Base url for API docs
+api_base_url = "/documents/{}/api/".format(release)
 if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/
     # For a release:
     # https://docs.twistedmatrix.com/en/twisted-20.3.0/
     # https://docs.twistedmatrix.com/en/latest/
-    apilinks_base_url = "/{}/{}/api/".format(
+    api_base_url = "/{}/{}/api/".format(
         os.environ["READTHEDOCS_LANGUAGE"],
         os.environ["READTHEDOCS_VERSION"],
     )
@@ -240,7 +239,7 @@ traclinks_base_url = "https://twistedmatrix.com/trac"
 intersphinx_mapping = {
     "py3": ("https://docs.python.org/3", None),
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
-    "api": (apilinks_base_url, "../apidocs/objects.inv"),
+    "api": (api_base_url, "../apidocs/objects.inv"),
 }
 # How long to cache remote inventories. Positive is a number of days,
 # negative means infinite. The default is 5 days, which should be fine
