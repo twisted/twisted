@@ -324,11 +324,11 @@ a ``Deferred`` that is called back with
 the password to use.
 
 ``getPublicKey()`` returns the SSH key data for the public key to use.
-:api:`Key <twisted.conch.ssh.keys.Key.fromString()>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :api:`Key <twisted.conch.ssh.keys.Key>`.
+:api:`twisted.conch.ssh.keys.Key.fromString <Key.fromString()>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :api:`twisted.conch.ssh.keys.Key <Key>`.
 Alternatively, ``keys.Key.fromFile()`` can be used instead, which
-will take the filename of a key in the supported format, and  and generate a new  :api:`Key <twisted.conch.ssh.keys.Key>`.
+will take the filename of a key in the supported format, and  and generate a new  :api:`twisted.conch.ssh.keys.Key <Key>`.
 
-``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :api:`Key <twisted.conch.ssh.keys.Key>`.
+``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :api:`twisted.conch.ssh.keys.Key <Key>`.
 
 ``getPassword()`` and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user for input.
 
