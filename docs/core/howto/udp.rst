@@ -66,8 +66,8 @@ Here is a simple example:
 .. literalinclude:: listings/udp/adopt_datagram_port.py
 
 .. note::
-   - You must ensure that the socket is non-blocking before passing its file descriptor to :api:`twisted.internet.interfaces.IReactorSocket. adoptDatagramPort <adoptDatagramPort>`.
-   - :api:`twisted.internet.interfaces.IReactorSocket. adoptDatagramPort <adoptDatagramPort>` cannot (`currently <https://twistedmatrix.com/trac/ticket/5599>`_) detect the family of the adopted socket so you must ensure that you pass the correct socket family argument.
+   - You must ensure that the socket is non-blocking before passing its file descriptor to :api:`twisted.internet.interfaces.IReactorSocket.adoptDatagramPort <adoptDatagramPort>`.
+   - :api:`twisted.internet.interfaces.IReactorSocket.adoptDatagramPort <adoptDatagramPort>` cannot (`currently <https://twistedmatrix.com/trac/ticket/5599>`_) detect the family of the adopted socket so you must ensure that you pass the correct socket family argument.
    - The reactor will not shutdown the socket.
      It is the responsibility of the process that created the socket to shutdown and clean up the socket when it is no longer needed.
 

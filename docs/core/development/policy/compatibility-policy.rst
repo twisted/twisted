@@ -468,7 +468,7 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
-There are helper methods available for handling deprecated callables (:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`) and deprecated classes or module attributes (:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute`).
+There are helper methods available for handling deprecated callables (:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`) and deprecated classes or module attributes (:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>`).
 
 If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>` to specify the exact warning you expect.
 

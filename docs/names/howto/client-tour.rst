@@ -73,7 +73,7 @@ These three lists contain answer records, authority records, and additional reco
 A simple example
 ~~~~~~~~~~~~~~~~
 
-In this section you will learn how the :api:`twisted.internet.interfaces.IResolver<IResolver>` interface can be used to write a utility for performing a `reverse DNS lookup <https://en.wikipedia.org/wiki/Reverse_DNS_lookup>`_ for an IPv4 address.
+In this section you will learn how the :api:`twisted.internet.interfaces.IResolver <IResolver>` interface can be used to write a utility for performing a `reverse DNS lookup <https://en.wikipedia.org/wiki/Reverse_DNS_lookup>`_ for an IPv4 address.
 `dig <https://en.wikipedia.org/wiki/Dig_(command)>`_ can do this too, so lets start by examining its output:
 
 .. code-block:: console
@@ -127,7 +127,7 @@ So lets examine the output of ``lookupPointer`` so that we can design a function
    ([<RR name=1.0.0.127.in-addr.arpa type=PTR class=IN ttl=86400s auth=False>], [], [])
 
 The deferred result of ``lookupPointer`` is a tuple containing three lists of records; **answers**, **authority**, and **additional**.
-The actual record is a :api:`twisted.names.dns.Record_PTR<Record_PTR>` instance which can be reached via the :api:`twisted.names.dns.RRHeader<RRHeader>`\ ``.payload`` attribute.
+The actual record is a :api:`twisted.names.dns.Record_PTR <Record_PTR>` instance which can be reached via the :api:`twisted.names.dns.RRHeader <RRHeader>`\ ``.payload`` attribute.
 
 .. code-block:: python
 
