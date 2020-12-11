@@ -10,7 +10,7 @@ Custom Response Codes
 
 
 
-The previous example introduced :api:`twisted.web.error.NoResource <NoResource>` , a Twisted Web error resource which
+The previous example introduced :api:`twisted.web.resource.NoResource <NoResource>`, a Twisted Web error resource which
 responds with a 404 (not found) code. This example will cover the APIs
 that ``NoResource`` uses to do this so that you can generate your own
 custom response codes as desired.
