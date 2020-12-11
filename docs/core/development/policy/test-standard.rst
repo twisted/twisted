@@ -240,7 +240,7 @@ Real I/O is slow, unreliable, and unwieldy.
 When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
 ``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
-If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
+If you need pair a client to a server and have them talk to each other, use ``twisted.test.iosim.connect`` with ``twisted.test.iosim.FakeTransport`` transports.
 
 
 Real Time
@@ -306,7 +306,7 @@ Since unit tests are avoiding real I/O and real time, they can usually avoid usi
 The only exceptions to this are unit tests for a real reactor implementation.
 Unit tests for protocol implementations or other application code should not use a reactor.
 Unit tests for real reactor implementations should not use the global reactor, but should
-instead use :api:`twisted.internet.test.reactormixins.ReactorBuilder` so they can be applied to all of the reactor implementations automatically.
+instead use ``twisted.internet.test.reactormixins.ReactorBuilder`` so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
