@@ -374,7 +374,7 @@ When ``connectionAttempt.cancel`` is invoked, that will:
 
 #. cause the underlying connection operation to be terminated, if it is still ongoing
 #. cause the connectionAttempt Deferred to be completed, one way or another, in a timely manner
-#. *likely* cause the connectionAttempt Deferred to be errbacked with :api:`CancelledError <CancelledError>`
+#. *likely* cause the connectionAttempt Deferred to be errbacked with :api:`twisted.internet.defer.CancelledError <CancelledError>`
 
 You may notice that that set of consequences is very heavily qualified.
 Although cancellation indicates the calling API's *desire* for the underlying operation to be stopped, the underlying operation cannot necessarily react immediately.
