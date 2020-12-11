@@ -247,7 +247,7 @@ happens before any of the response body, if there is one, is processed.
 The ``Response`` object has several attributes giving the
 response information: its code, version, phrase, and headers, as well as
 the length of the body to expect. In addition to these, the
-``Response`` also contains a reference to the :api:`twisted.web.iweb.IClientRequest.request <request>` that it is
+``Response`` also contains a reference to the :api:`twisted.web.iweb.IClientRequest <request>` that it is
 a response to; one particularly useful attribute on the request is :api:`twisted.web.iweb.IClientRequest.absoluteURI <absoluteURI>` :
 The absolute URI to which the request was made.  The
 ``Response`` object has a method which makes the response body
@@ -640,8 +640,8 @@ request.
 
 
 As mentioned previously, :api:`twisted.web.client.Response <Response>` contains a reference to both
-the :api:`twisted.web.iweb.IClientRequest.request <request>` that it is a response
-to, and the previously received :api:`twisted.web.client.Response.response <response>` , accessible by :api:`previousResponse <previousResponse>` .
+the :api:`twisted.web.iweb.IClientRequest <request>` that it is a response
+to, and the previously received :api:`twisted.web.client.Response <response>` , accessible by :api:`twisted.web.client.Response.previousResponse <previousResponse>` .
 In most cases there will not be a previous response, but in the case of
 ``RedirectAgent`` the response history can be obtained by
 following the previous responses from response to response.
