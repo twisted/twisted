@@ -240,7 +240,7 @@ The copyable subclass of ``LilyPond`` is called
 ("jelly" ) that object as an instance with a class name of"copy_sender.CopyPond" and some chunk of data that represents the
 object's state. ``pond.__class__.__module__`` and 
 ``pond.__class__.__name__`` are used to derive the class name
-string. The object's :api:`twisted.spread.flavors.Copyable.getStateToCopy <getStateToCopy>` method is
+string. The object's :api:`twisted.spread.pb.Copyable.getStateToCopy <getStateToCopy>` method is
 used to get the state: this is provided by :api:`twisted.spread.pb.Copyable <pb.Copyable>` , and the default just retrieves 
 ``self.__dict__`` . This works just like the optional 
 ``__getstate__`` method used by ``pickle`` . The pair of
@@ -276,7 +276,7 @@ is transmitted when the sender serializes the remote object.
 When the receiver unserializes ("unjellies" ) the object, it will
 create an instance of the local ``ReceiverPond`` class, and hand
 the transmitted state (usually in the form of a dictionary) to that object's 
-:api:`twisted.spread.flavors.RemoteCopy.setCopyableState <setCopyableState>` method.
+:api:`twisted.spread.pb.RemoteCopy.setCopyableState <setCopyableState>` method.
 This acts just like the ``__setstate__`` method that 
 ``pickle`` uses when unserializing an object. 
 ``getStateToCopy`` /``setCopyableState`` are distinct from 
@@ -542,8 +542,8 @@ attribute is changed [#]_ .
 
 
 You derive your sender-side class from ``pb.Cacheable`` , and you
-add two methods: :api:`twisted.spread.flavors.Cacheable.getStateToCacheAndObserveFor <getStateToCacheAndObserveFor>` 
-and :api:`twisted.spread.flavors.Cacheable.stoppedObserving <stoppedObserving>` . The first
+add two methods: :api:`twisted.spread.pb.Cacheable.getStateToCacheAndObserveFor <getStateToCacheAndObserveFor>`
+and :api:`twisted.spread.pb.Cacheable.stoppedObserving <stoppedObserving>` . The first
 is called when a remote caching reference is first created, and retrieves
 the data with which the cache is first filled. It also provides an
 object called the "observer"  [#]_ that points at that receiver-side cache. Every time the state of the object
@@ -590,7 +590,7 @@ reference goes away, the ``pb.RemoteCache`` object can be freed.
 Just before it dies, it tells the sender side it no longer cares about the
 original object. When *that* reference count goes to zero, the
 Observer goes away and the ``pb.Cacheable`` object can stop
-announcing every change that takes place. The :api:`twisted.spread.flavors.Cacheable.stoppedObserving <stoppedObserving>` method is
+announcing every change that takes place. The :api:`twisted.spread.pb.Cacheable.stoppedObserving <stoppedObserving>` method is
 used to tell the ``pb.Cacheable`` that the Observer has gone
 away.
 

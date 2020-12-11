@@ -44,12 +44,12 @@ called a :api:`twisted.cred.portal.Portal <Portal>` stores a
 realm, and a number of credential checkers.  Something that wishes to log in,
 such as a :api:`twisted.internet.protocol.Protocol <Protocol>` ,
 stores a reference to the portal. Login consists of passing credentials and a
-request interface (e.g. POP3's :api:`twisted.mail.pop3.IMailbox <IMailbox>` ) to the portal. The portal passes
+request interface (e.g. POP3's :api:`twisted.mail.interfaces.IMailboxPOP3 <IMailboxPOP3>` ) to the portal. The portal passes
 the credentials to the appropriate credential checker, which returns an avatar
 ID. The ID is passed to the realm, which returns the appropriate avatar.  For a
 Portal that has a realm that creates mailbox objects and a credential checker
 that checks /etc/passwd, login consists of passing in a username/password and
-the IMailbox interface to the portal. The portal passes this to the /etc/passwd
+the IMailboxPOP3 interface to the portal. The portal passes this to the /etc/passwd
 credential checker, gets back a avatar ID corresponding to an email account,
 passes that to the realm and gets back a mailbox object for that email
 account.
