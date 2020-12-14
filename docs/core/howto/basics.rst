@@ -9,15 +9,15 @@ The Basics
 Application
 -----------
 
-Twisted programs usually work with :api:`twisted.application.service.Application`.
+Twisted programs usually work with :py:func:`twisted.application.service.Application`.
 This class usually holds all persistent configuration of a running server, such as:
 
 - ports to bind to,
 - places where connections to must be kept or attempted,
 - periodic actions to do,
-- and almost everything else to do with your :api:`twisted.application.service.Application <Application>`.
+- and almost everything else to do with your :py:func:`Application <twisted.application.service.Application>`.
 
-It is the root object in a tree of services implementing :api:`twisted.application.service.IService`.
+It is the root object in a tree of services implementing :py:class:`twisted.application.service.IService`.
 
 Other howtos describe how to write custom code for ``Application``\ s, but this one describes how to use already written code (which can be part of Twisted or from a third-party Twisted plugin developer).
 The Twisted distribution comes with an important tool to deal with ``Application``\ s: ``twistd(1)``.
@@ -28,7 +28,7 @@ The Twisted distribution comes with an important tool to deal with ``Application
 twistd
 ------
 
-The Twisted Daemon is a program that knows how to run :api:`twisted.application.service.Application <Application>`\ s.
+The Twisted Daemon is a program that knows how to run :py:func:`Application <twisted.application.service.Application>`\ s.
 Strictly speaking, ``twistd`` is not necessary.
 Fetching the application, getting the ``IService`` component, calling ``startService()``, scheduling ``stopService()`` when the reactor shuts down, and then calling ``reactor.run()`` could be done manually.
 

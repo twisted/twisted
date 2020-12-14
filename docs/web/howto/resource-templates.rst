@@ -18,9 +18,9 @@ Overview
 
 While high-level templating systems can be used with Twisted (for
 example, `DivmodNevow <https://launchpad.net/nevow>`_ , sometimes one needs a less file-heavy system which lets one
-directly write HTML. While :api:`twisted.web.script.ResourceScript <ResourceScript>` is
+directly write HTML. While :py:func:`ResourceScript <twisted.web.script.ResourceScript>` is
 available, it has a high coding overhead, and requires some boring string
-arithmetic. :api:`twisted.web.script.ResourceTemplate <ResourceTemplate>` fills the
+arithmetic. :py:func:`ResourceTemplate <twisted.web.script.ResourceTemplate>` fills the
 space between Nevow and ResourceScript using Quixote's PTL (Python Templating
 Language).
 
@@ -76,7 +76,7 @@ ResourceTemplates are coded in an extension of Python called the"Python Templati
 is available
 at `the quixote web site <http://quixote.python.ca/quixote.dev/doc/PTL.html>`_ . The web server will expect the PTL source file
 to define a variable named ``resource`` .  This should be
-a :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` ,
+a :py:class:`twisted.web.resource.Resource` ,
 whose ``.render`` method be called. Usually, you would want
 to define ``render`` using the keyword ``template`` 
 rather than ``def`` .

@@ -18,8 +18,8 @@ twisted.python.failure
 
 
 
-:api:`twisted.python.failure.Failure.trap <Failure.trap>`
-raises itself (i.e. a :api:`twisted.python.failure.Failure <Failure>` ) in Python 2. In Python 3,
+:py:meth:`Failure.trap <twisted.python.failure.Failure.trap>`
+raises itself (i.e. a :py:class:`Failure <twisted.python.failure.Failure>` ) in Python 2. In Python 3,
 the wrapped exception will be re-raised.
 
 

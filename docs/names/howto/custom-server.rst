@@ -18,8 +18,8 @@ Lets start by creating a simple forwarding DNS server, which forwards all reques
 
 .. literalinclude:: listings/names/simple_server.py
 
-In this example we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance
-to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>`
+In this example we are passing a :py:class:`client.Resolver <twisted.names.client.Resolver>` instance
+to the :py:class:`DNSServerFactory <twisted.names.server.DNSServerFactory>`
 and we are configuring that client to use the upstream DNS servers which are specified in a local ``resolv.conf`` file.
 
 Also note that we start the server listening on both UDP and TCP ports.
@@ -49,24 +49,24 @@ Here's the code:
 
 .. literalinclude:: listings/names/override_server.py
 
-Notice that ``DynamicResolver.query`` returns a :api:`twisted.internet.defer.Deferred <Deferred>`.
+Notice that ``DynamicResolver.query`` returns a :py:class:`Deferred <twisted.internet.defer.Deferred>`.
 On success, it returns three lists of DNS records (answers, authority, additional),
-which will be encoded by :api:`twisted.names.dns.Message <dns.Message>` and returned to the client.
-On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`,
+which will be encoded by :py:class:`dns.Message <twisted.names.dns.Message>` and returned to the client.
+On failure, it returns a :py:class:`DomainError <twisted.names.error.DomainError>`,
 which is a signal that the query should be dispatched to the next client resolver in the list.
 
 .. note::
-   The fallback behaviour is actually handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
+   The fallback behaviour is actually handled by :py:class:`ResolverChain <twisted.names.resolve.ResolverChain>`.
 
    ResolverChain is a proxy for other resolvers.
-   It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers
+   It takes a list of :py:class:`IResolver <twisted.internet.interfaces.IResolver>` providers
    and queries each one in turn until it receives an answer, or until the list is exhausted.
 
-   Each :api:`twisted.internet.interfaces.IResolver <IResolver>` in the chain may return a deferred :api:`twisted.names.error.DomainError <DomainError>`,
-   which is a signal that :api:`twisted.names.resolve.ResolverChain <ResolverChain>` should query the next chained resolver.
+   Each :py:class:`IResolver <twisted.internet.interfaces.IResolver>` in the chain may return a deferred :py:class:`DomainError <twisted.names.error.DomainError>`,
+   which is a signal that :py:class:`ResolverChain <twisted.names.resolve.ResolverChain>` should query the next chained resolver.
 
-   The :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers
-   and ensures that they are added to the :api:`twisted.names.resolve.ResolverChain <ResolverChain>` in the correct order.
+   The :py:class:`DNSServerFactory <twisted.names.server.DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers
+   and ensures that they are added to the :py:class:`ResolverChain <twisted.names.resolve.ResolverChain>` in the correct order.
 
 Let's use ``dig`` to see how this server responds to requests that match the pattern we specified:
 
@@ -90,4 +90,4 @@ Further Reading
 For simplicity, the examples above use the ``reactor.listenXXX`` APIs.
 But your application will be more flexible if you use the :doc:`Twisted Application APIs <../../core/howto/application>`,
 along with the :doc:`Twisted plugin system <../../core/howto/plugin>` and ``twistd``.
-Read the source code of :api:`twisted.names.tap <names.tap>` to see how the ``twistd names`` plugin works.
+Read the source code of :py:mod:`names.tap <twisted.names.tap>` to see how the ``twistd names`` plugin works.

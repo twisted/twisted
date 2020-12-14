@@ -388,7 +388,7 @@ The requirement to have a complete working example will occasionally
 impose upon authors the need to have a few dummy functions: in Twisted
 documentation the most common example is where a function is needed to
 generate a Deferred and fire it after some time has passed. An example
-might be this, where :api:`twisted.internet.task.deferLater <deferLater>` is used to fire a callback
+might be this, where :py:func:`deferLater <twisted.internet.task.deferLater>` is used to fire a callback
 after a period of time:
 
     
