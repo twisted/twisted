@@ -388,6 +388,7 @@ Open questions
 
 - What bugs should be considered release blockers?
 
+  - Generally, fixes for regressions since the last release in the series and difficult-to-mitigate problems with the release toolchain
   - All bugs with a type from the release blocker family
   - Anybody can create/submit a new ticket with a release blocker type
   - Ultimately it's the RM's discretion to accept a ticket as a release blocker
