@@ -364,6 +364,17 @@ class ServerOptionsTests(TestCase):
         self.assertIs(e.code, None)
         self.assertEqual(stdout.getvalue(), expectedOutput)
 
+    def test_printSubCommandForUsageError(self):
+        """
+        TODO: verify *which* exception is raised 
+        """
+        stdout = StringIO()
+        import pdb
+        pdb.set_trace()
+        config = twistd.ServerOptions(stdout=stdout)
+        e = self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
+        
+
 
 @skipIf(not _twistd_unix, "twistd unix not available")
 class CheckPIDTests(TestCase):
