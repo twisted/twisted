@@ -366,12 +366,11 @@ class ServerOptionsTests(TestCase):
 
     def test_printSubCommandForUsageError(self):
         """
-        TODO: verify *which* exception is raised 
+        TODO: call app.run(*args) with a lambda or something, stick something weird in ServerOptions
         """
         stdout = StringIO()
-        import pdb
-        pdb.set_trace()
         config = twistd.ServerOptions(stdout=stdout)
+        
         e = self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
         
 
