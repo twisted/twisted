@@ -132,7 +132,7 @@ class SOCKSv4(protocol.Protocol):
         @param version: The SOCKS protocol version number.
 
         @type code: L{int}
-        @param code: The comand code. 1 means establish a TCP/IP stream
+        @param code: The command code. 1 means establish a TCP/IP stream
             connection, and 2 means establish a TCP/IP port binding.
 
         @type port: L{int}
