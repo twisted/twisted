@@ -14,10 +14,29 @@ from twisted.python.failure import Failure
 from twisted.logger import Logger
 import os
 import os.path
+import platform
 
 log = Logger()
 
-
+if platform.system() == 'Linux':
+    import statx
+    def stat(fd):
+        return statx.stat(fd)
+    def lstat(fd):
+        return statx.lstat(fd)
+    try:
+        import pyudev
+        _udev = True
+    except ImportError:
+        _udev = False
+else:
+    _udev = False
+    def stat(fd):
+        return os.stat(fd)
+    def lstat(fd):
+        return os.lstat(fd)
+        
+        
 class IFilesystem(Interface):
 
     """
@@ -32,8 +51,7 @@ class IFilesystem(Interface):
         @param filename: a string representing the file to open.
 
         @param flags: an integer of the flags to open the file with, ORed
-        together.  The flags and their values are listed at the bottom of
-        L{twisted.conch.ssh.filetransfer} as FXF_*.
+        together.  The flags and their values are passed directly to L{os.open}
 
         @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
@@ -77,6 +95,48 @@ class IFilesystem(Interface):
         @param newpath: the new file name.
         """
 
+    def makeDirectory(path, attrs):
+        """
+        Make a directory.
+
+        This method returns when the directory is created, or a Deferred that
+        is called back when it is created.
+
+        @param path: the name of the directory to create as a string.
+        @param attrs: a dictionary of attributes to create the directory with.
+        Its meaning is the same as the attrs in the L{openFile} method.
+        """
+
+    def removeDirectory(path):
+        """
+        Remove a directory (non-recursively)
+
+        It is an error to remove a directory that has files or directories in
+        it.
+
+        This method returns when the directory is removed, or a Deferred that
+        is called back when it is removed.
+
+        @param path: the directory to remove.
+        """
+
+    def openDirectory(path):
+        """
+        Open a directory for scanning.
+
+        B{NOTE:} this function differs from L{twisted.conch.interfaces.ISFTPServer}
+
+        This method returns an iterable object that has a close() method,
+        or a Deferred that is called back with same.
+
+        The close() method is called when the client is finished reading
+        from the directory.  At this point, the iterable will no longer
+        be used.
+
+        The iterable should return tuples of the form (filename,
+        attrs) or Deferreds that return the same. """
+        
+        
     def makeDirectory(path, attrs):
         """
         Make a directory.
@@ -188,8 +248,17 @@ class IFilesystem(Interface):
 
     def statfs():
         """
-        @return: 3-tuple ints (blocksize, total blocks, free blocks)
-        can be None if not available or not meaningful for this filesystem
+        @return: a dictionary with these keys, all optional
+         - C{size} size of a block, in bytes (int)
+         - C{blocks} size of filesystem in blocks  (int)
+         - C{free} free blocks (int)
+         - C{disk_id} 32-bit integer disk ID  (int)
+         - C{disk_namemax} maximum path length (int)
+         - C{disk_label} disk/volume label (str)
+         - C{disk_fstype} filesystem type (str)
+         - C{disk_birthtime} disk/volume creation time (int)
+     
+        @rtype: L{dict}
         """
 
 
@@ -263,7 +332,7 @@ class IFile(Interface):
 
 
 class AccessViolation(Exception):
-    """thrown when a csller tries to break access restrictions"""
+    """thrown when a caller tries to break access restrictions"""
 
 
 @implementer(IFile)
@@ -326,7 +395,7 @@ class _ThreadFile:
         return self.fso._deferToThread(int_write)
 
     def getAttrs(self):
-        s = self.fso._deferToThread(os.fstat, self.fd)
+        s = self.fso._deferToThread(stat, self.fd)
         s.addCallback(self.fso._getAttrs)
         return s
 
@@ -379,18 +448,32 @@ class ThreadVfs:
         if "permissions" in attrs:
             os.chmod(path, attrs["permissions"])
         if "atime" in attrs and "mtime" in attrs:
-            os.utime(path, (attrs["atime"], attrs["mtime"]))
+            os.utime(path, (attrs["atime"], attrs["mtime"])v)
 
     def _getAttrs(self, s):
-        return {
+        d = {
             "size": s.st_size,
             "uid": s.st_uid,
             "gid": s.st_gid,
             "permissions": s.st_mode,
             "atime": int(s.st_atime),
             "mtime": int(s.st_mtime),
+            "ext_ctime": int(s.st_ctime),
+            "ext_nlinks": s.st_nlinks,
         }
-
+        try:
+            d["ext_blksize"] = s.st_blksize
+        except AttributeError:
+            # not available on all platforms
+            pass
+        try:
+            if s.st_birthtime:
+                d["ext_birthtime"] = s.st_birthtime
+        except AttributeError:
+            # not available on all platforms
+            pass
+        return d
+        
     def _absPath(self, path):
         p = os.path.normpath(os.path.join(self.root, path))
         if not p.startswith(self.root):
@@ -445,9 +528,9 @@ class ThreadVfs:
     def getAttrs(self, path, followLinks=True):
         path = self._absPath(path)
         if followLinks:
-            s = self._deferToThread(os.stat, path)
+            s = self._deferToThread(stat, path)
         else:
-            s = self._deferToThread(os.lstat, path)
+            s = self._deferToThread(lstat, path)
         s.addCallback(self._getAttrs)
         return s
 
@@ -475,10 +558,43 @@ class ThreadVfs:
         def cb_statfs():
             try:
                 v = os.statvfs(self.root)
+                s = stat(self.root)
             except AttributeError:
+                # some systems dont have at all
                 return None
-            return (v.f_frsize, v.f_blocks, v.f_bavail)
-
+             d = dict(
+                size=v.f_frsize,
+                blocks=v.f_blocks,
+                free=v.f_bavail,
+                disk_namemax=v.f_namemax,
+            )
+            try:
+                d["disk_id"] = v.f_fsid % 2**32
+            except AttributeError:
+                pass # only python 3.7+
+            try:
+                d["disk_fstype"] = s.st_fstype
+            except AttributeError:
+                pass # only Solaris
+            try:
+                if s.st_birthtime:
+                    d["disk_birthtime"] = s.st_birthtime
+            except AttributeError:
+                # classically, only BSDs (?and Darwin)
+                # with statx, linux with glibc >= 2.28 also
+                pass
+            if _udev:
+                try:
+                    ctx = pyudev.Context()
+                    path = "/sys/dev/block/%d:%d" % (os.major(s.st_dev), os.minor(s.st_dev))
+                    dev = pyudev.Devices.from_path(ctx, path)
+                    if "ID_FS_TYPE" in dev.properties and dev.properties["ID_FS_TYPE"]:
+                        d["disk_fstype"] = dev.properties["ID_FS_TYPE"]
+                    if "ID_FS_LABEL" in dev.properties and dev.properties["ID_FS_LABEL"]:
+                        d["disk_label"] = dev.properties["ID_FS_LABEL"]
+                except BaseException:
+                    log.failure("trying to use udev db")
+            return d        
         return self._deferToThread(cb_statfs)
 
 
