@@ -25,6 +25,8 @@ serverBucket.rate = 20000
 serverFilter.buckets[None] = serverBucket
 
 # Web service is also limited per-host:
+
+
 class WebClientBucket(htb.Bucket):
     # Your first 10k is free
     maxburst = 10000

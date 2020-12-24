@@ -138,11 +138,11 @@ class Port(base.BasePort):
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
-        @param addressFamily: L{int}
+        @type addressFamily: L{int}
 
         @param protocol: A C{DatagramProtocol} instance which will be
             connected to the C{port}.
-        @type proto: L{twisted.internet.protocol.DatagramProtocol}
+        @type protocol: L{twisted.internet.protocol.DatagramProtocol}
 
         @param maxPacketSize: The maximum packet size to accept.
         @type maxPacketSize: L{int}
@@ -252,7 +252,7 @@ class Port(base.BasePort):
                     addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)
-                except:
+                except BaseException:
                     log.err()
 
     def write(self, datagram, addr=None):

@@ -182,7 +182,7 @@ def _callAppFunction(function):
     """
     try:
         function()
-    except:
+    except BaseException:
         _moduleLog.failure(
             "Unexpected exception from {name}", name=fullyQualifiedName(function)
         )
@@ -543,7 +543,7 @@ class HTTPClientParser(HTTPParser):
                     )
                 else:
                     self.response._bodyDataFinished()
-            except:
+            except BaseException:
                 # Handle exceptions from both the except suites and the else
                 # suite.  Those functions really shouldn't raise exceptions,
                 # but maybe there's some buggy application code somewhere
@@ -842,7 +842,7 @@ class Request:
                     state[0] = 2
                     try:
                         encoder._noMoreWritesExpected()
-                    except:
+                    except BaseException:
                         # Fail the overall writeTo Deferred - something the
                         # producer did was wrong.
                         ultimate.errback()
@@ -1593,7 +1593,7 @@ class HTTP11ClientProtocol(Protocol):
             # added back to connection pool before we finish the request.
             try:
                 self._quiescentCallback(self)
-            except:
+            except BaseException:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
                 self._log.failure("")
@@ -1641,7 +1641,7 @@ class HTTP11ClientProtocol(Protocol):
         """
         try:
             self._parser.dataReceived(bytes)
-        except:
+        except BaseException:
             self._giveUp(Failure())
 
     def connectionLost(self, reason):

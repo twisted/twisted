@@ -190,7 +190,7 @@ log.err(failure.Failure(e))
 
 try:
     doSomethingElse()
-except:
+except BaseException:
     log.deferr()
 """
 

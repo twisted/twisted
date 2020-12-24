@@ -106,6 +106,8 @@ DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 # Notionally, part of twisted.python.reflect, but defining it there causes a
 # cyclic dependency between this module and that module.  Define it here,
 # instead, and let reflect import it to re-expose to the public.
+
+
 def _fullyQualifiedName(obj):
     """
     Return the fully qualified name of a module, class, method or function.
@@ -220,18 +222,13 @@ def getDeprecationWarningString(callableThing, version, format=None, replacement
     @param callableThing: Callable object to be deprecated
 
     @type version: L{incremental.Version}
-    @param version: Version that C{callableThing} was deprecated in
+    @param version: Version that C{callableThing} was deprecated in.
 
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
-
-    @param callableThing: A callable to be deprecated.
-
-    @param version: The L{incremental.Version} that the callable
-        was deprecated in.
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -281,9 +278,6 @@ def deprecated(version, replacement=None):
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
-
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
@@ -322,9 +316,6 @@ def deprecatedProperty(version, replacement=None):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
-
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable.
         Either pass in a string, which will be inserted into the warning

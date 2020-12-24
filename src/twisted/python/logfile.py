@@ -267,7 +267,7 @@ class DailyLogFile(BaseLogFile):
         """Return the suffix given a (year, month, day) tuple or unixtime"""
         try:
             return "_".join(map(str, tupledate))
-        except:
+        except BaseException:
             # try taking a float unixtime
             return "_".join(map(str, self.toDate(tupledate)))
 

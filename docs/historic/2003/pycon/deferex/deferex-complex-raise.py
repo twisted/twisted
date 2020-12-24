@@ -9,5 +9,5 @@ try:
     print(x)
 except MyExc as me:
     print("error (", me, ").  x was:", x)
-except:
+except BaseException:
     print("fatal error! abort!")

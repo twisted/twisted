@@ -771,7 +771,7 @@ def _debuginit(
         if not exc[0] == self.__class__ and DO_POST_MORTEM:
             try:
                 strrepr = str(exc[1])
-            except:
+            except BaseException:
                 strrepr = "broken str"
             print(
                 "Jumping into debugger for post-mortem of exception '{}':".format(

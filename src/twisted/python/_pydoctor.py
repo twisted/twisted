@@ -81,39 +81,47 @@ def getDeprecated(self, decorators):
     """
     for a in decorators:
         if isinstance(a, ast.Call):
-            fn = self.expandName("".join(astbuilder.node2dottedname(a.func)))
+            fn = astbuilder.node2fullname(a.func, self)
 
-            if fn == "twisted.python.deprecate.deprecated":
+            if fn in (
+                "twisted.python.deprecate.deprecated",
+                "twisted.python.deprecate.deprecatedProperty",
+            ):
                 try:
                     self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
                 except AttributeError:
-                    raise
                     # It's a reference or something that we can't figure out
                     # from the AST.
                     pass
 
 
 class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
-    def visitClass(self, node):
+    def visit_ClassDef(self, node):
         """
-        Called when a class is visited.
+        Called when a class definition is visited.
         """
-        super().visitClass(node)
+        super().visit_ClassDef(node)
+        try:
+            cls = self.builder.current.contents[node.name]
+        except KeyError:
+            # Classes inside functions are ignored.
+            return
 
-        cls = self.builder.current.contents[node.name]
+        getDeprecated(cls, cls.raw_decorators)
 
-        getDeprecated(cls, list(cls.raw_decorators))
-
-    def visitFunction(self, node):
+    def visit_FunctionDef(self, node):
         """
-        Called when a class is visited.
+        Called when a function definition is visited.
         """
-        super().visitFunction(node)
-
-        func = self.builder.current.contents[node.name]
+        super().visit_FunctionDef(node)
+        try:
+            func = self.builder.current.contents[node.name]
+        except KeyError:
+            # Inner functions are ignored.
+            return
 
         if func.decorators:
-            getDeprecated(func, list(func.decorators))
+            getDeprecated(func, func.decorators)
 
 
 def versionToUsefulObject(version):
@@ -141,17 +149,11 @@ def deprecatedToUsefulText(visitor, name, deprecated):
             replacement = deprecated.args[1].s
     else:
         replacement = None
+        for keyword in deprecated.keywords:
+            if keyword.arg == "replacement":
+                replacement = keyword.value.s
 
     return _getDeprecationWarningString(name, version, replacement=replacement) + "."
-
-
-class TwistedFunction(zopeinterface.ZopeInterfaceFunction):
-    def docsources(self):
-
-        if self.decorators:
-            getDeprecated(self, list(self.decorators))
-
-        yield from super().docsources()
 
 
 class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
@@ -165,7 +167,6 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
     """
 
     defaultBuilder = TwistedASTBuilder
-    Function = TwistedFunction
 
     def __init__(self, options=None):
         super().__init__(options=options)

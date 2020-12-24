@@ -161,13 +161,13 @@ def run():
     fd = sys.stdin.fileno()
     try:
         old = tty.tcgetattr(fd)
-    except:
+    except BaseException:
         old = None
     try:
         oldUSR1 = signal.signal(
             signal.SIGUSR1, lambda *a: reactor.callLater(0, reConnect)
         )
-    except:
+    except BaseException:
         oldUSR1 = None
     try:
         reactor.run()
@@ -196,7 +196,7 @@ def handleError():
 def _stopReactor():
     try:
         reactor.stop()
-    except:
+    except BaseException:
         pass
 
 
@@ -537,7 +537,7 @@ def _enterRawMode():
     try:
         old = tty.tcgetattr(fd)
         new = old[:]
-    except:
+    except BaseException:
         log.msg("not a typewriter!")
     else:
         # iflage

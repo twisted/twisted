@@ -665,7 +665,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         for msg in msgs:
             try:
                 msg.connectionLost()
-            except:
+            except BaseException:
                 log.msg("msg raised exception from connectionLost")
                 log.err()
 
@@ -694,7 +694,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 self.mode = COMMAND
                 self._disconnect(msgs)
                 return
-            except:
+            except BaseException:
                 log.err()
                 self.sendCode(550, b"Internal server error")
                 self.mode = COMMAND
@@ -719,7 +719,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 for message in self.__messages:
                     try:
                         message.connectionLost()
-                    except:
+                    except BaseException:
                         log.err()
                 del self.__messages
             except AttributeError:
@@ -1527,7 +1527,7 @@ class ESMTPClient(SMTPClient):
         try:
             self.transport.startTLS(self.context)
             self._tlsMode = True
-        except:
+        except BaseException:
             log.err()
             self.esmtpTLSFailed(451)
 
@@ -2137,7 +2137,7 @@ def sendmail(
 
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
-    @type to_addr: L{list} of L{bytes} or L{bytes}
+    @type to_addrs: L{list} of L{bytes} or L{bytes}
 
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be

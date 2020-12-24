@@ -216,7 +216,7 @@ class TestCase(SynchronousTestCase):
             clean = util._Janitor(self, result).postCaseCleanup()
             if not clean:
                 self._passed = False
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
             self._passed = False
         for error in self._observer.getErrors():
@@ -230,7 +230,7 @@ class TestCase(SynchronousTestCase):
     def _classCleanUp(self, result):
         try:
             util._Janitor(self, result).postClassCleanup()
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
 
     def _makeReactorMethod(self, name):

@@ -15,4 +15,9 @@ Contents:
     pair/index
     web/index
     words/index
+    api/index
+
+.. toctree::
+    :maxdepth: 1
+
     historic/index

@@ -34,7 +34,7 @@ def searchFileForAll(hostsFile, name):
     results = []
     try:
         lines = hostsFile.getContent().splitlines()
-    except:
+    except BaseException:
         return results
 
     name = name.lower()

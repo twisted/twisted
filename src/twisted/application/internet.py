@@ -571,6 +571,10 @@ class _ClientMachine:
     """
     State machine for maintaining a single outgoing connection to an endpoint.
 
+    @ivar _awaitingConnected: notifications to make when connection
+        succeeds, fails, or is cancelled
+    @type _awaitingConnected: list of (Deferred, count) tuples
+
     @see: L{ClientService}
     """
 
@@ -583,10 +587,6 @@ class _ClientMachine:
         @param log: The logger for the L{ClientService} instance this state
             machine is associated to.
         @type log: L{Logger}
-
-        @ivar _awaitingConnected: notifications to make when connection
-            succeeds, fails, or is cancelled
-        @type _awaitingConnected: list of (Deferred, count) tuples
         """
         self._endpoint = endpoint
         self._failedAttempts = 0

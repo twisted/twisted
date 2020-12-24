@@ -92,7 +92,7 @@ since (and this is the important part) deployment is *orthogonal* .
 Later, when you want users to actually *use* your code, you should worry
 about what to do -- or rather, don't.  Users may have widely different needs.
 Some may want to run your code in a different process, so they'll use
-distributed web (:api:`twisted.web.distrib <twisted.web.distrib>` ).  Some may be
+distributed web (:py:mod:`twisted.web.distrib` ).  Some may be
 using the ``twisted-web`` Debian package, and will drop in:
 
 

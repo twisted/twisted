@@ -47,7 +47,7 @@ class SynchronousThreadPool:
         """
         try:
             f(*a, **kw)
-        except:
+        except BaseException:
             # callInThread doesn't let exceptions propagate to the caller.
             # None is always returned and any exception raised gets logged
             # later on.
@@ -334,7 +334,7 @@ class WSGITestsMixin:
                     content = iter(())  # No content.
                 else:
                     content = application(environ, startResponse)
-            except:
+            except BaseException:
                 result.errback()
                 startResponse("500 Error", [])
                 return iter(())
@@ -1756,7 +1756,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         try:
             raise SomeException()
-        except:
+        except BaseException:
             excInfo = exc_info()
 
         reraised = []
@@ -1767,7 +1767,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                 yield b"foo"
                 try:
                     startResponse("500 ERR", [], excInfo)
-                except:
+                except BaseException:
                     reraised.append(exc_info())
 
             return application

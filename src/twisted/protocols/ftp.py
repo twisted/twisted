@@ -513,7 +513,7 @@ class DTP(protocol.Protocol):
     def _conswrite(self, bytes):
         try:
             self._cons.write(bytes)
-        except:
+        except BaseException:
             self._onConnLost.errback()
 
     def dataReceived(self, bytes):
@@ -1885,7 +1885,7 @@ class FTPAnonymousShell:
             f = p.open("r")
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(_FileReader(f))
@@ -1908,7 +1908,7 @@ class FTPAnonymousShell:
             p.listdir()
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -1920,7 +1920,7 @@ class FTPAnonymousShell:
                 statResult = self._statNode(p, keys)
             except OSError as e:
                 return errnoToFailure(e.errno, path)
-            except:
+            except BaseException:
                 return defer.fail()
             else:
                 return defer.succeed(statResult)
@@ -1957,7 +1957,7 @@ class FTPAnonymousShell:
                     ent.extend(self._statNode(filePath, keys))
                 except OSError as e:
                     return errnoToFailure(e.errno, fileName)
-                except:
+                except BaseException:
                     return defer.fail()
 
         return defer.succeed(results)
@@ -2107,7 +2107,7 @@ class FTPShell(FTPAnonymousShell):
             p.makedirs()
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2123,7 +2123,7 @@ class FTPShell(FTPAnonymousShell):
             os.rmdir(p.path)
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2139,7 +2139,7 @@ class FTPShell(FTPAnonymousShell):
             p.remove()
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2151,7 +2151,7 @@ class FTPShell(FTPAnonymousShell):
             os.rename(fp.path, tp.path)
         except OSError as e:
             return errnoToFailure(e.errno, fromPath)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2176,7 +2176,7 @@ class FTPShell(FTPAnonymousShell):
             fObj = p.open("w")
         except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         return defer.succeed(_FileWriter(fObj))
 

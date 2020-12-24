@@ -496,7 +496,7 @@ class RemoteCache(RemoteCopy, Serializable):
             # log.msg( ' --- decache: %s %s' % (self, self.luid) )
             if self.broker:
                 self.broker.decCacheRef(self.luid)
-        except:
+        except BaseException:
             log.deferr()
 
     def _borgify(self):

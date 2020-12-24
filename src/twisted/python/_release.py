@@ -27,7 +27,6 @@ from twisted.python.monkey import MonkeyPatcher
 # Types of newsfragments.
 NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
-    "https://docs.python.org/2/objects.inv",
     "https://docs.python.org/3/objects.inv",
     "https://cryptography.io/en/latest/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
@@ -336,14 +335,12 @@ class APIBuilder:
             packagePath.parent().path,
             "--html-viewsource-base",
             sourceURL,
-            "--add-package",
-            packagePath.path,
             "--html-output",
             outputPath.path,
-            "--html-write-function-pages",
             "--quiet",
             "--make-html",
         ] + intersphinxes
+        args.append(packagePath.path)
         main(args)
 
         monkeyPatch.restore()

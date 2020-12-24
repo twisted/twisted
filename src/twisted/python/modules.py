@@ -388,7 +388,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         try:
             return self.pathEntry.pythonPath.moduleLoader(self.name)
-        except:  # this needs more thought...
+        except BaseException:  # this needs more thought...
             if default is not _nothing:
                 return default
             raise

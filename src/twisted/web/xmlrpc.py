@@ -450,7 +450,7 @@ class QueryFactory(protocol.ClientFactory):
             return
         try:
             response = xmlrpclib.loads(contents, use_datetime=self.useDateTime)[0][0]
-        except:
+        except BaseException:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
         else:
@@ -547,7 +547,7 @@ class Proxy:
             self.user = userpass.pop(0)
             try:
                 self.password = userpass.pop(0)
-            except:
+            except BaseException:
                 self.password = None
         else:
             self.user = self.password = None
@@ -555,7 +555,7 @@ class Proxy:
         self.host = hostport.pop(0)
         try:
             self.port = int(hostport.pop(0))
-        except:
+        except BaseException:
             self.port = None
         self.path = path
         if self.path in [b"", None]:

@@ -447,11 +447,11 @@ class ReraiseTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             typ, value, tb = sys.exc_info()
         try:
             reraise(value, None)
-        except:
+        except BaseException:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)
@@ -468,11 +468,11 @@ class ReraiseTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             typ, value, tb = sys.exc_info()
         try:
             reraise(value, tb)
-        except:
+        except BaseException:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)

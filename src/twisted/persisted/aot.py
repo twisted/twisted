@@ -454,7 +454,7 @@ class AOTUnjellier:
             for func, v in self.afterUnjelly:
                 func(v[0])
             return l[0]
-        except:
+        except BaseException:
             log.msg("Error jellying object! Stacktrace follows::")
             log.msg("\n".join(map(repr, self.stack)))
             raise
@@ -492,7 +492,7 @@ def _classOfMethod(methodObject):
     @type methodObject: L{types.MethodType}
 
     @return: a class
-    @rtype: L{types.ClassType} or L{type}
+    @rtype: L{type}
     """
     return methodObject.__self__.__class__
 
@@ -628,7 +628,7 @@ class AOTJellier:
         try:
             ao = self.jellyToAO(obj)
             return ao
-        except:
+        except BaseException:
             log.msg("Error jellying object! Stacktrace follows::")
             log.msg("\n".join(self.stack))
             raise

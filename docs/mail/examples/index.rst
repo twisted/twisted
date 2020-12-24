@@ -15,9 +15,9 @@ SMTP servers
 SMTP clients
 ------------
 
-- :download:`sendmail_smtp.py` - sending email over plain SMTP with the high-level :api:`twisted.mail.smtp.sendmail <sendmail>` client.
-- :download:`sendmail_gmail.py` - sending email encrypted ESMTP to GMail with the high-level :api:`twisted.mail.smtp.sendmail <sendmail>` client.
-- :download:`sendmail_message.py` - sending a complex message with the high-level :api:`twisted.mail.smtp.sendmail <sendmail>` client.
+- :download:`sendmail_smtp.py` - sending email over plain SMTP with the high-level :py:func:`sendmail <twisted.mail.smtp.sendmail>` client.
+- :download:`sendmail_gmail.py` - sending email encrypted ESMTP to GMail with the high-level :py:func:`sendmail <twisted.mail.smtp.sendmail>` client.
+- :download:`sendmail_message.py` - sending a complex message with the high-level :py:func:`sendmail <twisted.mail.smtp.sendmail>` client.
 - :download:`smtpclient_simple.py` - sending email using SMTP.
 - :download:`smtpclient_tls.py` - send email using authentication and transport layer security.
 

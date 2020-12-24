@@ -137,7 +137,7 @@ def execute(callable, *args, **kw):
     """
     try:
         result = callable(*args, **kw)
-    except:
+    except BaseException:
         return fail()
     else:
         return succeed(result)
@@ -165,7 +165,7 @@ def maybeDeferred(f, *args, **kw):
     """
     try:
         result = f(*args, **kw)
-    except:
+    except BaseException:
         return fail(failure.Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
@@ -671,7 +671,7 @@ class Deferred:
                             )
                     finally:
                         current._runningCallbacks = False
-                except:
+                except BaseException:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
@@ -835,7 +835,7 @@ class Deferred:
         def adapt(result):
             try:
                 extracted = result.result()
-            except:
+            except BaseException:
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
 
@@ -1170,7 +1170,7 @@ class DeferredList(Deferred):
             for deferred in self._deferredList:
                 try:
                     deferred.cancel()
-                except:
+                except BaseException:
                     log.failure("Exception raised from user supplied canceller")
 
 
@@ -1263,7 +1263,7 @@ def _deferGenerator(g, deferred):
         except StopIteration:
             deferred.callback(result)
             return deferred
-        except:
+        except BaseException:
             deferred.errback()
             return deferred
 
@@ -1497,7 +1497,7 @@ def _inlineCallbacks(result, g, status):
                 )
             status.deferred.callback(e.value)
             return
-        except:
+        except BaseException:
             status.deferred.errback()
             return
 

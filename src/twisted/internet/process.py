@@ -81,7 +81,7 @@ def registerReapProcessHandler(pid, process):
         raise RuntimeError("Try to register an already registered process.")
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
-    except:
+    except BaseException:
         log.msg("Failed to reap {}:".format(pid))
         log.err()
 
@@ -300,7 +300,7 @@ class _BaseProcess(BaseProcess):
                     pid = None
                 else:
                     raise
-        except:
+        except BaseException:
             log.msg("Failed to reap {}:".format(self.pid))
             log.err()
             pid = None
@@ -372,7 +372,7 @@ class _BaseProcess(BaseProcess):
         gc.disable()
         try:
             self.pid = os.fork()
-        except:
+        except BaseException:
             # Still in the parent process
             if collectorEnabled:
                 gc.enable()
@@ -396,7 +396,7 @@ class _BaseProcess(BaseProcess):
                     sys.settrace(None)
                     self._setupChild(**kwargs)
                     self._execChild(path, uid, gid, executable, args, environment)
-                except:
+                except BaseException:
                     # If there are errors, try to write something descriptive
                     # to stderr before exiting.
 
@@ -431,7 +431,7 @@ class _BaseProcess(BaseProcess):
 
                         for fd in range(3):
                             os.close(fd)
-                    except:
+                    except BaseException:
                         # Handle all errors during the error-reporting process
                         # silently to ensure that the child terminates.
                         pass
@@ -533,7 +533,7 @@ class _FDDetector:
         for impl in self._implementations:
             try:
                 before = impl()
-            except:
+            except BaseException:
                 continue
             with self.openfile("/dev/null", "r"):
                 after = impl()
@@ -705,7 +705,7 @@ class Process(_BaseProcess):
             # the child only cares about fdmap.values()
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
-        except:
+        except BaseException:
             for pipe in _openedPipes:
                 os.close(pipe)
             raise
@@ -730,7 +730,7 @@ class Process(_BaseProcess):
             # the 'transport' is used for some compatibility methods
             if self.proto is not None:
                 self.proto.makeConnection(self)
-        except:
+        except BaseException:
             log.err()
 
         # The reactor might not be running yet.  This might call back into
@@ -782,7 +782,7 @@ class Process(_BaseProcess):
                 continue
             try:
                 os.close(fd)
-            except:
+            except BaseException:
                 pass
 
         # at this point, the only fds still open are the ones that need to
@@ -825,8 +825,8 @@ class Process(_BaseProcess):
 
         old = []
         for fd in fdmap.values():
-            if not fd in old:
-                if not fd in fdmap.keys():
+            if fd not in old:
+                if fd not in fdmap.keys():
                     old.append(fd)
         if debug:
             print("old", old, file=errfd)
@@ -920,7 +920,7 @@ class Process(_BaseProcess):
         del self.pipes[childFD]
         try:
             self.proto.childConnectionLost(childFD)
-        except:
+        except BaseException:
             log.err()
         self.maybeCallProcessEnded()
 
@@ -1003,7 +1003,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
                 masterfd=masterfd,
                 slavefd=slavefd,
             )
-        except:
+        except BaseException:
             if not isinstance(usePTY, (tuple, list)):
                 os.close(masterfd)
                 os.close(slavefd)
@@ -1018,7 +1018,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         self.status = -1
         try:
             self.proto.makeConnection(self)
-        except:
+        except BaseException:
             log.err()
         registerReapProcessHandler(self.pid, self)
 
@@ -1065,7 +1065,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             if fd > 2:
                 try:
                     os.close(fd)
-                except:
+                except BaseException:
                     pass
 
         self._resetSignalDisposition()

@@ -584,7 +584,7 @@ class HTTPDownloader(HTTPClientFactory):
             if self.file:
                 try:
                     self.file.close()
-                except:
+                except BaseException:
                     self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
@@ -733,7 +733,7 @@ def _urljoin(base, url):
     @return: An absolute URL resulting from the combination of C{base} and
         C{url}.
 
-    @see: L{urlparse.urljoin}
+    @see: L{urllib.parse.urljoin()}
 
     @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
     """
@@ -1432,7 +1432,7 @@ class HTTPConnectionPool:
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )
-            except:
+            except BaseException:
                 self._log.failure(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )

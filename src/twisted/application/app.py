@@ -304,7 +304,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=N
             pdb.runcall(reactor.run)
         else:
             reactor.run()
-    except:
+    except BaseException:
         close = False
         if config["nodaemon"]:
             file = oldstdout

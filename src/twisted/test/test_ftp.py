@@ -3072,7 +3072,7 @@ class ErrnoToFailureTests(TestCase):
         """
         try:
             raise RuntimeError("bar")
-        except:
+        except BaseException:
             d = ftp.errnoToFailure(-1, "foo")
             return self.assertFailure(d, RuntimeError)
 

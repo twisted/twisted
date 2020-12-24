@@ -105,7 +105,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
@@ -115,7 +115,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
@@ -512,7 +512,7 @@ class Port(_SocketCloser, _LogOwner):
 
         try:
             self.factory.doStop()
-        except:
+        except BaseException:
             self.disconnecting = False
             if d is not None:
                 d.errback(failure.Failure())

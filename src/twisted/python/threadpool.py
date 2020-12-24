@@ -237,7 +237,7 @@ class ThreadPool:
             try:
                 result = inContext.theWork()  # type: ignore[attr-defined]
                 ok = True
-            except:
+            except BaseException:
                 result = Failure()
                 ok = False
 

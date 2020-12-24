@@ -553,7 +553,7 @@ class ProcessTests(unittest.TestCase):
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
         and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_process(self):
@@ -582,7 +582,7 @@ class ProcessTests(unittest.TestCase):
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
-            except:
+            except BaseException:
                 pass
 
         d.addCallback(check)
@@ -591,7 +591,7 @@ class ProcessTests(unittest.TestCase):
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
         and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_manyProcesses(self):

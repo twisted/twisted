@@ -203,7 +203,7 @@ class CFReactor(PosixReactorBase):
                     else:
                         if rw[_WRITE]:
                             why = readWriteDescriptor.doWrite()
-            except:
+            except BaseException:
                 why = sys.exc_info()[1]
                 log.err()
             if why:
