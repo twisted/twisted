@@ -29,8 +29,8 @@ resource
       
   
   An object accessible via HTTP at one or more URIs.  In Twisted Web,
-  a resource is represented by an object which provides :api:`twisted.web.resource.IResource <twisted.web.resource.IResource>` and most often is
-  a subclass of :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` .  For example, here
+  a resource is represented by an object which provides :py:class:`twisted.web.resource.IResource` and most often is
+  a subclass of :py:class:`twisted.web.resource.Resource` .  For example, here
   is a resource which represents a simple HTML greeting.
   
   

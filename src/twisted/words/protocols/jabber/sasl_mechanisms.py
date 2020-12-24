@@ -126,7 +126,7 @@ class DigestMD5:
             challenge.
         @type username: C{unicode}
 
-        @param username: The authentication password to use to respond to a
+        @param password: The authentication password to use to respond to a
             challenge.
         @type password: C{unicode}
         """

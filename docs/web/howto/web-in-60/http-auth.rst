@@ -18,13 +18,13 @@ resources.
 
 
 
-:api:`twisted.web.guard <guard>` , the Twisted Web
+:py:mod:`guard <twisted.web.guard>` , the Twisted Web
 module which provides most of the APIs that will be used in this
 example, helps you to
 add `authentication <http://en.wikipedia.org/wiki/Authentication>`_ 
 and `authorization <http://en.wikipedia.org/wiki/Authorization>`_ 
 to a resource hierarchy. It does this by providing a resource which
-implements :api:`twisted.web.resource.Resource.getChild <getChild>` to return
+implements :py:meth:`getChild <twisted.web.resource.Resource.getChild>` to return
 a :doc:`dynamically selected resource <dynamic-dispatch>` . The selection is based on the authentication headers in
 the request. If those headers indicate that the request is made on
 behalf of Alice, then Alice's resource will be returned. If they
@@ -36,15 +36,15 @@ traversal continues as normal from that resource.
 
 
 
-The resource that implements this is :api:`twisted.web.guard.HTTPAuthSessionWrapper <HTTPAuthSessionWrapper>` , though it is directly
+The resource that implements this is :py:class:`HTTPAuthSessionWrapper <twisted.web.guard.HTTPAuthSessionWrapper>` , though it is directly
 responsible for very little of the process. It will extract headers from the
 request and hand them off to a credentials factory to parse them according to
 the appropriate standards (eg `HTTPAuthentication: Basic and Digest Access Authentication <http://tools.ietf.org/html/rfc2617>`_ ) and then hand the
-resulting credentials object off to a :api:`twisted.cred.portal.Portal <Portal>` , the core
+resulting credentials object off to a :py:class:`Portal <twisted.cred.portal.Portal>` , the core
 of :doc:`Twisted Cred <../../../core/howto/cred>` , a system for
 uniform handling of authentication and authorization. We won't discuss Twisted
 Cred in much depth here. To make use of it with Twisted Web, the only thing you
-really need to know is how to implement an :api:`twisted.cred.portal.IRealm <IRealm>` .
+really need to know is how to implement an :py:class:`IRealm <twisted.cred.portal.IRealm>` .
 
 
 
@@ -59,7 +59,7 @@ import ``implements`` from ``zope.interface``
 and ``IRealm`` 
 from ``twisted.cred.portal`` . Together these will let me mark
 this class as a realm (this is mostly - but not entirely - a
-documentation thing). We'll also need :api:`twisted.web.static.File <File>` for the actual implementation
+documentation thing). We'll also need :py:class:`File <twisted.web.static.File>` for the actual implementation
 later.
 
 
@@ -80,7 +80,7 @@ later.
 
 
 
-A realm only needs to implement one method: :api:`twisted.cred.portal.IRealm.requestAvatar <requestAvatar>` . This method is called
+A realm only needs to implement one method: :py:meth:`requestAvatar <twisted.cred.portal.IRealm.requestAvatar>` . This method is called
 after any successful authentication attempt (ie, Alice supplied the right
 password). Its job is to return the *avatar* for the user who succeeded in
 authenticating. An *avatar* is just an object that represents a user. In
@@ -128,7 +128,7 @@ A few notes on this method:
 - Notice that the path handling code in this example is written very
   poorly. This example may be vulnerable to certain unintentional information
   disclosure attacks. This sort of problem is exactly the
-  reason :api:`twisted.python.filepath.FilePath <FilePath>` 
+  reason :py:class:`FilePath <twisted.python.filepath.FilePath>` 
   exists. However, that's an example for another day...
 
 
@@ -155,7 +155,7 @@ one credentials checker:
 
 
 
-:api:`twisted.cred.checkers.FilePasswordDB <FilePasswordDB>` is the
+:py:class:`FilePasswordDB <twisted.cred.checkers.FilePasswordDB>` is the
 credentials checker. It knows how to read ``passwd(5)`` -style (loosely)
 files to check credentials against. It is responsible for the authentication
 work after ``HTTPAuthSessionWrapper`` extracts the credentials from the
@@ -164,8 +164,8 @@ request.
 
 
 
-Next we need either :api:`twisted.web.guard.BasicCredentialFactory <BasicCredentialFactory>` 
-or :api:`twisted.web.guard.DigestCredentialFactory <DigestCredentialFactory>` . The former
+Next we need either :py:class:`BasicCredentialFactory <twisted.web.guard.BasicCredentialFactory>` 
+or :py:class:`DigestCredentialFactory <twisted.web.guard.DigestCredentialFactory>` . The former
 knows how to challenge HTTP clients to do basic authentication; the
 latter, digest authentication. We'll use digest here:
 

@@ -2266,7 +2266,7 @@ class ITLSTransport(ITCPTransport):
             For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
             servers, use L{twisted.internet.ssl.CertificateOptions}.
 
-        @param contextFactory: L{IOpenSSLClientConnectionCreator} or
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must

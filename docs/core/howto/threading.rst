@@ -32,7 +32,7 @@ This means that if you start a thread and call a Twisted method, you might get c
 So don't do it.
 
 The right way to call methods on the reactor from another thread, and therefore any objects which might call methods on the reactor, is to give a function to the reactor to execute within its own thread.
-This can be done using the function :api:`twisted.internet.interfaces.IReactorFromThreads.callFromThread <callFromThread>`::
+This can be done using the function :py:meth:`callFromThread <twisted.internet.interfaces.IReactorFromThreads.callFromThread>`::
 
     from twisted.internet import reactor
     def notThreadSafe(someProtocol, message):
@@ -44,7 +44,7 @@ In this example, ``callFromWhateverThreadYouWant`` is thread-safe and can be inv
 
 .. note::
 
-    There are many objects within Twisted that represent values - for example, :api:`twisted.python.filepath.FilePath <FilePath>` and :api:`twisted.python.urlpath.URLPath <URLPath>` - which you may construct yourself.
+    There are many objects within Twisted that represent values - for example, :py:class:`FilePath <twisted.python.filepath.FilePath>` and :py:class:`URLPath <twisted.python.urlpath.URLPath>` - which you may construct yourself.
     These may be safely constructed and used within a non-reactor thread as long as they are not shared with other threads.
     However, you should be sure that these objects do not share any state, especially not with the reactor.
     One good rule of thumb is that any object whose methods return ``Deferred``\ s is almost certainly touching the reactor at some point, and should never be accessed from a non-reactor thread.
@@ -53,7 +53,7 @@ Running Code In Threads
 -----------------------
 
 Sometimes we may want to run code in a non-reactor thread, to avoid blocking the reactor.
-Twisted provides an API for doing so, the :api:`twisted.internet.interfaces.IReactorInThreads.callInThread <callInThread>` method on the reactor.
+Twisted provides an API for doing so, the :py:meth:`callInThread <twisted.internet.interfaces.IReactorInThreads.callInThread>` method on the reactor.
 
 For example, to run a method in a non-reactor thread we can do::
 
@@ -95,9 +95,9 @@ Getting Results
 
 callInThread and callFromThread allow you to move the execution of your code out of and into the reactor thread, respectively, but that isn't always enough.
 
-When we run some code, we often want to know what its result was.  For this, Twisted provides two methods: :api:`twisted.internet.threads.deferToThread <deferToThread>` and :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`, defined in the ``twisted.internet.threads`` module.
+When we run some code, we often want to know what its result was.  For this, Twisted provides two methods: :py:func:`deferToThread <twisted.internet.threads.deferToThread>` and :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`, defined in the ``twisted.internet.threads`` module.
 
-To get a result from some blocking code back into the reactor thread, we can use :api:`twisted.internet.threads.deferToThread <deferToThread>` to execute it instead of callFromThread.
+To get a result from some blocking code back into the reactor thread, we can use :py:func:`deferToThread <twisted.internet.threads.deferToThread>` to execute it instead of callFromThread.
 
 ::
 
@@ -116,7 +116,7 @@ To get a result from some blocking code back into the reactor thread, we can use
     d.addCallback(printResult)
     reactor.run()
 
-Similarly, you want some code running in a non-reactor thread wants to invoke some code in the reactor thread and get its result, you can use :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
+Similarly, you want some code running in a non-reactor thread wants to invoke some code in the reactor thread and get its result, you can use :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`::
 
     from twisted.internet import threads, reactor, defer
     from twisted.web.client import Agent
@@ -151,5 +151,5 @@ We can do this::
 
 The default size of the thread pool depends on the reactor being used; the default reactor uses a minimum size of 0 and a maximum size of 10.
 
-The reactor thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
-To access methods on this object for more advanced tuning and monitoring (see the API documentation for details) you can get the thread pool with :api:`twisted.internet.interfaces.IReactorThreads.getThreadPool <getThreadPool>`.
+The reactor thread pool is implemented by :py:class:`ThreadPool <twisted.python.threadpool.ThreadPool>`.
+To access methods on this object for more advanced tuning and monitoring (see the API documentation for details) you can get the thread pool with :py:meth:`getThreadPool <twisted.internet.interfaces.IReactorThreads.getThreadPool>`.

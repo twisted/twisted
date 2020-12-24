@@ -245,8 +245,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
             (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
-        @type pKwArgs: L{dict}
-        @param pKwArgs: Keyword arguments for L{SMTPClient.__init__}
+        @param kw: Keyword arguments for L{SMTPClient.__init__}
         """
         self.secret = secret
         self.contextFactory = contextFactory

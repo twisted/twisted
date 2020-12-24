@@ -432,7 +432,7 @@ class BindAuthority(FileAuthority):
         @type domain: bytes
 
         @param rdata:
-        @type rdate: bytes
+        @type rdata: bytes
         """
         record = getattr(dns, "Record_{}".format(nativeString(type)), None)
         if record:
