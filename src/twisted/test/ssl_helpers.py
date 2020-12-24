@@ -23,12 +23,16 @@ class ClientTLSContext(ssl.ClientContextFactory):
     """
 
     isClient = 1
-    _context = None
 
     def getContext(self):
-        if self._context is None:
-            self._context = SSL.Context(SSL.SSLv23_METHOD)
-        return self._context
+        """
+        Return an L{SSL.Context} to be use for client-side connections.
+
+        Will not return a cached context.
+        This is done to improve the test coverage as most implementation
+        are caching the context.
+        """
+        return SSL.Context(SSL.SSLv23_METHOD)
 
 
 class ServerTLSContext:
@@ -47,9 +51,14 @@ class ServerTLSContext:
         self._method = method
 
     def getContext(self):
-        if self._context is None:
-            self._context = SSL.Context(self._method)
-            self._context.use_certificate_file(self.filename)
-            self._context.use_privatekey_file(self.filename)
+        """
+        Return an L{SSL.Context} to be use for server-side connections.
 
-        return self._context
+        Will not return a cached context.
+        This is done to improve the test coverage as most implementation
+        are caching the context.
+        """
+        ctx = SSL.Context(self._method)
+        ctx.use_certificate_file(self.filename)
+        ctx.use_privatekey_file(self.filename)
+        return ctx
