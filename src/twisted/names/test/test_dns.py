@@ -3785,7 +3785,7 @@ class CommonConstructorTestsMixin:
     common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
 
     TestCase classes that use this mixin must provide a C{messageFactory} method
-    which accepts any argment supported by L{dns.Message.__init__}.
+    which accepts any argument supported by L{dns.Message.__init__}.
 
     TestCases must also mixin ConstructorTestsMixin which provides some custom
     assertions for testing constructor arguments.
@@ -4390,7 +4390,7 @@ class StandardEncodingTestsMixin:
     These tests should work with both L{dns._EDNSMessage} and L{dns.Message}.
 
     TestCase classes that use this mixin must provide a C{messageFactory} method
-    which accepts any argment supported by L{dns._EDNSMessage.__init__}.
+    which accepts any argument supported by L{dns._EDNSMessage.__init__}.
 
     EDNS specific arguments may be discarded if not supported by the message
     class under construction.
