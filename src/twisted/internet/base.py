@@ -7,14 +7,16 @@ Very basic functionality for a Reactor implementation.
 """
 
 
-from abc import ABC, abstractmethod
 import builtins
-from heapq import heappush, heappop, heapify
 import socket  # needed only for sync-dns
 import sys
+import warnings
+from abc import ABC, abstractmethod
+from heapq import heapify, heappop, heappush
 from traceback import format_stack
 from types import FrameType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AnyStr,
     Callable,
@@ -26,15 +28,13 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    TYPE_CHECKING,
     Union,
     cast,
 )
-import warnings
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
     ComplexResolverSimplifier as _ComplexResolverSimplifier,
     GAIResolver as _GAIResolver,
@@ -42,7 +42,6 @@ from twisted.internet._resolver import (
 )
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.interfaces import (
-    _ISupportsExitSignalCapturing,
     IAddress,
     IConnector,
     IDelayedCall,
@@ -56,11 +55,12 @@ from twisted.internet.interfaces import (
     IReadDescriptor,
     IResolverSimple,
     IWriteDescriptor,
+    _ISupportsExitSignalCapturing,
 )
 from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
-from twisted.python.runtime import seconds as runtimeSeconds, platform
+from twisted.python.runtime import platform, seconds as runtimeSeconds
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -1053,12 +1053,17 @@ class ReactorBase(PluggableResolverMixin):
         # -exarkun
 
         # If any of the following environment variables:
+        #
         #  - PYTHONUTF8
         #  - PYTHONIOENCODING
+        #  - PYTHONLEGACYWINDOWSFSENCODING
         #
-        # are set before the Python interpreter runs, they will affect the
-        # value of sys.stdout.encoding
-        defaultEncoding = sys.stdout.encoding
+        # are set before the Python interpreter runs, they may affect the
+        # encoding and error handler used here. See
+        # https://docs.python.org/3/library/sys.html#sys.getfilesystemencoding
+        # and PEP 529 for the gory details.
+        defaultEncoding = sys.getfilesystemencoding()
+        defaultErrors = sys.getfilesystemencodeerrors()
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
@@ -1071,7 +1076,7 @@ class ReactorBase(PluggableResolverMixin):
             """
             if isinstance(arg, str):
                 try:
-                    arg = arg.encode(defaultEncoding)
+                    arg = arg.encode(defaultEncoding, defaultErrors)
                 except UnicodeEncodeError:
                     return None
             if isinstance(arg, bytes) and b"\0" not in arg:  # type: ignore[unreachable]
