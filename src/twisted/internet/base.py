@@ -60,7 +60,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
-from twisted.python.runtime import seconds as runtimeSeconds, platform
+from twisted.python.runtime import seconds as runtimeSeconds, platform, platformType
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -1064,7 +1064,18 @@ class ReactorBase(PluggableResolverMixin):
             defaultEncoding = "utf-8"
 
         # Common check function
-        def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
+        def argChecker(arg: Union[bytes, str]) -> Optional[Union[bytes, str]]:
+            """
+            Return either an argument value that can be used by the low-level
+            API or L{None}.
+            If the given value is not allowable for some reason, L{None} is returned.
+            """
+            if platformType == "posix":
+                return strToBytesChecker(arg)
+
+            return bytesToStrChecker(arg)
+
+        def strToBytesChecker(arg: Union[bytes, str]) -> Optional[Union[bytes, str]]:
             """
             Return either L{bytes} or L{None}.  If the given value is not
             allowable for some reason, L{None} is returned.  Otherwise, a
@@ -1080,6 +1091,26 @@ class ReactorBase(PluggableResolverMixin):
             if isinstance(arg, bytes) and b"\0" not in arg:  # type: ignore[unreachable]
                 return arg
 
+            return None
+
+        def bytesToStrChecker(arg: Union[bytes, str]) -> Optional[Union[bytes, str]]:
+            """
+            Return either L{str} or L{None}.  If the given value is not
+            allowable for some reason, L{None} is returned.  Otherwise, a
+            possibly different object which should be used in place of arg is
+            returned.  This forces unicode encoding to happen now, rather than
+            implicitly later.
+            """
+            if isinstance(arg, str):
+                return arg
+
+            if isinstance(arg, bytes):
+                try:
+                    arg = arg.decode(defaultEncoding)
+                except UnicodeDecodeError:
+                    return None
+
+            # Invalid argument type.
             return None
 
         # Make a few tests to check input validity
