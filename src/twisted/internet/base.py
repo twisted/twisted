@@ -1063,7 +1063,8 @@ class ReactorBase(PluggableResolverMixin):
         # https://docs.python.org/3/library/sys.html#sys.getfilesystemencoding
         # and PEP 529 for the gory details.
         defaultEncoding = sys.getfilesystemencoding()
-        defaultErrors = sys.getfilesystemencodeerrors()
+        # https://github.com/python/typeshed/pull/4864
+        defaultErrors = sys.getfilesystemencodeerrors()  # type: ignore
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
