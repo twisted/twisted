@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_internet,twisted.internet.test.test_posixbase -*-
+# -*- test-case-name: twisted.test.test_internet,twisted.internet.test.test_posixbase,twisted.internet.test.test_process -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

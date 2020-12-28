@@ -1059,6 +1059,9 @@ class ReactorBase(PluggableResolverMixin):
         # are set before the Python interpreter runs, they will affect the
         # value of sys.stdout.encoding
         defaultEncoding = sys.stdout.encoding
+        if not defaultEncoding:
+            # Maybe we have a streaming stdout.
+            defaultEncoding = "utf-8"
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
@@ -1102,7 +1105,7 @@ class ReactorBase(PluggableResolverMixin):
                     raise TypeError(
                         "Environment contains a "
                         "non-string key: {!r}, using encoding: {}".format(
-                            key, sys.stdout.encoding
+                            key, defaultEncoding
                         )
                     )
                 _val = argChecker(val)
@@ -1110,7 +1113,7 @@ class ReactorBase(PluggableResolverMixin):
                     raise TypeError(
                         "Environment contains a "
                         "non-string value: {!r}, using encoding {}".format(
-                            val, sys.stdout.encoding
+                            val, defaultEncoding
                         )
                     )
                 outputEnv[_key] = _val

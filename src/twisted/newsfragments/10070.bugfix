@@ -1,0 +1,2 @@
+twisted.internet.reactor.spawnProcess can now handle str arguments when
+standard output encoding is None (piped output).

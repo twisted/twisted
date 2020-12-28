@@ -27,7 +27,7 @@ import gc
 import stat
 import operator
 
-from unittest import skipIf
+from unittest import mock, skipIf
 
 try:
     import fcntl
@@ -58,7 +58,7 @@ from twisted.python.filepath import FilePath
 
 
 # Get the current Python executable as a bytestring.
-pyExe = FilePath(sys.executable).path
+pyExe = FilePath(sys.executable)._asBytesPath()
 CONCURRENT_PROCESS_TEST_COUNT = 25
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
@@ -627,12 +627,19 @@ class ProcessTests(unittest.TestCase):
         A spawning a subprocess which echoes its stdin to its stdout via
         L{IReactorProcess.spawnProcess} will result in that echoed output being
         delivered to outReceived.
+
+        The process arguments can have str values.
         """
         finished = defer.Deferred()
         p = EchoProtocol(finished)
 
-        scriptPath = b"twisted.test.process_echoer"
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", b"-m", scriptPath], env=properEnv)
+        scriptPath = "twisted.test.process_echoer"
+        reactor.spawnProcess(
+            processProtocol=p,
+            executable=pyExe,
+            args=[pyExe.decode(), "-u", "-m", scriptPath],
+            env=properEnv,
+        )
 
         def asserts(ignored):
             self.assertFalse(p.failure, p.failure)
@@ -644,6 +651,30 @@ class ProcessTests(unittest.TestCase):
             return err
 
         return finished.addCallback(asserts).addErrback(takedownProcess)
+
+    def test_default_piped_encoding(self):
+        """
+        When the arguments are strings and the standard output stream has
+        encoding of value C{None}, like with piped standard output,
+        it will default to UTF-8.
+        """
+        finished = defer.Deferred()
+        p = TrivialProcessProtocol(finished)
+        scriptPath = "twisted.test.process_cmdline"
+
+        class NoneEncodingStream:
+            encoding = None
+
+        with mock.patch.object(sys, "stdout", NoneEncodingStream()):
+            reactor.spawnProcess(
+                p, pyExe, [pyExe.decode(), "-um", scriptPath, "\N{sun} on", "the sky"]
+            )
+
+        def afterProcessEnd(ignored):
+            # process_cmdline.py writed each argument on a separeate line.
+            self.assertEqual([b"\xe2\x98\x89 on\n" b"the sky\n"], p.outData)
+
+        return finished.addCallback(afterProcessEnd)
 
     def test_commandLine(self):
         args = [
