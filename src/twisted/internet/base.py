@@ -60,7 +60,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
-from twisted.python.runtime import seconds as runtimeSeconds, platform, platformType
+from twisted.python.runtime import seconds as runtimeSeconds, platform
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -1028,7 +1028,9 @@ class ReactorBase(PluggableResolverMixin):
 
     def _checkProcessArgs(
         self, args: List[Union[bytes, str]], env: Optional[Mapping[AnyStr, AnyStr]]
-    ) -> Tuple[List[bytes], Optional[Dict[bytes, bytes]]]:
+    ) -> Tuple[
+        List[Union[bytes, str]], Optional[Dict[Union[bytes, str], Union[bytes, str]]]
+    ]:
         """
         Check for valid arguments and environment to spawnProcess.
 
@@ -1070,12 +1072,12 @@ class ReactorBase(PluggableResolverMixin):
             API or L{None}.
             If the given value is not allowable for some reason, L{None} is returned.
             """
-            if platformType == "posix":
+            if platform.isLinux():
                 return strToBytesChecker(arg)
 
             return bytesToStrChecker(arg)
 
-        def strToBytesChecker(arg: Union[bytes, str]) -> Optional[Union[bytes, str]]:
+        def strToBytesChecker(arg: Union[bytes, str]) -> Optional[bytes]:
             """
             Return either L{bytes} or L{None}.  If the given value is not
             allowable for some reason, L{None} is returned.  Otherwise, a
@@ -1093,7 +1095,7 @@ class ReactorBase(PluggableResolverMixin):
 
             return None
 
-        def bytesToStrChecker(arg: Union[bytes, str]) -> Optional[Union[bytes, str]]:
+        def bytesToStrChecker(arg: Union[bytes, str]) -> Optional[str]:
             """
             Return either L{str} or L{None}.  If the given value is not
             allowable for some reason, L{None} is returned.  Otherwise, a
