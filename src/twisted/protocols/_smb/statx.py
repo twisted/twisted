@@ -235,8 +235,8 @@ def stat(path, *, dir_fd: int = None, follow_symlinks: bool = True) \
 				stx_result.stx_gid,
 				stx_result.stx_size,
 				stx_result.stx_atime.tv_sec,
-				stx_result.stx_ctime.tv_sec,
 				stx_result.stx_mtime.tv_sec,
+				stx_result.stx_ctime.tv_sec,
 				
 				# Extended (platform-dependant) attributes
 				stx_result.stx_blksize,
@@ -246,8 +246,8 @@ def stat(path, *, dir_fd: int = None, follow_symlinks: bool = True) \
 				
 				# High-precision timestamps
 				ts_to_nstime(stx_result.stx_atime),
-				ts_to_nstime(stx_result.stx_ctime),
 				ts_to_nstime(stx_result.stx_mtime),
+				ts_to_nstime(stx_result.stx_ctime),
 				
 				# Non-standard birth time value
 				st_birthtime,

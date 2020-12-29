@@ -2,16 +2,19 @@
 # See LICENSE for details..
 
 import os
+import sys
 import tempfile
 import os.path
 from twisted.protocols._smb import vfs
 from twisted.trial import unittest
 from unittest import skipUnless
 from twisted.internet.defer import DeferredList
-from twisted.logger import Logger
-
+from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
 
 log = Logger()
+observers = [textFileLogObserver(sys.stdout)]
+globalLogBeginner.beginLoggingTo(observers)
+
 
 
 class BaseTestVfs:
@@ -204,8 +207,11 @@ class BaseTestVfs:
 
     def test_statfs(self):
         def cb_statfs(r):
+            log.debug("statvfs: {vfs}", vfs=r)
             v = os.statvfs(".")
-            self.assertEqual(r, (v.f_frsize, v.f_blocks, v.f_bavail))
+            self.assertEqual(r["size"], v.f_frsize)
+            self.assertEqual(r["blocks"], v.f_blocks)
+            self.assertEqual(r["free"], v.f_bavail)
 
         d1 = self.fso.statfs()
         d1.addCallback(cb_statfs)

@@ -19,7 +19,7 @@ import platform
 log = Logger()
 
 if platform.system() == 'Linux':
-    import statx
+    from twisted.protocols._smb import statx
     def stat(fd):
         return statx.stat(fd)
     def lstat(fd):
@@ -448,7 +448,8 @@ class ThreadVfs:
         if "permissions" in attrs:
             os.chmod(path, attrs["permissions"])
         if "atime" in attrs and "mtime" in attrs:
-            os.utime(path, (attrs["atime"], attrs["mtime"])v)
+            os.utime(path, (attrs["atime"], attrs["mtime"]))
+        return True
 
     def _getAttrs(self, s):
         d = {
@@ -459,7 +460,7 @@ class ThreadVfs:
             "atime": int(s.st_atime),
             "mtime": int(s.st_mtime),
             "ext_ctime": int(s.st_ctime),
-            "ext_nlinks": s.st_nlinks,
+            "ext_nlinks": s.st_nlink,
         }
         try:
             d["ext_blksize"] = s.st_blksize
@@ -562,7 +563,7 @@ class ThreadVfs:
             except AttributeError:
                 # some systems dont have at all
                 return None
-             d = dict(
+            d = dict(
                 size=v.f_frsize,
                 blocks=v.f_blocks,
                 free=v.f_bavail,
