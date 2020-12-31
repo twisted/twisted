@@ -1072,10 +1072,10 @@ class ReactorBase(PluggableResolverMixin):
             API or L{None}.
             If the given value is not allowable for some reason, L{None} is returned.
             """
-            if platform.isLinux():
-                return strToBytesChecker(arg)
+            if platform.isWindows():
+                return bytesToStrChecker(arg)
 
-            return bytesToStrChecker(arg)
+            return strToBytesChecker(arg)
 
         def strToBytesChecker(arg: Union[bytes, str]) -> Optional[bytes]:
             """
