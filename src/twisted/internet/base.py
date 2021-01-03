@@ -1057,8 +1057,12 @@ class ReactorBase(PluggableResolverMixin):
         #  - PYTHONIOENCODING
         #
         # are set before the Python interpreter runs, they will affect the
-        # value of sys.stdout.encoding
-        defaultEncoding = sys.stdout.encoding
+        # value of sys.stdout.encoding.
+        # If a client application patches sys.stdout so that encoding is not
+        # set properly, try to fall back to sys.__stdout__.encoding.
+        defaultEncoding = sys.stdout.encoding or sys.__stdout__.encoding
+        if not defaultEncoding:
+            raise ValueError("sys.stdout does not have a valid encoding")
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
