@@ -531,6 +531,32 @@ class ProcessTests(unittest.TestCase):
 
         return d.addCallback(processEnded)
 
+    def test_patchSysStdoutWithStringIO(self):
+        """
+        Some projects which use the Twisted reactor
+        such as Buildbot patch L{sys.stdout} with L{io.StringIO}
+        before running their tests.
+        """
+        import sys
+        from io import StringIO
+
+        stdoutStringIO = StringIO()
+        self.patch(sys, "stdout", stdoutStringIO)
+        return self.test_stdio()
+
+    def test_patch_sys__stdout__WithStringIO(self):
+        """
+        If L{sys.stdout} and L{sys.__stdout__} are patched with L{io.StringIO},
+        we should get a L{ValueError}.
+        """
+        import sys
+        from io import StringIO
+
+        self.patch(sys, "stdout", StringIO())
+        self.patch(sys, "__stdout__", StringIO())
+        with self.assertRaises(ValueError):
+            return self.test_stdio()
+
     def test_unsetPid(self):
         """
         Test if pid is None/non-None before/after process termination.  This
