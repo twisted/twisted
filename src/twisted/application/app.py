@@ -667,8 +667,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
 
 def run(runApp, ServerOptions):
-    import pdb
-    pdb.set_trace()
     config = ServerOptions()
     try:
         config.parseOptions()
