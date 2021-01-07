@@ -18,25 +18,31 @@ import platform
 
 log = Logger()
 
-if platform.system() == 'Linux':
+if platform.system() == "Linux":
     from twisted.protocols._smb import statx
+
     def stat(fd):
         return statx.stat(fd)
+
     def lstat(fd):
         return statx.lstat(fd)
+
     try:
         import pyudev
+
         _udev = True
     except ImportError:
         _udev = False
 else:
     _udev = False
+
     def stat(fd):
         return os.stat(fd)
+
     def lstat(fd):
         return os.lstat(fd)
-        
-        
+
+
 class IFilesystem(Interface):
 
     """
@@ -134,9 +140,8 @@ class IFilesystem(Interface):
         be used.
 
         The iterable should return tuples of the form (filename,
-        attrs) or Deferreds that return the same. """
-        
-        
+        attrs) or Deferreds that return the same."""
+
     def makeDirectory(path, attrs):
         """
         Make a directory.
@@ -257,7 +262,7 @@ class IFilesystem(Interface):
          - C{disk_label} disk/volume label (str)
          - C{disk_fstype} filesystem type (str)
          - C{disk_birthtime} disk/volume creation time (int)
-     
+
         @rtype: L{dict}
         """
 
@@ -474,7 +479,7 @@ class ThreadVfs:
             # not available on all platforms
             pass
         return d
-        
+
     def _absPath(self, path):
         p = os.path.normpath(os.path.join(self.root, path))
         if not p.startswith(self.root):
@@ -570,13 +575,13 @@ class ThreadVfs:
                 disk_namemax=v.f_namemax,
             )
             try:
-                d["disk_id"] = v.f_fsid % 2**32
+                d["disk_id"] = v.f_fsid % 2 ** 32
             except AttributeError:
-                pass # only python 3.7+
+                pass  # only python 3.7+
             try:
                 d["disk_fstype"] = s.st_fstype
             except AttributeError:
-                pass # only Solaris
+                pass  # only Solaris
             try:
                 if s.st_birthtime:
                     d["disk_birthtime"] = s.st_birthtime
@@ -587,15 +592,22 @@ class ThreadVfs:
             if _udev:
                 try:
                     ctx = pyudev.Context()
-                    path = "/sys/dev/block/%d:%d" % (os.major(s.st_dev), os.minor(s.st_dev))
+                    path = "/sys/dev/block/%d:%d" % (
+                        os.major(s.st_dev),
+                        os.minor(s.st_dev),
+                    )
                     dev = pyudev.Devices.from_path(ctx, path)
                     if "ID_FS_TYPE" in dev.properties and dev.properties["ID_FS_TYPE"]:
                         d["disk_fstype"] = dev.properties["ID_FS_TYPE"]
-                    if "ID_FS_LABEL" in dev.properties and dev.properties["ID_FS_LABEL"]:
+                    if (
+                        "ID_FS_LABEL" in dev.properties
+                        and dev.properties["ID_FS_LABEL"]
+                    ):
                         d["disk_label"] = dev.properties["ID_FS_LABEL"]
                 except BaseException:
                     log.failure("trying to use udev db")
-            return d        
+            return d
+
         return self._deferToThread(cb_statfs)
 
 

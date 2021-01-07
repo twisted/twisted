@@ -16,7 +16,6 @@ observers = [textFileLogObserver(sys.stdout)]
 globalLogBeginner.beginLoggingTo(observers)
 
 
-
 class BaseTestVfs:
     def setUp(self):
         self.oldpath = os.getcwd()
