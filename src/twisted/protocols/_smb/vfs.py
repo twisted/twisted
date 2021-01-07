@@ -140,47 +140,6 @@ class IFilesystem(Interface):
         be used.
 
         The iterable should return tuples of the form (filename,
-        attrs) or Deferreds that return the same."""
-
-    def makeDirectory(path, attrs):
-        """
-        Make a directory.
-
-        This method returns when the directory is created, or a Deferred that
-        is called back when it is created.
-
-        @param path: the name of the directory to create as a string.
-        @param attrs: a dictionary of attributes to create the directory with.
-        Its meaning is the same as the attrs in the L{openFile} method.
-        """
-
-    def removeDirectory(path):
-        """
-        Remove a directory (non-recursively)
-
-        It is an error to remove a directory that has files or directories in
-        it.
-
-        This method returns when the directory is removed, or a Deferred that
-        is called back when it is removed.
-
-        @param path: the directory to remove.
-        """
-
-    def openDirectory(path):
-        """
-        Open a directory for scanning.
-
-        B{NOTE:} this function differs from L{twisted.conch.interfaces.ISFTPServer}
-
-        This method returns an iterable object that has a close() method,
-        or a Deferred that is called back with same.
-
-        The close() method is called when the client is finished reading
-        from the directory.  At this point, the iterable will no longer
-        be used.
-
-        The iterable should return tuples of the form (filename,
         attrs) or Deferreds that return the same.  The
         sequence must support __getitem__, but otherwise may be any
         'sequence-like' object.
