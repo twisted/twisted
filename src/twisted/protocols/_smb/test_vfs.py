@@ -61,7 +61,7 @@ class BaseTestVfs:
 
     def test_write_close(self):
         def cb_write3(_):
-            with open("three.txt", "r") as fd:
+            with open("three.txt") as fd:
                 self.assertEqual(fd.read(), "lorem ipsum")
 
         def cb_write2(n, fd):
@@ -81,7 +81,7 @@ class BaseTestVfs:
 
     def test_write_flush(self):
         def cb_write3(_, fd):
-            with open("three.txt", "r") as fd2:
+            with open("three.txt") as fd2:
                 self.assertEqual(fd2.read(), "dolor sit")
             os.close(fd.fileno())
 
@@ -172,7 +172,7 @@ class BaseTestVfs:
 
     def test_makelink(self):
         def cb_link(_):
-            with open("one.lnk", "r") as fd:
+            with open("one.lnk") as fd:
                 self.assertEqual(fd.read(), "blahblahblah")
 
         d = self.fso.makeLink("one.lnk", "one.txt")
