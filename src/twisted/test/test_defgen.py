@@ -367,8 +367,7 @@ class InlineCallbacksCoroutineTests(BaseDefgenTests, unittest.TestCase):
 
     @inlineCallbacks
     async def _genNothing(self):
-        if False:
-            await 1  # type: ignore[unreachable]
+        pass
 
     @inlineCallbacks
     async def _genHandledTerminalFailure(self):
@@ -393,15 +392,18 @@ class InlineCallbacksCoroutineTests(BaseDefgenTests, unittest.TestCase):
 
     @inlineCallbacks
     async def _genStackUsage2(self):
+        async def succeedWithOne():
+            return 1
+
         for x in range(5000):
             # Test with yielding a random value
-            await 1
+            await succeedWithOne()
         return 0
 
     # Tests unique to inlineCallbacks with async def
     # TODO update for async def
 
-    def testYieldNonDeferred(self):
+    def testAwaitNotAwaitable(self):
         """
         Ensure that yielding a non-deferred passes it back as the
         result of the yield expression.
@@ -410,61 +412,38 @@ class InlineCallbacksCoroutineTests(BaseDefgenTests, unittest.TestCase):
         @rtype: L{twisted.internet.defer.Deferred}
         """
 
-        def _test():
-            yield 5
-            returnValue(5)
+        async def _test():
+            await 5  # FIXME
+            return 5
 
         _test = inlineCallbacks(_test)
 
-        return _test().addCallback(self.assertEqual, 5)
+        self.assertEqual(self.successResultOf(_test()), 5)
 
     def testReturnNoValue(self):
         """Ensure a standard python return results in a None result."""
 
-        def _noReturn():
-            yield 5
+        async def _noReturn():
+            await 5  # FIXME
             return
 
         _noReturn = inlineCallbacks(_noReturn)
 
-        return _noReturn().addCallback(self.assertEqual, None)
+        self.assertIs(self.successResultOf(_noReturn()), None)
 
     def testReturnValue(self):
-        """Ensure that returnValue works."""
+        """
+        returnValue works in a coroutine function
 
-        def _return():
-            yield 5
+        (Or maybe it shouldn't?)
+        """
+
+        async def _return():
             returnValue(6)
 
         _return = inlineCallbacks(_return)
 
-        return _return().addCallback(self.assertEqual, 6)
-
-    def test_nonGeneratorReturn(self):
-        """
-        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
-        raised when a non-generator returns something other than a generator.
-        """
-
-        def _noYield():
-            return 5
-
-        _noYield = inlineCallbacks(_noYield)
-
-        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
-
-    def test_nonGeneratorReturnValue(self):
-        """
-        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
-        raised when a non-generator calls L{returnValue}.
-        """
-
-        def _noYield():
-            returnValue(5)
-
-        _noYield = inlineCallbacks(_noYield)
-
-        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
+        self.assertEqual(self.successResultOf(_return()), 6)
 
 
 class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
