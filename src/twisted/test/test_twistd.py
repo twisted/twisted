@@ -371,7 +371,7 @@ class ServerOptionsTests(TestCase):
         stdout = StringIO()
         config = twistd.ServerOptions(stdout=stdout)
         
-        e = self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
+        self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
         
 
 
