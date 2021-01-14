@@ -366,8 +366,7 @@ class ServerOptionsTests(TestCase):
 
     def test_printSubCommandForUsageError(self):
         """
-        TODO: call app.run(*args) with a lambda or something, stick something weird in ServerOptions
-        ...also, find somewhere better for this test.
+        Command is printed when an invalid option is requested.
         """
         stdout = StringIO()
         config = twistd.ServerOptions(stdout=stdout)

@@ -1,0 +1,1 @@
+twistd should print the subcommand name in its usage error messages.  Having the subcommand in the error message will make it obvious in cases where you typed an unintended (but valid) subcommand.
