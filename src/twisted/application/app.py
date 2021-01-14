@@ -671,7 +671,7 @@ def run(runApp, ServerOptions):
     try:
         config.parseOptions()
     except usage.error as ue:
-        commstr = ' '.join(sys.argv[0:2])
+        commstr = " ".join(sys.argv[0:2])
         print(config)
         print("{}: {}".format(commstr, ue))
     else:
