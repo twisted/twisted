@@ -14,6 +14,7 @@ from ._convenience import Quit
 
 _stop = object()
 
+
 @implementer(IExclusiveWorker)
 class ThreadWorker:
     """
@@ -36,15 +37,16 @@ class ThreadWorker:
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
             C{startThread}.
-        @param queue: L{Queue}
+        @type queue: L{Queue}
         """
         self._q = queue
         self._hasQuit = Quit()
+
         def work():
             for task in iter(queue.get, _stop):
                 task()
-        startThread(work)
 
+        startThread(work)
 
     def do(self, task):
         """
@@ -55,7 +57,6 @@ class ThreadWorker:
         self._hasQuit.check()
         self._q.put(task)
 
-
     def quit(self):
         """
         Reject all future work and stop the thread started by C{__init__}.
@@ -64,7 +65,6 @@ class ThreadWorker:
         # that no work is ever enqueued _after_ _stop.
         self._hasQuit.set()
         self._q.put(_stop)
-
 
 
 @implementer(IExclusiveWorker)
@@ -85,7 +85,6 @@ class LockWorker:
         self._quit = Quit()
         self._lock = lock
         self._local = local
-
 
     def do(self, work):
         """
@@ -112,11 +111,9 @@ class LockWorker:
         else:
             working.append(work)
 
-
     def quit(self):
         """
         Quit this L{LockWorker}.
         """
         self._quit.set()
         self._lock = None
-

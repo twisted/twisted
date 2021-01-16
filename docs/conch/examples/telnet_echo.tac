@@ -16,27 +16,28 @@ from twisted.internet.protocol import ServerFactory
 from twisted.application.internet import TCPServer
 from twisted.application.service import Application
 
+
 class TelnetEcho(TelnetProtocol):
     def enableRemote(self, option):
         self.transport.write(b"You tried to enable " + option + b" (I rejected it)\r\n")
         return False
 
-
     def disableRemote(self, option):
         self.transport.write(b"You disabled " + option + b"\r\n")
 
-
     def enableLocal(self, option):
-        self.transport.write(b"You tried to make me enable " + option + b" (I rejected it)\r\n" % (option,))
+        self.transport.write(
+            b"You tried to make me enable "
+            + option
+            + b" (I rejected it)\r\n" % (option,)
+        )
         return False
-
 
     def disableLocal(self, option):
         self.transport.write(b"You asked me to disable " + option + "\r\n")
 
-
     def dataReceived(self, data):
-        self.transport.write(b"I received "+ data + b" from you\r\n")
+        self.transport.write(b"I received " + data + b" from you\r\n")
 
 
 factory = ServerFactory()

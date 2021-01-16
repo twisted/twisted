@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.kqueuereactor}.
 """
 
-
 import errno
 
 from zope.interface import implementer
@@ -14,6 +13,7 @@ from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet.kqreactor import KQueueReactor, _IKQueue
+
     kqueueSkip = None
 except ImportError:
     kqueueSkip = "KQueue not available."
@@ -25,7 +25,6 @@ def _fakeKEvent(*args, **kwargs):
     """
 
 
-
 def makeFakeKQueue(testKQueue, testKEvent):
     """
     Create a fake that implements L{_IKQueue}.
@@ -35,6 +34,7 @@ def makeFakeKQueue(testKQueue, testKEvent):
     @return: An implementation of L{_IKQueue} that includes C{testKQueue} and
         C{testKEvent}.
     """
+
     @implementer(_IKQueue)
     class FakeKQueue:
         kqueue = testKQueue
@@ -43,24 +43,26 @@ def makeFakeKQueue(testKQueue, testKEvent):
     return FakeKQueue()
 
 
-
 class KQueueTests(TestCase):
     """
     These are tests for L{KQueueReactor}'s implementation, not its real world
     behaviour. For that, look at
     L{twisted.internet.test.reactormixins.ReactorBuilder}.
     """
+
     skip = kqueueSkip
 
     def test_EINTR(self):
         """
         L{KQueueReactor} handles L{errno.EINTR} in C{doKEvent} by returning.
         """
+
         class FakeKQueue:
             """
             A fake KQueue that raises L{errno.EINTR} when C{control} is called,
             like a real KQueue would if it was interrupted.
             """
+
             def control(self, *args, **kwargs):
                 raise OSError(errno.EINTR, "Interrupted")
 

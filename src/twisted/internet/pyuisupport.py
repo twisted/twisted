@@ -13,6 +13,7 @@ See doc/examples/pyuidemo.py for example usage.
 # System imports
 import pyui
 
+
 def _guiUpdate(reactor, delay):
     pyui.draw()
     if pyui.update() == 0:
@@ -33,5 +34,6 @@ def install(ms=10, reactor=None, args=(), kw={}):
         from twisted.internet import reactor
     _guiUpdate(reactor, ms / 1000.0)
     return d
+
 
 __all__ = ["install"]

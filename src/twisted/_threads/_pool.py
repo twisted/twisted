@@ -40,9 +40,9 @@ def pool(currentLimit, threadFactory=Thread):
         created.
     @type currentLimit: 0-argument callable returning L{int}
 
-    @param reactor: If passed, the L{IReactorFromThreads} / L{IReactorCore} to
-        be used to coordinate actions on the L{Team} itself.  Otherwise, a
-        L{LockWorker} will be used.
+    @param threadFactory: Factory that, when given a C{target} keyword argument,
+        returns a L{threading.Thread} that will run that target.
+    @type threadFactory: callable returning a L{threading.Thread}
 
     @return: a new L{Team}.
     """
@@ -56,10 +56,9 @@ def pool(currentLimit, threadFactory=Thread):
             return None
         return ThreadWorker(startThread, Queue())
 
-    team = Team(coordinator=LockWorker(Lock(), LocalStorage()),
-                createWorker=limitedWorkerCreator,
-                logException=err)
+    team = Team(
+        coordinator=LockWorker(Lock(), LocalStorage()),
+        createWorker=limitedWorkerCreator,
+        logException=err,
+    )
     return team
-
-
-

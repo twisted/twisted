@@ -1,11 +1,11 @@
 """Non-twisted throughput client."""
-from __future__ import print_function
 
 import socket, time, sys
 
 TIMES = 50000
 S = "0123456789" * 1024
 sent = len(S) * TIMES
+
 
 def main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -19,5 +19,6 @@ def main():
     print("Throughput: %s kbytes/sec" % ((sent / passed) / 1024))
     s.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

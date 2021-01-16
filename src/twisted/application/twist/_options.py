@@ -8,21 +8,33 @@ Command line options for C{twist}.
 
 from sys import stdout, stderr
 from textwrap import dedent
+import typing
+from typing import (
+    Callable,
+    Iterable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from twisted.copyright import version
-from twisted.python.usage import Options, UsageError
+from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
-    LogLevel, InvalidLogLevelError,
-    textFileLogObserver, jsonFileLogObserver,
+    LogLevel,
+    InvalidLogLevelError,
+    textFileLogObserver,
+    jsonFileLogObserver,
 )
 from twisted.plugin import getPlugins
+from twisted.python.usage import Options, UsageError
 
 from ..reactors import installReactor, NoSuchReactor, getReactorTypes
 from ..runner._exit import exit, ExitStatus
 from ..service import IServiceMaker
 
 openFile = open
-
 
 
 class TwistOptions(Options):
@@ -33,29 +45,23 @@ class TwistOptions(Options):
     defaultReactorName = "default"
     defaultLogLevel = LogLevel.info
 
-
-    def __init__(self):
+    def __init__(self) -> None:
         Options.__init__(self)
 
         self["reactorName"] = self.defaultReactorName
         self["logLevel"] = self.defaultLogLevel
         self["logFile"] = stdout
 
+    def getSynopsis(self) -> str:
+        return "{} plugin [plugin_options]".format(Options.getSynopsis(self))
 
-    def getSynopsis(self):
-        return "{} plugin [plugin_options]".format(
-            Options.getSynopsis(self)
-        )
-
-
-    def opt_version(self):
+    def opt_version(self) -> "typing.NoReturn":
         """
         Print version and exit.
         """
         exit(ExitStatus.EX_OK, "{}".format(version))
 
-
-    def opt_reactor(self, name):
+    def opt_reactor(self, name: str) -> None:
         """
         The name of the reactor to use.
         (options: {options})
@@ -71,24 +77,21 @@ class TwistOptions(Options):
             self["reactorName"] = name
 
     opt_reactor.__doc__ = dedent(opt_reactor.__doc__ or "").format(
-        options=", ".join(
-            '"{}"'.format(rt.shortName) for rt in getReactorTypes()
-        ),
+        options=", ".join('"{}"'.format(rt.shortName) for rt in getReactorTypes()),
     )
 
-
-    def installReactor(self, name):
+    def installReactor(self, name: str) -> IReactorCore:
         """
         Install the reactor.
         """
         if name == self.defaultReactorName:
             from twisted.internet import reactor
-            return reactor
+
+            return cast(IReactorCore, reactor)
         else:
-            return installReactor(name)
+            return cast(IReactorCore, installReactor(name))
 
-
-    def opt_log_level(self, levelName):
+    def opt_log_level(self, levelName: str) -> None:
         """
         Set default log level.
         (options: {options}; default: "{default}")
@@ -100,14 +103,12 @@ class TwistOptions(Options):
 
     opt_log_level.__doc__ = dedent(opt_log_level.__doc__ or "").format(
         options=", ".join(
-            '"{}"'.format(constant.name)
-            for constant in LogLevel.iterconstants()
+            '"{}"'.format(constant.name) for constant in LogLevel.iterconstants()
         ),
         default=defaultLogLevel.name,
     )
 
-
-    def opt_log_file(self, fileName):
+    def opt_log_file(self, fileName: str) -> None:
         """
         Log to file. ("-" for stdout, "+" for stderr; default: "-")
         """
@@ -121,14 +122,13 @@ class TwistOptions(Options):
 
         try:
             self["logFile"] = openFile(fileName, "a")
-        except EnvironmentError as e:
+        except OSError as e:
             exit(
                 ExitStatus.EX_IOERR,
-                "Unable to open log file {!r}: {}".format(fileName, e)
+                "Unable to open log file {!r}: {}".format(fileName, e),
             )
 
-
-    def opt_log_format(self, format):
+    def opt_log_format(self, format: str) -> None:
         """
         Log file format.
         (options: "text", "json"; default: "text" if the log file is a tty,
@@ -146,8 +146,7 @@ class TwistOptions(Options):
 
     opt_log_format.__doc__ = dedent(opt_log_format.__doc__ or "")
 
-
-    def selectDefaultLogObserver(self):
+    def selectDefaultLogObserver(self) -> None:
         """
         Set C{fileLogObserverFactory} to the default appropriate for the
         chosen C{logFile}.
@@ -162,8 +161,7 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
                 self["logFormat"] = "json"
 
-
-    def parseOptions(self, options=None):
+    def parseOptions(self, options: Optional[Sequence[str]] = None) -> None:
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
@@ -171,35 +169,33 @@ class TwistOptions(Options):
         if "reactor" not in self:
             self["reactor"] = self.installReactor(self["reactorName"])
 
-
     @property
-    def plugins(self):
+    def plugins(self) -> Mapping[str, IServiceMaker]:
         if "plugins" not in self:
             plugins = {}
             for plugin in getPlugins(IServiceMaker):
                 plugins[plugin.tapname] = plugin
             self["plugins"] = plugins
 
-        return self["plugins"]
-
+        return cast(Mapping[str, IServiceMaker], self["plugins"])
 
     @property
-    def subCommands(self):
+    def subCommands(
+        self,
+    ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
         for name in sorted(plugins):
             plugin = plugins[name]
-            yield (
-                plugin.tapname,
-                None,
-                # Avoid resolving the options attribute right away, in case
-                # it's a property with a non-trivial getter (eg, one which
-                # imports modules).
-                lambda plugin=plugin: plugin.options(),
-                plugin.description,
-            )
 
+            # Don't pass plugin.options along in order to avoid resolving the
+            # options attribute right away, in case it's a property with a
+            # non-trivial getter (eg, one which imports modules).
+            def options(plugin: IServiceMaker = plugin) -> Options:
+                return cast(Options, plugin.options())
 
-    def postOptions(self):
+            yield (plugin.tapname, None, options, plugin.description)
+
+    def postOptions(self) -> None:
         Options.postOptions(self)
 
         if self.subCommand is None:

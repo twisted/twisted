@@ -33,7 +33,6 @@ To test this, use OpenSSL's s_client command, with either or both of the
 Alternatively, use the tls_alpn_npn_client.py script found in the examples
 directory.
 """
-from __future__ import print_function
 
 from OpenSSL import crypto
 
@@ -52,11 +51,10 @@ from twisted.python.filepath import FilePath
 # ambiguity about text encodings.
 # Try changing this list by adding, removing, and reordering protocols to see
 # how it affects the result.
-ACCEPTABLE_PROTOCOLS = [b'h2', b'http/1.1']
+ACCEPTABLE_PROTOCOLS = [b"h2", b"http/1.1"]
 
 # The port that the server will listen on.
 LISTEN_PORT = 8080
-
 
 
 class NPNPrinterProtocol(Protocol):
@@ -65,17 +63,16 @@ class NPNPrinterProtocol(Protocol):
     received, it prints what the negotiated protocol is, echoes the data back,
     and then terminates the connection.
     """
+
     def connectionMade(self):
         self.complete = False
         print("Connection made")
-
 
     def dataReceived(self, data):
         print(self.transport.negotiatedProtocol)
         self.transport.write(data)
         self.complete = True
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         # If we haven't received any data, an error occurred. Otherwise,
@@ -86,16 +83,14 @@ class NPNPrinterProtocol(Protocol):
             print("Connection lost due to error {}".format(reason))
 
 
-
 class ResponderFactory(Factory):
     def buildProtocol(self, addr):
         return NPNPrinterProtocol()
 
 
-
-privateKeyData = FilePath('server-key.pem').getContent()
+privateKeyData = FilePath("server-key.pem").getContent()
 privateKey = crypto.load_privatekey(crypto.FILETYPE_PEM, privateKeyData)
-certData = FilePath('server-cert.pem').getContent()
+certData = FilePath("server-cert.pem").getContent()
 certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certData)
 
 options = ssl.CertificateOptions(

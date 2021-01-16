@@ -34,7 +34,7 @@ Using an SSH Command Endpoint
 
 If your objective is to execute a command on a remote host over an SSH
 connection, then the easiest approach may be to
-use :api:`twisted.conch.endpoints.SSHCommandClientEndpoint <twisted.conch.endpoints.SSHCommandClientEndpoint>` .
+use :py:class:`twisted.conch.endpoints.SSHCommandClientEndpoint` .
 If you haven't used endpoints before, first take a look
 at :doc:`the endpoint howto <../../core/howto/endpoints>` to
 get an idea of how endpoints work in general.
@@ -134,7 +134,7 @@ Some of the other options may bear further explanation.
 
 
 
-The ``keys`` argument gives any SSH :api:`twisted.conch.ssh.keys.Key <Key>` objects which may be useful for authentication.
+The ``keys`` argument gives any SSH :py:class:`Key <twisted.conch.ssh.keys.Key>` objects which may be useful for authentication.
 These keys are available to the endpoint for authentication, but only keys that the server indicates are useful will actually be used.
 This argument is optional.
 If key authentication against the server is either unnecessary or undesired, it may be omitted entirely.
@@ -156,7 +156,7 @@ This explains the value ``echoclient_ssh.py`` assigns this parameter when *--no-
 
 
 
-The ``knownHosts`` argument accepts a :api:`twisted.conch.client.knownhosts.KnownHostsFile <KnownHostsFile>` instance and controls how server keys are checked and stored.
+The ``knownHosts`` argument accepts a :py:class:`KnownHostsFile <twisted.conch.client.knownhosts.KnownHostsFile>` instance and controls how server keys are checked and stored.
 This object has the opportunity to reject server keys if they differ from expectations.
 It can also save server keys when they are first observed.
 
@@ -169,9 +169,9 @@ Finally, there is one option that is not demonstrated in the example - the ``ui`
 This argument is closely related to the ``knownHosts`` argument described above.
 ``KnownHostsFile`` may require user-input under certain circumstances - for example, to ask if it should accept a server key the first time it is observed.
 The ``ui`` object is how this user-input is obtained.
-By default, a :api:`twisted.conch.client.knownhosts.ConsoleUI <ConsoleUI>` instance associated with */dev/tty* will be used.
+By default, a :py:class:`ConsoleUI <twisted.conch.client.knownhosts.ConsoleUI>` instance associated with */dev/tty* will be used.
 This gives about the same behavior as is seen in a standard command-line ssh client.
-See :api:`twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection <SSHCommandClientEndpoint.newConnection>` for details about how edge cases are handled for this default value.
+See :py:meth:`SSHCommandClientEndpoint.newConnection <twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection>` for details about how edge cases are handled for this default value.
 For use of ``SSHCommandClientEndpoint`` that is intended to be completely autonomous, applications will probably want to specify a custom ``ui`` object which can make the necessary decisions without user-input.
 
 
@@ -210,7 +210,7 @@ lower-level Conch client interface.  This is described below.
 
 
 
-Writing a client with Conch involves sub-classing 4 classes: :api:`twisted.conch.ssh.transport.SSHClientTransport <twisted.conch.ssh.transport.SSHClientTransport>` , :api:`twisted.conch.ssh.userauth.SSHUserAuthClient <twisted.conch.ssh.userauth.SSHUserAuthClient>` , :api:`twisted.conch.ssh.connection.SSHConnection <twisted.conch.ssh.connection.SSHConnection>` , and :api:`twisted.conch.ssh.channel.SSHChannel <twisted.conch.ssh.channel.SSHChannel>` . We'll start out
+Writing a client with Conch involves sub-classing 4 classes: :py:class:`twisted.conch.ssh.transport.SSHClientTransport` , :py:class:`twisted.conch.ssh.userauth.SSHUserAuthClient` , :py:class:`twisted.conch.ssh.connection.SSHConnection` , and :py:class:`twisted.conch.ssh.channel.SSHChannel` . We'll start out
 with ``SSHClientTransport`` because it's the base 
 of the client.
 
@@ -252,7 +252,7 @@ implement is ``verifyHostKey()`` . This method
 is called with two strings: the public key sent by the server and its
 fingerprint. You should verify the host key the server sends, either
 by checking against a hard-coded value as in the example, or by asking
-the user. ``verifyHostKey`` returns a :api:`twisted.internet.defer.Deferred <twisted.internet.defer.Deferred>` which gets a callback
+the user. ``verifyHostKey`` returns a :py:class:`twisted.internet.defer.Deferred` which gets a callback
 if the host key is valid, or an errback if it is not. Note that in the
 above, replace 'user' with the username you're attempting to ssh with,
 for instance a call to ``os.getlogin()`` for the
@@ -324,11 +324,11 @@ a ``Deferred`` that is called back with
 the password to use.
 
 ``getPublicKey()`` returns the SSH key data for the public key to use.
-:api:`Key <twisted.conch.ssh.keys.Key.fromString()>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :api:`Key <twisted.conch.ssh.keys.Key>`.
+:py:meth:`Key.fromString() <twisted.conch.ssh.keys.Key.fromString>` will take a key in OpenSSH, LSH or any supported format, as a string, and generate a new :py:class:`Key <twisted.conch.ssh.keys.Key>`.
 Alternatively, ``keys.Key.fromFile()`` can be used instead, which
-will take the filename of a key in the supported format, and  and generate a new  :api:`Key <twisted.conch.ssh.keys.Key>`.
+will take the filename of a key in the supported format, and  and generate a new  :py:class:`Key <twisted.conch.ssh.keys.Key>`.
 
-``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :api:`Key <twisted.conch.ssh.keys.Key>`.
+``getPrivateKey()`` returns a ``Deferred`` which is called back with the private :py:class:`Key <twisted.conch.ssh.keys.Key>`.
 
 ``getPassword()`` and ``getPrivateKey()`` return ``Deferreds`` because they may need to ask the user for input.
 
@@ -418,7 +418,7 @@ channel, and sends a request to the other side, using the ``sendRequest()`` meth
 events to the other side. We pass the method self so that it knows to
 send the request for this channel. The 2nd argument of 'exec' tells the
 server that we want to execute a command. The third argument is the data
-that accompanies the request. :api:`twisted.conch.ssh.common.NS <common.NS>` encodes
+that accompanies the request. :py:func:`common.NS <twisted.conch.ssh.common.NS>` encodes
 the data as a length-prefixed string, which is how the server expects
 the data. We also say that we want a reply saying that the process has a
 been started. ``sendRequest()`` then returns a ``Deferred`` which we add a callback for.
@@ -426,7 +426,7 @@ been started. ``sendRequest()`` then returns a ``Deferred`` which we add a callb
 
 
 
-Once the callback fires, we send the data. ``SSHChannel`` supports the :api:`twisted.internet.interfaces.ITransport <twisted.internet.interfaces.ITransport>` 
+Once the callback fires, we send the data. ``SSHChannel`` supports the :py:class:`twisted.internet.interfaces.ITransport` 
 interface, so
 it can be given to Protocols to run them over the secure
 connection. In our case, we just write the data directly. ``sendEOF()`` does not follow the interface,
@@ -470,7 +470,7 @@ The main() function
 
 We call ``connectTCP()`` to connect to
 localhost, port 22 (the standard port for ssh), and pass it an instance
-of :api:`twisted.internet.protocol.ClientFactory <twisted.internet.protocol.ClientFactory>` .
+of :py:class:`twisted.internet.protocol.ClientFactory` .
 This instance has the attribute ``protocol`` 
 set to our earlier ``ClientTransport`` 
 class. Note that the protocol attribute is set to the class ``ClientTransport`` , not an instance of ``ClientTransport`` ! When the ``connectTCP`` call completes, the protocol will be

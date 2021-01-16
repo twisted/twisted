@@ -14,6 +14,7 @@ class IPositioningReceiver(Interface):
     """
     An interface for positioning providers.
     """
+
     def positionReceived(latitude, longitude):
         """
         Method called when a position is received.
@@ -24,13 +25,12 @@ class IPositioningReceiver(Interface):
         @type longitude: L{twisted.positioning.base.Coordinate}
         """
 
-
     def positionErrorReceived(positionError):
         """
         Method called when position error is received.
 
-        @param positioningError: The position error.
-        @type positioningError: L{twisted.positioning.base.PositionError}
+        @param positionError: The position error.
+        @type positionError: L{twisted.positioning.base.PositionError}
         """
 
     def timeReceived(time):
@@ -42,7 +42,6 @@ class IPositioningReceiver(Interface):
         @type time: L{datetime.datetime}
         """
 
-
     def headingReceived(heading):
         """
         Method called when a true heading is received.
@@ -50,7 +49,6 @@ class IPositioningReceiver(Interface):
         @param heading: The heading.
         @type heading: L{twisted.positioning.base.Heading}
         """
-
 
     def altitudeReceived(altitude):
         """
@@ -60,7 +58,6 @@ class IPositioningReceiver(Interface):
         @type altitude: L{twisted.positioning.base.Altitude}
         """
 
-
     def speedReceived(speed):
         """
         Method called when the speed is received.
@@ -68,7 +65,6 @@ class IPositioningReceiver(Interface):
         @param speed: The speed of a mobile object.
         @type speed: L{twisted.positioning.base.Speed}
         """
-
 
     def climbReceived(climb):
         """
@@ -87,23 +83,24 @@ class IPositioningReceiver(Interface):
         """
 
 
-
 class IPositioningBeacon(Interface):
     """
     A positioning beacon.
     """
+
     identifier = Attribute(
         """
         A unique identifier for this beacon. The type is dependent on the
         implementation, but must be immutable.
-        """)
-
+        """
+    )
 
 
 class INMEAReceiver(Interface):
     """
     An object that can receive NMEA data.
     """
+
     def sentenceReceived(sentence):
         """
         Method called when a sentence is received.
@@ -113,9 +110,4 @@ class INMEAReceiver(Interface):
         """
 
 
-
-__all__ = [
-    "IPositioningReceiver",
-    "IPositioningBeacon",
-    "INMEAReceiver"
-]
+__all__ = ["IPositioningReceiver", "IPositioningBeacon", "INMEAReceiver"]

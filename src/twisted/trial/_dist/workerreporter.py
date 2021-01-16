@@ -15,7 +15,6 @@ from twisted.trial.reporter import TestResult
 from twisted.trial._dist import managercommands
 
 
-
 class WorkerReporter(TestResult):
     """
     Reporter for trial's distributed workers. We send things not through a
@@ -25,7 +24,7 @@ class WorkerReporter(TestResult):
         unexpected successes, used only if a C{Todo} is not provided.
     """
 
-    _DEFAULT_TODO = 'Test expected to fail'
+    _DEFAULT_TODO = "Test expected to fail"
 
     def __init__(self, ampProtocol):
         """
@@ -33,9 +32,8 @@ class WorkerReporter(TestResult):
             distributed manager which collects all test results.
         @type ampProtocol: C{AMP}
         """
-        super(WorkerReporter, self).__init__()
+        super().__init__()
         self.ampProtocol = ampProtocol
-
 
     def _getFailure(self, error):
         """
@@ -44,7 +42,6 @@ class WorkerReporter(TestResult):
         if isinstance(error, tuple):
             return Failure(error[1], error[0], error[2])
         return error
-
 
     def _getFrames(self, failure):
         """
@@ -55,62 +52,60 @@ class WorkerReporter(TestResult):
             frames.extend([frame[0], frame[1], str(frame[2])])
         return frames
 
-
     def addSuccess(self, test):
         """
         Send a success over.
         """
-        super(WorkerReporter, self).addSuccess(test)
+        super().addSuccess(test)
         testName = test.id()
-        self.ampProtocol.callRemote(managercommands.AddSuccess,
-                                    testName=testName)
-
+        self.ampProtocol.callRemote(managercommands.AddSuccess, testName=testName)
 
     def addError(self, test, error):
         """
         Send an error over.
         """
-        super(WorkerReporter, self).addError(test, error)
+        super().addError(test, error)
         testName = test.id()
         failure = self._getFailure(error)
         error = failure.getErrorMessage()
         errorClass = qual(failure.type)
         frames = [frame for frame in self._getFrames(failure)]
-        self.ampProtocol.callRemote(managercommands.AddError,
-                                    testName=testName,
-                                    error=error,
-                                    errorClass=errorClass,
-                                    frames=frames)
-
+        self.ampProtocol.callRemote(
+            managercommands.AddError,
+            testName=testName,
+            error=error,
+            errorClass=errorClass,
+            frames=frames,
+        )
 
     def addFailure(self, test, fail):
         """
         Send a Failure over.
         """
-        super(WorkerReporter, self).addFailure(test, fail)
+        super().addFailure(test, fail)
         testName = test.id()
         failure = self._getFailure(fail)
         fail = failure.getErrorMessage()
         failClass = qual(failure.type)
         frames = [frame for frame in self._getFrames(failure)]
-        self.ampProtocol.callRemote(managercommands.AddFailure,
-                                    testName=testName,
-                                    fail=fail,
-                                    failClass=failClass,
-                                    frames=frames)
-
+        self.ampProtocol.callRemote(
+            managercommands.AddFailure,
+            testName=testName,
+            fail=fail,
+            failClass=failClass,
+            frames=frames,
+        )
 
     def addSkip(self, test, reason):
         """
         Send a skip over.
         """
-        super(WorkerReporter, self).addSkip(test, reason)
+        super().addSkip(test, reason)
         reason = str(reason)
         testName = test.id()
-        self.ampProtocol.callRemote(managercommands.AddSkip,
-                                    testName=testName,
-                                    reason=reason)
-
+        self.ampProtocol.callRemote(
+            managercommands.AddSkip, testName=testName, reason=reason
+        )
 
     def _getTodoReason(self, todo):
         """
@@ -123,30 +118,31 @@ class WorkerReporter(TestResult):
         else:
             return todo.reason
 
-
     def addExpectedFailure(self, test, error, todo=None):
         """
         Send an expected failure over.
         """
-        super(WorkerReporter, self).addExpectedFailure(test, error, todo)
+        super().addExpectedFailure(test, error, todo)
         errorMessage = error.getErrorMessage()
         testName = test.id()
-        self.ampProtocol.callRemote(managercommands.AddExpectedFailure,
-                                    testName=testName,
-                                    error=errorMessage,
-                                    todo=self._getTodoReason(todo))
-
+        self.ampProtocol.callRemote(
+            managercommands.AddExpectedFailure,
+            testName=testName,
+            error=errorMessage,
+            todo=self._getTodoReason(todo),
+        )
 
     def addUnexpectedSuccess(self, test, todo=None):
         """
         Send an unexpected success over.
         """
-        super(WorkerReporter, self).addUnexpectedSuccess(test, todo)
+        super().addUnexpectedSuccess(test, todo)
         testName = test.id()
-        self.ampProtocol.callRemote(managercommands.AddUnexpectedSuccess,
-                                    testName=testName,
-                                    todo=self._getTodoReason(todo))
-
+        self.ampProtocol.callRemote(
+            managercommands.AddUnexpectedSuccess,
+            testName=testName,
+            todo=self._getTodoReason(todo),
+        )
 
     def printSummary(self):
         """

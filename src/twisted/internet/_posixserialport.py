@@ -18,7 +18,6 @@ from twisted.internet.serialport import BaseSerialPort
 from twisted.internet import abstract, fdesc
 
 
-
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):
     """
     A select()able serial device, acting as a transport.
@@ -26,14 +25,30 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
 
     connected = 1
 
-    def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-        baudrate = 9600, bytesize = EIGHTBITS, parity = PARITY_NONE,
-        stopbits = STOPBITS_ONE, timeout = 0, xonxoff = 0, rtscts = 0):
+    def __init__(
+        self,
+        protocol,
+        deviceNameOrPortNumber,
+        reactor,
+        baudrate=9600,
+        bytesize=EIGHTBITS,
+        parity=PARITY_NONE,
+        stopbits=STOPBITS_ONE,
+        timeout=0,
+        xonxoff=0,
+        rtscts=0,
+    ):
         abstract.FileDescriptor.__init__(self, reactor)
         self._serial = self._serialFactory(
-            deviceNameOrPortNumber, baudrate=baudrate, bytesize=bytesize,
-            parity=parity, stopbits=stopbits, timeout=timeout,
-            xonxoff=xonxoff, rtscts=rtscts)
+            deviceNameOrPortNumber,
+            baudrate=baudrate,
+            bytesize=bytesize,
+            parity=parity,
+            stopbits=stopbits,
+            timeout=timeout,
+            xonxoff=xonxoff,
+            rtscts=rtscts,
+        )
         self.reactor = reactor
         self.flushInput()
         self.flushOutput()
@@ -41,10 +56,8 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         self.protocol.makeConnection(self)
         self.startReading()
 
-
     def fileno(self):
         return self._serial.fd
-
 
     def writeSomeData(self, data):
         """
@@ -52,13 +65,11 @@ class SerialPort(BaseSerialPort, abstract.FileDescriptor):
         """
         return fdesc.writeToFD(self.fileno(), data)
 
-
     def doRead(self):
         """
         Some data's readable from serial device.
         """
         return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
-
 
     def connectionLost(self, reason):
         """

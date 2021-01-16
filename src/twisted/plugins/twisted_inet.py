@@ -7,4 +7,5 @@ TwistedINETD = ServiceMaker(
     "Twisted INETD Server",
     "twisted.runner.inetdtap",
     "An inetd(8) replacement.",
-    "inetd")
+    "inetd",
+)

@@ -12,7 +12,7 @@ Introduction
 
 On a network, one can think of any given connection as a long wire, stretched between two points.
 Lots of stuff can happen along the length of that wire - routers, switches, network address translation, and so on, but that is usually invisible to the application passing data across it.
-Twisted strives to make the nature of the "wire" as transparent as possible, with highly abstract interfaces for passing and receiving data, such as :api:`twisted.internet.interfaces.ITransport <ITransport>` and :api:`twisted.internet.interfaces.IProtocol <IProtocol>`.
+Twisted strives to make the nature of the "wire" as transparent as possible, with highly abstract interfaces for passing and receiving data, such as :py:class:`ITransport <twisted.internet.interfaces.ITransport>` and :py:class:`IProtocol <twisted.internet.interfaces.IProtocol>`.
 
 However, the application can't be completely ignorant of the wire.
 In particular, it must do something to *start* the connection, and
@@ -22,7 +22,7 @@ different names for the roles of each end point - "initiator" and
 common theme is that one side of the connection waits around for someone to
 connect to it, and the other side does the connecting.
 
-In Twisted 10.1, several new interfaces were introduced to describe each of these roles for stream-oriented connections: :api:`twisted.internet.interfaces.IStreamServerEndpoint <IStreamServerEndpoint>` and :api:`twisted.internet.interfaces.IStreamClientEndpoint <IStreamClientEndpoint>`.
+In Twisted 10.1, several new interfaces were introduced to describe each of these roles for stream-oriented connections: :py:class:`IStreamServerEndpoint <twisted.internet.interfaces.IStreamServerEndpoint>` and :py:class:`IStreamClientEndpoint <twisted.internet.interfaces.IStreamClientEndpoint>`.
 The word "stream", in this case, refers to endpoints which treat a connection as a continuous stream of bytes, rather than a sequence of discrete datagrams:
 TCP is a "stream" protocol whereas UDP is a "datagram" protocol.
 
@@ -35,7 +35,7 @@ you construct an appropriate type of server or client endpoint, and then call ``
 
 In both of those tutorials, we constructed specific types of endpoints directly.
 However, in most programs, you will want to allow the user to specify where to listen or connect, in a way which will allow the user to request different strategies, without having to adjust your program.
-In order to allow this, you should use :api:`twisted.internet.endpoints.clientFromString <clientFromString>` or :api:`twisted.internet.endpoints.serverFromString <serverFromString>`.
+In order to allow this, you should use :py:func:`clientFromString <twisted.internet.endpoints.clientFromString>` or :py:func:`serverFromString <twisted.internet.endpoints.serverFromString>`.
 
 
 There's Not Much To It
@@ -52,14 +52,14 @@ However, if you are not already, you *should* be very familiar with :doc:`Deferr
 Servers and Stopping
 ~~~~~~~~~~~~~~~~~~~~
 
-:api:`twisted.internet.interfaces.IStreamServerEndpoint.listen <IStreamServerEndpoint.listen>` returns a :api:`twisted.internet.defer.Deferred <Deferred>` that fires with an :api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`.
+:py:meth:`IStreamServerEndpoint.listen <twisted.internet.interfaces.IStreamServerEndpoint.listen>` returns a :py:class:`Deferred <twisted.internet.defer.Deferred>` that fires with an :py:class:`IListeningPort <twisted.internet.interfaces.IListeningPort>`.
 Note that this deferred may errback.
 The most common cause of such an error would be that another program is already using the requested port number, but the exact cause may vary depending on what type of endpoint you are listening on.
 If you receive such an error, it means that your application is not actually listening, and will not receive any incoming connections.
 It's important to somehow alert an administrator of your server, in this case, especially if you only have one listening port!
 
 Note also that once this has succeeded, it will continue listening forever.
-If you need to *stop* listening for some reason, in response to anything other than a full server shutdown (``reactor.stop`` and / or ``twistd`` will usually handle that case for you), make sure you keep a reference around to that listening port object so you can call :api:`twisted.internet.interfaces.IListeningPort.stopListening <IListeningPort.stopListening>` on it.
+If you need to *stop* listening for some reason, in response to anything other than a full server shutdown (``reactor.stop`` and / or ``twistd`` will usually handle that case for you), make sure you keep a reference around to that listening port object so you can call :py:meth:`IListeningPort.stopListening <twisted.internet.interfaces.IListeningPort.stopListening>` on it.
 Finally, keep in mind that ``stopListening`` itself returns a ``Deferred``, and the port may not have fully stopped listening until that ``Deferred`` has fired.
 
 Most server applications will not need to worry about these details.
@@ -69,18 +69,18 @@ One example of a case where you would need to be concerned with all of these eve
 Clients and Cancelling
 ~~~~~~~~~~~~~~~~~~~~~~
 
-:api:`twisted.internet.endpoints.connectProtocol <connectProtocol>` connects a :api:`twisted.internet.protocol.Protocol <Protocol>` instance to a given :api:`twisted.internet.interfaces.IStreamClientEndpoint <IStreamClientEndpoint>`. It returns a ``Deferred`` which fires with the ``Protocol`` once the connection has been made.
-Connection attempts may fail, and so that :api:`twisted.internet.defer.Deferred <Deferred>` may also errback.
+:py:func:`connectProtocol <twisted.internet.endpoints.connectProtocol>` connects a :py:class:`Protocol <twisted.internet.protocol.Protocol>` instance to a given :py:class:`IStreamClientEndpoint <twisted.internet.interfaces.IStreamClientEndpoint>`. It returns a ``Deferred`` which fires with the ``Protocol`` once the connection has been made.
+Connection attempts may fail, and so that :py:class:`Deferred <twisted.internet.defer.Deferred>` may also errback.
 If it does so, you will have to try again; no further attempts will be made.
 See the :doc:`client documentation <clients>` for an example use.
 
-:api:`twisted.internet.endpoints.connectProtocol <connectProtocol>` is a wrapper around a lower-level API:
-:api:`twisted.internet.interfaces.IStreamClientEndpoint.connect <IStreamClientEndpoint.connect>` will use a protocol factory for a new outgoing connection attempt.
+:py:func:`connectProtocol <twisted.internet.endpoints.connectProtocol>` is a wrapper around a lower-level API:
+:py:meth:`IStreamClientEndpoint.connect <twisted.internet.interfaces.IStreamClientEndpoint.connect>` will use a protocol factory for a new outgoing connection attempt.
 It returns a ``Deferred`` which fires with the ``IProtocol`` returned from the factory's ``buildProtocol`` method, or errbacks with the connection failure.
 
 Connection attempts may also take a long time, and your users may become bored and wander off.
-If this happens, and your code decides, for whatever reason, that you've been waiting for the connection too long, you can call :api:`twisted.internet.defer.Deferred.cancel <Deferred.cancel>` on the ``Deferred`` returned from :api:`twisted.internet.interfaces.IStreamClientEndpoint.connect <connect>` or :api:`twisted.internet.endpoints.connectProtocol <connectProtocol>`, and the underlying machinery should give up on the connection.
-This should cause the ``Deferred`` to errback, usually with :api:`twisted.internet.defer.CancelledError <CancelledError>`;
+If this happens, and your code decides, for whatever reason, that you've been waiting for the connection too long, you can call :py:meth:`Deferred.cancel <twisted.internet.defer.Deferred.cancel>` on the ``Deferred`` returned from :py:meth:`connect <twisted.internet.interfaces.IStreamClientEndpoint.connect>` or :py:func:`connectProtocol <twisted.internet.endpoints.connectProtocol>`, and the underlying machinery should give up on the connection.
+This should cause the ``Deferred`` to errback, usually with :py:class:`CancelledError <twisted.internet.defer.CancelledError>`;
 although you should consult the documentation for your particular endpoint type to see if it may do something different.
 
 Although some endpoint types may imply a built-in timeout, the
@@ -105,7 +105,7 @@ implemented like this:
 Persistent Client Connections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:api:`twisted.application.internet.ClientService` can maintain a persistent outgoing connection to a server which can be started and stopped along with your application.
+:py:class:`twisted.application.internet.ClientService` can maintain a persistent outgoing connection to a server which can be started and stopped along with your application.
 
 One popular protocol to maintain a long-lived client connection to is IRC, so for an example of ``ClientService``, here's how you would make a long-lived encrypted connection to an IRC server (other details, like how to authenticate, omitted for brevity):
 
@@ -169,7 +169,7 @@ Setting it to 2 means it will try once, wait a bit, try again, and then either f
 You can use 3 or more too, if you're feeling particularly patient.
 The default of ``None`` means it will wait forever for a successful connection.
 
-Regardless of ``failAfterFailures``, the ``Deferred`` will always fail with :api:`twisted.internet.defer.CancelledError <CancelledError>` if the service is stopped before a connection is made.
+Regardless of ``failAfterFailures``, the ``Deferred`` will always fail with :py:class:`CancelledError <twisted.internet.defer.CancelledError>` if the service is stopped before a connection is made.
 
 .. code-block:: python
 
@@ -201,7 +201,7 @@ If you need to tune these parameters, you have two options:
 
    Of course, unless you have only one client and only one server and they're both on localhost, this sort of policy is likely to cause massive performance degradation and thundering herd resource contention in the event of your server's failure, so you probably want to take the second option...
 
-2. You can tweak the default exponential backoff policy with a few parameters by passing the result of :api:`twisted.application.internet.backoffPolicy` to the ``retryPolicy`` argument.
+2. You can tweak the default exponential backoff policy with a few parameters by passing the result of :py:func:`twisted.application.internet.backoffPolicy` to the ``retryPolicy`` argument.
    For example, if you want to make it triple the delay between attempts, but start with a faster connection interval (half a second instead of one second), you could do it like so:
 
    .. code-block:: python
@@ -234,7 +234,7 @@ your code to accept client and server endpoints as parameters to functions
 or to your objects' constructors. That way, application code that calls
 your library can provide whatever endpoints are appropriate.
 
-If you are writing an application and you need to construct endpoints yourself, you can allow users to specify arbitrary endpoints described by a string using the :api:`twisted.internet.endpoints.clientFromString <clientFromString>` and :api:`twisted.internet.endpoints.serverFromString <serverFromString>` APIs.
+If you are writing an application and you need to construct endpoints yourself, you can allow users to specify arbitrary endpoints described by a string using the :py:func:`clientFromString <twisted.internet.endpoints.clientFromString>` and :py:func:`serverFromString <twisted.internet.endpoints.serverFromString>` APIs.
 Since these APIs just take a string, they provide flexibility:
 if Twisted adds support for new types of endpoints (for example, IPv6 endpoints, or WebSocket endpoints), your application will automatically be able to take advantage of them with no changes to its code.
 
@@ -243,10 +243,10 @@ Endpoints Aren't Always the Answer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For many use-cases, especially the common case of a ``twistd`` plugin which runs a long-running server that just binds a simple port, you might not want to use the endpoints APIs directly.
-Instead, you may want to construct an :api:`twisted.application.service.IService <IService>`, using :api:`twisted.application.strports.service <strports.service>`, which will fit neatly into the required structure of :doc:`the twistd plugin API <plugin>`.
+Instead, you may want to construct an :py:class:`IService <twisted.application.service.IService>`, using :py:func:`strports.service <twisted.application.strports.service>`, which will fit neatly into the required structure of :doc:`the twistd plugin API <plugin>`.
 This doesn't give your application much control - the port starts listening at startup and stops listening at shutdown - but it does provide the same flexibility in terms of what type of server endpoint your application will support.
 
-It is, however, almost always preferable to use an endpoint rather than calling a lower-level APIs like :api:`twisted.internet.interfaces.IReactorTCP.connectTCP <connectTCP>`, :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>`, etc, directly.
+It is, however, almost always preferable to use an endpoint rather than calling a lower-level APIs like :py:meth:`connectTCP <twisted.internet.interfaces.IReactorTCP.connectTCP>`, :py:meth:`listenTCP <twisted.internet.interfaces.IReactorTCP.listenTCP>`, etc, directly.
 By accepting an arbitrary endpoint rather than requiring a specific reactor interface, you leave your application open to lots of interesting transport-layer extensibility for the future.
 
 

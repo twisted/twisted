@@ -11,6 +11,7 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 
 # System Imports
 import os, copy
+
 try:
     import pwd
 except ImportError:
@@ -48,33 +49,34 @@ class Request(pb.RemoteCopy, server.Request):
     A request which was received by a L{ResourceSubscription} and sent via
     PB to a distributed node.
     """
+
     def setCopyableState(self, state):
         """
         Initialize this L{twisted.web.distrib.Request} based on the copied
         state so that it closely resembles a L{twisted.web.server.Request}.
         """
-        for k in 'host', 'client':
+        for k in "host", "client":
             tup = state[k]
-            addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
-            addr = {'TCP': lambda: address.IPv4Address(addrdesc,
-                                                       tup[1], tup[2]),
-                    'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
+            addrdesc = {"INET": "TCP", "UNIX": "UNIX"}[tup[0]]
+            addr = {
+                "TCP": lambda: address.IPv4Address(addrdesc, tup[1], tup[2]),
+                "UNIX": lambda: address.UNIXAddress(tup[1]),
+            }[addrdesc]()
             state[k] = addr
-        state['requestHeaders'] = Headers(dict(state['requestHeaders']))
+        state["requestHeaders"] = Headers(dict(state["requestHeaders"]))
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.content = BytesIO(self.content_data)
-        self.finish           = self.remote.remoteMethod('finish')
-        self.setHeader        = self.remote.remoteMethod('setHeader')
-        self.addCookie        = self.remote.remoteMethod('addCookie')
-        self.setETag          = self.remote.remoteMethod('setETag')
-        self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
-        self.setLastModified  = self.remote.remoteMethod('setLastModified')
+        self.finish = self.remote.remoteMethod("finish")
+        self.setHeader = self.remote.remoteMethod("setHeader")
+        self.addCookie = self.remote.remoteMethod("addCookie")
+        self.setETag = self.remote.remoteMethod("setETag")
+        self.setResponseCode = self.remote.remoteMethod("setResponseCode")
+        self.setLastModified = self.remote.remoteMethod("setLastModified")
 
         # To avoid failing if a resource tries to write a very long string
         # all at once, this one will be handled slightly differently.
-        self._write = self.remote.remoteMethod('write')
-
+        self._write = self.remote.remoteMethod("write")
 
     def write(self, bytes):
         """
@@ -92,20 +94,20 @@ class Request(pb.RemoteCopy, server.Request):
             if start >= len(bytes):
                 break
 
-
     def registerProducer(self, producer, streaming):
-        self.remote.callRemote("registerProducer",
-                               _ReferenceableProducerWrapper(producer),
-                               streaming).addErrback(self.fail)
+        self.remote.callRemote(
+            "registerProducer", _ReferenceableProducerWrapper(producer), streaming
+        ).addErrback(self.fail)
 
     def unregisterProducer(self):
         self.remote.callRemote("unregisterProducer").addErrback(self.fail)
 
     def fail(self, failure):
-        self._log.failure('', failure=failure)
+        self._log.failure("", failure=failure)
 
 
 pb.setUnjellyableForClass(server.Request, Request)
+
 
 class Issue:
     _log = Logger()
@@ -120,14 +122,15 @@ class Issue:
             self.request.finish()
 
     def failed(self, failure):
-        #XXX: Argh. FIXME.
+        # XXX: Argh. FIXME.
         failure = str(failure)
         self.request.write(
-            resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                               "Server Connection Lost",
-                               "Connection to distributed server lost:" +
-                               util._PRE(failure)).
-            render(self.request))
+            resource.ErrorPage(
+                http.INTERNAL_SERVER_ERROR,
+                "Server Connection Lost",
+                "Connection to distributed server lost:" + util._PRE(failure),
+            ).render(self.request)
+        )
         self.request.finish()
         self._log.info(failure)
 
@@ -145,22 +148,20 @@ class ResourceSubscription(resource.Resource):
         self.publisher = None
 
     def __getstate__(self):
-        """Get persistent state for this ResourceSubscription.
-        """
+        """Get persistent state for this ResourceSubscription."""
         # When I unserialize,
         state = copy.copy(self.__dict__)
         # Publisher won't be connected...
-        state['publisher'] = None
+        state["publisher"] = None
         # I won't be making a connection
-        state['waiting'] = 0
+        state["waiting"] = 0
         # There will be no pending requests.
-        state['pending'] = []
+        state["pending"] = []
         return state
 
     def connected(self, publisher):
-        """I've connected to a publisher; I'll now send all my requests.
-        """
-        self._log.info('connected to publisher')
+        """I've connected to a publisher; I'll now send all my requests."""
+        self._log.info("connected to publisher")
         publisher.broker.notifyOnDisconnect(self.booted)
         self.publisher = publisher
         self.waiting = 0
@@ -172,10 +173,7 @@ class ResourceSubscription(resource.Resource):
         """I can't connect to a publisher; I'll now reply to all pending
         requests.
         """
-        self._log.info(
-            "could not connect to distributed web service: {msg}",
-            msg=msg
-        )
+        self._log.info("could not connect to distributed web service: {msg}", msg=msg)
         self.waiting = 0
         self.publisher = None
         for request in self.pending:
@@ -209,9 +207,10 @@ class ResourceSubscription(resource.Resource):
 
         else:
             i = Issue(request)
-            self.publisher.callRemote('request', request).addCallbacks(i.finished, i.failed)
+            self.publisher.callRemote("request", request).addCallbacks(
+                i.finished, i.failed
+            )
         return server.NOT_DONE_YET
-
 
 
 class ResourcePublisher(pb.Root, styles.Versioned):
@@ -222,6 +221,7 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     @ivar site: The site which will be used for resource lookup.
     @type site: L{twisted.web.server.Site}
     """
+
     _log = Logger()
 
     def __init__(self, site):
@@ -239,7 +239,6 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     def getPerspectiveNamed(self, name):
         return self
 
-
     def remote_request(self, request):
         """
         Look up the resource for the given request and render it.
@@ -253,7 +252,6 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         return server.NOT_DONE_YET
 
 
-
 class UserDirectory(resource.Resource):
     """
     A resource which lists available user resources and serves them as
@@ -263,8 +261,8 @@ class UserDirectory(resource.Resource):
         their home directories.
     """
 
-    userDirName = 'public_html'
-    userSocketName = '.twistd-web-pb'
+    userDirName = "public_html"
+    userSocketName = ".twistd-web-pb"
 
     template = """
 <html>
@@ -314,7 +312,6 @@ class UserDirectory(resource.Resource):
             userDatabase = pwd
         self._pwd = userDatabase
 
-
     def _users(self):
         """
         Return a list of two-tuples giving links to user resources and text to
@@ -323,17 +320,16 @@ class UserDirectory(resource.Resource):
         users = []
         for user in self._pwd.getpwall():
             name, passwd, uid, gid, gecos, dir, shell = user
-            realname = gecos.split(',')[0]
+            realname = gecos.split(",")[0]
             if not realname:
                 realname = name
             if os.path.exists(os.path.join(dir, self.userDirName)):
-                users.append((name, realname + ' (file)'))
+                users.append((name, realname + " (file)"))
             twistdsock = os.path.join(dir, self.userSocketName)
             if os.path.exists(twistdsock):
-                linkName = name + '.twistd'
-                users.append((linkName, realname + ' (twistd)'))
+                linkName = name + ".twistd"
+                users.append((linkName, realname + " (twistd)"))
         return users
-
 
     def render_GET(self, request):
         """
@@ -345,38 +341,44 @@ class UserDirectory(resource.Resource):
         newDoc = domImpl.createDocument(None, "ul", None)
         listing = newDoc.documentElement
         for link, text in self._users():
-            linkElement = newDoc.createElement('a')
-            linkElement.setAttribute('href', link + '/')
+            linkElement = newDoc.createElement("a")
+            linkElement.setAttribute("href", link + "/")
             textNode = newDoc.createTextNode(text)
             linkElement.appendChild(textNode)
-            item = newDoc.createElement('li')
+            item = newDoc.createElement("li")
             item.appendChild(linkElement)
             listing.appendChild(item)
 
-        htmlDoc = self.template % ({'users': listing.toxml()})
+        htmlDoc = self.template % ({"users": listing.toxml()})
         return htmlDoc.encode("utf-8")
 
-
     def getChild(self, name, request):
-        if name == '':
+        if name == "":
             return self
 
-        td = '.twistd'
+        td = ".twistd"
 
-        if name[-len(td):] == td:
-            username = name[:-len(td)]
+        if name[-len(td) :] == td:
+            username = name[: -len(td)]
             sub = 1
         else:
             username = name
             sub = 0
         try:
-            pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                     = self._pwd.getpwnam(username)
+            (
+                pw_name,
+                pw_passwd,
+                pw_uid,
+                pw_gid,
+                pw_gecos,
+                pw_dir,
+                pw_shell,
+            ) = self._pwd.getpwnam(username)
         except KeyError:
             return resource.NoResource()
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
-            rs = ResourceSubscription('unix',twistdsock)
+            rs = ResourceSubscription("unix", twistdsock)
             self.putChild(name, rs)
             return rs
         else:

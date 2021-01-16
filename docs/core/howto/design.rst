@@ -88,7 +88,7 @@ program.  Although the Twisted "dot products" are highly interoperable,
 they
 also follow this approach.  You can use them independently because they are not
 stuck to each other.  They communicate in well-defined ways, and only when that
-communication provides some additional feature.  Thus, you can use :api:`twisted.web <twisted.web>` with :api:`twisted.enterprise <twisted.enterprise>` , but neither requires the other, because
+communication provides some additional feature.  Thus, you can use :py:mod:`twisted.web` with :py:mod:`twisted.enterprise` , but neither requires the other, because
 they are integrated around the concept of :doc:`Deferreds <defer>` .
 
 

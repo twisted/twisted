@@ -6,7 +6,7 @@ Tests for interrupting tests with Control-C.
 """
 
 
-from twisted.python.compat import NativeStringIO
+from io import StringIO
 
 from twisted.trial import unittest
 from twisted.trial import reporter, runner
@@ -14,7 +14,7 @@ from twisted.trial import reporter, runner
 
 class TrialTest(unittest.SynchronousTestCase):
     def setUp(self):
-        self.output = NativeStringIO()
+        self.output = StringIO()
         self.reporter = reporter.TestResult()
         self.loader = runner.TestLoader()
 
@@ -31,7 +31,7 @@ class InterruptInTestTests(TrialTest):
             InterruptInTestTests.test_03_doNothing_run = True
 
     def setUp(self):
-        super(InterruptInTestTests, self).setUp()
+        super().setUp()
         self.suite = self.loader.loadClass(InterruptInTestTests.InterruptedTest)
         InterruptInTestTests.test_03_doNothing_run = None
 
@@ -44,8 +44,9 @@ class InterruptInTestTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.assertFalse(InterruptInTestTests.test_03_doNothing_run,
-                    "test_03_doNothing ran.")
+        self.assertFalse(
+            InterruptInTestTests.test_03_doNothing_run, "test_03_doNothing ran."
+        )
 
 
 class InterruptInSetUpTests(TrialTest):
@@ -64,9 +65,8 @@ class InterruptInSetUpTests(TrialTest):
             InterruptInSetUpTests.test_02_run = True
 
     def setUp(self):
-        super(InterruptInSetUpTests, self).setUp()
-        self.suite = self.loader.loadClass(
-            InterruptInSetUpTests.InterruptedTest)
+        super().setUp()
+        self.suite = self.loader.loadClass(InterruptInSetUpTests.InterruptedTest)
         InterruptInSetUpTests.test_02_run = False
         InterruptInSetUpTests.testsRun = 0
 
@@ -80,8 +80,7 @@ class InterruptInSetUpTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertTrue(self.reporter.shouldStop)
         self.assertEqual(2, self.reporter.testsRun)
-        self.assertFalse(InterruptInSetUpTests.test_02_run,
-                    "test_02 ran")
+        self.assertFalse(InterruptInSetUpTests.test_02_run, "test_02 ran")
 
 
 class InterruptInTearDownTests(TrialTest):
@@ -100,9 +99,8 @@ class InterruptInTearDownTests(TrialTest):
             InterruptInTearDownTests.test_02_run = True
 
     def setUp(self):
-        super(InterruptInTearDownTests, self).setUp()
-        self.suite = self.loader.loadClass(
-            InterruptInTearDownTests.InterruptedTest)
+        super().setUp()
+        self.suite = self.loader.loadClass(InterruptInTearDownTests.InterruptedTest)
         InterruptInTearDownTests.testsRun = 0
         InterruptInTearDownTests.test_02_run = False
 
@@ -116,5 +114,4 @@ class InterruptInTearDownTests(TrialTest):
         runner.TrialSuite([self.suite]).run(self.reporter)
         self.assertEqual(1, self.reporter.testsRun)
         self.assertTrue(self.reporter.shouldStop)
-        self.assertFalse(InterruptInTearDownTests.test_02_run,
-                    "test_02 ran")
+        self.assertFalse(InterruptInTearDownTests.test_02_run, "test_02 ran")

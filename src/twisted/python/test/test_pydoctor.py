@@ -8,12 +8,12 @@ from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
 
-model = requireModule('pydoctor.model')
+model = requireModule("pydoctor.model")
 pydoctorSkip = None
 TwistedSphinxInventory = object
 TwistedSystem = object
 if model is None:
-    pydoctorSkip = 'Pydoctor is not present.'
+    pydoctorSkip = "Pydoctor is not present."
 else:
     # We have a valid pydoctor.
     from twisted.python._pydoctor import TwistedSphinxInventory, TwistedSystem
@@ -23,6 +23,7 @@ class TwistedSystemTests(TestCase):
     """
     Tests for L{TwistedSystem}.
     """
+
     skip = pydoctorSkip
 
     def test_initCustomSphinxInventory(self):
@@ -33,7 +34,6 @@ class TwistedSystemTests(TestCase):
 
         self.assertIsInstance(sut.intersphinx, TwistedSphinxInventory)
 
-
     def test_privacyClassBaseTestPackage(self):
         """
         The base I{twisted.test} package is visible to allow traversal to a
@@ -42,21 +42,18 @@ class TwistedSystemTests(TestCase):
         sut = TwistedSystem()
         twistedPackage = model.Package(
             system=sut,
-            name='twisted',
-            docstring='ignored',
+            name="twisted",
             parent=None,
-            )
+        )
         twistedTestPackage = model.Package(
             system=sut,
-            name='test',
-            docstring='ignored',
+            name="test",
             parent=twistedPackage,
-            )
+        )
 
         result = sut.privacyClass(twistedTestPackage)
 
         self.assertIs(result, model.PrivacyClass.VISIBLE)
-
 
     def test_privacyClassProtoHelpers(self):
         """
@@ -65,27 +62,23 @@ class TwistedSystemTests(TestCase):
         sut = TwistedSystem()
         twistedPackage = model.Package(
             system=sut,
-            name='twisted',
-            docstring='ignored',
+            name="twisted",
             parent=None,
-            )
+        )
         twistedTestPackage = model.Package(
             system=sut,
-            name='test',
-            docstring='ignored',
+            name="test",
             parent=twistedPackage,
-            )
+        )
         twistedProtoHelpersModule = model.Module(
             system=sut,
-            name='proto_helpers',
-            docstring='ignored',
+            name="proto_helpers",
             parent=twistedTestPackage,
-            )
+        )
 
         result = sut.privacyClass(twistedProtoHelpersModule)
 
         self.assertIs(result, model.PrivacyClass.VISIBLE)
-
 
     def test_privacyClassChildTestModule(self):
         """
@@ -94,28 +87,23 @@ class TwistedSystemTests(TestCase):
         sut = TwistedSystem()
         twistedPackage = model.Package(
             system=sut,
-            name='twisted',
-            docstring='ignored',
+            name="twisted",
             parent=None,
-            )
+        )
         twistedTestPackage = model.Package(
             system=sut,
-            name='test',
-            docstring='ignored',
+            name="test",
             parent=twistedPackage,
-            )
+        )
         twistedAnyTestModule = model.Module(
             system=sut,
-            name='other_child',
-            docstring='ignored',
+            name="other_child",
             parent=twistedTestPackage,
-            )
-
+        )
 
         result = sut.privacyClass(twistedAnyTestModule)
 
         self.assertIs(result, model.PrivacyClass.HIDDEN)
-
 
     def test_privacyClassPublicCode(self):
         """
@@ -125,28 +113,24 @@ class TwistedSystemTests(TestCase):
         sut = TwistedSystem()
         twistedPackage = model.Package(
             system=sut,
-            name='twisted',
-            docstring='ignored',
+            name="twisted",
             parent=None,
-            )
+        )
         twistedSubProjectPackage = model.Package(
             system=sut,
-            name='subproject',
-            docstring='ignored',
+            name="subproject",
             parent=twistedPackage,
-            )
+        )
         twistedSubProjectModule = model.Module(
             system=sut,
-            name='other_child',
-            docstring='ignored',
+            name="other_child",
             parent=twistedSubProjectPackage,
-            )
+        )
         twistedPrivateModule = model.Module(
             system=sut,
-            name='_private_child',
-            docstring='ignored',
+            name="_private_child",
             parent=twistedSubProjectPackage,
-            )
+        )
 
         result = sut.privacyClass(twistedSubProjectPackage)
         self.assertIs(result, model.PrivacyClass.VISIBLE)
@@ -158,11 +142,11 @@ class TwistedSystemTests(TestCase):
         self.assertIs(result, model.PrivacyClass.PRIVATE)
 
 
-
 class TwistedSphinxInventoryTests(TestCase):
     """
     Tests for L{TwistedSphinxInventory}.
     """
+
     skip = pydoctorSkip
 
     def getInventoryWithZope(self):
@@ -173,19 +157,18 @@ class TwistedSphinxInventoryTests(TestCase):
             inter sphinx links loaded.
         @rtype: L{TwistedSphinxInventory}
         """
-        inventory = TwistedSphinxInventory(
-            logger=object(), project_name='Super Duper')
+        inventory = TwistedSphinxInventory(logger=object(), project_name="Super Duper")
 
-        zopeBaseURL = 'https://zope.tld'
-        zopeAPIURL = 'api.html#$'
-        inventory._links.update({
-            'zope.interface.interfaces.IInterface': (zopeBaseURL, zopeAPIURL),
-            'zope.interface.declarations.implementer': (
-                zopeBaseURL, zopeAPIURL),
-            })
+        zopeBaseURL = "https://zope.tld"
+        zopeAPIURL = "api.html#$"
+        inventory._links.update(
+            {
+                "zope.interface.interfaces.IInterface": (zopeBaseURL, zopeAPIURL),
+                "zope.interface.declarations.implementer": (zopeBaseURL, zopeAPIURL),
+            }
+        )
 
         return inventory
-
 
     def test_getLinkExistentInInterSphinx(self):
         """
@@ -193,12 +176,11 @@ class TwistedSphinxInventoryTests(TestCase):
         """
         sut = self.getInventoryWithZope()
 
-        result = sut.getLink('zope.interface.interfaces.IInterface')
+        result = sut.getLink("zope.interface.interfaces.IInterface")
 
         self.assertEqual(
-            'https://zope.tld/api.html#zope.interface.interfaces.IInterface',
-            result)
-
+            "https://zope.tld/api.html#zope.interface.interfaces.IInterface", result
+        )
 
     def test_getLinkZopeNonExistent(self):
         """
@@ -209,12 +191,11 @@ class TwistedSphinxInventoryTests(TestCase):
 
         # Interface is at zope.interface.interfaces.IInterface so using the
         # short name will fail to find the url.
-        result = sut.getLink('zope.interface.Interface')
+        result = sut.getLink("zope.interface.Interface")
         self.assertIsNone(result)
         # Any unknown reference returns None.
-        result = sut.getLink('zope.interface.NoSuchReference')
+        result = sut.getLink("zope.interface.NoSuchReference")
         self.assertIsNone(result)
-
 
     def test_getLinkZopeAdapterRegistry(self):
         """
@@ -223,6 +204,6 @@ class TwistedSphinxInventoryTests(TestCase):
         """
         sut = self.getInventoryWithZope()
 
-        result = sut.getLink('zope.interface.adapter.AdapterRegistry')
+        result = sut.getLink("zope.interface.adapter.AdapterRegistry")
 
-        self.assertEqual('https://zope.tld/adapter.html', result)
+        self.assertEqual("https://zope.tld/adapter.html", result)

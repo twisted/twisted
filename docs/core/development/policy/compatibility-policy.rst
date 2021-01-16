@@ -97,13 +97,13 @@ Procedure for Exceptions to this Policy
 
 **Every change is unique.**
 
-Sometimes, we'll want to make a change that fits with this spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
-Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior that unanticipated, hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
+Sometimes, we'll want to make a change that fits with the spirit of this document (keeping Twisted working for applications which rely upon it) but may not fit with the letter of the procedure described above (the change modifies behavior of an existing API sufficiently that something might break).
+Generally, the reason that one would want to do this is to give applications a performance enhancement or bug fix that could break behavior in unintended hypothetical uses of an existing API, but we don't want well-behaved applications to pay the penalty of a deprecation/adopt-a-new-API/removal cycle in order to get the benefits of the improvement if they don't need to.
 
 If this is the case for your change, it's possible to make such a modification without a deprecation/removal cycle.
 However, we must give users an opportunity to discover whether a particular incompatible change affects them: we should not trust our own assessments of how code uses the API.
 In order to propose an incompatible change, start a discussion on the mailing list.
-Make sure that it is eye-catching so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
+Make sure that it is eye-catching, so those who don't read all list messages in depth will notice it, by prefixing the subject with **INCOMPATIBLE CHANGE:** (capitalized like so).
 Always include a link to the ticket, and branch (if relevant).
 
 In order to **conclude** such a discussion, there must be a branch available so that developers can run their unit tests against it to mechanically verify that their understanding of their own code is correct.
@@ -117,7 +117,7 @@ The branch must be available for one week's time.
     The announcement forum for incompatible changes and the waiting period required are subject to change as we discover how effective this method is; the important aspect of this policy is that users have some way of finding out in advance about changes which might affect them.
 
 
-Compatible Changes. Changed not Covered by the Compatibility Policy
+Compatible Changes. Changes not Covered by the Compatibility Policy
 -------------------------------------------------------------------
 
 Here is a non-exhaustive list of changes which are not covered by the compatibility policy.
@@ -132,8 +132,6 @@ By doing so, there's no chance anything could access these objects by going thro
 
 Test code and test helpers are considered private API and should not be imported outside
 of the Twisted testing infrastructure.
-As an exception to this, :api:`twisted.test.proto_helpers` is considered a public API
-(see `#6435 <https://twistedmatrix.com/trac/ticket/6435>`_ for more discussion).
 
 
 Private Changes
@@ -162,14 +160,14 @@ The most basic thing that can happen between Twisted versions, of course, is tha
 That means that no application may ever rely on, for example, the value of any **func_code** object's **co_code** attribute remaining stable, or the **checksum** of a .py file remaining stable.
 
 **Docstrings** may also change at any time.
-No application code may expect any Twisted class, module, or method's __doc__ attribute to remain the same.
+Applications must not depend on any Twisted class, module, or method's metadata attributes such as ``__module__``, ``__name__``, ``__qualname__``, ``__annotations__`` and ``__doc__`` to remain the same.
 
 
 New Attributes
 ^^^^^^^^^^^^^^
 
 New code may also be added.
-No application may ever rely on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
+Applications must not depend on the output of the ``dir()`` function on any object remaining stable, nor on any object's ``__all__`` attribute, nor on any object's ``__dict__`` not having new keys added to it.
 These may happen in any maintenance or bugfix release, no matter how minor.
 
 
@@ -177,8 +175,21 @@ Pickling
 ^^^^^^^^
 
 Even though Python objects can be pickled and unpickled without explicit support for this, whether a particular pickled object can be unpickled after any particular change to the implementation of that object is less certain.
-Because of this, no application may depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
+Because of this, applications must not depend on any object defined by Twisted to provide pickle compatibility between any release unless the object explicitly documents this as a feature it has.
 
+
+Representations
+^^^^^^^^^^^^^^^
+
+The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
+Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
+Attribute Access
+^^^^^^^^^^^^^^^^
+How an object's attributes are defined and accessed is considered an implementation detail.
+To allow backwards compatibility, an attribute may be moved from the instance ``__dict__`` into an ``@property`` or other descriptor based accessor.
+
+Adding new attributes to a constructed object, or monkey patching, is not considered a public use. This restriction allows both creating and converting to slotted classes.
+Because of this, applications must not depend on any object defined by Twisted to provide ``__dict__`` or ``__slots__`` compatibility between any release.
 
 Changes Covered by the Compatibility Policy
 -------------------------------------------
@@ -306,7 +317,7 @@ How to deprecate APIs
 Classes
 ^^^^^^^
 
-Classes are deprecated by raising a warning when they are access from within their module, using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
+Classes are deprecated by raising a warning when they are access from within their module, using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 
@@ -328,7 +339,7 @@ The warning should be of type ``DeprecationWarning`` and the stack level should 
 The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
 If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
 
-There is also a :api:`twisted.python.deprecate.deprecated <deprecated>` decorator which works for new-style classes.
+There is also a :py:func:`deprecated <twisted.python.deprecate.deprecated>` decorator which works for new-style classes.
 
 For example:
 
@@ -374,7 +385,7 @@ Instance attributes
 ^^^^^^^^^^^^^^^^^^^
 
 To deprecate an attribute on instances of a new-type class, make the attribute into a property and call ``warnings.warn`` from the getter and/or setter function for that property.
-You can also use the :api:`twisted.python.deprecate.deprecatedProperty <deprecatedProperty>` decorator which works for new-style classes.
+You can also use the :py:func:`deprecatedProperty <twisted.python.deprecate.deprecatedProperty>` decorator which works for new-style classes.
 
 .. code-block:: python
 
@@ -414,7 +425,7 @@ You can also use the :api:`twisted.python.deprecate.deprecatedProperty <deprecat
 Module attributes
 ^^^^^^^^^^^^^^^^^
 
-Modules cannot have properties, so module attributes should be deprecated using the :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` helper.
+Modules cannot have properties, so module attributes should be deprecated using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 
@@ -434,7 +445,7 @@ Modules cannot have properties, so module attributes should be deprecated using 
 Modules
 ^^^^^^^
 
-To deprecate an entire module, :api:`twisted.python.deprecate.deprecatedModuleAttribute <deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
+To deprecate an entire module, :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
 
 There are two other options:
 
@@ -457,11 +468,11 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
 There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
 
-There are helper methods available for handling deprecated callables (:api:`twisted.trial.unittest.SynchronousTestCase.callDeprecated <callDeprecated>`) and deprecated classes or module attributes (:api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute`).
+There are helper methods available for handling deprecated callables (:py:meth:`callDeprecated <twisted.trial.unittest.SynchronousTestCase.callDeprecated>`) and deprecated classes or module attributes (:py:meth:`getDeprecatedModuleAttribute <twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute>`).
 
-If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :api:`twisted.trial.unittest.SynchronousTestCase.assertWarns <assertWarns>` to specify the exact warning you expect.
+If the deprecation warning has a customized message or cannot be caught using these helpers, you can use :py:meth:`assertWarns <twisted.trial._synctest._Assertions.assertWarns>` to specify the exact warning you expect.
 
-Lastly, you can use :api:`twisted.trial.unittest.SynchronousTestCase.flushWarnings <flushWarnings>` after performing any deprecated activity.
+Lastly, you can use :py:meth:`flushWarnings <twisted.trial.unittest.SynchronousTestCase.flushWarnings>` after performing any deprecated activity.
 This is the most precise, but also the most verbose, way to assert that you've raised a ``DeprecationWarning``.
 
 
@@ -517,7 +528,7 @@ This is the most precise, but also the most verbose, way to assert that you've r
 
 
 When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
-Making calls to the deprecated code without raising these warnings can be done using the :api:`twisted.trial.unittest.TestCase.callDeprecated <callDeprecated>` helper.
+Making calls to the deprecated code without raising these warnings can be done using the :py:meth:`callDeprecated <twisted.trial.unittest.SynchronousTestCase.callDeprecated>` helper.
 
 .. code-block:: python
 
@@ -541,7 +552,7 @@ Making calls to the deprecated code without raising these warnings can be done u
             self.assertEqual('some-value', user.homePath)
 
 
-Tests which need to use deprecated classes should use the :api:`twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute <getDeprecatedModuleAttribute>` helper.
+Tests which need to use deprecated classes should use the :py:meth:`getDeprecatedModuleAttribute <twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 

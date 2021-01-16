@@ -35,14 +35,16 @@ from twisted.python import runtime
 # prevent the crash.
 
 try:
-    if not hasattr(sys, 'frozen'):
+    if not hasattr(sys, "frozen"):
         # Don't want to check this for py2exe
         import pygtk
-        pygtk.require('2.0')
+
+        pygtk.require("2.0")
 except (ImportError, AttributeError):
-    pass # maybe we're using pygtk before this hack existed.
+    pass  # maybe we're using pygtk before this hack existed.
 
 import gobject
+
 if hasattr(gobject, "threads_init"):
     # recent versions of python-gtk expose this. python-gtk=2.4.1
     # (wrapping glib-2.4.7) does. python-gtk=2.0.0 (wrapping
@@ -50,11 +52,11 @@ if hasattr(gobject, "threads_init"):
     gobject.threads_init()
 
 
-
 class Gtk2Reactor(_glibbase.GlibReactorBase):
     """
     PyGTK+ 2 event loop reactor.
     """
+
     _POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
     _POLL_IN = gobject.IO_IN
     _POLL_OUT = gobject.IO_OUT
@@ -73,20 +75,19 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
         _glibbase.GlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 
 
-
 class PortableGtkReactor(_glibbase.PortableGlibReactorBase):
     """
     Reactor that works on Windows.
 
     Sockets aren't supported by GTK+'s input_add on Win32.
     """
+
     def __init__(self, useGtk=True):
         _gtk = None
         if useGtk is True:
             import gtk as _gtk
 
-        _glibbase.PortableGlibReactorBase.__init__(self, gobject, _gtk,
-                                                   useGtk=useGtk)
+        _glibbase.PortableGlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 
 
 def install(useGtk=True):
@@ -98,6 +99,7 @@ def install(useGtk=True):
     """
     reactor = Gtk2Reactor(useGtk)
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 
@@ -108,14 +110,15 @@ def portableInstall(useGtk=True):
     """
     reactor = PortableGtkReactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 
 
-if runtime.platform.getType() == 'posix':
+if runtime.platform.getType() == "posix":
     install = install
 else:
     install = portableInstall
 
 
-__all__ = ['install']
+__all__ = ["install"]

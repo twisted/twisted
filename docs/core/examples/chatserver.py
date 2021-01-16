@@ -3,10 +3,8 @@
 run me with twistd -y chatserver.py, and then connect with multiple
 telnet clients to port 1025
 """
-from __future__ import print_function
 
 from twisted.protocols import basic
-
 
 
 class MyChat(basic.LineReceiver):
@@ -24,7 +22,7 @@ class MyChat(basic.LineReceiver):
             c.message(line)
 
     def message(self, message):
-        self.transport.write(message + b'\n')
+        self.transport.write(message + b"\n")
 
 
 from twisted.internet import protocol

@@ -17,14 +17,19 @@ from zope.interface import implementer
 
 
 @implementer(ICredentialsChecker)
-class DBCredentialsChecker(object):
+class DBCredentialsChecker:
     """
     This class checks the credentials of incoming connections
     against a user table in a database.
     """
-    def __init__(self, runQuery,
+
+    def __init__(
+        self,
+        runQuery,
         query="SELECT username, password FROM user WHERE username = %s",
-        customCheckFunc=None, caseSensitivePasswords=True):
+        customCheckFunc=None,
+        caseSensitivePasswords=True,
+    ):
         """
         @param runQuery: This will be called to get the info from the db.
             Generally you'd want to create a
@@ -56,7 +61,9 @@ class DBCredentialsChecker(object):
             self.credentialInterfaces = (IUsernamePassword,)
         else:
             self.credentialInterfaces = (
-                IUsernamePassword, IUsernameHashedPassword,)
+                IUsernamePassword,
+                IUsernameHashedPassword,
+            )
 
         self.sql = query
 
@@ -75,9 +82,12 @@ class DBCredentialsChecker(object):
         dbDeferred = self.runQuery(self.sql, (credentials.username,))
         # Setup our deferred result
         deferred = Deferred()
-        dbDeferred.addCallbacks(self._cbAuthenticate, self._ebAuthenticate,
-                callbackArgs=(credentials, deferred),
-                errbackArgs=(credentials, deferred))
+        dbDeferred.addCallbacks(
+            self._cbAuthenticate,
+            self._ebAuthenticate,
+            callbackArgs=(credentials, deferred),
+            errbackArgs=(credentials, deferred),
+        )
         return deferred
 
     def _cbAuthenticate(self, result, credentials, deferred):
@@ -87,17 +97,15 @@ class DBCredentialsChecker(object):
         """
         if len(result) == 0:
             # Username not found in db
-            deferred.errback(error.UnauthorizedLogin('Username unknown'))
+            deferred.errback(error.UnauthorizedLogin("Username unknown"))
         else:
             username, password = result[0]
             if self.customCheckFunc:
                 # Let the owner do the checking
-                if self.customCheckFunc(
-                        username, credentials.password, password):
+                if self.customCheckFunc(username, credentials.password, password):
                     deferred.callback(credentials.username)
                 else:
-                    deferred.errback(
-                        error.UnauthorizedLogin('Password mismatch'))
+                    deferred.errback(error.UnauthorizedLogin("Password mismatch"))
             else:
                 # It's up to us or the credentials object to do the checking
                 # now
@@ -106,22 +114,19 @@ class DBCredentialsChecker(object):
                     if credentials.checkPassword(password):
                         deferred.callback(credentials.username)
                     else:
-                        deferred.errback(
-                            error.UnauthorizedLogin('Password mismatch'))
+                        deferred.errback(error.UnauthorizedLogin("Password mismatch"))
                 elif IUsernamePassword.providedBy(credentials):
                     # Compare the passwords, deciging whether or not to use
                     # case sensitivity
                     if self.caseSensitivePasswords:
-                        passOk = (
-                            password.lower() == credentials.password.lower())
+                        passOk = password.lower() == credentials.password.lower()
                     else:
                         passOk = password == credentials.password
                     # See if they match
                     if passOk:
                         deferred.callback(credentials.username)
                     else:
-                        deferred.errback(
-                            error.UnauthorizedLogin('Password mismatch'))
+                        deferred.errback(error.UnauthorizedLogin("Password mismatch"))
                 else:
                     # OK, we don't know how to check this
                     deferred.errback(error.UnhandledCredentials())
@@ -143,12 +148,15 @@ def main():
     """
     import sys
     from twisted.python import log
+
     log.startLogging(sys.stdout)
     import os
-    if os.path.isfile('testcred'):
-        os.remove('testcred')
+
+    if os.path.isfile("testcred"):
+        os.remove("testcred")
     from twisted.enterprise import adbapi
-    pool = adbapi.ConnectionPool('pysqlite2.dbapi2', 'testcred')
+
+    pool = adbapi.ConnectionPool("pysqlite2.dbapi2", "testcred")
     # Create the table that will be used
     query1 = """CREATE TABLE user (
             username string,
@@ -156,16 +164,20 @@ def main():
         )"""
     # Insert a test user
     query2 = """INSERT INTO user VALUES ('guest', 'guest')"""
+
     def cb(res):
         pool.runQuery(query2)
+
     pool.runQuery(query1).addCallback(cb)
 
-    checker = DBCredentialsChecker(pool.runQuery,
-        query="SELECT username, password FROM user WHERE username = ?")
+    checker = DBCredentialsChecker(
+        pool.runQuery, query="SELECT username, password FROM user WHERE username = ?"
+    )
     from twisted.cred.portal import Portal
 
     import pbecho
     from twisted.spread import pb
+
     portal = Portal(pbecho.SimpleRealm())
     portal.registerChecker(checker)
     reactor.listenTCP(pb.portno, pb.PBServerFactory(portal))
@@ -173,6 +185,6 @@ def main():
 
 if __name__ == "__main__":
     from twisted.internet import reactor
+
     reactor.callWhenRunning(main)
     reactor.run()
-

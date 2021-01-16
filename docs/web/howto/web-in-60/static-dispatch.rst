@@ -38,9 +38,9 @@ different resources at a few different URLs.
 
 
 
-First things first: we need to import :api:`twisted.web.server.Site <Site>` , the factory for HTTP servers, :api:`twisted.web.resource.Resource <Resource>` , a convenient base class
-for custom pages, :api:`twisted.internet.reactor <reactor>` ,
-the object which implements the Twisted main loop, and :api:`twisted.internet.endpoints <endpoints>`, which contains classes for creating listening sockets. We'll also import :api:`twisted.web.static.File <File>` to use as the resource at one
+First things first: we need to import :py:class:`Site <twisted.web.server.Site>` , the factory for HTTP servers, :py:class:`Resource <twisted.web.resource.Resource>` , a convenient base class
+for custom pages, :py:mod:`reactor <twisted.internet.reactor>` ,
+the object which implements the Twisted main loop, and :py:mod:`endpoints <twisted.internet.endpoints>`, which contains classes for creating listening sockets. We'll also import :py:class:`File <twisted.web.static.File>` to use as the resource at one
 of the example URLs.
 
 

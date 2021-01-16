@@ -22,30 +22,23 @@ from twisted.internet.tcp import Port
 from twisted.internet import reactor
 
 
-
-
 class TrivialReactor(PosixReactorBase):
     def __init__(self):
         self._readers = {}
         self._writers = {}
         PosixReactorBase.__init__(self)
 
-
     def addReader(self, reader):
         self._readers[reader] = True
-
 
     def removeReader(self, reader):
         del self._readers[reader]
 
-
     def addWriter(self, writer):
         self._writers[writer] = True
 
-
     def removeWriter(self, writer):
         del self._writers[writer]
-
 
 
 class PosixReactorBaseTests(TestCase):
@@ -58,7 +51,6 @@ class PosixReactorBaseTests(TestCase):
         self.assertIn(reactor.waker, reactor._internalReaders)
         self.assertIn(reactor.waker, reactor._readers)
 
-
     def test_wakerIsInternalReader(self):
         """
         When L{PosixReactorBase} is instantiated, it creates a waker and adds
@@ -66,7 +58,6 @@ class PosixReactorBaseTests(TestCase):
         """
         reactor = TrivialReactor()
         self._checkWaker(reactor)
-
 
     def test_removeAllSkipsInternalReaders(self):
         """
@@ -82,7 +73,6 @@ class PosixReactorBaseTests(TestCase):
         self.assertIn(extra, reactor._internalReaders)
         self.assertIn(extra, reactor._readers)
 
-
     def test_removeAllReturnsRemovedDescriptors(self):
         """
         L{PosixReactorBase._removeAll} returns a list of removed
@@ -93,12 +83,10 @@ class PosixReactorBaseTests(TestCase):
         writer = object()
         reactor.addReader(reader)
         reactor.addWriter(writer)
-        removed = reactor._removeAll(
-            reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
+        removed = reactor._removeAll(reactor._readers, reactor._writers)
+        self.assertEqual(set(removed), {reader, writer})
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
-
 
 
 class TCPPortTests(TestCase):
@@ -120,25 +108,23 @@ class TCPPortTests(TestCase):
         return self.assertFailure(port.stopListening(), ZeroDivisionError)
 
 
-
 class TimeoutReportReactor(PosixReactorBase):
     """
     A reactor which is just barely runnable and which cannot monitor any
     readers or writers, and which fires a L{Deferred} with the timeout
     passed to its C{doIteration} method as soon as that method is invoked.
     """
+
     def __init__(self):
         PosixReactorBase.__init__(self)
         self.iterationTimeout = Deferred()
         self.now = 100
-
 
     def addReader(self, reader):
         """
         Ignore the reader.  This is necessary because the waker will be
         added.  However, we won't actually monitor it for any events.
         """
-
 
     def removeAll(self):
         """
@@ -148,14 +134,12 @@ class TimeoutReportReactor(PosixReactorBase):
         """
         return []
 
-
     def seconds(self):
         """
         Override the real clock with a deterministic one that can be easily
         controlled in a unit test.
         """
         return self.now
-
 
     def doIteration(self, timeout):
         d = self.iterationTimeout
@@ -164,20 +148,19 @@ class TimeoutReportReactor(PosixReactorBase):
             d.callback(timeout)
 
 
-
 class IterationTimeoutTests(TestCase):
     """
     Tests for the timeout argument L{PosixReactorBase.run} calls
     L{PosixReactorBase.doIteration} with in the presence of various delayed
     calls.
     """
+
     def _checkIterationTimeout(self, reactor):
         timeout = []
         reactor.iterationTimeout.addCallback(timeout.append)
         reactor.iterationTimeout.addCallback(lambda ignored: reactor.stop())
         reactor.run()
         return timeout[0]
-
 
     def test_noCalls(self):
         """
@@ -187,7 +170,6 @@ class IterationTimeoutTests(TestCase):
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
         self.assertIsNone(timeout)
-
 
     def test_delayedCall(self):
         """
@@ -200,7 +182,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 100)
 
-
     def test_timePasses(self):
         """
         If a delayed call is scheduled and then some time passes, the
@@ -212,7 +193,6 @@ class IterationTimeoutTests(TestCase):
         reactor.now += 25
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 75)
-
 
     def test_multipleDelayedCalls(self):
         """
@@ -227,7 +207,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 10)
 
-
     def test_resetDelayedCall(self):
         """
         If a delayed call is reset, the timeout passed to C{doIteration} is
@@ -240,7 +219,6 @@ class IterationTimeoutTests(TestCase):
         call.reset(15)
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 15)
-
 
     def test_delayDelayedCall(self):
         """
@@ -256,7 +234,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 60)
 
-
     def test_cancelDelayedCall(self):
         """
         If the only delayed call is canceled, L{None} is the timeout passed
@@ -269,20 +246,20 @@ class IterationTimeoutTests(TestCase):
         self.assertIsNone(timeout)
 
 
-
 class ConnectedDatagramPortTests(TestCase):
     """
     Test connected datagram UNIX sockets.
     """
+
     if skipSockets is not None:
         skip = skipSockets
-
 
     def test_connectionFailedDoesntCallLoseConnection(self):
         """
         L{ConnectedDatagramPort} does not call the deprecated C{loseConnection}
         in L{ConnectedDatagramPort.connectionFailed}.
         """
+
         def loseConnection():
             """
             Dummy C{loseConnection} method. C{loseConnection} is deprecated and
@@ -293,7 +270,6 @@ class ConnectedDatagramPortTests(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.loseConnection = loseConnection
         port.connectionFailed("goodbye")
-
 
     def test_connectionFailedCallsStopListening(self):
         """
@@ -313,3 +289,12 @@ class ConnectedDatagramPortTests(TestCase):
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
         self.assertTrue(self.called)
+
+
+class WakerTests(TestCase):
+    def test_noWakerConstructionWarnings(self):
+        waker = _Waker(reactor=None)
+        warnings = self.flushWarnings()
+        # explicitly close the sockets
+        waker.connectionLost(None)
+        self.assertEqual(len(warnings), 0)

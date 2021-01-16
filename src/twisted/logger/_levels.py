@@ -9,19 +9,17 @@ Log levels.
 from constantly import NamedConstant, Names
 
 
-
 class InvalidLogLevelError(Exception):
     """
     Someone tried to use a L{LogLevel} that is unknown to the logging system.
     """
-    def __init__(self, level):
-        """
-        @param level: A log level.
-        @type level: L{LogLevel}
-        """
-        super(InvalidLogLevelError, self).__init__(str(level))
-        self.level = level
 
+    def __init__(self, level: NamedConstant) -> None:
+        """
+        @param level: A log level from L{LogLevel}.
+        """
+        super().__init__(str(level))
+        self.level = level
 
 
 class LogLevel(Names):
@@ -65,17 +63,14 @@ class LogLevel(Names):
     error = NamedConstant()
     critical = NamedConstant()
 
-
     @classmethod
-    def levelWithName(cls, name):
+    def levelWithName(cls, name: str) -> NamedConstant:
         """
         Get the log level with the given name.
 
         @param name: The name of a log level.
-        @type name: L{str} (native string)
 
         @return: The L{LogLevel} with the specified C{name}.
-        @rtype: L{LogLevel}
 
         @raise InvalidLogLevelError: if the C{name} does not name a valid log
             level.
@@ -84,27 +79,3 @@ class LogLevel(Names):
             return cls.lookupByName(name)
         except ValueError:
             raise InvalidLogLevelError(name)
-
-
-    @classmethod
-    def _priorityForLevel(cls, level):
-        """
-        We want log levels to have defined ordering - the order of definition -
-        but they aren't value constants (the only value is the name).  This is
-        arguably a bug in Twisted, so this is just a workaround for U{until
-        this is fixed in some way
-        <https://twistedmatrix.com/trac/ticket/6523>}.
-
-        @param level: A log level.
-        @type level: L{LogLevel}
-
-        @return: A numeric index indicating priority (lower is higher level).
-        @rtype: L{int}
-        """
-        return cls._levelPriorities[level]
-
-
-LogLevel._levelPriorities = dict(
-    (level, index) for (index, level) in
-    (enumerate(LogLevel.iterconstants()))
-)

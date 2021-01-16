@@ -22,18 +22,24 @@ def getThing():
     reactor.callLater(0, d.callback, "hi")
     return d
 
+
 def getOwie():
     d = Deferred()
+
     def CRAP():
-        d.errback(ZeroDivisionError('OMG'))
+        d.errback(ZeroDivisionError("OMG"))
+
     reactor.callLater(0, CRAP)
     return d
+
 
 # NOTE: most of the tests in DeferredGeneratorTests are duplicated
 # with slightly different syntax for the InlineCallbacksTests below.
 
+
 class TerminalException(Exception):
     pass
+
 
 class BaseDefgenTests:
     """
@@ -50,7 +56,7 @@ class BaseDefgenTests:
         ensures returning a final value works.
         """
 
-        return self._genBasics().addCallback(self.assertEqual, 'WOOSH')
+        return self._genBasics().addCallback(self.assertEqual, "WOOSH")
 
     def testBuggy(self):
         """
@@ -80,8 +86,7 @@ class BaseDefgenTests:
         d = defer.Deferred()
         deferredGeneratorResultDeferred = self._genHandledTerminalAsyncFailure(d)
         d.errback(TerminalException("Handled Terminal Failure"))
-        return deferredGeneratorResultDeferred.addCallback(
-            self.assertEqual, None)
+        return deferredGeneratorResultDeferred.addCallback(self.assertEqual, None)
 
     def testStackUsage(self):
         """
@@ -98,7 +103,6 @@ class BaseDefgenTests:
         return self._genStackUsage2().addCallback(self.assertEqual, 0)
 
 
-
 def deprecatedDeferredGenerator(f):
     """
     Calls L{deferredGenerator} while suppressing the deprecation warning.
@@ -107,10 +111,14 @@ def deprecatedDeferredGenerator(f):
     @return: Return value of function.
     """
     return runWithWarningsSuppressed(
-        [ SUPPRESS(message="twisted.internet.defer.deferredGenerator was "
-                          "deprecated") ],
-        deferredGenerator, f)
-
+        [
+            SUPPRESS(
+                message="twisted.internet.defer.deferredGenerator was " "deprecated"
+            )
+        ],
+        deferredGenerator,
+        f,
+    )
 
 
 class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
@@ -130,21 +138,19 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         try:
             ow.getResult()
         except ZeroDivisionError as e:
-            self.assertEqual(str(e), 'OMG')
+            self.assertEqual(str(e), "OMG")
         yield "WOOSH"
         return
-
 
     @deprecatedDeferredGenerator
     def _genBuggy(self):
         yield waitForDeferred(getThing())
-        1//0
-
+        1 // 0
 
     @deprecatedDeferredGenerator
     def _genNothing(self):
-        if 0: yield 1
-
+        if False:
+            yield 1  # type: ignore[unreachable]
 
     @deprecatedDeferredGenerator
     def _genHandledTerminalFailure(self):
@@ -155,7 +161,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         except TerminalException:
             pass
 
-
     @deprecatedDeferredGenerator
     def _genHandledTerminalAsyncFailure(self, d):
         x = waitForDeferred(d)
@@ -165,7 +170,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         except TerminalException:
             pass
 
-
     def _genStackUsage(self):
         for x in range(5000):
             # Test with yielding a deferred
@@ -173,6 +177,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             yield x
             x = x.getResult()
         yield 0
+
     _genStackUsage = deprecatedDeferredGenerator(_genStackUsage)
 
     def _genStackUsage2(self):
@@ -180,6 +185,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             # Test with yielding a random value
             yield 1
         yield 0
+
     _genStackUsage2 = deprecatedDeferredGenerator(_genStackUsage2)
 
     # Tests unique to deferredGenerator
@@ -192,14 +198,15 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         # See the comment _deferGenerator about d.callback(Deferred).
         def _genDeferred():
             yield getThing()
+
         _genDeferred = deprecatedDeferredGenerator(_genDeferred)
 
         return self.assertFailure(_genDeferred(), TypeError)
 
     suppress = [
-            SUPPRESS(message='twisted.internet.defer.waitForDeferred was '
-                             'deprecated')
-            ]
+        SUPPRESS(message="twisted.internet.defer.waitForDeferred was " "deprecated")
+    ]
+
 
 class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     # First provide all the generator impls necessary for BaseDefgenTests
@@ -213,43 +220,45 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         try:
             yield getOwie()
         except ZeroDivisionError as e:
-            self.assertEqual(str(e), 'OMG')
+            self.assertEqual(str(e), "OMG")
         returnValue("WOOSH")
+
     _genBasics = inlineCallbacks(_genBasics)
 
     def _genBuggy(self):
         yield getThing()
-        1/0
+        1 / 0
+
     _genBuggy = inlineCallbacks(_genBuggy)
 
-
     def _genNothing(self):
-        if 0: yield 1
-    _genNothing = inlineCallbacks(_genNothing)
+        if False:
+            yield 1  # type: ignore[unreachable]
 
+    _genNothing = inlineCallbacks(_genNothing)
 
     def _genHandledTerminalFailure(self):
         try:
             yield defer.fail(TerminalException("Handled Terminal Failure"))
         except TerminalException:
             pass
-    _genHandledTerminalFailure = inlineCallbacks(_genHandledTerminalFailure)
 
+    _genHandledTerminalFailure = inlineCallbacks(_genHandledTerminalFailure)
 
     def _genHandledTerminalAsyncFailure(self, d):
         try:
             yield d
         except TerminalException:
             pass
-    _genHandledTerminalAsyncFailure = inlineCallbacks(
-        _genHandledTerminalAsyncFailure)
 
+    _genHandledTerminalAsyncFailure = inlineCallbacks(_genHandledTerminalAsyncFailure)
 
     def _genStackUsage(self):
         for x in range(5000):
             # Test with yielding a deferred
             yield defer.succeed(1)
         returnValue(0)
+
     _genStackUsage = inlineCallbacks(_genStackUsage)
 
     def _genStackUsage2(self):
@@ -257,6 +266,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
             # Test with yielding a random value
             yield 1
         returnValue(0)
+
     _genStackUsage2 = inlineCallbacks(_genStackUsage2)
 
     # Tests unique to inlineCallbacks
@@ -269,57 +279,62 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         @return: A L{twisted.internet.defer.Deferred}
         @rtype: L{twisted.internet.defer.Deferred}
         """
+
         def _test():
             yield 5
             returnValue(5)
+
         _test = inlineCallbacks(_test)
 
         return _test().addCallback(self.assertEqual, 5)
 
     def testReturnNoValue(self):
         """Ensure a standard python return results in a None result."""
+
         def _noReturn():
             yield 5
             return
+
         _noReturn = inlineCallbacks(_noReturn)
 
         return _noReturn().addCallback(self.assertEqual, None)
 
     def testReturnValue(self):
         """Ensure that returnValue works."""
+
         def _return():
             yield 5
             returnValue(6)
+
         _return = inlineCallbacks(_return)
 
         return _return().addCallback(self.assertEqual, 6)
-
 
     def test_nonGeneratorReturn(self):
         """
         Ensure that C{TypeError} with a message about L{inlineCallbacks} is
         raised when a non-generator returns something other than a generator.
         """
+
         def _noYield():
             return 5
+
         _noYield = inlineCallbacks(_noYield)
 
-        self.assertIn("inlineCallbacks",
-            str(self.assertRaises(TypeError, _noYield)))
-
+        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
 
     def test_nonGeneratorReturnValue(self):
         """
         Ensure that C{TypeError} with a message about L{inlineCallbacks} is
         raised when a non-generator calls L{returnValue}.
         """
+
         def _noYield():
             returnValue(5)
+
         _noYield = inlineCallbacks(_noYield)
 
-        self.assertIn("inlineCallbacks",
-            str(self.assertRaises(TypeError, _noYield)))
-
+        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
 
 
 class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
@@ -332,18 +347,20 @@ class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
         """
         L{deferredGenerator} is deprecated.
         """
+
         @deferredGenerator
         def decoratedFunction():
             yield None
 
         warnings = self.flushWarnings([self.test_deferredGeneratorDeprecated])
         self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "twisted.internet.defer.deferredGenerator was deprecated in "
             "Twisted 15.0.0; please use "
-            "twisted.internet.defer.inlineCallbacks instead")
+            "twisted.internet.defer.inlineCallbacks instead",
+        )
 
     def test_waitForDeferredDeprecated(self):
         """
@@ -354,9 +371,10 @@ class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
 
         warnings = self.flushWarnings([self.test_waitForDeferredDeprecated])
         self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "twisted.internet.defer.waitForDeferred was deprecated in "
             "Twisted 15.0.0; please use "
-            "twisted.internet.defer.inlineCallbacks instead")
+            "twisted.internet.defer.inlineCallbacks instead",
+        )

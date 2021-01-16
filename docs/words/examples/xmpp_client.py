@@ -9,7 +9,6 @@ To run the script:
 $ python xmpp_client.py <jid> <secret>
 """
 
-from __future__ import print_function
 
 import sys
 
@@ -21,7 +20,7 @@ from twisted.words.protocols.jabber import xmlstream, client
 from twisted.words.protocols.jabber.jid import JID
 
 
-class Client(object):
+class Client:
     def __init__(self, reactor, jid, secret):
         self.reactor = reactor
         f = client.XMPPClientFactory(jid, secret)
@@ -29,22 +28,18 @@ class Client(object):
         f.addBootstrap(xmlstream.STREAM_END_EVENT, self.disconnected)
         f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.authenticated)
         f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.init_failed)
-        connector = SRVConnector(
-            reactor, 'xmpp-client', jid.host, f, defaultPort=5222)
+        connector = SRVConnector(reactor, "xmpp-client", jid.host, f, defaultPort=5222)
         connector.connect()
         self.finished = Deferred()
-
 
     def rawDataIn(self, buf):
         print("RECV: %r" % buf)
 
-
     def rawDataOut(self, buf):
         print("SEND: %r" % buf)
 
-
     def connected(self, xs):
-        print('Connected.')
+        print("Connected.")
 
         self.xmlstream = xs
 
@@ -52,29 +47,25 @@ class Client(object):
         xs.rawDataInFn = self.rawDataIn
         xs.rawDataOutFn = self.rawDataOut
 
-
     def disconnected(self, reason):
-        print('Disconnected.')
+        print("Disconnected.")
         print(reason)
 
         self.finished.callback(None)
 
-
     def authenticated(self, xs):
         print("Authenticated.")
 
-        presence = domish.Element((None, 'presence'))
+        presence = domish.Element((None, "presence"))
         xs.send(presence)
 
         self.reactor.callLater(5, xs.sendFooter)
-
 
     def init_failed(self, failure):
         print("Initialization failed.")
         print(failure)
 
         self.xmlstream.sendFooter()
-
 
 
 def main(reactor, jid, secret):
@@ -89,5 +80,5 @@ def main(reactor, jid, secret):
     return Client(reactor, JID(jid), secret).finished
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     react(main, sys.argv[1:])

@@ -11,11 +11,10 @@ from twisted.python import filepath, runtime
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-if requireModule('twisted.python._inotify') is not None:
+if requireModule("twisted.python._inotify") is not None:
     from twisted.internet import inotify
 else:
     inotify = None  # type: ignore[assignment]
-
 
 
 class INotifyTests(unittest.TestCase):
@@ -23,6 +22,7 @@ class INotifyTests(unittest.TestCase):
     Define all the tests for the basic functionality exposed by
     L{inotify.INotify}.
     """
+
     if not runtime.platform.supportsINotify():
         skip = "This platform doesn't support INotify."
 
@@ -33,7 +33,6 @@ class INotifyTests(unittest.TestCase):
         self.inotify.startReading()
         self.addCleanup(self.inotify.loseConnection)
 
-
     def test_initializationErrors(self):
         """
         L{inotify.INotify} emits a C{RuntimeError} when initialized
@@ -42,12 +41,13 @@ class INotifyTests(unittest.TestCase):
         We just try to raise an exception for every possible case in
         the for loop in L{inotify.INotify._inotify__init__}.
         """
+
         class FakeINotify:
             def init(self):
                 raise inotify.INotifyError()
-        self.patch(inotify.INotify, '_inotify', FakeINotify())
-        self.assertRaises(inotify.INotifyError, inotify.INotify)
 
+        self.patch(inotify.INotify, "_inotify", FakeINotify())
+        self.assertRaises(inotify.INotifyError, inotify.INotify)
 
     def _notificationTest(self, mask, operation, expectedPath=None):
         """
@@ -71,54 +71,55 @@ class INotifyTests(unittest.TestCase):
         if expectedPath is None:
             expectedPath = self.dirname.child("foo.bar")
         notified = defer.Deferred()
+
         def cbNotified(result):
             (watch, filename, events) = result
             self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & mask)
+
         notified.addCallback(cbNotified)
 
         self.inotify.watch(
-            self.dirname, mask=mask,
-            callbacks=[lambda *args: notified.callback(args)])
+            self.dirname, mask=mask, callbacks=[lambda *args: notified.callback(args)]
+        )
         operation(expectedPath)
         return notified
-
 
     def test_access(self):
         """
         Reading from a file in a monitored directory sends an
         C{inotify.IN_ACCESS} event to the callback.
         """
+
         def operation(path):
             path.setContent(b"foo")
             path.getContent()
 
         return self._notificationTest(inotify.IN_ACCESS, operation)
 
-
     def test_modify(self):
         """
         Writing to a file in a monitored directory sends an
         C{inotify.IN_MODIFY} event to the callback.
         """
+
         def operation(path):
             with path.open("w") as fObj:
-                fObj.write(b'foo')
+                fObj.write(b"foo")
 
         return self._notificationTest(inotify.IN_MODIFY, operation)
-
 
     def test_attrib(self):
         """
         Changing the metadata of a file in a monitored directory
         sends an C{inotify.IN_ATTRIB} event to the callback.
         """
+
         def operation(path):
             path.touch()
             path.touch()
 
         return self._notificationTest(inotify.IN_ATTRIB, operation)
-
 
     def test_closeWrite(self):
         """
@@ -126,11 +127,11 @@ class INotifyTests(unittest.TestCase):
         directory sends an C{inotify.IN_CLOSE_WRITE} event to the
         callback.
         """
+
         def operation(path):
             path.open("w").close()
 
         return self._notificationTest(inotify.IN_CLOSE_WRITE, operation)
-
 
     def test_closeNoWrite(self):
         """
@@ -138,41 +139,42 @@ class INotifyTests(unittest.TestCase):
         monitored directory sends an C{inotify.IN_CLOSE_NOWRITE} event
         to the callback.
         """
+
         def operation(path):
             path.touch()
             path.open("r").close()
 
         return self._notificationTest(inotify.IN_CLOSE_NOWRITE, operation)
 
-
     def test_open(self):
         """
         Opening a file in a monitored directory sends an
         C{inotify.IN_OPEN} event to the callback.
         """
+
         def operation(path):
             path.open("w").close()
 
         return self._notificationTest(inotify.IN_OPEN, operation)
-
 
     def test_movedFrom(self):
         """
         Moving a file out of a monitored directory sends an
         C{inotify.IN_MOVED_FROM} event to the callback.
         """
+
         def operation(path):
             path.open("w").close()
             path.moveTo(filepath.FilePath(self.mktemp()))
 
         return self._notificationTest(inotify.IN_MOVED_FROM, operation)
 
-
     def test_movedTo(self):
         """
         Moving a file into a monitored directory sends an
         C{inotify.IN_MOVED_TO} event to the callback.
         """
+
         def operation(path):
             p = filepath.FilePath(self.mktemp())
             p.touch()
@@ -180,41 +182,41 @@ class INotifyTests(unittest.TestCase):
 
         return self._notificationTest(inotify.IN_MOVED_TO, operation)
 
-
     def test_create(self):
         """
         Creating a file in a monitored directory sends an
         C{inotify.IN_CREATE} event to the callback.
         """
+
         def operation(path):
             path.open("w").close()
 
         return self._notificationTest(inotify.IN_CREATE, operation)
-
 
     def test_delete(self):
         """
         Deleting a file in a monitored directory sends an
         C{inotify.IN_DELETE} event to the callback.
         """
+
         def operation(path):
             path.touch()
             path.remove()
 
         return self._notificationTest(inotify.IN_DELETE, operation)
 
-
     def test_deleteSelf(self):
         """
         Deleting the monitored directory itself sends an
         C{inotify.IN_DELETE_SELF} event to the callback.
         """
+
         def operation(path):
             path.remove()
 
         return self._notificationTest(
-            inotify.IN_DELETE_SELF, operation, expectedPath=self.dirname)
-
+            inotify.IN_DELETE_SELF, operation, expectedPath=self.dirname
+        )
 
     def test_deleteSelfForced(self):
         """
@@ -222,16 +224,15 @@ class INotifyTests(unittest.TestCase):
         C{inotify.IN_DELETE_SELF} event to the callback
         even if the mask isn't specified by the call to watch().
         """
+
         def cbNotified(result):
             (watch, filename, events) = result
-            self.assertEqual(
-                filename.asBytesMode(), self.dirname.asBytesMode()
-            )
+            self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
         self.inotify.watch(
-            self.dirname, mask=0x0,
-            callbacks=[lambda *args: d.callback(args)])
+            self.dirname, mask=0x0, callbacks=[lambda *args: d.callback(args)]
+        )
 
         d = defer.Deferred()
         d.addCallback(cbNotified)
@@ -239,24 +240,25 @@ class INotifyTests(unittest.TestCase):
         self.dirname.remove()
         return d
 
-
     def test_moveSelf(self):
         """
         Renaming the monitored directory itself sends an
         C{inotify.IN_MOVE_SELF} event to the callback.
         """
+
         def operation(path):
             path.moveTo(filepath.FilePath(self.mktemp()))
 
         return self._notificationTest(
-            inotify.IN_MOVE_SELF, operation, expectedPath=self.dirname)
-
+            inotify.IN_MOVE_SELF, operation, expectedPath=self.dirname
+        )
 
     def test_simpleSubdirectoryAutoAdd(self):
         """
         L{inotify.INotify} when initialized with autoAdd==True adds
         also adds the created subdirectories to the watchlist.
         """
+
         def _callback(wp, filename, mask):
             # We are notified before we actually process new
             # directories, so we need to defer this check.
@@ -266,17 +268,17 @@ class INotifyTests(unittest.TestCase):
                     d.callback(None)
                 except Exception:
                     d.errback()
+
             reactor.callLater(0, _)
 
         checkMask = inotify.IN_ISDIR | inotify.IN_CREATE
         self.inotify.watch(
-            self.dirname, mask=checkMask, autoAdd=True,
-            callbacks=[_callback])
-        subdir = self.dirname.child('test')
+            self.dirname, mask=checkMask, autoAdd=True, callbacks=[_callback]
+        )
+        subdir = self.dirname.child("test")
         d = defer.Deferred()
         subdir.createDirectory()
         return d
-
 
     def test_simpleDeleteDirectory(self):
         """
@@ -284,6 +286,7 @@ class INotifyTests(unittest.TestCase):
         it's removed from the filesystem.
         """
         calls = []
+
         def _callback(wp, filename, mask):
             # We are notified before we actually process new
             # directories, so we need to defer this check.
@@ -293,6 +296,7 @@ class INotifyTests(unittest.TestCase):
                     subdir.remove()
                 except Exception:
                     d.errback()
+
             def _eb():
                 # second call, we have just removed the subdir
                 try:
@@ -311,19 +315,19 @@ class INotifyTests(unittest.TestCase):
 
         checkMask = inotify.IN_ISDIR | inotify.IN_CREATE
         self.inotify.watch(
-            self.dirname, mask=checkMask, autoAdd=True,
-            callbacks=[_callback])
-        subdir = self.dirname.child('test')
+            self.dirname, mask=checkMask, autoAdd=True, callbacks=[_callback]
+        )
+        subdir = self.dirname.child("test")
         d = defer.Deferred()
         subdir.createDirectory()
         return d
-
 
     def test_deleteSelfLoseConnection(self):
         """
         L{inotify.INotify} closes the file descriptor after removing a
         directory from the filesystem (and therefore from the watchlist).
         """
+
         def cbNotified(result):
             def _():
                 try:
@@ -334,16 +338,17 @@ class INotifyTests(unittest.TestCase):
                     d.errback()
 
             (ignored, filename, events) = result
-            self.assertEqual(
-                filename.asBytesMode(), self.dirname.asBytesMode()
-            )
+            self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
             reactor.callLater(0, _)
 
         self.assertTrue(
             self.inotify.watch(
-                self.dirname, mask=inotify.IN_DELETE_SELF,
-                callbacks=[lambda *args: notified.callback(args)]))
+                self.dirname,
+                mask=inotify.IN_DELETE_SELF,
+                callbacks=[lambda *args: notified.callback(args)],
+            )
+        )
 
         notified = defer.Deferred()
         notified.addCallback(cbNotified)
@@ -351,7 +356,6 @@ class INotifyTests(unittest.TestCase):
         self.dirname.remove()
         d = defer.Deferred()
         return d
-
 
     def test_ignoreDirectory(self):
         """
@@ -362,7 +366,6 @@ class INotifyTests(unittest.TestCase):
         self.inotify.ignore(self.dirname)
         self.assertFalse(self.inotify._isWatched(self.dirname))
 
-
     def test_humanReadableMask(self):
         """
         L{inotify.humaReadableMask} translates all the possible event
@@ -371,21 +374,20 @@ class INotifyTests(unittest.TestCase):
         for mask, value in inotify._FLAG_TO_HUMAN:
             self.assertEqual(inotify.humanReadableMask(mask)[0], value)
 
-        checkMask = (
-            inotify.IN_CLOSE_WRITE | inotify.IN_ACCESS | inotify.IN_OPEN)
+        checkMask = inotify.IN_CLOSE_WRITE | inotify.IN_ACCESS | inotify.IN_OPEN
         self.assertEqual(
             set(inotify.humanReadableMask(checkMask)),
-            set(['close_write', 'access', 'open']))
-
+            {"close_write", "access", "open"},
+        )
 
     def test_recursiveWatch(self):
         """
         L{inotify.INotify.watch} with recursive==True will add all the
         subdirectories under the given path to the watchlist.
         """
-        subdir = self.dirname.child('test')
-        subdir2 = subdir.child('test2')
-        subdir3 = subdir2.child('test3')
+        subdir = self.dirname.child("test")
+        subdir2 = subdir.child("test2")
+        subdir3 = subdir2.child("test3")
         subdir3.makedirs()
         dirs = [subdir, subdir2, subdir3]
         self.inotify.watch(self.dirname, recursive=True)
@@ -394,13 +396,13 @@ class INotifyTests(unittest.TestCase):
         for d in dirs:
             self.assertTrue(self.inotify._isWatched(d))
 
-
     def test_connectionLostError(self):
         """
         L{inotify.INotify.connectionLost} if there's a problem while closing
         the fd shouldn't raise the exception but should log the error
         """
         import os
+
         in_ = inotify.INotify()
         os.close(in_._fd)
         in_.loseConnection()
@@ -411,6 +413,7 @@ class INotifyTests(unittest.TestCase):
         L{inotify.INotify.watch} with autoAdd==False will stop inotify
         from watching subdirectories created under the watched one.
         """
+
         def _callback(wp, fp, mask):
             # We are notified before we actually process new
             # directories, so we need to defer this check.
@@ -420,17 +423,17 @@ class INotifyTests(unittest.TestCase):
                     d.callback(None)
                 except Exception:
                     d.errback()
+
             reactor.callLater(0, _)
 
         checkMask = inotify.IN_ISDIR | inotify.IN_CREATE
         self.inotify.watch(
-            self.dirname, mask=checkMask, autoAdd=False,
-            callbacks=[_callback])
-        subdir = self.dirname.child('test')
+            self.dirname, mask=checkMask, autoAdd=False, callbacks=[_callback]
+        )
+        subdir = self.dirname.child("test")
         d = defer.Deferred()
         subdir.createDirectory()
         return d
-
 
     def test_seriesOfWatchAndIgnore(self):
         """
@@ -441,6 +444,7 @@ class INotifyTests(unittest.TestCase):
         expectedPath.touch()
 
         notified = defer.Deferred()
+
         def cbNotified(result):
             (ignored, filename, events) = result
             self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
@@ -454,7 +458,9 @@ class INotifyTests(unittest.TestCase):
         self.inotify.ignore(expectedPath)
         self.assertTrue(
             self.inotify.watch(
-                expectedPath, mask=inotify.IN_DELETE_SELF, callbacks=[callIt]))
+                expectedPath, mask=inotify.IN_DELETE_SELF, callbacks=[callIt]
+            )
+        )
 
         notified.addCallback(cbNotified)
 
@@ -465,7 +471,6 @@ class INotifyTests(unittest.TestCase):
         expectedPath.remove()
 
         return notified
-
 
     def test_ignoreFilePath(self):
         """
@@ -478,6 +483,7 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.touch()
 
         notified = defer.Deferred()
+
         def cbNotified(result):
             (ignored, filename, events) = result
             self.assertEqual(filename.asBytesMode(), expectedPath2.asBytesMode())
@@ -487,13 +493,15 @@ class INotifyTests(unittest.TestCase):
             notified.callback(args)
 
         self.assertTrue(
-            self.inotify.watch(
-                expectedPath, inotify.IN_DELETE_SELF, callbacks=[callIt]))
+            self.inotify.watch(expectedPath, inotify.IN_DELETE_SELF, callbacks=[callIt])
+        )
         notified.addCallback(cbNotified)
 
         self.assertTrue(
             self.inotify.watch(
-                expectedPath2, inotify.IN_DELETE_SELF, callbacks=[callIt]))
+                expectedPath2, inotify.IN_DELETE_SELF, callbacks=[callIt]
+            )
+        )
 
         self.inotify.ignore(expectedPath)
 
@@ -501,7 +509,6 @@ class INotifyTests(unittest.TestCase):
         expectedPath2.remove()
 
         return notified
-
 
     def test_ignoreNonWatchedFile(self):
         """
@@ -513,7 +520,6 @@ class INotifyTests(unittest.TestCase):
 
         self.assertRaises(KeyError, self.inotify.ignore, expectedPath)
 
-
     def test_complexSubdirectoryAutoAdd(self):
         """
         L{inotify.INotify} with autoAdd==True for a watched path
@@ -524,6 +530,7 @@ class INotifyTests(unittest.TestCase):
         we may generate duplicate events.
         """
         calls = set()
+
         def _callback(wp, filename, mask):
             calls.add(filename)
             if len(calls) == 6:
@@ -542,20 +549,21 @@ class INotifyTests(unittest.TestCase):
 
         checkMask = inotify.IN_ISDIR | inotify.IN_CREATE
         self.inotify.watch(
-            self.dirname, mask=checkMask, autoAdd=True,
-            callbacks=[_callback])
-        subdir = self.dirname.child('test')
-        subdir2 = subdir.child('test2')
-        subdir3 = subdir2.child('test3')
+            self.dirname, mask=checkMask, autoAdd=True, callbacks=[_callback]
+        )
+        subdir = self.dirname.child("test")
+        subdir2 = subdir.child("test2")
+        subdir3 = subdir2.child("test3")
         d = defer.Deferred()
         subdir3.makedirs()
 
-        someFiles = [subdir.child('file1.dat'),
-                     subdir2.child('file2.dat'),
-                     subdir3.child('file3.dat')]
+        someFiles = [
+            subdir.child("file1.dat"),
+            subdir2.child("file2.dat"),
+            subdir3.child("file3.dat"),
+        ]
         # Add some files in pretty much all the directories so that we
         # see that we process all of them.
         for i, filename in enumerate(someFiles):
-            filename.setContent(
-                filename.path.encode(sys.getfilesystemencoding()))
+            filename.setContent(filename.path.encode(sys.getfilesystemencoding()))
         return d

@@ -26,15 +26,14 @@ class AnonymousCheckerFactory:
     """
     Generates checkers that will authenticate an anonymous request.
     """
-    authType = 'anonymous'
+
+    authType = "anonymous"
     authHelp = anonymousCheckerFactoryHelp
-    argStringFormat = 'No argstring required.'
+    argStringFormat = "No argstring required."
     credentialInterfaces = (IAnonymous,)
 
-
-    def generateChecker(self, argstring=''):
+    def generateChecker(self, argstring=""):
         return AllowAnonymousAccess()
-
 
 
 theAnonymousCheckerFactory = AnonymousCheckerFactory()

@@ -30,4 +30,3 @@ LoopingCall(logSomething).start(1)
 
 application = Application("twistd-logging")
 application.setComponent(ILogObserver, log)
-

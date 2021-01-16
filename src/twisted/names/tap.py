@@ -16,35 +16,39 @@ from twisted.names import server
 from twisted.names import authority
 from twisted.names import secondary
 
+
 class Options(usage.Options):
     optParameters = [
-        ["interface", "i", "",   "The interface to which to bind"],
-        ["port",      "p", "53", "The port on which to listen"],
-        ["resolv-conf", None, None,
-            "Override location of resolv.conf (implies --recursive)"],
+        ["interface", "i", "", "The interface to which to bind"],
+        ["port", "p", "53", "The port on which to listen"],
+        [
+            "resolv-conf",
+            None,
+            None,
+            "Override location of resolv.conf (implies --recursive)",
+        ],
         ["hosts-file", None, None, "Perform lookups with a hosts file"],
     ]
 
     optFlags = [
-        ["cache",       "c", "Enable record caching"],
-        ["recursive",   "r", "Perform recursive lookups"],
-        ["verbose",     "v", "Log verbosely"],
+        ["cache", "c", "Enable record caching"],
+        ["recursive", "r", "Perform recursive lookups"],
+        ["verbose", "v", "Log verbosely"],
     ]
 
     compData = usage.Completions(
-        optActions={"interface" : usage.CompleteNetInterfaces()}
-        )
+        optActions={"interface": usage.CompleteNetInterfaces()}
+    )
 
     zones = None
     zonefiles = None
 
     def __init__(self):
         usage.Options.__init__(self)
-        self['verbose'] = 0
+        self["verbose"] = 0
         self.bindfiles = []
         self.zonefiles = []
         self.secondaries = []
-
 
     def opt_pyzone(self, filename):
         """Specify the filename of a Python syntax zone definition"""
@@ -58,15 +62,14 @@ class Options(usage.Options):
             raise usage.UsageError(filename + ": No such file")
         self.bindfiles.append(filename)
 
-
     def opt_secondary(self, ip_domain):
         """Act as secondary for the specified domain, performing
         zone transfers from the specified IP (IP/domain)
         """
-        args = ip_domain.split('/', 1)
+        args = ip_domain.split("/", 1)
         if len(args) != 2:
             raise usage.UsageError("Argument must be of the form IP[:port]/domain")
-        address = args[0].split(':')
+        address = args[0].split(":")
         if len(address) == 1:
             address = (address[0], dns.PORT)
         else:
@@ -74,19 +77,18 @@ class Options(usage.Options):
                 port = int(address[1])
             except ValueError:
                 raise usage.UsageError(
-                    "Specify an integer port number, not %r" % (address[1],))
+                    "Specify an integer port number, not {!r}".format(address[1])
+                )
             address = (address[0], port)
         self.secondaries.append((address, [args[1]]))
 
-
     def opt_verbose(self):
         """Increment verbosity level"""
-        self['verbose'] += 1
-
+        self["verbose"] += 1
 
     def postOptions(self):
-        if self['resolv-conf']:
-            self['recursive'] = True
+        if self["resolv-conf"]:
+            self["recursive"] = True
 
         self.svcs = []
         self.zones = []
@@ -107,9 +109,9 @@ class Options(usage.Options):
             self.svcs.append(svc)
             self.zones.append(self.svcs[-1].getAuthority())
         try:
-            self['port'] = int(self['port'])
+            self["port"] = int(self["port"])
         except ValueError:
-            raise usage.UsageError("Invalid port: %r" % (self['port'],))
+            raise usage.UsageError("Invalid port: {!r}".format(self["port"]))
 
 
 def _buildResolvers(config):
@@ -126,24 +128,24 @@ def _buildResolvers(config):
     from twisted.names import client, cache, hosts
 
     ca, cl = [], []
-    if config['cache']:
-        ca.append(cache.CacheResolver(verbose=config['verbose']))
-    if config['hosts-file']:
-        cl.append(hosts.Resolver(file=config['hosts-file']))
-    if config['recursive']:
-        cl.append(client.createResolver(resolvconf=config['resolv-conf']))
+    if config["cache"]:
+        ca.append(cache.CacheResolver(verbose=config["verbose"]))
+    if config["hosts-file"]:
+        cl.append(hosts.Resolver(file=config["hosts-file"]))
+    if config["recursive"]:
+        cl.append(client.createResolver(resolvconf=config["resolv-conf"]))
     return ca, cl
 
 
 def makeService(config):
     ca, cl = _buildResolvers(config)
 
-    f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
+    f = server.DNSServerFactory(config.zones, ca, cl, config["verbose"])
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
     ret = service.MultiService()
     for (klass, arg) in [(internet.TCPServer, f), (internet.UDPServer, p)]:
-        s = klass(config['port'], arg, interface=config['interface'])
+        s = klass(config["port"], arg, interface=config["interface"])
         s.setServiceParent(ret)
     for svc in config.svcs:
         svc.setServiceParent(ret)

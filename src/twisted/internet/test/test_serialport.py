@@ -9,11 +9,13 @@ from twisted.trial import unittest
 from twisted.python.failure import Failure
 from twisted.internet.protocol import Protocol
 from twisted.internet.error import ConnectionDone
-try:
-    from twisted.internet import serialport
-except ImportError:
-    serialport = None  # type: ignore[assignment]
 
+try:
+    from twisted.internet import serialport as _serialport
+except ImportError:
+    serialport = None
+else:
+    serialport = _serialport
 
 
 class DoNothing:
@@ -24,10 +26,8 @@ class DoNothing:
     def __init__(self, *args, **kwargs):
         pass
 
-
     def __getattr__(self, attr):
         return lambda *args, **kwargs: None
-
 
 
 class SerialPortTests(unittest.TestCase):
@@ -40,7 +40,6 @@ class SerialPortTests(unittest.TestCase):
     if serialport is None:
         skip = "Serial port support is not available."
 
-
     def test_connectionMadeLost(self):
         """
         C{connectionMade} and C{connectionLost} are called on the protocol by
@@ -51,7 +50,7 @@ class SerialPortTests(unittest.TestCase):
             _serialFactory = DoNothing
 
             def _finishPortSetup(self):
-                pass # override default win32 actions
+                pass  # override default win32 actions
 
         events = []
 

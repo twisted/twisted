@@ -21,7 +21,6 @@ from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 
 
-
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
     """
     Check whether the given modules were imported, and if requested, ensure
@@ -37,7 +36,7 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
     @param errorMessage: Message to use when raising an C{ImportError}.
     @type errorMessage: C{str}
 
-    @raises: C{ImportError} with given error message if a given module name
+    @raise ImportError: with given error message if a given module name
         has already been imported.
     """
     for name in moduleNames:
@@ -49,7 +48,6 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
-
 class GlibWaker(posixbase._UnixWaker):
     """
     Run scheduled events after waking up.
@@ -58,7 +56,6 @@ class GlibWaker(posixbase._UnixWaker):
     def doRead(self):
         posixbase._UnixWaker.doRead(self)
         self.reactor._simulate()
-
 
 
 @implementer(IReactorFDSet)
@@ -127,7 +124,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._crash = lambda: self._glib.idle_add(self.loop.quit)
             self._run = self.loop.run
 
-
     def _handleSignals(self):
         # First, install SIGINT and friends:
         base._SignalReactorMixin._handleSignals(self)
@@ -136,7 +132,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         # ensure they're *really* set. We don't call this twice so we don't
         # leak file descriptors created in the SIGCHLD initialization:
         self.callLater(0, posixbase.PosixReactorBase._handleSignals, self)
-
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -148,27 +143,25 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     # gtk_input_add(). We use g_io_add_watch() here in case pygtk fixes this
     # bug.
     def input_add(self, source, condition, callback):
-        if hasattr(source, 'fileno'):
+        if hasattr(source, "fileno"):
             # handle python objects
             def wrapper(ignored, condition):
                 return callback(source, condition)
+
             fileno = source.fileno()
         else:
             fileno = source
             wrapper = callback
         return self._glib.io_add_watch(
-            fileno, condition, wrapper,
-            priority=self._glib.PRIORITY_DEFAULT_IDLE)
-
+            fileno, condition, wrapper, priority=self._glib.PRIORITY_DEFAULT_IDLE
+        )
 
     def _ioEventCallback(self, source, condition):
         """
         Called by event loop when an I/O event occurs.
         """
-        log.callWithLogger(
-            source, self._doReadOrWrite, source, source, condition)
+        log.callWithLogger(source, self._doReadOrWrite, source, source, condition)
         return True  # True = don't auto-remove the source
-
 
     def _add(self, source, primary, other, primaryFlag, otherFlag):
         """
@@ -183,26 +176,20 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         if source in other:
             self._source_remove(self._sources[source])
             flags |= otherFlag
-        self._sources[source] = self.input_add(
-            source, flags, self._ioEventCallback)
+        self._sources[source] = self.input_add(source, flags, self._ioEventCallback)
         primary.add(source)
-
 
     def addReader(self, reader):
         """
         Add a L{FileDescriptor} for monitoring of data available to read.
         """
-        self._add(reader, self._reads, self._writes,
-                  self.INFLAGS, self.OUTFLAGS)
-
+        self._add(reader, self._reads, self._writes, self.INFLAGS, self.OUTFLAGS)
 
     def addWriter(self, writer):
         """
         Add a L{FileDescriptor} for monitoring ability to write data.
         """
-        self._add(writer, self._writes, self._reads,
-                  self.OUTFLAGS, self.INFLAGS)
-
+        self._add(writer, self._writes, self._reads, self.OUTFLAGS, self.INFLAGS)
 
     def getReaders(self):
         """
@@ -210,20 +197,17 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         return list(self._reads)
 
-
     def getWriters(self):
         """
         Retrieve the list of current L{FileDescriptor} monitored for writing.
         """
         return list(self._writes)
 
-
     def removeAll(self):
         """
         Remove monitoring for all registered L{FileDescriptor}s.
         """
         return self._removeAll(self._reads, self._writes)
-
 
     def _remove(self, source, primary, other, flags):
         """
@@ -236,11 +220,9 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._source_remove(self._sources[source])
         primary.remove(source)
         if source in other:
-            self._sources[source] = self.input_add(
-                source, flags, self._ioEventCallback)
+            self._sources[source] = self.input_add(source, flags, self._ioEventCallback)
         else:
             self._sources.pop(source)
-
 
     def removeReader(self, reader):
         """
@@ -248,13 +230,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         self._remove(reader, self._reads, self._writes, self.OUTFLAGS)
 
-
     def removeWriter(self, writer):
         """
         Stop monitoring the given L{FileDescriptor} for writing.
         """
         self._remove(writer, self._writes, self._reads, self.INFLAGS)
-
 
     def iterate(self, delay=0):
         """
@@ -266,14 +246,12 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         while self._pending():
             self._iteration(0)
 
-
     def crash(self):
         """
         Crash the reactor.
         """
         posixbase.PosixReactorBase.crash(self)
         self._crash()
-
 
     def stop(self):
         """
@@ -289,7 +267,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         # crash() which will do the actual gobject event loop shutdown.
         self.wakeUp()
 
-
     def run(self, installSignalHandlers=True):
         """
         Run the reactor.
@@ -298,7 +275,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         if self._started:
             self._run()
-
 
     def callLater(self, *args, **kwargs):
         """
@@ -310,7 +286,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._reschedule()
         return result
 
-
     def _reschedule(self):
         """
         Schedule a glib timeout for C{_simulate}.
@@ -321,9 +296,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         timeout = self.timeout()
         if timeout is not None:
             self._simtag = self._timeout_add(
-                int(timeout * 1000), self._simulate,
-                priority=self._glib.PRIORITY_DEFAULT_IDLE)
-
+                int(timeout * 1000),
+                self._simulate,
+                priority=self._glib.PRIORITY_DEFAULT_IDLE,
+            )
 
     def _simulate(self):
         """
@@ -333,13 +309,13 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._reschedule()
 
 
-
 class PortableGlibReactorBase(selectreactor.SelectReactor):
     """
     Base class for GObject event loop reactors that works on Windows.
 
     Sockets aren't supported by GObject's input_add on Win32.
     """
+
     def __init__(self, glib_module, gtk_module, useGtk=False):
         self._simtag = None
         self._glib = glib_module
@@ -361,18 +337,15 @@ class PortableGlibReactorBase(selectreactor.SelectReactor):
             self._crash = lambda: self._glib.idle_add(self.loop.quit)
             self._run = self.loop.run
 
-
     def crash(self):
         selectreactor.SelectReactor.crash(self)
         self._crash()
-
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self._timeout_add(0, self.simulate)
         if self._started:
             self._run()
-
 
     def simulate(self):
         """
@@ -385,5 +358,7 @@ class PortableGlibReactorBase(selectreactor.SelectReactor):
         if timeout is None:
             timeout = 0.01
         self._simtag = self._timeout_add(
-            int(timeout * 1000), self.simulate,
-            priority=self._glib.PRIORITY_DEFAULT_IDLE)
+            int(timeout * 1000),
+            self.simulate,
+            priority=self._glib.PRIORITY_DEFAULT_IDLE,
+        )
