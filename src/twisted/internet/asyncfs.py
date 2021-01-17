@@ -1,13 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-# -*- test-case-name: twisted.protocols._smb.test_vfs -*-
+# -*- test-case-name: twisted.internet.test.test_async -*-
 """
-This module contains VFS interfaces and reference implementations
+This module contains asynchronous filesystem interfaces and reference implementations
 """
 
 from zope.interface import Interface, implementer
 from twisted.internet import reactor
-from twisted.internet.interfaces import IReadDescriptor
 from twisted.internet.threads import deferToThreadPool
 from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
@@ -18,35 +17,11 @@ import platform
 
 log = Logger()
 
-if platform.system() == "Linux":
-    from twisted.protocols._smb import statx
 
-    def stat(fd):
-        return statx.stat(fd)
-
-    def lstat(fd):
-        return statx.lstat(fd)
-
-    try:
-        import pyudev
-
-        _udev = True
-    except ImportError:
-        _udev = False
-else:
-    _udev = False
-
-    def stat(fd):
-        return os.stat(fd)
-
-    def lstat(fd):
-        return os.lstat(fd)
-
-
-class IFilesystem(Interface):
+class IAsyncFilesystem(Interface):
 
     """
-    a virtual filesystem
+    an asynchronous filesystem
     based closely on L{twisted.conch.interfaces.ISFTPServer}
     """
 
@@ -212,7 +187,7 @@ class IFilesystem(Interface):
 
     def statfs():
         """
-        @return: a dictionary with these keys, all optional
+        @return: a Deferred returning a dictionary with these keys, all optional
          - C{size} size of a block, in bytes (int)
          - C{blocks} size of filesystem in blocks  (int)
          - C{free} free blocks (int)
@@ -359,7 +334,7 @@ class _ThreadFile:
         return self.fso._deferToThread(int_write)
 
     def getAttrs(self):
-        s = self.fso._deferToThread(stat, self.fd)
+        s = self.fso._deferToThread(os.stat, self.fd)
         s.addCallback(self.fso._getAttrs)
         return s
 
@@ -374,8 +349,8 @@ class _ThreadFile:
         return self.fso._deferToThread(os.fsync, self.fd)
 
 
-@implementer(IFilesystem)
-class ThreadVfs:
+@implementer(IAsyncFilesystem)
+class ThreadFs:
     """
     An async filesystem implemented using threads
 
@@ -493,9 +468,9 @@ class ThreadVfs:
     def getAttrs(self, path, followLinks=True):
         path = self._absPath(path)
         if followLinks:
-            s = self._deferToThread(stat, path)
+            s = self._deferToThread(os.stat, path)
         else:
-            s = self._deferToThread(lstat, path)
+            s = self._deferToThread(os.lstat, path)
         s.addCallback(self._getAttrs)
         return s
 
@@ -523,7 +498,7 @@ class ThreadVfs:
         def cb_statfs():
             try:
                 v = os.statvfs(self.root)
-                s = stat(self.root)
+                s = os.stat(self.root)
             except AttributeError:
                 # some systems dont have at all
                 return None
@@ -548,227 +523,6 @@ class ThreadVfs:
                 # classically, only BSDs (?and Darwin)
                 # with statx, linux with glibc >= 2.28 also
                 pass
-            if _udev:
-                try:
-                    ctx = pyudev.Context()
-                    path = "/sys/dev/block/%d:%d" % (
-                        os.major(s.st_dev),
-                        os.minor(s.st_dev),
-                    )
-                    dev = pyudev.Devices.from_path(ctx, path)
-                    if "ID_FS_TYPE" in dev.properties and dev.properties["ID_FS_TYPE"]:
-                        d["disk_fstype"] = dev.properties["ID_FS_TYPE"]
-                    if (
-                        "ID_FS_LABEL" in dev.properties
-                        and dev.properties["ID_FS_LABEL"]
-                    ):
-                        d["disk_label"] = dev.properties["ID_FS_LABEL"]
-                except BaseException:
-                    log.failure("trying to use udev db")
             return d
 
         return self._deferToThread(cb_statfs)
-
-
-try:
-    import libaio
-    from libaio.eventfd import eventfd, EFD_CLOEXEC
-
-    has_aio = True
-    # this is linux only
-
-    MAX_AIO = 500  # max concurrent AIO operations. has to be specified upfront.
-    # related to kernel param fs.aio-max-nr
-
-    @implementer(IReadDescriptor)
-    class _AIOManager:
-        """
-        manager of kernel AIO events
-        sits on Twisted event loop wrapping the eventfd
-        """
-
-        def __init__(self):
-            self.fd = eventfd(0, EFD_CLOEXEC)
-            self.ctx = libaio.AIOContext(MAX_AIO)
-            reactor.addReader(self)
-            self._registered = True
-
-        def unregister(self):
-            if self._registered:
-                self._registered = False
-                reactor.removeReader(self)
-                self.ctx.close()
-
-        def fileno(self):
-            return self.fd
-
-        def connectionLost(self, reason):
-            log.failure("connectionLost", reason)
-
-        def doRead(self):
-            """called by twisted mainloop when eventfd ready"""
-            os.read(self.fd, 8)  # reset the eventfd
-            self.ctx.getEvents()
-
-        def logPrefix(self):
-            return self.__class__.__name__
-
-        def submit(self, **kwargs):
-            kwargs["eventfd"] = self.fd
-            self.ctx.submit([libaio.AIOBlock(**kwargs)])
-
-    @implementer(IFile)
-    class _AIOFile:
-        """
-        async file object implemented using Linux AIO
-        Interface same as L{_ThreadFile}
-        """
-
-        def __init__(self, fso, filename, flags, attrs):
-            self.tf = _ThreadFile(fso.tvfs, filename, flags, attrs)
-            self.fd = self.tf.fd
-            self.aio = fso.aio
-            self.fso = fso.tvfs
-
-        def fileno(self):
-            return self.fd
-
-        def close(self):
-            return self.tf.close()
-
-        def readChunk(self, offset, length):
-            d = Deferred()
-            buf = bytearray(length)
-
-            def cb_read(block, n, ret):
-                if ret == 0:
-                    d.callback(bytes(buf[:n]))
-                else:
-                    d.errback(Failure(OSError(ret, "async read() failed")))
-
-            self.aio.submit(
-                mode=libaio.AIOBLOCK_MODE_READ,
-                target_file=self.fd,
-                buffer_list=[buf],
-                offset=offset,
-                onCompletion=cb_read,
-            )
-            return d
-
-        def writeChunk(self, offset, data):
-            if self.fso.read_only:
-                raise AccessViolation()
-            d = Deferred()
-            buf = bytearray(data)
-
-            def cb_write(block, n, ret):
-                if ret == 0:
-                    d.callback(n)
-                else:
-                    d.errback(Failure(OSError(ret, "async write() failed")))
-
-            self.aio.submit(
-                mode=libaio.AIOBLOCK_MODE_WRITE,
-                target_file=self.fd,
-                buffer_list=[buf],
-                offset=offset,
-                onCompletion=cb_write,
-            )
-            return d
-
-        def getAttrs(self):
-            return self.tf.getAttrs()
-
-        def setAttrs(self, attrs):
-            return self.tf.setAttrs(attrs)
-
-        def flush(self):
-            if self.fso.read_only:
-                raise AccessViolation()
-            d = Deferred()
-
-            def cb_flush(block, n, ret):
-                log.debug("FSYNC n:{n} ret:{ret}", n=n, ret=ret)
-                if ret == 0:
-                    d.callback(True)
-                else:
-                    d.errback(Failure(OSError(ret, "async flush() failed")))
-
-            self.aio.submit(
-                mode=libaio.AIOBLOCK_MODE_FSYNC,
-                target_file=self.fd,
-                onCompletion=cb_flush,
-            )
-            return d
-
-    @implementer(IFilesystem)
-    class AIOVfs:
-        """
-        An async filesystem implemented using Linux AIO
-        (only for read()/write()/flush(), other functions handled using threads)
-
-        Requires Python package C{libaio} through C{pip} plus the binary library
-        package of the same name through C{apt}/C{yum}
-
-        Needs a modern kernel, tested on 5.4
-        """
-
-        def __init__(self, root, threadpool=None, read_only=False):
-            """
-            @param root: the base directory
-            @type root: L{str}
-
-            @param threadpool: the threadpool to use, default the reactor's threadpool
-            @type threadpool: L{twisted.python.threadpool.ThreadPool}
-
-            @param read_only: if C{True}, changes to filesystem forbidden
-            @type read_only: C{bool}
-            """
-            self.tvfs = ThreadVfs(root, threadpool, read_only)
-            self.aio = _AIOManager()
-
-        def unregister(self):
-            self.aio.unregister()
-
-        def openFile(self, filename, flags=0, attrs=None):
-            return self.tvfs._deferToThread(
-                _AIOFile, self, self.tvfs._absPath(filename), flags, attrs
-            )
-
-        def removeFile(self, filename):
-            return self.tvfs.removeFile(filename)
-
-        def renameFile(self, oldpath, newpath):
-            return self.tvfs.renameFile(oldpath, newpath)
-
-        def makeDirectory(self, path, attrs=None):
-            return self.tvfs.makeDirectory(path, attrs)
-
-        def removeDirectory(self, path):
-            return self.tvfs.removeDirectory(path)
-
-        def openDirectory(self, path):
-            return self.tvfs.openDirectory(path)
-
-        def getAttrs(self, path, followLinks=True):
-            return self.tvfs.getAttrs(path, followLinks)
-
-        def setAttrs(self, path, attrs):
-            return self.tvfs.setAttrs(path, attrs)
-
-        def readLink(self, path):
-            return self.tvfs.readLink(path)
-
-        def makeLink(self, linkPath, targetPath):
-            return self.tvfs.makeLink(linkPath, targetPath)
-
-        def realPath(self, path):
-            return self.tvfs.realPath(path)
-
-        def statfs(self):
-            return self.tvfs.statfs()
-
-
-except ImportError:
-    has_aio = False
-    AIOVfs = ThreadVfs

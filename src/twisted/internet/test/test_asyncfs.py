@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 import os.path
-from twisted.protocols._smb import vfs
+from twisted.internet import asyncfs
 from twisted.trial import unittest
 from unittest import skipUnless
 from twisted.internet.defer import DeferredList
@@ -16,7 +16,7 @@ observers = [textFileLogObserver(sys.stdout)]
 globalLogBeginner.beginLoggingTo(observers)
 
 
-class BaseTestVfs:
+class BaseTestFs:
     def setUp(self):
         self.oldpath = os.getcwd()
         self.tpath = tempfile.mkdtemp()
@@ -217,10 +217,5 @@ class BaseTestVfs:
         return d1
 
 
-class TestThreadVfs(BaseTestVfs, unittest.TestCase):
-    fso_class = vfs.ThreadVfs
-
-
-@skipUnless(vfs.has_aio, "libaio not available")
-class TestAIOVfs(BaseTestVfs, unittest.TestCase):
-    fso_class = vfs.AIOVfs
+class TestThreadFs(BaseTestFs, unittest.TestCase):
+    fso_class = asyncfs.ThreadFs
