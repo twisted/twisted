@@ -17,8 +17,8 @@ session object.
 
 
 As was discussed :doc:`previously <session-basics>` , instances
-of :api:`twisted.web.server.Session <Session>` last as long as
-the notional session itself does. Each time :api:`twisted.web.server.Request.getSession <Request.getSession>` is called, if the session
+of :py:class:`Session <twisted.web.server.Session>` last as long as
+the notional session itself does. Each time :py:meth:`Request.getSession <twisted.web.server.Request.getSession>` is called, if the session
 for the request is still active, then the same ``Session`` instance is
 returned as was returned previously. Because of this, ``Session`` 
 instances can be used to keep other objects around for as long as the session
@@ -84,7 +84,7 @@ several critical pieces interacting here:
   this example. It implements ``ICounter`` (again, mostly for
   documentation purposes). It also has a ``value`` attribute, as the
   interface declared.
-- The :api:`twisted.python.components.registerAdapter <registerAdapter>` call sets up the
+- The :py:func:`registerAdapter <twisted.python.components.registerAdapter>` call sets up the
   relationship between its three arguments so that adaption will do what we
   want in this case.
 - Adaption is performed by the expression ``ICounter(ses)`` . This

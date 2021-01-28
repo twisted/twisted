@@ -37,6 +37,14 @@ from ..service import IServiceMaker
 openFile = open
 
 
+def _update_doc(opt: Callable[["TwistOptions", str], None], **kwargs: str) -> None:
+    """
+    Update the docstring of a method that implements an option.
+    The string is dedented and the given keyword arguments are substituted.
+    """
+    opt.__doc__ = dedent(opt.__doc__ or "").format(**kwargs)
+
+
 class TwistOptions(Options):
     """
     Command line options for C{twist}.
@@ -76,7 +84,8 @@ class TwistOptions(Options):
         else:
             self["reactorName"] = name
 
-    opt_reactor.__doc__ = dedent(opt_reactor.__doc__ or "").format(
+    _update_doc(
+        opt_reactor,
         options=", ".join('"{}"'.format(rt.shortName) for rt in getReactorTypes()),
     )
 
@@ -101,7 +110,8 @@ class TwistOptions(Options):
         except InvalidLogLevelError:
             raise UsageError("Invalid log level: {}".format(levelName))
 
-    opt_log_level.__doc__ = dedent(opt_log_level.__doc__ or "").format(
+    _update_doc(
+        opt_log_level,
         options=", ".join(
             '"{}"'.format(constant.name) for constant in LogLevel.iterconstants()
         ),
@@ -144,7 +154,7 @@ class TwistOptions(Options):
             raise UsageError("Invalid log format: {}".format(format))
         self["logFormat"] = format
 
-    opt_log_format.__doc__ = dedent(opt_log_format.__doc__ or "")
+    _update_doc(opt_log_format)
 
     def selectDefaultLogObserver(self) -> None:
         """
@@ -170,14 +180,14 @@ class TwistOptions(Options):
             self["reactor"] = self.installReactor(self["reactorName"])
 
     @property
-    def plugins(self) -> Mapping[Optional[str], IServiceMaker]:
+    def plugins(self) -> Mapping[str, IServiceMaker]:
         if "plugins" not in self:
             plugins = {}
             for plugin in getPlugins(IServiceMaker):
                 plugins[plugin.tapname] = plugin
             self["plugins"] = plugins
 
-        return cast(Mapping[Optional[str], IServiceMaker], self["plugins"])
+        return cast(Mapping[str, IServiceMaker], self["plugins"])
 
     @property
     def subCommands(

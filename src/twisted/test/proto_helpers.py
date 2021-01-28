@@ -10,7 +10,22 @@ instead.
 from twisted.internet import testing
 
 
-__all__ = testing.__all__
+__all__ = [
+    "AccumulatingProtocol",
+    "LineSendingProtocol",
+    "FakeDatagramTransport",
+    "StringTransport",
+    "StringTransportWithDisconnection",
+    "StringIOWithoutClosing",
+    "_FakeConnector",
+    "_FakePort",
+    "MemoryReactor",
+    "MemoryReactorClock",
+    "RaisingMemoryReactor",
+    "NonStreamingProducer",
+    "waitUntilAllDisconnected",
+    "EventLoggingObserver",
+]
 
 
 AccumulatingProtocol = testing.AccumulatingProtocol

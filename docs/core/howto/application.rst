@@ -33,19 +33,19 @@ Using this infrastructure frees you from from having to write a large amount of 
 The major tool that manages Twisted applications is a command-line utility called ``twistd``.
 ``twistd`` is cross platform, and is the recommended tool for running Twisted applications.
 
-The core component of the Twisted Application infrastructure is the :api:`twisted.application.service.Application <twisted.application.service.Application>` object --  an object which represents your application.
+The core component of the Twisted Application infrastructure is the :py:func:`twisted.application.service.Application` object --  an object which represents your application.
 However, Application doesn't provide anything that you'd want to manipulate directly.
-Instead, Application acts as a container of any "Services" (objects implementing :api:`twisted.application.service.IService <IService>`) that your application provides.
+Instead, Application acts as a container of any "Services" (objects implementing :py:class:`IService <twisted.application.service.IService>`) that your application provides.
 Most of your interaction with the Application infrastructure will be done through Services.
 
 By "Service", we mean anything in your application that can be started and stopped.
 Typical services include web servers, FTP servers and SSH clients.
-Your Application object can contain many services, and can even contain structured hierarchies of Services using :api:`twisted.application.service.MultiService <MultiService>` or your own custom :api:`twisted.application.service.IServiceCollection <IServiceCollection>` implementations.
+Your Application object can contain many services, and can even contain structured hierarchies of Services using :py:class:`MultiService <twisted.application.service.MultiService>` or your own custom :py:class:`IServiceCollection <twisted.application.service.IServiceCollection>` implementations.
 You will most likely want to use these to manage Services which are dependent on other Services.
 For example, a proxying Twisted application might want its server Service to only start up after the associated Client service.
 
-An :api:`twisted.application.service.IService <IService>` has two basic methods, ``startService()`` which is used to start the service, and ``stopService()`` which is used to stop the service.
-The latter can return a :api:`twisted.internet.defer.Deferred <Deferred>`, indicating service shutdown is not over until the result fires.
+An :py:class:`IService <twisted.application.service.IService>` has two basic methods, ``startService()`` which is used to start the service, and ``stopService()`` which is used to stop the service.
+The latter can return a :py:class:`Deferred <twisted.internet.defer.Deferred>`, indicating service shutdown is not over until the result fires.
 For example:
 
 .. code-block:: python
@@ -77,7 +77,7 @@ twistd and tac
 
 
 To handle start-up and configuration of your Twisted application, the Twisted Application infrastructure uses ``.tac`` files.
-``.tac`` are Python files which configure an :api:`twisted.application.service.Application <Application>` object and assign this object to the top-level variable "``application``" .
+``.tac`` are Python files which configure an :py:func:`Application <twisted.application.service.Application>` object and assign this object to the top-level variable "``application``" .
 
 The following is a simple example of a ``.tac`` file:
 
@@ -113,9 +113,9 @@ Given a file named ``my.py`` with the code:
 Invoking ``twistd --logger my.logger ...`` will log to a file named ``/tmp/my.log`` (this simple example could easily be replaced with use of the ``--logfile`` parameter to twistd).
 
 Alternatively, the logging behavior can be customized through an API accessible from ``.tac`` files.
-The :api:`twisted.python.log.ILogObserver <ILogObserver>` component can be set on an Application in order to customize the default log observer that ``twistd`` will use.
+The :py:class:`ILogObserver <twisted.python.log.ILogObserver>` component can be set on an Application in order to customize the default log observer that ``twistd`` will use.
 
-Here is an example of how to use :api:`twisted.python.logfile.DailyLogFile <DailyLogFile>`, which rotates the log once per day.
+Here is an example of how to use :py:class:`DailyLogFile <twisted.python.logfile.DailyLogFile>`, which rotates the log once per day.
 
 .. code-block:: python
 
@@ -134,7 +134,7 @@ Invoking ``twistd -y my.tac`` will create a log file at ``/tmp/my.log``.
 Services provided by Twisted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Twisted also provides pre-written :api:`twisted.application.service.IService <IService>` implementations for common cases like listening on a TCP port, in the :api:`twisted.application.internet <twisted.application.internet>` module.
+Twisted also provides pre-written :py:class:`IService <twisted.application.service.IService>` implementations for common cases like listening on a TCP port, in the :py:mod:`twisted.application.internet` module.
 Here's a simple example of constructing a service that runs an echo server on TCP port 7001:
 
 .. code-block:: python
@@ -159,8 +159,8 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
   Services which allow you to make connections and listen for connections
   on TCP ports.
 
-  - :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>`
-  - :api:`twisted.internet.interfaces.IReactorTCP.connectTCP <connectTCP>`
+  - :py:meth:`listenTCP <twisted.internet.interfaces.IReactorTCP.listenTCP>`
+  - :py:meth:`connectTCP <twisted.internet.interfaces.IReactorTCP.connectTCP>`
 
 
 ``UNIXServer``
@@ -169,8 +169,8 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
 
   Services which listen and make connections over UNIX sockets.
 
-  - :api:`twisted.internet.interfaces.IReactorUNIX.listenUNIX <listenUNIX>`
-  - :api:`twisted.internet.interfaces.IReactorUNIX.connectUNIX <connectUNIX>`
+  - :py:meth:`listenUNIX <twisted.internet.interfaces.IReactorUNIX.listenUNIX>`
+  - :py:meth:`connectUNIX <twisted.internet.interfaces.IReactorUNIX.connectUNIX>`
 
 
 ``SSLServer``
@@ -179,15 +179,15 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
 
   Services which allow you to make SSL connections and run SSL servers.
 
-  - :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>`
-  - :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>`
+  - :py:meth:`listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>`
+  - :py:meth:`connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>`
 
 
 ``UDPServer``
 
   A service which allows you to send and receive data over UDP.
 
-  - :api:`twisted.internet.interfaces.IReactorUDP.listenUDP <listenUDP>`
+  - :py:meth:`listenUDP <twisted.internet.interfaces.IReactorUDP.listenUDP>`
 
   See also the :doc:`UDP documentation <udp>`.
 
@@ -198,31 +198,31 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
 
   Services which send and receive data over UNIX datagram sockets.
 
-  - :api:`twisted.internet.interfaces.IReactorUNIXDatagram.listenUNIXDatagram <listenUNIXDatagram>`
-  - :api:`twisted.internet.interfaces.IReactorUNIXDatagram.connectUNIXDatagram <connectUNIXDatagram>`
+  - :py:meth:`listenUNIXDatagram <twisted.internet.interfaces.IReactorUNIXDatagram.listenUNIXDatagram>`
+  - :py:meth:`connectUNIXDatagram <twisted.internet.interfaces.IReactorUNIXDatagram.connectUNIXDatagram>`
 
 
 ``MulticastServer``
 
   A server for UDP socket methods that support multicast.
 
-  - :api:`twisted.internet.interfaces.IReactorMulticast.listenMulticast <listenMulticast>`
+  - :py:meth:`listenMulticast <twisted.internet.interfaces.IReactorMulticast.listenMulticast>`
 
 
 ``TimerService``
 
   A service to periodically call a function.
 
-  - :api:`twisted.application.internet.TimerService <TimerService>`
+  - :py:class:`TimerService <twisted.application.internet.TimerService>`
 
 
 Service Collection
 ~~~~~~~~~~~~~~~~~~
 
-:api:`twisted.application.service.IServiceCollection <IServiceCollection>` objects contain :api:`twisted.application.service.IService <IService>` objects.
-IService objects can be added to IServiceCollection by calling :api:`twisted.application.service.IService.setServiceParent <setServiceParent>` and detached by using :api:`twisted.application.service.IService.disownServiceParent <disownServiceParent>`.
+:py:class:`IServiceCollection <twisted.application.service.IServiceCollection>` objects contain :py:class:`IService <twisted.application.service.IService>` objects.
+IService objects can be added to IServiceCollection by calling :py:meth:`setServiceParent <twisted.application.service.IService.setServiceParent>` and detached by using :py:meth:`disownServiceParent <twisted.application.service.IService.disownServiceParent>`.
 
-The standard implementation of IServiceCollection is :api:`twisted.application.service.MultiService <MultiService>`, which also implements IService.
+The standard implementation of IServiceCollection is :py:class:`MultiService <twisted.application.service.MultiService>`, which also implements IService.
 MultiService is useful for creating a new Service which combines two or more existing Services.
 For example, you could create a DNS Service as a MultiService which has a TCP and a UDP Service as children.
 

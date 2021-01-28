@@ -98,8 +98,8 @@ class UNIXChecker:
         and see if it it matches it matches C{password}.
 
         @param spwd: Module which provides functions which
-                    access to the Unix shadow password database.
-        @type pwd: C{module}
+                     access to the Unix shadow password database.
+        @type spwd: C{module}
         @param username: The user to look up in the Unix password database.
         @type username: L{unicode}/L{str} or L{bytes}
         @param password: The password to compare.

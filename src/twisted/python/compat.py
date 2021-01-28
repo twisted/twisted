@@ -314,13 +314,7 @@ def ioType(fileIshObject, default=str):
 
             2. L{bytes}, if the file is unambiguously opened in binary mode.
 
-            3. L{basestring}, if we are on python 2 (the L{basestring} type
-               does not exist on python 3) and the file is opened in binary
-               mode, but has an encoding and can therefore accept both bytes
-               and text reliably for writing, but will return L{bytes} from
-               read methods.
-
-            4. The C{default} parameter, if the given type is not understood.
+            3. The C{default} parameter, if the given type is not understood.
 
     @rtype: L{type}
     """

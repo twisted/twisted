@@ -83,7 +83,10 @@ def getDeprecated(self, decorators):
         if isinstance(a, ast.Call):
             fn = astbuilder.node2fullname(a.func, self)
 
-            if fn == "twisted.python.deprecate.deprecated":
+            if fn in (
+                "twisted.python.deprecate.deprecated",
+                "twisted.python.deprecate.deprecatedProperty",
+            ):
                 try:
                     self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
                 except AttributeError:

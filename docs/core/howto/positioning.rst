@@ -11,10 +11,10 @@ Introduction
 High-level overview
 -------------------
 
-In ``twisted.positioning``, you write an :api:`twisted.positioning.ipositioning.IPositioningReceiver <IPositioningReceiver>` implementation that will get called whenever some information about your position is known (such as position, altitude, heading...).
-The package provides a base class, :api:`twisted.positioning.base.BasePositioningReceiver <BasePositioningReceiver>` you might want to use that implements all of the receiver methods as stubs.
+In ``twisted.positioning``, you write an :py:class:`IPositioningReceiver <twisted.positioning.ipositioning.IPositioningReceiver>` implementation that will get called whenever some information about your position is known (such as position, altitude, heading...).
+The package provides a base class, :py:class:`BasePositioningReceiver <twisted.positioning.base.BasePositioningReceiver>` you might want to use that implements all of the receiver methods as stubs.
 
-Secondly, you will want a positioning source, which will call your :api:`twisted.positioning.ipositioning.IPositioningReceiver <IPositioningReceiver>`.
+Secondly, you will want a positioning source, which will call your :py:class:`IPositioningReceiver <twisted.positioning.ipositioning.IPositioningReceiver>`.
 Currently, ``twisted.positioning`` provides an NMEA implementation, which is a standard protocol spoken by many positioning devices, usually over a serial port.
 
 Examples

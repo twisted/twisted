@@ -1,7 +1,12 @@
 version: 2
 
 sphinx:
-  fail_on_warning: true
+  # This should not fail on errors so that we can view the rendered Read The Docs
+  # pages even on errors.
+  # We have a separate build process which fails on errors and shows all
+  # the errors in one go.
+  # This can be re-enable once RTD is updated with https://github.com/readthedocs/readthedocs.org/issues/7116
+  fail_on_warning: False
 
 formats:
   - pdf
@@ -14,4 +19,4 @@ python:
     - method: pip
       path: .
       extra_requirements:
-        - dev
+        - dev_release

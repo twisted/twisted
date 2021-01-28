@@ -703,9 +703,9 @@ class IRCUser(irc.IRC):
         """
         Send a group of LIST response lines
 
-        @type channel: C{list} of C{(str, int, str)}
-        @param channel: Information about the channels being sent:
-        their name, the number of participants, and their topic.
+        @type channels: C{list} of C{(str, int, str)}
+        @param channels: Information about the channels being sent:
+            their name, the number of participants, and their topic.
         """
         for (name, size, topic) in channels:
             self.sendMessage(irc.RPL_LIST, name, str(size), ":" + topic)

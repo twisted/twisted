@@ -335,14 +335,12 @@ class APIBuilder:
             packagePath.parent().path,
             "--html-viewsource-base",
             sourceURL,
-            "--add-package",
-            packagePath.path,
             "--html-output",
             outputPath.path,
-            "--html-write-function-pages",
             "--quiet",
             "--make-html",
         ] + intersphinxes
+        args.append(packagePath.path)
         main(args)
 
         monkeyPatch.restore()

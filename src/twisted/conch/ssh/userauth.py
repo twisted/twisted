@@ -692,7 +692,7 @@ class SSHUserAuthClient(service.SSHService):
         return the signature.
 
         @param privateKey: the private key object
-        @type publicKey: L{keys.Key}
+        @type privateKey: L{keys.Key}
         @param signData: the data to be signed by the private key.
         @type signData: L{bytes}
         @return: the signature

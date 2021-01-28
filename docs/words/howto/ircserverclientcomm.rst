@@ -12,14 +12,14 @@ Today, we'll be looking at receiving messages from a client and sending messages
 Representing Clients in Twisted
 -------------------------------
 
-Users in Twisted IRC are represented as subclasses of :api:`twisted.words.protocols.irc.IRC <the IRC class>`.
+Users in Twisted IRC are represented as subclasses of :py:class:`the IRC class <twisted.words.protocols.irc.IRC>`.
 This works as the protocol for your Factory class. It will also give you IRC features (like automatically parsing incoming lines) without you having to implement them yourself. The rest of this guide assumes this setup.
 
 
 Sending Messages
 ----------------
 
-Messages are sent to users using the user object's :api:`twisted.words.protocols.irc.IRC.sendMessage <sendMessage>` method.
+Messages are sent to users using the user object's :py:meth:`sendMessage <twisted.words.protocols.irc.IRC.sendMessage>` method.
 
 
 Sending Basic Messages
@@ -77,7 +77,7 @@ Once your tags are collected, you can send the message. The tag dictionary is pa
 
 Receiving Messages
 ------------------
-Twisted Words will handle receiving messages and parsing lines into tokens. The parsed messages are passed into your command through the user's :api:`twisted.words.protocols.irc.IRC.handleCommand <handleCommand>` method.
+Twisted Words will handle receiving messages and parsing lines into tokens. The parsed messages are passed into your command through the user's :py:meth:`handleCommand <twisted.words.protocols.irc.IRC.handleCommand>` method.
 
 
 Handling Commands
