@@ -32,7 +32,7 @@ from typing import (
     Union,
     cast,
 )
-from typing_extensions import Literal, Protocol as _Protocol
+from typing_extensions import Literal
 import warnings
 
 import attr
@@ -186,7 +186,7 @@ def maybeDeferred(
 
     @param f: The callable to invoke
     @param args: The arguments to pass to C{f}
-    @param kw: The keyword arguments to pass to C{f}
+    @param kwargs: The keyword arguments to pass to C{f}
 
     @return: The result of the function call, wrapped in a L{Deferred} if
     necessary.
