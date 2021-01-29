@@ -397,11 +397,11 @@ class Deferred(Awaitable[_DeferredResultT]):
         self,
         callback: Callable[
             ...,
-            Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]],
+            "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         errback: Callable[
             ...,
-            Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]],
+            "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ] = _failthru,
         callbackArgs: _CallbackOrderedArguments = (),
         callbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
@@ -448,7 +448,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self,
         callback: Callable[
             ...,
-            Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]],
+            "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
         **kwargs: object,
@@ -464,7 +464,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self,
         errback: Callable[
             ...,
-            Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]],
+            "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
         **kwargs: object
@@ -488,7 +488,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self,
         callback: Callable[
             ...,
-            Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]],
+            "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
         **kwargs: object
