@@ -365,7 +365,7 @@ class BlockingResolver:
             # type note: returning a failing Deferred is akin to raising...
             #   it's awkward to express that with typing a return value, where
             #   exceptions are not factored in
-            return defer.fail(err)  # type: ignore[return-value]
+            return defer.fail(err)
         else:
             return defer.succeed(address)
 
