@@ -1,1 +1,0 @@
-twisted.python.win32.WindowsError and FakeWindowsError have been deprecated.

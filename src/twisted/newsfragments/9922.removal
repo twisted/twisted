@@ -1,1 +1,0 @@
-Functions and types in twisted.python.compat that existed to support the transition from Python 2 to 3 have been deprecated.
