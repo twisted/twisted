@@ -1,0 +1,17 @@
+name: 'Build wheels'
+description: 'Build wheels'
+runs:
+  using: 'composite'
+
+  steps:
+  - name: Install dependencies
+    shell: bash
+    run: |
+      python -m pip install --upgrade pip tox
+      tox -q --notest -e wheel
+
+  - name: Build wheels on ${{ runner.os }} / Python ${{ matrix.python-version }}
+    shell: bash
+    run: |
+      python --version
+      tox -q -e wheel
