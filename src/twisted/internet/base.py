@@ -1028,7 +1028,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def _checkProcessArgs(
         self, args: List[Union[bytes, str]], env: Optional[Mapping[AnyStr, AnyStr]]
-    ) -> Tuple[List[bytes], Optional[Dict[bytes, bytes]]]:
+    ) -> Union[
+        Tuple[List[bytes], Optional[Dict[bytes, bytes]]],
+        Tuple[List[Union[bytes, str]], Optional[Mapping[AnyStr, AnyStr]]],
+    ]:
         """
         Check for valid arguments and environment to spawnProcess.
 
@@ -1058,6 +1061,13 @@ class ReactorBase(PluggableResolverMixin):
         #
         # are set before the Python interpreter runs, they will affect the
         # value of sys.stdout.encoding.
+
+        # In certain cases, such as a Windows GUI Application which has no
+        # console, sys.stdout is None.  In this case,
+        # just return the args and env unmodified.
+        if not sys.stdout:
+            return args, env
+
         # If a client application patches sys.stdout so that encoding is not
         # set properly, try to fall back to sys.__stdout__.encoding.
         defaultEncoding = sys.stdout.encoding or sys.__stdout__.encoding
