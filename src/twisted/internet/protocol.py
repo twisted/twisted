@@ -527,17 +527,17 @@ connectionDone.cleanFailure()
 @implementer(interfaces.IProtocol, interfaces.ILoggingContext)
 class Protocol(BaseProtocol):
     """
-    This is the base class for streaming connection-oriented protocols.
+    Protocol is a legacy interface for inheritance-based code sharing
+    for streaming connection-oriented protocols.
 
-    If you are going to write a new connection-oriented protocol for Twisted,
-    start here.  Any protocol implementation, either client or server, should
-    be a subclass of this class.
+    New code should prefer the composition-based interface L{interfaces.IProtocol),
+    for either client or server side connections.
 
     The API is quite simple.  Implement L{dataReceived} to handle both
     event-based and synchronous input; output can be sent through the
-    L{BaseProtocol.transport} attribute, which is to be an instance that implements
+    L{transport} attribute, which is to be an instance that implements
     L{twisted.internet.interfaces.ITransport}.
-    Override C{connectionLost} to be notified when the connection ends.
+    Override L{connectionLost} to be notified when the connection ends.
 
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
