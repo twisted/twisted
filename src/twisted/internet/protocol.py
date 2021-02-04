@@ -530,7 +530,7 @@ class Protocol(BaseProtocol):
     Protocol is a legacy interface for inheritance-based code sharing
     for streaming connection-oriented protocols.
 
-    New code should prefer the composition-based interface L{interfaces.IProtocol),
+    New code should prefer the composition-based interface L{interfaces.IProtocol},
     for either client or server side connections.
 
     The API is quite simple.  Implement L{dataReceived} to handle both
