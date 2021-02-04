@@ -554,11 +554,11 @@ class Protocol(BaseProtocol):
 
     def dataReceived(self, data: bytes):
         """
-        Called whenever data is received.
+        Called whenever a chunk of data is received.
 
-        Use this method to translate to a higher-level message.  Usually, some
-        callback will be made upon the receipt of each complete protocol
-        message.
+        Use this method to translate to a higher-level message.
+        Usually, this is used to assemble a complete protocol message and
+        dispatch it to high-level callback.
 
         @param data: a string of indeterminate length.  Please keep in mind
             that you will probably need to buffer some data, as partial
