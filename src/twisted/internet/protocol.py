@@ -535,7 +535,7 @@ class Protocol(BaseProtocol):
 
     The API is quite simple.  Implement L{dataReceived} to handle both
     event-based and synchronous input; output can be sent through the
-    L{Protocol.transport} attribute, which is to be an instance that implements
+    L{BaseProtocol.transport} attribute, which is to be an instance that implements
     L{twisted.internet.interfaces.ITransport}.
     Override C{connectionLost} to be notified when the connection ends.
 
