@@ -16,6 +16,7 @@ import os
 import pathlib
 import subprocess
 from pprint import pprint
+from datetime import date
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -61,9 +62,14 @@ source_suffix = ".rst"
 # The master toctree document.
 master_doc = "index"
 
+_today = date.today()
 # General information about the project.
 project = "Twisted"
-copyright = "2020, Twisted Matrix Labs"
+copyright = "{}, Twisted Matrix Labs. Ver {}. Build at {}".format(
+    _today.year,
+    twisted_version_object.public(),
+    _today.isoformat(),
+)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
