@@ -531,6 +531,16 @@ class ProcessTests(unittest.TestCase):
 
         return d.addCallback(processEnded)
 
+    def test_patchSysStdoutWithNone(self):
+        """
+        In some scenarious, such as Python running as part of a Windows
+        Windows GUI Application with no console, L{sys.stdout} is L{None}.
+        """
+        import sys
+
+        self.patch(sys, "stdout", None)
+        return self.test_stdio()
+
     def test_patchSysStdoutWithStringIO(self):
         """
         Some projects which use the Twisted reactor
