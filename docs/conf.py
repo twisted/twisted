@@ -65,7 +65,7 @@ master_doc = "index"
 _today = date.today()
 # General information about the project.
 project = "Twisted"
-copyright = "{}, Twisted Matrix Labs. Ver {}. Build at {}".format(
+copyright = "{}, Twisted Matrix Labs. Ver {}. Built on {}".format(
     _today.year,
     twisted_version_object.public(),
     _today.isoformat(),
