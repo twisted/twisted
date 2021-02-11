@@ -942,16 +942,12 @@ class Deferred(Awaitable[_DeferredResultT]):
         @return: A L{Deferred} which will fire when the L{Future} fires.
         """
 
-        class Adaptor:
-            def __init__(self, actual: Deferred[Any]) -> None:
-                self.actual = actual
-
-            def __call__(self, result: Future) -> None:
-                try:
-                    extracted = result.result()
-                except BaseException:
-                    extracted = Failure()
-                self.actual.callback(extracted)
+        def adapt(result: Future) -> None:
+            try:
+                extracted = result.result()
+            except BaseException:
+                extracted = Failure()
+            actual.callback(extracted)
 
         futureCancel = object()
 
@@ -960,12 +956,13 @@ class Deferred(Awaitable[_DeferredResultT]):
             reself.callback(futureCancel)
 
         self = cls(cancel)
-        adapt = Adaptor(self)
+        actual = self
 
-        def uncancel(result: _T) -> Union[_T, Deferred[object]]:
+        def uncancel(result: _T) -> Union[_T, Deferred[_DeferredResultT]]:
             if result is futureCancel:
-                adapt.actual = Deferred()
-                return adapt.actual
+                nonlocal actual
+                actual = Deferred()
+                return actual
             return result
 
         self.addCallback(uncancel)
