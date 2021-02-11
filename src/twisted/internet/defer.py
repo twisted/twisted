@@ -129,9 +129,7 @@ def succeed(result: _T) -> "Deferred[_T]":
     return d
 
 
-def fail(
-    result: Optional[Union[Failure, BaseException]] = None
-) -> "Deferred[Optional[Union[Failure, BaseException]]]":
+def fail(result: Optional[Union[Failure, BaseException]] = None) -> "Deferred[Any]":
     """
     Return a L{Deferred} that has already had C{.errback(result)} called.
 
@@ -160,10 +158,7 @@ def execute(
     try:
         result = callable(*args, **kwargs)
     except BaseException:
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
-        return fail()  # type: ignore[return-value]
+        return fail()
     else:
         return succeed(result)
 
@@ -190,18 +185,12 @@ def maybeDeferred(
     try:
         result = f(*args, **kwargs)
     except BaseException:
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
-        return fail(Failure(captureVars=Deferred.debug))  # type: ignore[return-value]
+        return fail(Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
         return result
     elif isinstance(result, Failure):
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
-        return fail(result)  # type: ignore[return-value]
+        return fail(result)
     else:
         return succeed(result)
 
@@ -925,7 +914,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     @classmethod
     def fromFuture(cls, future: Future) -> "Deferred[Any]":
         """
-        Adapt an L{Future} to a L{Deferred}.
+        Adapt a L{Future} to a L{Deferred}.
 
         @note: This creates a L{Deferred} from a L{Future}, I{not} from
             a C{coroutine}; in other words, you will need to call
@@ -2139,10 +2128,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
             been called and not successfully locked the file.
         """
         if self._tryLockCall is not None:
-            # type note: returning a failing Deferred is akin to raising...
-            #   it's awkward to express that with typing a return value, where
-            #   exceptions are not factored in
-            return fail(  # type: ignore[return-value]
+            return fail(
                 AlreadyTryingToLockError(
                     "deferUntilLocked isn't safe for concurrent use."
                 )
