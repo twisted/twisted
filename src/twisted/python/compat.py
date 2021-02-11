@@ -501,7 +501,7 @@ def _constructMethod(cls, name, self):
     @type self: any object
 
     @return: a bound method
-    @rtype: L{types._MethodType}
+    @rtype: L{_MethodType}
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
