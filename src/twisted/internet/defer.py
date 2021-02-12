@@ -922,7 +922,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     __await__ = __iter__  # type: ignore[assignment]
     __next__ = send
 
-    def asFuture(self, loop: AbstractEventLoop) -> Future[_DeferredResultT]:
+    def asFuture(self, loop: AbstractEventLoop) -> "Future[_DeferredResultT]":
         """
         Adapt this L{Deferred} into a L{Future} which is bound to C{loop}.
 
@@ -946,7 +946,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         future = createFuture()
 
-        def checkCancel(futureAgain: Future[_DeferredResultT]) -> None:
+        def checkCancel(futureAgain: "Future[_DeferredResultT]") -> None:
             if futureAgain.cancelled():
                 self.cancel()
 
