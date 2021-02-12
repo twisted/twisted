@@ -443,7 +443,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object,
+        **kwargs: object
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding just a callback.
@@ -459,7 +459,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object,
+        **kwargs: object
     ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         """
         Convenience method for adding just an errback.
@@ -483,7 +483,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object,
+        **kwargs: object
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding a single callable as both a callback
