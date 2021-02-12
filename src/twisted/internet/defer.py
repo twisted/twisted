@@ -260,6 +260,11 @@ class _Sentinel(Enum):
     _CONTINUE = object()
 
 
+# Cache these values for use without the extra lookup in deferred hot code paths
+_NO_RESULT = _Sentinel._NO_RESULT
+_CONTINUE = _Sentinel._CONTINUE
+
+
 # type note: this should be Callable[[object, ...], object] but mypy doesn't allow.
 #   Callable[[object], object] is next best, but disallows valid callback signatures
 DeferredCallback = Callable[..., object]
@@ -269,7 +274,7 @@ DeferredErrback = Callable[..., object]
 
 _CallbackOrderedArguments = Tuple[object, ...]
 _CallbackKeywordArguments = Mapping[str, object]
-_Callbacks = Tuple[
+_CallbackChain = Tuple[
     Tuple[
         Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
@@ -367,7 +372,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks = []  # type: List[_Callbacks]
+        self.callbacks = []  # type: List[_CallbackChain]
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
@@ -672,7 +677,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self.result = result
         self._runCallbacks()
 
-    def _continuation(self) -> _Callbacks:
+    def _continuation(self) -> _CallbackChain:
         """
         Build a tuple of callback and errback with L{_Sentinel._CONTINUE}.
         """
@@ -739,7 +744,7 @@ class Deferred(Awaitable[_DeferredResultT]):
                     callback, args, kwargs = item[1]
 
                 # Avoid recursion if we can.
-                if callback is _Sentinel._CONTINUE:
+                if callback is _CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
                     chainee = cast(Deferred[object], args[0])
@@ -758,7 +763,15 @@ class Deferred(Awaitable[_DeferredResultT]):
                 try:
                     current._runningCallbacks = True
                     try:
-                        current.result = callback(current.result, *args, **kwargs)
+                        # type note: mypy sees `callback is _CONTINUE` above and
+                        #    then decides that `callback` is not callable.
+                        #    This goes away when we use `_Sentinel._CONTINUE`
+                        #    instead, but we don't want to do that attribute
+                        #    lookup in this hot code path, so we ignore the mypy
+                        #    complaint here.
+                        current.result = callback(  # type: ignore[misc]
+                            current.result, *args, **kwargs
+                        )
 
                         if current.result is current:
                             warnAboutFunction(
@@ -778,11 +791,9 @@ class Deferred(Awaitable[_DeferredResultT]):
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(
-                            current.result, "result", _Sentinel._NO_RESULT
-                        )
+                        resultResult = getattr(current.result, "result", _NO_RESULT)
                         if (
-                            resultResult is _Sentinel._NO_RESULT
+                            resultResult is _NO_RESULT
                             or isinstance(resultResult, Deferred)
                             or current.result.paused
                         ):
@@ -830,11 +841,11 @@ class Deferred(Awaitable[_DeferredResultT]):
         Return a string representation of this L{Deferred}.
         """
         cname = self.__class__.__name__
-        result = getattr(self, "result", _Sentinel._NO_RESULT)
+        result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
             result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
-        elif result is _Sentinel._NO_RESULT:
+        elif result is _NO_RESULT:
             result = ""
         else:
             result = " current result: {!r}".format(result)
@@ -851,8 +862,8 @@ class Deferred(Awaitable[_DeferredResultT]):
             # If we're paused, we have no result to give
             return self
 
-        result = getattr(self, "result", _Sentinel._NO_RESULT)
-        if result is _Sentinel._NO_RESULT:
+        result = getattr(self, "result", _NO_RESULT)
+        if result is _NO_RESULT:
             return self
         if isinstance(result, Failure):
             # Clear the failure on debugInfo so it doesn't raise "unhandled
@@ -1294,7 +1305,7 @@ class waitForDeferred:
     See L{deferredGenerator}.
     """
 
-    result = _Sentinel._NO_RESULT  # type: Any
+    result = _NO_RESULT  # type: Any
 
     def __init__(self, d: Deferred[object]) -> None:
         warnings.warn(
@@ -1314,7 +1325,7 @@ class waitForDeferred:
     def getResult(self) -> Any:
         if isinstance(self.result, Failure):
             self.result.raiseException()
-        self.result is not _Sentinel._NO_RESULT
+        self.result is not _NO_RESULT
         return self.result
 
 
