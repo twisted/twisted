@@ -457,7 +457,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         errback: Callable[
             ...,
             "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
-        ] = _failthru,
+        ],
         *args: object,
         **kwargs: object,
     ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
