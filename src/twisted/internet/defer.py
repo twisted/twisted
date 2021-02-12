@@ -20,8 +20,8 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
-    Generic,
     Generator,
+    Generic,
     List,
     Mapping,
     NoReturn,
@@ -142,10 +142,6 @@ def fail(result: Optional[Union[Failure, BaseException]] = None) -> "Deferred[An
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
     """
-    # Typing note: it would be onerous to require applications to declare all
-    # failure types (much as Mypy doesn't require exception declarations), so a
-    # failing Deferred is implicitly an 'Any', and can pretend to have any
-    # result type, since the result branch won't be taken.
     d = Deferred()  # type: Deferred[Any]
     d.errback(result)
     return d
@@ -164,9 +160,6 @@ def execute(
     try:
         result = callable(*args, **kwargs)
     except BaseException:
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
         return fail()
     else:
         return succeed(result)
@@ -194,17 +187,11 @@ def maybeDeferred(
     try:
         result = f(*args, **kwargs)
     except BaseException:
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
         return fail(Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
         return result
     elif isinstance(result, Failure):
-        # type note: returning a failing Deferred is akin to raising...
-        #   it's awkward to express that with typing a return value, where
-        #   exceptions are not factored in
         return fail(result)
     else:
         return succeed(result)
@@ -279,16 +266,21 @@ class _Sentinel(Enum):
     _CONTINUE = object()
 
 
+# Cache these values for use without the extra lookup in deferred hot code paths
+_NO_RESULT = _Sentinel._NO_RESULT
+_CONTINUE = _Sentinel._CONTINUE
+
+
 # type note: this should be Callable[[object, ...], object] but mypy doesn't allow.
-#   Callable[[object], object] is next best, but disallows valid callback signatures
+#     Callable[[object], object] is next best, but disallows valid callback signatures
 DeferredCallback = Callable[..., object]
 # type note: this should be Callable[[Failure, ...], object] but mypy doesn't allow.
-#   Callable[[Failure], object] is next best, but disallows valid callback signatures
+#     Callable[[Failure], object] is next best, but disallows valid callback signatures
 DeferredErrback = Callable[..., object]
 
 _CallbackOrderedArguments = Tuple[object, ...]
 _CallbackKeywordArguments = Mapping[str, object]
-_Callbacks = Tuple[
+_CallbackChain = Tuple[
     Tuple[
         Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
@@ -387,7 +379,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks = []  # type: List[_Callbacks]
+        self.callbacks = []  # type: List[_CallbackChain]
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
@@ -440,9 +432,9 @@ class Deferred(Awaitable[_DeferredResultT]):
         if self.called:
             self._runCallbacks()
 
-        # The Deferred's type has changed here, but *idiomatically* the caller
-        # should treat the result as the new type, consistently.
-        return self  # type: ignore[return-value]
+        # type note: The Deferred's type has changed here, but *idiomatically*
+        #     the caller should treat the result as the new type, consistently.
+        return cast(Deferred[_NextDeferredResultT], self)
 
     def addCallback(
         self,
@@ -467,19 +459,19 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         """
         Convenience method for adding just an errback.
 
         See L{addCallbacks}.
         """
-        # passthru constrains the type of errback in a way which mypy can't
-        # propagate through to _NextDeferredResultT, so we have to ignore a
-        # type error.
+        # type note: passthru constrains the type of errback in a way which mypy
+        #     can't propagate through to _NextDeferredResultT, so we have to
+        #     ignore a type error.
         return self.addCallbacks(
             passthru,
-            errback,  # type: ignore
+            errback,  # type: ignore[arg-type]
             errbackArgs=args,
             errbackKeywords=kwargs,
         )
@@ -491,7 +483,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding a single callable as both a callback
@@ -726,7 +718,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self.result = result
         self._runCallbacks()
 
-    def _continuation(self) -> _Callbacks:
+    def _continuation(self) -> _CallbackChain:
         """
         Build a tuple of callback and errback with L{_Sentinel._CONTINUE}.
         """
@@ -789,11 +781,11 @@ class Deferred(Awaitable[_DeferredResultT]):
                     callback, args, kwargs = item[0]
                 else:
                     # type note: Callback signature also works for Errbacks in
-                    # this context
+                    #     this context.
                     callback, args, kwargs = item[1]
 
                 # Avoid recursion if we can.
-                if callback is _Sentinel._CONTINUE:
+                if callback is _CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
                     chainee = cast(Deferred[object], args[0])
@@ -812,7 +804,15 @@ class Deferred(Awaitable[_DeferredResultT]):
                 try:
                     current._runningCallbacks = True
                     try:
-                        current.result = callback(current.result, *args, **kwargs)
+                        # type note: mypy sees `callback is _CONTINUE` above and
+                        #    then decides that `callback` is not callable.
+                        #    This goes away when we use `_Sentinel._CONTINUE`
+                        #    instead, but we don't want to do that attribute
+                        #    lookup in this hot code path, so we ignore the mypy
+                        #    complaint here.
+                        current.result = callback(  # type: ignore[misc]
+                            current.result, *args, **kwargs
+                        )
 
                         if current.result is current:
                             warnAboutFunction(
@@ -832,11 +832,9 @@ class Deferred(Awaitable[_DeferredResultT]):
                     if isinstance(current.result, Deferred):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(
-                            current.result, "result", _Sentinel._NO_RESULT
-                        )
+                        resultResult = getattr(current.result, "result", _NO_RESULT)
                         if (
-                            resultResult is _Sentinel._NO_RESULT
+                            resultResult is _NO_RESULT
                             or isinstance(resultResult, Deferred)
                             or current.result.paused
                         ):
@@ -884,11 +882,11 @@ class Deferred(Awaitable[_DeferredResultT]):
         Return a string representation of this L{Deferred}.
         """
         cname = self.__class__.__name__
-        result = getattr(self, "result", _Sentinel._NO_RESULT)
+        result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
             result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
-        elif result is _Sentinel._NO_RESULT:
+        elif result is _NO_RESULT:
             result = ""
         else:
             result = " current result: {!r}".format(result)
@@ -905,8 +903,8 @@ class Deferred(Awaitable[_DeferredResultT]):
             # If we're paused, we have no result to give
             return self
 
-        result = getattr(self, "result", _Sentinel._NO_RESULT)
-        if result is _Sentinel._NO_RESULT:
+        result = getattr(self, "result", _NO_RESULT)
+        if result is _NO_RESULT:
             return self
         if isinstance(result, Failure):
             # Clear the failure on debugInfo so it doesn't raise "unhandled
@@ -924,7 +922,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     __await__ = __iter__  # type: ignore[assignment]
     __next__ = send
 
-    def asFuture(self, loop: AbstractEventLoop) -> "Future[_DeferredResultT]":
+    def asFuture(self, loop: AbstractEventLoop) -> Future[_DeferredResultT]:
         """
         Adapt this L{Deferred} into a L{Future} which is bound to C{loop}.
 
@@ -948,7 +946,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         future = createFuture()
 
-        def checkCancel(futureAgain: "Future[_DeferredResultT]") -> None:
+        def checkCancel(futureAgain: Future[_DeferredResultT]) -> None:
             if futureAgain.cancelled():
                 self.cancel()
 
@@ -968,7 +966,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     @classmethod
     def fromFuture(cls, future: Future) -> "Deferred[Any]":
         """
-        Adapt an L{Future} to a L{Deferred}.
+        Adapt a L{Future} to a L{Deferred}.
 
         @note: This creates a L{Deferred} from a L{Future}, I{not} from
             a C{coroutine}; in other words, you will need to call
@@ -985,16 +983,12 @@ class Deferred(Awaitable[_DeferredResultT]):
         @return: A L{Deferred} which will fire when the L{Future} fires.
         """
 
-        class Adaptor:
-            def __init__(self, actual: Deferred[Any]) -> None:
-                self.actual = actual
-
-            def __call__(self, result: Future) -> None:
-                try:
-                    extracted = result.result()
-                except BaseException:
-                    extracted = Failure()
-                self.actual.callback(extracted)
+        def adapt(result: Future) -> None:
+            try:
+                extracted = result.result()
+            except BaseException:
+                extracted = Failure()
+            actual.callback(extracted)
 
         futureCancel = object()
 
@@ -1003,14 +997,15 @@ class Deferred(Awaitable[_DeferredResultT]):
             reself.callback(futureCancel)
 
         self = cls(cancel)
-        adapt = Adaptor(self)
+        actual = self
 
         def uncancel(
             result: _DeferredResultT,
         ) -> Union[_DeferredResultT, Deferred[_DeferredResultT]]:
             if result is futureCancel:
-                adapt.actual = Deferred()
-                return adapt.actual
+                nonlocal actual
+                actual = Deferred()
+                return actual
             return result
 
         self.addCallback(uncancel)
@@ -1353,7 +1348,7 @@ class waitForDeferred:
     See L{deferredGenerator}.
     """
 
-    result = _Sentinel._NO_RESULT  # type: Any
+    result = _NO_RESULT  # type: Any
 
     def __init__(self, d: Deferred[object]) -> None:
         warnings.warn(
@@ -1373,7 +1368,7 @@ class waitForDeferred:
     def getResult(self) -> Any:
         if isinstance(self.result, Failure):
             self.result.raiseException()
-        self.result is not _Sentinel._NO_RESULT
+        self.result is not _NO_RESULT
         return self.result
 
 
@@ -1396,8 +1391,8 @@ def _deferGenerator(
 
     # defgen is waiting for result?  # result
     # type note: List[Any] because you can't annotate List items by index.
-    # …better fix would be to create a class, but we need to jettison
-    # deferredGenerator anyway.
+    #     …better fix would be to create a class, but we need to jettison
+    #     deferredGenerator anyway.
     waiting = [True, None]  # type: List[Any]
 
     while 1:
@@ -1554,7 +1549,8 @@ class _CancellationStatus:
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[_T], object, None], Coroutine[Deferred[_T], object, None]
+        Generator[Deferred[_T], object, None],
+        Coroutine[Deferred[_T], object, None],
     ],
     status: _CancellationStatus,
 ) -> None:
@@ -1702,7 +1698,10 @@ def _inlineCallbacks(
 
 
 def _cancellableInlineCallbacks(
-    gen: Union[Generator["Future[_T]", object, _T], Coroutine["Future[_T]", object, _T]]
+    gen: Union[
+        Generator["Future[_T]", object, _T],
+        Coroutine["Future[_T]", object, _T],
+    ]
 ) -> Deferred[_T]:
     """
     Make an C{@}L{inlineCallbacks} cancellable.
@@ -1756,7 +1755,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
 
 
 # type note: "..." is used here because we don't have a better way to express
-# that the same arguments are accepted by the returned callable
+#     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
     f: Callable[..., Generator[Deferred[object], object, None]]
 ) -> Callable[..., Deferred[object]]:
@@ -2186,9 +2185,6 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
             been called and not successfully locked the file.
         """
         if self._tryLockCall is not None:
-            # type note: returning a failing Deferred is akin to raising...
-            #   it's awkward to express that with typing a return value, where
-            #   exceptions are not factored in
             return fail(
                 AlreadyTryingToLockError(
                     "deferUntilLocked isn't safe for concurrent use."

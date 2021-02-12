@@ -362,9 +362,6 @@ class BlockingResolver:
         except OSError:
             msg = "address {!r} not found".format(name)
             err = error.DNSLookupError(msg)
-            # type note: returning a failing Deferred is akin to raising...
-            #   it's awkward to express that with typing a return value, where
-            #   exceptions are not factored in
             return defer.fail(err)
         else:
             return defer.succeed(address)
@@ -1035,7 +1032,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def _checkProcessArgs(
         self, args: List[Union[bytes, str]], env: Optional[Mapping[AnyStr, AnyStr]]
-    ) -> Tuple[List[bytes], Optional[Dict[bytes, bytes]]]:
+    ) -> Union[
+        Tuple[List[bytes], Optional[Dict[bytes, bytes]]],
+        Tuple[List[Union[bytes, str]], Optional[Mapping[AnyStr, AnyStr]]],
+    ]:
         """
         Check for valid arguments and environment to spawnProcess.
 
@@ -1064,8 +1064,19 @@ class ReactorBase(PluggableResolverMixin):
         #  - PYTHONIOENCODING
         #
         # are set before the Python interpreter runs, they will affect the
-        # value of sys.stdout.encoding
-        defaultEncoding = sys.stdout.encoding
+        # value of sys.stdout.encoding.
+
+        # In certain cases, such as a Windows GUI Application which has no
+        # console, sys.stdout is None.  In this case,
+        # just return the args and env unmodified.
+        if not sys.stdout:
+            return args, env
+
+        # If a client application patches sys.stdout so that encoding is not
+        # set properly, try to fall back to sys.__stdout__.encoding.
+        defaultEncoding = sys.stdout.encoding or sys.__stdout__.encoding
+        if not defaultEncoding:
+            raise ValueError("sys.stdout does not have a valid encoding")
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
