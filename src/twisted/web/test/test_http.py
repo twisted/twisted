@@ -1994,6 +1994,33 @@ abasdfg
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
+    def test_multipartEmptyHeaderProcessingFailure(self):
+        """
+        When the multipart does not contain a header is should be skipped
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        # The parsing failure is encoding a NoneType key when name is not
+        # defined in Content-Disposition
+        req = b"""\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaBb1313
+Content-Length: 14
+
+--AaBb1313
+
+--AaBb1313--
+"""
+        channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(processed[0].args, {})
+
     def test_multipartFormData(self):
         """
         If the request has a Content-Type of C{multipart/form-data}, and the
