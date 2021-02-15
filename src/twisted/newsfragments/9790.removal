@@ -1,1 +1,0 @@
-Support for Python 2.7 has been removed. Twisted now supports only Python versions 3.5/3.6/3.7.

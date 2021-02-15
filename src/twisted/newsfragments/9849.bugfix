@@ -1,1 +1,0 @@
-The _connDone parameter has been removed from twisted.internet.abstract.FileDescriptor.loseConnection()'s signature in order to match the signature in the base class twisted.internet._newtls.ConnectionMixin loseConnection().
