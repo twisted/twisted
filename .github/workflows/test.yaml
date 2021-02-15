@@ -15,7 +15,7 @@ jobs:
       TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
-          python-version: [3.5, 3.6, 3.7, 3.8, 3.9, pypy3]
+          python-version: [3.5, 3.6, 3.7, 3.8, 3.9, pypy-3.6, pypy-3.7]
 
     steps:
     - uses: actions/checkout@v2
