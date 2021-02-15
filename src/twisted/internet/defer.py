@@ -1462,7 +1462,7 @@ def _inlineCallbacks(result, g, status):
             if version_info < (3, 7):
                 # The contextvars backport and our no-op shim add an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
-            elif implementation.name == 'pypy':
+            elif implementation.name == "pypy":
                 # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
 
