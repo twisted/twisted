@@ -7,7 +7,6 @@ import tempfile
 import os.path
 from twisted.internet import asyncfs
 from twisted.trial import unittest
-from unittest import skipUnless
 from twisted.internet.defer import DeferredList
 from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
 
