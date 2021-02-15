@@ -664,7 +664,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(E, [])
         self.assertEqual(S, [15])
 
-    def test_maybeDeferredSyncError(self):
+    def test_maybeDeferredSyncException(self):
         """
         L{defer.maybeDeferred} should catch exception raised by a synchronous
         function and errback its resulting L{defer.Deferred} with it.
@@ -679,6 +679,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(S, [])
         self.assertEqual(len(E), 1)
         self.assertEqual(str(E[0].value), expected)
+
+    def test_maybeDeferredSyncFailure(self):
+        """
+        L{defer.maybeDeferred} should catch exception raised by a synchronous
+        function and errback its resulting L{defer.Deferred} with it.
+        """
+        S, E = [], []
+        d = defer.maybeDeferred((lambda x: defer.fail(x + 5)), 10)
+        d.addCallbacks(S.append, E.append)
+        self.assertEqual(S, [])
+        self.assertEqual(len(E), 1)
+        self.assertEqual(E[0].value, 15)
 
     def test_maybeDeferredAsync(self):
         """
