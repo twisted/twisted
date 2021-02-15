@@ -9,7 +9,7 @@ Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
 well.
 """
 
-
+from twisted.python.compat import _PYPY
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
     Deferred,
@@ -79,11 +79,15 @@ class NonLocalExitTests(TestCase):
         warnings = self.flushWarnings(offendingFunctions=[self.mistakenMethod])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0]["category"], DeprecationWarning)
+        if _PYPY:
+            contextVarMethod = "run"
+        else:
+            contextVarMethod = "inline"
         self.assertEqual(
             warnings[0]["message"],
-            "returnValue() in 'mistakenMethod' causing 'inline' to exit: "
+            "returnValue() in 'mistakenMethod' causing '{contextVarMethod}' to exit: "
             "returnValue should only be invoked by functions decorated with "
-            "inlineCallbacks",
+            "inlineCallbacks".format(contextVarMethod=contextVarMethod),
         )
 
     def test_returnValueNonLocalWarning(self):
