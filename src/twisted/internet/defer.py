@@ -409,7 +409,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         """
         # Default value used to be None and callers may be using None
         if errback is None:
-            errback = passthru  # type: ignore[unreachable]
+            errback = _failthru  # type: ignore[unreachable]
         if callbackArgs is None:
             callbackArgs = ()  # type: ignore[unreachable]
         if callbackKeywords is None:

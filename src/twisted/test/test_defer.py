@@ -176,6 +176,44 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callbackResults, (("hello",), {}))
         self.assertEqual(self.callback2Results, (("hello",), {}))
 
+    def testAddCallbacksNoneErrback(self):
+        """
+        If given None for an errback, addCallbacks uses a pass-through.
+        """
+        error = GenericError("oopsie")
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, None)
+        deferred.errback(error)
+        deferred.addErrback(self._errback)
+        self.assertIsNone(self.callbackResults)
+        self.assertEqual(len(self.errbackResults[0]), 1)
+        self.assertEqual(self.errbackResults[0][0].value, error)
+        self.assertEqual(self.errbackResults[1], {})
+
+    def testAddCallbacksNoneCallbackArgs(self):
+        """
+        If given None as a callback args and kwargs, () and {} are used.
+        """
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, self._errback, None, None, (), {})
+        deferred.callback("hello")
+        self.assertIsNone(self.errbackResults)
+        self.assertEqual(self.callbackResults, (("hello",), {}))
+
+    def testAddCallbacksNoneErrbackArgs(self):
+        """
+        If given None as a errback args and kwargs, () and {} are used.
+        """
+        error = GenericError("oopsie")
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, self._errback, (), {}, None, None)
+        deferred.errback(error)
+        deferred.addErrback(self._errback)
+        self.assertIsNone(self.callbackResults)
+        self.assertEqual(len(self.errbackResults[0]), 1)
+        self.assertEqual(self.errbackResults[0][0].value, error)
+        self.assertEqual(self.errbackResults[1], {})
+
     def testDeferredList(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()
