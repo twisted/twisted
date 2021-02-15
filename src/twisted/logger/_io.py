@@ -30,7 +30,7 @@ class LoggingFile:
 
     _softspace = 0
 
-    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    @deprecatedProperty(Version("Twisted", 21, 2, 0))
     def softspace(self):
         return self._softspace
 

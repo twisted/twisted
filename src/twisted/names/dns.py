@@ -470,7 +470,7 @@ class IEncodableRecord(IEncodable, IRecord):
     """
     Interface for DNS records that can be encoded and decoded.
 
-    @since: Twisted NEXT
+    @since: Twisted 21.2.0
     """
 
 

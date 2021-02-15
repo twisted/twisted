@@ -46,7 +46,7 @@ class DeprecationTests(unittest.TestCase):
 
         self.assertWarns(
             DeprecationWarning,
-            "twisted.python.win32.FakeWindowsError was deprecated in Twisted NEXT: "
+            "twisted.python.win32.FakeWindowsError was deprecated in Twisted 21.2.0: "
             "Catch OSError and check presence of 'winerror' attribute.",
             reflect.__file__,
             lambda: reflect.namedAny("twisted.python.win32.FakeWindowsError"),
@@ -57,7 +57,7 @@ class DeprecationTests(unittest.TestCase):
 
         self.assertWarns(
             DeprecationWarning,
-            "twisted.python.win32.WindowsError was deprecated in Twisted NEXT: "
+            "twisted.python.win32.WindowsError was deprecated in Twisted 21.2.0: "
             "Catch OSError and check presence of 'winerror' attribute.",
             reflect.__file__,
             lambda: reflect.namedAny("twisted.python.win32.WindowsError"),

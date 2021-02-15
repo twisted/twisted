@@ -889,7 +889,7 @@ class Deferred:
 
             react(main)
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
 
         @param coro: The coroutine object to schedule.
         @type coro: A Python 3.5+ C{async def} coroutine or a Python 3.4+
