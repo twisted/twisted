@@ -7,13 +7,14 @@ This module contains asynchronous filesystem interfaces and reference implementa
 
 from zope.interface import Interface, implementer
 from twisted.internet import reactor
-from twisted.internet.threads import deferToThreadPool
+from twisted.internet.interfaces import IPushProducer, IConsumer
+from twisted.internet.threads import deferToThreadPool, blockingCallFromThread
 from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
 from twisted.logger import Logger
 import os
 import os.path
-import platform
+import threading
 
 log = Logger()
 
@@ -203,7 +204,7 @@ class IAsyncFilesystem(Interface):
 
 class IFile(Interface):
     """
-    This represents an open file on the server.  An object adhering to this
+    This represents an open file on the filesystem.  An object adhering to this
     interface should be returned from L{openFile}().
     """
 
@@ -269,11 +270,37 @@ class IFile(Interface):
         @rtype: L{int)
         """
 
+    def send(consumer, start=0, chunkSize=4096):
+        """
+        Produce the contents of the file to the given consumer.
+
+        @type consumer: C{IConsumer}
+        @param start: offset to begin reading from
+        @param chunkSize: size, in bytes, of each read
+        @return: A Deferred which fires when the file has been
+        consumed completely.
+
+        adapted from L{twisted.protocols.ftp.IReadFile}
+        """
+
+    def receive(append=False):
+        """
+        @param append: True if append to end of file
+        @return: A C{IConsumer} which is used to write data
+
+        adapted from L{twisted.protocols.ftp.IWriteFile}
+        """
+
 
 class AccessViolation(Exception):
     """thrown when a caller tries to break access restrictions"""
 
 
+DEFAULT_BUFFER_MAX = 2 ** 12  # four megabytes
+DEFAULT_CHUNK_SIZE = 4096
+
+
+@implementer(IPushProducer)
 @implementer(IFile)
 class _ThreadFile:
     """
@@ -294,6 +321,7 @@ class _ThreadFile:
         @type attrs: L{dict}
         """
         self.fso = fso
+        self._write_consumer = None
         if attrs is None:
             attrs = {}
         if "permissions" in attrs and not self.fso.read_only:
@@ -314,7 +342,13 @@ class _ThreadFile:
         return self.fd
 
     def close(self):
-        return self.fso._deferToThread(os.close, self.fd)
+        if self._write_consumer:
+            self._write_consumer.close()
+            d = self._write_consumer.write_deferred
+            d.addCallback(lambda _: self.fso._deferToThread(os.close, self.fd))
+            return d
+        else:
+            return self.fso._deferToThread(os.close, self.fd)
 
     def readChunk(self, offset, length):
         def int_read():
@@ -347,6 +381,109 @@ class _ThreadFile:
         if self.fso.read_only:
             raise AccessViolation()
         return self.fso._deferToThread(os.fsync, self.fd)
+
+    def send(self, consumer, start=0, chunkSize=DEFAULT_CHUNK_SIZE):
+        self.stop_flag = False
+        self.event = threading.Event()
+        self.event.set()
+
+        def int_read_loop():
+            os.lseek(self.fd, start, 0)
+            while True:
+                buf = os.read(self.fd, chunkSize)
+                if buf:
+                    blockingCallFromThread(reactor, consumer.write, buf)
+                if len(buf) < chunkSize or self.stop_flag:
+                    break
+                self.event.wait()
+
+        return self.fso._deferToThread(int_read_loop)
+
+    def stopProducing(self):
+        self.stop_flag = True
+
+    def pauseProducing(self):
+        self.event.clear()
+
+    def resumeProducing(self):
+        self.event.set()
+
+    def receive(self, append=False, buffer_max=DEFAULT_BUFFER_MAX):
+        if self.fso.read_only:
+            raise AccessViolation()
+        self._write_consumer = _ThreadFileConsumer(self, append, buffer_max)
+        return self._write_consumer
+
+
+@implementer(IConsumer)
+class _ThreadFileConsumer:
+    def __init__(self, thread_file, append, buffer_max):
+        self.producer = None
+        self.streaming = False
+        self.lock = threading.Lock()
+        self.event = threading.Event()
+        self._paused = False
+        self._buffer = bytearray()
+        self.write_deferred = self.fso._deferToThread(
+            self._consumer_write_thread, append
+        )
+        self.fd = thread_file.fileno()
+        self.buffer_max = buffer_max
+        self._closed = False
+
+    def registerProducer(self, producer, streaming):
+        assert self.producer is None
+        self.producer = producer
+        self.streaming = streaming
+        self._paused = False
+
+    def unregisterProducer(self):
+        assert self.producer
+        if self.streaming and not self._paused:
+            self.producer.pauseProducing()
+            self._paused = True
+        self.producer = None
+
+    def write(self, data):
+        with self.lock:
+            self._buffer += data
+            self.event.set()
+        if (
+            self.producer
+            and self.streaming
+            and (not self._paused)
+            and len(self.buffer) > self.buffer_max
+        ):
+            self.producer.pauseProducing()
+            self._paused = True
+
+    def close(self):
+        with self.lock:
+            self._closed = True
+            self.event.set()
+        if self.producer and self.streaming and (not self._paused):
+            self.producer.pauseProducing()
+            self._paused = True
+
+    def _consumer_write_thread(self, append):
+        os.lseek(self.fd, 0, os.SEEK_END if append else os.SEEK_SET)
+        while True:
+            with self.lock:
+                buf = bytes(self._buffer)
+                self._buffer = bytearray()
+                if len(buf) == 0:
+                    self.event.clear()
+            if len(buf) == 0:
+                if self._closed:
+                    break
+                if self.producer and (
+                    (self.streaming and self._paused) or (not self.streaming)
+                ):
+                    self._paused = False
+                    blockingCallFromThread(reactor, self.producer.resumeProducing)
+                self.event.wait()
+            else:
+                os.write(self.fd, buf)
 
 
 @implementer(IAsyncFilesystem)
