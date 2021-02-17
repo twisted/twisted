@@ -1088,7 +1088,7 @@ class ReactorBase(PluggableResolverMixin):
                     arg = arg.encode(defaultEncoding)
                 except UnicodeEncodeError:
                     return None
-            if isinstance(arg, bytes) and b"\0" not in arg:  # type: ignore[unreachable]
+            if isinstance(arg, bytes) and b"\0" not in arg:
                 return arg
 
             return None

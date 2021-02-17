@@ -22,7 +22,7 @@ import types
 import warnings
 from asyncio import iscoroutine
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info, implementation, version_info
 from typing import Optional
 
 import attr
@@ -1459,8 +1459,11 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
+                # The contextvars backport and our no-op shim add an extra frame.
+                appCodeTrace = appCodeTrace.tb_next
+            elif implementation.name == "pypy":
+                # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
