@@ -1,0 +1,1 @@
+delegate to urllib.parse:parse_qs in twisted.web.http:parse_qs to avoid CVE-2021-23336 and the associated CI failures
