@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info, implementation, version_info
 import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
@@ -1615,8 +1615,11 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
+                # The contextvars backport and our no-op shim add an extra frame.
+                appCodeTrace = appCodeTrace.tb_next
+            elif implementation.name == "pypy":
+                # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 

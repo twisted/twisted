@@ -980,6 +980,7 @@ class Request:
                                     for z in y
                                 ]
                                 for x, y in cgiArgs.items()
+                                if isinstance(x, str)
                             }
                         )
                     else:
