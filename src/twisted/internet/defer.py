@@ -1610,14 +1610,17 @@ def _inlineCallbacks(
             # code.
             excInfo = exc_info()
             assert excInfo is not None
+
             traceback = excInfo[2]
             assert traceback is not None
+
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
             if version_info < (3, 7):
                 # The contextvars backport and our no-op shim add an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
+                assert appCodeTrace is not None
             elif implementation.name == "pypy":
                 # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
