@@ -9,6 +9,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+import sys
 
 import hamcrest
 
@@ -2319,6 +2320,7 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
+    @skipIf(sys.version_info >= (3, 6), "newer py3.6 parse_qs treat ; differently")
     def testParseqs(self):
         self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)
