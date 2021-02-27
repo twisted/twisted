@@ -34,7 +34,7 @@ from twisted.logger import Logger
 # from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs, int_from_bytes
+from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs
 
 
 def _mpFromBytes(data):
@@ -48,7 +48,7 @@ def _mpFromBytes(data):
     @rtype: L{bytes}
     @return: The given data encoded as an SSH multiple-precision integer.
     """
-    return MP(int_from_bytes(data, "big"))
+    return MP(int.from_bytes(data, "big"))
 
 
 class _MACParams(tuple):
