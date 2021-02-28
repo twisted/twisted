@@ -177,7 +177,7 @@ Announce
 
 #. Announce the release
 
-   - Send a text version of the announcement to: twisted-python@twistedmatrix.com, python-announce-list@python.org, python-list@python.org, twisted-web@twistedmatrix.com
+   - Send a text version of the announcement to: twisted-python@twistedmatrix.com, python-announce-list@python.org, twisted-web@twistedmatrix.com
    - ​http://labs.twistedmatrix.com (Post a web version of the announcements, with links instead of literal URLs)
    - Twitter, if you feel like it
    - ``#twisted`` topic on IRC (you'll need ops)
