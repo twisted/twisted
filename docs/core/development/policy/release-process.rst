@@ -95,7 +95,7 @@ Prepare the branch
 #. Run ``python -m incremental.update Twisted --rc``
 #. Commit the changes made by Incremental.
 #. Run ``tox -e towncrier``.
-#. Commit the changes made by towncrier - this automatically removes the NEWS newsfragments.
+#. Commit the changes made by towncrier - this automatically removes the newsfragment files.
 #. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
 #. Push the changes up to GitHub and create a new release PR.
 #. The GitHub PR is dedicated to the final release and the same PR is used to release the candidate and final version.
