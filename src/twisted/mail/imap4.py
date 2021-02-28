@@ -536,7 +536,7 @@ class Command:
         wantResponse=(),
         continuation=None,
         *contArgs,
-        **contKw
+        **contKw,
     ):
         self.command = command
         self.args = args

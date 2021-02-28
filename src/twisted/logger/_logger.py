@@ -147,7 +147,7 @@ class Logger:
         format: str,
         failure: Optional[Failure] = None,
         level: LogLevel = LogLevel.critical,
-        **kwargs: object
+        **kwargs: object,
     ) -> None:
         """
         Log a failure and emit a traceback.

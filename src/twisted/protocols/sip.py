@@ -165,7 +165,7 @@ class Via:
         rport=_absent,
         branch=None,
         maddr=None,
-        **kw
+        **kw,
     ):
         """
         Set parameters of this Via header. All arguments correspond to

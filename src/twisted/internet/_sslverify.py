@@ -1192,7 +1192,7 @@ def optionsForClientTLS(
     clientCertificate=None,
     acceptableProtocols=None,
     *,
-    extraCertificateOptions=None
+    extraCertificateOptions=None,
 ):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for

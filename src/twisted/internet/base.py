@@ -416,7 +416,7 @@ class _ThreePhaseEvent:
         phase: str,
         callable: _ThreePhaseEventTriggerCallable,
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _ThreePhaseEventTriggerHandle:
         """
         Add a trigger to the indicate phase.
@@ -787,7 +787,7 @@ class ReactorBase(PluggableResolverMixin):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _SystemEventID:
         """
         See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.

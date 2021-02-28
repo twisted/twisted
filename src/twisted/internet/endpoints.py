@@ -2226,7 +2226,7 @@ def _parseClientTLS(
     privateKey=None,
     trustRoots=None,
     endpoint=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Internal method to construct an endpoint from string parameters.
