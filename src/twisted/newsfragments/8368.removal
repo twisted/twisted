@@ -1,1 +1,0 @@
-twisted.cred.credentials.UsernameHashedPassword is now deprecated because it doesn't hash the password, causing it to return the wrong result.

@@ -1,1 +1,0 @@
-twisted.internet.process.registerReapProcessHandler and ._BaseProcess.reapProcess will no longer raise a TypeError when processing a None PID

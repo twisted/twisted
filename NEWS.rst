@@ -3,6 +3,191 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 21.2.0 (2021-02-28)
+===========================
+
+Features
+--------
+
+- The enableSessions argument to twisted.internet.ssl.CertificateOptions now
+  actually enables/disables OpenSSL's session cache.  Also, due to
+  session-related bugs, it defaults to False. (#9583)
+- twisted.internet.defer.inlineCallbacks and ensureDeferred will now associate a contextvars.Context with the coroutines they run, meaning that ContextVar objects will maintain their value within the same coroutine, similarly to asyncio Tasks. This functionality requires Python 3.7+, or the contextvars PyPI backport to be installed for Python 3.5-3.6. (#9719, #9826)
+- twisted.internet.defer.Deferred.fromCoroutine has been added. This is similar to the existing ensureDeferred function, but is named more consistently inside Twisted and does not pass through Deferreds. (#9825)
+- trial now allows the @unittest.skipIf decorator to specify that an entire test class should be skipped. (#9829)
+- The twisted.python.deprecate.deprecatedKeywordParameter decorator can be used to mark a keyword paramater of a function or method as deprecated. (#9844)
+- Projects using Twisted can now perform type checking against a Twisted
+  installation, for example using mypy. (#9908)
+- twisted.python.util.InsensitiveDict now fully implements MutableMapping. (#9919)
+- Python 3.8 is now tested and supported. (#9955)
+- Support a coroutine function in twisted.internet.task.react (#9974)
+- PyPy 3.7 is now tested and supported. (#10093)
+
+
+Bugfixes
+--------
+
+- twisted.web.twcgi.CGIProcessProtocol.processEnded(...) now handles an already-finished request, for example when request.connectionLost(...) was called previously. (#9468)
+- Twisted's dependency on PyHamcrest has been moved from the base package to the new "test" extra. Consequently the test extra must be installed for Twisted's test suite to pass. (#9509)
+- Fixed serialization of timedelta, date, and time objects in twisted.spread. (#9716)
+- twisted.internet.asyncioreactor.AsyncioSelectorReactor now raises an exception if instantiated with an event loop which is not compatible with asyncio.SelectorEventLoop. This fixes the AsyncioSelectorReactor in Python 3.8+ on Windows, where in bp-34687 the default Windows asyncio event loop was changed to ProactorEventLoop.  Applications that use AsyncioSelectorReactor on Windows with Python 3.8+ must call asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) before instantiating and running AsyncioSelectorReactor. (#9766)
+- twisted.internet.process.registerReapProcessHandler and ._BaseProcess.reapProcess will no longer raise a TypeError when processing a None PID (#9775)
+- INotify will close its file descriptor if a directory is automatically removed by twisted from the watchlist because it's deleted, avoiding orphaned filedescriptors. (#9777)
+- DelayedCall.reset() is now working properly with asyncioreactor (#9780)
+- AsyncioSelectorReactor.seconds() now correctly returns an epoch time. (#9787)
+- The _connDone parameter has been removed from twisted.internet.abstract.FileDescriptor.loseConnection()'s signature in order to match the signature in the base class twisted.internet._newtls.ConnectionMixin loseConnection(). (#9849)
+- The Gtk3 reactor now runs on Wayland-only sessions (#9904)
+- Descriptive error messages from twisted.internet.error are now present when running with 'python -OO'. (#9918)
+- Comparator methods such as __eq__() now always return NotImplemented for uncomparable types. (#9919)
+- When installing Twisted it now requires a minimum Python 3.5.4 version to match the version used with automated testing. This is the minimum Python version that we know that Twisted works with. (#10098)
+
+
+Improved Documentation
+----------------------
+
+- The narrative docs now contains the associated Twisted version and the date
+  when they were generated. (#3945)
+- The "Writing a twistd plugin" howto now explains how to deploy twistd plugins using Python packaging and pip (#9243)
+-  (#9868, #9873, #9874)
+- Fix a typo in "Introduction to Deferreds" document. (#9948)
+- The Twisted Coding Standard has been changed to refer to The Black code style for guidelines regarding whitespace and line lengths. (#9957)
+- Exempt ``__repr__``, ``__slots__`` and other ``@attrs.define`` related changes from compatibility policy. (#9982)
+- Fix many docstring mistakes flagged by new sanity checks in pydoctor. (#10021)
+- Fix a few dozen broken links to API documentation pages. (#10057)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.cred.credentials.UsernameHashedPassword is now deprecated because it doesn't hash the password, causing it to return the wrong result. (#8368)
+- twisted.news is now removed from the codebase. (This module was never installed on Python 3.) (#9782)
+- Support for Python 2.7 has been removed. Twisted now supports only Python versions 3.5/3.6/3.7. (#9790)
+- twisted.pair.ethernet.IEthernetProtocol.addProto()'s interface was changed to match the existing implementations in the Twisted source code. (#9877)
+- twisted.python.filepath.FilePath.statinfo was deprecated in Twisted 15.0.0 and has now been removed. (#9881)
+- The parameters to twisted.internet.base.ReactorBase.addSystemEventTrigger(), twisted.internet.base.ReactorBase.callWhenRunning(), twisted.internet.base.ReactorBase.callLater(), twisted.internet.task.Clock.callLater() have been renamed to match the parameters defined in the following interfaces: twisted.internet.interfaces.IReactorCore, twisted.internet.interfaces.IReactorTime. (#9897)
+- Functions and types in twisted.python.compat that existed to support the transition from Python 2 to 3 have been deprecated. (#9922)
+- twisted.logger.LoggingFile.softspace has been deprecated. (#10042)
+- twisted.python.win32.WindowsError and FakeWindowsError have been deprecated. (#10053)
+- twisted.mail.pop3client has been renamed to twisted.mail._pop3client, since it has always been a private implementation module. (#10054)
+
+
+Misc
+----
+
+- #5356, #6460, #6903, #6986, #7945, #9306, #9512, #9531, #9622, #9652, #9718, #9744, #9768, #9773, #9776, #9778, #9781, #9784, #9785, #9788, #9789, #9791, #9793, #9795, #9796, #9797, #9798, #9800, #9802, #9803, #9808, #9809, #9810, #9811, #9812, #9820, #9823, #9827, #9833, #9837, #9840, #9842, #9846, #9847, #9848, #9850, #9851, #9852, #9854, #9855, #9856, #9857, #9858, #9861, #9862, #9863, #9864, #9865, #9866, #9867, #9869, #9870, #9871, #9872, #9876, #9878, #9879, #9880, #9882, #9883, #9884, #9886, #9889, #9890, #9891, #9892, #9895, #9896, #9898, #9899, #9902, #9903, #9916, #9917, #9921, #9924, #9927, #9928, #9936, #9953, #9954, #9956, #9959, #9960, #9969, #9970, #9971, #9975, #9976, #9977, #9978, #9979, #9980, #9981, #9983, #9985, #9986, #9987, #9988, #9989, #9991, #9992, #9995, #9999, #10000, #10002, #10009, #10010, #10011, #10014, #10015, #10018, #10025, #10027, #10029, #10032, #10033, #10034, #10036, #10038, #10043, #10044, #10046, #10054, #10059, #10060, #10061, #10063, #10064, #10065, #10069, #10080, #10090
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports Ed25519 keys (requires OpenSSL >= 1.1.1b). (#8966)
+- twisted.conch.ssh.session.SSHSession can now accept environment variables sent by the client, if the SSH avatar implements the new ISessionSetEnv interface. (#9315)
+- twisted.conch.ssh.keys.Key.fromString and twisted.conch.ssh.keys.Key.toString now normalize Unicode passphrases as required by NIST 800-63B. (#9736)
+- twisted.conch.telnet now implements EOR (End of Record) command (RFC 885) (#9875)
+
+
+Bugfixes
+~~~~~~~~
+
+- t.c.ssh.filetransfer.FileTransferClient now errbacks any outstanding requests if the connection is lost before a reply is received. (#9571)
+- t.c.ssh.filetransfer.FileTransferClient immediately errbacks any attempt to send a request on a closed channel. (#9572)
+- twisted.conch.ssh.session.SSHSession now accepts environment variables also for multiplexed SSH session. (#10016)
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- construct and assign portal and checkers consistently in ssh server example (#9578)
+
+
+Misc
+~~~~
+
+- #6446, #9571, #9831, #9913
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.http.Request.getRequestHostname now supports IPv6 literal hostnames
+  in HTTP host headers. (#6014)
+- Fixed unexpected exception by handling subclass of TaskFinished when FileBodyProducer's task stopped twice. (#6528)
+- Importing twisted.web.client no longer has the side effect of initializing the reactor. (#9774)
+- Ensure that all calls to connectionLost use a Failure instance in the HTTP 2 code. (#9817)
+- twisted.web.util.ParentRedirect has been fixed and documented. It was broken by a security fix in Twisted 19.2.0. (#9835)
+- xmlrpc's Proxy class now verifies HTTPS certificates against the system bundle. (#9836)
+- twisted.web.twcgi can now handle url parameters in python 3 (#9887)
+- defer reactor import in twisted.web.xmlrpc (#9931)
+- twisted.web.RedirectAgent now supports 308 redirects (#9940)
+- Fixed an error where twisted.web.http.requestReceived() tries to encode a NoneType returned by cgi.parse_multipart when a multipart body does not contain a "content-disposition" definition. (#10084)
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- xmlrpc's QueryFactory class is now public, more explanation for xmlrpc's queryFactory, and new xmlrpc-debug.py example script for debugging raw XML-RPC traffic. (#9350)
+- twisted.web.client.ContentDecoderAgent's documentation has been corrected and improved. (#9742)
+
+
+Misc
+~~~~
+
+- #6446, #9758, #9801, #9831, #9834, #9841
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.smtp.ESMTPSender no longer forces TLSv1.0 when used without explicit context factory. (#9740)
+
+
+Misc
+~~~~
+
+- #6446, #9831, #9832, #9900, #9910
+
+
+Words
+-----
+
+Misc
+~~~~
+
+- #9901
+
+
+Names
+-----
+
+Features
+~~~~~~~~
+
+- twisted.names.hosts.Resolver and twisted.names.hosts.searchFileForAll() now ignore malformed lines in hosts files like /etc/hosts (#9752)
+- New interface IEncodableRecord combines IEncodable and IRecord, which is useful when using type annotations. (#9920)
+
+
+Bugfixes
+~~~~~~~~
+
+- twistd -n dns --pyzone example-domain.com will no longer throw an exception on startup with Python 3. (#9783)
+- twist dns --pyzone example-domain.com now works on Python 3. (#9786)
+
+
+Misc
+~~~~
+
+- #9749
+
+
 Twisted 20.3.0 (2020-03-13)
 ===========================
 
