@@ -31,7 +31,7 @@ from pyasn1.codec.ber import encoder as berEncoder
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import univ
 from twisted.conch.ssh import common, sexpy
-from twisted.conch.ssh.common import int_from_bytes, int_to_bytes
+from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, nativeString
 from twisted.python.constants import NamedConstant, Names
@@ -1803,8 +1803,8 @@ class Key:
             )
         elif keyType == "DSA":
             concatenatedSignature = common.getNS(signature)[0]
-            r = int_from_bytes(concatenatedSignature[:20], "big")
-            s = int_from_bytes(concatenatedSignature[20:], "big")
+            r = int.from_bytes(concatenatedSignature[:20], "big")
+            s = int.from_bytes(concatenatedSignature[20:], "big")
             signature = encode_dss_signature(r, s)
             k = self._keyObject
             if not self.isPublic():
@@ -1814,8 +1814,8 @@ class Key:
         elif keyType == "EC":  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
             rstr, sstr, rest = common.getNS(concatenatedSignature, 2)
-            r = int_from_bytes(rstr, "big")
-            s = int_from_bytes(sstr, "big")
+            r = int.from_bytes(rstr, "big")
+            s = int.from_bytes(sstr, "big")
             signature = encode_dss_signature(r, s)
 
             k = self._keyObject
