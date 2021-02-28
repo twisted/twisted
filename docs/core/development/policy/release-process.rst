@@ -156,7 +156,9 @@ Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
 #. Have the release branch, previously used to generate a release candidate, checked out
-#. Manually update the version and realease date. Commit and push.
+#. Run ``python -m incremental.update Twisted --newversion $RELEASE``
+#. Manually update the release date if necessary.
+#. Commit and push.
 #. Submit the ticket for review
 #. Pause until the ticket is reviewed and accepted.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
