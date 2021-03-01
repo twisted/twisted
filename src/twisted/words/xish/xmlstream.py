@@ -259,7 +259,7 @@ class XmlStreamFactory(XmlStreamFactoryMixin, protocol.ReconnectingClientFactory
     Factory for XmlStream protocol objects as a reconnection client.
     """
 
-    protocol: Type[protocol.Protocol] = XmlStream
+    protocol: "Type[protocol.Protocol]" = XmlStream
 
     def buildProtocol(self, addr):
         """

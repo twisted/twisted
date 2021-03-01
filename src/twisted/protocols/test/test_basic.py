@@ -557,7 +557,7 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 class LPTestCaseMixin:
 
     illegalStrings: Optional[List[bytes]] = []
-    protocol: Optional[Type[protocol.Protocol]] = None
+    protocol: "Optional[Type[protocol.Protocol]]" = None
 
     def getProtocol(self):
         """
@@ -801,7 +801,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     TestCase mixin for int-prefixed protocols.
     """
 
-    protocol: Optional[Type[protocol.Protocol]] = None
+    protocol: "Optional[Type[protocol.Protocol]]" = None
     strings: Optional[List[bytes]] = None
     illegalStrings: Optional[List[bytes]] = None
     partialStrings: Optional[List[bytes]] = None

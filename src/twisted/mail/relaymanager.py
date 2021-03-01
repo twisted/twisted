@@ -156,7 +156,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol: Type[protocol.Protocol] = SMTPManagedRelayer
+    protocol: "Type[protocol.Protocol]" = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
