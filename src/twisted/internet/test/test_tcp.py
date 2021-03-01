@@ -109,7 +109,7 @@ try:
     s.bind(("::1", 0))
 except OSError as e:
     ipv6Skip = True
-    ipv6SkipReason = str(e)
+    ipv6SkipReason = f"IPv6 not available. {e}"
 else:
     ipv6Skip = False
     ipv6SkipReason = ""
