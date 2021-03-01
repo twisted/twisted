@@ -29,7 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    protocol: Optional[Callable[[], Protocol]] = None
+    protocol: "Optional[Callable[[], Protocol]]" = None
 
     numPorts = 0
     noisy = True

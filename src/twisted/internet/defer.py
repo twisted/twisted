@@ -269,7 +269,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo: Optional[Deferred] = None
+    _chainedTo: "Optional[Deferred]" = None
 
     def __init__(self, canceller=None):
         """

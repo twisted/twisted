@@ -151,7 +151,7 @@ class Options(dict):
 
     subCommand: Optional[str] = None
     defaultSubCommand: Optional[str] = None
-    parent: Optional[Options] = None
+    parent: "Optional[Options]" = None
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
