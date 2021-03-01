@@ -1331,8 +1331,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily: socket.AddressFamily = None
-    socketType: socket.SocketKind = None
+    addressFamily: socket.AddressFamily = None  # type: ignore[assignment]
+    socketType: socket.SocketKind = None  # type: ignore[assignment]
 
     def createInternetSocket(self) -> socket.socket:
         s = socket.socket(self.addressFamily, self.socketType)

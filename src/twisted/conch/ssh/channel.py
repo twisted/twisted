@@ -52,7 +52,7 @@ class SSHChannel(log.Logger):
     """
 
     _log = Logger()
-    name: bytes = None  # only needed for client channels
+    name: bytes = None  # type: ignore[assignment]  # only needed for client channels
 
     def __init__(
         self,

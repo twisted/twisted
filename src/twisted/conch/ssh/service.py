@@ -13,7 +13,9 @@ from twisted.logger import Logger
 
 
 class SSHService:
-    name: bytes = None  # this is the ssh name for the service
+    # this is the ssh name for the service:
+    name: bytes = None  # type:ignore[assignment]
+
     protocolMessages: Dict[int, str] = {}  # map #'s -> protocol names
     transport = None  # gets set later
 
