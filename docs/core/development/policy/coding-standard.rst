@@ -617,11 +617,9 @@ An attribute (or function, method or class) should be considered private when on
 Python 3
 --------
 
-Twisted is being ported to Python 3, targeting Python 3.6+.
+Twisted was ported to Python 3.
 Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
-All new modules must be Python 3.6+ compatible, and all new code to ported modules must be 3.6+ compatible.
-New code in non-ported modules must be written in a 3.6+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
 
 
 Database
