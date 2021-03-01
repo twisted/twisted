@@ -37,12 +37,12 @@ class ClientOptions(options.ConchOptions):
         "executing commands to send and receive file information"
     )
 
-    optParameters = [
+    optParameters: List[List[Optional[Union[str, int]]]] = [
         ["buffersize", "B", 32768, "Size of the buffer to use for sending/receiving."],
         ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
         ["requests", "R", 5, "Number of requests to make before waiting for a reply."],
         ["subsystem", "s", "sftp", "Subsystem/server program to connect to."],
-    ]  # type: List[List[Optional[Union[str, int]]]]
+    ]
 
     compData = usage.Completions(
         descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},

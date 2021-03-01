@@ -98,7 +98,7 @@ class AbstractClientMixin:
     @ivar _logonDeferred: Fired when I am done logging in.
     """
 
-    _protoBase = None  # type: Type[Protocol]
+    _protoBase: Type[Protocol] = None
 
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:

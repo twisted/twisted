@@ -218,7 +218,7 @@ def testByte%(groupName)s(self):
 
 
 class ByteGroupingsMixin(MockMixin):
-    protocolFactory = None  # type: Optional[Type[Protocol]]
+    protocolFactory: Optional[Type[Protocol]] = None
 
     for word, n in [
         ("Pairs", 2),

@@ -17,7 +17,7 @@ from twisted.python import log, reflect
 from io import StringIO as _cStringIO
 
 
-oldModules = {}  # type: Dict[str, types.ModuleType]
+oldModules: Dict[str, types.ModuleType] = {}
 
 
 _UniversalPicklingError = pickle.PicklingError
@@ -241,7 +241,7 @@ class Ephemeral:
         self.__class__ = Ephemeral
 
 
-versionedsToUpgrade = {}  # type: Dict[int, 'Versioned']
+versionedsToUpgrade: Dict[int, "Versioned"] = {}
 upgraded = {}
 
 

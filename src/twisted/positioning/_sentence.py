@@ -35,7 +35,7 @@ class _BaseSentence:
     @type ALLOWED_ATTRIBUTES: C{set} of C{str}
     """
 
-    ALLOWED_ATTRIBUTES = set()  # type: Set[str]
+    ALLOWED_ATTRIBUTES: Set[str] = set()
 
     def __init__(self, sentenceData):
         """

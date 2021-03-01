@@ -407,7 +407,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS

@@ -217,7 +217,7 @@ class Project:
         @return: A L{incremental.Version} specifying the version number of the
             project based on live python modules.
         """
-        namespace = {}  # type: Dict[str, object]
+        namespace: Dict[str, object] = {}
         directory = self.directory
         while not namespace:
             if directory.path == "/":

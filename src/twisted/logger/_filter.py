@@ -138,7 +138,7 @@ class LogLevelFilterPredicate:
         """
         @param defaultLogLevel: The default minimum log level.
         """
-        self._logLevelsByNamespace = {}  # type: Dict[str, NamedConstant]
+        self._logLevelsByNamespace: Dict[str, NamedConstant] = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
 

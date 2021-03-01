@@ -186,7 +186,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer = []  # type: List[bytes]
+        self._tempDataBuffer: List[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):

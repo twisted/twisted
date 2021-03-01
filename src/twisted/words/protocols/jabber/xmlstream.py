@@ -163,7 +163,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -259,7 +259,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def associateWithStream(self, xmlstream):
         """
@@ -315,7 +315,7 @@ class BaseFeatureInitiatingInitializer:
     @type required: C{bool}
     """
 
-    feature = None  # type: Optional[Tuple[str, str]]
+    feature: Optional[Tuple[str, str]] = None
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs

@@ -156,7 +156,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
+    protocol: Type[protocol.Protocol] = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -676,7 +676,7 @@ class SmartHostSMTPRelayingManager:
         filenames of messages the managed relayer is responsible for.
     """
 
-    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
+    factory: Type[protocol.ClientFactory] = SMTPManagedRelayerFactory
 
     PORT = 25
 

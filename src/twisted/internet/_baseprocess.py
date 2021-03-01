@@ -21,8 +21,8 @@ _missingProcessExited = (
 
 
 class BaseProcess:
-    pid = None  # type: Optional[int]
-    status = None  # type: Optional[int]
+    pid: Optional[int] = None
+    status: Optional[int] = None
     lostProcess = 0
     proto = None
 

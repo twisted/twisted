@@ -107,8 +107,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = None  # type: Optional[List[bytes]]
-    postpath = None  # type: Optional[bytes]
+    prepath: Optional[List[bytes]] = None
+    postpath: Optional[bytes] = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None

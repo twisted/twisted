@@ -246,7 +246,7 @@ class TuntapPort(abstract.FileDescriptor):
         self.logstr = f"{logPrefix} ({self._mode.name})"
 
     def __repr__(self) -> str:
-        args = (fullyQualifiedName(self.protocol.__class__),)  # type: Tuple[str, ...]
+        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:

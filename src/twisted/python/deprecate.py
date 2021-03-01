@@ -640,7 +640,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}  # type: Dict[str, object]
+    result: Dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}

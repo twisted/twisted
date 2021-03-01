@@ -106,9 +106,9 @@ class UNIXAddress:
     @type name: C{bytes}
     """
 
-    name = attr.ib(
+    name: Optional[bytes] = attr.ib(
         converter=attr.converters.optional(_asFilesystemBytes)
-    )  # type: Optional[bytes]
+    )
 
     if getattr(os.path, "samefile", None) is not None:
 

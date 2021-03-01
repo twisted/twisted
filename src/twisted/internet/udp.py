@@ -85,7 +85,7 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):

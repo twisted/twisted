@@ -21,13 +21,13 @@ from ._format import formatEvent
 
 
 # Mappings to Python's logging module
-toStdlibLogLevelMapping = {
+toStdlibLogLevelMapping: Mapping[NamedConstant, int] = {
     LogLevel.debug: stdlibLogging.DEBUG,
     LogLevel.info: stdlibLogging.INFO,
     LogLevel.warn: stdlibLogging.WARNING,
     LogLevel.error: stdlibLogging.ERROR,
     LogLevel.critical: stdlibLogging.CRITICAL,
-}  # type: Mapping[NamedConstant, int]
+}
 
 
 def _reverseLogLevelMapping() -> Mapping[int, NamedConstant]:

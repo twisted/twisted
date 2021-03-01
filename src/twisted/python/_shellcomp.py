@@ -116,9 +116,9 @@ def shellComplete(config, cmdName, words, shellCompFile):
                     subOptions = parser()
                     subOptions.parent = config
 
-                    gen = ZshSubcommandBuilder(
+                    gen: ZshBuilder = ZshSubcommandBuilder(
                         subOptions, config, cmdName, shellCompFile
-                    )  # type: ZshBuilder
+                    )
                     gen.write()
                     return
 
@@ -305,8 +305,8 @@ class ZshArgumentsGenerator:
 
         aCL = reflect.accumulateClassList
 
-        optFlags = []  # type: List[List[object]]
-        optParams = []  # type: List[List[object]]
+        optFlags: List[List[object]] = []
+        optParams: List[List[object]] = []
 
         aCL(options.__class__, "optFlags", optFlags)
         aCL(options.__class__, "optParameters", optParams)
@@ -481,7 +481,7 @@ class ZshArgumentsGenerator:
             if optList[1] != None:
                 longToShort[optList[0]] = optList[1]
 
-        excludes = {}  # type: Dict[str, Set[str]]
+        excludes: Dict[str, Set[str]] = {}
         for lst in self.mutuallyExclusive:
             for i, longname in enumerate(lst):
                 tmp = set(lst[:i] + lst[i + 1 :])
@@ -622,7 +622,7 @@ class ZshArgumentsGenerator:
         These will be defined by 'opt_foo' methods of the Options subclass
         @return: L{None}
         """
-        methodsDict = {}  # type: Dict[str, MethodType]
+        methodsDict: Dict[str, MethodType] = {}
         reflect.accumulateMethods(self.options, methodsDict, "opt_")
         methodToShort = {}
         for name in methodsDict.copy():

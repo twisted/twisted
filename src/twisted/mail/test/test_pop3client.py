@@ -488,7 +488,7 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output = []  # type: List[bytes]
+        output: List[bytes] = []
 
         def connectionMade(self):
             self.factory.input = []

@@ -49,7 +49,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[SelectorEventLoop] = None):
         if eventloop is None:
-            _eventloop = get_event_loop()  # type: AbstractEventLoop
+            _eventloop: AbstractEventLoop = get_event_loop()
         else:
             _eventloop = eventloop
 
@@ -59,9 +59,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if not isinstance(_eventloop, SelectorEventLoop):
             raise TypeError(f"SelectorEventLoop required, instead got: {_eventloop}")
 
-        self._asyncioEventloop = _eventloop  # type: SelectorEventLoop
-        self._writers = {}  # type: Dict[Type[FileDescriptor], int]
-        self._readers = {}  # type: Dict[Type[FileDescriptor], int]
+        self._asyncioEventloop: SelectorEventLoop = _eventloop
+        self._writers: Dict[Type[FileDescriptor], int] = {}
+        self._readers: Dict[Type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
 
         self._scheduledAt = None

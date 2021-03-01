@@ -609,7 +609,9 @@ class FancyStrMixin:
     """
 
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]
+    showAttributes: Sequence[
+        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+    ] = ()
 
     def __str__(self) -> str:
         r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
@@ -639,7 +641,7 @@ class FancyEqMixin:
     C{compareAttributes}.
     """
 
-    compareAttributes = ()  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ()
 
     def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:

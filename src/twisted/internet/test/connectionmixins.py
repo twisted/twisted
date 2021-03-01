@@ -277,7 +277,7 @@ class ConnectionTestsMixin:
     implementations.
     """
 
-    endpoints = None  # type: Optional[EndpointCreator]
+    endpoints: Optional[EndpointCreator] = None
 
     def test_logPrefix(self):
         """

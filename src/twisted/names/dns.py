@@ -1076,7 +1076,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("name", "name", "%s"), "ttl")
     compareAttributes = ("name", "ttl")
 
-    TYPE = None  # type: Optional[int]
+    TYPE: Optional[int] = None
     name = None
 
     def __init__(self, name=b"", ttl=None):

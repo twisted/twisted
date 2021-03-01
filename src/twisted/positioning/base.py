@@ -149,10 +149,10 @@ class Angle(FancyEqMixin):
         Angles.HEADING: "Heading",
     }
 
-    compareAttributes = (
+    compareAttributes: ClassVar[Sequence[str]] = (
         "angleType",
         "inDecimalDegrees",
-    )  # type: ClassVar[Sequence[str]]
+    )
 
     def __init__(self, angle=None, angleType=None):
         """

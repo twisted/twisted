@@ -374,7 +374,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     @ivar programName: The name of the program to run.
     """
 
-    programName = b""  # type: bytes
+    programName: bytes = b""
 
     @classmethod
     def run(cls, reactor, argv, env):

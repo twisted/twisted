@@ -114,7 +114,7 @@ def prep(user, host, resource):
     return (user, host, resource)
 
 
-__internJIDs = {}  # type: Dict[str, 'JID']
+__internJIDs: Dict[str, "JID"] = {}
 
 
 def internJID(jidstring):
