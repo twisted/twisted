@@ -186,9 +186,9 @@ Announce
 Post release
 ~~~~~~~~~~~~
 
-#. Run ``python -m incremental.update Twisted --dev`` to add a `dev0` postfix.
+#. Run ``python -m incremental.update Twisted --post`` to add a `post` postfix.
 
-#. Commit the dev0 update change.
+#. Commit the post0 update change.
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 
