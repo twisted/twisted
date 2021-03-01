@@ -186,7 +186,7 @@ class OurServerOurClientTests(SFTPTestBase):
         """
         self.assertTrue(
             filetransfer.ISFTPServer.providedBy(self.server.client),
-            "ISFTPServer not provided by {!r}".format(self.server.client),
+            f"ISFTPServer not provided by {self.server.client!r}",
         )
 
     def test_openedFileClosedWithConnection(self):

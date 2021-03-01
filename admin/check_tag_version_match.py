@@ -21,14 +21,14 @@ branch_version = pep517.meta.load(".").version
 run_version = sys.argv[1]
 
 if not run_version.startswith(TAG_PREFIX):
-    print("Not a twisted release tag name '{}.".format(run_version))
+    print(f"Not a twisted release tag name '{run_version}.")
     sys.exit(1)
 
 run_version = run_version[len(TAG_PREFIX) :]
 
 if run_version != branch_version:
-    print("Branch is at '{}' while tag is '{}'".format(branch_version, run_version))
+    print(f"Branch is at '{branch_version}' while tag is '{run_version}'")
     exit(1)
 
-print("All good. Branch and tag versions match for '{}'.".format(branch_version))
+print(f"All good. Branch and tag versions match for '{branch_version}'.")
 sys.exit(0)

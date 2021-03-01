@@ -160,9 +160,7 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = "unknown"
             except BaseException:
-                raise UnknownService(
-                    "Unknown service: {} ({})".format(serviceName, protocol)
-                )
+                raise UnknownService(f"Unknown service: {serviceName} ({protocol})")
 
         self.services.append(
             InetdService(

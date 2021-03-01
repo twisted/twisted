@@ -69,11 +69,11 @@ class MinConversation(basechat.Conversation):
         pass
 
     def showMessage(self, text, metadata=None):
-        print("<{}> {}".format(self.person.name, text))
+        print(f"<{self.person.name}> {text}")
 
     def contactChangedNick(self, person, newnick):
         basechat.Conversation.contactChangedNick(self, person, newnick)
-        print("-!- {} is now known as {}".format(person.name, newnick))
+        print(f"-!- {person.name} is now known as {newnick}")
 
 
 class MinGroupConversation(basechat.GroupConversation):
@@ -96,26 +96,22 @@ class MinGroupConversation(basechat.GroupConversation):
         pass
 
     def showGroupMessage(self, sender, text, metadata=None):
-        print("<{}/{}> {}".format(sender, self.group.name, text))
+        print(f"<{sender}/{self.group.name}> {text}")
 
     def setTopic(self, topic, author):
-        print(
-            "-!- {} set the topic of {} to: {}".format(author, self.group.name, topic)
-        )
+        print(f"-!- {author} set the topic of {self.group.name} to: {topic}")
 
     def memberJoined(self, member):
         basechat.GroupConversation.memberJoined(self, member)
-        print("-!- {} joined {}".format(member, self.group.name))
+        print(f"-!- {member} joined {self.group.name}")
 
     def memberChangedNick(self, oldnick, newnick):
         basechat.GroupConversation.memberChangedNick(self, oldnick, newnick)
-        print(
-            "-!- {} is now known as {} in {}".format(oldnick, newnick, self.group.name)
-        )
+        print(f"-!- {oldnick} is now known as {newnick} in {self.group.name}")
 
     def memberLeft(self, member):
         basechat.GroupConversation.memberLeft(self, member)
-        print("-!- {} left {}".format(member, self.group.name))
+        print(f"-!- {member} left {self.group.name}")
 
 
 class MinChat(basechat.ChatUI):

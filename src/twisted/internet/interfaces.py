@@ -1344,7 +1344,7 @@ class IReactorCore(Interface):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> Any:
         """
         Add a function to be called when a system event occurs.

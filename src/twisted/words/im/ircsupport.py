@@ -50,9 +50,7 @@ class IRCGroup(basesupport.AbstractGroup):
         if self.account.client is None:
             raise locals.OfflineError
         reason = "for great justice!"
-        self.account.client.sendLine(
-            "KICK #{} {} :{}".format(self.name, target.name, reason)
-        )
+        self.account.client.sendLine(f"KICK #{self.name} {target.name} :{reason}")
 
     ### Interface Implementation
     def setTopic(self, topic):

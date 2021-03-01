@@ -47,7 +47,7 @@ def main(reactor, url):
     We create a custom UserAgent and send a GET request to a web server.
     """
     url = url.encode("ascii")
-    userAgent = "Twisted/{} (httpclient.py)".format(version.short()).encode("ascii")
+    userAgent = f"Twisted/{version.short()} (httpclient.py)".encode("ascii")
     agent = Agent(reactor)
     d = agent.request(b"GET", url, Headers({b"user-agent": [userAgent]}))
 

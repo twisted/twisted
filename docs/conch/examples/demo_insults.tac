@@ -211,7 +211,7 @@ class DemoProtocol(insults.TerminalProtocol):
         self.height = height
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: {!r}".format(seq))
+        log.msg(f"Client sent something weird: {seq!r}")
 
     def keystrokeReceived(self, keyID, modifier):
         if keyID == "+":
@@ -223,7 +223,7 @@ class DemoProtocol(insults.TerminalProtocol):
         elif keyID == "/":
             self.rate *= 1.1
         else:
-            log.msg("Client sent: {!r}".format(keyID))
+            log.msg(f"Client sent: {keyID!r}")
             return
 
         self._call.stop()

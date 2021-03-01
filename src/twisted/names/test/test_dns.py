@@ -468,7 +468,7 @@ class RoundtripDNSTests(unittest.TestCase):
             k1, k2 = k(), k()
             hk1 = hash(k1)
             hk2 = hash(k2)
-            self.assertEqual(hk1, hk2, "{} != {} (for {})".format(hk1, hk2, k))
+            self.assertEqual(hk1, hk2, f"{hk1} != {hk2} (for {k})")
 
     def test_Charstr(self):
         """
@@ -2488,7 +2488,7 @@ def assertIsSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertTrue(
         dns._isSubdomainOf(descendant, ancestor),
-        "{!r} is not a subdomain of {!r}".format(descendant, ancestor),
+        f"{descendant!r} is not a subdomain of {ancestor!r}",
     )
 
 
@@ -2507,7 +2507,7 @@ def assertIsNotSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertFalse(
         dns._isSubdomainOf(descendant, ancestor),
-        "{!r} is a subdomain of {!r}".format(descendant, ancestor),
+        f"{descendant!r} is a subdomain of {ancestor!r}",
     )
 
 

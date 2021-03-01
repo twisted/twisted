@@ -166,7 +166,7 @@ class ServiceTests(TestCase):
         options = Options()
         options.parseOptions(["--personal"])
         path = os.path.expanduser(os.path.join("~", UserDirectory.userSocketName))
-        self.assertEqual(options["ports"][0], "unix:{}".format(path))
+        self.assertEqual(options["ports"][0], f"unix:{path}")
 
     def test_defaultPort(self):
         """
@@ -218,7 +218,7 @@ class ServiceTests(TestCase):
         options = Options()
         for name in [__name__ + ".nosuchthing", "foo."]:
             exc = self.assertRaises(UsageError, options.parseOptions, ["--wsgi", name])
-            self.assertEqual(str(exc), "No such WSGI application: {!r}".format(name))
+            self.assertEqual(str(exc), f"No such WSGI application: {name!r}")
 
     @skipIf(requireModule("OpenSSL.SSL") is not None, "SSL module is available.")
     def test_HTTPSFailureOnMissingSSL(self):

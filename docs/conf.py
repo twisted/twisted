@@ -182,12 +182,12 @@ _git_reference = subprocess.run(
 ).stdout
 
 
-print("== Environment dump for {} ===".format(_git_reference))
+print(f"== Environment dump for {_git_reference} ===")
 pprint(dict(os.environ))
 print("======")
 
 # Base url for API docs
-api_base_url = "/documents/{}/api/".format(release)
+api_base_url = f"/documents/{release}/api/"
 if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/

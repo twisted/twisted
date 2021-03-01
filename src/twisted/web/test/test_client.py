@@ -21,7 +21,7 @@ class DummyEndPoint:
         self.someString = someString
 
     def __repr__(self) -> str:
-        return "DummyEndPoint({})".format(self.someString)
+        return f"DummyEndPoint({self.someString})"
 
     def connect(self, factory):
         return defer.succeed(dict(factory=factory))

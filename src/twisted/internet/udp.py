@@ -164,9 +164,9 @@ class Port(base.BasePort):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<{} not connected>".format(self.protocol.__class__)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """

@@ -175,14 +175,14 @@ class StructureAssertingMixin:
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
+                self.assertTrue(child.isdir(), f"{child.path} is not a dir!")
                 self.assertStructure(child, expectation)
             else:
                 actual = child.getContent().decode().replace(os.linesep, "\n")
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
-            self.fail("There were extra children in {}: {}".format(root.path, children))
+            self.fail(f"There were extra children in {root.path}: {children}")
 
 
 class ProjectTests(ExternalTempdirTestCase):
@@ -380,10 +380,6 @@ class DoNotFailTests(TestCase):
 pydoctor = requireModule("pydoctor")
 
 
-@skipIf(
-    sys.version_info <= (3, 5),
-    "Python version is too old to install pydoctor >= 20.12.1",
-)
 @skipIf(pydoctor is None, "Pydoctor is not present.")
 class APIBuilderTests(ExternalTempdirTestCase):
     """
@@ -423,10 +419,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
 
         self.assertTrue(
-            indexPath.exists(), "API index {!r} did not exist.".format(outputPath.path)
+            indexPath.exists(), f"API index {outputPath.path!r} did not exist."
         )
         self.assertIn(
-            '<a href="{}">{}</a>'.format(projectURL, projectName),
+            f'<a href="{projectURL}">{projectName}</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -434,7 +430,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file {!r} did not exist.".format(quuxPath.path),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
@@ -442,7 +438,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="{}/{}/__init__.py">(source)</a>'.format(sourceURL, packageName),
+            f'<a href="{sourceURL}/{packageName}/__init__.py">(source)</a>',
             quuxPath.getContent().decode(),
         )
         self.assertIn(
@@ -480,7 +476,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         indexPath = outputPath.child("index.html")
         self.assertTrue(
-            indexPath.exists(), "API index {} did not exist.".format(outputPath.path)
+            indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
             '<a href="http://twistedmatrix.com/">Twisted</a>',
@@ -491,7 +487,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file {!r} did not exist.".format(twistedPath.path),
+            f"Package documentation file {twistedPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
@@ -551,7 +547,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file {!r} did not exist.".format(quuxPath.path),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
 
         self.assertIn(

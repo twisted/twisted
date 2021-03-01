@@ -67,7 +67,7 @@ class TwistOptions(Options):
         """
         Print version and exit.
         """
-        exit(ExitStatus.EX_OK, "{}".format(version))
+        exit(ExitStatus.EX_OK, f"{version}")
 
     def opt_reactor(self, name: str) -> None:
         """
@@ -80,13 +80,13 @@ class TwistOptions(Options):
         try:
             self["reactor"] = self.installReactor(name)
         except NoSuchReactor:
-            raise UsageError("Unknown reactor: {}".format(name))
+            raise UsageError(f"Unknown reactor: {name}")
         else:
             self["reactorName"] = name
 
     _update_doc(
         opt_reactor,
-        options=", ".join('"{}"'.format(rt.shortName) for rt in getReactorTypes()),
+        options=", ".join(f'"{rt.shortName}"' for rt in getReactorTypes()),
     )
 
     def installReactor(self, name: str) -> IReactorCore:
@@ -108,12 +108,12 @@ class TwistOptions(Options):
         try:
             self["logLevel"] = LogLevel.levelWithName(levelName)
         except InvalidLogLevelError:
-            raise UsageError("Invalid log level: {}".format(levelName))
+            raise UsageError(f"Invalid log level: {levelName}")
 
     _update_doc(
         opt_log_level,
         options=", ".join(
-            '"{}"'.format(constant.name) for constant in LogLevel.iterconstants()
+            f'"{constant.name}"' for constant in LogLevel.iterconstants()
         ),
         default=defaultLogLevel.name,
     )
@@ -135,7 +135,7 @@ class TwistOptions(Options):
         except OSError as e:
             exit(
                 ExitStatus.EX_IOERR,
-                "Unable to open log file {!r}: {}".format(fileName, e),
+                f"Unable to open log file {fileName!r}: {e}",
             )
 
     def opt_log_format(self, format: str) -> None:
@@ -151,7 +151,7 @@ class TwistOptions(Options):
         elif format == "json":
             self["fileLogObserverFactory"] = jsonFileLogObserver
         else:
-            raise UsageError("Invalid log format: {}".format(format))
+            raise UsageError(f"Invalid log format: {format}")
         self["logFormat"] = format
 
     _update_doc(opt_log_format)

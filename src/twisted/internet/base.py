@@ -295,9 +295,7 @@ class ThreadedResolver:
         self._runningQueries = {}  # type: Dict[Deferred, Tuple[Deferred, IDelayedCall]]
 
     def _fail(self, name: str, err: str) -> Failure:
-        lookupError = error.DNSLookupError(
-            "address {!r} not found: {}".format(name, err)
-        )
+        lookupError = error.DNSLookupError(f"address {name!r} not found: {err}")
         return Failure(lookupError)
 
     def _cleanup(self, name: str, lookupDeferred: Deferred) -> None:
@@ -358,7 +356,7 @@ class BlockingResolver:
         try:
             address = socket.gethostbyname(name)
         except OSError:
-            msg = "address {!r} not found".format(name)
+            msg = f"address {name!r} not found"
             err = error.DNSLookupError(msg)
             return defer.fail(err)
         else:
@@ -416,7 +414,7 @@ class _ThreePhaseEvent:
         phase: str,
         callable: _ThreePhaseEventTriggerCallable,
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _ThreePhaseEventTriggerHandle:
         """
         Add a trigger to the indicate phase.
@@ -787,12 +785,12 @@ class ReactorBase(PluggableResolverMixin):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _SystemEventID:
         """
         See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
+        assert builtins.callable(callable), f"{callable} is not callable"
         if eventType not in self._eventTriggers:
             self._eventTriggers[eventType] = _ThreePhaseEvent()
         return _SystemEventID(
@@ -868,8 +866,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
-        assert delay >= 0, "{} is not greater than or equal to 0 seconds".format(delay)
+        assert builtins.callable(callable), f"{callable} is not callable"
+        assert delay >= 0, f"{delay} is not greater than or equal to 0 seconds"
         delayedCall = DelayedCall(
             self.seconds() + delay,
             callable,
@@ -1101,9 +1099,7 @@ class ReactorBase(PluggableResolverMixin):
         for arg in args:
             _arg = argChecker(arg)
             if _arg is None:
-                raise TypeError(
-                    "Arguments contain a non-string value: {!r}".format(arg)
-                )
+                raise TypeError(f"Arguments contain a non-string value: {arg!r}")
             else:
                 outputArgs.append(_arg)
 
@@ -1151,7 +1147,7 @@ class ReactorBase(PluggableResolverMixin):
             See
             L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
-            assert callable(f), "{} is not callable".format(f)
+            assert callable(f), f"{f} is not callable"
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
             # won't work in Jython.
@@ -1218,7 +1214,7 @@ class ReactorBase(PluggableResolverMixin):
         def callFromThread(
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
-            assert callable(f), "{} is not callable".format(f)
+            assert callable(f), f"{f} is not callable"
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kwargs))
 
