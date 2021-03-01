@@ -259,8 +259,8 @@ class GeneralOptions(usage.Options):
     compData = usage.Completions(
         mutuallyExclusive=[("tty", "notty")],
         optActions={
-            "cipher": usage.CompleteList(_ciphers),
-            "macs": usage.CompleteList(_macs),
+            "cipher": usage.CompleteList([v.decode() for v in _ciphers]),
+            "macs": usage.CompleteList([v.decode() for v in _macs]),
             "localforward": usage.Completer(descr="listen-port:host:port"),
             "remoteforward": usage.Completer(descr="listen-port:host:port"),
         },
