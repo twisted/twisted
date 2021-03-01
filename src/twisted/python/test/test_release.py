@@ -380,11 +380,11 @@ class DoNotFailTests(TestCase):
 pydoctor = requireModule("pydoctor")
 
 
-@skipIf(pydoctor is None, "Pydoctor is not present.")
 @skipIf(
-    pydoctor is not None and pydoctor.__version__ < Version("pydoctor", 20, 12, 1),
-    "Pydoctor 20.12.1 or later is required.",
+    sys.version_info <= (3, 5),
+    "Python version is too old to install pydoctor >= 20.12.1",
 )
+@skipIf(pydoctor is None, "Pydoctor is not present.")
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.

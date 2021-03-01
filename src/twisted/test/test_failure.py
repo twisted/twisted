@@ -532,13 +532,12 @@ class BrokenExceptionMetaclass(type):
         raise ValueError("You cannot make a string out of me.")
 
 
-class BrokenExceptionType(Exception):
+class BrokenExceptionType(Exception, metaclass=BrokenExceptionMetaclass):
+
     """
-    The aforementioned exception type which cnanot be presented as a string via
+    The aforementioned exception type which cannot be presented as a string via
     L{str}.
     """
-
-    __metaclass__ = BrokenExceptionMetaclass
 
 
 class GetTracebackTests(SynchronousTestCase):
