@@ -327,21 +327,13 @@ class ServerOptionsTests(TestCase):
             config.parseOptions,
             ["--logger", "twisted.test.test_twistd.FOOBAR"],
         )
-        if sys.version_info <= (3, 5):
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: 'module' object has no attribute 'FOOBAR'"
-                )
+        self.assertTrue(
+            e.args[0].startswith(
+                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                "imported: module 'twisted.test.test_twistd' "
+                "has no attribute 'FOOBAR'"
             )
-        else:
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: module 'twisted.test.test_twistd' "
-                    "has no attribute 'FOOBAR'"
-                )
-            )
+        )
         self.assertNotIn("\n", e.args[0])
 
     def test_version(self):
