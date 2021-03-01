@@ -694,15 +694,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def test_maybeDeferredSyncFailure(self):
         """
-        L{defer.maybeDeferred} should catch exception raised by a synchronous
-        function and errback its resulting L{defer.Deferred} with it.
+        L{defer.maybeDeferred} should handle a L{failure.Failure} returned by a
+        function and errback with it.
         """
         S, E = [], []
-        d = defer.maybeDeferred((lambda x: defer.fail(x + 5)), 10)
+        try:
+            "10" + 5
+        except TypeError:
+            expected = failure.Failure()
+        d = defer.maybeDeferred(lambda: expected)
         d.addCallbacks(S.append, E.append)
         self.assertEqual(S, [])
         self.assertEqual(len(E), 1)
-        self.assertEqual(E[0].value, 15)
+        self.assertIdentical(E[0], expected)
 
     def test_maybeDeferredAsync(self):
         """
