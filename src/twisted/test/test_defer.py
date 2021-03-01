@@ -658,6 +658,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} should retrieve the result of a synchronous
         function and pass it to its resulting L{defer.Deferred}.
         """
+        result = object()
+        S, E = [], []
+        d = defer.maybeDeferred(lambda: result)
+        d.addCallbacks(S.append, E.append)
+        self.assertEqual(E, [])
+        self.assertEqual(len(S), 1)
+        self.assertIdentical(S[0], result)
+
+    def test_maybeDeferredSyncWithArgs(self):
+        """
+        L{defer.maybeDeferred} should pass arguments to the called function.
+        """
         S, E = [], []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
@@ -666,7 +678,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def test_maybeDeferredSyncException(self):
         """
-        L{defer.maybeDeferred} should catch exception raised by a synchronous
+        L{defer.maybeDeferred} should catch an exception raised by a synchronous
         function and errback its resulting L{defer.Deferred} with it.
         """
         S, E = [], []
