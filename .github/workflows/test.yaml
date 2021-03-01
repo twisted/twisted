@@ -69,7 +69,17 @@ jobs:
         ip a
 
     - uses: twisted/python-info-action@v1
-    - uses: ./.github/actions/run-tox
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip tox
+        tox --notest
+
+    - name: Test
+      shell: bash
+      run: |
+        python --version
+        tox -q
 
 
   pypi-publish:
