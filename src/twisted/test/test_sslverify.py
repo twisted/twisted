@@ -1413,8 +1413,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertIn(k, s, "{!r} was not in inspect output.".format(k))
-            self.assertIn(k.title(), s, "{!r} was not in inspect output.".format(k))
+            self.assertIn(k, s, f"{k!r} was not in inspect output.")
+            self.assertIn(k.title(), s, f"{k!r} was not in inspect output.")
 
     def testInspectDistinguishedNameWithoutAllFields(self):
         n = sslverify.DN(localityName=b"locality name")
@@ -1427,8 +1427,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertNotIn(k, s, "{!r} was in inspect output.".format(k))
-            self.assertNotIn(k.title(), s, "{!r} was in inspect output.".format(k))
+            self.assertNotIn(k, s, f"{k!r} was in inspect output.")
+            self.assertNotIn(k.title(), s, f"{k!r} was in inspect output.")
         self.assertIn("locality name", s)
         self.assertIn("Locality Name", s)
 

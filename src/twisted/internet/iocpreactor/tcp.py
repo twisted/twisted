@@ -357,7 +357,7 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.clientAddr.host)
+        self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
         self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
@@ -490,7 +490,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """

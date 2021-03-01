@@ -76,7 +76,7 @@ class MainTests(TestCase):
             self.assertEqual("wb", mode)
             return self.writeStream
         else:
-            raise AssertionError("Unexpected fd {!r}".format(fd))
+            raise AssertionError(f"Unexpected fd {fd!r}")
 
     def startLoggingWithObserver(self, emit, setStdout):
         """

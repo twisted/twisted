@@ -3116,7 +3116,7 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey={}".format(escapedPEMPathName)
+            reactor, f"ssl:4321:privateKey={escapedPEMPathName}"
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
@@ -3749,7 +3749,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find systemd parser in {!r}".format(parsers))
+            self.fail(f"Did not find systemd parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3831,7 +3831,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find TCP6ServerEndpoint parser in {!r}".format(parsers))
+            self.fail(f"Did not find TCP6ServerEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3875,7 +3875,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find StandardIOEndpoint parser in {!r}".format(parsers))
+            self.fail(f"Did not find StandardIOEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """

@@ -65,7 +65,7 @@ class TestCase(SynchronousTestCase):
 
         def _cb(ignore):
             raise self.failureException(
-                "did not catch an error, instead got {!r}".format(ignore)
+                f"did not catch an error, instead got {ignore!r}"
             )
 
         def _eb(failure):
@@ -88,7 +88,7 @@ class TestCase(SynchronousTestCase):
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                "{!r} ({}) still running at {} secs".format(self, methodName, timeout)
+                f"{self!r} ({methodName}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram

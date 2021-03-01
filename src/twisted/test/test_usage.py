@@ -34,7 +34,7 @@ class WellBehaved(usage.Options):
         self.opts["myflag"] = "PONY!"
 
     def opt_myparam(self, value):
-        self.opts["myparam"] = "{} WITH A PONY!".format(value)
+        self.opts["myparam"] = f"{value} WITH A PONY!"
 
 
 class ParseCorrectnessTests(unittest.TestCase):

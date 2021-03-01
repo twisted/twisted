@@ -167,5 +167,5 @@ def posixGetLinkLocalIPv6Addresses():
         interface = nativeString(interface)
         address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith("fe80:"):
-            retList.append("{}%{}".format(address, interface))
+            retList.append(f"{address}%{interface}")
     return retList

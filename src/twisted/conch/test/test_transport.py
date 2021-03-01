@@ -353,7 +353,7 @@ def generatePredictableKey(transport):
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
         ).private_key(default_backend())
     except ValueError:
-        print("\np={}\ng={}\nx={}\n".format(p, g, x))
+        print(f"\np={p}\ng={g}\nx={x}\n")
         raise
     transport.dhSecretKeyPublicMP = common.MP(
         transport.dhSecretKey.public_key().public_numbers().y
@@ -2734,7 +2734,7 @@ class SSHCiphersTests(TestCase):
             self.assertEqual(
                 mac,
                 binascii.hexlify(outMAC.makeMAC(seqid, shortened)),
-                "Failed HMAC test vector; key={!r} data={!r}".format(key, data),
+                f"Failed HMAC test vector; key={key!r} data={data!r}",
             )
 
 

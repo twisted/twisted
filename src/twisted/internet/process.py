@@ -82,7 +82,7 @@ def registerReapProcessHandler(pid, process):
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
     except BaseException:
-        log.msg("Failed to reap {}:".format(pid))
+        log.msg(f"Failed to reap {pid}:")
         log.err()
 
         if pid is None:
@@ -301,7 +301,7 @@ class _BaseProcess(BaseProcess):
                 else:
                     raise
         except BaseException:
-            log.msg("Failed to reap {}:".format(self.pid))
+            log.msg(f"Failed to reap {self.pid}:")
             log.err()
             pid = None
         if pid:
@@ -328,7 +328,7 @@ class _BaseProcess(BaseProcess):
         @type signalID: C{str} or C{int}
         """
         if signalID in ("HUP", "STOP", "INT", "KILL", "TERM"):
-            signalID = getattr(signal, "SIG{}".format(signalID))
+            signalID = getattr(signal, f"SIG{signalID}")
         if self.pid is None:
             raise ProcessExitedAlready()
         try:
@@ -696,7 +696,7 @@ class Process(_BaseProcess):
                     fdmap[childFD] = readFD  # child reads from this
                     helpers[childFD] = writeFD  # parent writes to this
                 else:
-                    assert type(target) == int, "{!r} should be an int".format(target)
+                    assert type(target) == int, f"{target!r} should be an int"
                     fdmap[childFD] = target  # parent ignores this
             if debug:
                 print("fdmap", fdmap)

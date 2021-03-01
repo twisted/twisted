@@ -224,9 +224,7 @@ class SRVConnector:
 
                 return str(chosen.target), chosen.port
 
-        raise RuntimeError(
-            "Impossible {} pickServer result.".format(self.__class__.__name__)
-        )
+        raise RuntimeError(f"Impossible {self.__class__.__name__} pickServer result.")
 
     def _reallyConnect(self):
         if self.stopAfterDNS:

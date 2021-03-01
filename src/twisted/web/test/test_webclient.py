@@ -508,9 +508,7 @@ class WebClientTests(unittest.TestCase):
         called back with the contents of the page.
         """
         d = client.getPage(self.getURL("host"), timeout=100)
-        d.addCallback(
-            self.assertEqual, networkString("127.0.0.1:{}".format(self.portno))
-        )
+        d.addCallback(self.assertEqual, networkString(f"127.0.0.1:{self.portno}"))
         return d
 
     def test_timeoutTriggering(self):
@@ -903,10 +901,10 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
         skip = "Reactor doesn't support SSL"
 
     def getHTTPS(self, path):
-        return networkString("https://127.0.0.1:{}/{}".format(self.tlsPortno, path))
+        return networkString(f"https://127.0.0.1:{self.tlsPortno}/{path}")
 
     def getHTTP(self, path):
-        return networkString("http://127.0.0.1:{}/{}".format(self.plainPortno, path))
+        return networkString(f"http://127.0.0.1:{self.plainPortno}/{path}")
 
     def setUp(self):
         plainRoot = Data(b"not me", "text/plain")

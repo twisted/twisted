@@ -104,7 +104,7 @@ class SSHChannel(log.Logger):
             name = self.name.decode("ascii")
         else:
             name = "None"
-        return "SSHChannel {} ({}) on {}".format(name, id, self.conn.logPrefix())
+        return f"SSHChannel {name} ({id}) on {self.conn.logPrefix()}"
 
     def channelOpen(self, specificData):
         """

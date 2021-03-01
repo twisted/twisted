@@ -206,7 +206,7 @@ class NetstringPerformanceTester(PerformanceTester):
     def receiveData(self, chunk, numberOfChunks, dataSize):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
-        dr("{}:".format(dataSize).encode("ascii"))
+        dr(f"{dataSize}:".encode("ascii"))
         for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)

@@ -101,10 +101,10 @@ class _ListSerializer:
         if not prefix:
             write("<%s" % (name))
         else:
-            write("<{}:{}".format(prefix, name))
+            write(f"<{prefix}:{name}")
 
             if not inScope:
-                write(" xmlns:{}='{}'".format(prefix, uri))
+                write(f" xmlns:{prefix}='{uri}'")
                 self.prefixStack[-1].append(prefix)
                 inScope = True
 
@@ -114,7 +114,7 @@ class _ListSerializer:
             write(" xmlns='%s'" % (defaultUri))
 
         for p, u in elem.localPrefixes.items():
-            write(" xmlns:{}='{}'".format(p, u))
+            write(f" xmlns:{p}='{u}'")
 
         # Serialize attributes
         for k, v in elem.attributes.items():
@@ -124,7 +124,7 @@ class _ListSerializer:
                 attr_prefix = self.getPrefix(attr_uri)
 
                 if not self.prefixInScope(attr_prefix):
-                    write(" xmlns:{}='{}'".format(attr_prefix, attr_uri))
+                    write(f" xmlns:{attr_prefix}='{attr_uri}'")
                     self.prefixStack[-1].append(attr_prefix)
 
                 write(" {}:{}='{}'".format(attr_prefix, attr_name, escapeToXml(v, 1)))
@@ -146,7 +146,7 @@ class _ListSerializer:
             if not prefix:
                 write("</%s>" % (name))
             else:
-                write("</{}:{}>".format(prefix, name))
+                write(f"</{prefix}:{name}>")
         else:
             write("/>")
 

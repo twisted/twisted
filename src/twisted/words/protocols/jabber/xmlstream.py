@@ -71,7 +71,7 @@ def hashPassword(sid, password):
         raise TypeError("The session identifier must be a unicode object")
     if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
-    input = "{}{}".format(sid, password)
+    input = f"{sid}{password}"
     return sha1(input.encode("utf-8")).hexdigest()
 
 

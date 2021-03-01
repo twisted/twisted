@@ -57,7 +57,7 @@ class LogComposedObject:
         self.state = state
 
     def __str__(self) -> str:
-        return "<LogComposedObject {state}>".format(state=self.state)
+        return f"<LogComposedObject {self.state}>"
 
 
 class LoggerTests(unittest.TestCase):

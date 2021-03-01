@@ -1656,7 +1656,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("{}: foo".format(i)))
+            requestLines.append(networkString(f"{i}: foo"))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
