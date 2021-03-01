@@ -38,7 +38,7 @@ class ZshScriptTestMeta(type):
         return type.__new__(cls, name, bases, attrs)
 
 
-class ZshScriptTestMixin:
+class ZshScriptTestMixin(metaclass=ZshScriptTestMeta):
     """
     Integration test helper to show that C{usage.Options} classes can have zsh
     completion functions generated for them without raising errors.
@@ -55,8 +55,6 @@ class ZshScriptTestMixin:
     subclass which also inherits from this mixin, and contains a C{generateFor}
     list appropriate for the scripts in that package.
     """
-
-    __metaclass__ = ZshScriptTestMeta
 
 
 def test_genZshFunction(self, cmdName, optionsFQPN):
