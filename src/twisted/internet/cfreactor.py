@@ -140,10 +140,10 @@ class CFReactor(PosixReactorBase):
         Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
         should be exactly the same as the parent implementation.
         """
-        if not self.waker:
-            self.waker = _WakerPlus(self)
-            self._internalReaders.add(self.waker)
-            self.addReader(self.waker)
+        if not self._waker:
+            self._waker = _WakerPlus(self)
+            self._internalReaders.add(self._waker)
+            self.addReader(self._waker)
 
     def _socketCallback(
         self, cfSocket, callbackType, ignoredAddress, ignoredData, context

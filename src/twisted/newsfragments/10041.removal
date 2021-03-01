@@ -1,0 +1,1 @@
+`reactor.waker` moved to be private as `reactor._waker`.

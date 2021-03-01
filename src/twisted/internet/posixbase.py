@@ -326,10 +326,10 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         We use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html) to wake
         the reactor. On Windows we use a pair of sockets.
         """
-        if not self.waker:
-            self.waker = self._wakerFactory(self)
-            self._internalReaders.add(self.waker)
-            self.addReader(self.waker)
+        if not self._waker:
+            self._waker = self._wakerFactory(self)
+            self._internalReaders.add(self._waker)
+            self.addReader(self._waker)
 
     _childWaker = None
 
