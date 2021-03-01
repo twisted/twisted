@@ -67,7 +67,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     for interfaceClass in interfaceClasses:
         factory = self.registered([origInterface], interfaceClass)
         if factory is not None and not ALLOW_DUPLICATES:
-            raise ValueError("an adapter ({}) was already registered.".format(factory))
+            raise ValueError(f"an adapter ({factory}) was already registered.")
     for interfaceClass in interfaceClasses:
         self.register([origInterface], interfaceClass, "", adapterFactory)
 

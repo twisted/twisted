@@ -513,7 +513,7 @@ def isIPAddress(addr: str, family: int = AF_INET) -> bool:
         if addr.count(".") != 3:
             return False
     else:
-        raise ValueError("unknown address family {!r}".format(family))
+        raise ValueError(f"unknown address family {family!r}")
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.

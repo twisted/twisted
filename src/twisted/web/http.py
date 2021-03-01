@@ -831,11 +831,7 @@ class Request:
         if self.producer:
             self._log.failure(
                 "",
-                Failure(
-                    RuntimeError(
-                        "Producer was not unregistered for {}".format(self.uri)
-                    )
-                ),
+                Failure(RuntimeError(f"Producer was not unregistered for {self.uri}")),
             )
             self.unregisterProducer()
         self.channel.requestDone(self)
@@ -1893,7 +1889,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_{}".format(self.state))(data)
+            data = getattr(self, f"_dataReceived_{self.state}")(data)
 
     def noMoreData(self):
         """

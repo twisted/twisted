@@ -118,7 +118,7 @@ class GitCommand:
             runCommand(["git", "rev-parse"], cwd=path.path)
         except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
-                "{} does not appear to be a Git repository.".format(path.path)
+                f"{path.path} does not appear to be a Git repository."
             )
 
     @staticmethod
@@ -193,9 +193,7 @@ def getRepositoryCommand(directory):
         # It's not Git, but that's okay, eat the error
         pass
 
-    raise NotWorkingDirectory(
-        "No supported VCS can be found in {}".format(directory.path)
-    )
+    raise NotWorkingDirectory(f"No supported VCS can be found in {directory.path}")
 
 
 class Project:
@@ -212,7 +210,7 @@ class Project:
         self.directory = directory
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(self.__class__.__name__, self.directory)
+        return f"{self.__class__.__name__}({self.directory!r})"
 
     def getVersion(self):
         """
@@ -373,7 +371,7 @@ class SphinxBuilder:
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(f"Unclean build:\n{output}\n")
             raise sys.exit(1)
 
     def build(self, docDir, buildDir=None, version=""):

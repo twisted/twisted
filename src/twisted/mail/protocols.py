@@ -195,7 +195,7 @@ class SMTPFactory(smtp.SMTPFactory):
         @rtype: L{SMTP}
         @return: An SMTP protocol.
         """
-        log.msg("Connection from {}".format(addr))
+        log.msg(f"Connection from {addr}")
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
         p.portal = self.portal

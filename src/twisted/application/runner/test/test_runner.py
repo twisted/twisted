@@ -57,7 +57,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch getpid so we get a known result
 
         self.pid = 1337
-        self.pidFileContent = "{}\n".format(self.pid).encode("utf-8")
+        self.pidFileContent = f"{self.pid}\n".encode("utf-8")
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -338,7 +338,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         runnerArguments = {
             methodName: hook,
-            "{}Arguments".format(methodName): arguments.copy(),
+            f"{methodName}Arguments": arguments.copy(),
         }
         runner = Runner(
             reactor=MemoryReactor(), **runnerArguments  # type: ignore[arg-type]

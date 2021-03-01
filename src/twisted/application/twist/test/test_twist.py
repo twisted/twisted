@@ -88,7 +88,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         )
         self.assertTrue(
             self.exit.message.endswith(  # type: ignore[union-attr]
-                "\n\n{}".format(TwistOptions())
+                f"\n\n{TwistOptions()}"
             )
         )
 

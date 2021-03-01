@@ -101,7 +101,7 @@ class Logger:
         )
 
     def __repr__(self) -> str:
-        return "<{} {!r}>".format(self.__class__.__name__, self.namespace)
+        return f"<{self.__class__.__name__} {self.namespace!r}>"
 
     def emit(
         self, level: LogLevel, format: Optional[str] = None, **kwargs: object

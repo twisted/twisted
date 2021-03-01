@@ -637,7 +637,7 @@ class POP3ClientModuleStructureTests(TestCase):
             if not pc == "POP3Client":
                 self.assertTrue(
                     hasattr(twisted.mail.pop3, pc),
-                    "{} not in {}".format(pc, twisted.mail.pop3),
+                    f"{pc} not in {twisted.mail.pop3}",
                 )
             else:
                 self.assertTrue(hasattr(twisted.mail.pop3, "AdvancedPOP3Client"))

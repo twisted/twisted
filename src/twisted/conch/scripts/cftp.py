@@ -420,7 +420,7 @@ class StdioClient(basic.LineReceiver):
         lf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred {} to {}".format(rf.name, lf.name)
+        return f"Transferred {rf.name} to {lf.name}"
 
     def cmd_PUT(self, rest):
         """
@@ -590,7 +590,7 @@ class StdioClient(basic.LineReceiver):
         rf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred {} to {}".format(lf.name, rf.name)
+        return f"Transferred {lf.name} to {rf.name}"
 
     def cmd_LCD(self, path):
         os.chdir(path)
@@ -845,7 +845,7 @@ version                         Print the SFTP version.
             self._abbrevTime(timeLeft),
         )
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * " "
-        command = "\r{}{}{}".format(front, spaces, back)
+        command = f"\r{front}{spaces}{back}"
         self._writeToTransport(command)
 
     def _getFilename(self, line):

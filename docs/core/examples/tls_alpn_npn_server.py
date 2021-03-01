@@ -80,7 +80,7 @@ class NPNPrinterProtocol(Protocol):
         if self.complete:
             print("Connection closed cleanly")
         else:
-            print("Connection lost due to error {}".format(reason))
+            print(f"Connection lost due to error {reason}")
 
 
 class ResponderFactory(Factory):

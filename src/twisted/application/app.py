@@ -46,7 +46,7 @@ class _BasicProfiler:
         has to be explicit because some of these modules are removed by
         distributions due to them being non-free.
         """
-        s = "Failed to import module {}: {}".format(module, e)
+        s = f"Failed to import module {module}: {e}"
         s += """
 This is most likely caused by your operating system not including
 the module due to it being non-free. Either do not use the option
@@ -129,7 +129,7 @@ class AppProfiler:
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
         else:
-            raise SystemExit("Unsupported profiler name: {}".format(self.profiler))
+            raise SystemExit(f"Unsupported profiler name: {self.profiler}")
 
 
 class AppLogger:
@@ -491,9 +491,7 @@ class ReactorSelectionMixin:
         for r in rcts:
             try:
                 namedModule(r.moduleName)
-                self.messageOutput.write(
-                    "    {:<4}\t{}\n".format(r.shortName, r.description)
-                )
+                self.messageOutput.write(f"    {r.shortName:<4}\t{r.description}\n")
             except ImportError as e:
                 notWorkingReactors += "    !{:<4}\t{} ({})\n".format(
                     r.shortName,
@@ -673,7 +671,7 @@ def run(runApp, ServerOptions):
     except usage.error as ue:
         commstr = " ".join(sys.argv[0:2])
         print(config)
-        print("{}: {}".format(commstr, ue))
+        print(f"{commstr}: {ue}")
     else:
         runApp(config)
 

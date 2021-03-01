@@ -1087,7 +1087,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(error.DNSNameError("No MX records for {!r}".format(domain)))
+            return Failure(error.DNSNameError(f"No MX records for {domain!r}"))
 
     def _ebMX(self, failure, domain):
         """
@@ -1135,5 +1135,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise OSError("No MX found for {!r}".format(domain))
+            raise OSError(f"No MX found for {domain!r}")
         return failure

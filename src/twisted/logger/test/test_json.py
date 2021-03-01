@@ -226,9 +226,7 @@ class FileLogObserverTests(TestCase):
             observer = jsonFileLogObserver(fileHandle, recordSeparator)
             event = dict(x=1)
             observer(event)
-            self.assertEqual(
-                fileHandle.getvalue(), '{0}{{"x": 1}}\n'.format(recordSeparator)
-            )
+            self.assertEqual(fileHandle.getvalue(), f'{recordSeparator}{{"x": 1}}\n')
 
     def test_observeWritesDefaultRecordSeparator(self) -> None:
         """
