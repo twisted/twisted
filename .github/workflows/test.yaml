@@ -15,6 +15,10 @@ jobs:
       TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
+          # Run on the minimum micro Python version that we can get on CI.
+          # When updating the minimum Python version here, also update the
+          # `python_requires` from `setup.cfg`.
+          # Run on latest minor release of each major python version.
           python-version: ["3.6.7", 3.6, 3.7, 3.8, 3.9, pypy-3.6, pypy-3.7]
 
     steps:
