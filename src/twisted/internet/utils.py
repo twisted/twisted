@@ -41,7 +41,7 @@ class _UnexpectedErrorOutput(IOError):
     """
 
     def __init__(self, text, processEnded):
-        IOError.__init__(self, "got stderr: {!r}".format(text))
+        IOError.__init__(self, f"got stderr: {text!r}")
         self.processEnded = processEnded
 
 

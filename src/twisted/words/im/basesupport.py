@@ -57,10 +57,10 @@ class AbstractGroup:
         self.account.client.leaveGroup(self.name)
 
     def __repr__(self) -> str:
-        return "<{} {!r}>".format(self.__class__, self.name)
+        return f"<{self.__class__} {self.name!r}>"
 
     def __str__(self) -> str:
-        return "{}@{}".format(self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractPerson:
@@ -84,10 +84,10 @@ class AbstractPerson:
         return "--"
 
     def __repr__(self) -> str:
-        return "<{} {!r}/{}>".format(self.__class__, self.name, self.status)
+        return f"<{self.__class__} {self.name!r}/{self.status}>"
 
     def __str__(self) -> str:
-        return "{}@{}".format(self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractClientMixin:

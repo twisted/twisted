@@ -76,7 +76,7 @@ class StringTest(unittest.SynchronousTestCase):
                     % (line_number, exp.pattern, out),
                 )
             else:
-                raise TypeError("don't know what to do with object {!r}".format(exp))
+                raise TypeError(f"don't know what to do with object {exp!r}")
 
 
 class TestResultTests(unittest.SynchronousTestCase):
@@ -148,7 +148,7 @@ class ErrorReportingTests(StringTest):
                 "twisted.trial.test.erroneous.FoolishError: "
                 "I am a broken setUp method"
             ),
-            "{}.{}.test_noop".format(cls.__module__, cls.__name__),
+            f"{cls.__module__}.{cls.__name__}.test_noop",
         ]
         self.stringComparison(match, output)
 

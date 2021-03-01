@@ -412,11 +412,11 @@ class BindAuthority(FileAuthority):
             domain = domain + b"." + owner[:-1]
         else:
             domain = domain[:-1]
-        f = getattr(self, "class_{}".format(cls), None)
+        f = getattr(self, f"class_{cls}", None)
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError("Record class {!r} not supported".format(cls))
+            raise NotImplementedError(f"Record class {cls!r} not supported")
 
     def class_IN(self, ttl, type, domain, rdata):
         """

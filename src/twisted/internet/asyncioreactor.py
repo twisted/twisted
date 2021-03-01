@@ -57,9 +57,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         # Windows was changed to return a ProactorEventLoop
         # unless the loop policy has been changed.
         if not isinstance(_eventloop, SelectorEventLoop):
-            raise TypeError(
-                "SelectorEventLoop required, instead got: {}".format(_eventloop)
-            )
+            raise TypeError(f"SelectorEventLoop required, instead got: {_eventloop}")
 
         self._asyncioEventloop = _eventloop  # type: SelectorEventLoop
         self._writers = {}  # type: Dict[Type[FileDescriptor], int]

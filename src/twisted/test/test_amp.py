@@ -1233,7 +1233,7 @@ class AMPTests(TestCase):
         ]:
             self.assertTrue(
                 interface.implementedBy(implementation),
-                "{} does not implements({})".format(implementation, interface),
+                f"{implementation} does not implements({interface})",
             )
 
     def test_helloWorld(self):

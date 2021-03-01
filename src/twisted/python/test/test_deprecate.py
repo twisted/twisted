@@ -440,7 +440,7 @@ def callTestFunction():
         """
         self.assertTrue(
             normcase(first.path) == normcase(second.path),
-            "{!r} != {!r}".format(first, second),
+            f"{first!r} != {second!r}",
         )
 
     def test_renamedFile(self):
@@ -530,7 +530,7 @@ def callTestFunction():
             msg.endswith(
                 "module.py:9: DeprecationWarning: A Warning String\n" "  return a\n"
             ),
-            "Unexpected warning string: {!r}".format(msg),
+            f"Unexpected warning string: {msg!r}",
         )
 
 

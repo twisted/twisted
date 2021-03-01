@@ -11,7 +11,7 @@ class Enum:
         self.label = label
 
     def __repr__(self) -> str:
-        return "<{}: {}>".format(self.group, self.label)
+        return f"<{self.group}: {self.label}>"
 
     def __str__(self) -> str:
         return self.label

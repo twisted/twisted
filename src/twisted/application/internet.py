@@ -191,9 +191,9 @@ class _AbstractClient(_VolatileDataService):
         @return: the port object returned by the connect method.
         @rtype: an object providing L{twisted.internet.interfaces.IConnector}.
         """
-        return getattr(
-            _maybeGlobalReactor(self.reactor), "connect{}".format(self.method)
-        )(*self.args, **self.kwargs)
+        return getattr(_maybeGlobalReactor(self.reactor), f"connect{self.method}")(
+            *self.args, **self.kwargs
+        )
 
 
 _clientDoc = """Connect to {tran}
@@ -470,7 +470,7 @@ class _ReconnectingProtocolProxy:
         return getattr(self._protocol, item)
 
     def __repr__(self) -> str:
-        return "<{} wrapping {!r}>".format(self.__class__.__name__, self._protocol)
+        return f"<{self.__class__.__name__} wrapping {self._protocol!r}>"
 
 
 class _DisconnectFactory:

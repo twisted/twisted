@@ -798,7 +798,7 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.hostname)
+        self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
             self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
@@ -1442,7 +1442,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -1493,7 +1493,7 @@ class Connector(base.BaseConnector):
             try:
                 port = socket.getservbyname(port, "tcp")
             except OSError as e:
-                raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
+                raise error.ServiceNameUnknownError(string=f"{e} ({port!r})")
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address

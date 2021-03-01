@@ -38,9 +38,7 @@ def printResult(address, hostname):
     if address:
         sys.stdout.write(address + "\n")
     else:
-        sys.stderr.write(
-            "ERROR: No IP addresses found for name {!r}\n".format(hostname)
-        )
+        sys.stderr.write(f"ERROR: No IP addresses found for name {hostname!r}\n")
 
 
 def printError(failure, hostname):
@@ -49,7 +47,7 @@ def printError(failure, hostname):
     resolved.
     """
     failure.trap(error.DNSNameError)
-    sys.stderr.write("ERROR: hostname not found {!r}\n".format(hostname))
+    sys.stderr.write(f"ERROR: hostname not found {hostname!r}\n")
 
 
 def main(reactor, *argv):
@@ -58,7 +56,7 @@ def main(reactor, *argv):
         options.parseOptions(argv)
     except usage.UsageError as errortext:
         sys.stderr.write(str(options) + "\n")
-        sys.stderr.write("ERROR: {}\n".format(errortext))
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
     hostname = options["hostname"]

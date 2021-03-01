@@ -203,9 +203,7 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(
-                    Exception("Received bytes ({!r}) before descriptor.".format(data))
-                )
+                Failure(Exception(f"Received bytes ({data!r}) before descriptor."))
             )
             self.waiting = None
 

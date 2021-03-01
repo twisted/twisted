@@ -68,7 +68,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if relativeLink is None:
                 return None
 
-            return "{}/{}".format(baseURL, relativeLink)
+            return f"{baseURL}/{relativeLink}"
 
         return None
 

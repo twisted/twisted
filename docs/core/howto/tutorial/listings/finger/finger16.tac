@@ -75,7 +75,7 @@ class FingerService(service.Service):
             user = self.users.get(path, b"No such users <p/> usage: site/user")
             path = path.decode("ascii")
             user = user.decode("ascii")
-            text = "<h1>{}</h1><p>{}</p>".format(path, user)
+            text = f"<h1>{path}</h1><p>{user}</p>"
             text = text.encode("ascii")
             return static.Data(text, "text/html")
 
