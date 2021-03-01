@@ -24,7 +24,7 @@ jobs:
         # Run on latest minor release of each major python version.
         python-version: ["3.6.7", 3.8, 3.9, pypy-3.6, pypy-3.7]
         tox-env: [alldeps]
-        noipv6: []
+        noipv6: ['']
 
         include:
           # Run nodeps tests and add some extra coverage for latest 3.6 micro
