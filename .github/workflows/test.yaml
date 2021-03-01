@@ -25,15 +25,16 @@ jobs:
           python-version: ["3.6.7", 3.8, 3.9, pypy-3.6, pypy-3.7]
           tox-env: alldeps
           noipv6:
-      include:
-        # Run nodeps tests and add some extra coverage for latest 3.6 micro
-        # version.
-        - python-version: 3.6
-          tox-env: nodeps
-        # Run nodeps tests and add some extra coverage for latest 3.6 micro
-        # version.
-        - python-version: 3.7
-          noipv6: -noipv6
+
+          include:
+            # Run nodeps tests and add some extra coverage for latest 3.6 micro
+            # version.
+            - python-version: 3.6
+              tox-env: nodeps
+            # Run nodeps tests and add some extra coverage for latest 3.6 micro
+            # version.
+            - python-version: 3.7
+              noipv6: -noipv6
 
     steps:
     - uses: actions/checkout@v2
