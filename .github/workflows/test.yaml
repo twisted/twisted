@@ -34,6 +34,7 @@ jobs:
           # Run nodeps tests and add some extra coverage for latest 3.6 micro
           # version.
           - python-version: 3.7
+            tox-env: alldeps
             noipv6: -noipv6
 
     steps:
