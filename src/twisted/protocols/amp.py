@@ -1067,55 +1067,56 @@ class BoxDispatcher:
         return maybeDeferred(responder, box)
 
 
+class _CommandLocatorMeta(type):
+    """
+    This metaclass keeps track of all of the Command.responder-decorated
+    methods defined since the last CommandLocator subclass was defined.  It
+    assumes (usually correctly, but unfortunately not necessarily so) that
+    those commands responders were all declared as methods of the class
+    being defined.  Note that this list can be incorrect if users use the
+    Command.responder decorator outside the context of a CommandLocator
+    class declaration.
+
+    Command responders defined on subclasses are given precedence over
+    those inherited from a base class.
+
+    The Command.responder decorator explicitly cooperates with this
+    metaclass.
+    """
+
+    _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
+
+    def __new__(cls, name, bases, attrs):
+        commands = cls._currentClassCommands[:]
+        cls._currentClassCommands[:] = []
+        cd = attrs["_commandDispatch"] = {}
+        subcls = type.__new__(cls, name, bases, attrs)
+        ancestors = list(subcls.__mro__[1:])
+        ancestors.reverse()
+        for ancestor in ancestors:
+            cd.update(getattr(ancestor, "_commandDispatch", {}))
+        for commandClass, responderFunc in commands:
+            cd[commandClass.commandName] = (commandClass, responderFunc)
+        if bases and (subcls.lookupFunction != CommandLocator.lookupFunction):
+
+            def locateResponder(self, name):
+                warnings.warn(
+                    "Override locateResponder, not lookupFunction.",
+                    category=PendingDeprecationWarning,
+                    stacklevel=2,
+                )
+                return self.lookupFunction(name)
+
+            subcls.locateResponder = locateResponder
+        return subcls
+
+
 @implementer(IResponderLocator)
-class CommandLocator:
+class CommandLocator(metaclass=_CommandLocatorMeta):
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
     the help of the L{Command.responder} decorator.
     """
-
-    class __metaclass__(type):
-        """
-        This metaclass keeps track of all of the Command.responder-decorated
-        methods defined since the last CommandLocator subclass was defined.  It
-        assumes (usually correctly, but unfortunately not necessarily so) that
-        those commands responders were all declared as methods of the class
-        being defined.  Note that this list can be incorrect if users use the
-        Command.responder decorator outside the context of a CommandLocator
-        class declaration.
-
-        Command responders defined on subclasses are given precedence over
-        those inherited from a base class.
-
-        The Command.responder decorator explicitly cooperates with this
-        metaclass.
-        """
-
-        _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
-
-        def __new__(cls, name, bases, attrs):
-            commands = cls._currentClassCommands[:]
-            cls._currentClassCommands[:] = []
-            cd = attrs["_commandDispatch"] = {}
-            subcls = type.__new__(cls, name, bases, attrs)
-            ancestors = list(subcls.__mro__[1:])
-            ancestors.reverse()
-            for ancestor in ancestors:
-                cd.update(getattr(ancestor, "_commandDispatch", {}))
-            for commandClass, responderFunc in commands:
-                cd[commandClass.commandName] = (commandClass, responderFunc)
-            if bases and (subcls.lookupFunction != CommandLocator.lookupFunction):
-
-                def locateResponder(self, name):
-                    warnings.warn(
-                        "Override locateResponder, not lookupFunction.",
-                        category=PendingDeprecationWarning,
-                        stacklevel=2,
-                    )
-                    return self.lookupFunction(name)
-
-                subcls.locateResponder = locateResponder
-            return subcls
 
     def _wrapWithSerialization(self, aCallable, command):
         """
@@ -1196,15 +1197,6 @@ class CommandLocator:
             commandClass, responderFunc = cd[name]
             responderMethod = MethodType(responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
-
-
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating CommandLocator using the metaclass
-# here.
-CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
-    "CommandLocator", (CommandLocator,), {}
-)
 
 
 @implementer(IResponderLocator)
@@ -1694,7 +1686,68 @@ class Descriptor(Integer):
         return outString
 
 
-class Command:
+class _CommandMeta(type):
+    """
+    Metaclass hack to establish reverse-mappings for 'errors' and
+    'fatalErrors' as class vars.
+    """
+
+    def __new__(cls, name, bases, attrs):
+        reverseErrors = attrs["reverseErrors"] = {}
+        er = attrs["allErrors"] = {}
+        if "commandName" not in attrs:
+            attrs["commandName"] = name.encode("ascii")
+        newtype = type.__new__(cls, name, bases, attrs)
+
+        if not isinstance(newtype.commandName, bytes):
+            raise TypeError(
+                "Command names must be byte strings, got: {!r}".format(
+                    newtype.commandName
+                )
+            )
+        for name, _ in newtype.arguments:
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    "Argument names must be byte strings, got: {!r}".format(name)
+                )
+        for name, _ in newtype.response:
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    "Response names must be byte strings, got: {!r}".format(name)
+                )
+
+        errors = {}  # type: Dict[Type[Exception], bytes]
+        fatalErrors = {}  # type: Dict[Type[Exception], bytes]
+        accumulateClassDict(newtype, "errors", errors)
+        accumulateClassDict(newtype, "fatalErrors", fatalErrors)
+
+        if not isinstance(newtype.errors, dict):
+            newtype.errors = dict(newtype.errors)
+        if not isinstance(newtype.fatalErrors, dict):
+            newtype.fatalErrors = dict(newtype.fatalErrors)
+
+        for v, k in errors.items():
+            reverseErrors[k] = v
+            er[v] = k
+        for v, k in fatalErrors.items():
+            reverseErrors[k] = v
+            er[v] = k
+
+        for _, name in newtype.errors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    "Error names must be byte strings, got: {!r}".format(name)
+                )
+        for _, name in newtype.fatalErrors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    "Fatal error names must be byte strings, got: {!r}".format(name)
+                )
+
+        return newtype
+
+
+class Command(metaclass=_CommandMeta):
     """
     Subclass me to specify an AMP Command.
 
@@ -1736,65 +1789,6 @@ class Command:
     L{response}, because clients are always free to request a response if they
     want one.
     """
-
-    class __metaclass__(type):
-        """
-        Metaclass hack to establish reverse-mappings for 'errors' and
-        'fatalErrors' as class vars.
-        """
-
-        def __new__(cls, name, bases, attrs):
-            reverseErrors = attrs["reverseErrors"] = {}
-            er = attrs["allErrors"] = {}
-            if "commandName" not in attrs:
-                attrs["commandName"] = name.encode("ascii")
-            newtype = type.__new__(cls, name, bases, attrs)
-
-            if not isinstance(newtype.commandName, bytes):
-                raise TypeError(
-                    "Command names must be byte strings, got: %r"
-                    % (newtype.commandName,)
-                )
-            for name, _ in newtype.arguments:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Argument names must be byte strings, got: {!r}".format(name)
-                    )
-            for name, _ in newtype.response:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Response names must be byte strings, got: {!r}".format(name)
-                    )
-
-            errors = {}  # type: Dict[Type[Exception], bytes]
-            fatalErrors = {}  # type: Dict[Type[Exception], bytes]
-            accumulateClassDict(newtype, "errors", errors)
-            accumulateClassDict(newtype, "fatalErrors", fatalErrors)
-
-            if not isinstance(newtype.errors, dict):
-                newtype.errors = dict(newtype.errors)
-            if not isinstance(newtype.fatalErrors, dict):
-                newtype.fatalErrors = dict(newtype.fatalErrors)
-
-            for v, k in errors.items():
-                reverseErrors[k] = v
-                er[v] = k
-            for v, k in fatalErrors.items():
-                reverseErrors[k] = v
-                er[v] = k
-
-            for _, name in newtype.errors.items():
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Error names must be byte strings, got: {!r}".format(name)
-                    )
-            for _, name in newtype.fatalErrors.items():
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Fatal error names must be byte strings, got: {!r}".format(name)
-                    )
-
-            return newtype
 
     arguments = []  # type: List[Tuple[bytes, Argument]]
     response = []  # type: List[Tuple[bytes, Argument]]
@@ -1974,12 +1968,6 @@ class Command:
             d.addErrback(_massageError)
 
         return d
-
-
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]
 
 
 class _NoCertificate:
