@@ -1154,10 +1154,11 @@ class SynchronousTestCase(_Assertions):
 
                     if filename != os.path.normcase(aWarning.filename):
                         continue
-                    lineStarts = list(_findlinestarts(aFunction.__code__))
-                    first = lineStarts[0][1]
-                    last = lineStarts[-1][1]
-                    if not (first <= aWarning.lineno <= last):
+                    lineNumbers = [
+                        lineNumber
+                        for _, lineNumber in _findlinestarts(aFunction.__code__)
+                    ]
+                    if not (min(lineNumbers) <= aWarning.lineno <= max(lineNumbers)):
                         continue
                     # The warning points to this function, flush it and move on
                     # to the next warning.
