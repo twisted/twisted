@@ -365,6 +365,24 @@ def foo():
         # Flush it
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
+    def test_pep626(self):
+        """
+        dis.findlinestarts is not guaranteed to be sorted ascending.
+        """
+
+        def foo(a=1, b=1):
+            if a:
+                if b:
+                    warnings.warn("oh no")
+                else:
+                    pass
+
+        # Generate the warning
+        foo()
+
+        # Flush it
+        self.assertEqual(len(self.flushWarnings([foo])), 1)
+
 
 class FakeWarning(Warning):
     pass
