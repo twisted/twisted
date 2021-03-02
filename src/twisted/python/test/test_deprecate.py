@@ -377,6 +377,29 @@ def callTestFunction():
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 """
         )
+        self.package.child("pep626.py").setContent(
+            b"""
+"A module string"
+
+from twisted.python import deprecate
+
+def noop():
+    pass
+
+def testFunction(a=1, b=1):
+    "A doc string"
+    if a:
+        if b:
+            noop()
+        else:
+            pass
+
+def callTestFunction():
+    b = testFunction()
+    if b is None:
+        deprecate.warnAboutFunction(testFunction, "A Warning String")
+"""
+        )
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)
@@ -425,6 +448,26 @@ def callTestFunction():
         # Line number 9 is the last line in the testFunction in the helper
         # module.
         self.assertEqual(warningsShown[0]["lineno"], 9)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
+
+    def test_warningLineNumberPEP626(self):
+        """
+        L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
+        number of a line within the implementation of the function passed to it
+        on py3.10 with PEP 626.
+        """
+        from twisted_private_helper import pep626
+
+        pep626.callTestFunction()
+        warningsShown = self.flushWarnings()
+        self.assertSamePath(
+            FilePath(warningsShown[0]["filename"].encode("utf-8")),
+            self.package.sibling(b"twisted_private_helper").child(b"pep626.py"),
+        )
+        # Line number 15 is the last line in the testFunction in the helper
+        # module.
+        self.assertEqual(warningsShown[0]["lineno"], 15)
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
         self.assertEqual(len(warningsShown), 1)
 
