@@ -1875,7 +1875,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender  # type: Type[SMTPClient]
+    protocol: Type[SMTPClient] = SMTPSender
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5, timeout=None):
         """

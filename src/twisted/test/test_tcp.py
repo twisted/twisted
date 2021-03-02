@@ -121,7 +121,7 @@ class MyProtocolFactoryMixin:
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = None  # type: Optional[Callable[[], Protocol]]
+    protocol: Optional[Callable[[], Protocol]] = None
     called = 0
 
     def __init__(self):

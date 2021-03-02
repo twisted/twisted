@@ -280,7 +280,7 @@ class SimpleFactoryCopy(pb.Copyable):
     @type allIDs: C{dict}
     """
 
-    allIDs = {}  # type: Dict[int, 'SimpleFactoryCopy']
+    allIDs: Dict[int, "SimpleFactoryCopy"] = {}
 
     def __init__(self, id):
         self.id = id

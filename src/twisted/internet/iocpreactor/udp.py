@@ -44,7 +44,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """

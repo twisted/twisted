@@ -365,7 +365,7 @@ class TransportTestCase(TestCase):
     Base class for transport test cases.
     """
 
-    klass = None  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = None
 
     if dependencySkip:
         skip = dependencySkip
@@ -462,7 +462,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass = MockTransportBase  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = MockTransportBase
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -1366,9 +1366,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass = (
-        transport.SSHServerTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHServerTransport
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -1921,9 +1919,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHClientTransport tests.
     """
 
-    klass = (
-        transport.SSHClientTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHClientTransport
 
     def verifyHostKey(self, pubKey, fingerprint):
         """

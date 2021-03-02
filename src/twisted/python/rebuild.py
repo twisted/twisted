@@ -61,7 +61,7 @@ class Sensitive:
             return anObject
 
 
-_modDictIDMap = {}  # type:Dict[int, ModuleType]
+_modDictIDMap: Dict[int, ModuleType] = {}
 
 
 def latestFunction(oldFunc):

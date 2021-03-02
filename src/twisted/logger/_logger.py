@@ -64,7 +64,7 @@ class Logger:
         if observer is None:
             from ._global import globalLogPublisher
 
-            self.observer = globalLogPublisher  # type: ILogObserver
+            self.observer: ILogObserver = globalLogPublisher
         else:
             self.observer = observer
 
@@ -90,7 +90,7 @@ class Logger:
         assert owner is not None
 
         if instance is None:
-            source = owner  # type: Any
+            source: Any = owner
         else:
             source = instance
 

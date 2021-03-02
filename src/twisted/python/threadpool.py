@@ -65,7 +65,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = []  # type: List[Thread]
+        self.threads: List[Thread] = []
 
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(  # type: ignore[misc]

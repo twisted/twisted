@@ -75,8 +75,8 @@ class ClientOptions(ConchOptions):
         ],
     )
 
-    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
-    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    localForwards: List[Tuple[int, Tuple[int, int]]] = []
+    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
 
     def opt_escape(self, esc):
         """

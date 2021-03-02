@@ -434,7 +434,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     @ivar _auth: Authorization credentials.
     """
 
-    magic = None  # type: Optional[bytes]
+    magic: Optional[bytes] = None
     _userIs = None
     _onLogout = None
 

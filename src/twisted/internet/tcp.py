@@ -1246,7 +1246,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # An externally initialized socket that we will use, rather than creating
     # our own.

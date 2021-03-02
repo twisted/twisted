@@ -206,7 +206,7 @@ class DummyRequest:
 
     uri = b"http://dummy/"
     method = b"GET"
-    client = None  # type: Optional[IAddress]
+    client: Optional[IAddress] = None
 
     def registerProducer(self, prod, s):
         """

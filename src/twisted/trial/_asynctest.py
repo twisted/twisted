@@ -25,7 +25,7 @@ from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
-_wait_is_running = []  # type: List[None]
+_wait_is_running: List[None] = []
 
 
 @implementer(itrial.ITestCase)

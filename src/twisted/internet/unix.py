@@ -67,7 +67,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase = None  # type: Optional[Type[FileDescriptor]]
+    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):

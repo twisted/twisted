@@ -166,7 +166,7 @@ class _CommandDispatcherMixin:
     @ivar prefix: Command handler prefix, used to locate handler attributes
     """
 
-    prefix = None  # type: Optional[str]
+    prefix: Optional[str] = None
 
     def dispatch(self, commandName, *args):
         """
@@ -257,7 +257,7 @@ class IRC(protocol.Protocol):
     buffer = ""
     hostname = None
 
-    encoding = None  # type: Optional[str]
+    encoding: Optional[str] = None
 
     def connectionMade(self):
         self.channels = []
@@ -3050,7 +3050,7 @@ class DccFileReceive(DccFileReceiveBasic):
     fileSize = -1
     destDir = "."
     overwrite = 0
-    fromUser = None  # type: Optional[bytes]
+    fromUser: Optional[bytes] = None
     queryData = None
 
     def __init__(

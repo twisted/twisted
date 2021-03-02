@@ -29,7 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    protocol = None  # type: Optional[Callable[[], Protocol]]
+    protocol: "Optional[Callable[[], Protocol]]" = None
 
     numPorts = 0
     noisy = True
@@ -494,7 +494,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None  # type: Optional[ITransport]
+    transport: Optional[ITransport] = None
 
     def makeConnection(self, transport):
         """
@@ -543,7 +543,7 @@ class Protocol(BaseProtocol):
     see the L{twisted.protocols.basic} module for a few of them.
     """
 
-    factory = None  # type: Optional[Factory]
+    factory: Optional[Factory] = None
 
     def logPrefix(self):
         """

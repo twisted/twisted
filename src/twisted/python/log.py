@@ -477,7 +477,7 @@ class FileLogObserver(_GlobalStartStopObserver):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat = None  # type: Optional[str]
+    timeFormat: Optional[str] = None
 
     def __init__(self, f):
         # Compatibility

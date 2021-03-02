@@ -72,7 +72,7 @@ def _maybeGlobalReactor(maybeReactor):
 
 class _VolatileDataService(service.Service):
 
-    volatile = []  # type: List[str]
+    volatile: List[str] = []
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)
@@ -100,7 +100,7 @@ class _AbstractServer(_VolatileDataService):
     """
 
     volatile = ["_port"]
-    method = ""  # type: str
+    method: str = ""
     reactor = None
 
     _port = None
@@ -163,7 +163,7 @@ class _AbstractClient(_VolatileDataService):
     """
 
     volatile = ["_connection"]
-    method = ""  # type: str
+    method: str = ""
     reactor = None
 
     _connection = None

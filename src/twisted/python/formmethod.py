@@ -32,7 +32,7 @@ class Argument:
     """Base class for form arguments."""
 
     # default value for argument, if no other default is given
-    defaultDefault = None  # type: Any
+    defaultDefault: Any = None
 
     def __init__(
         self, name, default=None, shortDesc=None, longDesc=None, hints=None, allowNone=1
@@ -68,7 +68,7 @@ class Argument:
 class String(Argument):
     """A single string."""
 
-    defaultDefault = ""  # type: str
+    defaultDefault: str = ""
     min = 0
     max = None
 
@@ -136,7 +136,7 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer."""
 
-    defaultDefault = None  # type: Optional[int]
+    defaultDefault: Optional[int] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -204,7 +204,7 @@ class IntegerRange(Integer):
 
 class Float(Argument):
 
-    defaultDefault = None  # type: Optional[float]
+    defaultDefault: Optional[float] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -344,7 +344,7 @@ def positiveInt(x):
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault = None  # type: Optional[Tuple[int, int, int]]
+    defaultDefault: Optional[Tuple[int, int, int]] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None

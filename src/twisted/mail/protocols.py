@@ -37,7 +37,7 @@ class DomainDeliveryBase:
     """
 
     service = None
-    protocolName = b"not-implemented-protocol"  # type: bytes
+    protocolName: bytes = b"not-implemented-protocol"
 
     def __init__(self, service, user, host=smtp.DNSNAME):
         """
