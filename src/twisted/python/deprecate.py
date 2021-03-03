@@ -604,21 +604,15 @@ def warnAboutFunction(offender, warningString):
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
     offenderModule = sys.modules[offender.__module__]
-    filename = inspect.getabsfile(offenderModule)
-    lineStarts = list(findlinestarts(offender.__code__))
-    lastLineNo = lineStarts[-1][1]
-    globals = offender.__globals__
-
-    kwargs = dict(
+    warn_explicit(
+        warningString,
         category=DeprecationWarning,
-        filename=filename,
-        lineno=lastLineNo,
+        filename=inspect.getabsfile(offenderModule),
+        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
         module=offenderModule.__name__,
-        registry=globals.setdefault("__warningregistry__", {}),
+        registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,
     )
-
-    warn_explicit(warningString, **kwargs)
 
 
 def _passedArgSpec(argspec, positional, keyword):
