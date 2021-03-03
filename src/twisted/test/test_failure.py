@@ -21,8 +21,10 @@ from twisted.python import failure
 
 from twisted.trial.unittest import SynchronousTestCase
 
-
-from cython_test_exception_raiser import raiser
+try:
+    from cython_test_exception_raiser import raiser
+except ImportError:
+    raiser = None
 
 
 def getDivisionFailure(*args, **kwargs):
