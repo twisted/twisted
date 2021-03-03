@@ -6,26 +6,26 @@
 Application data directory support.
 """
 
-
 import appdirs
 import inspect
+from typing import cast
 
 from twisted.python.compat import currentframe
 
 
-def getDataDirectory(moduleName=None):
+def getDataDirectory(moduleName: str = "") -> str:
     """
     Get a data directory for the caller function, or C{moduleName} if given.
 
     @param moduleName: The module name if you don't wish to have the caller's
         module.
-    @type moduleName: L{str}
 
     @returns: A directory for putting data in.
-    @rtype: L{str}
     """
     if not moduleName:
         caller = currentframe(1)
-        moduleName = inspect.getmodule(caller).__name__
+        module = inspect.getmodule(caller)
+        assert module is not None
+        moduleName = module.__name__
 
-    return appdirs.user_data_dir(moduleName)
+    return cast(str, appdirs.user_data_dir(moduleName))

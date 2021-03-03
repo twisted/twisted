@@ -11,7 +11,7 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Optional, Type, Union
+from typing import Callable, Optional, Tuple
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
@@ -29,10 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    # Put a subclass of Protocol here:
-    protocol = (
-        None
-    )  # type: Optional[Union[Type['Protocol'], Type['AbstractDatagramProtocol']]]  # noqa
+    protocol: "Optional[Callable[[], Protocol]]" = None
 
     numPorts = 0
     noisy = True
@@ -115,7 +112,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: Tuple[str, int]) -> "Protocol":
         """
         Create an instance of a subclass of Protocol.
 
@@ -130,6 +127,7 @@ class Factory:
 
         @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
         """
+        assert self.protocol is not None
         p = self.protocol()
         p.factory = self
         return p
@@ -191,7 +189,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
     def __repr__(self) -> str:
-        return "<ClientCreator factory: %r>" % (self.instance,)
+        return f"<ClientCreator factory: {self.instance!r}>"
 
     def buildProtocol(self, addr):
         """
@@ -257,10 +255,10 @@ class ClientCreator:
         @param method: A callable which will actually start the connection
             attempt.  For example, C{reactor.connectTCP}.
 
-        @param *args: Positional arguments to pass to C{method}, excluding the
+        @param args: Positional arguments to pass to C{method}, excluding the
             factory.
 
-        @param **kwargs: Keyword arguments to pass to C{method}.
+        @param kwargs: Keyword arguments to pass to C{method}.
 
         @return: A L{Deferred} which fires with an instance of the protocol
             class passed to this L{ClientCreator}'s initializer or fails if the
@@ -396,7 +394,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %s on explicit request" % (connector,))
+                log.msg(f"Abandoning {connector} on explicit request")
             return
 
         if connector is None:
@@ -496,7 +494,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None  # type: Optional[ITransport]
+    transport: Optional[ITransport] = None
 
     def makeConnection(self, transport):
         """
@@ -544,6 +542,8 @@ class Protocol(BaseProtocol):
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
     """
+
+    factory: Optional[Factory] = None
 
     def logPrefix(self):
         """
@@ -853,7 +853,7 @@ class FileWrapper:
         self.closed = 1
         try:
             self.file.close()
-        except (IOError, OSError):
+        except OSError:
             self.handleException()
 
     def getPeer(self):

@@ -30,8 +30,8 @@ alternateLink = '<link rel="alternate" href="%(source)s" type="text/x-python" />
 
 
 class Options(usage.Options):
-    synopsis = """%s [options] source.py
-    """ % (
+    synopsis = """{} [options] source.py
+    """.format(
         os.path.basename(sys.argv[0]),
     )
 
@@ -63,7 +63,7 @@ def run():
     with open(filename + ".html", "wb") as output:
         outHeader = header % {
             "title": filename,
-            "generator": "htmlizer/%s" % (copyright.longversion,),
+            "generator": f"htmlizer/{copyright.longversion}",
             "alternate": alternateLink % {"source": filename},
             "stylesheet": stylesheet,
         }

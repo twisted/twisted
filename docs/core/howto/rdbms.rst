@@ -9,7 +9,7 @@ twisted.enterprise.adbapi: Twisted RDBMS support
 Abstract
 --------
 
-Twisted is an asynchronous networking framework, but most database API implementations unfortunately have blocking interfaces -- for this reason, :api:`twisted.enterprise.adbapi <twisted.enterprise.adbapi>` was created.
+Twisted is an asynchronous networking framework, but most database API implementations unfortunately have blocking interfaces -- for this reason, :py:mod:`twisted.enterprise.adbapi` was created.
 It is a non-blocking interface to the standardized DB-API 2.0 API, which allows you to access a number of different RDBMSes.
 
 
@@ -39,17 +39,17 @@ This means standard database modules cannot be used directly, as they typically 
     # ...which could take a long time, perhaps even minutes.
 
 Those delays are unacceptable when using an asynchronous framework such as Twisted.
-For this reason, Twisted provides :api:`twisted.enterprise.adbapi <twisted.enterprise.adbapi>`, an asynchronous wrapper for any `DB-API 2.0 <http://www.python.org/dev/peps/pep-0249/>`_-compliant module.
+For this reason, Twisted provides :py:mod:`twisted.enterprise.adbapi`, an asynchronous wrapper for any `DB-API 2.0 <http://www.python.org/dev/peps/pep-0249/>`_-compliant module.
 
-:api:`twisted.enterprise.adbapi <adbapi>` will do blocking database operations in separate threads, which trigger callbacks in the originating thread when they complete.
+:py:mod:`adbapi <twisted.enterprise.adbapi>` will do blocking database operations in separate threads, which trigger callbacks in the originating thread when they complete.
 In the meantime, the original thread can continue doing normal work, like servicing other requests.
 
 
 How do I use adbapi?
 --------------------
 
-Rather than creating a database connection directly, use the :api:`twisted.enterprise.adbapi.ConnectionPool <adbapi.ConnectionPool>` class to manage a connections for you.
-This allows :api:`twisted.enterprise.adbapi <adbapi>` to use multiple connections, one per thread. This is easy::
+Rather than creating a database connection directly, use the :py:class:`adbapi.ConnectionPool <twisted.enterprise.adbapi.ConnectionPool>` class to manage a connections for you.
+This allows :py:mod:`adbapi <twisted.enterprise.adbapi>` to use multiple connections, one per thread. This is easy::
 
     # Using the "dbmodule" from the previous example, create a ConnectionPool
     from twisted.enterprise import adbapi
@@ -58,8 +58,8 @@ This allows :api:`twisted.enterprise.adbapi <adbapi>` to use multiple connection
 Things to note about doing this:
 
 - There is no need to import dbmodule directly.
-  You just pass the name to :api:`twisted.enterprise.adbapi.ConnectionPool <adbapi.ConnectionPool>`'s constructor.
-- The parameters you would pass to dbmodule.connect are passed as extra arguments to :api:`twisted.enterprise.adbapi.ConnectionPool <adbapi.ConnectionPool>`'s constructor.
+  You just pass the name to :py:class:`adbapi.ConnectionPool <twisted.enterprise.adbapi.ConnectionPool>`'s constructor.
+- The parameters you would pass to dbmodule.connect are passed as extra arguments to :py:class:`adbapi.ConnectionPool <twisted.enterprise.adbapi.ConnectionPool>`'s constructor.
   Keyword parameters work as well.
 
 Now we can do a database query::
@@ -77,12 +77,12 @@ Now we can do a database query::
     getAge("joe").addCallback(printResult)
 
 This is straightforward, except perhaps for the return value of ``getAge``.
-It returns a :api:`twisted.internet.defer.Deferred <Deferred>`, which allows arbitrary callbacks to be called upon completion (or upon failure).
+It returns a :py:class:`Deferred <twisted.internet.defer.Deferred>`, which allows arbitrary callbacks to be called upon completion (or upon failure).
 More documentation on Deferred is available :doc:`here <defer>`.
 
 
 In addition to ``runQuery``, there is also ``runOperation`` and ``runInteraction`` that gets called with a callable (e.g. a function).
-The function will be called in the thread with a :api:`twisted.enterprise.adbapi.Transaction <adbapi.Transaction>`, which basically mimics a DB-API cursor.
+The function will be called in the thread with a :py:class:`adbapi.Transaction <twisted.enterprise.adbapi.Transaction>`, which basically mimics a DB-API cursor.
 In all cases a database transaction will be committed after your database usage is finished, unless an exception is raised in which case it will be rolled back.
 
 .. code-block:: python

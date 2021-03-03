@@ -6,7 +6,6 @@ Example Shoutcast client. Run with:
 
 python shoutcast.py localhost 8080
 """
-from __future__ import print_function
 
 import sys
 

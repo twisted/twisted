@@ -38,11 +38,11 @@ from twisted.internet import protocol, task
 from twisted.python import log
 
 
-
 class DrawingFinished(Exception):
     """Sentinel exception, raised when no \"frames\" for a particular
     \"animation\" remain to be drawn.
     """
+
 
 class Drawable:
     """Representation of an animation.
@@ -56,6 +56,7 @@ class Drawable:
     Frames are defined with draw_ prefixed methods.  Erasure is
     performed by erase_ prefixed methods.
     """
+
     n = 0
 
     def __init__(self, proto, col, line):
@@ -73,9 +74,9 @@ class Drawable:
             line += 1
 
     def iterate(self):
-        getattr(self, 'erase_' + str(self.n))()
+        getattr(self, "erase_" + str(self.n))()
         self.n += 1
-        f = getattr(self, 'draw_' + str(self.n), None)
+        f = getattr(self, "draw_" + str(self.n), None)
         if f is None:
             raise DrawingFinished()
         f()
@@ -90,53 +91,54 @@ class Splat(Drawable):
 
     def draw_1(self):
         # . .
-        #. . .
+        # . . .
         # . .
-        self.drawLines(' . .\n. . .\n . .')
+        self.drawLines(" . .\n. . .\n . .")
 
     def erase_1(self):
-        self.drawLines('    \n     \n    ')
+        self.drawLines("    \n     \n    ")
 
     def draw_2(self):
         #  . . . .
         # . o o o .
-        #. o o o o .
+        # . o o o o .
         # . o o o .
         #  . . . .
-        self.drawLines('  . . . .\n . o o o .\n. o o o o .\n . o o o .\n  . . . .')
+        self.drawLines("  . . . .\n . o o o .\n. o o o o .\n . o o o .\n  . . . .")
 
     def erase_2(self):
-        self.drawLines('         \n          \n           \n          \n         ')
+        self.drawLines("         \n          \n           \n          \n         ")
 
     def draw_3(self):
         #  o o o o
         # o O O O o
-        #o O O O O o
+        # o O O O O o
         # o O O O o
         #  o o o o
-        self.drawLines('  o o o o\n o O O O o\no O O O O o\n o O O O o\n  o o o o')
+        self.drawLines("  o o o o\n o O O O o\no O O O O o\n o O O O o\n  o o o o")
 
     erase_3 = erase_2
 
     def draw_4(self):
         #  O O O O
         # O . . . O
-        #O . . . . O
+        # O . . . . O
         # O . . . O
         #  O O O O
-        self.drawLines('  O O O O\n O . . . O\nO . . . . O\n O . . . O\n  O O O O')
+        self.drawLines("  O O O O\n O . . . O\nO . . . . O\n O . . . O\n  O O O O")
 
     erase_4 = erase_3
 
     def draw_5(self):
         #  . . . .
         # .       .
-        #.         .
+        # .         .
         # .       .
         #  . . . .
-        self.drawLines('  . . . .\n .       .\n.         .\n .       .\n  . . . .')
+        self.drawLines("  . . . .\n .       .\n.         .\n .       .\n  . . . .")
 
     erase_5 = erase_4
+
 
 class Drop(Drawable):
     WIDTH = 3
@@ -144,30 +146,31 @@ class Drop(Drawable):
 
     def draw_1(self):
         # o
-        self.drawLines(' o')
+        self.drawLines(" o")
 
     def erase_1(self):
-        self.drawLines('  ')
+        self.drawLines("  ")
 
     def draw_2(self):
         # _
-        #/ \
-        #\./
-        self.drawLines(' _ \n/ \\\n\\./')
+        # / \
+        # \./
+        self.drawLines(" _ \n/ \\\n\\./")
 
     def erase_2(self):
-        self.drawLines('  \n   \n   ')
+        self.drawLines("  \n   \n   ")
 
     def draw_3(self):
         # O
-        self.drawLines(' O')
+        self.drawLines(" O")
 
     def erase_3(self):
-        self.drawLines('  ')
+        self.drawLines("  ")
+
 
 class DemoProtocol(insults.TerminalProtocol):
-    """Draws random things at random places on the screen.
-    """
+    """Draws random things at random places on the screen."""
+
     width = 80
     height = 24
 
@@ -198,7 +201,9 @@ class DemoProtocol(insults.TerminalProtocol):
         s = cls(self.terminal, col, line)
 
         c = task.LoopingCall(s.iterate)
-        c.start(self.rate).addErrback(lambda f: f.trap(DrawingFinished)).addErrback(log.err)
+        c.start(self.rate).addErrback(lambda f: f.trap(DrawingFinished)).addErrback(
+            log.err
+        )
 
     # ITerminalListener
     def terminalSize(self, width, height):
@@ -206,19 +211,19 @@ class DemoProtocol(insults.TerminalProtocol):
         self.height = height
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: %r" % (seq,))
+        log.msg(f"Client sent something weird: {seq!r}")
 
     def keystrokeReceived(self, keyID, modifier):
-        if keyID == '+':
+        if keyID == "+":
             self.interval /= 1.1
-        elif keyID == '-':
+        elif keyID == "-":
             self.interval *= 1.1
-        elif keyID == '*':
+        elif keyID == "*":
             self.rate /= 1.1
-        elif keyID == '/':
+        elif keyID == "/":
             self.rate *= 1.1
         else:
-            log.msg("Client sent: %r" % (keyID,))
+            log.msg(f"Client sent: {keyID!r}")
             return
 
         self._call.stop()
@@ -230,18 +235,21 @@ def makeService(args):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
-                                         insults.ServerProtocol,
-                                         args['protocolFactory'],
-                                         *args.get('protocolArgs', ()),
-                                         **args.get('protocolKwArgs', {}))
-    tsvc = internet.TCPServer(args['telnet'], f)
+    f.protocol = lambda: TelnetTransport(
+        TelnetBootstrapProtocol,
+        insults.ServerProtocol,
+        args["protocolFactory"],
+        *args.get("protocolArgs", ()),
+        **args.get("protocolKwArgs", {}),
+    )
+    tsvc = internet.TCPServer(args["telnet"], f)
 
     def chainProtocolFactory():
         return insults.ServerProtocol(
-            args['protocolFactory'],
-            *args.get('protocolArgs', ()),
-            **args.get('protocolKwArgs', {}))
+            args["protocolFactory"],
+            *args.get("protocolArgs", ()),
+            **args.get("protocolKwArgs", {}),
+        )
 
     rlm = TerminalRealm()
     rlm.chainedProtocolFactory = chainProtocolFactory
@@ -249,15 +257,16 @@ def makeService(args):
     f = ConchFactory(ptl)
     f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
     f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
-    csvc = internet.TCPServer(args['ssh'], f)
+    csvc = internet.TCPServer(args["ssh"], f)
 
     m = service.MultiService()
     tsvc.setServiceParent(m)
     csvc.setServiceParent(m)
     return m
 
+
 application = service.Application("Insults Demo App")
 
-makeService({'protocolFactory': DemoProtocol,
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
+makeService(
+    {"protocolFactory": DemoProtocol, "telnet": 6023, "ssh": 6022}
+).setServiceParent(application)

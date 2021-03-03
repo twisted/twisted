@@ -196,7 +196,8 @@ class _WrappingFactory(ClientFactory):
         that is managing the current or previous connection attempt.
     """
 
-    protocol = _WrappingProtocol
+    # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
+    protocol = _WrappingProtocol  # type: ignore[assignment]
 
     def __init__(self, wrappedFactory):
         """
@@ -262,7 +263,7 @@ class _WrappingFactory(ClientFactory):
             proto = self._wrappedFactory.buildProtocol(addr)
             if proto is None:
                 raise error.NoProtocol()
-        except:
+        except BaseException:
             self._onConnection.errback()
         else:
             return self.protocol(self._onConnection, proto)
@@ -472,7 +473,7 @@ class ProcessEndpoint:
                 self._usePTY,
                 self._childFDs,
             )
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(proto)
@@ -602,7 +603,7 @@ class TCP4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -676,7 +677,7 @@ class TCP6ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -839,7 +840,7 @@ class HostnameEndpoint:
             # constructor, which is already a native string.
             host = self._hostStr
         elif isIPv6Address(self._hostStr):
-            host = "[{}]".format(self._hostStr)
+            host = f"[{self._hostStr}]"
         else:
             # Convert the bytes representation to a native string to ensure
             # that we display the punycoded version of the hostname, which is
@@ -934,7 +935,7 @@ class HostnameEndpoint:
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(ValueError("invalid hostname: {}".format(self._hostStr)))
+            return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
 
         d = Deferred()
         addresses = []
@@ -959,9 +960,7 @@ class HostnameEndpoint:
 
         d.addErrback(
             lambda ignored: defer.fail(
-                error.DNSLookupError(
-                    "Couldn't find the hostname '{}'".format(self._hostStr)
-                )
+                error.DNSLookupError(f"Couldn't find the hostname '{self._hostStr}'")
             )
         )
 
@@ -1021,7 +1020,7 @@ class HostnameEndpoint:
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    "no results for hostname lookup: {}".format(self._hostStr)
+                    f"no results for hostname lookup: {self._hostStr}"
                 )
             iterEndpoints = iter(endpoints)
             pending = []
@@ -1189,7 +1188,7 @@ class SSL4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1266,7 +1265,7 @@ class UNIXClientEndpoint:
                 self._path, wf, timeout=self._timeout, checkPID=self._checkPID
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1313,7 +1312,7 @@ class AdoptedStreamServerEndpoint:
                 self.fileno, self.addressFamily, factory
             )
             self._close(self.fileno)
-        except:
+        except BaseException:
             return defer.fail()
         return defer.succeed(port)
 
@@ -1714,7 +1713,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+    raise ValueError(f"Unknown endpoint type: '{endpointType}'")
 
 
 def serverFromString(reactor, description):
@@ -1879,7 +1878,7 @@ def _loadCAsFromDir(directoryPath):
             continue
         try:
             data = child.getContent()
-        except IOError:
+        except OSError:
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
@@ -1984,15 +1983,14 @@ def _parseClientSSL(*args, **kwargs):
 
     Valid positional arguments to this function are host and port.
 
-    @param caCertsDir: The one parameter which is not part of
+    @keyword caCertsDir: The one parameter which is not part of
         L{IReactorSSL.connectSSL}'s signature, this is a path name used to
         construct a list of certificate authority certificates.  The directory
         will be scanned for files ending in C{.pem}, all of which will be
         considered valid certificate authorities for this connection.
-
     @type caCertsDir: L{str}
 
-    @param hostname: The hostname to use for validating the server's
+    @keyword hostname: The hostname to use for validating the server's
         certificate.
     @type hostname: L{unicode}
 
@@ -2226,7 +2224,7 @@ def _parseClientTLS(
     privateKey=None,
     trustRoots=None,
     endpoint=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Internal method to construct an endpoint from string parameters.

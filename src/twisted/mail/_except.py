@@ -5,6 +5,8 @@
 Exceptions in L{twisted.mail}.
 """
 
+from typing import Optional
+
 
 class IMAP4Exception(Exception):
     pass
@@ -58,7 +60,7 @@ class NoSupportedAuthentication(IMAP4Exception):
     def __str__(self) -> str:
         return IMAP4Exception.__str__(
             self
-        ) + ": Server supports %r, client supports %r" % (
+        ) + ": Server supports {!r}, client supports {!r}".format(
             self.serverSupports,
             self.clientSupports,
         )
@@ -94,25 +96,32 @@ class SMTPClientError(SMTPError):
     """
 
     def __init__(
-        self, code, resp, log=None, addresses=None, isFatal=False, retry=False
+        self,
+        code: int,
+        resp: bytes,
+        log: Optional[bytes] = None,
+        addresses: Optional[object] = None,
+        isFatal: bool = False,
+        retry: bool = False,
     ):
         """
         @param code: The SMTP response code associated with this error.
-
         @param resp: The string response associated with this error.
-
         @param log: A string log of the exchange leading up to and including
             the error.
-        @type log: L{bytes}
-
         @param isFatal: A boolean indicating whether this connection can
             proceed or not. If True, the connection will be dropped.
-
         @param retry: A boolean indicating whether the delivery should be
             retried. If True and the factory indicates further retries are
             desirable, they will be attempted, otherwise the delivery will be
             failed.
         """
+        if isinstance(resp, str):  # type: ignore[unreachable]
+            resp = resp.encode("utf-8")  # type: ignore[unreachable]
+
+        if isinstance(log, str):  # type: ignore[unreachable]
+            log = log.encode("utf-8")  # type: ignore[unreachable]
+
         self.code = code
         self.resp = resp
         self.log = log
@@ -123,17 +132,14 @@ class SMTPClientError(SMTPError):
     def __str__(self) -> str:
         return self.__bytes__().decode("utf-8")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = ["{:03d} {}".format(self.code, self.resp)]
+            res = [f"{self.code:03d} ".encode("utf-8") + self.resp]
         else:
             res = [self.resp]
         if self.log:
             res.append(self.log)
             res.append(b"")
-        for (i, r) in enumerate(res):
-            if isinstance(r, str):
-                res[i] = r.encode("utf-8")
         return b"\n".join(res)
 
 

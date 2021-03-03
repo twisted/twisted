@@ -21,7 +21,7 @@ asynchronously. In this installment, we'll write a resource like this.
 
 A resource that generates a response asynchronously looks like one that
 generates a response synchronously in many ways. The same base
-class, :api:`twisted.web.resource.Resource <Resource>` , is used
+class, :py:class:`Resource <twisted.web.resource.Resource>` , is used
 either way; the same render methods are used. There are three basic differences,
 though.
 
@@ -29,11 +29,11 @@ though.
 
 
 First, instead of returning the string which will be used as the
-body of the response, the resource uses :api:`twisted.web.http.Request.write <Request.write>` . This method can be
+body of the response, the resource uses :py:meth:`Request.write <twisted.web.http.Request.write>` . This method can be
 called repeatedly. Each call appends another string to the response
 body. Second, when the entire response body has been passed
 to ``Request.write`` , the application must
-call :api:`twisted.web.http.Request.finish <Request.finish>` . As you might expect
+call :py:meth:`Request.finish <twisted.web.http.Request.finish>` . As you might expect
 from the name, this ends the response. Finally, in order to make
 Twisted Web not end the response as soon as the render method returns,
 the render method must return ``NOT_DONE_YET`` . Consider this
@@ -62,7 +62,7 @@ example:
 
 
 
-If you're not familiar with the reactor :api:`twisted.internet.interfaces.IReactorTime.callLater <callLater>` 
+If you're not familiar with the reactor :py:meth:`callLater <twisted.internet.interfaces.IReactorTime.callLater>` 
 method, all you really need to know about it to understand this
 example is that the above usage of it arranges to
 have ``self._delayedRender(request)`` run about 5 seconds

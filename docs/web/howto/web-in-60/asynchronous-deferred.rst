@@ -10,11 +10,11 @@ Asynchronous Responses (via Deferred)
 
 
 
-The previous example had a :api:`twisted.web.resource.Resource <Resource>` that generates its response
+The previous example had a :py:class:`Resource <twisted.web.resource.Resource>` that generates its response
 asynchronously rather than immediately upon the call to its render
 method. Though it was a useful demonstration of the ``NOT_DONE_YET`` 
 feature of Twisted Web, the example didn't reflect what a realistic application
-might want to do. This example introduces :api:`twisted.internet.defer.Deferred <Deferred>` , the Twisted class which is used
+might want to do. This example introduces :py:class:`Deferred <twisted.internet.defer.Deferred>` , the Twisted class which is used
 to provide a uniform interface to many asynchronous events, and shows you an
 example of using a ``Deferred`` -returning API to generate an
 asynchronous response to a request in Twisted Web.
@@ -31,11 +31,11 @@ object once it does exist. It also needs a way to define how to handle
 errors in the creation or acquisition of that object. These two needs
 are satisfied by the *callbacks* and *errbacks* of
 a ``Deferred`` . Callbacks are added to
-a ``Deferred`` with :api:`twisted.internet.defer.Deferred.addCallback <Deferred.addCallback>` ; errbacks
-are added with :api:`twisted.internet.defer.Deferred.addErrback <Deferred.addErrback>` . When the
-object finally does exist, it is passed to :api:`twisted.internet.defer.Deferred.callback <Deferred.callback>` which passes it
+a ``Deferred`` with :py:meth:`Deferred.addCallback <twisted.internet.defer.Deferred.addCallback>` ; errbacks
+are added with :py:meth:`Deferred.addErrback <twisted.internet.defer.Deferred.addErrback>` . When the
+object finally does exist, it is passed to :py:meth:`Deferred.callback <twisted.internet.defer.Deferred.callback>` which passes it
 on to the callback added with ``addCallback`` . Similarly, if
-an error occurs, :api:`twisted.internet.defer.Deferred.errback <Deferred.errback>` is called and
+an error occurs, :py:meth:`Deferred.errback <twisted.internet.defer.Deferred.errback>` is called and
 the error is passed along to the errback added
 with ``addErrback`` . Second, the events that make
 asynchronous code actually work often take many different,
@@ -55,7 +55,7 @@ API. It does exactly the same thing as the :doc:`previous example <asynchronous>
 
 
 
-First, the example must import that new API that was just mentioned, :api:`twisted.internet.task.deferLater <deferLater>` :
+First, the example must import that new API that was just mentioned, :py:func:`deferLater <twisted.internet.task.deferLater>` :
 
 
 
@@ -105,8 +105,8 @@ the code is identical to the previous version:
 
 
 Next we need to define the render method. Here's where things
-change a bit. Instead of using :api:`twisted.internet.interfaces.IReactorTime.callLater <callLater>` ,
-We're going to use :api:`twisted.internet.task.deferLater <deferLater>` this
+change a bit. Instead of using :py:meth:`callLater <twisted.internet.interfaces.IReactorTime.callLater>` ,
+We're going to use :py:func:`deferLater <twisted.internet.task.deferLater>` this
 time. ``deferLater`` accepts a reactor, delay (in seconds, as
 with ``callLater`` ), and a function to call after the delay
 to produce that elusive object discussed in the description

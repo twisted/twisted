@@ -13,8 +13,6 @@ available reactor implementations.
 """
 
 
-__metaclass__ = type
-
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os
@@ -180,8 +178,8 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
-    requiredInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
-    skippedReactors = {}  # type: Dict[str, str]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
+    skippedReactors: Dict[str, str] = {}
 
     def setUp(self):
         """
@@ -272,7 +270,7 @@ class ReactorBuilder:
                 )
         try:
             reactor = self.reactorFactory()
-        except:
+        except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
             # instantiating the reactor.  So we catch some more here
@@ -338,9 +336,7 @@ class ReactorBuilder:
         timedOutCall = reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
-            raise TestTimeoutError(
-                "reactor still running after %s seconds" % (timeout,)
-            )
+            raise TestTimeoutError(f"reactor still running after {timeout} seconds")
         else:
             timedOutCall.cancel()
 
@@ -352,14 +348,14 @@ class ReactorBuilder:
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes = (
-            {}
-        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]   # noqa
+        classes: Dict[
+            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
+        ] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
 
-            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]

@@ -74,7 +74,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, salt)
         self.assertTrue(
             checkers.verifyCryptedPassword(crypted, password),
-            "%r supposed to be valid encrypted password for %r" % (crypted, password),
+            "{!r} supposed to be valid encrypted password for {!r}".format(
+                crypted, password
+            ),
         )
 
     def test_verifyCryptedPasswordMD5(self):
@@ -87,7 +89,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, salt)
         self.assertTrue(
             checkers.verifyCryptedPassword(crypted, password),
-            "%r supposed to be valid encrypted password for %s" % (crypted, password),
+            "{!r} supposed to be valid encrypted password for {}".format(
+                crypted, password
+            ),
         )
 
     def test_refuteCryptedPassword(self):
@@ -100,7 +104,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, password)
         self.assertFalse(
             checkers.verifyCryptedPassword(crypted, wrong),
-            "%r not supposed to be valid encrypted password for %s" % (crypted, wrong),
+            "{!r} not supposed to be valid encrypted password for {}".format(
+                crypted, wrong
+            ),
         )
 
     def test_pwdGetByName(self):
@@ -791,7 +797,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         self.assertEqual(self.expectedKeys, list(keydb.getAuthorizedKeys(b"alice")))
 
 
-_KeyDB = namedtuple("KeyDB", ["getAuthorizedKeys"])
+_KeyDB = namedtuple("_KeyDB", ["getAuthorizedKeys"])
 
 
 class _DummyException(Exception):

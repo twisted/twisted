@@ -267,9 +267,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         self._waitForLock(waiting)
 
-        self.assertFalse(
-            actor.failures, "run() re-entered {} times".format(actor.failures)
-        )
+        self.assertFalse(actor.failures, f"run() re-entered {actor.failures} times")
 
     def test_callInThread(self):
         """

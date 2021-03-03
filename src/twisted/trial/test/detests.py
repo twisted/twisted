@@ -156,7 +156,7 @@ class DeferredTests(unittest.TestCase):
         d.addCallback(self._cb_error)
         return d
 
-    test_expectedFailure.todo = "Expected failure"  # type: ignore[attr-defined]  # noqa
+    test_expectedFailure.todo = "Expected failure"  # type: ignore[attr-defined]
 
 
 class TimeoutTests(unittest.TestCase):
@@ -189,13 +189,13 @@ class TimeoutTests(unittest.TestCase):
         return defer.Deferred()
 
     test_expectedFailure.timeout = 0.1  # type: ignore[attr-defined]
-    test_expectedFailure.todo = "i will get it right, eventually"  # type: ignore[attr-defined]  # noqa
+    test_expectedFailure.todo = "i will get it right, eventually"  # type: ignore[attr-defined]
 
     def test_skip(self):
         return defer.Deferred()
 
     test_skip.timeout = 0.1  # type: ignore[attr-defined]
-    test_skip.skip = "i will get it right, eventually"  # type: ignore[attr-defined]  # noqa
+    test_skip.skip = "i will get it right, eventually"  # type: ignore[attr-defined]
 
     def test_errorPropagation(self):
         def timedOut(err):

@@ -61,7 +61,8 @@ class DNSServerFactory(protocol.ServerFactory):
     @type _messageFactory: C{callable}
     """
 
-    protocol = dns.DNSProtocol
+    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10004#ticket
+    protocol = dns.DNSProtocol  # type: ignore[assignment]
     cache = None
     _messageFactory = dns.Message
 
@@ -397,7 +398,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Inverse query from %r" % (address,))
+        self._verboseLog(f"Inverse query from {address!r}")
 
     def handleStatus(self, message, protocol, address):
         """
@@ -424,7 +425,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Status request from %r" % (address,))
+        self._verboseLog(f"Status request from {address!r}")
 
     def handleNotify(self, message, protocol, address):
         """
@@ -451,7 +452,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Notify message from %r" % (address,))
+        self._verboseLog(f"Notify message from {address!r}")
 
     def handleOther(self, message, protocol, address):
         """
@@ -523,10 +524,12 @@ class DNSServerFactory(protocol.ServerFactory):
                 )
             if not len(s):
                 log.msg(
-                    "Empty query from %r" % ((address or proto.transport.getPeer()),)
+                    "Empty query from {!r}".format(address or proto.transport.getPeer())
                 )
             else:
-                log.msg("%s query from %r" % (s, address or proto.transport.getPeer()))
+                log.msg(
+                    "{} query from {!r}".format(s, address or proto.transport.getPeer())
+                )
 
         if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED

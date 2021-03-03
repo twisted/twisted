@@ -11,7 +11,7 @@ import random
 import errno
 import hamcrest
 from functools import wraps
-from typing import Optional, Type, Union
+from typing import Callable, Optional
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -23,6 +23,7 @@ from twisted.internet import protocol, reactor, defer, interfaces
 from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
+from twisted.internet.protocol import Protocol
 from twisted.protocols import policies
 from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
@@ -120,9 +121,7 @@ class MyProtocolFactoryMixin:
 
     protocolConnectionMade = None
     protocolConnectionLost = None
-    protocol = (
-        None
-    )  # type: Optional[Union[Type[protocol.Protocol],Type[protocol.AbstractDatagramProtocol]]]  # noqa
+    protocol: Optional[Callable[[], Protocol]] = None
     called = 0
 
     def __init__(self):
@@ -244,7 +243,7 @@ class ListeningTests(TestCase):
             portNumber = port.getHost().port
             self.assertEqual(
                 repr(serverProto.transport),
-                "<AccumulatingProtocol #0 on %s>" % (portNumber,),
+                f"<AccumulatingProtocol #0 on {portNumber}>",
             )
             serverProto.transport.loseConnection()
             clientProto.transport.loseConnection()
@@ -874,11 +873,11 @@ class WriterProtocol(protocol.Protocol):
         self.transport.writeSequence(seq)
         peer = self.transport.getPeer()
         if peer.type != "TCP":
-            msg("getPeer returned non-TCP socket: %s" % (peer,))
+            msg(f"getPeer returned non-TCP socket: {peer}")
             self.factory.problem = 1
         us = self.transport.getHost()
         if us.type != "TCP":
-            msg("getHost returned non-TCP socket: %s" % (us,))
+            msg(f"getHost returned non-TCP socket: {us}")
             self.factory.problem = 1
         self.factory.done = 1
 
@@ -1074,7 +1073,7 @@ class WriteDataTests(TestCase):
             return client.lostReason
 
         clientConnectionLost.addCallback(cbClientLost)
-        msg("Connecting to %s:%s" % (addr.host, addr.port))
+        msg(f"Connecting to {addr.host}:{addr.port}")
         reactor.connectTCP(addr.host, addr.port, client)
 
         # By the end of the test, the client should have received notification

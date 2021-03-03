@@ -76,7 +76,7 @@ def passivemode_msg(protocol, host="127.0.0.1", port=12345):
     @param port: the port
     @return: the passive mode message
     """
-    msg = "227 Entering Passive Mode (%s)." % (ftp.encodeHostPort(host, port),)
+    msg = "227 Entering Passive Mode ({}).".format(ftp.encodeHostPort(host, port))
     return msg.encode(protocol._encoding)
 
 
@@ -1063,7 +1063,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         d.addCallback(loggedIn)
 
-        self._download("%s something" % (command,), chainDeferred=d)
+        self._download(f"{command} something", chainDeferred=d)
 
         def checkDownload(download):
             self.assertEqual(expectedOutput, download)
@@ -1534,7 +1534,7 @@ class FTPFileListingTests(TestCase):
 
         def check(fileOther):
             ((file,), other) = fileOther
-            self.assertFalse(other, "unexpect unparsable lines: %s" % (repr(other),))
+            self.assertFalse(other, "unexpect unparsable lines: {}".format(repr(other)))
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
             self.assertTrue(file["owner"] == "root", "misparsed fileitem")
@@ -1620,9 +1620,9 @@ class FTPFileListingTests(TestCase):
         Will parse filenames and linktargets containing escaped
         space characters.
         """
-        line1 = "drw-r--r--   2 root     other        531 Jan  9  2003 A\ B"
+        line1 = r"drw-r--r--   2 root     other        531 Jan  9  2003 A\ B"
         line2 = (
-            "lrw-r--r--   1 root     other          1 Jan 29 03:26 " "B A -> D\ C/A B"
+            "lrw-r--r--   1 root     other          1 Jan 29 03:26 " r"B A -> D\ C/A B"
         )
 
         def check(result):
@@ -1926,7 +1926,7 @@ class FTPClientTests(TestCase):
         self.client.passive = False
 
         def generatePort(portCmd):
-            portCmd.text = "PORT %s" % (ftp.encodeHostPort("127.0.0.1", 9876),)
+            portCmd.text = "PORT {}".format(ftp.encodeHostPort("127.0.0.1", 9876))
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
             portCmd.protocol.dataReceived(b"x" * 1000)
             portCmd.protocol.connectionLost(failure.Failure(error.ConnectionDone("")))
@@ -1941,7 +1941,7 @@ class FTPClientTests(TestCase):
         d.addCallback(cbRetr, proto)
         self.assertEqual(
             self.transport.value(),
-            ("PORT %s\r\n" % (ftp.encodeHostPort("127.0.0.1", 9876),)).encode(
+            ("PORT {}\r\n".format(ftp.encodeHostPort("127.0.0.1", 9876))).encode(
                 self.client._encoding
             ),
         )
@@ -1995,7 +1995,7 @@ class FTPClientTests(TestCase):
         l = []
 
         def generatePort(portCmd):
-            portCmd.text = "PORT %s" % (ftp.encodeHostPort("127.0.0.1", 9876),)
+            portCmd.text = "PORT {}".format(ftp.encodeHostPort("127.0.0.1", 9876))
             tr = proto_helpers.StringTransportWithDisconnection()
             portCmd.protocol.makeConnection(tr)
             tr.protocol = portCmd.protocol
@@ -2008,7 +2008,7 @@ class FTPClientTests(TestCase):
         d = self.client.retrieveFile("spam", proto)
         self.assertEqual(
             self.transport.value(),
-            ("PORT %s\r\n" % (ftp.encodeHostPort("127.0.0.1", 9876),)).encode(
+            ("PORT {}\r\n".format(ftp.encodeHostPort("127.0.0.1", 9876))).encode(
                 self.client._encoding
             ),
         )
@@ -2124,7 +2124,7 @@ class FTPClientTests(TestCase):
         def cbStore(sender):
             self.assertEqual(
                 self.transport.value(),
-                ("PORT %s\r\n" % (ftp.encodeHostPort("127.0.0.1", 9876),)).encode(
+                ("PORT {}\r\n".format(ftp.encodeHostPort("127.0.0.1", 9876))).encode(
                     self.client._encoding
                 ),
             )
@@ -2216,7 +2216,7 @@ class FTPClientTests(TestCase):
         self.client.passive = False
 
         def generatePort(portCmd):
-            portCmd.text = "PORT %s" % (ftp.encodeHostPort("127.0.0.1", 9876),)
+            portCmd.text = "PORT {}".format(ftp.encodeHostPort("127.0.0.1", 9876))
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
                 b"150 File status okay; about to open data connection."
@@ -2243,7 +2243,7 @@ class FTPClientTests(TestCase):
         d = self.client.list("foo/bar", fileList).addCallback(cbList, fileList)
         self.assertEqual(
             self.transport.value(),
-            ("PORT %s\r\n" % (ftp.encodeHostPort("127.0.0.1", 9876),)).encode(
+            ("PORT {}\r\n".format(ftp.encodeHostPort("127.0.0.1", 9876))).encode(
                 self.client._encoding
             ),
         )
@@ -2295,7 +2295,7 @@ class FTPClientTests(TestCase):
         self.client.passive = False
 
         def generatePort(portCmd):
-            portCmd.text = "PORT %s" % (ftp.encodeHostPort("127.0.0.1", 9876),)
+            portCmd.text = "PORT {}".format(ftp.encodeHostPort("127.0.0.1", 9876))
             portCmd.protocol.makeConnection(proto_helpers.StringTransport())
             self.client.lineReceived(
                 b"150 File status okay; about to open data connection."
@@ -2318,7 +2318,7 @@ class FTPClientTests(TestCase):
         d = self.client.nlst("foo/bar", lstproto).addCallback(cbList, lstproto)
         self.assertEqual(
             self.transport.value(),
-            ("PORT %s\r\n" % (ftp.encodeHostPort("127.0.0.1", 9876),)).encode(
+            ("PORT {}\r\n".format(ftp.encodeHostPort("127.0.0.1", 9876))).encode(
                 self.client._encoding
             ),
         )
@@ -3072,7 +3072,7 @@ class ErrnoToFailureTests(TestCase):
         """
         try:
             raise RuntimeError("bar")
-        except:
+        except BaseException:
             d = ftp.errnoToFailure(-1, "foo")
             return self.assertFailure(d, RuntimeError)
 
@@ -3820,9 +3820,13 @@ class FTPResponseCodeTests(TestCase):
                 self.assertIn(
                     value,
                     allValues,
-                    "Code %r with value %r missing from RESPONSE dict" % (key, value),
+                    "Code {!r} with value {!r} missing from RESPONSE dict".format(
+                        key, value
+                    ),
                 )
                 self.assertNotIn(
-                    value, seenValues, "Duplicate code %r with value %r" % (key, value)
+                    value,
+                    seenValues,
+                    f"Duplicate code {key!r} with value {value!r}",
                 )
                 seenValues.add(value)

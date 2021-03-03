@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -6,7 +5,7 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from twisted.python.test.test_tzhelper import mktime, addTZCleanup, setTZ
+from typing import AnyStr, Optional, cast
 
 try:
     from time import tzset
@@ -16,10 +15,11 @@ try:
 except ImportError:
     tzset = None  # type: ignore[assignment,misc]
 
+from twisted.python.failure import Failure
+from twisted.python.test.test_tzhelper import mktime, addTZCleanup, setTZ
 from twisted.trial import unittest
 from twisted.trial.unittest import SkipTest
 
-from .._levels import LogLevel
 from .._format import (
     formatEvent,
     formatUnformattableEvent,
@@ -28,7 +28,8 @@ from .._format import (
     formatWithCall,
     eventAsText,
 )
-from twisted.python.failure import Failure
+from .._interfaces import LogEvent
+from .._levels import LogLevel
 
 
 class FormattingTests(unittest.TestCase):
@@ -36,7 +37,7 @@ class FormattingTests(unittest.TestCase):
     Tests for basic event formatting functions.
     """
 
-    def test_formatEvent(self):
+    def test_formatEvent(self) -> None:
         """
         L{formatEvent} will format an event according to several rules:
 
@@ -54,7 +55,7 @@ class FormattingTests(unittest.TestCase):
         always treat its format string as UTF-8 encoded.
         """
 
-        def format(logFormat, **event):
+        def format(logFormat: AnyStr, **event: object) -> str:
             event["log_format"] = logFormat
             result = formatEvent(event)
             self.assertIs(type(result), str)
@@ -68,15 +69,14 @@ class FormattingTests(unittest.TestCase):
             format("{not_called}, {called()}.", not_called="no", called=lambda: "yes"),
         )
         self.assertEqual("S\xe1nchez", format(b"S\xc3\xa1nchez"))
-        badResult = format(b"S\xe1nchez")
-        self.assertIn("Unable to format event", badResult)
+        self.assertIn("Unable to format event", format(b"S\xe1nchez"))
         maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
         self.assertIn("Sb'\\xe1'nchez", maybeResult)
 
         xe1 = str(repr(b"\xe1"))
         self.assertIn("S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
 
-    def test_formatEventNoFormat(self):
+    def test_formatEventNoFormat(self) -> None:
         """
         Formatting an event with no format.
         """
@@ -85,17 +85,17 @@ class FormattingTests(unittest.TestCase):
 
         self.assertEqual("", result)
 
-    def test_formatEventWeirdFormat(self):
+    def test_formatEventWeirdFormat(self) -> None:
         """
         Formatting an event with a bogus format.
         """
         event = dict(log_format=object(), foo=1, bar=2)
         result = formatEvent(event)
 
-        self.assertIn("Log format must be unicode or bytes", result)
+        self.assertIn("Log format must be str", result)
         self.assertIn(repr(event), result)
 
-    def test_formatUnformattableEvent(self):
+    def test_formatUnformattableEvent(self) -> None:
         """
         Formatting an event that's just plain out to get us.
         """
@@ -105,21 +105,21 @@ class FormattingTests(unittest.TestCase):
         self.assertIn("Unable to format event", result)
         self.assertIn(repr(event), result)
 
-    def test_formatUnformattableEventWithUnformattableKey(self):
+    def test_formatUnformattableEventWithUnformattableKey(self) -> None:
         """
         Formatting an unformattable event that has an unformattable key.
         """
-        event = {
+        event: LogEvent = {
             "log_format": "{evil()}",
             "evil": lambda: 1 / 0,
-            Unformattable(): "gurk",
+            cast(str, Unformattable()): "gurk",
         }
         result = formatEvent(event)
         self.assertIn("MESSAGE LOST: unformattable object logged:", result)
         self.assertIn("Recoverable data:", result)
         self.assertIn("Exception during formatting:", result)
 
-    def test_formatUnformattableEventWithUnformattableValue(self):
+    def test_formatUnformattableEventWithUnformattableValue(self) -> None:
         """
         Formatting an unformattable event that has an unformattable value.
         """
@@ -133,7 +133,7 @@ class FormattingTests(unittest.TestCase):
         self.assertIn("Recoverable data:", result)
         self.assertIn("Exception during formatting:", result)
 
-    def test_formatUnformattableEventWithUnformattableErrorOMGWillItStop(self):
+    def test_formatUnformattableEventWithUnformattableErrorOMGWillItStop(self) -> None:
         """
         Formatting an unformattable event that has an unformattable value.
         """
@@ -143,7 +143,7 @@ class FormattingTests(unittest.TestCase):
             recoverable="okay",
         )
         # Call formatUnformattableEvent() directly with a bogus exception.
-        result = formatUnformattableEvent(event, Unformattable())
+        result = formatUnformattableEvent(event, cast(BaseException, Unformattable()))
         self.assertIn("MESSAGE LOST: unformattable object logged:", result)
         self.assertIn(repr("recoverable") + " = " + repr("okay"), result)
 
@@ -153,10 +153,10 @@ class TimeFormattingTests(unittest.TestCase):
     Tests for time formatting functions.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         addTZCleanup(self)
 
-    def test_formatTimeWithDefaultFormat(self):
+    def test_formatTimeWithDefaultFormat(self) -> None:
         """
         Default time stamp format is RFC 3339 and offset respects the timezone
         as set by the standard C{TZ} environment variable and L{tzset} API.
@@ -164,7 +164,7 @@ class TimeFormattingTests(unittest.TestCase):
         if tzset is None:
             raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
-        def testForTimeZone(name, expectedDST, expectedSTD):
+        def testForTimeZone(name: str, expectedDST: str, expectedSTD: str) -> None:
             setTZ(name)
 
             localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
@@ -201,14 +201,14 @@ class TimeFormattingTests(unittest.TestCase):
             "2007-01-31T00:00:00-0600",
         )
 
-    def test_formatTimeWithNoTime(self):
+    def test_formatTimeWithNoTime(self) -> None:
         """
         If C{when} argument is L{None}, we get the default output.
         """
         self.assertEqual(formatTime(None), "-")
         self.assertEqual(formatTime(None, default="!"), "!")
 
-    def test_formatTimeWithNoFormat(self):
+    def test_formatTimeWithNoFormat(self) -> None:
         """
         If C{timeFormat} argument is L{None}, we get the default output.
         """
@@ -216,14 +216,14 @@ class TimeFormattingTests(unittest.TestCase):
         self.assertEqual(formatTime(t, timeFormat=None), "-")
         self.assertEqual(formatTime(t, timeFormat=None, default="!"), "!")
 
-    def test_formatTimeWithAlternateTimeFormat(self):
+    def test_formatTimeWithAlternateTimeFormat(self) -> None:
         """
         Alternate time format in output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
         self.assertEqual(formatTime(t, timeFormat="%Y/%W"), "2013/38")
 
-    def test_formatTimePercentF(self):
+    def test_formatTimePercentF(self) -> None:
         """
         "%f" supported in time format.
         """
@@ -235,7 +235,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
     Tests for classic text log event formatting functions.
     """
 
-    def test_formatTimeDefault(self):
+    def test_formatTimeDefault(self) -> None:
         """
         Time is first field.  Default time stamp format is RFC 3339 and offset
         respects the timezone as set by the standard C{TZ} environment variable
@@ -254,14 +254,14 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "2013-09-24T11:40:47+0000 [-\x23-] XYZZY\n",
         )
 
-    def test_formatTimeCustom(self):
+    def test_formatTimeCustom(self) -> None:
         """
         Time is first field.  Custom formatting function is an optional
         argument.
         """
 
-        def formatTime(t):
-            return "__{0}__".format(t)
+        def formatTime(t: Optional[float]) -> str:
+            return f"__{t}__"
 
         event = dict(log_format="XYZZY", log_time=12345)
         self.assertEqual(
@@ -269,7 +269,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "__12345__ [-\x23-] XYZZY\n",
         )
 
-    def test_formatNamespace(self):
+    def test_formatNamespace(self) -> None:
         """
         Namespace is first part of second field.
         """
@@ -279,7 +279,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [my.namespace\x23-] XYZZY\n",
         )
 
-    def test_formatLevel(self):
+    def test_formatLevel(self) -> None:
         """
         Level is second part of second field.
         """
@@ -289,7 +289,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [-\x23warn] XYZZY\n",
         )
 
-    def test_formatSystem(self):
+    def test_formatSystem(self) -> None:
         """
         System is second field.
         """
@@ -299,7 +299,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [S.Y.S.T.E.M.] XYZZY\n",
         )
 
-    def test_formatSystemRulz(self):
+    def test_formatSystemRulz(self) -> None:
         """
         System is not supplanted by namespace and level.
         """
@@ -314,7 +314,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [S.Y.S.T.E.M.] XYZZY\n",
         )
 
-    def test_formatSystemUnformattable(self):
+    def test_formatSystemUnformattable(self) -> None:
         """
         System is not supplanted by namespace and level.
         """
@@ -324,7 +324,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [UNFORMATTABLE] XYZZY\n",
         )
 
-    def test_formatFormat(self):
+    def test_formatFormat(self) -> None:
         """
         Formatted event is last field.
         """
@@ -334,21 +334,21 @@ class ClassicLogFormattingTests(unittest.TestCase):
             "- [-\x23-] id:123\n",
         )
 
-    def test_formatNoFormat(self):
+    def test_formatNoFormat(self) -> None:
         """
         No format string.
         """
         event = dict(id="123")
         self.assertIs(formatEventAsClassicLogText(event), None)
 
-    def test_formatEmptyFormat(self):
+    def test_formatEmptyFormat(self) -> None:
         """
         Empty format string.
         """
         event = dict(log_format="", id="123")
         self.assertIs(formatEventAsClassicLogText(event), None)
 
-    def test_formatFormatMultiLine(self):
+    def test_formatFormatMultiLine(self) -> None:
         """
         If the formatted event has newlines, indent additional lines.
         """
@@ -364,7 +364,7 @@ class FormatFieldTests(unittest.TestCase):
     Tests for format field functions.
     """
 
-    def test_formatWithCall(self):
+    def test_formatWithCall(self) -> None:
         """
         L{formatWithCall} is an extended version of L{str.format} that
         will interpret a set of parentheses "C{()}" at the end of a format key
@@ -405,7 +405,7 @@ class EventAsTextTests(unittest.TestCase):
     returned type is UTF-8 decoded text.
     """
 
-    def test_eventWithTraceback(self):
+    def test_eventWithTraceback(self) -> None:
         """
         An event with a C{log_failure} key will have a traceback appended.
         """
@@ -414,13 +414,13 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn(str(f.getTraceback()), eventText)
         self.assertIn("This is a test log message", eventText)
 
-    def test_formatEmptyEventWithTraceback(self):
+    def test_formatEmptyEventWithTraceback(self) -> None:
         """
         An event with an empty C{log_format} key appends a traceback from
         the accompanying failure.
@@ -429,13 +429,13 @@ class EventAsTextTests(unittest.TestCase):
             raise CapturedError("This is a fake error")
         except CapturedError:
             f = Failure()
-        event = {"log_format": ""}
+        event: LogEvent = {"log_format": ""}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn(str(f.getTraceback()), eventText)
         self.assertIn("This is a fake error", eventText)
 
-    def test_formatUnformattableWithTraceback(self):
+    def test_formatUnformattableWithTraceback(self) -> None:
         """
         An event with an unformattable value in the C{log_format} key still
         has a traceback appended.
@@ -455,7 +455,7 @@ class EventAsTextTests(unittest.TestCase):
         self.assertIn(str(f.getTraceback()), eventText)
         self.assertIn("This is a fake error", eventText)
 
-    def test_formatUnformattableErrorWithTraceback(self):
+    def test_formatUnformattableErrorWithTraceback(self) -> None:
         """
         An event with an unformattable value in the C{log_format} key, that
         throws an exception when __repr__ is invoked still has a traceback
@@ -466,10 +466,10 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {
+        event: LogEvent = {
             "log_format": "{evil()}",
             "evil": lambda: 1 / 0,
-            Unformattable(): "gurk",
+            cast(str, Unformattable()): "gurk",
         }
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
@@ -478,27 +478,27 @@ class EventAsTextTests(unittest.TestCase):
         self.assertIn(str(f.getTraceback()), eventText)
         self.assertIn("This is a fake error", eventText)
 
-    def test_formatEventUnformattableTraceback(self):
+    def test_formatEventUnformattableTraceback(self) -> None:
         """
         If a traceback cannot be appended, a message indicating this is true
         is appended.
         """
-        event = {"log_format": ""}
+        event: LogEvent = {"log_format": ""}
         event["log_failure"] = object()
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIsInstance(eventText, str)
         self.assertIn("(UNABLE TO OBTAIN TRACEBACK FROM EVENT)", eventText)
 
-    def test_formatEventNonCritical(self):
+    def test_formatEventNonCritical(self) -> None:
         """
         An event with no C{log_failure} key will not have a traceback appended.
         """
-        event = {"log_format": "This is a test log message"}
+        event: LogEvent = {"log_format": "This is a test log message"}
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIsInstance(eventText, str)
         self.assertIn("This is a test log message", eventText)
 
-    def test_formatTracebackMultibyte(self):
+    def test_formatTracebackMultibyte(self) -> None:
         """
         An exception message with multibyte characters is properly handled.
         """
@@ -507,13 +507,13 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn("€", eventText)
         self.assertIn("Traceback", eventText)
 
-    def test_formatTracebackHandlesUTF8DecodeFailure(self):
+    def test_formatTracebackHandlesUTF8DecodeFailure(self) -> None:
         """
         An error raised attempting to decode the UTF still produces a
         valid log message.
@@ -524,13 +524,13 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn("Traceback", eventText)
         self.assertIn(r'CapturedError(b"\xff\xfet\x00e\x00s\x00t\x00")', eventText)
 
-    def test_eventAsTextSystemOnly(self):
+    def test_eventAsTextSystemOnly(self) -> None:
         """
         If includeSystem is specified as the only option no timestamp or
         traceback are printed.
@@ -541,7 +541,7 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
             "log_time": t,
@@ -558,7 +558,7 @@ class EventAsTextTests(unittest.TestCase):
             "[fake_system] ABCD",
         )
 
-    def test_eventAsTextTimestampOnly(self):
+    def test_eventAsTextTimestampOnly(self) -> None:
         """
         If includeTimestamp is specified as the only option no system or
         traceback are printed.
@@ -575,7 +575,7 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
             "log_time": t,
@@ -592,7 +592,7 @@ class EventAsTextTests(unittest.TestCase):
             "2013-09-24T11:40:47+0000 ABCD",
         )
 
-    def test_eventAsTextSystemMissing(self):
+    def test_eventAsTextSystemMissing(self) -> None:
         """
         If includeSystem is specified with a missing system [-#-]
         is used.
@@ -603,7 +603,7 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
         }
@@ -619,7 +619,7 @@ class EventAsTextTests(unittest.TestCase):
             "[-\x23-] ABCD",
         )
 
-    def test_eventAsTextSystemMissingNamespaceAndLevel(self):
+    def test_eventAsTextSystemMissingNamespaceAndLevel(self) -> None:
         """
         If includeSystem is specified with a missing system but
         namespace and level are present they are used.
@@ -630,7 +630,7 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
             "log_level": LogLevel.info,
@@ -648,7 +648,7 @@ class EventAsTextTests(unittest.TestCase):
             "[test\x23info] ABCD",
         )
 
-    def test_eventAsTextSystemMissingLevelOnly(self):
+    def test_eventAsTextSystemMissingLevelOnly(self) -> None:
         """
         If includeSystem is specified with a missing system but
         level is present, level is included.
@@ -659,7 +659,7 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
             "log_level": LogLevel.info,

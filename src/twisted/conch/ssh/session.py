@@ -50,9 +50,6 @@ class SSHSession(channel.SSHChannel):
     @ivar session: an object providing concrete implementations of session
         operations.
     @type session: L{ISession}
-    @ivar _sessionSetEnv: an object providing a concrete implementation of
-        the C{setEnv} session operation.
-    @type _sessionSetEnv: L{ISessionSetEnv}
     """
 
     name = b"session"
@@ -62,7 +59,6 @@ class SSHSession(channel.SSHChannel):
         self.buf = b""
         self.client = None
         self.session = None
-        self._sessionSetEnv = None
 
     def request_subsystem(self, data):
         subsystem, ignored = common.getNS(data)
@@ -135,18 +131,21 @@ class SSHSession(channel.SSHChannel):
         @return: A true value if the request to pass this environment
             variable was accepted, otherwise a false value.
         """
-        if not self._sessionSetEnv:
-            self._sessionSetEnv = ISessionSetEnv(self.avatar, None)
-            if self._sessionSetEnv is None:
-                log.info(
-                    "Can't handle setting environment variables for "
-                    "SSH avatar {avatar}",
-                    avatar=self.avatar,
-                )
-                return 0
+        if not self.session:
+            self.session = ISession(self.avatar)
+        if not ISessionSetEnv.providedBy(self.session):
+            log.warn(
+                "Can't handle environment variables for SSH avatar {avatar}: "
+                "{session} does not provide ISessionSetEnv interface. "
+                "It should be decorated with @implementer(ISession, "
+                "ISessionSetEnv) to support env variables.",
+                avatar=self.avatar,
+                session=self.session,
+            )
+            return 0
         name, value, data = common.getNS(data, 2)
         try:
-            self._sessionSetEnv.setEnv(name, value)
+            self.session.setEnv(name, value)
         except EnvironmentVariableNotPermitted:
             return 0
         except Exception:

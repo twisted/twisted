@@ -77,7 +77,7 @@ class Options(usage.Options):
                 port = int(address[1])
             except ValueError:
                 raise usage.UsageError(
-                    "Specify an integer port number, not %r" % (address[1],)
+                    "Specify an integer port number, not {!r}".format(address[1])
                 )
             address = (address[0], port)
         self.secondaries.append((address, [args[1]]))
@@ -111,7 +111,7 @@ class Options(usage.Options):
         try:
             self["port"] = int(self["port"])
         except ValueError:
-            raise usage.UsageError("Invalid port: %r" % (self["port"],))
+            raise usage.UsageError("Invalid port: {!r}".format(self["port"]))
 
 
 def _buildResolvers(config):

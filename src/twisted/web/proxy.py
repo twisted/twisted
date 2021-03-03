@@ -88,7 +88,8 @@ class ProxyClientFactory(ClientFactory):
     Used by ProxyRequest to implement a simple web proxy.
     """
 
-    protocol = ProxyClient
+    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10006
+    protocol = ProxyClient  # type: ignore[assignment]
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father

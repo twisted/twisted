@@ -175,7 +175,7 @@ class RootResolverTests(TestCase):
         resolver = Resolver(roots, maximumQueries)
 
         def query(query, serverAddresses, timeout, filter):
-            msg("Query for QNAME %s at %r" % (query.name, serverAddresses))
+            msg(f"Query for QNAME {query.name} at {serverAddresses!r}")
             for addr in serverAddresses:
                 try:
                     server = serverResponses[addr]
