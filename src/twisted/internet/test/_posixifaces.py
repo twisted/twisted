@@ -33,14 +33,14 @@ from twisted.python.compat import nativeString
 libc = CDLL(find_library("c") or "")
 
 if sys.platform.startswith("freebsd") or sys.platform == "darwin":
-    _sockaddrCommon = [
+    _sockaddrCommon: List[Tuple[str, Any]] = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
-    ]  # type: List[Tuple[str, Any]]
+    ]
 else:
-    _sockaddrCommon = [
+    _sockaddrCommon: List[Tuple[str, Any]] = [
         ("sin_family", c_ushort),
-    ]  # type: List[Tuple[str, Any]]
+    ]
 
 
 class in_addr(Structure):

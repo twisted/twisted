@@ -45,7 +45,7 @@ deprecatedModuleAttribute(
 
 
 try:
-    WindowsError = WindowsError  # type: OSError
+    WindowsError: OSError = WindowsError
 except NameError:
     WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 

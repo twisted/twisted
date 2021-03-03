@@ -1566,7 +1566,7 @@ class IMAP4HelperTests(TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages = []  # type: List[Tuple[bytes, list, bytes, int]]
+    messages: List[Tuple[bytes, list, bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1654,7 +1654,7 @@ class UncloseableMailbox:
     """
 
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages = []  # type:List[Tuple[bytes, list, bytes, int]]
+    messages: List[Tuple[bytes, list, bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1868,8 +1868,8 @@ class SimpleClient(imap4.IMAP4Client):
 
 class IMAP4HelperMixin:
 
-    serverCTX = None  # type: Optional[ServerTLSContext]
-    clientCTX = None  # type: Optional[ClientTLSContext]
+    serverCTX: Optional[ServerTLSContext] = None
+    clientCTX: Optional[ClientTLSContext] = None
 
     def setUp(self):
         d = defer.Deferred()
@@ -4565,7 +4565,7 @@ class PreauthIMAP4ClientMixin:
         C{transport}.
     """
 
-    clientProtocol = imap4.IMAP4Client  # type: Type[imap4.IMAP4Client]
+    clientProtocol: Type[imap4.IMAP4Client] = imap4.IMAP4Client
 
     def setUp(self):
         """

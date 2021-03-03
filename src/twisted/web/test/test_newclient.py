@@ -191,7 +191,7 @@ class _HTTPParserTests:
     the task of parsing HTTP bytes.
     """
 
-    sep = None  # type: Optional[bytes]
+    sep: Optional[bytes] = None
 
     def test_statusCallback(self):
         """

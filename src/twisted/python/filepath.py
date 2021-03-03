@@ -632,7 +632,7 @@ class FilePath(AbstractFilePath):
     """
 
     _statinfo = None
-    path = None  # type: Union[bytes, str]
+    path: Union[bytes, str] = None  # type: ignore[assignment]
 
     def __init__(self, path, alwaysCreate=False):
         """

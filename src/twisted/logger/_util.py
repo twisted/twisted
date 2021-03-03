@@ -31,7 +31,7 @@ def formatTrace(trace: LogTrace) -> str:
             return f"{obj}"
 
     result = []
-    lineage = []  # type: List[Logger]
+    lineage: List[Logger] = []
 
     for parent, child in trace:
         if not lineage or lineage[-1] is not parent:

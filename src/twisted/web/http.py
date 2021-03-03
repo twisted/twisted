@@ -783,8 +783,8 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = b"(no method yet)"  # type: bytes
-    clientproto = b"(no clientproto yet)"  # type: bytes
+    method: bytes = b"(no method yet)"
+    clientproto: bytes = b"(no clientproto yet)"
     uri = "(no uri yet)"
     startedWriting = 0
     chunked = 0

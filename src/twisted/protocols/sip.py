@@ -340,7 +340,7 @@ class URL:
             self.headers = headers
 
     def toString(self) -> str:
-        l = []  # type: List[str]
+        l: List[str] = []
         w = l.append
         w("sip:")
         if self.username != None:
@@ -1057,7 +1057,7 @@ class RegisterProxy(Proxy):
 
     registry = None  # Should implement IRegistry
 
-    authorizers = {}  # type: Dict[str, IAuthorizer]
+    authorizers: Dict[str, IAuthorizer] = {}
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)

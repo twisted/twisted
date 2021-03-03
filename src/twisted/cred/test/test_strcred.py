@@ -564,7 +564,7 @@ class OptionsSupportsAllInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
-    supportedInterfaces = []  # type: Sequence[Type[Interface]]
+    supportedInterfaces: Sequence[Type[Interface]] = []
 
 
 class LimitingInterfacesTests(TestCase):

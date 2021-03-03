@@ -81,7 +81,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _repr = None  # type: Optional[str]
+    _repr: Optional[str] = None
 
     def __init__(
         self,
@@ -238,7 +238,7 @@ class DelayedCall:
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
             if hasattr(self.func, "__qualname__"):
-                func = self.func.__qualname__  # type: Optional[str]
+                func: Optional[str] = self.func.__qualname__
             elif hasattr(self.func, "__name__"):
                 func = self.func.func_name  # type: ignore[attr-defined]
                 if hasattr(self.func, "im_class"):
@@ -292,7 +292,7 @@ class ThreadedResolver:
 
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
-        self._runningQueries = {}  # type: Dict[Deferred, Tuple[Deferred, IDelayedCall]]
+        self._runningQueries: Dict[Deferred, Tuple[Deferred, IDelayedCall]] = {}
 
     def _fail(self, name: str, err: str) -> Failure:
         lookupError = error.DNSLookupError(f"address {name!r} not found: {err}")
@@ -404,9 +404,9 @@ class _ThreePhaseEvent:
     """
 
     def __init__(self) -> None:
-        self.before = []  # type: List[_ThreePhaseEventTrigger]
-        self.during = []  # type: List[_ThreePhaseEventTrigger]
-        self.after = []  # type: List[_ThreePhaseEventTrigger]
+        self.before: List[_ThreePhaseEventTrigger] = []
+        self.during: List[_ThreePhaseEventTrigger] = []
+        self.after: List[_ThreePhaseEventTrigger] = []
         self.state = "BASE"
 
     def addTrigger(
@@ -487,7 +487,7 @@ class _ThreePhaseEvent:
         """
         self.state = "BEFORE"
         self.finishedBefore = []
-        beforeResults = []  # type: List[object]
+        beforeResults: List[object] = []
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
@@ -524,8 +524,8 @@ class PluggableResolverMixin:
     @ivar _nameResolver: The installed L{IHostnameResolver}.
     """
 
-    resolver = BlockingResolver()  # type: IResolverSimple
-    _nameResolver = _SimpleResolverComplexifier(resolver)  # type: IHostnameResolver
+    resolver: IResolverSimple = BlockingResolver()
+    _nameResolver: IHostnameResolver = _SimpleResolverComplexifier(resolver)
 
     # IReactorPluggableResolver
     def installResolver(self, resolver: IResolverSimple) -> IResolverSimple:
@@ -604,10 +604,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.threadCallQueue = []  # type: List[_ThreadCall]
-        self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
-        self._pendingTimedCalls = []  # type: List[DelayedCall]
-        self._newTimedCalls = []  # type: List[DelayedCall]
+        self.threadCallQueue: List[_ThreadCall] = []
+        self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
+        self._pendingTimedCalls: List[DelayedCall] = []
+        self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
         self.running = False
         self._started = False
@@ -615,8 +615,8 @@ class ReactorBase(PluggableResolverMixin):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
-        self._internalReaders = set()  # type: Set[Any]
-        self.waker = None  # type: Any
+        self._internalReaders: Set[Any] = set()
+        self.waker: Any = None
 
         # Arrange for the running attribute to change to True at the right time
         # and let a subclass possibly do other things at that time (eg install
@@ -1263,7 +1263,7 @@ class BaseConnector(ABC):
         if not self.factoryStarted:
             self.factory.doStart()
             self.factoryStarted = 1
-        self.transport = self._makeTransport()  # type: Optional[Client]
+        self.transport: Optional[Client] = self._makeTransport()
         if self.timeout is not None:
             self.timeoutID = self.reactor.callLater(
                 self.timeout, self.transport.failIfNotConnected, error.TimeoutError()
@@ -1331,8 +1331,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None  # type: socket.AddressFamily
-    socketType = None  # type: socket.SocketKind
+    addressFamily: socket.AddressFamily = None  # type: ignore[assignment]
+    socketType: socket.SocketKind = None  # type: ignore[assignment]
 
     def createInternetSocket(self) -> socket.socket:
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1437,4 +1437,4 @@ class _SignalReactorMixin:
                 log.msg("Main loop terminated.")
 
 
-__all__ = []  # type: List[str]
+__all__: List[str] = []

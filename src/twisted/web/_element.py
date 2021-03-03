@@ -151,7 +151,7 @@ class Element:
         return from C{render}.
     """
 
-    loader = None  # type: Optional[ITemplateLoader]
+    loader: Optional[ITemplateLoader] = None
 
     def __init__(self, loader=None):
         if loader is not None:

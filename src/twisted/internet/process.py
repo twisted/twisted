@@ -56,7 +56,7 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}  # type: Dict[int, Callable]
+reapProcessHandlers: Dict[int, Callable] = {}
 
 
 def reapAllProcesses():
@@ -275,7 +275,7 @@ class _BaseProcess(BaseProcess):
     Base class for Process and PTYProcess.
     """
 
-    status = None  # type: Optional[int]
+    status: Optional[int] = None
     pid = None
 
     def reapProcess(self):

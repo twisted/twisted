@@ -271,9 +271,9 @@ class GeneralOptions(usage.Options):
         ],
     )
 
-    identitys = []  # type: List[str]
-    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
-    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    identitys: List[str] = []
+    localForwards: List[Tuple[int, Tuple[int, int]]] = []
+    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -499,7 +499,7 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles = []  # type: List[str]
+    usedFiles: List[str] = []
 
     def getPassword(self, prompt=None):
         if not prompt:

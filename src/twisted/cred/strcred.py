@@ -142,7 +142,7 @@ class AuthOptionMixin:
         will send all help-related output. Default: L{sys.stdout}
     """
 
-    supportedInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
+    supportedInterfaces: Optional[Sequence[Type[Interface]]] = None
     authOutput = sys.stdout
 
     def supportsInterface(self, interface):

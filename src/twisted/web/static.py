@@ -203,7 +203,7 @@ class File(resource.Resource, filepath.FilePath):
 
     contentEncodings = {".gz": "gzip", ".bz2": "bzip2"}
 
-    processors = {}  # type: Dict[str, Callable[[str, Any], Data]]
+    processors: Dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 

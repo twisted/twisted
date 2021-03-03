@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class Enum:
-    group = None  # type: Optional[str]
+    group: Optional[str] = None
 
     def __init__(self, label: str) -> None:
         self.label = label

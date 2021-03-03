@@ -11,7 +11,7 @@ from typing import List, Optional, Union
 
 class ConchOptions(usage.Options):
 
-    optParameters = [
+    optParameters: List[List[Optional[Union[str, int]]]] = [
         ["user", "l", None, "Log in using this user name."],
         ["identity", "i", None],
         ["ciphers", "c", None],
@@ -22,7 +22,7 @@ class ConchOptions(usage.Options):
         ["known-hosts", "", None, "File to check for host keys"],
         ["user-authentications", "", None, "Types of user authentications to use."],
         ["logfile", "", None, "File to log to, or - for stdout"],
-    ]  # type: List[List[Optional[Union[str, int]]]]
+    ]
 
     optFlags = [
         ["version", "V", "Display version number only."],

@@ -60,7 +60,7 @@ class LogPublisher:
         Forward events to contained observers.
         """
         if "log_trace" not in event:
-            trace = None  # type: Optional[Callable[[ILogObserver], None]]
+            trace: Optional[Callable[[ILogObserver], None]] = None
 
         else:
 

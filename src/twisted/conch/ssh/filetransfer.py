@@ -24,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3,)
 
-    packetTypes = {}  # type: Dict[int, str]
+    packetTypes: Dict[int, str] = {}
 
     def __init__(self):
         self.buf = b""

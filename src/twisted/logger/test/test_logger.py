@@ -86,7 +86,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result = []  # type: List[Logger]
+        result: List[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -120,7 +120,7 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed = []  # type: List[LogEvent]
+        observed: List[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))

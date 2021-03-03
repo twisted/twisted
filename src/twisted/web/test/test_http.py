@@ -265,7 +265,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response = [
+    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -274,7 +274,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
             b"Content-Length: 13",
             b"'''\nNone\n'''\n",
         )
-    ]  # type: Union[Sequence[Sequence[bytes]], bytes]
+    ]
 
     def test_buffer(self):
         """

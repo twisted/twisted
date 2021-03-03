@@ -189,7 +189,7 @@ class MessageSet:
         that it will not be called out-of-order).
     """
 
-    _empty = []  # type: List[Any]
+    _empty: List[Any] = []
     _infinity = float("inf")
 
     def __init__(self, start=_empty, end=_empty):
