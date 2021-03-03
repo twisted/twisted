@@ -451,11 +451,11 @@ def callTestFunction():
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
         self.assertEqual(len(warningsShown), 1)
 
-    def test_warningLineNumberPEP626(self):
+    def test_warningLineNumberDisFindlinestarts(self):
         """
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
-        number of a line within the implementation of the function passed to it
-        on py3.10 with PEP 626.
+        number of a line within the implementation handling the case in which
+        dis.findlinestarts returns the lines in random order.
         """
         from twisted_private_helper import pep626
 

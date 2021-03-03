@@ -365,9 +365,14 @@ def foo():
         # Flush it
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
-    def test_pep626(self):
+    def test_offendingFunctions_deep_branch(self):
         """
-        dis.findlinestarts is not guaranteed to be sorted ascending.
+        In Python 3.6 the dis.findlinestarts documented behaviour
+        was changed such that the reported lines might not be sorted ascending.
+        In Python 3.10 PEP 626 introduced byte-code change such that the last
+        line of a function wasn't always associated with the last byte-code.
+        In the past flushWarning was not detecting that such a function was
+        associated with any warnings.
         """
 
         def foo(a=1, b=1):
