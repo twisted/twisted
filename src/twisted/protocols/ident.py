@@ -215,7 +215,7 @@ class IdentClient(basic.LineOnlyReceiver):
 
     def lineReceived(self, line):
         if not self.queries:
-            log.msg("Unexpected server response: %r" % (line,))
+            log.msg(f"Unexpected server response: {line!r}")
         else:
             d, _, _ = self.queries.pop(0)
             self.parseResponse(d, line)

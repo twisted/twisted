@@ -111,8 +111,8 @@ class IReporter(zi.Interface):
 
         @type test: L{unittest.TestCase}
         @param test: The test which this is about.
-        @type error: L{failure.Failure}
-        @param error: The error which this test failed with.
+        @type failure: L{failure.Failure}
+        @param failure: The error which this test failed with.
         @type todo: L{unittest.Todo}
         @param todo: The reason for the test's TODO status. If L{None}, a
             generic reason is used.

@@ -28,7 +28,7 @@ def _PRE(text):
     @return: Escaped text wrapped in <pre> tags.
     @rtype: C{str}
     """
-    return "<pre>%s</pre>" % (escape(text),)
+    return "<pre>{}</pre>".format(escape(text))
 
 
 def redirectTo(URL: bytes, request) -> bytes:

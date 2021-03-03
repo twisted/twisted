@@ -203,7 +203,7 @@ class File(resource.Resource, filepath.FilePath):
 
     contentEncodings = {".gz": "gzip", ".bz2": "bzip2"}
 
-    processors = {}  # type: Dict[str, Callable[[str, Any], Data]]
+    processors: Dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 
@@ -301,7 +301,7 @@ class File(resource.Resource, filepath.FilePath):
                 # leaving us with raw bytes.
                 path = path.decode("utf-8")
             except UnicodeDecodeError:
-                log.err(None, "Could not decode path segment as utf-8: %r" % (path,))
+                log.err(None, f"Could not decode path segment as utf-8: {path!r}")
                 return self.childNotFound
 
         self.restat(reraise=False)
@@ -362,36 +362,36 @@ class File(resource.Resource, filepath.FilePath):
             raise ValueError("Missing '=' separator")
         kind = kind.strip()
         if kind != b"bytes":
-            raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
+            raise ValueError(f"Unsupported Bytes-Unit: {kind!r}")
         unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
         parsedRanges = []
         for byteRange in unparsedRanges:
             try:
                 start, end = byteRange.split(b"-", 1)
             except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
             if start:
                 try:
                     start = int(start)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
             else:
                 start = None
             if end:
                 try:
                     end = int(end)
                 except ValueError:
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
             else:
                 end = None
             if start is not None:
                 if end is not None and start > end:
                     # Start must be less than or equal to end or it is invalid.
-                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
             elif end is None:
                 # One or both of start and end must be specified.  Omitting
                 # both is invalid.
-                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+                raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
             parsedRanges.append((start, end))
         return parsedRanges
 
@@ -513,7 +513,9 @@ class File(resource.Resource, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = networkString("%x%x" % (int(time.time() * 1000000), os.getpid()))
+        boundary = networkString(
+            "{:x}{:x}".format(int(time.time() * 1000000), os.getpid())
+        )
         if self.type:
             contentType = self.type
         else:
@@ -554,7 +556,7 @@ class File(resource.Resource, filepath.FilePath):
         request.setHeader(
             b"content-type",
             networkString(
-                'multipart/byteranges; boundary="%s"' % (nativeString(boundary),)
+                'multipart/byteranges; boundary="{}"'.format(nativeString(boundary))
             ),
         )
         request.setHeader(
@@ -600,7 +602,7 @@ class File(resource.Resource, filepath.FilePath):
         try:
             parsedRanges = self._parseRangeHeader(byteRange)
         except ValueError:
-            log.msg("Ignoring malformed Range header %r" % (byteRange.decode(),))
+            log.msg(f"Ignoring malformed Range header {byteRange.decode()!r}")
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
@@ -638,7 +640,7 @@ class File(resource.Resource, filepath.FilePath):
 
         try:
             fileForReading = self.openForReading()
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EACCES:
                 return self.forbidden.render(request)
             else:
@@ -1063,7 +1065,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 
         tableContent = "".join(self._buildTableContent(dirs + files))
 
-        header = "Directory listing for %s" % (
+        header = "Directory listing for {}".format(
             escape(unquote(nativeString(request.uri))),
         )
 

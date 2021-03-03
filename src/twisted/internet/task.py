@@ -7,8 +7,6 @@ Scheduling utility methods and classes.
 """
 
 
-__metaclass__ = type
-
 import sys
 import time
 import warnings
@@ -281,7 +279,7 @@ class LoopingCall:
         else:
             func = reflect.safe_repr(self.f)
 
-        return "LoopingCall<%r>(%s, *%s, **%s)" % (
+        return "LoopingCall<{!r}>({}, *{}, **{})".format(
             self.interval,
             func,
             reflect.safe_repr(self.a),
@@ -502,7 +500,7 @@ class CooperativeTask:
             result = next(self._iterator)
         except StopIteration:
             self._completeWith(TaskDone(), self._iterator)
-        except:
+        except BaseException:
             self._completeWith(TaskFailed(), Failure())
         else:
             if isinstance(result, defer.Deferred):
@@ -822,9 +820,9 @@ def deferLater(clock, delay, callable=None, *args, **kw):
 
     @param callable: The object to call after the delay.
 
-    @param *args: The positional arguments to pass to C{callable}.
+    @param args: The positional arguments to pass to C{callable}.
 
-    @param **kw: The keyword arguments to pass to C{callable}.
+    @param kw: The keyword arguments to pass to C{callable}.
 
     @rtype: L{defer.Deferred}
 

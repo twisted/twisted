@@ -20,7 +20,7 @@ class DOMHelpersTestsMixin:
     subclass.
     """
 
-    dom = None  # type: Optional[Any]
+    dom: Optional[Any] = None
 
     def test_getElementsByTagName(self):
         doc1 = self.dom.parseString("<foo/>")
@@ -287,7 +287,7 @@ class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         self.assertEqual(text, "bar")
         self.assertIsInstance(text, str)
 
-        node = self.dom.parseString("<foo>\N{SNOWMAN}</foo>".encode("utf-8"))
+        node = self.dom.parseString("<foo>\N{SNOWMAN}</foo>".encode())
         text = domhelpers.getNodeText(node)
         self.assertEqual(text, "\N{SNOWMAN}")
         self.assertIsInstance(text, str)

@@ -355,7 +355,7 @@ class Document(Node):
 
         w('<?xml version="1.0"?>' + newl)
         if self.doctype:
-            w("<!DOCTYPE {}>{}".format(self.doctype, newl))
+            w(f"<!DOCTYPE {self.doctype}>{newl}")
         self.documentElement.writexml(
             stream, indent, addindent, newl, strip, nsprefixes, namespace
         )
@@ -443,7 +443,7 @@ class Comment(CharacterData):
     ):
         w = _streamWriteWrapper(stream)
         val = self.data
-        w("<!--{}-->".format(val))
+        w(f"<!--{val}-->")
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
@@ -813,11 +813,11 @@ class Element(Node):
     def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
-            rep += ", attributes=%r" % (self.attributes,)
+            rep += f", attributes={self.attributes!r}"
         if self._filename:
-            rep += ", filename=%r" % (self._filename,)
+            rep += f", filename={self._filename!r}"
         if self._markpos:
-            rep += ", markpos=%r" % (self._markpos,)
+            rep += f", markpos={self._markpos!r}"
         return rep + ")"
 
     def __str__(self) -> str:

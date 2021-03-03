@@ -38,7 +38,7 @@ class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
         for modinfo in where.walkModules(importPackages=importPackages):
             if modinfo.name == modname:
                 return modinfo
-        self.fail("Unable to find module %r through iteration." % (modname,))
+        self.fail(f"Unable to find module {modname!r} through iteration.")
 
 
 class BasicTests(TwistedModulesTestCase):
@@ -326,7 +326,7 @@ class PathModificationTests(TwistedModulesTestCase):
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            networkString("__path__.append({0})\n".format(repr(moddir2)))
+            networkString("__path__.append({})\n".format(repr(moddir2)))
         )
         # Cut here
         self._setupSysPath()

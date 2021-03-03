@@ -84,7 +84,7 @@ class BaseError(Exception):
     @type appCondition: object providing L{domish.IElement}.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def __init__(self, condition, text=None, textLang=None, appCondition=None):
         Exception.__init__(self)
@@ -94,7 +94,9 @@ class BaseError(Exception):
         self.appCondition = appCondition
 
     def __str__(self) -> str:
-        message = "%s with condition %r" % (self.__class__.__name__, self.condition)
+        message = "{} with condition {!r}".format(
+            self.__class__.__name__, self.condition
+        )
 
         if self.text:
             message += ": " + self.text

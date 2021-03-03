@@ -47,7 +47,7 @@ from twisted.web.error import ExcessiveBufferingError
 
 
 # This API is currently considered private.
-__all__ = []  # type: List[str]
+__all__: List[str] = []
 
 
 _END_STREAM_SENTINEL = object()
@@ -1075,7 +1075,7 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type: Any iterable of two-tuples of L{bytes}, representing header
+        @type headers: Any iterable of two-tuples of L{bytes}, representing header
             names and header values.
         """
         self._conn.writeHeaders(version, code, reason, headers, self.streamID)

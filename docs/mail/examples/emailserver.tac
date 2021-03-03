@@ -7,7 +7,6 @@
 """
 A toy email server.
 """
-from __future__ import print_function
 
 from zope.interface import implementer
 
@@ -20,18 +19,15 @@ from twisted.cred.portal import IRealm
 from twisted.cred.portal import Portal
 
 
-
 @implementer(smtp.IMessageDelivery)
 class ConsoleMessageDelivery:
     def receivedHeader(self, helo, origin, recipients):
         return "Received: ConsoleMessageDelivery"
 
-    
     def validateFrom(self, helo, origin):
         # All addresses are accepted
         return origin
 
-    
     def validateTo(self, user):
         # Only messages directed to the "console" user are accepted.
         if user.dest.local == "console":
@@ -39,28 +35,23 @@ class ConsoleMessageDelivery:
         raise smtp.SMTPBadRcpt(user)
 
 
-
 @implementer(smtp.IMessage)
 class ConsoleMessage:
     def __init__(self):
         self.lines = []
 
-    
     def lineReceived(self, line):
         self.lines.append(line)
 
-    
     def eomReceived(self):
         print("New message received:")
         print("\n".join(self.lines))
         self.lines = None
         return defer.succeed(None)
 
-    
     def connectionLost(self):
         # There was an error, throw away the stored lines
         self.lines = None
-
 
 
 class ConsoleSMTPFactory(smtp.SMTPFactory):
@@ -69,14 +60,12 @@ class ConsoleSMTPFactory(smtp.SMTPFactory):
     def __init__(self, *a, **kw):
         smtp.SMTPFactory.__init__(self, *a, **kw)
         self.delivery = ConsoleMessageDelivery()
-    
 
     def buildProtocol(self, addr):
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.delivery = self.delivery
         p.challengers = {"LOGIN": LOGINCredentials, "PLAIN": PLAINCredentials}
         return p
-
 
 
 @implementer(IRealm)
@@ -87,19 +76,19 @@ class SimpleRealm:
         raise NotImplementedError()
 
 
-
 def main():
     from twisted.application import internet
-    from twisted.application import service    
-    
+    from twisted.application import service
+
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
     checker.addUser("guest", "password")
     portal.registerChecker(checker)
-    
+
     a = service.Application("Console SMTP Server")
     internet.TCPServer(2500, ConsoleSMTPFactory(portal)).setServiceParent(a)
-    
+
     return a
+
 
 application = main()

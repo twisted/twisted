@@ -29,11 +29,11 @@ def stringyString(object, indentation=""):
             if isMultiline(value):
                 if endsInNewline(value):
                     value = value[: -len("\n")]
-                sl.append("%s %s:\n%s" % (indentation, key, value))
+                sl.append(f"{indentation} {key}:\n{value}")
             else:
                 # Oops.  Will have to move that indentation.
                 sl.append(
-                    "%s %s: %s" % (indentation, key, value[len(indentation) + 3 :])
+                    "{} {}: {}".format(indentation, key, value[len(indentation) + 3 :])
                 )
 
     elif type(object) is tuple or type(object) is list:

@@ -7,8 +7,6 @@ L{IReactorSocket}.
 """
 
 
-__metaclass__ = type
-
 import errno
 import gc
 import io
@@ -109,7 +107,7 @@ s = None
 try:
     s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     s.bind(("::1", 0))
-except socket.error as e:
+except OSError as e:
     ipv6Skip = True
     ipv6SkipReason = str(e)
 else:
@@ -664,7 +662,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
             while True:
                 port = findFreePort(self.interface, self.family)
                 bindAddress = (self.interface, port[1])
-                log.msg("Connect attempt with bindAddress {}".format(bindAddress))
+                log.msg(f"Connect attempt with bindAddress {bindAddress}")
                 try:
                     reactor.connectTCP(
                         fakeDomain,
@@ -685,7 +683,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         if clientFactory.failReason:
             self.fail(clientFactory.failReason.getTraceback())
 
-        transportRepr = "<%s to %s at %x>" % (
+        transportRepr = "<{} to {} at {:x}>".format(
             transportData["instance"].__class__,
             transportData["instance"].addr,
             id(transportData["instance"]),
@@ -743,9 +741,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
 
         self.runReactor(reactor)
 
-        self.assertEqual(
-            len(results), 1, "more than one callback result: %s" % (results,)
-        )
+        self.assertEqual(len(results), 1, f"more than one callback result: {results}")
 
         if isinstance(results[0], Failure):
             # self.fail(Failure)
@@ -996,7 +992,7 @@ class _ExhaustsFileDescriptors:
             while True:
                 try:
                     fd = self._fileDescriptorFactory()
-                except (IOError, OSError) as e:
+                except OSError as e:
                     if e.errno == errno.EMFILE:
                         break
                     raise
@@ -1500,9 +1496,7 @@ class TCPPortTestsMixin:
     Tests for L{IReactorTCP.listenTCP}
     """
 
-    requiredInterfaces = (
-        IReactorTCP,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -1514,7 +1508,7 @@ class TCPPortTestsMixin:
         """
         Get the expected connection lost message for a TCP port.
         """
-        return "(TCP Port %s Closed)" % (port.getHost().port,)
+        return f"(TCP Port {port.getHost().port} Closed)"
 
     def test_portGetHostOnIPv4(self):
         """
@@ -1587,7 +1581,7 @@ class TCPPortTestsMixin:
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
@@ -1669,7 +1663,7 @@ class TCPPortTestsMixin:
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address
@@ -2066,9 +2060,7 @@ class WriteSequenceTestsMixin:
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
 
-    requiredInterfaces = (
-        IReactorTCP,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def setWriteBufferSize(self, transport, value):
         """
@@ -2738,7 +2730,7 @@ class AbortConnectionMixin:
     """
 
     # Override in subclasses, should be an EndpointCreator instance:
-    endpoints = None  # type: Optional[EndpointCreator]
+    endpoints: Optional[EndpointCreator] = None
 
     def runAbortTest(self, clientClass, serverClass, clientConnectionLostReason=None):
         """

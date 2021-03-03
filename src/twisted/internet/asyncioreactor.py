@@ -58,8 +58,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
     On POSIX platforms, the default event loop is
     L{asyncio.SelectorEventLoop}.
     On Windows, the default event loop on Python 3.7 and older
-    is L{asyncio.WindowsSelectorEventLoop}, but on Python 3.8 and newer
-    the default event loop is L{asyncio.WindowsProactorEventLoop} which
+    is C{asyncio.WindowsSelectorEventLoop}, but on Python 3.8 and newer
+    the default event loop is C{asyncio.WindowsProactorEventLoop} which
     is incompatible with L{AsyncioSelectorReactor}.
     Applications that use L{AsyncioSelectorReactor} on Windows
     with Python 3.8+ must call
@@ -72,7 +72,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[SelectorEventLoop] = None):
         if eventloop is None:
-            _eventloop = get_event_loop()  # type: AbstractEventLoop
+            _eventloop: AbstractEventLoop = get_event_loop()
             if current_async_library_cvar is not None:
                 _eventloop.set_task_factory(factory=sniffioTaskFactory)
         else:
@@ -82,13 +82,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
         # Windows was changed to return a ProactorEventLoop
         # unless the loop policy has been changed.
         if not isinstance(_eventloop, SelectorEventLoop):
-            raise TypeError(
-                "SelectorEventLoop required, instead got: {}".format(_eventloop)
-            )
+            raise TypeError(f"SelectorEventLoop required, instead got: {_eventloop}")
 
-        self._asyncioEventloop = _eventloop  # type: SelectorEventLoop
-        self._writers = {}  # type: Dict[Type[FileDescriptor], int]
-        self._readers = {}  # type: Dict[Type[FileDescriptor], int]
+        self._asyncioEventloop: SelectorEventLoop = _eventloop
+        self._writers: Dict[Type[FileDescriptor], int] = {}
+        self._readers: Dict[Type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
 
         self._scheduledAt = None
@@ -148,7 +146,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         """
         try:
             self._asyncioEventloop._selector.unregister(fd)
-        except:
+        except BaseException:
             pass
 
     def _readOrWrite(self, selectable, read):
@@ -176,7 +174,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 fd, callWithLogger, reader, self._readOrWrite, reader, True
             )
             self._readers[reader] = fd
-        except IOError as e:
+        except OSError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
@@ -205,7 +203,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         except BrokenPipeError:
             # The kqueuereactor will raise this if there is a broken pipe
             self._unregisterFDInAsyncio(fd)
-        except:
+        except BaseException:
             self._unregisterFDInAsyncio(fd)
             raise
 

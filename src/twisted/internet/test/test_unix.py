@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorUNIX}.
 from stat import S_IMODE
 from os import stat, close, urandom, unlink, fstat
 from tempfile import mktemp, mkstemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from pprint import pformat
 from hashlib import md5
 from struct import pack
@@ -100,9 +100,7 @@ class UNIXCreator(EndpointCreator):
     Create UNIX socket end points.
     """
 
-    requiredInterfaces = (
-        interfaces.IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (interfaces.IReactorUNIX,)
 
     def server(self, reactor):
         """
@@ -203,7 +201,7 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(Exception("Received bytes (%r) before descriptor." % (data,)))
+                Failure(Exception(f"Received bytes ({data!r}) before descriptor."))
             )
             self.waiting = None
 
@@ -258,7 +256,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
 
         def raiseSocketError(self):
-            raise error("FakeBasePort forced socket.error")
+            raise OSError("FakeBasePort forced socket.error")
 
         self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
         reactor = self.buildReactor()
@@ -567,7 +565,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             data = b"some data"
             ancillary = [(None, None, b"")]
             flags = 0
-            return sendmsg.RecievedMessage(data, ancillary, flags)
+            return sendmsg.ReceivedMessage(data, ancillary, flags)
 
         events = []
         addObserver(events.append)
@@ -727,10 +725,10 @@ class SocketUNIXMixin:
     UNIX ports.
     """
 
-    requiredInterfaces = (
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (
         IReactorUNIX,
         IReactorSocket,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    )
 
     def getListeningPort(self, reactor, factory):
         """
@@ -799,21 +797,19 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces = (
-        IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "%s starting on %r" % (factory, nativeString(port.getHost().name))
+        return "{} starting on {!r}".format(factory, nativeString(port.getHost().name))
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port %s Closed)" % (nativeString(port.getHost().name),)
+        return "(UNIX Port {} Closed)".format(nativeString(port.getHost().name))
 
 
 class UNIXPortTestsBuilder(

@@ -48,7 +48,7 @@ class IWorker(Interface):
         Free any resources associated with this L{IWorker} and cause it to
         reject all future work.
 
-        @raise: L{AlreadyQuit} if this method has already been called.
+        @raise AlreadyQuit: if this method has already been called.
         """
 
 

@@ -92,7 +92,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # make sure the fd is actually real.  In some situations we can get
             # -1 here.
             mdict[fd]
-        except:
+        except BaseException:
             # the hard way: necessary because fileno() may disappear at any
             # moment, thanks to python's underlying sockets impl
             for fd, fdes in self._selectables.items():

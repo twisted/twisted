@@ -230,7 +230,7 @@ class ResourceTests(TestCase):
         I{render_}-prefixed methods which it defines, if C{allowedMethods} is
         not explicitly defined by the L{Resource}.
         """
-        expected = set([b"GET", b"HEAD", b"PUT"])
+        expected = {b"GET", b"HEAD", b"PUT"}
         resource = ImplicitAllowedMethods()
         request = DummyRequest([])
         request.method = b"FICTIONAL"
