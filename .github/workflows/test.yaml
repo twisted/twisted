@@ -10,6 +10,12 @@ on:
   pull_request:
     branches: [ trunk ]
 
+
+defaults:
+  run:
+    shell: bash
+
+
 jobs:
   testing:
     runs-on: ubuntu-20.04
@@ -73,13 +79,11 @@ jobs:
 
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
-      shell: bash
       run: |
         python -m pip install --upgrade pip tox
         tox --notest
 
     - name: Test
-      shell: bash
       run: |
         python --version
         tox -q
