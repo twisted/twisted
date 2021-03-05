@@ -19,7 +19,7 @@ from twisted.internet import interfaces, main
 
 
 def _dataMustBeBytes(obj):
-    if not isinstance(obj, bytes):  # no, really, I mean it
+    if not isinstance(obj, (bytes, memoryview)):  # no, really, I mean it
         raise TypeError("Data must be bytes")
 
 
