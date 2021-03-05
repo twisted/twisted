@@ -2118,6 +2118,31 @@ class WriteSequenceTestsMixin:
         d.addErrback(log.err)
         self.runReactor(reactor)
 
+    def test_writeSequenceWithMemoryView(self):
+        """
+        C{writeSequence} with an element in the sequence of memoryviews succeeds.
+        """
+
+        def connected(protocols):
+            client, server, port = protocols
+
+            def dataReceived(data):
+                log.msg("data received: %r" % data)
+                self.assertEqual(data, b"Some sequence splitted")
+                client.transport.loseConnection()
+
+            server.dataReceived = dataReceived
+
+            to_send = [memoryview(b) for b in (b"Some ", b"sequence ", b"splitted")]
+
+            client.transport.writeSequence(to_send)
+
+        reactor = self.buildReactor()
+        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
+        d.addCallback(connected)
+        d.addErrback(log.err)
+        self.runReactor(reactor)
+
     def test_streamingProducer(self):
         """
         C{writeSequence} pauses its streaming producer if too much data is
