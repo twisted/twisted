@@ -329,8 +329,6 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         """
         Close the connection at the next available opportunity.
 
-        This is the same code from twisted.internet.abstract.FileDescriptor.loseConnection
-
         Call this to cause this FileDescriptor to lose its connection.  It will
         first write any data that it has buffered.
 
@@ -341,7 +339,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         unregister your producer when it's finished, or the connection will
         never close.
         """
-
+        # This is the same code from twisted.internet.abstract.FileDescriptor.loseConnection.
         if self.connected and not self.disconnecting:
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore

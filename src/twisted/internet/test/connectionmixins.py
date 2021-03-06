@@ -127,11 +127,15 @@ class _SingleProtocolFactory(ClientFactory):
         return self._protocol
 
 
-def runProtocolsWithReactorInstance(
-    reactor, reactorBuilder, serverProtocol, clientProtocol, endpointCreator
+def runProtocolsWithReactor(
+    reactorBuilder,
+    serverProtocol,
+    clientProtocol,
+    endpointCreator,
+    reactorSetUp=lambda _: None,
 ):
     """
-    Connect two protocols using endpoints and an existing reactor instance.
+    Connect two protocols using endpoints and a new reactor instance.
 
     A new reactor will be created and run, with the client and server protocol
     instances connected to each other using the given endpoint creator. The
@@ -139,16 +143,20 @@ def runProtocolsWithReactorInstance(
     have disconnected the reactor will be stopped and the function will
     return.
 
-    @param reactor: A L{Reactor} instance.
-
-    @param reactorBuilder: A L{ReactorBuilder} instance used to spin the reactor.
+    @param reactorBuilder: A L{ReactorBuilder} instance.
 
     @param serverProtocol: A L{ConnectableProtocol} that will be the server.
 
     @param clientProtocol: A L{ConnectableProtocol} that will be the client.
 
     @param endpointCreator: An instance of L{EndpointCreator}.
+
+    @param reactorSetUp: Callable called with the reactor as argument, after the reactor is created.
+
+    @return: The reactor run by this test.
     """
+    reactor = reactorBuilder.buildReactor()
+    reactorSetUp(reactor)
     serverProtocol._setAttributes(reactor, Deferred())
     clientProtocol._setAttributes(reactor, Deferred())
     serverFactory = _SingleProtocolFactory(serverProtocol)
@@ -175,34 +183,6 @@ def runProtocolsWithReactorInstance(
     d.addCallback(lambda _: needsRunningReactor(reactor, reactor.stop))
 
     reactorBuilder.runReactor(reactor)
-
-
-def runProtocolsWithReactor(
-    reactorBuilder, serverProtocol, clientProtocol, endpointCreator
-):
-    """
-    Connect two protocols using endpoints and a new reactor instance.
-
-    A new reactor will be created and run, with the client and server protocol
-    instances connected to each other using the given endpoint creator. The
-    protocols should run through some set of tests, then disconnect; when both
-    have disconnected the reactor will be stopped and the function will
-    return.
-
-    @param reactorBuilder: A L{ReactorBuilder} instance.
-
-    @param serverProtocol: A L{ConnectableProtocol} that will be the server.
-
-    @param clientProtocol: A L{ConnectableProtocol} that will be the client.
-
-    @param endpointCreator: An instance of L{EndpointCreator}.
-
-    @return: The reactor run by this test.
-    """
-    reactor = reactorBuilder.buildReactor()
-    runProtocolsWithReactorInstance(
-        reactor, reactorBuilder, serverProtocol, clientProtocol, endpointCreator
-    )
     return reactor
 
 

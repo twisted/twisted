@@ -47,7 +47,6 @@ from twisted.internet.test.connectionmixins import (
     ConnectableProtocol,
     EndpointCreator,
     runProtocolsWithReactor,
-    runProtocolsWithReactorInstance,
     Stop,
     BrokenContextFactory,
 )
@@ -2061,8 +2060,9 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         connection calls C{loseWriteConnection}, and then C{loseConnection} in
         {writeConnectionLost}, the connection is closed correctly.
 
-        This rather obscure case used to fail (see ticket #3037).
-        This also covers a code branch for ticket #9553.
+        This rather obscure case used to fail.
+        See U{https://twistedmatrix.com/trac/ticket/3037}.
+        This also covers a code branch for ticket U{https://twistedmatrix.com/trac/ticket/9553}.
 
         This is the generic tests for most reactors.
         This tests is overwritten for IOCP reactor, as IOCP reactor doesn't
@@ -2083,18 +2083,22 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
             def connectionMade(self):
                 self.transport.loseConnection()
 
-        # If test fails, reactor won't stop and we'll hit timeout:
-        reactor = self.buildReactor()
-        reactor._handleSignals()
-        # We might have the waker readers.
-        try:
-            initial_readers = reactor.getReaders()
-        except NotImplementedError:
-            raise SkipTest("Reactor does not implements IReadDescriptor.")
+        initial_readers = []
+
+        def reactorSetUp(reactor):
+            # If test fails, reactor won't stop and we'll hit timeout:
+            reactor._handleSignals()
+            # We might have the waker readers.
+            try:
+                initial_readers.extend(reactor.getReaders())
+            except NotImplementedError:
+                raise SkipTest("Reactor does not implements IReadDescriptor.")
 
         server = ListenerProtocol()
         client = Client()
-        runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
+        reactor = runProtocolsWithReactor(
+            self, server, client, TCPCreator(), reactorSetUp
+        )
 
         # Check that the reactor is clean.
         self.assertEqual([], reactor.getWriters())

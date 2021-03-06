@@ -22,7 +22,7 @@ from twisted.internet.interfaces import IPushProducer, IHalfCloseableProtocol
 
 from twisted.internet.test.connectionmixins import (
     ConnectableProtocol,
-    runProtocolsWithReactorInstance,
+    runProtocolsWithReactor,
 )
 from twisted.internet.test.reactormixins import (
     ReactorBuilder,
@@ -233,7 +233,7 @@ class IOCPReactorTests(ReactorBuilder, TestCase):
         connection calls C{loseWriteConnection}, and then C{loseConnection} in
         {writeConnectionLost}, the connection is closed correctly.
 
-        This covers a code branch for ticket #9553.
+        This covers a code branch for ticket U{https://twistedmatrix.com/trac/ticket/9553}.
         """
 
         @implementer(IHalfCloseableProtocol)
@@ -253,12 +253,17 @@ class IOCPReactorTests(ReactorBuilder, TestCase):
         # If test fails, reactor won't stop and we'll hit timeout:
         server = ListenerProtocol()
         client = Client()
-        reactor = self.buildReactor()
-        reactor._handleSignals()
-        # We might have the waker readers.
-        initial_handles = reactor.handles.copy()
 
-        runProtocolsWithReactorInstance(reactor, self, server, client, TCPCreator())
+        initial_handles = []
+
+        def reactorSetUp(reactor):
+            reactor._handleSignals()
+            # We might have the waker readers.
+            initial_handles.extend(reactor.handles.copy())
+
+        reactor = runProtocolsWithReactor(
+            self, server, client, TCPCreator(), reactorSetUp
+        )
 
         # Check that the reactor is clean.
         self.assertCountEqual(initial_handles, reactor.handles)
