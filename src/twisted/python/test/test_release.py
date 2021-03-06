@@ -479,7 +479,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            '<a href="https://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
