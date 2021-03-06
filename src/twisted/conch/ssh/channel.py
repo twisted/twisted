@@ -52,7 +52,7 @@ class SSHChannel(log.Logger):
     """
 
     _log = Logger()
-    name = None  # type: bytes  # only needed for client channels
+    name: bytes = None  # type: ignore[assignment]  # only needed for client channels
 
     def __init__(
         self,
@@ -104,7 +104,7 @@ class SSHChannel(log.Logger):
             name = self.name.decode("ascii")
         else:
             name = "None"
-        return "SSHChannel %s (%s) on %s" % (name, id, self.conn.logPrefix())
+        return f"SSHChannel {name} ({id}) on {self.conn.logPrefix()}"
 
     def channelOpen(self, specificData):
         """

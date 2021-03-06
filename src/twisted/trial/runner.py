@@ -101,7 +101,7 @@ def filenameToModule(fn):
     @raise ValueError: If C{fn} does not exist.
     """
     if not os.path.exists(fn):
-        raise ValueError("%r doesn't exist" % (fn,))
+        raise ValueError(f"{fn!r} doesn't exist")
     try:
         ret = reflect.namedAny(reflect.filenameToModuleName(fn))
     except (ValueError, AttributeError):
@@ -145,7 +145,7 @@ def _resolveDirectory(fn):
         if initFile:
             fn = os.path.join(fn, initFile)
         else:
-            raise ValueError("%r is not a package directory" % (fn,))
+            raise ValueError(f"{fn!r} is not a package directory")
     return fn
 
 
@@ -203,7 +203,7 @@ class LoggedSuite(TestSuite):
         """
         observer = _logObserver
         observer._add()
-        super(LoggedSuite, self).run(result)
+        super().run(result)
         observer._remove()
         for error in observer.getErrors():
             result.addError(TestHolder(NOT_IN_TEST), error)
@@ -225,7 +225,7 @@ class TrialSuite(TestSuite):
                 newTests.append(test)
             tests = newTests
         suite = LoggedSuite(tests)
-        super(TrialSuite, self).__init__([suite])
+        super().__init__([suite])
 
     def _bail(self):
         from twisted.internet import reactor
@@ -331,11 +331,11 @@ class ErrorHolder(TestHolder):
         @param error: The error to be added to the result. Can be an `exc_info`
         tuple or a L{twisted.python.failure.Failure}.
         """
-        super(ErrorHolder, self).__init__(description)
+        super().__init__(description)
         self.error = util.excInfoOrFailureToExcInfo(error)
 
     def __repr__(self) -> str:
-        return "<ErrorHolder description=%r error=%r>" % (
+        return "<ErrorHolder description={!r} error={!r}>".format(
             self.description,
             self.error[1],
         )
@@ -462,9 +462,7 @@ class TestLoader:
                     raise
 
                 if remaining == "":
-                    raise reflect.ModuleNotFound(
-                        "The module {} does not exist.".format(name)
-                    )
+                    raise reflect.ModuleNotFound(f"The module {name} does not exist.")
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
@@ -479,7 +477,7 @@ class TestLoader:
                 # class from just holding onto the method.
                 parent, obj = obj, getattr(obj, part)
         except AttributeError:
-            raise AttributeError("{} does not exist.".format(name))
+            raise AttributeError(f"{name} does not exist.")
 
         return self.loadAnything(
             obj, parent=parent, qualName=remaining, recurse=recurse
@@ -501,7 +499,7 @@ class TestLoader:
         ## a custom suite.
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
-            raise TypeError("%r is not a module" % (module,))
+            raise TypeError(f"{module!r} is not a module")
         if hasattr(module, "testSuite"):
             return module.testSuite()
         elif hasattr(module, "test_suite"):
@@ -525,9 +523,9 @@ class TestLoader:
         @param klass: The class to load tests from.
         """
         if not isinstance(klass, type):
-            raise TypeError("%r is not a class" % (klass,))
+            raise TypeError(f"{klass!r} is not a class")
         if not isTestCase(klass):
-            raise ValueError("%r is not a test case" % (klass,))
+            raise ValueError(f"{klass!r} is not a test case")
         names = self.getTestCaseNames(klass)
         tests = self.sort(
             [self._makeCase(klass, self.methodPrefix + name) for name in names]
@@ -570,7 +568,7 @@ class TestLoader:
         tests.
         """
         if not isPackage(package):
-            raise TypeError("%r is not a package" % (package,))
+            raise TypeError(f"{package!r} is not a package")
         pkgobj = modules.getModule(package.__name__)
         if recurse:
             discovery = pkgobj.walkModules()
@@ -584,7 +582,7 @@ class TestLoader:
         for modinfo in self.sort(discovered):
             try:
                 module = modinfo.load()
-            except:
+            except BaseException:
                 thingToAdd = ErrorHolder(modinfo.name, failure.Failure())
             else:
                 thingToAdd = self.loadModule(module)
@@ -600,7 +598,7 @@ class TestLoader:
         if isinstance(module, str):
             try:
                 module = reflect.namedAny(module)
-            except:
+            except BaseException:
                 return ErrorHolder(module, failure.Failure())
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
@@ -666,7 +664,7 @@ class TestLoader:
             # We've found a test suite.
             return obj
         else:
-            raise TypeError("don't know how to make test from: %s" % (obj,))
+            raise TypeError(f"don't know how to make test from: {obj}")
 
     def loadByName(self, name, recurse=False):
         """
@@ -679,7 +677,7 @@ class TestLoader:
         """
         try:
             return self.suiteFactory([self.findByName(name, recurse=recurse)])
-        except:
+        except BaseException:
             return self.suiteFactory([ErrorHolder(name, failure.Failure())])
 
     loadTestsFromName = loadByName
@@ -698,7 +696,7 @@ class TestLoader:
         for name in names:
             try:
                 things.append(self.loadByName(name, recurse=recurse))
-            except:
+            except BaseException:
                 errors.append(ErrorHolder(name, failure.Failure()))
         things.extend(errors)
         return self.suiteFactory(self._uniqueTests(things))
@@ -733,7 +731,7 @@ class TestLoader:
             module = SourceFileLoader(name, fileName).load_module()
             return self.loadAnything(module, recurse=recurse)
         except OSError:
-            raise ValueError("{} is not a Python file.".format(fileName))
+            raise ValueError(f"{fileName} is not a Python file.")
 
 
 def _qualNameWalker(qualName):

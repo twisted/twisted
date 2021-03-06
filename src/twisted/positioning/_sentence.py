@@ -35,7 +35,7 @@ class _BaseSentence:
     @type ALLOWED_ATTRIBUTES: C{set} of C{str}
     """
 
-    ALLOWED_ATTRIBUTES = set()  # type: Set[str]
+    ALLOWED_ATTRIBUTES: Set[str] = set()
 
     def __init__(self, sentenceData):
         """
@@ -65,7 +65,7 @@ class _BaseSentence:
             return self._sentenceData.get(name, None)
         else:
             className = self.__class__.__name__
-            msg = "%s sentences have no %s attributes" % (className, name)
+            msg = f"{className} sentences have no {name} attributes"
             raise AttributeError(msg)
 
     def __repr__(self) -> str:
@@ -76,13 +76,13 @@ class _BaseSentence:
         @rtype: C{str}
         """
         items = self._sentenceData.items()
-        data = ["%s: %s" % (k, v) for k, v in sorted(items) if k != "type"]
+        data = [f"{k}: {v}" for k, v in sorted(items) if k != "type"]
         dataRepr = ", ".join(data)
 
         typeRepr = self._sentenceData.get("type") or "unknown type"
         className = self.__class__.__name__
 
-        return "<%s (%s) {%s}>" % (className, typeRepr, dataRepr)
+        return f"<{className} ({typeRepr}) {{{dataRepr}}}>"
 
 
 class _PositioningSentenceProducerMixin:
@@ -108,7 +108,7 @@ class _PositioningSentenceProducerMixin:
         @return: The set of all possible sentence attribute names.
         @rtype: C{set} of C{str}
         """
-        attributes = set(["type"])
+        attributes = {"type"}
         for attributeList in cls._SENTENCE_CONTENTS.values():
             for attribute in attributeList:
                 if attribute is None:

@@ -272,7 +272,7 @@ Twisted specific testing
 
 Up to this point we've been doing fairly standard Python unit testing.
 With only a few cosmetic changes (most importantly, directly importing
-``unittest`` instead of using Twisted's :api:`twisted.trial.unittest <unittest>` version) we could make the
+``unittest`` instead of using Twisted's :py:mod:`unittest <twisted.trial.unittest>` version) we could make the
 above tests run using Python's standard library unit testing framework.
 
 Here we will assume a basic familiarity with Twisted's network I/O, timing,
@@ -346,7 +346,7 @@ following into ``calculus/remote_1.py`` :
 .. literalinclude:: listings/trial/calculus/remote_1.py
 
 
-As mentioned, this server creates a protocol that inherits from :api:`twisted.protocols.basic.LineReceiver <basic.LineReceiver>` , and then a
+As mentioned, this server creates a protocol that inherits from :py:class:`basic.LineReceiver <twisted.protocols.basic.LineReceiver>` , and then a
 factory that uses it as protocol. The only trick is the ``CalculationProxy`` object, which calls ``Calculation`` methods through ``remote_*`` methods. This pattern is used frequently in
 Twisted, because it is very explicit about what methods you are making
 accessible.
@@ -414,7 +414,7 @@ More good practices
 Testing scheduling
 ~~~~~~~~~~~~~~~~~~
 
-When testing code that involves the passage of time, waiting e.g. for a two hour timeout to occur in a test is not very realistic. Twisted provides a solution to this, the :api:`twisted.internet.task.Clock <Clock>` class that allows one to simulate the passage of time.
+When testing code that involves the passage of time, waiting e.g. for a two hour timeout to occur in a test is not very realistic. Twisted provides a solution to this, the :py:class:`Clock <twisted.internet.task.Clock>` class that allows one to simulate the passage of time.
 
 As an example we'll test the code for client request timeout: since our client
 uses TCP it can hang for a long time (firewall, connectivity problems, etc...).
@@ -595,9 +595,9 @@ example.  Because we were careful to use ``Clock`` , we
 don't need the global reactor to run in our tests.  Instead of returning the
 Deferred with a callback attached to it which performs the necessary assertions,
 we can use a testing helper,
-:api:`twisted.trial.unittest.SynchronousTestCase.successResultOf <successResultOf>` (and
+:py:meth:`successResultOf <twisted.trial._synctest._Assertions.successResultOf>` (and
 the corresponding error-case helper
-:api:`twisted.trial.unittest.SynchronousTestCase.failureResultOf <failureResultOf>` ), to
+:py:meth:`failureResultOf <twisted.trial._synctest._Assertions.failureResultOf>` ), to
 extract its result and make assertions against it directly.  Compared to
 returning a Deferred, this avoids the problem of forgetting to return the
 Deferred, improves the stack trace reported when the assertion fails, and avoids
@@ -625,7 +625,7 @@ result.  Similarly, ``failureResultOf`` will raise an exception (also
 failing the test) if the ``Deferred`` passed to it does not have a
 result, or has a success result.  There is a third helper method for testing the
 final case,
-:api:`twisted.trial.unittest.SynchronousTestCase.assertNoResult <assertNoResult>` ,
+:py:meth:`assertNoResult <twisted.trial._synctest._Assertions.assertNoResult>` ,
 which only raises an exception (failing the test) if the ``Deferred`` passed
 to it *has* a result (either success or failure).
 

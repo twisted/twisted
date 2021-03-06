@@ -5,8 +5,6 @@
 Tests for implementations of L{IReactorFDSet}.
 """
 
-__metaclass__ = type
-
 import os
 import socket
 import traceback
@@ -34,11 +32,11 @@ def socketpair():
             client.setblocking(False)
             try:
                 client.connect(("127.0.0.1", serverSocket.getsockname()[1]))
-            except socket.error as e:
+            except OSError as e:
                 if e.args[0] not in (EINPROGRESS, EWOULDBLOCK):
                     raise
             server, addr = serverSocket.accept()
-        except:
+        except BaseException:
             client.close()
             raise
     finally:
@@ -292,7 +290,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
             # no chance to notice the socket is no longer valid.
-            raise SkipTest("%r cannot detect lost file descriptors" % (name,))
+            raise SkipTest(f"{name!r} cannot detect lost file descriptors")
 
         client, server = self._connectedPair()
 

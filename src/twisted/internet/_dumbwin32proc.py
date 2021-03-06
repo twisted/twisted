@@ -79,7 +79,7 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    with open(filename, "rU") as f:
+    with open(filename) as f:
         if f.read(2) == "#!":
             exe = f.readline(1024).strip("\n")
             return exe
@@ -284,7 +284,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{list} of C{bytes}
+        @type seq: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
 
@@ -398,4 +398,4 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Return a string representation of the process.
         """
-        return "<%s pid=%s>" % (self.__class__.__name__, self.pid)
+        return f"<{self.__class__.__name__} pid={self.pid}>"

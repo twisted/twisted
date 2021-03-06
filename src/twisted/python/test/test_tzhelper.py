@@ -41,7 +41,7 @@ def mktime(t9):
     try:
         return mktime_real(t9)
     except OverflowError:
-        raise SkipTest("Platform cannot construct time zone for {0!r}".format(t9))
+        raise SkipTest(f"Platform cannot construct time zone for {t9!r}")
 
 
 def setTZ(name):
@@ -100,8 +100,8 @@ class FixedOffsetTimeZoneTests(TestCase):
             tzDST = FixedOffsetTimeZone.fromLocalTimeStamp(localDST)
             tzSTD = FixedOffsetTimeZone.fromLocalTimeStamp(localSTD)
 
-            self.assertEqual(tzDST.tzname(localDST), "UTC{0}".format(expectedOffsetDST))
-            self.assertEqual(tzSTD.tzname(localSTD), "UTC{0}".format(expectedOffsetSTD))
+            self.assertEqual(tzDST.tzname(localDST), f"UTC{expectedOffsetDST}")
+            self.assertEqual(tzSTD.tzname(localSTD), f"UTC{expectedOffsetSTD}")
 
             self.assertEqual(tzDST.dst(localDST), timedelta(0))
             self.assertEqual(tzSTD.dst(localSTD), timedelta(0))

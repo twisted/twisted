@@ -313,13 +313,7 @@ def ioType(fileIshObject, default=str):
 
             2. L{bytes}, if the file is unambiguously opened in binary mode.
 
-            3. L{basestring}, if we are on python 2 (the L{basestring} type
-               does not exist on python 3) and the file is opened in binary
-               mode, but has an encoding and can therefore accept both bytes
-               and text reliably for writing, but will return L{bytes} from
-               read methods.
-
-            4. The C{default} parameter, if the given type is not understood.
+            3. The C{default} parameter, if the given type is not understood.
 
     @rtype: L{type}
     """
@@ -497,7 +491,7 @@ def _constructMethod(cls, name, self):
     Construct a bound method.
 
     @param cls: The class that the method should be bound to.
-    @type cls: L{types.ClassType} or L{type}.
+    @type cls: L{type}
 
     @param name: The name of the method.
     @type name: native L{str}

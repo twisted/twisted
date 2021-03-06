@@ -37,23 +37,23 @@ application. It uses ``PBServerFactory()`` on the server side, and
 
 
 First we look at the server. This defines an Echoer class (derived from 
-:api:`twisted.spread.pb.Root <pb.Root>` ), with a method called 
+:py:class:`pb.Root <twisted.spread.pb.Root>` ), with a method called 
 ``remote_echo()`` . 
-:api:`twisted.spread.pb.Root <pb.Root>` objects (because of
+:py:class:`pb.Root <twisted.spread.pb.Root>` objects (because of
 their inheritance of 
-:api:`twisted.spread.pb.Referenceable <pb.Referenceable>` , described
+:py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` , described
 later) can define methods with names of the form ``remote_*`` ; a
 client which obtains a remote reference to that 
-:api:`twisted.spread.pb.Root <pb.Root>` object will be able to
+:py:class:`pb.Root <twisted.spread.pb.Root>` object will be able to
 invoke those methods.
 
 
 
 
-The :api:`twisted.spread.pb.Root <pb.Root>` -ish object is
-given to a :api:`twisted.spread.pb.PBServerFactory <pb.PBServerFactory>` ``()`` . This is a 
-:api:`twisted.internet.protocol.Factory <Factory>` object like
-any other: the :api:`twisted.internet.protocol.Protocol <Protocol>` objects it creates for new
+The :py:class:`pb.Root <twisted.spread.pb.Root>` -ish object is
+given to a :py:class:`pb.PBServerFactory <twisted.spread.pb.PBServerFactory>` ``()`` . This is a 
+:py:class:`Factory <twisted.internet.protocol.Factory>` object like
+any other: the :py:class:`Protocol <twisted.internet.protocol.Protocol>` objects it creates for new
 connections know how to speak the PB protocol. The object you give to 
 ``pb.PBServerFactory()`` becomes the "root object" , which
 simply makes it available for the client to retrieve. The client may only
@@ -61,14 +61,14 @@ request references to the objects you want to provide it: this helps you
 implement your security model. Because it is so common to export just a
 single object (and because a ``remote_*`` method on that one can
 return a reference to any other object you might want to give out), the
-simplest example is one where the :api:`twisted.spread.pb.PBServerFactory <PBServerFactory>` is given the root object, and
+simplest example is one where the :py:class:`PBServerFactory <twisted.spread.pb.PBServerFactory>` is given the root object, and
 the client retrieves it.
 
 
 
 
 The client side uses 
-:api:`twisted.spread.pb.PBClientFactory <pb.PBClientFactory>` to make a
+:py:class:`pb.PBClientFactory <twisted.spread.pb.PBClientFactory>` to make a
 connection to a given port. This is a two-step process involving opening
 a TCP connection to a given host and port and requesting the root object
 using ``.getRootObject()`` .
@@ -79,7 +79,7 @@ using ``.getRootObject()`` .
 Because ``.getRootObject()`` has to wait until a network
 connection has been made and exchange some data, it may take a while,
 so it returns a Deferred, to which the gotObject() callback is
-attached. (See the documentation on :doc:`Deferring Execution <defer>` for a complete explanation of :api:`twisted.internet.defer.Deferred <Deferred>` s). If and when the
+attached. (See the documentation on :doc:`Deferring Execution <defer>` for a complete explanation of :py:class:`Deferred <twisted.internet.defer.Deferred>` s). If and when the
 connection succeeds and a reference to the remote root object is
 obtained, this callback is run. The first argument passed to the
 callback is a remote reference to the distant root object.  (you can
@@ -107,10 +107,10 @@ which causes the server's ``.remote_echo()`` method to be invoked.
 (running ``.callRemote("boom")`` would cause 
 ``.remote_boom()`` to be run, etc). Again because of the delay
 involved, ``callRemote()`` returns a 
-:api:`twisted.internet.defer.Deferred <Deferred>` . Assuming the
+:py:class:`Deferred <twisted.internet.defer.Deferred>` . Assuming the
 remote method was run without causing an exception (including an attempt to
 invoke an unknown method), the callback attached to that 
-:api:`twisted.internet.defer.Deferred <Deferred>` will be
+:py:class:`Deferred <twisted.internet.defer.Deferred>` will be
 invoked with any objects that were returned by the remote method call.
 
 
@@ -137,8 +137,8 @@ returns the same string it was given: "hello network" .
 
 
 
-From the client's point of view, the remote call gets another :api:`twisted.internet.defer.Deferred <Deferred>` object instead of
-that string. ``callRemote()`` *always* returns a :api:`twisted.internet.defer.Deferred <Deferred>` . This is why PB is
+From the client's point of view, the remote call gets another :py:class:`Deferred <twisted.internet.defer.Deferred>` object instead of
+that string. ``callRemote()`` *always* returns a :py:class:`Deferred <twisted.internet.defer.Deferred>` . This is why PB is
 described as a system for "translucent" remote method calls instead of "transparent" ones: you cannot pretend that the remote object is really
 local. Trying to do so (as some other RPC mechanisms do, coughCORBAcough)
 breaks down when faced with the asynchronous nature of the network. Using
@@ -148,10 +148,10 @@ Deferreds turns out to be a very clean way to deal with the whole thing.
 
 
 The remote reference object (the one given to 
-``getRootObject()`` 's success callback) is an instance the :api:`twisted.spread.pb.RemoteReference <RemoteReference>` class. This means
+``getRootObject()`` 's success callback) is an instance the :py:class:`RemoteReference <twisted.spread.pb.RemoteReference>` class. This means
 you can use it to invoke methods on the remote object that it refers to. Only
-instances of :api:`twisted.spread.pb.RemoteReference <RemoteReference>` are eligible for 
-``.callRemote()`` . The :api:`twisted.spread.pb.RemoteReference <RemoteReference>` object is the one that lives
+instances of :py:class:`RemoteReference <twisted.spread.pb.RemoteReference>` are eligible for 
+``.callRemote()`` . The :py:class:`RemoteReference <twisted.spread.pb.RemoteReference>` object is the one that lives
 on the remote side (the client, in this case), not the local side (where the
 actual object is defined).
 
@@ -159,9 +159,9 @@ actual object is defined).
 
 
 In our example, the local object is that ``Echoer()`` instance,
-which inherits from :api:`twisted.spread.pb.Root <pb.Root>` ,
+which inherits from :py:class:`pb.Root <twisted.spread.pb.Root>` ,
 which inherits from 
-:api:`twisted.spread.pb.Referenceable <pb.Referenceable>` . It is that 
+:py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` . It is that 
 ``Referenceable`` class that makes the object eligible to be available
 for remote method calls [#]_ . If you have
 an object that is Referenceable, then any client that manages to get a
@@ -180,7 +180,7 @@ reference to it can invoke any ``remote_*`` methods they please.
    
    
    Also note: the other classes like 
-   :api:`twisted.spread.pb.Referenceable <Referenceable>` allow access to
+   :py:class:`Referenceable <twisted.spread.pb.Referenceable>` allow access to
    other methods, in particular ``perspective_*`` and ``view_*`` 
    may be accessed.  Don't write local-only methods with these names, because then
    remote callers will be able to do more than you intended.
@@ -189,7 +189,7 @@ reference to it can invoke any ``remote_*`` methods they please.
    
    
    Also also note: the other classes like 
-   :api:`twisted.spread.pb.Copyable <pb.Copyable>` *do* allow
+   :py:class:`pb.Copyable <twisted.spread.pb.Copyable>` *do* allow
    access to attributes, but you control which ones they can see.
    
    
@@ -198,14 +198,14 @@ reference to it can invoke any ``remote_*`` methods they please.
 
 
 You don't have to be a 
-:api:`twisted.spread.pb.Root <pb.Root>` to be remotely callable,
+:py:class:`pb.Root <twisted.spread.pb.Root>` to be remotely callable,
 but you do have to be 
-:api:`twisted.spread.pb.Referenceable <pb.Referenceable>` .  (Objects that
-inherit from :api:`twisted.spread.pb.Referenceable <pb.Referenceable>` 
-but not from :api:`twisted.spread.pb.Root <pb.Root>` can be
+:py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` .  (Objects that
+inherit from :py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` 
+but not from :py:class:`pb.Root <twisted.spread.pb.Root>` can be
 remotely called, but only 
-:api:`twisted.spread.pb.Root <pb.Root>` -ish objects can be given
-to the :api:`twisted.spread.pb.PBServerFactory <PBServerFactory>` .)
+:py:class:`pb.Root <twisted.spread.pb.Root>` -ish objects can be given
+to the :py:class:`PBServerFactory <twisted.spread.pb.PBServerFactory>` .)
 
 
 
@@ -216,9 +216,9 @@ Complete Example
 
 
 
-Here is an example client and server which uses :api:`twisted.spread.pb.Referenceable <pb.Referenceable>` as a root object and as the
+Here is an example client and server which uses :py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` as a root object and as the
 result of a remotely exposed method.  In each context, methods can be invoked
-on the exposed :api:`twisted.spread.pb.Referenceable <Referenceable>` 
+on the exposed :py:class:`Referenceable <twisted.spread.pb.Referenceable>` 
 instance.  In this example, the initial root object has a method that returns a
 reference to the second object.
 
@@ -237,11 +237,11 @@ reference to the second object.
 .. literalinclude:: listings/pb/pb1client.py
 
 
-:api:`twisted.spread.pb.PBClientFactory.getRootObject <pb.PBClientFactory.getRootObject>` will
+:py:meth:`pb.PBClientFactory.getRootObject <twisted.spread.pb.PBClientFactory.getRootObject>` will
 handle all the details of waiting for the creation of a connection.
-It returns a :api:`twisted.internet.defer.Deferred <Deferred>` , which will have its
+It returns a :py:class:`Deferred <twisted.internet.defer.Deferred>` , which will have its
 callback called when the reactor connects to the remote server and 
-:api:`twisted.spread.pb.PBClientFactory <pb.PBClientFactory>` gets the
+:py:class:`pb.PBClientFactory <twisted.spread.pb.PBClientFactory>` gets the
 root, and have its ``errback`` called when the
 object-connection fails for any reason, whether it was host lookup
 failure, connection refusal, or some server-side error.
@@ -251,18 +251,18 @@ failure, connection refusal, or some server-side error.
 
 The root object has a method called ``remote_getTwo`` , which
 returns the ``Two()`` instance. On the client end, the callback gets
-a :api:`twisted.spread.pb.RemoteReference <RemoteReference>` to that
+a :py:class:`RemoteReference <twisted.spread.pb.RemoteReference>` to that
 instance. The client can then invoke two's ``.remote_three()`` 
 method.
 
 
 
 
-:api:`twisted.spread.pb.RemoteReference <RemoteReference>` 
+:py:class:`RemoteReference <twisted.spread.pb.RemoteReference>` 
 objects have one method which is their purpose for being: ``callRemote`` .  This method allows you to call a
-remote method on the object being referred to by the Reference.  :api:`twisted.spread.pb.RemoteReference.callRemote <RemoteReference.callRemote>` , like :api:`twisted.spread.pb.PBClientFactory.getRootObject <pb.PBClientFactory.getRootObject>` , returns
-a :api:`twisted.internet.defer.Deferred <Deferred>` .
-When a response to the method-call being sent arrives, the :api:`twisted.internet.defer.Deferred <Deferred>` 's ``callback`` or ``errback`` 
+remote method on the object being referred to by the Reference.  :py:meth:`RemoteReference.callRemote <twisted.spread.pb.RemoteReference.callRemote>` , like :py:meth:`pb.PBClientFactory.getRootObject <twisted.spread.pb.PBClientFactory.getRootObject>` , returns
+a :py:class:`Deferred <twisted.internet.defer.Deferred>` .
+When a response to the method-call being sent arrives, the :py:class:`Deferred <twisted.internet.defer.Deferred>` 's ``callback`` or ``errback`` 
 will be made, depending on whether an error occurred in processing the
 method call.
 
@@ -271,10 +271,10 @@ method call.
 
 You can use this technique to provide access to arbitrary sets of objects.
 Just remember that any object that might get passed "over the wire" must
-inherit from :api:`twisted.spread.pb.Referenceable <Referenceable>` 
+inherit from :py:class:`Referenceable <twisted.spread.pb.Referenceable>` 
 (or one of the other flavors). If you try to pass a non-Referenceable object
 (say, by returning one from a ``remote_*`` method), you'll get an 
-:api:`twisted.spread.jelly.InsecureJelly <InsecureJelly>` 
+:py:class:`InsecureJelly <twisted.spread.jelly.InsecureJelly>` 
 exception [#]_ .
 
 
@@ -395,19 +395,19 @@ sort. The Twisted Way is the same.
 
 
 The only special thing you do is to define your ``Exception`` 
-subclass by deriving it from :api:`twisted.spread.pb.Error <pb.Error>` . When any remotely-invokable method
+subclass by deriving it from :py:class:`pb.Error <twisted.spread.pb.Error>` . When any remotely-invokable method
 (like ``remote_*`` or ``perspective_*`` ) raises a 
 ``pb.Error`` -derived exception, a serialized form of that Exception
 object will be sent back over the wire [#]_ . The other side (which
 did ``callRemote`` ) will have the "``errback``" 
-callback run with a :api:`twisted.python.failure.Failure <Failure>` object that contains a copy of
+callback run with a :py:class:`Failure <twisted.python.failure.Failure>` object that contains a copy of
 the exception object. This ``Failure`` object can be queried to
 retrieve the error message and a stack traceback.
 
 
 
 
-:api:`twisted.python.failure.Failure <Failure>` is a
+:py:class:`Failure <twisted.python.failure.Failure>` is a
 special class, defined in ``twisted/python/failure.py`` , created to
 make it easier to handle asynchronous exceptions. Just as exception handlers
 can be nested, ``errback`` functions can be chained. If one errback
@@ -465,7 +465,7 @@ trapped, just like most exceptions that occur in response to network
 traffic), but it will print out an unsightly stack trace on the server's
 stderr with a message that says "Peer Will Receive PB Traceback" , just
 as if the exception had happened outside a remotely-invokable method. (This
-message will go the current log target, if :api:`twisted.python.log.startLogging <log.startLogging>` was used to redirect it). The
+message will go the current log target, if :py:func:`log.startLogging <twisted.python.log.startLogging>` was used to redirect it). The
 client will get the same ``Failure`` object in either case, but
 subclassing your exception from ``pb.Error`` is the way to tell
 Twisted that you expect this sort of exception, and that it is ok to just
@@ -477,7 +477,7 @@ behavior.
 
 
 
-If you don't add an ``errback`` function to the :api:`twisted.internet.defer.Deferred <Deferred>` , then a remote
+If you don't add an ``errback`` function to the :py:class:`Deferred <twisted.internet.defer.Deferred>` , then a remote
 exception will still send a ``Failure`` object back over, but it
 will get lodged in the ``Deferred`` with nowhere to go. When that 
 ``Deferred`` finally goes out of scope, the side that did 
@@ -485,14 +485,14 @@ will get lodged in the ``Deferred`` with nowhere to go. When that
 that point (after all, the ``callRemote`` that triggered the
 problem is long gone), but it will emit a traceback. So be a good programmer
 and *always* add ``errback`` handlers, even if they are just
-calls to :api:`twisted.python.log.err <log.err>` .
+calls to :py:func:`log.err <twisted.python.log.err>` .
 
 
 
 
 
-Try/Except blocks and :api:`twisted.python.failure.Failure.trap <Failure.trap>`
--------------------------------------------------------------------------------
+Try/Except blocks and :py:meth:`Failure.trap <twisted.python.failure.Failure.trap>`
+-----------------------------------------------------------------------------------
 
 
 
@@ -545,7 +545,7 @@ errbacks to test for each kind of exception in sequence.
 
 In this example, ``callTwo`` tries to send an instance of a
 locally-defined class through ``callRemote`` . The default security
-model implemented by :api:`twisted.spread.jelly <jelly>` 
+model implemented by :py:mod:`jelly <twisted.spread.jelly>` 
 on the remote end will not allow unknown classes to be unserialized (i.e.
 taken off the wire as a stream of bytes and turned back into an object: a
 living, breathing instance of some class): one reason is that it does not
@@ -556,7 +556,7 @@ corresponds to the remote object [#]_ .
 
 
 The receiving end of the connection gets to decide what to accept and what
-to reject. It indicates its disapproval by raising a :api:`twisted.spread.jelly.InsecureJelly <jelly.InsecureJelly>` exception. Because it occurs
+to reject. It indicates its disapproval by raising a :py:class:`jelly.InsecureJelly <twisted.spread.jelly.InsecureJelly>` exception. Because it occurs
 at the remote end, the exception is returned to the caller asynchronously,
 so an ``errback`` handler for the associated ``Deferred`` 
 is run. That errback receives a ``Failure`` which wraps the 
@@ -574,7 +574,7 @@ checked in a single errback: give a list of exception types to
 ``trap`` , and it will return the matching member. In this case, the
 kinds of exceptions we are checking for (``MyException`` and 
 ``MyOtherException`` ) may be raised by the remote end: they inherit
-from :api:`twisted.spread.pb.Error <pb.Error>` .
+from :py:class:`pb.Error <twisted.spread.pb.Error>` .
 
 
 
@@ -589,7 +589,7 @@ your errback handlers could themselves raise exceptions. The extra
 importance in an asynchronous environment is that an exception that falls
 off the end of the ``Deferred`` will not be signalled until that 
 ``Deferred`` goes out of scope, and at that point may only cause a
-log message (which could even be thrown away if :api:`twisted.python.log.startLogging <log.startLogging>` is not used to point it at
+log message (which could even be thrown away if :py:func:`log.startLogging <twisted.python.log.startLogging>` is not used to point it at
 stdout or a log file). In contrast, a synchronous exception that is not
 handled by any other ``except:`` block will very visibly terminate
 the program immediately with a noisy stack trace.
@@ -598,7 +598,7 @@ the program immediately with a noisy stack trace.
 
 
 ``callFour`` shows another kind of exception that can occur
-while using ``callRemote`` : :api:`twisted.spread.pb.DeadReferenceError <pb.DeadReferenceError>` . This one occurs when the
+while using ``callRemote`` : :py:class:`pb.DeadReferenceError <twisted.spread.pb.DeadReferenceError>` . This one occurs when the
 remote end has disconnected or crashed, leaving the local side with a stale
 reference. This kind of exception happens to be reported right away (XXX: is
 this guaranteed? probably not), so must be caught in a traditional
@@ -607,7 +607,7 @@ synchronous ``try: except pb.DeadReferenceError`` block.
 
 
 
-Yet another kind that can occur is a :api:`twisted.spread.pb.PBConnectionLost <pb.PBConnectionLost>` exception. This occurs
+Yet another kind that can occur is a :py:class:`pb.PBConnectionLost <twisted.spread.pb.PBConnectionLost>` exception. This occurs
 (asynchronously) if the connection was lost while you were waiting for a ``callRemote`` call to complete. When the line goes dead, all
 pending requests are terminated with this exception. Note that you have no
 way of knowing whether the request made it to the other end or not, nor how
@@ -651,10 +651,10 @@ lost. XXX: explain transaction semantics, find a decent reference.
        
        
        
-       The :api:`twisted.spread.jelly.InsecureJelly <InsecureJelly>` 
+       The :py:class:`InsecureJelly <twisted.spread.jelly.InsecureJelly>` 
        exception arises because the class being sent over the wire has not been
-       registered with the serialization layer (known as :api:`twisted.spread.jelly <jelly>` ). The easiest way to make it possible to
-       copy entire class instances over the wire is to have them inherit from :api:`twisted.spread.pb.Copyable <pb.Copyable>` , and then to use 
+       registered with the serialization layer (known as :py:mod:`jelly <twisted.spread.jelly>` ). The easiest way to make it possible to
+       copy entire class instances over the wire is to have them inherit from :py:class:`pb.Copyable <twisted.spread.pb.Copyable>` , and then to use 
        ``setUnjellyableForClass(remoteClass, localClass)`` on the
        receiving side. See :doc:`Passing Complex Types <pb-copyable>` 
        for an example.

@@ -78,7 +78,7 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return "%s.M%sP%sQ%s.%s" % (seconds, microseconds, self.p, self.n, self.s)
+        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
@@ -228,7 +228,7 @@ class AbstractMaildirDomain:
             return lambda: self.startMessage(user)
         try:
             a = self.alias[user.dest.local]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.alias, memo)
@@ -256,7 +256,7 @@ class AbstractMaildirDomain:
         filename = os.path.join(dir, "tmp", fname)
         fp = open(filename, "w")
         return MaildirMessage(
-            "%s@%s" % (name, domain), fp, filename, os.path.join(dir, "new", fname)
+            f"{name}@{domain}", fp, filename, os.path.join(dir, "new", fname)
         )
 
     def willRelay(self, user, protocol):
@@ -412,7 +412,7 @@ class _MaildirMailboxAppendMessageTask:
         """
         try:
             self.oswrite(self.fh, data)
-        except:
+        except BaseException:
             self.fail()
 
     def fail(self, err=None):

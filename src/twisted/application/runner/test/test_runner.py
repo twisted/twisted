@@ -57,7 +57,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch getpid so we get a known result
 
         self.pid = 1337
-        self.pidFileContent = "{}\n".format(self.pid).encode("utf-8")
+        self.pidFileContent = f"{self.pid}\n".encode("utf-8")
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -217,7 +217,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # running (started by trial) logging system.
 
         class LogBeginner:
-            observers = []  # type: List[ILogObserver]
+            observers: List[ILogObserver] = []
 
             def beginLoggingTo(self, observers: Iterable[ILogObserver]) -> None:
                 LogBeginner.observers = list(observers)
@@ -227,8 +227,8 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch FilteringLogObserver so we can capture its arguments
 
         class MockFilteringLogObserver(FilteringLogObserver):
-            observer = None  # type: Optional[ILogObserver]
-            predicates = []  # type: List[LogLevelFilterPredicate]
+            observer: Optional[ILogObserver] = None
+            predicates: List[LogLevelFilterPredicate] = []
 
             def __init__(
                 self,
@@ -247,7 +247,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch FileLogObserver so we can capture its arguments
 
         class MockFileLogObserver(FileLogObserver):
-            outFile = None  # type: Optional[TextIO]
+            outFile: Optional[TextIO] = None
 
             def __init__(self, outFile: TextIO) -> None:
                 MockFileLogObserver.outFile = outFile
@@ -338,7 +338,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         runnerArguments = {
             methodName: hook,
-            "{}Arguments".format(methodName): arguments.copy(),
+            f"{methodName}Arguments": arguments.copy(),
         }
         runner = Runner(
             reactor=MemoryReactor(), **runnerArguments  # type: ignore[arg-type]
@@ -426,7 +426,7 @@ class DummyKill:
     """
 
     def __init__(self) -> None:
-        self.calls = []  # type: List[Tuple[int, int]]
+        self.calls: List[Tuple[int, int]] = []
 
     def __call__(self, pid: int, sig: int) -> None:
         self.calls.append((pid, sig))

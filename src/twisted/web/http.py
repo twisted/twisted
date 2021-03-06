@@ -405,7 +405,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("%x" % (len(data),)), b"\r\n", data, b"\r\n")
+    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -783,8 +783,8 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = b"(no method yet)"  # type: bytes
-    clientproto = b"(no clientproto yet)"  # type: bytes
+    method: bytes = b"(no method yet)"
+    clientproto: bytes = b"(no clientproto yet)"
     uri = "(no uri yet)"
     startedWriting = 0
     chunked = 0
@@ -831,9 +831,7 @@ class Request:
         if self.producer:
             self._log.failure(
                 "",
-                Failure(
-                    RuntimeError("Producer was not unregistered for %s" % (self.uri,))
-                ),
+                Failure(RuntimeError(f"Producer was not unregistered for {self.uri}")),
             )
             self.unregisterProducer()
         self.channel.requestDone(self)
@@ -978,6 +976,7 @@ class Request:
                                     for z in y
                                 ]
                                 for x, y in cgiArgs.items()
+                                if isinstance(x, str)
                             }
                         )
                     else:
@@ -1009,7 +1008,7 @@ class Request:
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
         """
-        return "<%s at 0x%x method=%s uri=%s clientproto=%s>" % (
+        return "<{} at 0x{:x} method={} uri={} clientproto={}>".format(
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
@@ -1060,7 +1059,7 @@ class Request:
         @rtype: C{bytes} or C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request. The string type of the result
-            matches the type of L{key}.
+            matches the type of C{key}.
         """
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:
@@ -1360,11 +1359,11 @@ class Request:
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type k: L{bytes} or L{str}
-        @param k: The name of the header for which to set the value.
+        @type name: L{bytes} or L{str}
+        @param name: The name of the header for which to set the value.
 
-        @type v: L{bytes} or L{str}
-        @param v: The value to set for the named header. A L{str} will be
+        @type value: L{bytes} or L{str}
+        @param value: The value to set for the named header. A L{str} will be
             UTF-8 encoded, which may not interoperable with other
             implementations. Avoid passing non-ASCII characters if possible.
         """
@@ -1595,7 +1594,7 @@ class Request:
             self.user, self.password = upw.split(b":", 1)
         except (binascii.Error, ValueError):
             self.user = self.password = b""
-        except:
+        except BaseException:
             self._log.failure("")
             self.user = self.password = b""
 
@@ -1610,7 +1609,7 @@ class Request:
         """
         try:
             return self.user
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.user
@@ -1626,7 +1625,7 @@ class Request:
         """
         try:
             return self.password
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.password
@@ -1890,7 +1889,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_%s" % (self.state,))(data)
+            data = getattr(self, f"_dataReceived_{self.state}")(data)
 
     def noMoreData(self):
         """
@@ -2482,7 +2481,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         Write a list of strings to the HTTP response.
 
         @param iovec: A list of byte strings to write to the stream.
-        @type data: L{list} of L{bytes}
+        @type iovec: L{list} of L{bytes}
 
         @return: L{None}
         """
@@ -2731,7 +2730,7 @@ class _XForwardedForAddress:
         self.host = host
 
 
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]  # noqa
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
@@ -2791,7 +2790,7 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]  # noqa
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.

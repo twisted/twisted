@@ -126,7 +126,7 @@ class PluginTests(unittest.TestCase):
         cache = plugin.getCache(self.module)
 
         dropin = cache[self.originalPlugin]
-        self.assertEqual(dropin.moduleName, "mypackage.%s" % (self.originalPlugin,))
+        self.assertEqual(dropin.moduleName, f"mypackage.{self.originalPlugin}")
         self.assertIn("I'm a test drop-in.", dropin.description)
 
         # Note, not the preferred way to get a plugin by its interface.
@@ -143,7 +143,8 @@ class PluginTests(unittest.TestCase):
         realPlugin = p1.load()
         # The plugin should match the class present in sys.modules
         self.assertIs(
-            realPlugin, sys.modules["mypackage.%s" % (self.originalPlugin,)].TestPlugin
+            realPlugin,
+            sys.modules[f"mypackage.{self.originalPlugin}"].TestPlugin,
         )
 
         # And it should also match if we import it classicly
@@ -361,7 +362,7 @@ def pluginFileContents(name):
             "from twisted.test.test_plugin import ITestPlugin\n"
             "\n"
             "@provider(IPlugin, ITestPlugin)\n"
-            "class {0}:\n"
+            "class {}:\n"
             "    pass\n"
         )
         .format(name)

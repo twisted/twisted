@@ -186,14 +186,14 @@ class XMLFileReprTests(TestCase):
         An L{XMLFile} with a L{FilePath} returns a useful repr().
         """
         path = FilePath("/tmp/fake.xml")
-        self.assertEqual("<XMLFile of %r>" % (path,), repr(XMLFile(path)))
+        self.assertEqual(f"<XMLFile of {path!r}>", repr(XMLFile(path)))
 
     def test_filename(self):
         """
         An L{XMLFile} with a filename returns a useful repr().
         """
         fname = "/tmp/fake.xml"
-        self.assertEqual("<XMLFile of %r>" % (fname,), repr(XMLFile(fname)))
+        self.assertEqual(f"<XMLFile of {fname!r}>", repr(XMLFile(fname)))
 
     test_filename.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
@@ -202,7 +202,7 @@ class XMLFileReprTests(TestCase):
         An L{XMLFile} with a file object returns a useful repr().
         """
         fobj = StringIO("not xml")
-        self.assertEqual("<XMLFile of %r>" % (fobj,), repr(XMLFile(fobj)))
+        self.assertEqual(f"<XMLFile of {fobj!r}>", repr(XMLFile(fobj)))
 
     test_file.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 

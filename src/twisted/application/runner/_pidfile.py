@@ -127,7 +127,7 @@ class PIDFile:
             return int(pidString)
         except ValueError:
             raise InvalidPIDFileError(
-                "non-integer PID value in PID file: {!r}".format(pidString)
+                f"non-integer PID value in PID file: {pidString!r}"
             )
 
     def _write(self, pid: int) -> None:
@@ -155,9 +155,7 @@ class PIDFile:
         if SYSTEM_NAME == "posix":
             return self._pidIsRunningPOSIX(pid)
         else:
-            raise NotImplementedError(
-                "isRunning is not implemented on {}".format(SYSTEM_NAME)
-            )
+            raise NotImplementedError(f"isRunning is not implemented on {SYSTEM_NAME}")
 
     @staticmethod
     def _pidIsRunningPOSIX(pid: int) -> bool:

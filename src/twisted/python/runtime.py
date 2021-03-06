@@ -26,10 +26,10 @@ knownPlatforms = {
 }
 
 
-_timeFunctions = {
+_timeFunctions: Dict[Optional[str], Callable] = {
     #'win32': time.clock,
     "win32": time.time,
-}  # type: Dict[Optional[str], Callable]
+}
 
 
 class Platform:
@@ -37,7 +37,7 @@ class Platform:
     Gives us information about the platform we're running on.
     """
 
-    type = knownPlatforms.get(os.name)  # type: Optional[str]
+    type: Optional[str] = knownPlatforms.get(os.name)
     seconds = staticmethod(_timeFunctions.get(type, time.time))
     _platform = sys.platform
 
@@ -107,10 +107,7 @@ class Platform:
 
         @return: C{True} if the current platform has been detected as Vista
         """
-        if getattr(sys, "getwindowsversion", None) is not None:
-            return sys.getwindowsversion()[0] == 6
-        else:
-            return False
+        return sys.platform == "win32" and sys.getwindowsversion().major == 6
 
     def isLinux(self) -> bool:
         """

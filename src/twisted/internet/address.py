@@ -106,9 +106,9 @@ class UNIXAddress:
     @type name: C{bytes}
     """
 
-    name = attr.ib(
+    name: Optional[bytes] = attr.ib(
         converter=attr.converters.optional(_asFilesystemBytes)
-    )  # type: Optional[bytes]
+    )
 
     if getattr(os.path, "samefile", None) is not None:
 
@@ -143,7 +143,7 @@ class UNIXAddress:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding("", self.name)
-        return "UNIXAddress(%r)" % (name,)
+        return f"UNIXAddress({name!r})"
 
     def __hash__(self):
         if self.name is None:

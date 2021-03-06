@@ -134,7 +134,7 @@ class ModuleProxyTests(SynchronousTestCase):
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
         self.assertEqual(
-            repr(proxy), "<%s module=%r>" % (type(proxy).__name__, realModule)
+            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
         )
 
 
@@ -377,6 +377,29 @@ def callTestFunction():
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 """
         )
+        self.package.child("pep626.py").setContent(
+            b"""
+"A module string"
+
+from twisted.python import deprecate
+
+def noop():
+    pass
+
+def testFunction(a=1, b=1):
+    "A doc string"
+    if a:
+        if b:
+            noop()
+        else:
+            pass
+
+def callTestFunction():
+    b = testFunction()
+    if b is None:
+        deprecate.warnAboutFunction(testFunction, "A Warning String")
+"""
+        )
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)
@@ -428,6 +451,26 @@ def callTestFunction():
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
         self.assertEqual(len(warningsShown), 1)
 
+    def test_warningLineNumberDisFindlinestarts(self):
+        """
+        L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
+        number of a line within the implementation handling the case in which
+        dis.findlinestarts returns the lines in random order.
+        """
+        from twisted_private_helper import pep626
+
+        pep626.callTestFunction()
+        warningsShown = self.flushWarnings()
+        self.assertSamePath(
+            FilePath(warningsShown[0]["filename"].encode("utf-8")),
+            self.package.sibling(b"twisted_private_helper").child(b"pep626.py"),
+        )
+        # Line number 15 is the last line in the testFunction in the helper
+        # module.
+        self.assertEqual(warningsShown[0]["lineno"], 15)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
+
     def assertSamePath(self, first, second):
         """
         Assert that the two paths are the same, considering case normalization
@@ -439,7 +482,8 @@ def callTestFunction():
         @raise C{self.failureType}: If the paths are not the same.
         """
         self.assertTrue(
-            normcase(first.path) == normcase(second.path), "%r != %r" % (first, second)
+            normcase(first.path) == normcase(second.path),
+            f"{first!r} != {second!r}",
         )
 
     def test_renamedFile(self):
@@ -529,7 +573,7 @@ def callTestFunction():
             msg.endswith(
                 "module.py:9: DeprecationWarning: A Warning String\n" "  return a\n"
             ),
-            "Unexpected warning string: %r" % (msg,),
+            f"Unexpected warning string: {msg!r}",
         )
 
 

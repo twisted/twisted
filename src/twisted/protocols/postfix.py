@@ -72,7 +72,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         else:
             try:
                 f(params)
-            except:
+            except BaseException:
                 excInfo = str(sys.exc_info()[1]).encode("ascii")
                 self.sendCode(400, b"Command " + request + b" failed: " + excInfo)
 

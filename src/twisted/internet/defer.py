@@ -22,7 +22,7 @@ import types
 import warnings
 from asyncio import iscoroutine
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info, implementation, version_info
 from typing import Optional
 
 import attr
@@ -137,7 +137,7 @@ def execute(callable, *args, **kw):
     """
     try:
         result = callable(*args, **kw)
-    except:
+    except BaseException:
         return fail()
     else:
         return succeed(result)
@@ -165,7 +165,7 @@ def maybeDeferred(f, *args, **kw):
     """
     try:
         result = f(*args, **kw)
-    except:
+    except BaseException:
         return fail(failure.Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
@@ -269,7 +269,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo = None  # type: Optional[Deferred]
+    _chainedTo: "Optional[Deferred]" = None
 
     def __init__(self, canceller=None):
         """
@@ -671,7 +671,7 @@ class Deferred:
                             )
                     finally:
                         current._runningCallbacks = False
-                except:
+                except BaseException:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
@@ -732,12 +732,12 @@ class Deferred:
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
+            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: %r" % (result,)
-        return "<%s at 0x%x%s>" % (cname, myID, result)
+            result = f" current result: {result!r}"
+        return f"<{cname} at 0x{myID:x}{result}>"
 
     __repr__ = __str__
 
@@ -835,7 +835,7 @@ class Deferred:
         def adapt(result):
             try:
                 extracted = result.result()
-            except:
+            except BaseException:
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
 
@@ -900,7 +900,7 @@ class Deferred:
         @rtype: L{Deferred}
         """
         if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
-            raise NotACoroutineError("%r is not a coroutine" % (coro,))
+            raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
 
@@ -952,7 +952,7 @@ def ensureDeferred(coro):
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError("%r is not a coroutine or a Deferred" % (coro,))
+            raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
 
 
 class DebugInfo:
@@ -1168,7 +1168,7 @@ class DeferredList(Deferred):
             for deferred in self._deferredList:
                 try:
                     deferred.cancel()
-                except:
+                except BaseException:
                     log.failure("Exception raised from user supplied canceller")
 
 
@@ -1232,7 +1232,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it %r." % (d,)
+                f"You must give waitForDeferred a Deferred. You gave it {d!r}."
             )
         self.d = d
 
@@ -1261,7 +1261,7 @@ def _deferGenerator(g, deferred):
         except StopIteration:
             deferred.callback(result)
             return deferred
-        except:
+        except BaseException:
             deferred.errback()
             return deferred
 
@@ -1457,8 +1457,11 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
+                # The contextvars backport and our no-op shim add an extra frame.
+                appCodeTrace = appCodeTrace.tb_next
+            elif implementation.name == "pypy":
+                # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
@@ -1495,7 +1498,7 @@ def _inlineCallbacks(result, g, status):
                 )
             status.deferred.callback(e.value)
             return
-        except:
+        except BaseException:
             status.deferred.errback()
             return
 

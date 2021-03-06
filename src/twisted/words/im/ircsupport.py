@@ -50,9 +50,7 @@ class IRCGroup(basesupport.AbstractGroup):
         if self.account.client is None:
             raise locals.OfflineError
         reason = "for great justice!"
-        self.account.client.sendLine(
-            "KICK #%s %s :%s" % (self.name, target.name, reason)
-        )
+        self.account.client.sendLine(f"KICK #{self.name} {target.name} :{reason}")
 
     ### Interface Implementation
     def setTopic(self, topic):
@@ -111,7 +109,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             if self._logonDeferred is not None:
                 self._logonDeferred.callback(self)
             self.chat.getContactsList()
-        except:
+        except BaseException:
             import traceback
 
             traceback.print_exc()
@@ -177,7 +175,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         for nickname in users:
             try:
                 self._ingroups[nickname].append(group)
-            except:
+            except BaseException:
                 self._ingroups[nickname] = [group]
 
     def irc_RPL_ENDOFNAMES(self, prefix, params):
@@ -207,7 +205,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         if nickname != self.nickname:
             try:
                 self._ingroups[nickname].append(group)
-            except:
+            except BaseException:
                 self._ingroups[nickname] = [group]
             self.getGroupConversation(group).memberJoined(nickname)
 

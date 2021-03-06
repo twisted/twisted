@@ -5,7 +5,7 @@ Naming
 ------
 
 Try to choose names which are both easy to remember and meaningful.
-Some silliness is OK at the module naming level (see :api:`twisted.spread <twisted.spread>` ...) but when choosing class names, be as precise as possible.
+Some silliness is OK at the module naming level (see :py:mod:`twisted.spread` ...) but when choosing class names, be as precise as possible.
 
 Try to avoid terms that may have existing definitions or uses.
 This rule is often broken, since it is incredibly difficult, as most normal words have already been taken by some other software.
@@ -44,7 +44,7 @@ The latter arrangement, ``twisted.somepackage.test``, is preferred for new tests
 
 Parts of the Twisted test suite may serve as good examples of how to write tests for Twisted or for Twisted-based libraries (newer parts of the test suite are generally better examples than older parts - check when the code you are looking at was written before you use it as an example of what you should write).
 The names of test modules must begin with ``test_`` so that they are automatically discoverable by test runners such as Trial.
-Twisted's unit tests are written using :api:`twisted.trial <twisted.trial>`, an xUnit library which has been extensively customized for use in testing Twisted and Twisted-based libraries.
+Twisted's unit tests are written using :py:mod:`twisted.trial`, an xUnit library which has been extensively customized for use in testing Twisted and Twisted-based libraries.
 
 Implementation (i.e., non-test) source files should begin with a ``test-case-name`` tag which gives the name of any test modules or packages which exercise them.
 This lets tools discover a subset of the entire test suite which they can run first to find tests which might be broken by a particular change.
@@ -77,14 +77,14 @@ This entire source tree can be reformatted by running:
 
 .. code-block:: console
 
-    tox -e black-reformat
+    tox -e lint
 
 
-A single file can be reformatted by running:
+Only changed files can be reformatted by running:
 
 .. code-block:: console
 
-    tox -e black-reformat -- path/to/file.py
+    pipx run pre-commit run
 
 
 Modules
@@ -194,7 +194,7 @@ Use ``+`` to combine bytestrings, not string formatting (either "percent formatt
     transport.write(b"HTTP/" + HTTPVersion)
 
 
-Utilities are available in :api:`twisted.python.compat <twisted.python.compat>` to paper over some use cases where other Python code (especially the standard library) expects a "native string", or provides a native string where a bytestring is actually required (namely :api:`twisted.python.compat <twisted.python.compat.nativeString>` and :api:`twisted.python.compat <twisted.python.compat.networkString>`)
+Utilities are available in :py:mod:`twisted.python.compat` to paper over some use cases where other Python code (especially the standard library) expects a "native string", or provides a native string where a bytestring is actually required (namely :py:mod:`twisted.python.compat.nativeString <twisted.python.compat>` and :py:mod:`twisted.python.compat.networkString <twisted.python.compat>`)
 
 
 String Formatting Operations
@@ -375,7 +375,7 @@ Scripts
 
 For each "script" , that is, a program you expect a Twisted user to run from the command-line, the following things must be done:
 
-#. Write a module in :api:`twisted.scripts <twisted.scripts>` which contains a callable global named ``run``.
+#. Write a module in :py:mod:`twisted.scripts` which contains a callable global named ``run``.
    This will be called by the command line part with no arguments (it will usually read ``sys.argv`` ).
    Feel free to write more functions or classes in this module, if you feel they are useful to others.
 #. Create a file which contains a shebang line for Python.
@@ -449,7 +449,7 @@ Use the "as" syntax of the import statement as well, to set the name of the exte
 
 Some modules don't exist across all supported Python versions.
 For example, Python 2.3's ``sets`` module was deprecated in Python 2.6 in favor of the ``set`` and ``frozenset`` builtins.
-:api:`twisted.python.compat <twisted.python.compat>` would be the place to add ``set`` and ``frozenset`` implementations that work across Python versions.
+:py:mod:`twisted.python.compat` would be the place to add ``set`` and ``frozenset`` implementations that work across Python versions.
 
 
 Classes
@@ -540,13 +540,13 @@ The reactor attribute should be private by default, but if it is useful to the u
 Callback Arguments
 ------------------
 
-There are several methods whose purpose is to help the user set up callback functions, for example :api:`twisted.internet.defer.Deferred.addCallback <Deferred.addCallback>` or the reactor's :api:`twisted.internet.base.ReactorBase.callLater <callLater>` method.
+There are several methods whose purpose is to help the user set up callback functions, for example :py:meth:`Deferred.addCallback <twisted.internet.defer.Deferred.addCallback>` or the reactor's :py:meth:`callLater <twisted.internet.base.ReactorBase.callLater>` method.
 To make access to the callback as transparent as possible, most of these methods use ``**kwargs`` to capture arbitrary arguments that are destined for the user's callback.
 This allows the call to the setup function to look very much like the eventual call to the target callback function.
 
 In these methods, take care to not have other argument names that will "steal" the user's callback's arguments.
 When sensible, prefix these "internal" argument names with an underscore.
-For example, :api:`twisted.spread.pb.RemoteReference.callRemote <RemoteReference.callRemote>` is meant to be called like this:
+For example, :py:meth:`RemoteReference.callRemote <twisted.spread.pb.RemoteReference.callRemote>` is meant to be called like this:
 
 .. code-block:: python
 
@@ -617,12 +617,9 @@ An attribute (or function, method or class) should be considered private when on
 Python 3
 --------
 
-Twisted is being ported to Python 3, targeting Python 3.5+.
+Twisted was ported to Python 3.
 Please see :doc:`Porting to Python 3 </core/howto/python3>` for details.
 
-All new modules must be Python 2.7 & 3.5+ compatible, and all new code to ported modules must be Python 2.7 & 3.5+ compatible.
-New code in non-ported modules must be written in a 2.7 & 3.5+ compatible way (explicit bytes/unicode strings, new exception raising format, etc) as to prevent extra work when that module is eventually ported.
-Code targeting Python 3 specific features must gracefully fall-back on Python 2 as much as is reasonably possible (for example, Python 2 support for 'async/await' is not reasonably possible and would not be required, but code that uses a Python 3-specific module such as ipaddress should be able to use a backport to 2.7 if available).
 
 
 Database
@@ -640,7 +637,7 @@ All SQL keywords should be in upper case.
 C Code
 ------
 
-C code must be optional, and work across multiple platforms (MSVC++9/10/14 for Pythons 2.7 and 3.5+ on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
+C code must be optional, and work across multiple platforms (MSVC++14 for Python 3 on Windows, as well as recent GCCs and Clangs for Linux, macOS, and FreeBSD).
 
 C code should be kept in external bindings packages which Twisted depends on.
 If creating new C extension modules, using `cffi <https://cffi.readthedocs.io/en/latest/>`_ is highly encouraged, as it will perform well on PyPy and CPython, and be easier to use on Python 2 and 3.

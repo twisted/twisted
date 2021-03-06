@@ -1037,10 +1037,10 @@ class IReactorProcess(Interface):
         L{unicode} may be encoded or decoded depending on the platform and the
         argument type given.  On UNIX systems (Linux, FreeBSD, macOS) and
         Python 2 on Windows, L{unicode} arguments will be encoded down to
-        L{bytes} using the encoding given by L{os.getfilesystemencoding}, to be
+        L{bytes} using the encoding given by L{sys.getfilesystemencoding}, to be
         used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
         arguments will be decoded up to L{unicode} using the encoding given by
-        L{os.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
+        L{sys.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
         thereafter) and given to Windows's native "wide" APIs.
 
         @param processProtocol: An object which will be notified of all events
@@ -1344,7 +1344,7 @@ class IReactorCore(Interface):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> Any:
         """
         Add a function to be called when a system event occurs.
@@ -2266,7 +2266,7 @@ class ITLSTransport(ITCPTransport):
             For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
             servers, use L{twisted.internet.ssl.CertificateOptions}.
 
-        @param contextFactory: L{IOpenSSLClientConnectionCreator} or
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must

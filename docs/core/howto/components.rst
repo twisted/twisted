@@ -165,7 +165,7 @@ Interfaces and Components in Twisted code
 Adapters are a useful way of using multiple classes to factor code into discrete chunks.
 However, they are not very interesting without some more infrastructure.
 If each piece of code which wished to use an adapted object had to explicitly construct the adapter itself, the coupling between components would be too tight.
-We would like to achieve "loose coupling", and this is where :api:`twisted.python.components <twisted.python.components>` comes in.
+We would like to achieve "loose coupling", and this is where :py:mod:`twisted.python.components` comes in.
 
 First, we need to discuss Interfaces in more detail.
 As we mentioned earlier, an Interface is nothing more than a class which is used as a marker.
@@ -333,7 +333,7 @@ Components and Inheritance
 
 If you inherit from a class which implements some interface, and your new subclass declares that it implements another interface, the implements will be inherited by default.
 
-For example, :api:`twisted.spread.pb.Root <pb.Root>` is a class which implements :api:`twisted.spread.pb.IPBRoot <IPBRoot>`.
+For example, :py:class:`pb.Root <twisted.spread.pb.Root>` is a class which implements :py:class:`IPBRoot <twisted.spread.pb.IPBRoot>`.
 This interface indicates that an object has remotely-invokable methods and can be used as the initial object served by a new Broker instance.
 It has an ``implements`` setting like:
 

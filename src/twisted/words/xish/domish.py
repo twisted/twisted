@@ -101,10 +101,10 @@ class _ListSerializer:
         if not prefix:
             write("<%s" % (name))
         else:
-            write("<%s:%s" % (prefix, name))
+            write(f"<{prefix}:{name}")
 
             if not inScope:
-                write(" xmlns:%s='%s'" % (prefix, uri))
+                write(f" xmlns:{prefix}='{uri}'")
                 self.prefixStack[-1].append(prefix)
                 inScope = True
 
@@ -114,7 +114,7 @@ class _ListSerializer:
             write(" xmlns='%s'" % (defaultUri))
 
         for p, u in elem.localPrefixes.items():
-            write(" xmlns:%s='%s'" % (p, u))
+            write(f" xmlns:{p}='{u}'")
 
         # Serialize attributes
         for k, v in elem.attributes.items():
@@ -124,12 +124,12 @@ class _ListSerializer:
                 attr_prefix = self.getPrefix(attr_uri)
 
                 if not self.prefixInScope(attr_prefix):
-                    write(" xmlns:%s='%s'" % (attr_prefix, attr_uri))
+                    write(f" xmlns:{attr_prefix}='{attr_uri}'")
                     self.prefixStack[-1].append(attr_prefix)
 
-                write(" %s:%s='%s'" % (attr_prefix, attr_name, escapeToXml(v, 1)))
+                write(" {}:{}='{}'".format(attr_prefix, attr_name, escapeToXml(v, 1)))
             else:
-                write((" %s='%s'" % (k, escapeToXml(v, 1))))
+                write(" {}='{}'".format(k, escapeToXml(v, 1)))
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
@@ -146,7 +146,7 @@ class _ListSerializer:
             if not prefix:
                 write("</%s>" % (name))
             else:
-                write("</%s:%s>" % (prefix, name))
+                write(f"</{prefix}:{name}>")
         else:
             write("/>")
 
@@ -519,7 +519,9 @@ class Element:
     def addContent(self, text: str) -> str:
         """ Add some text data to this Element. """
         if not isinstance(text, str):
-            raise TypeError("Expected str not %r (%s)" % (text, type(text).__name__))
+            raise TypeError(
+                "Expected str not {!r} ({})".format(text, type(text).__name__)
+            )
         c = self.children
         if len(c) > 0 and isinstance(c[-1], str):
             c[-1] = c[-1] + text

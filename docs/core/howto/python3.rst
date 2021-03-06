@@ -4,7 +4,7 @@ Porting to Python 3
 Introduction
 ------------
 
-Twisted currently supports only Python 3.5+.
+Twisted currently supports only Python 3.6+.
 This document covers Twisted-specific issues in porting your code to Python 3.
 
 API Differences
@@ -18,8 +18,8 @@ twisted.python.failure
 
 
 
-:api:`twisted.python.failure.Failure.trap <Failure.trap>`
-raises itself (i.e. a :api:`twisted.python.failure.Failure <Failure>` ) in Python 2. In Python 3,
+:py:meth:`Failure.trap <twisted.python.failure.Failure.trap>`
+raises itself (i.e. a :py:class:`Failure <twisted.python.failure.Failure>` ) in Python 2. In Python 3,
 the wrapped exception will be re-raised.
 
 

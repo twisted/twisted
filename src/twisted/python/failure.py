@@ -56,10 +56,10 @@ def format_frames(frames, write, detail="default"):
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:
-            w("%s:%s:%s\n" % (filename, lineno, method))
+            w(f"{filename}:{lineno}:{method}\n")
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
-            w('  File "%s", line %s, in %s\n' % (filename, lineno, method))
+            w(f'  File "{filename}", line {lineno}, in {method}\n')
             w("    %s\n" % linecache.getline(filename, lineno).strip())
     elif detail == "verbose-vars-not-captured":
         for method, filename, lineno, localVars, globalVars in frames:
@@ -71,10 +71,10 @@ def format_frames(frames, write, detail="default"):
             w(" [ Locals ]\n")
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  %s : %s\n" % (name, repr(val)))
+                w("  {} : {}\n".format(name, repr(val)))
             w(" ( Globals )\n")
             for name, val in globalVars:
-                w("  %s : %s\n" % (name, repr(val)))
+                w("  {} : {}\n".format(name, repr(val)))
 
 
 # slyphon: i have a need to check for this value in trial
@@ -559,7 +559,7 @@ class Failure(BaseException):
             return frame.f_locals.get("self")
 
     def __repr__(self) -> str:
-        return "<%s %s: %s>" % (
+        return "<{} {}: {}>".format(
             reflect.qual(self.__class__),
             reflect.qual(self.type),
             self.getErrorMessage(),
@@ -705,7 +705,7 @@ class Failure(BaseException):
         if self.frames:
             if not elideFrameworkCode:
                 format_frames(self.stack[-traceupLength:], w, formatDetail)
-                w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
+                w(f"{EXCEPTION_CAUGHT_HERE}\n")
             format_frames(self.frames, w, formatDetail)
         elif not detail == "brief":
             # Yeah, it's not really a traceback, despite looking like one...
@@ -713,7 +713,7 @@ class Failure(BaseException):
 
         # Postamble, if any
         if not detail == "brief":
-            w("%s: %s\n" % (reflect.qual(self.type), reflect.safe_str(self.value)))
+            w("{}: {}\n".format(reflect.qual(self.type), reflect.safe_str(self.value)))
 
         # Chaining
         if isinstance(self.value, Failure):
@@ -771,10 +771,12 @@ def _debuginit(
         if not exc[0] == self.__class__ and DO_POST_MORTEM:
             try:
                 strrepr = str(exc[1])
-            except:
+            except BaseException:
                 strrepr = "broken str"
             print(
-                "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
+                "Jumping into debugger for post-mortem of exception '{}':".format(
+                    strrepr
+                )
             )
             import pdb
 

@@ -135,9 +135,9 @@ class TkConchMenu(Tkinter.Frame):
         host = self.forwardHost.get()
         self.forwardHost.delete(0, Tkinter.END)
         if self.localRemoteVar.get() == "local":
-            self.forwards.insert(Tkinter.END, "L:%s:%s" % (port, host))
+            self.forwards.insert(Tkinter.END, f"L:{port}:{host}")
         else:
-            self.forwards.insert(Tkinter.END, "R:%s:%s" % (port, host))
+            self.forwards.insert(Tkinter.END, f"R:{port}:{host}")
 
     def removeForward(self):
         cur = self.forwards.curselection()
@@ -210,7 +210,9 @@ class TkConchMenu(Tkinter.Frame):
             log.msg((host, port))
             reactor.connectTCP(host, port, SSHClientFactory())
             frame.master.deiconify()
-            frame.master.title("%s@%s - TkConch" % (options["user"], options["host"]))
+            frame.master.title(
+                "{}@{} - TkConch".format(options["user"], options["host"])
+            )
         else:
             self.focus()
 
@@ -257,8 +259,8 @@ class GeneralOptions(usage.Options):
     compData = usage.Completions(
         mutuallyExclusive=[("tty", "notty")],
         optActions={
-            "cipher": usage.CompleteList(_ciphers),
-            "macs": usage.CompleteList(_macs),
+            "cipher": usage.CompleteList([v.decode() for v in _ciphers]),
+            "macs": usage.CompleteList([v.decode() for v in _macs]),
             "localforward": usage.Completer(descr="listen-port:host:port"),
             "remoteforward": usage.Completer(descr="listen-port:host:port"),
         },
@@ -269,9 +271,9 @@ class GeneralOptions(usage.Options):
         ],
     )
 
-    identitys = []  # type: List[str]
-    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
-    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    identitys: List[str] = []
+    localForwards: List[Tuple[int, Tuple[int, int]]] = []
+    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -370,10 +372,10 @@ def run():
         if v and hasattr(menu, k):
             getattr(menu, k).insert(Tkinter.END, v)
     for (p, (rh, rp)) in options.localForwards:
-        menu.forwards.insert(Tkinter.END, "L:%s:%s:%s" % (p, rh, rp))
+        menu.forwards.insert(Tkinter.END, f"L:{p}:{rh}:{rp}")
     options.localForwards = []
     for (p, (rh, rp)) in options.remoteForwards:
-        menu.forwards.insert(Tkinter.END, "R:%s:%s:%s" % (p, rh, rp))
+        menu.forwards.insert(Tkinter.END, f"R:{p}:{rh}:{rp}")
     options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
     root.geometry(
@@ -413,7 +415,7 @@ class SSHClientFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         tkMessageBox.showwarning(
             "TkConch",
-            "Connection Failed, Reason:\n %s: %s" % (reason.type, reason.value),
+            f"Connection Failed, Reason:\n {reason.type}: {reason.value}",
         )
 
 
@@ -453,11 +455,11 @@ class SSHClientTransport(transport.SSHClientTransport):
                 host = options["host"]
                 khHost = options["host"]
             else:
-                host = "%s (%s)" % (options["host"], self.transport.getPeer().host)
-                khHost = "%s,%s" % (options["host"], self.transport.getPeer().host)
+                host = "{} ({})".format(options["host"], self.transport.getPeer().host)
+                khHost = "{},{}".format(options["host"], self.transport.getPeer().host)
             keyType = common.getNS(pubKey)[0]
-            ques = """The authenticity of host '%s' can't be established.\r
-%s key fingerprint is %s.""" % (
+            ques = """The authenticity of host '{}' can't be established.\r
+{} key fingerprint is {}.""".format(
                 host,
                 {b"ssh-dss": "DSA", b"ssh-rsa": "RSA"}[keyType],
                 fingerprint,
@@ -483,7 +485,7 @@ class SSHClientTransport(transport.SSHClientTransport):
             )
             with open(os.path.expanduser("~/.ssh/known_hosts"), "a") as known_hosts:
                 encodedKey = base64.b64encode(pubKey)
-                known_hosts.write("\n%s %s %s" % (khHost, keyType, encodedKey))
+                known_hosts.write(f"\n{khHost} {keyType} {encodedKey}")
         except BaseException:
             log.deferr()
             raise error.ConchError
@@ -497,11 +499,11 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles = []  # type: List[str]
+    usedFiles: List[str] = []
 
     def getPassword(self, prompt=None):
         if not prompt:
-            prompt = "%s@%s's password: " % (self.user, options["host"])
+            prompt = "{}@{}'s password: ".format(self.user, options["host"])
         return deferredAskFrame(prompt, 0)
 
     def getPublicKey(self):
@@ -517,7 +519,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return
         try:
             return keys.Key.fromFile(file).blob()
-        except:
+        except BaseException:
             return self.getPublicKey()  # try again
 
     def getPrivateKey(self):
@@ -559,7 +561,9 @@ class SSHConnection(connection.SSHConnection):
         if options.remoteForwards:
             for remotePort, hostport in options.remoteForwards:
                 log.msg(
-                    "asking for remote forwarding for %s:%s" % (remotePort, hostport)
+                    "asking for remote forwarding for {}:{}".format(
+                        remotePort, hostport
+                    )
                 )
                 data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
                 self.sendGlobalRequest("tcpip-forward", data)

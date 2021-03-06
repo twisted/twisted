@@ -67,7 +67,7 @@ except ImportError:
     )
 
     def WSAEnumNetworkEvents(fd, event):
-        return set([FD_READ])
+        return {FD_READ}
 
 
 from win32event import CreateEvent, MsgWaitForMultipleObjects
@@ -274,7 +274,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
         closed = 0
         try:
             closed = fd.doWrite()
-        except:
+        except BaseException:
             closed = sys.exc_info()[1]
             log.deferr()
 
@@ -283,7 +283,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
             self.removeWriter(fd)
             try:
                 fd.connectionLost(failure.Failure(closed))
-            except:
+            except BaseException:
                 log.deferr()
         elif closed is None:
             return 1
@@ -291,7 +291,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
     def _runAction(self, action, fd):
         try:
             closed = getattr(fd, action)()
-        except:
+        except BaseException:
             closed = sys.exc_info()[1]
             log.deferr()
         if closed:

@@ -44,8 +44,8 @@ else:
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
-    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
+    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]
+    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]
 }
 
 
@@ -99,13 +99,13 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
@@ -115,7 +115,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
@@ -357,8 +357,8 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
-        self.repstr = "<%s #%s on %s>" % (
+        self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             self.serverAddr.port,
@@ -407,7 +407,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
@@ -427,13 +427,13 @@ class Port(_SocketCloser, _LogOwner):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -447,7 +447,7 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())
@@ -490,7 +490,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -512,7 +512,7 @@ class Port(_SocketCloser, _LogOwner):
 
         try:
             self.factory.doStop()
-        except:
+        except BaseException:
             self.disconnecting = False
             if d is not None:
                 d.errback(failure.Failure())

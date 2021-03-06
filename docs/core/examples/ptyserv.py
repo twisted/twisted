@@ -10,7 +10,6 @@ Run this example by typing in:
 Telnet to the server once you start it by typing in: 
 > telnet localhost 5823
 """
-from __future__ import print_function
 
 from twisted.internet import reactor, protocol
 

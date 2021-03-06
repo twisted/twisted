@@ -3,6 +3,8 @@ name: Run tests
 on:
   push:
     branches: [ trunk ]
+    tags:
+      - twisted-*
   pull_request:
     branches: [ trunk ]
 
@@ -13,7 +15,11 @@ jobs:
       TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
     strategy:
       matrix:
-          python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
+          # Run on the minimum micro Python version that we can get on CI.
+          # When updating the minimum Python version here, also update the
+          # `python_requires` from `setup.cfg`.
+          # Run on latest minor release of each major python version.
+          python-version: ["3.6.7", 3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -31,17 +37,20 @@ jobs:
         python -c "import sys; print(sys.executable)"
         python -c "import struct; print(struct.calcsize('P') * 8)"
         python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
 
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+        echo "::set-output name=dir::$(pip cache dir)"
 
-    - uses: actions/cache@v2
+    - name: pip cache
+      uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -54,6 +63,7 @@ jobs:
       run: |
         python --version
         tox -q
+
 
   # We need a builder without IPv6. This is going to be slower than all the
   # others, but that's ok.
@@ -77,12 +87,15 @@ jobs:
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+        echo "::set-output name=dir::$(pip cache dir)"
 
-    - uses: actions/cache@v2
+    - name: pip cache
+      uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -94,7 +107,7 @@ jobs:
         python -c "import sys; print(sys.executable)"
         python -c "import struct; print(struct.calcsize('P') * 8)"
         python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
+        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
 
     - name: Install dependencies
       run: |
@@ -105,3 +118,36 @@ jobs:
       run: |
         python --version
         tox -q
+
+
+  pypi-publish:
+    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    name: Check release and publish on twisted-* tag
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Test
+      run: |
+        python --version
+        python -m pip install --upgrade pip tox pep517
+        rm -rf dist/*
+        tox -e release-prepare
+
+    - name: Display structure of files to be pushed
+      run: ls -R dist/
+
+    - name: Check matched tag version and branch version - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+
+    - name: Publish to PyPI - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}

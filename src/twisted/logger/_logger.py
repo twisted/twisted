@@ -64,7 +64,7 @@ class Logger:
         if observer is None:
             from ._global import globalLogPublisher
 
-            self.observer = globalLogPublisher  # type: ILogObserver
+            self.observer: ILogObserver = globalLogPublisher
         else:
             self.observer = observer
 
@@ -90,7 +90,7 @@ class Logger:
         assert owner is not None
 
         if instance is None:
-            source = owner  # type: Any
+            source: Any = owner
         else:
             source = instance
 
@@ -101,7 +101,7 @@ class Logger:
         )
 
     def __repr__(self) -> str:
-        return "<%s %r>" % (self.__class__.__name__, self.namespace)
+        return f"<{self.__class__.__name__} {self.namespace!r}>"
 
     def emit(
         self, level: LogLevel, format: Optional[str] = None, **kwargs: object
@@ -147,7 +147,7 @@ class Logger:
         format: str,
         failure: Optional[Failure] = None,
         level: LogLevel = LogLevel.critical,
-        **kwargs: object
+        **kwargs: object,
     ) -> None:
         """
         Log a failure and emit a traceback.

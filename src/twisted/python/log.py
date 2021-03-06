@@ -94,14 +94,14 @@ def callWithLogger(logger, func, *args, **kw):
         lp = logger.logPrefix()
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         lp = "(buggy logPrefix method)"
         err(system=lp)
     try:
         return callWithContext({"system": lp}, func, *args, **kw)
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         err(system=lp)
 
 
@@ -381,19 +381,19 @@ def _safeFormat(fmtString: str, fmtDict: Dict[str, Any]) -> str:
         text = fmtString % fmtDict
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         try:
             text = (
                 "Invalid format string or unformattable object in "
                 "log message: %r, %s" % (fmtString, fmtDict)
             )
-        except:
+        except BaseException:
             try:
                 text = (
                     "UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, "
                     "MESSAGE LOST" % (fmtString,)
                 )
-            except:
+            except BaseException:
                 text = (
                     "PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND "
                     "MESSAGE DETAILS, MESSAGE LOST"
@@ -477,7 +477,7 @@ class FileLogObserver(_GlobalStartStopObserver):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat = None  # type: Optional[str]
+    timeFormat: Optional[str] = None
 
     def __init__(self, f):
         # Compatibility
@@ -617,7 +617,7 @@ class StdioOnnaStick:
         pass
 
     def read(self):
-        raise IOError("can't read from the log!")
+        raise OSError("can't read from the log!")
 
     readline = read
     readlines = read

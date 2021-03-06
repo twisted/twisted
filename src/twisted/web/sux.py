@@ -42,7 +42,7 @@ def unionlist(*args):
     l = []
     for x in args:
         l.extend(x)
-    d = dict([(x, 1) for x in l])
+    d = {x: 1 for x in l}
     return d.keys()
 
 
@@ -55,21 +55,17 @@ def zipfndict(*args, **kw):
 
 
 def prefixedMethodClassDict(clazz, prefix):
-    return dict(
-        [
-            (name, getattr(clazz, prefix + name))
-            for name in prefixedMethodNames(clazz, prefix)
-        ]
-    )
+    return {
+        name: getattr(clazz, prefix + name)
+        for name in prefixedMethodNames(clazz, prefix)
+    }
 
 
 def prefixedMethodObjDict(obj, prefix):
-    return dict(
-        [
-            (name, getattr(obj, prefix + name))
-            for name in prefixedMethodNames(obj.__class__, prefix)
-        ]
-    )
+    return {
+        name: getattr(obj, prefix + name)
+        for name in prefixedMethodNames(obj.__class__, prefix)
+    }
 
 
 class ParseError(Exception):
@@ -80,7 +76,7 @@ class ParseError(Exception):
         self.message = message
 
     def __str__(self) -> str:
-        return "%s:%s:%s: %s" % (self.filename, self.line, self.col, self.message)
+        return f"{self.filename}:{self.line}:{self.col}: {self.message}"
 
 
 class XMLParser(Protocol):
@@ -215,7 +211,7 @@ class XMLParser(Protocol):
             if self.beExtremelyLenient:
                 self._leadingBodyData = byte
                 return "bodydata"
-            self._parseError("First char of document [%r] wasn't <" % (byte,))
+            self._parseError(f"First char of document [{byte!r}] wasn't <")
         return "tagstart"
 
     def begin_comment(self, byte):
@@ -393,7 +389,7 @@ class XMLParser(Protocol):
             # something is really broken. let's leave this attribute where it
             # is and move on to the next thing
             return
-        self._parseError("Invalid attribute name: %r %r" % (self.attrname, byte))
+        self._parseError(f"Invalid attribute name: {self.attrname!r} {byte!r}")
 
     def do_beforeattrval(self, byte):
         if byte in "\"'":

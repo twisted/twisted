@@ -447,7 +447,7 @@ class TunnelDeviceTestsMixin:
             for j in range(100):
                 try:
                     packet = self.system.read(self.fileno, 1024)
-                except EnvironmentError as e:
+                except OSError as e:
                     if e.errno in (EAGAIN, EWOULDBLOCK):
                         break
                     raise
@@ -591,7 +591,7 @@ class TestRealSystem(_RealSystem):
         platform support for tuntap devices are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).open(filename, *args, **kwargs)
+            return super().open(filename, *args, **kwargs)
         except OSError as e:
             # The device file may simply be missing.  The device file may also
             # exist but be unsupported by the kernel.
@@ -606,8 +606,8 @@ class TestRealSystem(_RealSystem):
         do not have them are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).ioctl(*args, **kwargs)
-        except IOError as e:
+            return super().ioctl(*args, **kwargs)
+        except OSError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
             raise
@@ -1135,7 +1135,7 @@ class TunnelTestsMixin:
         self.port.startListening()
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " listening on %s/%s>" % (
+        expected = " listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.system.getTunnel(self.port).name,
         )
@@ -1148,7 +1148,7 @@ class TunnelTestsMixin:
         """
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " not listening on %s/%s>" % (
+        expected = " not listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.name,
         )

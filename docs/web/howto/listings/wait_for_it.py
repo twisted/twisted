@@ -9,7 +9,9 @@ sample = XMLString(
     <span t:render="wait"></span>
     ... after waiting.
     </div>
-    """)
+    """
+)
+
 
 class WaitForIt(Element):
     def __init__(self):
@@ -18,15 +20,16 @@ class WaitForIt(Element):
 
     @renderer
     def wait(self, request, tag):
-        return self.deferred.addCallback(
-            lambda aValue: tag("A value: " + repr(aValue)))
+        return self.deferred.addCallback(lambda aValue: tag("A value: " + repr(aValue)))
+
 
 def done(ignore):
     print("[[[Deferred fired.]]]")
 
-print('[[[Rendering the template.]]]')
+
+print("[[[Rendering the template.]]]")
 it = WaitForIt()
 flatten(None, it, sys.stdout.write).addCallback(done)
-print('[[[In progress... now firing the Deferred.]]]')
+print("[[[In progress... now firing the Deferred.]]]")
 it.deferred.callback("<value>")
-print('[[[All done.]]]')
+print("[[[All done.]]]")

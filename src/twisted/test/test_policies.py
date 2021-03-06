@@ -935,14 +935,14 @@ class LoggingFactoryTests(unittest.TestCase):
         p.dataReceived(b"here are some bytes")
 
         v = f.openFile.getvalue()
-        self.assertIn("C 1: %r" % (b"here are some bytes",), v)
-        self.assertIn("S 1: %r" % (b"here are some bytes",), v)
+        self.assertIn("C 1: {!r}".format(b"here are some bytes"), v)
+        self.assertIn("S 1: {!r}".format(b"here are some bytes"), v)
         self.assertEqual(t.value(), b"here are some bytes")
 
         t.clear()
         p.dataReceived(b"prepare for vector! to the extreme")
         v = f.openFile.getvalue()
-        self.assertIn("SV 1: %r" % ([b"prepare for vector! to the extreme"],), v)
+        self.assertIn("SV 1: {!r}".format([b"prepare for vector! to the extreme"]), v)
         self.assertEqual(t.value(), b"prepare for vector! to the extreme")
 
         p.loseConnection()
