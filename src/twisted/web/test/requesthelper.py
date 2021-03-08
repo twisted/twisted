@@ -27,7 +27,7 @@ from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
 
 
-textLinearWhitespaceComponents = ["Foo{}bar".format(lw) for lw in ["\r", "\n", "\r\n"]]
+textLinearWhitespaceComponents = [f"Foo{lw}bar" for lw in ["\r", "\n", "\r\n"]]
 
 sanitizedText = "Foo bar"
 bytesLinearWhitespaceComponents = [
@@ -60,9 +60,7 @@ class DummyChannel:
 
         def write(self, data):
             if not isinstance(data, bytes):
-                raise TypeError(
-                    "Can only write bytes to a transport, not {!r}".format(data)
-                )
+                raise TypeError(f"Can only write bytes to a transport, not {data!r}")
             self.written.write(data)
 
         def writeSequence(self, iovec):
@@ -208,7 +206,7 @@ class DummyRequest:
 
     uri = b"http://dummy/"
     method = b"GET"
-    client = None  # type: Optional[IAddress]
+    client: Optional[IAddress] = None
 
     def registerProducer(self, prod, s):
         """

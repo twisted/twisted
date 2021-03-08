@@ -351,7 +351,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     # sets it directly.
     debug = False
 
-    _chainedTo = None  # type: Optional[Deferred[Any]]
+    _chainedTo: "Optional[Deferred[Any]]" = None
 
     def __init__(
         self, canceller: Optional[Callable[["Deferred[Any]"], None]] = None
@@ -443,7 +443,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding just a callback.
@@ -459,7 +459,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         """
         Convenience method for adding just an errback.
@@ -483,7 +483,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             "Union[_NextDeferredResultT, Deferred[_NextDeferredResultT]]",
         ],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding a single callable as both a callback
@@ -889,8 +889,8 @@ class Deferred(Awaitable[_DeferredResultT]):
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: {!r}".format(result)
-        return "<{} at 0x{:x}{}>".format(cname, myID, result)
+            result = f" current result: {result!r}"
+        return f"<{cname} at 0x{myID:x}{result}>"
 
     __repr__ = __str__
 
@@ -1051,7 +1051,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
         if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
-            raise NotACoroutineError("{!r} is not a coroutine".format(coro))
+            raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
 
@@ -1077,9 +1077,7 @@ def ensureDeferred(
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError(
-                "{!r} is not a coroutine or a Deferred".format(coro)
-            )
+            raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
 
 
 class DebugInfo:
@@ -1361,7 +1359,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it {!r}.".format(d)
+                f"You must give waitForDeferred a Deferred. You gave it {d!r}."
             )
         self.d = d
 
@@ -1871,7 +1869,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_DeferredResultT]):
         self_319AA2A8B18F4B8EA296D75F279EB07F: _ConcurrencyPrimitiveT,
         f: Callable[..., _DeferredResultT],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> Deferred[_DeferredResultT]:
         """
         Acquire, run, release.

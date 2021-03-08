@@ -15,14 +15,14 @@ class Divide(amp.Command):
 class Math(amp.AMP):
     def sum(self, a, b):
         total = a + b
-        print("Did a sum: {} + {} = {}".format(a, b, total))
+        print(f"Did a sum: {a} + {b} = {total}")
         return {"total": total}
 
     Sum.responder(sum)
 
     def divide(self, numerator, denominator):
         result = float(numerator) / denominator
-        print("Divided: {} / {} = {}".format(numerator, denominator, result))
+        print(f"Divided: {numerator} / {denominator} = {result}")
         return {"result": result}
 
     Divide.responder(divide)

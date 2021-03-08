@@ -357,7 +357,7 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.clientAddr.host)
+        self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
         self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
@@ -407,7 +407,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
@@ -490,7 +490,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """

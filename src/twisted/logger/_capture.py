@@ -16,7 +16,7 @@ from ._interfaces import ILogObserver, LogEvent
 
 @contextmanager
 def capturedLogs() -> Iterator[Sequence[LogEvent]]:
-    events = []  # type: List[LogEvent]
+    events: List[LogEvent] = []
     observer = cast(ILogObserver, events.append)
 
     globalLogPublisher.addObserver(observer)

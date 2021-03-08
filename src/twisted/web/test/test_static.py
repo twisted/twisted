@@ -1162,9 +1162,7 @@ class RangeTests(TestCase):
         """
         logItem = self.catcher.pop()
         self.assertEqual(logItem["message"][0], expected)
-        self.assertEqual(
-            self.catcher, [], "An additional log occurred: {!r}".format(logItem)
-        )
+        self.assertEqual(self.catcher, [], f"An additional log occurred: {logItem!r}")
 
     def test_invalidRanges(self):
         """
@@ -1264,7 +1262,7 @@ class RangeTests(TestCase):
         range = b"foobar=0-43"
         self.request.requestHeaders.addRawHeader(b"range", range)
         self.resource.render(self.request)
-        expected = "Ignoring malformed Range header {!r}".format(range.decode())
+        expected = f"Ignoring malformed Range header {range.decode()!r}"
         self._assertLogged(expected)
         self.assertEqual(b"".join(self.request.written), self.payload)
         self.assertEqual(self.request.responseCode, http.OK)
@@ -1314,7 +1312,7 @@ class RangeTests(TestCase):
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
         rangeHeaderValue = b",".join(
-            [networkString("{}-{}".format(s, e)) for (s, e) in startEnds]
+            [networkString(f"{s}-{e}") for (s, e) in startEnds]
         )
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1341,7 +1339,7 @@ class RangeTests(TestCase):
         """
         startEnds = [(0, 2), (40, len(self.payload) + 10)]
         rangeHeaderValue = b",".join(
-            [networkString("{}-{}".format(s, e)) for (s, e) in startEnds]
+            [networkString(f"{s}-{e}") for (s, e) in startEnds]
         )
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1738,8 +1736,8 @@ class DirectoryListerTests(TestCase):
         """
         path = FilePath(self.mktemp())
         lister = static.DirectoryLister(path.path)
-        self.assertEqual(repr(lister), "<DirectoryLister of {!r}>".format(path.path))
-        self.assertEqual(str(lister), "<DirectoryLister of {!r}>".format(path.path))
+        self.assertEqual(repr(lister), f"<DirectoryLister of {path.path!r}>")
+        self.assertEqual(str(lister), f"<DirectoryLister of {path.path!r}>")
 
     def test_formatFileSize(self):
         """

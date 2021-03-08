@@ -76,7 +76,7 @@ class StringTest(unittest.SynchronousTestCase):
                     % (line_number, exp.pattern, out),
                 )
             else:
-                raise TypeError("don't know what to do with object {!r}".format(exp))
+                raise TypeError(f"don't know what to do with object {exp!r}")
 
 
 class TestResultTests(unittest.SynchronousTestCase):
@@ -148,7 +148,7 @@ class ErrorReportingTests(StringTest):
                 "twisted.trial.test.erroneous.FoolishError: "
                 "I am a broken setUp method"
             ),
-            "{}.{}.test_noop".format(cls.__module__, cls.__name__),
+            f"{cls.__module__}.{cls.__name__}.test_noop",
         ]
         self.stringComparison(match, output)
 
@@ -947,7 +947,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         callable must take the same parameters as L{reporter.Reporter}.
     """
 
-    resultFactory = reporter.Reporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.Reporter
 
     def setUp(self):
         self.test = sample.FooTest("test_foo")
@@ -1133,7 +1133,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
     This just tests that the subunit reporter implements the basic interface.
     """
 
-    resultFactory = reporter.SubunitReporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.SubunitReporter
 
     def setUp(self):
         if reporter.TestProtocolClient is None:
@@ -1346,7 +1346,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
 
 
 class TimingReporterTests(ReporterTests):
-    resultFactory = reporter.TimingTextReporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.TimingTextReporter
 
 
 class LoggingReporter(reporter.Reporter):

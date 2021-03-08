@@ -398,7 +398,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Inverse query from {!r}".format(address))
+        self._verboseLog(f"Inverse query from {address!r}")
 
     def handleStatus(self, message, protocol, address):
         """
@@ -425,7 +425,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Status request from {!r}".format(address))
+        self._verboseLog(f"Status request from {address!r}")
 
     def handleNotify(self, message, protocol, address):
         """
@@ -452,7 +452,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Notify message from {!r}".format(address))
+        self._verboseLog(f"Notify message from {address!r}")
 
     def handleOther(self, message, protocol, address):
         """

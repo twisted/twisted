@@ -224,7 +224,7 @@ class UnsupportedMethod(Exception):
             )
 
     def __str__(self) -> str:
-        return "Expected one of {!r}".format(self.allowedMethods)
+        return f"Expected one of {self.allowedMethods!r}"
 
 
 class SchemeNotSupported(Exception):
@@ -274,7 +274,7 @@ class MissingTemplateLoader(RenderError):
         self.element = element
 
     def __repr__(self) -> str:
-        return "{!r}: {!r} had no loader".format(self.__class__.__name__, self.element)
+        return f"{self.__class__.__name__!r}: {self.element!r} had no loader"
 
 
 class UnexposedMethodError(Exception):

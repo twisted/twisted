@@ -67,7 +67,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase = None  # type: Optional[Type[FileDescriptor]]
+    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):
@@ -364,7 +364,7 @@ class Port(_UNIXPort, tcp.Port):
                 _coerceToFilesystemEncoding("", self.port),
             )
         else:
-            return "<{} (not listening)>".format(factoryName)
+            return f"<{factoryName} (not listening)>"
 
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
@@ -503,9 +503,9 @@ class DatagramPort(_UNIXPort, udp.Port):
             self.protocol.__class__,
         )
         if hasattr(self, "socket"):
-            return "<{} on {!r}>".format(protocolName, self.port)
+            return f"<{protocolName} on {self.port!r}>"
         else:
-            return "<{} (not listening)>".format(protocolName)
+            return f"<{protocolName} (not listening)>"
 
     def _bindSocket(self):
         log.msg("{} starting on {}".format(self.protocol.__class__, repr(self.port)))

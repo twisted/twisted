@@ -32,7 +32,7 @@ def _wrappedLogPrefix(wrapper, wrapped):
         logPrefix = wrapped.logPrefix()
     else:
         logPrefix = wrapped.__class__.__name__
-    return "{} ({})".format(logPrefix, wrapper.__class__.__name__)
+    return f"{logPrefix} ({wrapper.__class__.__name__})"
 
 
 class ProtocolWrapper(Protocol):
@@ -119,7 +119,7 @@ class WrappingFactory(ClientFactory):
     Wraps a factory and its protocols, and keeps track of them.
     """
 
-    protocol = ProtocolWrapper  # type: Type[Protocol]
+    protocol: Type[Protocol] = ProtocolWrapper
 
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory
@@ -393,7 +393,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     connectionCount = 0
     connectionLimit = None
-    overflowProtocol = None  # type: Optional[Type[Protocol]]
+    overflowProtocol: Optional[Type[Protocol]] = None
 
     def buildProtocol(self, addr):
         if self.connectionLimit is None or self.connectionCount < self.connectionLimit:
@@ -626,7 +626,7 @@ class TimeoutMixin:
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
 
-    timeOut = None  # type: Optional[int]
+    timeOut: Optional[int] = None
 
     __timeoutCall = None
 

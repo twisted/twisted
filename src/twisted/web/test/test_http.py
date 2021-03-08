@@ -9,6 +9,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+import sys
 
 import hamcrest
 
@@ -264,7 +265,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response = [
+    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -273,7 +274,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
             b"Content-Length: 13",
             b"'''\nNone\n'''\n",
         )
-    ]  # type: Union[Sequence[Sequence[bytes]], bytes]
+    ]
 
     def test_buffer(self):
         """
@@ -1655,7 +1656,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("{}: foo".format(i)))
+            requestLines.append(networkString(f"{i}: foo"))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
@@ -2319,6 +2320,9 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
+    # FIXME: https://twistedmatrix.com/trac/ticket/10096
+    # Re-enable once the implementation is updated.
+    @skipIf(sys.version_info >= (3, 6, 13), "newer py3.6 parse_qs treat ; differently")
     def testParseqs(self):
         self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)

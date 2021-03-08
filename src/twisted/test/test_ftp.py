@@ -1063,7 +1063,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         d.addCallback(loggedIn)
 
-        self._download("{} something".format(command), chainDeferred=d)
+        self._download(f"{command} something", chainDeferred=d)
 
         def checkDownload(download):
             self.assertEqual(expectedOutput, download)
@@ -3827,6 +3827,6 @@ class FTPResponseCodeTests(TestCase):
                 self.assertNotIn(
                     value,
                     seenValues,
-                    "Duplicate code {!r} with value {!r}".format(key, value),
+                    f"Duplicate code {key!r} with value {value!r}",
                 )
                 seenValues.add(value)

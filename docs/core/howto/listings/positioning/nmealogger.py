@@ -13,7 +13,7 @@ from twisted.python import log, usage
 
 class PositioningReceiver(base.BasePositioningReceiver):
     def positionReceived(self, latitude, longitude):
-        log.msg("I'm at {} lat, {} lon".format(latitude, longitude))
+        log.msg(f"I'm at {latitude} lat, {longitude} lon")
 
     def beaconInformationReceived(self, beaconInformation):
         template = "{0.seen} beacons seen, {0.used} beacons used"

@@ -82,7 +82,7 @@ class Headers:
         self,
         rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
     ):
-        self._rawHeaders = {}  # type: Dict[bytes, List[bytes]]
+        self._rawHeaders: Dict[bytes, List[bytes]] = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
@@ -186,7 +186,7 @@ class Headers:
                 )
 
         _name = _sanitizeLinearWhitespace(self._encodeName(name))
-        encodedValues = []  # type: List[bytes]
+        encodedValues: List[bytes] = []
         for v in values:
             if isinstance(v, str):
                 _v = v.encode("utf8")

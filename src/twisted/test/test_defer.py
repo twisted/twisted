@@ -1265,7 +1265,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         d = defer.Deferred()
         address = id(d)
-        self.assertEqual(repr(d), "<Deferred at 0x{:x}>".format(address))
+        self.assertEqual(repr(d), f"<Deferred at 0x{address:x}>")
 
     def test_reprWithResult(self):
         """
@@ -2042,7 +2042,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "Unhandled Error\nTraceback "
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {!r}".format(expected),
+            f"Expected message starting with: {expected!r}",
         )
 
     def test_errorLogDebugInfo(self):
@@ -2067,7 +2067,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "(debug:  I"
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {!r}".format(expected),
+            f"Expected message starting with: {expected!r}",
         )
 
     def test_chainedErrorCleanup(self):

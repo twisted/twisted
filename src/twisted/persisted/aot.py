@@ -127,16 +127,12 @@ class Ref:
 
     def setRef(self, num):
         if self.refnum:
-            raise ValueError(
-                "Error setting id {}, I already have {}".format(num, self.refnum)
-            )
+            raise ValueError(f"Error setting id {num}, I already have {self.refnum}")
         self.refnum = num
 
     def setObj(self, obj):
         if self.obj:
-            raise ValueError(
-                "Error setting obj {}, I already have {}".format(obj, self.obj)
-            )
+            raise ValueError(f"Error setting obj {obj}, I already have {self.obj}")
         self.obj = obj
 
     def getSource(self):
@@ -229,9 +225,7 @@ def prettify(obj):
             out.append(len(obj) and "\n\0)" or ")")
             return "".join(out)
         else:
-            raise TypeError(
-                "Unsupported type {} when trying to prettify {}.".format(t, obj)
-            )
+            raise TypeError(f"Unsupported type {t} when trying to prettify {obj}.")
 
 
 def indentify(s):

@@ -60,7 +60,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if name == "zope.interface.adapter.AdapterRegistry":
                 # FIXME:
                 # https://github.com/zopefoundation/zope.interface/issues/41
-                relativeLink = "adapter.html"  # type: Optional[str]
+                relativeLink: Optional[str] = "adapter.html"
             else:
                 # Not a known exception.
                 relativeLink = None
@@ -68,7 +68,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if relativeLink is None:
                 return None
 
-            return "{}/{}".format(baseURL, relativeLink)
+            return f"{baseURL}/{relativeLink}"
 
         return None
 
