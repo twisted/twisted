@@ -68,7 +68,7 @@ class Logger:
         else:
             self.observer = observer
 
-    def __get__(self, instance: object, owner: Optional[type] = None) -> object:
+    def __get__(self, instance: object, owner: Optional[type] = None) -> "Logger":
         """
         When used as a descriptor, i.e.::
 
