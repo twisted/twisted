@@ -5,8 +5,6 @@
 Test cases for L{twisted.logger._capture}.
 """
 
-from typing import cast
-
 from twisted.logger import Logger, LogLevel
 from twisted.trial.unittest import TestCase
 
@@ -27,8 +25,8 @@ class LogCaptureTests(TestCase):
         foo = object()
 
         with capturedLogs() as captured:
-            cast(Logger, self.log).debug("Capture this, please", foo=foo)
-            cast(Logger, self.log).info("Capture this too, please", foo=foo)
+            self.log.debug("Capture this, please", foo=foo)
+            self.log.info("Capture this too, please", foo=foo)
 
         self.assertTrue(len(captured) == 2)
         self.assertEqual(captured[0]["log_format"], "Capture this, please")
