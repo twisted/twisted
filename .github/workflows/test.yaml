@@ -28,7 +28,7 @@ jobs:
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6.7, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
         tox-env: [alldeps]
         noipv6: ['']
 
@@ -36,10 +36,11 @@ jobs:
 
           # `nodeps` is created to make sure we don't have import errors in the
           # runtime and production code.
-          # Any supported Python version is OK for this job.
-          - python-version: 3.6
+          # The minimum supported Python version should be used to maximize
+          # coverage of code that otherwise depends on backports.
+          - python-version: 3.6.7
             tox-env: nodeps
-          # `noipv6` is created to make sure all is OK on an OS which don't
+          # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
