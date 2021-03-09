@@ -92,6 +92,10 @@ jobs:
         python --version
         tox -q
 
+    - name: Show trial log
+      if: always()
+      run: cat trial.log
+
 
   pypi-publish:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
