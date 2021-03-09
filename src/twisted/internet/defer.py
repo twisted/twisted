@@ -1014,7 +1014,9 @@ class Deferred(Awaitable[_DeferredResultT]):
         return self
 
     @classmethod
-    def fromCoroutine(cls, coro: Coroutine["Future[_T]", object, _T]) -> "Deferred[_T]":
+    def fromCoroutine(
+        cls, coro: Coroutine["Deferred[_T]", object, _T]
+    ) -> "Deferred[_T]":
         """
         Schedule the execution of a coroutine that awaits on L{Deferred}s,
         wrapping it in a L{Deferred} that will fire on success/failure of the
@@ -1057,7 +1059,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
 
 def ensureDeferred(
-    coro: Union[Coroutine["Future[_T]", object, "_T"], Deferred[_T]]
+    coro: Union[Coroutine["Deferred[_T]", object, "_T"], Deferred[_T]]
 ) -> Deferred[_T]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
@@ -1703,8 +1705,8 @@ def _inlineCallbacks(
 
 def _cancellableInlineCallbacks(
     gen: Union[
-        Generator["Future[_T]", object, _T],
-        Coroutine["Future[_T]", object, _T],
+        Generator["Deferred[_T]", object, _T],
+        Coroutine["Deferred[_T]", object, _T],
     ]
 ) -> Deferred[_T]:
     """
