@@ -1,0 +1,1 @@
+twisted.internet.defer.maybeDeferred now converts the result of calling a coroutine function to a Deferred, rather than returning the coroutine object.
