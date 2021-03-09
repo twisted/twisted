@@ -7,11 +7,14 @@ L{IReactorSocket}.
 """
 
 
+import array
 import errno
 import gc
 import io
+import mmap
 import os
 import socket
+import tempfile
 
 from functools import wraps
 from typing import Optional, Sequence, Type
@@ -28,6 +31,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
+from twisted.internet.abstract import ReadableBuffer
 from twisted.internet.error import (
     ConnectionLost,
     UserError,
@@ -2095,47 +2099,33 @@ class WriteSequenceTestsMixin:
         d.addErrback(log.err)
         self.runReactor(reactor)
 
-    def test_writeSequenceWithUnicodeRaisesException(self):
+    def test_writeSequenceAsBytesLike(self):
         """
-        C{writeSequence} with an element in the sequence of type unicode raises
-        C{TypeError}.
-        """
-
-        def connected(protocols):
-            client, server, port = protocols
-
-            exc = self.assertRaises(
-                TypeError, server.transport.writeSequence, ["Unicode is not kosher"]
-            )
-
-            self.assertEqual(str(exc), "Data must be bytes")
-
-            server.transport.loseConnection()
-
-        reactor = self.buildReactor()
-        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
-        d.addCallback(connected)
-        d.addErrback(log.err)
-        self.runReactor(reactor)
-
-    def test_writeSequenceWithMemoryView(self):
-        """
-        C{writeSequence} with an element in the sequence of memoryviews succeeds.
+        C{writeSequence} with an element in the sequence of byte likes succeeds.
         """
 
         def connected(protocols):
             client, server, port = protocols
+            count = len(ReadableBuffer.__args__)
 
             def dataReceived(data):
                 log.msg("data received: %r" % data)
-                self.assertEqual(data, b"Some sequence splitted")
+                self.assertEqual(data, b"Some sequence splitted" * count)
                 client.transport.loseConnection()
 
             server.dataReceived = dataReceived
 
-            to_send = [memoryview(b) for b in (b"Some ", b"sequence ", b"splitted")]
+            sequence = (b"Some ", b"sequence ", b"splitted")
+            for bytetype in (bytes, bytearray, memoryview):
+                to_send = map(bytetype, sequence)
+                client.transport.writeSequence(to_send)
 
-            client.transport.writeSequence(to_send)
+            client.transport.writeSequence([array.array("b", b) for b in sequence])
+
+            with tempfile.TemporaryFile() as f:
+                f.write(b"Some sequence splitted")
+                f.flush()
+                client.transport.writeSequence([mmap.mmap(f.fileno(), 0)])
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
