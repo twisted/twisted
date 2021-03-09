@@ -339,12 +339,12 @@ class FileHandle(_ConsumerMixin, _LogOwner):
         unregister your producer when it's finished, or the connection will
         never close.
         """
-
+        # This is the same code from twisted.internet.abstract.FileDescriptor.loseConnection.
         if self.connected and not self.disconnecting:
             if self._writeDisconnected:
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
-                self.stopWriting
+                self.stopWriting()
                 self.connectionLost(_connDone)
             else:
                 self.stopReading()

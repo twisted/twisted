@@ -2054,6 +2054,101 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         # If test fails, reactor won't stop and we'll hit timeout:
         runProtocolsWithReactor(self, ListenerProtocol(), Client(), TCPCreator())
 
+    def test_doubleHalfCloseReactorCleanup(self):
+        """
+        If one side half-closes its connection, and then the other side of the
+        connection calls C{loseWriteConnection}, and then C{loseConnection} in
+        {writeConnectionLost}, the connection is closed correctly.
+
+        This rather obscure case used to fail.
+        See U{https://twistedmatrix.com/trac/ticket/3037}.
+        This also covers a code branch for ticket U{https://twistedmatrix.com/trac/ticket/9553}.
+
+        This is the generic tests for most reactors.
+        This tests is overwritten for IOCP reactor, as IOCP reactor doesn't
+        have getReaders() and getWriters().
+        """
+
+        @implementer(IHalfCloseableProtocol)
+        class ListenerProtocol(ConnectableProtocol):
+            def readConnectionLost(self):
+                # Force the existence of a writer in an attempt to cover #9553.
+                self.transport.startWriting()
+                self.transport.loseWriteConnection()
+
+            def writeConnectionLost(self):
+                self.transport.loseConnection()
+
+        class Client(ConnectableProtocol):
+            def connectionMade(self):
+                self.transport.loseConnection()
+
+        initial_readers = []
+
+        def reactorSetUp(reactor):
+            # If test fails, reactor won't stop and we'll hit timeout:
+            reactor._handleSignals()
+            # We might have the waker readers.
+            try:
+                initial_readers.extend(reactor.getReaders())
+            except NotImplementedError:
+                raise SkipTest("Reactor does not implements IReadDescriptor.")
+
+        server = ListenerProtocol()
+        client = Client()
+        reactor = runProtocolsWithReactor(
+            self, server, client, TCPCreator(), reactorSetUp
+        )
+
+        # Check that the reactor is clean.
+        self.assertEqual([], reactor.getWriters())
+        self.assertCountEqual(initial_readers, reactor.getReaders())
+
+    def test_connectClientToServer(self):
+        """
+        This just check that a client can connect to a server and exchange
+        data.
+        """
+
+        class ListenerProtocol(ConnectableProtocol):
+            """
+            A server protocol collecting the received data.
+
+            This is still an ConnectableProtocol to work with `runProtocolsWithReactor`
+            but doesn't implements the interface.
+            """
+
+            data = []
+
+            def connectionMade(self):
+                self.transport.write(b"server-data")
+
+            def dataReceived(self, data):
+                self.data.append(data)
+
+        class Client(ConnectableProtocol):
+            """
+            A client protocol collecting the received data and closing
+            the connection after the data was received from the server.
+            """
+
+            data = []
+
+            def connectionMade(self):
+                self.transport.write(b"client-data")
+
+            def dataReceived(self, data):
+                self.data.append(data)
+                self.transport.loseConnection()
+
+        server = ListenerProtocol()
+        client = Client()
+
+        runProtocolsWithReactor(self, server, client, TCPCreator())
+
+        self.assertEqual([b"client-data"], server.data)
+        self.assertEqual([b"server-data"], client.data)
+
 
 class WriteSequenceTestsMixin:
     """

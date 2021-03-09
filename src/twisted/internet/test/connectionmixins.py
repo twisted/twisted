@@ -128,7 +128,11 @@ class _SingleProtocolFactory(ClientFactory):
 
 
 def runProtocolsWithReactor(
-    reactorBuilder, serverProtocol, clientProtocol, endpointCreator
+    reactorBuilder,
+    serverProtocol,
+    clientProtocol,
+    endpointCreator,
+    reactorSetUp=lambda _: None,
 ):
     """
     Connect two protocols using endpoints and a new reactor instance.
@@ -147,9 +151,12 @@ def runProtocolsWithReactor(
 
     @param endpointCreator: An instance of L{EndpointCreator}.
 
+    @param reactorSetUp: Callable called with the reactor as argument, after the reactor is created.
+
     @return: The reactor run by this test.
     """
     reactor = reactorBuilder.buildReactor()
+    reactorSetUp(reactor)
     serverProtocol._setAttributes(reactor, Deferred())
     clientProtocol._setAttributes(reactor, Deferred())
     serverFactory = _SingleProtocolFactory(serverProtocol)
