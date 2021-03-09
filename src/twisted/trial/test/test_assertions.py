@@ -1235,7 +1235,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         exception = Exception("Bad times")
         try:
             self.successResultOf(self.raisesException(exception))
-        except unittest.FailTest as e:
+        except self.failureException as e:
             self.assertIn("Success result expected on", str(e))
             self.assertIn("builtins.Exception: Bad times", str(e))
 
@@ -1301,7 +1301,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         exception = Exception("Bad times")
         try:
             self.failureResultOf(self.raisesException(exception), KeyError)
-        except unittest.FailTest as e:
+        except self.failureException as e:
             self.assertIn("Failure of type (builtins.KeyError) expected on", str(e))
             self.assertIn("builtins.Exception: Bad times", str(e))
 
@@ -1338,7 +1338,7 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
 
         try:
             self.failureResultOf(self.raisesException(exception), KeyError, IOError)
-        except unittest.FailTest as e:
+        except self.failureException as e:
             self.assertIn(
                 "Failure of type (builtins.KeyError or builtins.OSError) expected on",
                 str(e),
