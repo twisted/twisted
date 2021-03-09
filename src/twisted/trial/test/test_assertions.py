@@ -1224,21 +1224,6 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
             self.failureException, self.successResultOf, self.raisesException()
         )
 
-    def test_successResultOfWithFailureHasTraceback(self):
-        """
-        L{SynchronousTestCase.successResultOf} raises a
-        L{SynchronousTestCase.failureException} that has the original failure
-        traceback when called with a coroutine with a failure result.
-        """
-        try:
-            self.successResultOf(self.raisesException())
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
-
     def test_failureResultOfWithoutResult(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
@@ -1290,23 +1275,6 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
                 str(e),
             )
 
-    def test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB(self):
-        """
-        L{SynchronousTestCase.failureResultOf} raises
-        L{SynchronousTestCase.failureException} when called with a coroutine
-        that raises an exception with a failure type that was not expected, and
-        the L{SynchronousTestCase.failureException} message contains the
-        original exception traceback.
-        """
-        try:
-            self.failureResultOf(self.raisesException(), KeyError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
-
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
@@ -1327,23 +1295,6 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
                 ),
                 str(e),
             )
-
-    def test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB(self):
-        """
-        L{SynchronousTestCase.failureResultOf} raises
-        L{SynchronousTestCase.failureException} when called with a coroutine
-        that raises an exception of a type that was not expected, and the
-        L{SynchronousTestCase.failureException} message contains the original
-        exception traceback in the error message.
-        """
-        try:
-            self.failureResultOf(self.raisesException(), KeyError, IOError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
 
     def test_successResultOfWithSuccessResult(self):
         """
