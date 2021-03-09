@@ -61,7 +61,7 @@ class ConchTestRealm:
             self.avatar = ConchTestAvatar()
             return interfaces[0], self.avatar, self.avatar.logout
         raise UnauthorizedLogin(
-            "Only {!r} may log in, not {!r}".format(self.expectedAvatarID, avatarID)
+            f"Only {self.expectedAvatarID!r} may log in, not {avatarID!r}"
         )
 
 
@@ -388,7 +388,7 @@ if cryptography is not None and pyasn1 is not None:
                 return
             if not hasattr(self, "expectedLoseConnection"):
                 raise unittest.FailTest(
-                    "unexpectedly lost connection {}\n{}".format(self, reason)
+                    f"unexpectedly lost connection {self}\n{reason}"
                 )
             self.done = 1
 
@@ -409,7 +409,7 @@ if cryptography is not None and pyasn1 is not None:
             self.loseConnection()
 
         def receiveUnimplemented(self, seqID):
-            raise unittest.FailTest("got unimplemented: seqid {}".format(seqID))
+            raise unittest.FailTest(f"got unimplemented: seqid {seqID}")
 
     class ConchTestServer(ConchTestBase, transport.SSHServerTransport):
         def connectionLost(self, reason):
@@ -507,7 +507,7 @@ if cryptography is not None and pyasn1 is not None:
             if dataType == connection.EXTENDED_DATA_STDERR:
                 self.receivedExt.append(data)
             else:
-                log.msg("Unrecognized extended data: {!r}".format(dataType))
+                log.msg(f"Unrecognized extended data: {dataType!r}")
 
         def request_exit_status(self, status):
             [self.status] = struct.unpack(">L", status)

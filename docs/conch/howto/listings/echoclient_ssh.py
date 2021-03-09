@@ -75,7 +75,7 @@ def readKey(path):
     try:
         return Key.fromFile(path)
     except EncryptedKeyError:
-        passphrase = getpass.getpass("{!r} keyphrase: ".format(path))
+        passphrase = getpass.getpass(f"{path!r} keyphrase: ")
         return Key.fromFile(path, passphrase=passphrase)
 
 

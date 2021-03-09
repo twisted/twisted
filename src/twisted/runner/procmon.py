@@ -248,7 +248,7 @@ class ProcessMonitor(service.Service):
         @raise KeyError: If a process with the given name already exists.
         """
         if name in self._processes:
-            raise KeyError("remove {} first".format(name))
+            raise KeyError(f"remove {name} first")
         self._processes[name] = _Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
@@ -369,7 +369,7 @@ class ProcessMonitor(service.Service):
         @param name: The name of the process to be stopped
         """
         if name not in self._processes:
-            raise KeyError("Unrecognized process name: {}".format(name))
+            raise KeyError(f"Unrecognized process name: {name}")
 
         proto = self.protocols.get(name, None)
         if proto is not None:
@@ -404,5 +404,5 @@ class ProcessMonitor(service.Service):
 
             if uidgid:
                 uidgid = "(" + uidgid + ")"
-            lst.append("{!r}{}: {!r}".format(name, uidgid, proc.args))
+            lst.append(f"{name!r}{uidgid}: {proc.args!r}")
         return "<" + self.__class__.__name__ + " " + " ".join(lst) + ">"

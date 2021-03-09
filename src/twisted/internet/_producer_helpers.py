@@ -16,7 +16,7 @@ from twisted.python.reflect import safe_str
 
 
 # This module exports nothing public, it's for internal Twisted use only.
-__all__ = []  # type: List[str]
+__all__: List[str] = []
 
 
 @implementer(IPushProducer)

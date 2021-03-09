@@ -662,7 +662,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
             while True:
                 port = findFreePort(self.interface, self.family)
                 bindAddress = (self.interface, port[1])
-                log.msg("Connect attempt with bindAddress {}".format(bindAddress))
+                log.msg(f"Connect attempt with bindAddress {bindAddress}")
                 try:
                     reactor.connectTCP(
                         fakeDomain,
@@ -741,9 +741,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
 
         self.runReactor(reactor)
 
-        self.assertEqual(
-            len(results), 1, "more than one callback result: {}".format(results)
-        )
+        self.assertEqual(len(results), 1, f"more than one callback result: {results}")
 
         if isinstance(results[0], Failure):
             # self.fail(Failure)
@@ -1498,7 +1496,7 @@ class TCPPortTestsMixin:
     Tests for L{IReactorTCP.listenTCP}
     """
 
-    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -1510,7 +1508,7 @@ class TCPPortTestsMixin:
         """
         Get the expected connection lost message for a TCP port.
         """
-        return "(TCP Port {} Closed)".format(port.getHost().port)
+        return f"(TCP Port {port.getHost().port} Closed)"
 
     def test_portGetHostOnIPv4(self):
         """
@@ -2062,7 +2060,7 @@ class WriteSequenceTestsMixin:
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
 
-    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def setWriteBufferSize(self, transport, value):
         """
@@ -2732,7 +2730,7 @@ class AbortConnectionMixin:
     """
 
     # Override in subclasses, should be an EndpointCreator instance:
-    endpoints = None  # type: Optional[EndpointCreator]
+    endpoints: Optional[EndpointCreator] = None
 
     def runAbortTest(self, clientClass, serverClass, clientConnectionLostReason=None):
         """

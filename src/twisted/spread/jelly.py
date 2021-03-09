@@ -267,7 +267,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
             "It's not a class."
         else:
             if yes:
-                setUnjellyableForClass("{}{}".format(prefix, name), loaded)
+                setUnjellyableForClass(f"{prefix}{name}", loaded)
 
 
 def getInstanceState(inst, jellier):
@@ -578,9 +578,7 @@ class _Jellier:
                         )
                 return self.preserve(obj, sxp)
         else:
-            raise InsecureJelly(
-                "Type not allowed for object: {} {}".format(objType, obj)
-            )
+            raise InsecureJelly(f"Type not allowed for object: {objType} {obj}")
 
     def _jellyIterable(self, atom, obj):
         """
@@ -679,7 +677,7 @@ class _Unjellier:
             modName = ".".join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module {} not allowed (in type {}).".format(modName, jelTypeText)
+                    f"Module {modName} not allowed (in type {jelTypeText})."
                 )
             clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
@@ -831,9 +829,7 @@ class _Unjellier:
         if type(moduleName) != str:
             raise InsecureJelly("Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
-            raise InsecureJelly(
-                "Attempted to unjelly module named {!r}".format(moduleName)
-            )
+            raise InsecureJelly(f"Attempted to unjelly module named {moduleName!r}")
         mod = __import__(moduleName, {}, {}, "x")
         return mod
 

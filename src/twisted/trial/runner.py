@@ -101,7 +101,7 @@ def filenameToModule(fn):
     @raise ValueError: If C{fn} does not exist.
     """
     if not os.path.exists(fn):
-        raise ValueError("{!r} doesn't exist".format(fn))
+        raise ValueError(f"{fn!r} doesn't exist")
     try:
         ret = reflect.namedAny(reflect.filenameToModuleName(fn))
     except (ValueError, AttributeError):
@@ -145,7 +145,7 @@ def _resolveDirectory(fn):
         if initFile:
             fn = os.path.join(fn, initFile)
         else:
-            raise ValueError("{!r} is not a package directory".format(fn))
+            raise ValueError(f"{fn!r} is not a package directory")
     return fn
 
 
@@ -462,9 +462,7 @@ class TestLoader:
                     raise
 
                 if remaining == "":
-                    raise reflect.ModuleNotFound(
-                        "The module {} does not exist.".format(name)
-                    )
+                    raise reflect.ModuleNotFound(f"The module {name} does not exist.")
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
@@ -479,7 +477,7 @@ class TestLoader:
                 # class from just holding onto the method.
                 parent, obj = obj, getattr(obj, part)
         except AttributeError:
-            raise AttributeError("{} does not exist.".format(name))
+            raise AttributeError(f"{name} does not exist.")
 
         return self.loadAnything(
             obj, parent=parent, qualName=remaining, recurse=recurse
@@ -501,7 +499,7 @@ class TestLoader:
         ## a custom suite.
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
-            raise TypeError("{!r} is not a module".format(module))
+            raise TypeError(f"{module!r} is not a module")
         if hasattr(module, "testSuite"):
             return module.testSuite()
         elif hasattr(module, "test_suite"):
@@ -525,9 +523,9 @@ class TestLoader:
         @param klass: The class to load tests from.
         """
         if not isinstance(klass, type):
-            raise TypeError("{!r} is not a class".format(klass))
+            raise TypeError(f"{klass!r} is not a class")
         if not isTestCase(klass):
-            raise ValueError("{!r} is not a test case".format(klass))
+            raise ValueError(f"{klass!r} is not a test case")
         names = self.getTestCaseNames(klass)
         tests = self.sort(
             [self._makeCase(klass, self.methodPrefix + name) for name in names]
@@ -570,7 +568,7 @@ class TestLoader:
         tests.
         """
         if not isPackage(package):
-            raise TypeError("{!r} is not a package".format(package))
+            raise TypeError(f"{package!r} is not a package")
         pkgobj = modules.getModule(package.__name__)
         if recurse:
             discovery = pkgobj.walkModules()
@@ -666,7 +664,7 @@ class TestLoader:
             # We've found a test suite.
             return obj
         else:
-            raise TypeError("don't know how to make test from: {}".format(obj))
+            raise TypeError(f"don't know how to make test from: {obj}")
 
     def loadByName(self, name, recurse=False):
         """
@@ -733,7 +731,7 @@ class TestLoader:
             module = SourceFileLoader(name, fileName).load_module()
             return self.loadAnything(module, recurse=recurse)
         except OSError:
-            raise ValueError("{} is not a Python file.".format(fileName))
+            raise ValueError(f"{fileName} is not a Python file.")
 
 
 def _qualNameWalker(qualName):

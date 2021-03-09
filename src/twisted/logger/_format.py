@@ -253,7 +253,7 @@ def _formatEvent(event: LogEvent) -> str:
         elif isinstance(format, bytes):
             format = format.decode("utf-8")
         else:
-            raise TypeError("Log format must be str, not {!r}".format(format))
+            raise TypeError(f"Log format must be str, not {format!r}")
 
         return formatWithCall(format, event)
 

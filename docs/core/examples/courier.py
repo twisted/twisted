@@ -35,7 +35,7 @@ from syslog import syslog, openlog, LOG_MAIL
 def trace_dump():
     t, v, tb = sys.exc_info()
     openlog(FILTERNAME, 0, LOG_MAIL)
-    syslog("Unhandled exception: {} - {}".format(v, t))
+    syslog(f"Unhandled exception: {v} - {t}")
     while tb:
         syslog(
             "Trace: {}:{} {}".format(
@@ -73,7 +73,7 @@ class MailProcessor(basic.LineReceiver):
     delimiter = "\n"
 
     def connectionMade(self):
-        log.msg("Connection from {}".format(self.transport))
+        log.msg(f"Connection from {self.transport}")
         self.state = "connected"
         self.metaInfo = []
 
@@ -109,8 +109,8 @@ def main():
     # Listen on the UNIX socket
     f = Factory()
     f.protocol = MailProcessor
-    safe_del("{}/{}".format(ALLFILTERS, FILTERNAME))
-    reactor.listenUNIX("{}/{}".format(ALLFILTERS, FILTERNAME), f, 10)
+    safe_del(f"{ALLFILTERS}/{FILTERNAME}")
+    reactor.listenUNIX(f"{ALLFILTERS}/{FILTERNAME}", f, 10)
 
     # Once started, close fd 3 to let Courier know we're ready
     reactor.callLater(0, os.close, 3)

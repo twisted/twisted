@@ -162,7 +162,7 @@ class SaveLoadTests(TestCase):
         Round-tripping a failure through L{eventAsJSON} preserves its class and
         structure.
         """
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
         log = Logger(observer=cast(ILogObserver, events.append))
         try:
             1 / 0
@@ -226,9 +226,7 @@ class FileLogObserverTests(TestCase):
             observer = jsonFileLogObserver(fileHandle, recordSeparator)
             event = dict(x=1)
             observer(event)
-            self.assertEqual(
-                fileHandle.getvalue(), '{0}{{"x": 1}}\n'.format(recordSeparator)
-            )
+            self.assertEqual(fileHandle.getvalue(), f'{recordSeparator}{{"x": 1}}\n')
 
     def test_observeWritesDefaultRecordSeparator(self) -> None:
         """
@@ -253,7 +251,7 @@ class FileLogObserverTests(TestCase):
         """
         io = StringIO()
         publisher = LogPublisher()
-        logged = []  # type: List[LogEvent]
+        logged: List[LogEvent] = []
         publisher.addObserver(cast(ILogObserver, logged.append))
         publisher.addObserver(jsonFileLogObserver(io))
         logger = Logger(observer=publisher)
@@ -286,7 +284,7 @@ class LogFileReaderTests(TestCase):
     """
 
     def setUp(self) -> None:
-        self.errorEvents = []  # type: List[LogEvent]
+        self.errorEvents: List[LogEvent] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:

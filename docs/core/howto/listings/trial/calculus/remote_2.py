@@ -10,7 +10,7 @@ class CalculationProxy:
     def __init__(self):
         self.calc = Calculation()
         for m in ["add", "subtract", "multiply", "divide"]:
-            setattr(self, "remote_{}".format(m), getattr(self.calc, m))
+            setattr(self, f"remote_{m}", getattr(self.calc, m))
 
 
 class RemoteCalculationProtocol(basic.LineReceiver):

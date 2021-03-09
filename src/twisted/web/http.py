@@ -783,8 +783,8 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = b"(no method yet)"  # type: bytes
-    clientproto = b"(no clientproto yet)"  # type: bytes
+    method: bytes = b"(no method yet)"
+    clientproto: bytes = b"(no clientproto yet)"
     uri = "(no uri yet)"
     startedWriting = 0
     chunked = 0
@@ -831,11 +831,7 @@ class Request:
         if self.producer:
             self._log.failure(
                 "",
-                Failure(
-                    RuntimeError(
-                        "Producer was not unregistered for {}".format(self.uri)
-                    )
-                ),
+                Failure(RuntimeError(f"Producer was not unregistered for {self.uri}")),
             )
             self.unregisterProducer()
         self.channel.requestDone(self)
@@ -980,6 +976,7 @@ class Request:
                                     for z in y
                                 ]
                                 for x, y in cgiArgs.items()
+                                if isinstance(x, str)
                             }
                         )
                     else:
@@ -1892,7 +1889,7 @@ class _ChunkedTransferDecoder:
         data = self._buffer + data
         self._buffer = b""
         while data:
-            data = getattr(self, "_dataReceived_{}".format(self.state))(data)
+            data = getattr(self, f"_dataReceived_{self.state}")(data)
 
     def noMoreData(self):
         """

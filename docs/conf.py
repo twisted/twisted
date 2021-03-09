@@ -16,6 +16,7 @@ import os
 import pathlib
 import subprocess
 from pprint import pprint
+from datetime import date
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -25,8 +26,9 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- General configuration ------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = "1.2"
+# See setup.cfg for the Sphinx version required to build the documentation.
+# needs_sphinx is not use to avoid duplication and getting these values
+# out of sync.
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -60,9 +62,14 @@ source_suffix = ".rst"
 # The master toctree document.
 master_doc = "index"
 
+_today = date.today()
 # General information about the project.
 project = "Twisted"
-copyright = "2020, Twisted Matrix Labs"
+copyright = "{}, Twisted Matrix Labs. Ver {}. Built on {}".format(
+    _today.year,
+    twisted_version_object.public(),
+    _today.isoformat(),
+)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -175,12 +182,12 @@ _git_reference = subprocess.run(
 ).stdout
 
 
-print("== Environment dump for {} ===".format(_git_reference))
+print(f"== Environment dump for {_git_reference} ===")
 pprint(dict(os.environ))
 print("======")
 
 # Base url for API docs
-api_base_url = "/documents/{}/api/".format(release)
+api_base_url = f"/documents/{release}/api/"
 if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/
@@ -209,7 +216,6 @@ if os.environ.get("READTHEDOCS", "") == "True":
 _source_root = pathlib.Path(__file__).parent.parent / "src"
 pydoctor_args = [
     "--quiet",
-    "--make-html",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     "--project-name=Twisted",
     "--project-url=https://twistedmatrix.com/",
@@ -230,6 +236,8 @@ pydoctor_args = [
     str(_source_root / "twisted"),
 ]
 
+pydoctor_url_path = "/en/{rtd_version}/api/"
+
 traclinks_base_url = "https://twistedmatrix.com/trac"
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
@@ -238,7 +246,6 @@ traclinks_base_url = "https://twistedmatrix.com/trac"
 intersphinx_mapping = {
     "py3": ("https://docs.python.org/3", None),
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
-    "api": (api_base_url, "../apidocs/objects.inv"),
 }
 # How long to cache remote inventories. Positive is a number of days,
 # negative means infinite. The default is 5 days, which should be fine

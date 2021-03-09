@@ -120,7 +120,7 @@ class OptionsTests(TestCase):
         # SystemExit.code is None on success
         self.assertEqual(systemExitCode.code, None)
         data = out.getvalue()
-        self.assertEqual(data, "mailmail version: {}\n".format(version))
+        self.assertEqual(data, f"mailmail version: {version}\n")
 
     def test_backgroundDelivery(self):
         """
