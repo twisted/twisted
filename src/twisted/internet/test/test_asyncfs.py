@@ -1,11 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details..
+# type: ignore
 
 import os
 import sys
+import time
 import tempfile
 import os.path
+from zope.interface import implementer
 from twisted.internet import asyncfs
+from twisted.internet.interfaces import IPushProducer, IConsumer
 from twisted.trial import unittest
 from twisted.internet.defer import DeferredList
 from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
@@ -13,6 +17,46 @@ from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
 log = Logger()
 observers = [textFileLogObserver(sys.stdout)]
 globalLogBeginner.beginLoggingTo(observers)
+
+ONE_MEG_OF_BLAH = "blah" * (2 ** 18)  # needed to overwhelm RAM buffers
+
+
+@implementer(IConsumer)
+class FakeConsumer:
+    def write(self, data):
+        self.total_bytes += len(data)
+        if self.total_bytes > 10000 and not self.done_flip:
+            self.done_flip = True
+            self.producer.pauseProducing()
+            time.sleep(0.01)
+            self.producer.resumeProducing()
+
+    def __init__(self):
+        self.done_flip = False
+        self.total_bytes = 0
+
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+        self.streaming = streaming
+
+    def unregisterProducer(self):
+        self.producer = None
+
+
+@implementer(IPushProducer)
+class FakeProducer:
+    def __init__(self):
+        self.paused = False
+
+    def pauseProducing(self):
+        self.paused = True
+
+    def resumeProducing(self):
+        self.paused = False
+
+    def fire(self, consumer):
+        if not self.paused:
+            consumer.write(ONE_MEG_OF_BLAH.encode("us-ascii"))
 
 
 class BaseTestFs:
@@ -213,6 +257,42 @@ class BaseTestFs:
 
         d1 = self.fso.statfs()
         d1.addCallback(cb_statfs)
+        return d1
+
+    def test_consumer(self):
+        def cb_con2(_, fd, consumer):
+            self.assertEqual(consumer.total_bytes, len(ONE_MEG_OF_BLAH))
+            return fd.close()
+
+        def cb_con1(fd):
+            consumer = FakeConsumer()
+            consumer.registerProducer(fd.producer, True)
+            d2 = fd.send(consumer)
+            d2.addCallback(cb_con2, fd, consumer)
+            return d2
+
+        with open("bigfile.txt", "w") as fd:
+            fd.write(ONE_MEG_OF_BLAH)
+        d1 = self.fso.openFile("bigfile.txt", os.O_CREAT | os.O_RDONLY)
+        d1.addCallback(cb_con1)
+        return d1
+
+    def test_producer(self):
+        def cb_pro2(_):
+            s = os.stat("bigfile.txt")
+            self.assertEqual(s.st_size, len(ONE_MEG_OF_BLAH))
+
+        def cb_pro1(fd):
+            producer = FakeProducer()
+            consumer = fd.receive()
+            consumer.registerProducer(producer, True)
+            producer.fire(consumer)
+            d2 = fd.close()
+            d2.addCallback(cb_pro2)
+            return d2
+
+        d1 = self.fso.openFile("bigfile.txt", os.O_CREAT | os.O_WRONLY)
+        d1.addCallback(cb_pro1)
         return d1
 
 

@@ -5,18 +5,30 @@
 This module contains asynchronous filesystem interfaces and reference implementations
 """
 
-from zope.interface import Interface, implementer
+from zope.interface import Interface, Attribute, implementer
 from twisted.internet import reactor
-from twisted.internet.interfaces import IPushProducer, IConsumer
-from twisted.internet.threads import deferToThreadPool, blockingCallFromThread
+from twisted.internet.interfaces import (
+    IPushProducer,
+    IProducer,
+    IConsumer,
+)
+from twisted.python.threadpool import ThreadPool
+from twisted.internet.threads import (
+    deferToThreadPool,
+    blockingCallFromThread,
+)
 from twisted.internet.defer import Deferred
-from twisted.python.failure import Failure
 from twisted.logger import Logger
+from typing import Tuple, Iterable, Optional, Callable, cast, Any
 import os
 import os.path
 import threading
 
 log = Logger()
+
+
+DEFAULT_BUFFER_MAX = 2 ** 12  # four megabytes
+DEFAULT_CHUNK_SIZE = 4096
 
 
 class IAsyncFilesystem(Interface):
@@ -26,7 +38,9 @@ class IAsyncFilesystem(Interface):
     based closely on L{twisted.conch.interfaces.ISFTPServer}
     """
 
-    def openFile(filename, flags, attrs):
+    def openFile(
+        filename: str, flags: int = 0, attrs: Optional[dict] = None
+    ) -> "Deferred":
         """
         Called when the clients asks to open a file.
 
@@ -55,17 +69,17 @@ class IAsyncFilesystem(Interface):
         with the object.
         """
 
-    def removeFile(filename):
+    def removeFile(filename: str) -> "Deferred":
         """
         Remove the given file.
 
-        This method returns when the remove succeeds, or a Deferred that is
+        This method returns a Deferred that is
         called back when it succeeds.
 
         @param filename: the name of the file as a string.
         """
 
-    def renameFile(oldpath, newpath):
+    def renameFile(oldpath: str, newpath: str) -> "Deferred":
         """
         Rename the given file.
 
@@ -77,7 +91,7 @@ class IAsyncFilesystem(Interface):
         @param newpath: the new file name.
         """
 
-    def makeDirectory(path, attrs):
+    def makeDirectory(path: str, attrs: Optional[dict] = None) -> "Deferred":
         """
         Make a directory.
 
@@ -89,7 +103,7 @@ class IAsyncFilesystem(Interface):
         Its meaning is the same as the attrs in the L{openFile} method.
         """
 
-    def removeDirectory(path):
+    def removeDirectory(path: str) -> "Deferred":
         """
         Remove a directory (non-recursively)
 
@@ -102,7 +116,7 @@ class IAsyncFilesystem(Interface):
         @param path: the directory to remove.
         """
 
-    def openDirectory(path):
+    def openDirectory(path: str) -> "Deferred":
         """
         Open a directory for scanning.
 
@@ -125,7 +139,7 @@ class IAsyncFilesystem(Interface):
         @param path: the directory to open.
         """
 
-    def getAttrs(path, followLinks):
+    def getAttrs(path: str, followLinks: bool) -> "Deferred":
         """
         Return the attributes for the given path.
 
@@ -138,7 +152,7 @@ class IAsyncFilesystem(Interface):
         return attributes for the specified path.
         """
 
-    def setAttrs(path, attrs):
+    def setAttrs(path: str, attrs: dict) -> "Deferred":
         """
         Set the attributes for the path.
 
@@ -150,7 +164,7 @@ class IAsyncFilesystem(Interface):
         L{openFile}.
         """
 
-    def readLink(path):
+    def readLink(path: str) -> "Deferred":
         """
         Find the root of a set of symbolic links.
 
@@ -160,7 +174,7 @@ class IAsyncFilesystem(Interface):
         @param path: the path of the symlink to read.
         """
 
-    def makeLink(linkPath, targetPath):
+    def makeLink(linkPath: str, targetPath: str) -> "Deferred":
         """
         Create a symbolic link.
 
@@ -171,7 +185,7 @@ class IAsyncFilesystem(Interface):
         @param targetPath: the path of the target of the link as a string.
         """
 
-    def realPath(path):
+    def realPath(path: str) -> "Deferred":
         """
         Convert any path to an absolute path.
 
@@ -181,12 +195,12 @@ class IAsyncFilesystem(Interface):
         @param path: the path to convert as a string.
         """
 
-    def unregister():
+    def unregister() -> None:
         """
         release system resources
         """
 
-    def statfs():
+    def statfs() -> "Deferred":
         """
         @return: a Deferred returning a dictionary with these keys, all optional
          - C{size} size of a block, in bytes (int)
@@ -208,7 +222,7 @@ class IFile(Interface):
     interface should be returned from L{openFile}().
     """
 
-    def close():
+    def close() -> "Deferred":
         """
         Close the file.
 
@@ -216,7 +230,7 @@ class IFile(Interface):
         Deferred that is called back when the close succeeds.
         """
 
-    def readChunk(offset, length):
+    def readChunk(offset: int, length: int) -> "Deferred":
         """
         Read from the file.
 
@@ -231,7 +245,7 @@ class IFile(Interface):
         this should read the requested number (up to the end of the file).
         """
 
-    def writeChunk(offset, data):
+    def writeChunk(offset: int, data: bytes) -> "Deferred":
         """
         Write to the file.
 
@@ -245,7 +259,7 @@ class IFile(Interface):
         @rtype: L{int}
         """
 
-    def getAttrs():
+    def getAttrs() -> "Deferred":
         """
         Return the attributes for the file.
 
@@ -253,7 +267,7 @@ class IFile(Interface):
         argument to L{openFile} or a L{Deferred} that is called back with same.
         """
 
-    def setAttrs(attrs):
+    def setAttrs(attrs: dict) -> "Deferred":
         """
         Set the attributes for the file.
 
@@ -264,13 +278,15 @@ class IFile(Interface):
         L{openFile}.
         """
 
-    def fileno():
+    def fileno() -> int:
         """
         @return: the underlying file descriptor
         @rtype: L{int)
         """
 
-    def send(consumer, start=0, chunkSize=4096):
+    def send(
+        consumer: "IConsumer", start: int = 0, chunkSize: int = DEFAULT_CHUNK_SIZE
+    ) -> "Deferred":
         """
         Produce the contents of the file to the given consumer.
 
@@ -283,7 +299,9 @@ class IFile(Interface):
         adapted from L{twisted.protocols.ftp.IReadFile}
         """
 
-    def receive(append=False):
+    producer = Attribute("a read-only IPushProducer object available during send()")
+
+    def receive(append: bool = False) -> "IConsumer":
         """
         @param append: True if append to end of file
         @return: A C{IConsumer} which is used to write data
@@ -296,11 +314,6 @@ class AccessViolation(Exception):
     """thrown when a caller tries to break access restrictions"""
 
 
-DEFAULT_BUFFER_MAX = 2 ** 12  # four megabytes
-DEFAULT_CHUNK_SIZE = 4096
-
-
-@implementer(IPushProducer)
 @implementer(IFile)
 class _ThreadFile:
     """
@@ -308,7 +321,9 @@ class _ThreadFile:
     by L{ThreadVfs.openFile}
     """
 
-    def __init__(self, fso, filename, flags, attrs):
+    def __init__(
+        self, fso: "ThreadFs", filename: str, flags: int, attrs: Optional[dict]
+    ) -> None:
         """
         @param fso: the parent filesystem object
         @type fso: L{IFilesystem}
@@ -321,7 +336,8 @@ class _ThreadFile:
         @type attrs: L{dict}
         """
         self.fso = fso
-        self._write_consumer = None
+        self._write_consumer: Optional["_ThreadFileConsumer"] = None
+        self._producer = _ThreadFileProducer()
         if attrs is None:
             attrs = {}
         if "permissions" in attrs and not self.fso.read_only:
@@ -338,10 +354,10 @@ class _ThreadFile:
             self.fso._setAttrs(filename, attrs)
         self.fd = fd
 
-    def fileno(self):
+    def fileno(self) -> int:
         return self.fd
 
-    def close(self):
+    def close(self) -> "Deferred":
         if self._write_consumer:
             self._write_consumer.close()
             d = self._write_consumer.write_deferred
@@ -350,80 +366,97 @@ class _ThreadFile:
         else:
             return self.fso._deferToThread(os.close, self.fd)
 
-    def readChunk(self, offset, length):
-        def int_read():
+    def readChunk(self, offset: int, length: int) -> "Deferred":
+        def int_read() -> bytes:
             os.lseek(self.fd, offset, 0)
             return os.read(self.fd, length)
 
         return self.fso._deferToThread(int_read)
 
-    def writeChunk(self, offset, data):
+    def writeChunk(self, offset: int, data: bytes) -> "Deferred":
         if self.fso.read_only:
             raise AccessViolation()
 
-        def int_write():
+        def int_write() -> int:
             os.lseek(self.fd, offset, 0)
             return os.write(self.fd, data)
 
         return self.fso._deferToThread(int_write)
 
-    def getAttrs(self):
+    def getAttrs(self) -> "Deferred":
         s = self.fso._deferToThread(os.stat, self.fd)
         s.addCallback(self.fso._getAttrs)
         return s
 
-    def setAttrs(self, attrs):
+    def setAttrs(self, attrs: dict) -> "Deferred":
         if self.fso.read_only:
             raise AccessViolation()
         return self.fso._deferToThread(self.fso._setAttrs, self.fd, attrs)
 
-    def flush(self):
+    def flush(self) -> "Deferred":
         if self.fso.read_only:
             raise AccessViolation()
         return self.fso._deferToThread(os.fsync, self.fd)
 
-    def send(self, consumer, start=0, chunkSize=DEFAULT_CHUNK_SIZE):
-        self.stop_flag = False
-        self.event = threading.Event()
-        self.event.set()
+    def send(
+        self, consumer: "IConsumer", start: int = 0, chunkSize: int = DEFAULT_CHUNK_SIZE
+    ) -> "Deferred":
+        self._producer.stop_flag = False
+        self._producer.event.set()
 
-        def int_read_loop():
+        def int_read_loop() -> None:
             os.lseek(self.fd, start, 0)
             while True:
                 buf = os.read(self.fd, chunkSize)
                 if buf:
                     blockingCallFromThread(reactor, consumer.write, buf)
-                if len(buf) < chunkSize or self.stop_flag:
+                if len(buf) < chunkSize or self._producer.stop_flag:
                     break
-                self.event.wait()
+                self._producer.event.wait()
 
         return self.fso._deferToThread(int_read_loop)
 
-    def stopProducing(self):
-        self.stop_flag = True
+    @property
+    def producer(self) -> "_ThreadFileProducer":
+        return self._producer
 
-    def pauseProducing(self):
-        self.event.clear()
-
-    def resumeProducing(self):
-        self.event.set()
-
-    def receive(self, append=False, buffer_max=DEFAULT_BUFFER_MAX):
+    def receive(
+        self, append: bool = False, buffer_max: int = DEFAULT_BUFFER_MAX
+    ) -> "IConsumer":
         if self.fso.read_only:
             raise AccessViolation()
         self._write_consumer = _ThreadFileConsumer(self, append, buffer_max)
         return self._write_consumer
 
 
+@implementer(IPushProducer)
+class _ThreadFileProducer:
+    def __init__(self) -> None:
+        self.stop_flag = False
+        self.event = threading.Event()
+
+    def stopProducing(self) -> None:
+        self.stop_flag = True
+
+    def pauseProducing(self) -> None:
+        self.event.clear()
+
+    def resumeProducing(self) -> None:
+        self.event.set()
+
+
 @implementer(IConsumer)
 class _ThreadFileConsumer:
-    def __init__(self, thread_file, append, buffer_max):
-        self.producer = None
+    def __init__(
+        self, thread_file: "_ThreadFile", append: bool, buffer_max: int
+    ) -> None:
+        self.producer: Optional["IProducer"] = None
         self.streaming = False
         self.lock = threading.Lock()
         self.event = threading.Event()
         self._paused = False
         self._buffer = bytearray()
+        self.fso = thread_file.fso
         self.write_deferred = self.fso._deferToThread(
             self._consumer_write_thread, append
         )
@@ -431,20 +464,20 @@ class _ThreadFileConsumer:
         self.buffer_max = buffer_max
         self._closed = False
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(self, producer: "IProducer", streaming: bool) -> None:
         assert self.producer is None
         self.producer = producer
         self.streaming = streaming
         self._paused = False
 
-    def unregisterProducer(self):
+    def unregisterProducer(self) -> None:
         assert self.producer
         if self.streaming and not self._paused:
-            self.producer.pauseProducing()
+            cast("IPushProducer", self.producer).pauseProducing()
             self._paused = True
         self.producer = None
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         with self.lock:
             self._buffer += data
             self.event.set()
@@ -452,20 +485,20 @@ class _ThreadFileConsumer:
             self.producer
             and self.streaming
             and (not self._paused)
-            and len(self.buffer) > self.buffer_max
+            and len(self._buffer) > self.buffer_max
         ):
-            self.producer.pauseProducing()
+            cast("IPushProducer", self.producer).pauseProducing()
             self._paused = True
 
-    def close(self):
+    def close(self) -> None:
         with self.lock:
             self._closed = True
             self.event.set()
         if self.producer and self.streaming and (not self._paused):
-            self.producer.pauseProducing()
+            cast("IPushProducer", self.producer).pauseProducing()
             self._paused = True
 
-    def _consumer_write_thread(self, append):
+    def _consumer_write_thread(self, append: bool) -> None:
         os.lseek(self.fd, 0, os.SEEK_END if append else os.SEEK_SET)
         while True:
             with self.lock:
@@ -480,7 +513,9 @@ class _ThreadFileConsumer:
                     (self.streaming and self._paused) or (not self.streaming)
                 ):
                     self._paused = False
-                    blockingCallFromThread(reactor, self.producer.resumeProducing)
+                    blockingCallFromThread(
+                        reactor, cast("IPushProducer", self.producer).resumeProducing
+                    )
                 self.event.wait()
             else:
                 os.write(self.fd, buf)
@@ -497,7 +532,12 @@ class ThreadFs:
     However unlike conch we don't have per-user processes so more of our own security.
     """
 
-    def __init__(self, root, threadpool=None, read_only=False):
+    def __init__(
+        self,
+        root: str,
+        threadpool: Optional["ThreadPool"] = None,
+        read_only: bool = False,
+    ) -> None:
         """
         @param root: the base directory
         @type root: L{str}
@@ -513,12 +553,12 @@ class ThreadFs:
         if threadpool:
             self.threadpool = threadpool
         else:
-            self.threadpool = reactor.getThreadPool()
+            self.threadpool = reactor.getThreadPool()  # type: ignore
 
-    def unregister(self):
+    def unregister(self) -> None:
         pass
 
-    def _setAttrs(self, path, attrs):
+    def _setAttrs(self, path: str, attrs: dict) -> bool:
         if "uid" in attrs and "gid" in attrs:
             os.chown(path, attrs["uid"], attrs["gid"])
         if "permissions" in attrs:
@@ -527,7 +567,7 @@ class ThreadFs:
             os.utime(path, (attrs["atime"], attrs["mtime"]))
         return True
 
-    def _getAttrs(self, s):
+    def _getAttrs(self, s: os.stat_result) -> dict:
         d = {
             "size": s.st_size,
             "uid": s.st_uid,
@@ -551,35 +591,39 @@ class ThreadFs:
             pass
         return d
 
-    def _absPath(self, path):
+    def _absPath(self, path: str) -> str:
         p = os.path.normpath(os.path.join(self.root, path))
         if not p.startswith(self.root):
             raise AccessViolation()
         return p
 
-    def _deferToThread(self, f, *args, **kwargs):
-        return deferToThreadPool(reactor, self.threadpool, f, *args, **kwargs)
+    def _deferToThread(self, f: Callable, *args: Any, **kwargs: Any) -> "Deferred":
+        return cast(
+            "Deferred", deferToThreadPool(reactor, self.threadpool, f, *args, **kwargs)
+        )
 
-    def openFile(self, filename, flags=0, attrs=None):
+    def openFile(
+        self, filename: str, flags: int = 0, attrs: Optional[dict] = None
+    ) -> "Deferred":
         return self._deferToThread(
             _ThreadFile, self, self._absPath(filename), flags, attrs
         )
 
-    def removeFile(self, filename):
+    def removeFile(self, filename: str) -> "Deferred":
         if self.read_only:
             raise AccessViolation()
         filename = self._absPath(filename)
         return self._deferToThread(os.remove, filename)
 
-    def renameFile(self, oldpath, newpath):
+    def renameFile(self, oldpath: str, newpath: str) -> "Deferred":
         if self.read_only:
             raise AccessViolation()
         oldpath = self._absPath(oldpath)
         newpath = self._absPath(newpath)
         return self._deferToThread(os.rename, oldpath, newpath)
 
-    def makeDirectory(self, path, attrs=None):
-        def int_mkdir():
+    def makeDirectory(self, path: str, attrs: Optional[dict] = None) -> "Deferred":
+        def int_mkdir() -> None:
             if self.read_only:
                 raise AccessViolation()
             path2 = self._absPath(path)
@@ -589,20 +633,20 @@ class ThreadFs:
 
         return self._deferToThread(int_mkdir)
 
-    def removeDirectory(self, path):
+    def removeDirectory(self, path: str) -> "Deferred":
         if self.read_only:
             raise AccessViolation()
         path = self._absPath(path)
         return self._deferToThread(os.rmdir, path)
 
-    def openDirectory(self, path):
-        def int_opendir():
+    def openDirectory(self, path: str) -> "Deferred":
+        def int_opendir() -> Iterable[Tuple[str, dict]]:
             path2 = self._absPath(path)
             return ((i.name, self._getAttrs(i.stat())) for i in os.scandir(path2))
 
         return self._deferToThread(int_opendir)
 
-    def getAttrs(self, path, followLinks=True):
+    def getAttrs(self, path: str, followLinks: bool = True) -> "Deferred":
         path = self._absPath(path)
         if followLinks:
             s = self._deferToThread(os.stat, path)
@@ -611,34 +655,34 @@ class ThreadFs:
         s.addCallback(self._getAttrs)
         return s
 
-    def setAttrs(self, path, attrs):
+    def setAttrs(self, path: str, attrs: dict) -> "Deferred":
         if self.read_only:
             raise AccessViolation()
         path = self._absPath(path)
         return self._deferToThread(self._setAttrs, path, attrs)
 
-    def readLink(self, path):
+    def readLink(self, path: str) -> "Deferred":
         path = self._absPath(path)
         return self._deferToThread(os.readlink, path)
 
-    def makeLink(self, linkPath, targetPath):
+    def makeLink(self, linkPath: str, targetPath: str) -> "Deferred":
         if self.read_only:
             raise AccessViolation()
         linkPath = self._absPath(linkPath)
         targetPath = self._absPath(targetPath)
         return self._deferToThread(os.symlink, targetPath, linkPath)
 
-    def realPath(self, path):
+    def realPath(self, path: str) -> "Deferred":
         return self._deferToThread(os.path.realpath, self._absPath(path))
 
-    def statfs(self):
-        def cb_statfs():
+    def statfs(self) -> "Deferred":
+        def cb_statfs() -> dict:
             try:
                 v = os.statvfs(self.root)
                 s = os.stat(self.root)
             except AttributeError:
                 # some systems dont have at all
-                return None
+                return {}
             d = dict(
                 size=v.f_frsize,
                 blocks=v.f_blocks,
@@ -650,7 +694,7 @@ class ThreadFs:
             except AttributeError:
                 pass  # only python 3.7+
             try:
-                d["disk_fstype"] = s.st_fstype
+                d["disk_fstype"] = s.st_fstype  # type: ignore
             except AttributeError:
                 pass  # only Solaris
             try:
