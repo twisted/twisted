@@ -1201,8 +1201,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
     async def noCurrentResult(self):
         await Deferred()
 
-    async def raisesException(self):
-        raise self.exception
+    async def raisesException(self, exception=None):
+        if exception is None:
+            exception = self.exception
+        raise exception
 
     def test_withoutResult(self):
         """
@@ -1223,6 +1225,19 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         self.assertRaises(
             self.failureException, self.successResultOf, self.raisesException()
         )
+
+    def test_successResultOfWithFailureHasTraceback(self):
+        """
+        L{SynchronousTestCase.successResultOf} raises a
+        L{SynchronousTestCase.failureException} that has the original failure
+        traceback when called with a coroutine with a failure result.
+        """
+        exception = Exception("Bad times")
+        try:
+            self.successResultOf(self.raisesException(exception))
+        except unittest.FailTest as e:
+            self.assertIn("Success result expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithoutResult(self):
         """
@@ -1275,6 +1290,21 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
                 str(e),
             )
 
+    def test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a coroutine
+        that raises an exception with a failure type that was not expected, and
+        the L{SynchronousTestCase.failureException} message contains the
+        original exception traceback.
+        """
+        exception = Exception("Bad times")
+        try:
+            self.failureResultOf(self.raisesException(exception), KeyError)
+        except unittest.FailTest as e:
+            self.assertIn("Failure of type (builtins.KeyError) expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
+
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
@@ -1295,6 +1325,25 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
                 ),
                 str(e),
             )
+
+    def test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a coroutine
+        that raises an exception of a type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        exception traceback in the error message.
+        """
+        exception = Exception("Bad times")
+
+        try:
+            self.failureResultOf(self.raisesException(exception), KeyError, IOError)
+        except unittest.FailTest as e:
+            self.assertIn(
+                "Failure of type (builtins.KeyError or builtins.OSError) expected on",
+                str(e),
+            )
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_successResultOfWithSuccessResult(self):
         """
