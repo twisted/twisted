@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
-      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}'"
+      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
       # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
       TRIAL_ARGS: '-j 2'
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
