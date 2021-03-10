@@ -20,7 +20,8 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "${{ matrix.tox-env }}-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+      TOXENV: "${{ matrix.tox-env }}"
+      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}'"
       # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
       TRIAL_ARGS: '-j 2'
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
@@ -32,7 +33,7 @@ jobs:
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
-        tox-env: [alldeps]
+        tox-env: ['alldeps-withcov-posix']
         noipv6: ['']
 
         include:
@@ -42,12 +43,12 @@ jobs:
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
           - python-version: 3.6.7
-            tox-env: nodeps
+            tox-env: nodeps-withcov-posix
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
-            tox-env: alldeps
+            tox-env: alldeps-withcov-posix
             noipv6: -noipv6
 
     steps:
@@ -91,6 +92,10 @@ jobs:
       run: |
         python --version
         tox -q
+
+    - name: Publish coverage
+      if: contains(matrix['tox-env'], 'withcov')
+      run: tox -e coverage-prepare,codecov-push,coveralls-push
 
 
   pypi-publish:
