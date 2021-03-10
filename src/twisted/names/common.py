@@ -320,9 +320,6 @@ def extractRecord(resolver, name, answers, level=10):
         return nsResolver.lookupAddress(name.name).addCallback(queryAgain)
 
 typeToMethod = {
-    """
-    Translation table for determining tghe correct lookup method.
-    """
     dns.A: "lookupAddress",
     dns.AAAA: "lookupIPV6Address",
     dns.A6: "lookupAddress6",
