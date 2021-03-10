@@ -22,8 +22,7 @@ jobs:
     env:
       TOXENV: "${{ matrix.tox-env }}"
       CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
-      # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-      TRIAL_ARGS: '-j 2'
+      TRIAL_ARGS: "${{ matrix.trial-args }}"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
     strategy:
       fail-fast: false
@@ -35,6 +34,9 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
         tox-env: ['alldeps-withcov-posix']
         noipv6: ['']
+        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+        # Enable trial distributed jobs to speed up the jobs.
+        trial-args: ['-j 2']
 
         include:
 
@@ -42,8 +44,11 @@ jobs:
           # runtime and production code.
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
+          # Distributed test run is disabled here so that we also have
+          # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
             tox-env: nodeps-withcov-posix
+            trial-args: ''
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
