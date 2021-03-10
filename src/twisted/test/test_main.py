@@ -19,8 +19,6 @@ from twisted.trial.unittest import TestCase
 class MainTests(TestCase):
     """Test that twisted scripts can be invoked as modules."""
 
-    maxdiff = None
-
     def test_twisted(self):
         """Invoking python -m twisted should execute twist."""
         cmd = sys.executable

@@ -22,7 +22,7 @@ jobs:
     env:
       TOXENV: "${{ matrix.tox-env }}-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
       # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-      TRIAL_ARGS: '-j 2 -l trial.log'
+      TRIAL_ARGS: '-j 2'
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
     strategy:
       fail-fast: false
@@ -91,10 +91,6 @@ jobs:
       run: |
         python --version
         tox -q
-
-    - name: Show trial log
-      if: always()
-      run: cat trial.log
 
 
   pypi-publish:
