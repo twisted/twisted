@@ -19,12 +19,18 @@ from twisted.trial.unittest import TestCase
 class MainTests(TestCase):
     """Test that twisted scripts can be invoked as modules."""
 
+    # Force the full diff to make debugging easier on failures.
+    maxDiff = None
+
     def test_twisted(self):
         """Invoking python -m twisted should execute twist."""
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, cmd, [cmd, "-m", "twisted", "--help"], env=None)
+        # Enforce 80 columns as otherwise the test are failing when executed in debug mode.
+        reactor.spawnProcess(
+            p, cmd, [cmd, "-m", "twisted", "--help"], env={"COLUMNS": "80"}
+        )
         p.transport.closeStdin()
 
         # Fix up our sys args to match the command we issued
@@ -34,11 +40,11 @@ class MainTests(TestCase):
 
         def processEnded(ign):
             f = p.outF
-            output = f.getvalue().replace(b"\r\n", b"\n")
+            output = f.getvalue()
 
             options = TwistOptions()
             message = f"{options}\n".encode("utf-8")
-            self.assertEqual(output, message)
+            self.assertEqual(output.splitlines(), message.splitlines())
 
         return d.addCallback(processEnded)
 
@@ -47,7 +53,10 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, cmd, [cmd, "-m", "twisted.trial", "--help"], env=None)
+        # Enforce 80 columns as otherwise the test are failing when executed in debug mode.
+        reactor.spawnProcess(
+            p, cmd, [cmd, "-m", "twisted.trial", "--help"], env={"COLUMNS": "80"}
+        )
         p.transport.closeStdin()
 
         # Fix up our sys args to match the command we issued
@@ -57,11 +66,11 @@ class MainTests(TestCase):
 
         def processEnded(ign):
             f = p.outF
-            output = f.getvalue().replace(b"\r\n", b"\n")
+            output = f.getvalue()
 
             options = trial.Options()
             message = f"{options}\n".encode("utf-8")
-            self.assertEqual(output, message)
+            self.assertEqual(output.splitlines(), message.splitlines())
 
         return d.addCallback(processEnded)
 
