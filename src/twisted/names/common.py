@@ -236,7 +236,7 @@ class ResolverBase:
     # IResolverSimple
     def getHostByName(self, name, timeout=None, effort=10):
         """
-        Returns DNS lookup iterable.
+        Returns DNS lookup deferred record.
         """
         name = dns.domainString(name)
         # XXX - respect timeout
