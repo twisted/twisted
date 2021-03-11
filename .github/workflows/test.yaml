@@ -31,16 +31,12 @@ jobs:
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
         tox-env: ['alldeps-withcov-posix']
         noipv6: ['']
         # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
         # Trial distributed jobs enabled to speed up the CI jobs.
-        # There is a speed improvement if we enable something like -j4
-        # but then pypy tests are failing on -j4.
-        # For now run -j2 everywhere. Later we can enable -j4 on cpython,
-        # and much later fix the tests to work with -j4 on pypy.
-        trial-args: ['-j 2']
+        trial-args: ['-j 4']
 
         include:
 
@@ -59,6 +55,15 @@ jobs:
           - python-version: 3.6
             tox-env: alldeps-withcov-posix
             noipv6: -noipv6
+          # On PYPY concurrent test jobs result in random failures so for now
+          # run non-distributed tests.
+          - python-version: pypy-3.6
+            tox-env: alldeps-withcov-posix
+            trial-args:
+          - python-version: pypy-3.7
+            tox-env: alldeps-withcov-posix
+            trial-args:
+
 
     steps:
     - uses: actions/checkout@v2
@@ -103,7 +108,8 @@ jobs:
         tox -q
 
     - name: Publish coverage
-      if: contains(matrix['tox-env'], 'withcov')
+      # We want to publish coverage even on failure.
+      if: contains(matrix['tox-env'], 'withcov') || failure()
       run: tox -e coverage-prepare,codecov-push,coveralls-push
 
 
