@@ -3,6 +3,7 @@
 # type: ignore
 
 import os
+import platform
 import sys
 import time
 import tempfile
@@ -207,10 +208,14 @@ class BaseTestFs:
         return d1
 
     def test_realpath(self):
+        def cb_realpath(r):
+            if platform.system() == "Darwin" and r.startswith("/private"):
+                # KLUDGE: Github test environment has odd virtual directory
+                r = r[8:]
+            self.assertEqual(r, os.path.join(self.tpath, "one.txt"))
+
         d = self.fso.realPath("./one.txt")
-        d.addCallback(
-            lambda r: self.assertEqual(r, os.path.join(self.tpath, "one.txt"))
-        )
+        d.addCallback(cb_realpath)
         return d
 
     def test_makelink(self):
@@ -255,6 +260,8 @@ class BaseTestFs:
             self.assertEqual(r["blocks"], v.f_blocks)
             self.assertEqual(r["free"], v.f_bavail)
 
+        if not hasattr(os, "statvfs"):
+            raise unittest.SkipTest("no statvfs on this platform")
         d1 = self.fso.statfs()
         d1.addCallback(cb_statfs)
         return d1
