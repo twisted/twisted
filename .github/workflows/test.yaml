@@ -23,7 +23,7 @@ jobs:
       TOXENV: "${{ matrix.tox-env }}"
       CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
       TRIAL_ARGS: "${{ matrix.trial-args }}"
-    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
       fail-fast: false
       matrix:
