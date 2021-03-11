@@ -36,7 +36,7 @@ jobs:
         noipv6: ['']
         # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
         # Enable trial distributed jobs to speed up the jobs.
-        trial-args: ['-j 2']
+        trial-args: ['-j 4']
 
         include:
 
