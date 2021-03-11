@@ -73,7 +73,13 @@ class BaseTestFs:
 
     def tearDown(self):
         for i in os.listdir():
-            os.unlink(i)
+            # on Windows may need to wait for close()
+            for _ in range(5):
+                try:
+                    os.unlink(i)
+                    break
+                except PermissionError:
+                    time.sleep(1)
         os.chdir(self.oldpath)
         os.rmdir(self.tpath)
         self.fso.unregister()
@@ -83,10 +89,15 @@ class BaseTestFs:
         self.assertEqual(sorted(os.listdir()), dlist)
 
     def test_open(self):
+        def cb_open(r):
+            self.assertDir(["one.txt", "two.txt", "three.txt"])
+            os.close(r[0][1].fileno())
+            os.close(r[1][1].fileno())
+
         d1 = self.fso.openFile("one.txt")
         d2 = self.fso.openFile("three.txt", os.O_CREAT | os.O_RDWR)
         d3 = DeferredList([d1, d2])
-        d3.addCallback(lambda _: self.assertDir(["one.txt", "two.txt", "three.txt"]))
+        d3.addCallback(cb_open)
         return d3
 
     def test_read(self):
@@ -178,9 +189,26 @@ class BaseTestFs:
             d2.addCallback(cb_attrs2)
             return d2
 
+        if platform.system() == "Windows":
+            raise unittest.SkipTest("doesn't work on Windows")
         d1 = self.fso.setAttrs(
             "one.txt", {"mtime": 4000, "atime": 4000, "permissions": 0o650}
         )
+        d1.addCallback(cb_attrs1)
+        return d1
+
+    def test_attrs_times(self):
+        # on Windows we try only to set the file timestamps
+        def cb_attrs2(r):
+            self.assertEqual(r["mtime"], 4000)
+            self.assertEqual(r["atime"], 4000)
+
+        def cb_attrs1(_):
+            d2 = self.fso.getAttrs("one.txt")
+            d2.addCallback(cb_attrs2)
+            return d2
+
+        d1 = self.fso.setAttrs("one.txt", {"mtime": 4000, "atime": 4000})
         d1.addCallback(cb_attrs1)
         return d1
 
@@ -203,6 +231,8 @@ class BaseTestFs:
             d2.addCallback(cb_attrs2, fd)
             return d2
 
+        if platform.system() == "Windows":
+            raise unittest.SkipTest("doesn't work on Windows")
         d1 = self.fso.openFile("one.txt", os.O_RDWR)
         d1.addCallback(cb_attrs1)
         return d1
@@ -258,7 +288,7 @@ class BaseTestFs:
             v = os.statvfs(".")
             self.assertEqual(r["size"], v.f_frsize)
             self.assertEqual(r["blocks"], v.f_blocks)
-            self.assertEqual(r["free"], v.f_bavail)
+            self.assertTrue(abs(r["free"] - v.f_bavail) < 5)  # free blocks can change
 
         if not hasattr(os, "statvfs"):
             raise unittest.SkipTest("no statvfs on this platform")
