@@ -244,6 +244,8 @@ class BaseTestFs:
                 r = r[8:]
             self.assertEqual(r, os.path.join(self.tpath, "one.txt"))
 
+        if platform.system() == "Windows":
+            raise unittest.SkipTest("doesn't work on Windows")
         d = self.fso.realPath("./one.txt")
         d.addCallback(cb_realpath)
         return d
@@ -266,6 +268,8 @@ class BaseTestFs:
             d2.addCallback(cb_link2)
             return d2
 
+        if platform.system() == "Windows":
+            raise unittest.SkipTest("doesn't work on Windows")
         d1 = self.fso.makeLink("one.lnk", "one.txt")
         d1.addCallback(cb_link1)
         return d1
