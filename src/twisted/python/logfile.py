@@ -40,9 +40,9 @@ class BaseLogFile:
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):
-            self.defaultMode = stat.S_IMODE(
+            self.defaultMode: Optional[int] = stat.S_IMODE(
                 os.stat(self.path)[stat.ST_MODE]
-            )  # type: Optional[int]
+            )
         else:
             self.defaultMode = defaultMode
         self._openFile()

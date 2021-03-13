@@ -243,10 +243,10 @@ class TuntapPort(abstract.FileDescriptor):
         self.maxPacketSize = maxPacketSize
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{} ({})".format(logPrefix, self._mode.name)
+        self.logstr = f"{logPrefix} ({self._mode.name})"
 
     def __repr__(self) -> str:
-        args = (fullyQualifiedName(self.protocol.__class__),)  # type: Tuple[str, ...]
+        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:
@@ -328,9 +328,7 @@ class TuntapPort(abstract.FileDescriptor):
                 self.protocol.datagramReceived(data, partial=0)
             except BaseException:
                 cls = fullyQualifiedName(self.protocol.__class__)
-                log.err(
-                    None, "Unhandled exception from {}.datagramReceived".format(cls)
-                )
+                log.err(None, f"Unhandled exception from {cls}.datagramReceived")
 
     def write(self, datagram):
         """

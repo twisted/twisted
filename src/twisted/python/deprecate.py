@@ -123,17 +123,17 @@ def _fullyQualifiedName(obj):
 
     if inspect.isclass(obj) or inspect.isfunction(obj):
         moduleName = obj.__module__
-        return "{}.{}".format(moduleName, name)
+        return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
         try:
             cls = obj.im_class
         except AttributeError:
             # Python 3 eliminates im_class, substitutes __module__ and
             # __qualname__ to provide similar information.
-            return "{}.{}".format(obj.__module__, obj.__qualname__)
+            return f"{obj.__module__}.{obj.__qualname__}"
         else:
             className = _fullyQualifiedName(cls)
-            return "{}.{}".format(className, name)
+            return f"{className}.{name}"
     return name
 
 
@@ -155,7 +155,7 @@ def _getReplacementString(replacement):
     """
     if callable(replacement):
         replacement = _fullyQualifiedName(replacement)
-    return "please use {} instead".format(replacement)
+    return f"please use {replacement} instead"
 
 
 def _getDeprecationDocstring(version, replacement=None):
@@ -604,21 +604,15 @@ def warnAboutFunction(offender, warningString):
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
     offenderModule = sys.modules[offender.__module__]
-    filename = inspect.getabsfile(offenderModule)
-    lineStarts = list(findlinestarts(offender.__code__))
-    lastLineNo = lineStarts[-1][1]
-    globals = offender.__globals__
-
-    kwargs = dict(
+    warn_explicit(
+        warningString,
         category=DeprecationWarning,
-        filename=filename,
-        lineno=lastLineNo,
+        filename=inspect.getabsfile(offenderModule),
+        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
         module=offenderModule.__name__,
-        registry=globals.setdefault("__warningregistry__", {}),
+        registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,
     )
-
-    warn_explicit(warningString, **kwargs)
 
 
 def _passedArgSpec(argspec, positional, keyword):
@@ -640,7 +634,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}  # type: Dict[str, object]
+    result: Dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}
@@ -703,13 +697,11 @@ def _passedSignature(signature, positional, keyword):
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
             if name not in keyword:
                 if param.default == inspect.Parameter.empty:
-                    raise TypeError("missing keyword arg {}".format(name))
+                    raise TypeError(f"missing keyword arg {name}")
                 else:
                     result[name] = param.default
         else:
-            raise TypeError(
-                "'{}' parameter is invalid kind: {}".format(name, param.kind)
-            )
+            raise TypeError(f"'{name}' parameter is invalid kind: {param.kind}")
 
     if len(positional) > numPositional:
         raise TypeError("Too many arguments.")

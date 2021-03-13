@@ -66,7 +66,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
         @return: the event as observed by the legacy wrapper
         """
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
 
         legacyObserver = cast(legacyLog.ILogObserver, lambda e: events.append(e))
         observer = LegacyLogObserverWrapper(legacyObserver)
@@ -282,7 +282,7 @@ class PublishToNewObserverTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.events = []  # type: List[LogEvent]
+        self.events: List[LogEvent] = []
         self.observer = cast(ILogObserver, self.events.append)
 
     def legacyEvent(self, *message: str, **values: object) -> legacyLog.EventDict:

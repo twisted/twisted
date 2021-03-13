@@ -53,7 +53,7 @@ class FileCheckerFactory:
         if not argstring.strip():
             raise ValueError("%r requires a filename" % self.authType)
         elif not FilePath(argstring).isfile():
-            self.errorOutput.write("{}: {}\n".format(invalidFileWarning, argstring))
+            self.errorOutput.write(f"{invalidFileWarning}: {argstring}\n")
         return FilePasswordDB(argstring)
 
 

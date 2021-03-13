@@ -24,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3,)
 
-    packetTypes = {}  # type: Dict[int, str]
+    packetTypes: Dict[int, str] = {}
 
     def __init__(self):
         self.buf = b""
@@ -44,7 +44,7 @@ class FileTransferBase(protocol.Protocol):
             if not packetType:
                 self._log.info("no packet type for {kind}", kind=kind)
                 continue
-            f = getattr(self, "packet_{}".format(packetType), None)
+            f = getattr(self, f"packet_{packetType}", None)
             if not f:
                 self._log.info(
                     "not implemented: {packetType} data={data!r}",
@@ -53,7 +53,7 @@ class FileTransferBase(protocol.Protocol):
                 )
                 (reqId,) = struct.unpack("!L", data[:4])
                 self._sendStatus(
-                    reqId, FX_OP_UNSUPPORTED, "don't understand {}".format(packetType)
+                    reqId, FX_OP_UNSUPPORTED, f"don't understand {packetType}"
                 )
                 # XXX not implemented
                 continue
@@ -162,7 +162,7 @@ class FileTransferServer(FileTransferBase):
         (flags,) = struct.unpack("!L", data[:4])
         data = data[4:]
         attrs, data = self._parseAttributes(data)
-        assert data == b"", "still have data in OPEN: {!r}".format(data)
+        assert data == b"", f"still have data in OPEN: {data!r}"
         d = defer.maybeDeferred(self.client.openFile, filename, flags, attrs)
         d.addCallback(self._cbOpenFile, requestId)
         d.addErrback(self._ebStatus, requestId, b"open failed")
@@ -178,7 +178,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == b"", "still have data in CLOSE: {!r}".format(data)
+        assert data == b"", f"still have data in CLOSE: {data!r}"
         if handle in self.openFiles:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.close)
@@ -204,7 +204,7 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         handle, data = getNS(data)
         (offset, length), data = struct.unpack("!QL", data[:12]), data[12:]
-        assert data == b"", "still have data in READ: {!r}".format(data)
+        assert data == b"", f"still have data in READ: {data!r}"
         if handle not in self.openFiles:
             self._ebRead(failure.Failure(KeyError()), requestId)
         else:
@@ -225,7 +225,7 @@ class FileTransferServer(FileTransferBase):
         (offset,) = struct.unpack("!Q", data[:8])
         data = data[8:]
         writeData, data = getNS(data)
-        assert data == b"", "still have data in WRITE: {!r}".format(data)
+        assert data == b"", f"still have data in WRITE: {data!r}"
         if handle not in self.openFiles:
             self._ebWrite(failure.Failure(KeyError()), requestId)
         else:
@@ -238,7 +238,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         filename, data = getNS(data)
-        assert data == b"", "still have data in REMOVE: {!r}".format(data)
+        assert data == b"", f"still have data in REMOVE: {data!r}"
         d = defer.maybeDeferred(self.client.removeFile, filename)
         d.addCallback(self._cbStatus, requestId, b"remove succeeded")
         d.addErrback(self._ebStatus, requestId, b"remove failed")
@@ -248,7 +248,7 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         oldPath, data = getNS(data)
         newPath, data = getNS(data)
-        assert data == b"", "still have data in RENAME: {!r}".format(data)
+        assert data == b"", f"still have data in RENAME: {data!r}"
         d = defer.maybeDeferred(self.client.renameFile, oldPath, newPath)
         d.addCallback(self._cbStatus, requestId, b"rename succeeded")
         d.addErrback(self._ebStatus, requestId, b"rename failed")
@@ -258,7 +258,7 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        assert data == b"", "still have data in MKDIR: {!r}".format(data)
+        assert data == b"", f"still have data in MKDIR: {data!r}"
         d = defer.maybeDeferred(self.client.makeDirectory, path, attrs)
         d.addCallback(self._cbStatus, requestId, b"mkdir succeeded")
         d.addErrback(self._ebStatus, requestId, b"mkdir failed")
@@ -267,7 +267,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == b"", "still have data in RMDIR: {!r}".format(data)
+        assert data == b"", f"still have data in RMDIR: {data!r}"
         d = defer.maybeDeferred(self.client.removeDirectory, path)
         d.addCallback(self._cbStatus, requestId, b"rmdir succeeded")
         d.addErrback(self._ebStatus, requestId, b"rmdir failed")
@@ -276,7 +276,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == b"", "still have data in OPENDIR: {!r}".format(data)
+        assert data == b"", f"still have data in OPENDIR: {data!r}"
         d = defer.maybeDeferred(self.client.openDirectory, path)
         d.addCallback(self._cbOpenDirectory, requestId)
         d.addErrback(self._ebStatus, requestId, b"opendir failed")
@@ -292,7 +292,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == b"", "still have data in READDIR: {!r}".format(data)
+        assert data == b"", f"still have data in READDIR: {data!r}"
         if handle not in self.openDirs:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
@@ -332,7 +332,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == b"", "still have data in STAT/LSTAT: {!r}".format(data)
+        assert data == b"", f"still have data in STAT/LSTAT: {data!r}"
         d = defer.maybeDeferred(self.client.getAttrs, path, followLinks)
         d.addCallback(self._cbStat, requestId)
         d.addErrback(self._ebStatus, requestId, b"stat/lstat failed")
@@ -344,10 +344,10 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
-        assert data == b"", "still have data in FSTAT: {!r}".format(data)
+        assert data == b"", f"still have data in FSTAT: {data!r}"
         if handle not in self.openFiles:
             self._ebStatus(
-                failure.Failure(KeyError("{} not in self.openFiles".format(handle))),
+                failure.Failure(KeyError(f"{handle} not in self.openFiles")),
                 requestId,
             )
         else:
@@ -376,7 +376,7 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         handle, data = getNS(data)
         attrs, data = self._parseAttributes(data)
-        assert data == b"", "still have data in FSETSTAT: {!r}".format(data)
+        assert data == b"", f"still have data in FSETSTAT: {data!r}"
         if handle not in self.openFiles:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
@@ -389,7 +389,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == b"", "still have data in READLINK: {!r}".format(data)
+        assert data == b"", f"still have data in READLINK: {data!r}"
         d = defer.maybeDeferred(self.client.readLink, path)
         d.addCallback(self._cbReadLink, requestId)
         d.addErrback(self._ebStatus, requestId, b"readlink failed")
@@ -410,7 +410,7 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         path, data = getNS(data)
-        assert data == b"", "still have data in REALPATH: {!r}".format(data)
+        assert data == b"", f"still have data in REALPATH: {data!r}"
         d = defer.maybeDeferred(self.client.realPath, path)
         d.addCallback(self._cbReadLink, requestId)  # Same return format
         d.addErrback(self._ebStatus, requestId, b"realpath failed")
@@ -956,7 +956,7 @@ class SFTPError(Exception):
         return self._message
 
     def __str__(self) -> str:
-        return "SFTPError {}: {}".format(self.code, self.message)
+        return f"SFTPError {self.code}: {self.message}"
 
 
 FXP_INIT = 1

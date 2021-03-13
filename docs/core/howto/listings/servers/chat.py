@@ -26,13 +26,13 @@ class Chat(LineReceiver):
         if name in self.users:
             self.sendLine("Name taken, please choose another.")
             return
-        self.sendLine("Welcome, {}!".format(name))
+        self.sendLine(f"Welcome, {name}!")
         self.name = name
         self.users[name] = self
         self.state = "CHAT"
 
     def handle_CHAT(self, message):
-        message = "<{}> {}".format(self.name, message)
+        message = f"<{self.name}> {message}"
         for name, protocol in self.users.iteritems():
             if protocol != self:
                 protocol.sendLine(message)

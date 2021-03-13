@@ -79,7 +79,7 @@ class _FDHolder:
         If C{self._fd} is unclosed, raise a warning.
         """
         if self._fd:
-            warnings.warn("FD {} was not closed!".format(self._fd), ResourceWarning)
+            warnings.warn(f"FD {self._fd} was not closed!", ResourceWarning)
             self.close()
 
     def __enter__(self):

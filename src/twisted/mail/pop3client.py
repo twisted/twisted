@@ -23,4 +23,4 @@ OK
 ERR
 POP3Client
 
-__all__ = []  # type: List[str]
+__all__: List[str] = []

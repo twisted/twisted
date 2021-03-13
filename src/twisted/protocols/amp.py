@@ -553,7 +553,7 @@ class RemoteAmpError(AmpError):
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
         errorCodeForMessage = "".join(
-            "\\x{:2x}".format(c) if c >= 0x80 else chr(c) for c in errorCode
+            f"\\x{c:2x}" if c >= 0x80 else chr(c) for c in errorCode
         )
 
         if othertb:
@@ -616,7 +616,7 @@ class AmpBox(dict):
 
     # be like a regular dictionary don't magically
     # acquire a __dict__...
-    __slots__ = []  # type: List[str]
+    __slots__: List[str] = []
 
     def __init__(self, *args, **kw):
         """
@@ -671,9 +671,7 @@ class AmpBox(dict):
             if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
             if type(v) == str:
-                raise TypeError(
-                    "Unicode value for key {!r} not allowed: {!r}".format(k, v)
-                )
+                raise TypeError(f"Unicode value for key {k!r} not allowed: {v!r}")
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
             if len(v) > MAX_VALUE_LENGTH:
@@ -714,10 +712,10 @@ class QuitBox(AmpBox):
     I am an AmpBox that, upon being sent, terminates the connection.
     """
 
-    __slots__ = []  # type: List[str]
+    __slots__: List[str] = []
 
     def __repr__(self) -> str:
-        return "QuitBox(**{})".format(super().__repr__())
+        return f"QuitBox(**{super().__repr__()})"
 
     def _sendTo(self, proto):
         """
@@ -1055,7 +1053,7 @@ class BoxDispatcher:
         cmd = box[COMMAND]
         responder = self.locator.locateResponder(cmd)
         if responder is None:
-            description = "Unhandled Command: {!r}".format(cmd)
+            description = f"Unhandled Command: {cmd!r}"
             return fail(
                 RemoteAmpError(
                     UNHANDLED_ERROR_CODE,
@@ -1067,55 +1065,56 @@ class BoxDispatcher:
         return maybeDeferred(responder, box)
 
 
+class _CommandLocatorMeta(type):
+    """
+    This metaclass keeps track of all of the Command.responder-decorated
+    methods defined since the last CommandLocator subclass was defined.  It
+    assumes (usually correctly, but unfortunately not necessarily so) that
+    those commands responders were all declared as methods of the class
+    being defined.  Note that this list can be incorrect if users use the
+    Command.responder decorator outside the context of a CommandLocator
+    class declaration.
+
+    Command responders defined on subclasses are given precedence over
+    those inherited from a base class.
+
+    The Command.responder decorator explicitly cooperates with this
+    metaclass.
+    """
+
+    _currentClassCommands: "List[Tuple[Command, Callable]]" = []
+
+    def __new__(cls, name, bases, attrs):
+        commands = cls._currentClassCommands[:]
+        cls._currentClassCommands[:] = []
+        cd = attrs["_commandDispatch"] = {}
+        subcls = type.__new__(cls, name, bases, attrs)
+        ancestors = list(subcls.__mro__[1:])
+        ancestors.reverse()
+        for ancestor in ancestors:
+            cd.update(getattr(ancestor, "_commandDispatch", {}))
+        for commandClass, responderFunc in commands:
+            cd[commandClass.commandName] = (commandClass, responderFunc)
+        if bases and (subcls.lookupFunction != CommandLocator.lookupFunction):
+
+            def locateResponder(self, name):
+                warnings.warn(
+                    "Override locateResponder, not lookupFunction.",
+                    category=PendingDeprecationWarning,
+                    stacklevel=2,
+                )
+                return self.lookupFunction(name)
+
+            subcls.locateResponder = locateResponder
+        return subcls
+
+
 @implementer(IResponderLocator)
-class CommandLocator:
+class CommandLocator(metaclass=_CommandLocatorMeta):
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
     the help of the L{Command.responder} decorator.
     """
-
-    class __metaclass__(type):
-        """
-        This metaclass keeps track of all of the Command.responder-decorated
-        methods defined since the last CommandLocator subclass was defined.  It
-        assumes (usually correctly, but unfortunately not necessarily so) that
-        those commands responders were all declared as methods of the class
-        being defined.  Note that this list can be incorrect if users use the
-        Command.responder decorator outside the context of a CommandLocator
-        class declaration.
-
-        Command responders defined on subclasses are given precedence over
-        those inherited from a base class.
-
-        The Command.responder decorator explicitly cooperates with this
-        metaclass.
-        """
-
-        _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
-
-        def __new__(cls, name, bases, attrs):
-            commands = cls._currentClassCommands[:]
-            cls._currentClassCommands[:] = []
-            cd = attrs["_commandDispatch"] = {}
-            subcls = type.__new__(cls, name, bases, attrs)
-            ancestors = list(subcls.__mro__[1:])
-            ancestors.reverse()
-            for ancestor in ancestors:
-                cd.update(getattr(ancestor, "_commandDispatch", {}))
-            for commandClass, responderFunc in commands:
-                cd[commandClass.commandName] = (commandClass, responderFunc)
-            if bases and (subcls.lookupFunction != CommandLocator.lookupFunction):
-
-                def locateResponder(self, name):
-                    warnings.warn(
-                        "Override locateResponder, not lookupFunction.",
-                        category=PendingDeprecationWarning,
-                        stacklevel=2,
-                    )
-                    return self.lookupFunction(name)
-
-                subcls.locateResponder = locateResponder
-            return subcls
 
     def _wrapWithSerialization(self, aCallable, command):
         """
@@ -1196,15 +1195,6 @@ class CommandLocator:
             commandClass, responderFunc = cd[name]
             responderMethod = MethodType(responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
-
-
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating CommandLocator using the metaclass
-# here.
-CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
-    "CommandLocator", (CommandLocator,), {}
-)
 
 
 @implementer(IResponderLocator)
@@ -1474,7 +1464,7 @@ class Float(Argument):
 
     def toString(self, inString):
         if not isinstance(inString, float):
-            raise ValueError("Bad float value {!r}".format(inString))
+            raise ValueError(f"Bad float value {inString!r}")
         return str(inString).encode("ascii")
 
 
@@ -1489,7 +1479,7 @@ class Boolean(Argument):
         elif inString == b"False":
             return False
         else:
-            raise TypeError("Bad boolean value: {!r}".format(inString))
+            raise TypeError(f"Bad boolean value: {inString!r}")
 
     def toString(self, inObject):
         if inObject:
@@ -1694,7 +1684,62 @@ class Descriptor(Integer):
         return outString
 
 
-class Command:
+class _CommandMeta(type):
+    """
+    Metaclass hack to establish reverse-mappings for 'errors' and
+    'fatalErrors' as class vars.
+    """
+
+    def __new__(cls, name, bases, attrs):
+        reverseErrors = attrs["reverseErrors"] = {}
+        er = attrs["allErrors"] = {}
+        if "commandName" not in attrs:
+            attrs["commandName"] = name.encode("ascii")
+        newtype = type.__new__(cls, name, bases, attrs)
+
+        if not isinstance(newtype.commandName, bytes):
+            raise TypeError(
+                "Command names must be byte strings, got: {!r}".format(
+                    newtype.commandName
+                )
+            )
+        for name, _ in newtype.arguments:
+            if not isinstance(name, bytes):
+                raise TypeError(f"Argument names must be byte strings, got: {name!r}")
+        for name, _ in newtype.response:
+            if not isinstance(name, bytes):
+                raise TypeError(f"Response names must be byte strings, got: {name!r}")
+
+        errors: Dict[Type[Exception], bytes] = {}
+        fatalErrors: Dict[Type[Exception], bytes] = {}
+        accumulateClassDict(newtype, "errors", errors)
+        accumulateClassDict(newtype, "fatalErrors", fatalErrors)
+
+        if not isinstance(newtype.errors, dict):
+            newtype.errors = dict(newtype.errors)
+        if not isinstance(newtype.fatalErrors, dict):
+            newtype.fatalErrors = dict(newtype.fatalErrors)
+
+        for v, k in errors.items():
+            reverseErrors[k] = v
+            er[v] = k
+        for v, k in fatalErrors.items():
+            reverseErrors[k] = v
+            er[v] = k
+
+        for _, name in newtype.errors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(f"Error names must be byte strings, got: {name!r}")
+        for _, name in newtype.fatalErrors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    f"Fatal error names must be byte strings, got: {name!r}"
+                )
+
+        return newtype
+
+
+class Command(metaclass=_CommandMeta):
     """
     Subclass me to specify an AMP Command.
 
@@ -1737,73 +1782,14 @@ class Command:
     want one.
     """
 
-    class __metaclass__(type):
-        """
-        Metaclass hack to establish reverse-mappings for 'errors' and
-        'fatalErrors' as class vars.
-        """
+    arguments: List[Tuple[bytes, Argument]] = []
+    response: List[Tuple[bytes, Argument]] = []
+    extra: List[Any] = []
+    errors: Dict[Type[Exception], bytes] = {}
+    fatalErrors: Dict[Type[Exception], bytes] = {}
 
-        def __new__(cls, name, bases, attrs):
-            reverseErrors = attrs["reverseErrors"] = {}
-            er = attrs["allErrors"] = {}
-            if "commandName" not in attrs:
-                attrs["commandName"] = name.encode("ascii")
-            newtype = type.__new__(cls, name, bases, attrs)
-
-            if not isinstance(newtype.commandName, bytes):
-                raise TypeError(
-                    "Command names must be byte strings, got: %r"
-                    % (newtype.commandName,)
-                )
-            for name, _ in newtype.arguments:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Argument names must be byte strings, got: {!r}".format(name)
-                    )
-            for name, _ in newtype.response:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Response names must be byte strings, got: {!r}".format(name)
-                    )
-
-            errors = {}  # type: Dict[Type[Exception], bytes]
-            fatalErrors = {}  # type: Dict[Type[Exception], bytes]
-            accumulateClassDict(newtype, "errors", errors)
-            accumulateClassDict(newtype, "fatalErrors", fatalErrors)
-
-            if not isinstance(newtype.errors, dict):
-                newtype.errors = dict(newtype.errors)
-            if not isinstance(newtype.fatalErrors, dict):
-                newtype.fatalErrors = dict(newtype.fatalErrors)
-
-            for v, k in errors.items():
-                reverseErrors[k] = v
-                er[v] = k
-            for v, k in fatalErrors.items():
-                reverseErrors[k] = v
-                er[v] = k
-
-            for _, name in newtype.errors.items():
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Error names must be byte strings, got: {!r}".format(name)
-                    )
-            for _, name in newtype.fatalErrors.items():
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Fatal error names must be byte strings, got: {!r}".format(name)
-                    )
-
-            return newtype
-
-    arguments = []  # type: List[Tuple[bytes, Argument]]
-    response = []  # type: List[Tuple[bytes, Argument]]
-    extra = []  # type: List[Any]
-    errors = {}  # type: Dict[Type[Exception], bytes]
-    fatalErrors = {}  # type: Dict[Type[Exception], bytes]
-
-    commandType = Box  # type: Union[Type[Command], Type[Box]]
-    responseType = Box  # type: Type[AmpBox]
+    commandType: "Union[Type[Command], Type[Box]]" = Box
+    responseType: Type[AmpBox] = Box
 
     requiresAnswer = True
 
@@ -1878,7 +1864,7 @@ class Command:
 
         for intendedArg in objects:
             if intendedArg not in allowedNames:
-                raise InvalidSignature("{} is not a valid argument".format(intendedArg))
+                raise InvalidSignature(f"{intendedArg} is not a valid argument")
         return _objectsToStrings(objects, cls.arguments, cls.commandType(), proto)
 
     @classmethod
@@ -1976,12 +1962,6 @@ class Command:
         return d
 
 
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command,), {})  # type: ignore[assignment,misc]
-
-
 class _NoCertificate:
     """
     This is for peers which don't want to use a local certificate.  Used by
@@ -2043,7 +2023,7 @@ class _TLSBox(AmpBox):
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
 
-    __slots__ = []  # type: List[str]
+    __slots__: List[str] = []
 
     def __init__(self):
         if ssl is None:
@@ -2297,7 +2277,7 @@ class BinaryBoxProtocol(
 
     hostCertificate = None
     noPeerCertificate = False  # for tests
-    innerProtocol = None  # type: Optional[Protocol]
+    innerProtocol: Optional[Protocol] = None
     innerProtocolClientFactory = None
 
     def __init__(self, boxReceiver):
@@ -2585,7 +2565,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         AMP connection.
         """
         if self.innerProtocol is not None:
-            innerRepr = " inner {!r}".format(self.innerProtocol)
+            innerRepr = f" inner {self.innerProtocol!r}"
         else:
             innerRepr = ""
         return "<{}{} at 0x{:x}>".format(self.__class__.__name__, innerRepr, id(self))
@@ -2803,7 +2783,7 @@ class DateTime(Argument):
         s = nativeString(s)
 
         if len(s) != 32:
-            raise ValueError("invalid date format {!r}".format(s))
+            raise ValueError(f"invalid date format {s!r}")
 
         values = [int(s[p]) for p in self._positions]
         sign = s[26]

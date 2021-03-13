@@ -22,7 +22,7 @@ import types
 import warnings
 from asyncio import iscoroutine
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info, implementation, version_info
 from typing import Optional
 
 import attr
@@ -269,7 +269,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo = None  # type: Optional[Deferred]
+    _chainedTo: "Optional[Deferred]" = None
 
     def __init__(self, canceller=None):
         """
@@ -736,8 +736,8 @@ class Deferred:
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: {!r}".format(result)
-        return "<{} at 0x{:x}{}>".format(cname, myID, result)
+            result = f" current result: {result!r}"
+        return f"<{cname} at 0x{myID:x}{result}>"
 
     __repr__ = __str__
 
@@ -900,7 +900,7 @@ class Deferred:
         @rtype: L{Deferred}
         """
         if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
-            raise NotACoroutineError("{!r} is not a coroutine".format(coro))
+            raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
 
@@ -952,9 +952,7 @@ def ensureDeferred(coro):
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
-            raise NotACoroutineError(
-                "{!r} is not a coroutine or a Deferred".format(coro)
-            )
+            raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
 
 
 class DebugInfo:
@@ -1234,7 +1232,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it {!r}.".format(d)
+                f"You must give waitForDeferred a Deferred. You gave it {d!r}."
             )
         self.d = d
 
@@ -1459,8 +1457,11 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
+                # The contextvars backport and our no-op shim add an extra frame.
+                appCodeTrace = appCodeTrace.tb_next
+            elif implementation.name == "pypy":
+                # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:

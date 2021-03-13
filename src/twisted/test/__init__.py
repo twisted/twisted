@@ -13,7 +13,7 @@ from twisted.test import proto_helpers
 for obj in proto_helpers.__all__:
     deprecatedModuleAttribute(
         Version("Twisted", 19, 7, 0),
-        "Please use twisted.internet.testing.{} instead.".format(obj),
+        f"Please use twisted.internet.testing.{obj} instead.",
         "twisted.test.proto_helpers",
         obj,
     )

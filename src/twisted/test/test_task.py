@@ -479,14 +479,12 @@ class LoopTests(unittest.TestCase):
         # valid.  First, the "epsilon" value here measures the floating-point
         # inaccuracy in question, and so if it doesn't exist then we are not
         # triggering an interesting condition.
-        self.assertTrue(
-            abs(epsilon) > 0.0, "{} should be greater than zero".format(epsilon)
-        )
+        self.assertTrue(abs(epsilon) > 0.0, f"{epsilon} should be greater than zero")
         # Secondly, task.Clock should behave in such a way that once we have
         # advanced to this point, it has reached or exceeded the timespan.
         self.assertTrue(
             secondsValue >= timespan,
-            "{} should be greater than or equal to {}".format(secondsValue, timespan),
+            f"{secondsValue} should be greater than or equal to {timespan}",
         )
 
         self.assertEqual(sum(accumulator), count)

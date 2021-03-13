@@ -231,12 +231,12 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         if childFD == 1:
             self.stages.append(2)
             if self.data != b"abcd":
-                raise RuntimeError("Data was {!r} instead of 'abcd'".format(self.data))
+                raise RuntimeError(f"Data was {self.data!r} instead of 'abcd'")
             self.transport.write(b"1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != b"1234":
-                raise RuntimeError("Err was {!r} instead of '1234'".format(self.err))
+                raise RuntimeError(f"Err was {self.err!r} instead of '1234'")
             self.transport.write(b"abcd")
             self.stages.append(4)
         elif childFD == 0:
@@ -309,7 +309,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         is set up and ready to receive the signal) by sending the signal to
         it.  Also log all output to help with debugging.
         """
-        msg("Received {!r} from child stdout".format(data))
+        msg(f"Received {data!r} from child stdout")
         if not self.signaled:
             self.signaled = True
             self.transport.signalProcess(self.signal)
@@ -319,7 +319,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         Log all data received from the child's stderr to help with
         debugging.
         """
-        msg("Received {!r} from child stderr".format(data))
+        msg(f"Received {data!r} from child stderr")
 
     def processEnded(self, reason):
         """
@@ -329,11 +329,9 @@ class SignalProtocol(protocol.ProcessProtocol):
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
         """
-        msg("Child exited: {!r}".format(reason.getTraceback()))
+        msg(f"Child exited: {reason.getTraceback()!r}")
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: {}".format(reason))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if isinstance(self.signal, str):
             signalValue = getattr(signal, "SIG" + self.signal)
@@ -341,9 +339,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             signalValue = self.signal
         if v.exitCode is not None:
             return self.deferred.errback(
-                ValueError(
-                    "SIG{}: exitCode is {}, not None".format(self.signal, v.exitCode)
-                )
+                ValueError(f"SIG{self.signal}: exitCode is {v.exitCode}, not None")
             )
         if v.signal != signalValue:
             return self.deferred.errback(
@@ -378,7 +374,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     @ivar programName: The name of the program to run.
     """
 
-    programName = b""  # type: bytes
+    programName: bytes = b""
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -899,13 +895,11 @@ class FDChecker(protocol.ProcessProtocol):
                 self.transport.writeToChild(3, b"efgh")
                 return
         if self.state == 2:
-            self.fail("read '{}' on fd {} during state 2".format(childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 2")
             return
         if self.state == 3:
             if childFD != 1:
-                self.fail(
-                    "read '{}' on fd {} (not 1) during state 3".format(childFD, data)
-                )
+                self.fail(f"read '{childFD}' on fd {data} (not 1) during state 3")
                 return
             self.data += data
             if len(self.data) == 6:
@@ -915,7 +909,7 @@ class FDChecker(protocol.ProcessProtocol):
                 self.state = 4
             return
         if self.state == 4:
-            self.fail("read '{}' on fd {} during state 4".format(childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 4")
             return
 
     def childConnectionLost(self, childFD):
@@ -1034,7 +1028,7 @@ class PosixProcessBase:
         elif usrbinLoc.exists():
             return usrbinLoc._asBytesPath()
         else:
-            raise RuntimeError("{} not found in /bin or /usr/bin".format(commandName))
+            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -2226,14 +2220,10 @@ class Win32SignalProtocol(SignalProtocol):
         Otherwise, errback with a C{ValueError} describing the problem.
         """
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: {}".format(reason))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if v.exitCode != 1:
-            return self.deferred.errback(
-                ValueError("Wrong exit code: {}".format(v.exitCode))
-            )
+            return self.deferred.errback(ValueError(f"Wrong exit code: {v.exitCode}"))
         self.deferred.callback(None)
 
 

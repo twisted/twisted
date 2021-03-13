@@ -33,7 +33,7 @@ class FileLogObserver:
         @param formatEvent: A callable that formats an event.
         """
         if ioType(outFile) is not str:
-            self._encoding = "utf-8"  # type: Optional[str]
+            self._encoding: Optional[str] = "utf-8"
         else:
             self._encoding = None
 

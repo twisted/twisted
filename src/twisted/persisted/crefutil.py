@@ -97,7 +97,7 @@ class _InstanceMethod(NotKnown):
         import traceback
 
         log.msg("instance method {}.{}".format(reflect.qual(self.my_class), self.name))
-        log.msg("being called with {!r} {!r}".format(args, kw))
+        log.msg(f"being called with {args!r} {kw!r}")
         traceback.print_stack(file=log.logfile)
         assert 0
 

@@ -100,9 +100,7 @@ class UNIXCreator(EndpointCreator):
     Create UNIX socket end points.
     """
 
-    requiredInterfaces = (
-        interfaces.IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (interfaces.IReactorUNIX,)
 
     def server(self, reactor):
         """
@@ -203,9 +201,7 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(
-                    Exception("Received bytes ({!r}) before descriptor.".format(data))
-                )
+                Failure(Exception(f"Received bytes ({data!r}) before descriptor."))
             )
             self.waiting = None
 
@@ -729,10 +725,10 @@ class SocketUNIXMixin:
     UNIX ports.
     """
 
-    requiredInterfaces = (
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (
         IReactorUNIX,
         IReactorSocket,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    )
 
     def getListeningPort(self, reactor, factory):
         """
@@ -801,7 +797,7 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
