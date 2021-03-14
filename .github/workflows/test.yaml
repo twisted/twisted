@@ -89,7 +89,7 @@ jobs:
     - name: Tox info
       uses: twisted/python-info-action@v1
       with:
-        python-path: .tox/${TOX_ENV}/*/python
+        python-path: .tox/${{ env.TOX_ENV }}/*/python
 
     - name: Test
       run: |
@@ -123,7 +123,7 @@ jobs:
     - name: Tox info
       uses: twisted/python-info-action@v1
       with:
-        python-path: .tox/${TOX_ENV}/*/python
+        python-path: .tox/${{ env.TOX_ENV }}/*/python
 
     - name: Prepare release
       run: |
