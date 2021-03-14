@@ -14,6 +14,8 @@ from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 from inspect import iscoroutine
+from contextlib import contextmanager
+from collections import deque
 
 from twisted.python.compat import nativeString
 from twisted.internet.defer import Deferred, ensureDeferred
@@ -157,7 +159,9 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
-def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
+def _flattenElement(
+    request, root, write, slotData, renderFactory, dataEscaper, trampoline
+):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -201,7 +205,7 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         newRoot, dataEscaper=dataEscaper, renderFactory=renderFactory, write=write
     ):
         return _flattenElement(
-            request, newRoot, write, slotData, renderFactory, dataEscaper
+            request, newRoot, write, slotData, renderFactory, dataEscaper, trampoline
         )
 
     if isinstance(root, (bytes, str)):
@@ -270,9 +274,9 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         escaped = "&#%d;" % (root.ordinal,)
         write(escaped.encode("ascii"))
     elif isinstance(root, Deferred):
-        yield root.addCallback(lambda result: (result, keepGoing(result)))
+        yield trampoline(root).addCallback(lambda result: (result, keepGoing(result)))
     elif iscoroutine(root):
-        d = ensureDeferred(root)
+        d = trampoline(ensureDeferred(root))
         yield d.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
@@ -281,7 +285,7 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         raise UnsupportedType(root)
 
 
-def _flattenTree(request, root, write):
+def _flattenTree(request, root, write, trampoline):
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -302,7 +306,9 @@ def _flattenTree(request, root, write):
         flattening C{root}.  The returned iterator must not be iterated again
         until the L{Deferred} is called back.
     """
-    stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
+    stack = [
+        _flattenElement(request, root, write, [], None, escapeForContent, trampoline)
+    ]
     while stack:
         try:
             frame = stack[-1].gi_frame
@@ -324,44 +330,67 @@ def _flattenTree(request, root, write):
                     stack.append(toFlatten)
                     return original
 
-                yield element.addCallback(cbx)
+                yield trampoline(element).addCallback(cbx)
             else:
                 stack.append(element)
 
 
-def _writeFlattenedData(state, write, result):
+@contextmanager
+def _trampoline():
     """
-    Take strings from an iterator and pass them to a writer function.
+    A context manager for flattening the execution of Deferreds and preventing
+    recursion errors when accounting for large numbers of synchronous Deferred
+    callback executions.  Use like so::
 
-    @param state: An iterator of L{str} and L{Deferred}.  L{str} instances will
-        be passed to C{write}.  L{Deferred} instances will be waited on before
-        resuming iteration of C{state}.
+        def topLevelAPI():
+            with _trampoline() as safelyRecurse:
+                return maybeRecursive(someData, safelyRecurse)
 
-    @param write: A callable which will be invoked with each L{str}
-        produced by iterating C{state}.
+        def maybeRecursive(data, safelyRecurse):
+            if recursionCondition(data):
+                return (safelyRecurse(someDeferred())
+                        .addCallback(lambda result:
+                                     maybeRecursive(result, safelyRecurse)))
+            else:
+                return data
 
-    @param result: A L{Deferred} which will be called back when C{state} has
-        been completely flattened into C{write} or which will be errbacked if
-        an exception in a generator passed to C{state} or an errback from a
-        L{Deferred} from state occurs.
+    This will unwind the stack at the exit of trampoline() but also unwind the
+    stack of any future invocations of C{maybeRecursive}.
 
-    @return: L{None}
+    @note: This might be a convenient function to have publicly as
+        C{twisted.internet.defer.trampoline()}.
     """
-    while True:
-        try:
-            element = next(state)
-        except StopIteration:
-            result.callback(None)
-        except BaseException:
-            result.errback()
-        else:
+    queue = deque()
+    running = False
 
-            def cby(original):
-                _writeFlattenedData(state, write, result)
-                return original
+    def bounce():
+        nonlocal running
+        running = True
+        while queue:
+            queue.popleft().unpause()
+        running = False
 
-            element.addCallbacks(cby, result.errback)
-        break
+    def jump(deferred):
+        deferred.pause()
+        queue.append(deferred)
+        if not running:
+            bounce()
+        return deferred
+
+    yield jump
+    bounce()
+
+
+async def _awaitEverything(iterable):
+    """
+    Await each value in the iterable, completing when they're all done.
+
+    @param iterator: An iterator of L{Deferred}s
+
+    @return: C{None}
+    """
+    for value in iterable:
+        await value
 
 
 def flatten(request, root, write):
@@ -377,20 +406,20 @@ def flatten(request, root, write):
 
     @param root: An object to be made flatter.  This may be of type L{unicode},
         L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
-        L{list}, L{types.GeneratorType}, L{Deferred}, or something that provides
-        L{IRenderable}.
+        L{list}, L{types.GeneratorType}, L{Deferred}, or something that
+        provides L{IRenderable}.
 
     @param write: A callable which will be invoked with each L{bytes} produced
         by flattening C{root}.
 
-    @return: A L{Deferred} which will be called back when C{root} has been
-        completely flattened into C{write} or which will be errbacked if an
-        unexpected exception occurs.
+    @return: A L{Deferred} which will be called back with C{None} when C{root}
+        has been completely flattened into C{write} or which will be errbacked
+        if an unexpected exception occurs.
     """
-    result = Deferred()
-    state = _flattenTree(request, root, write)
-    _writeFlattenedData(state, write, result)
-    return result
+    with _trampoline() as trampoline:
+        return ensureDeferred(
+            _awaitEverything(_flattenTree(request, root, write, trampoline))
+        )
 
 
 def flattenString(request, root):

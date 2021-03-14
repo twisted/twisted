@@ -401,9 +401,16 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</a>"
             )
         )
-        return self.assertFlattensTo(
+        self.assertFlattensImmediately(
             element, b'<a href="http://example.com">Hello, world.</a>'
         )
+
+    def test_synchronousDeferredRecursion(self):
+        """
+        When rendering a large number of already-fired Deferreds we should not
+        encounter any recursion errors or stack-depth issues.
+        """
+        self.assertFlattensImmediately([succeed("x") for i in range(250)], b"x" * 250)
 
     def test_errorToplevelAttr(self):
         """
