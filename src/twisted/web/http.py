@@ -1707,7 +1707,7 @@ class PotentialDataLoss(Exception):
 
 class _MalformedChunkedDataError(Exception):
     """
-    C{_ChunkedTranferDecoder} raises L{_MalformedChunkedDataError} from its
+    C{_ChunkedTransferDecoder} raises L{_MalformedChunkedDataError} from its
     C{dataReceived} method when it encounters malformed data. This exception
     indicates a client-side error. If this exception is raised, the connection
     should be dropped with a 400 error.
