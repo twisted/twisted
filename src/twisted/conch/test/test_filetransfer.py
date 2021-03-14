@@ -21,24 +21,34 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
 try:
-    from twisted.conch import unix
+    from twisted.conch import unix as _unix
 except ImportError:
-    unix = None  # type: ignore[assignment]
+    unix = None
+else:
+    unix = _unix
 
 try:
-    from twisted.conch.unix import SFTPServerForUnixConchUser
+    from twisted.conch.unix import (
+        SFTPServerForUnixConchUser as _SFTPServerForUnixConchUser,
+    )
 except ImportError:
-    SFTPServerForUnixConchUser = None  # type: ignore[assignment,misc]
+    SFTPServerForUnixConchUser = None
+else:
+    SFTPServerForUnixConchUser = _SFTPServerForUnixConchUser
 
 try:
-    import cryptography
+    import cryptography as _cryptography
 except ImportError:
-    cryptography = None  # type: ignore[assignment]
+    cryptography = None
+else:
+    cryptography = _cryptography
 
 try:
-    from twisted.conch.avatar import ConchUser
+    from twisted.conch.avatar import ConchUser as _ConchUser
 except ImportError:
-    ConchUser = object  # type: ignore[assignment,misc]
+    ConchUser = object
+else:
+    ConchUser = _ConchUser  # type: ignore[misc]
 
 try:
     from twisted.conch.ssh import common, connection, filetransfer, session
@@ -79,7 +89,7 @@ class ConchSessionForTestAvatar:
         self.avatar = avatar
 
 
-if not SFTPServerForUnixConchUser:
+if SFTPServerForUnixConchUser is None:
     # unix should either be a fully working module, or None.  I'm not sure
     # how this happens, but on win32 it does.  Try to cope.  --spiv.
     import warnings
@@ -93,7 +103,7 @@ if not SFTPServerForUnixConchUser:
     )
 else:
 
-    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):
+    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):  # type: ignore[misc,valid-type]
         def gotVersion(self, version, otherExt):
             return {b"conchTest": b"ext data"}
 
@@ -176,7 +186,7 @@ class OurServerOurClientTests(SFTPTestBase):
         """
         self.assertTrue(
             filetransfer.ISFTPServer.providedBy(self.server.client),
-            "ISFTPServer not provided by %r" % (self.server.client,),
+            f"ISFTPServer not provided by {self.server.client!r}",
         )
 
     def test_openedFileClosedWithConnection(self):
@@ -552,15 +562,13 @@ class OurServerOurClientTests(SFTPTestBase):
 
         self.assertEqual(
             filenames,
-            set(
-                [
-                    b".testHiddenFile",
-                    b"testDirectory",
-                    b"testRemoveFile",
-                    b"testRenameFile",
-                    b"testfile1",
-                ]
-            ),
+            {
+                b".testHiddenFile",
+                b"testDirectory",
+                b"testRemoveFile",
+                b"testRenameFile",
+                b"testfile1",
+            },
         )
 
     @defer.inlineCallbacks
@@ -644,6 +652,7 @@ class FileTransferCloseTests(TestCase):
         # make a server connection
         conn = connection.SSHConnection()
         # server connections have a 'self.transport.avatar'.
+
         class DummyTransport:
             def __init__(self):
                 self.transport = self

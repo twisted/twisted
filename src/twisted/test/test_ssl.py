@@ -161,7 +161,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 1024)
+    pkey.generate_key(crypto.TYPE_RSA, 2048)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
@@ -244,13 +244,13 @@ if SSL is not None:
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """
         A context factory with a default method set to
-        L{OpenSSL.SSL.TLSv1_METHOD}.
+        L{OpenSSL.SSL.SSLv23_METHOD}.
         """
 
         isClient = False
 
         def __init__(self, *args, **kw):
-            kw["sslmethod"] = SSL.TLSv1_METHOD
+            kw["sslmethod"] = SSL.SSLv23_METHOD
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 

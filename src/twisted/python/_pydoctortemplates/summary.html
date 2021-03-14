@@ -9,11 +9,9 @@
   <body>
     <nav class="navbar navbar-default">
       <div class="container">
-
-        <div class="navbar-header">
-          <a class="navbar-brand" href="index.html">
-            <t:transparent t:render="project">Some Project</t:transparent> API Documentation
-          </a>
+        <div class="navbar-header navbar-brand">
+          <t:transparent t:render="project">Some Project</t:transparent>
+          <a href="index.html">API Documentation</a>
         </div>
       </div>
     </nav>
@@ -30,9 +28,12 @@
 
       <div class="page-header">
         <h1 t:render="heading">Heading</h1>
+        <div id="showPrivate">
+          <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+        </div>
       </div>
 
-      <ul t:render="stuff">
+      <ul id="summaryTree" t:render="stuff">
       </ul>
 
     </div>
@@ -57,6 +58,8 @@
         delete container;
       }
     </script>
+
+    <script src="pydoctor.js" type='text/javascript'></script>
 
   </body>
 </html>

@@ -44,13 +44,13 @@ class BrokenStream:
         if self.written:
             return self.fObj.write(s)
         self.written = True
-        raise IOError(errno.EINTR, "Interrupted write")
+        raise OSError(errno.EINTR, "Interrupted write")
 
     def flush(self):
         if self.flushed:
             return self.fObj.flush()
         self.flushed = True
-        raise IOError(errno.EINTR, "Interrupted flush")
+        raise OSError(errno.EINTR, "Interrupted flush")
 
 
 class StringTest(unittest.SynchronousTestCase):
@@ -76,7 +76,7 @@ class StringTest(unittest.SynchronousTestCase):
                     % (line_number, exp.pattern, out),
                 )
             else:
-                raise TypeError("don't know what to do with object %r" % (exp,))
+                raise TypeError(f"don't know what to do with object {exp!r}")
 
 
 class TestResultTests(unittest.SynchronousTestCase):
@@ -148,7 +148,7 @@ class ErrorReportingTests(StringTest):
                 "twisted.trial.test.erroneous.FoolishError: "
                 "I am a broken setUp method"
             ),
-            "%s.%s.test_noop" % (cls.__module__, cls.__name__),
+            f"{cls.__module__}.{cls.__name__}.test_noop",
         ]
         self.stringComparison(match, output)
 
@@ -206,10 +206,8 @@ class ErrorReportingTests(StringTest):
 
         if reflect.qual(reactor).startswith("twisted.internet.asyncioreactor"):
             raise self.skipTest(
-                (
-                    "This test does not work on the asyncio reactor, as the "
-                    "traceback comes from inside asyncio, not Twisted."
-                )
+                "This test does not work on the asyncio reactor, as the "
+                "traceback comes from inside asyncio, not Twisted."
             )
 
         test = erroneous.DelayedCall("testHiddenException")
@@ -224,7 +222,7 @@ class ErrorReportingTests(StringTest):
             ),
             re.compile(
                 r'^\s+self\.fail\("Deliberate failure to mask the '
-                'hidden exception"\)$'
+                r'hidden exception"\)$'
             ),
             "twisted.trial.unittest.FailTest: "
             "Deliberate failure to mask the hidden exception",
@@ -234,8 +232,8 @@ class ErrorReportingTests(StringTest):
             "Traceback (most recent call last):",
             re.compile(r"^\s+File .* in runUntilCurrent"),
             re.compile(r"^\s+.*"),
-            re.compile('^\s+File .*erroneous\.py", line \d+, in go'),
-            re.compile("^\s+raise RuntimeError\(self.hiddenExceptionMsg\)"),
+            re.compile(r'^\s+File .*erroneous\.py", line \d+, in go'),
+            re.compile(r"^\s+raise RuntimeError\(self.hiddenExceptionMsg\)"),
             errorQual + ": something blew up",
             "twisted.trial.test.erroneous.DelayedCall.testHiddenException",
         ]
@@ -949,7 +947,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         callable must take the same parameters as L{reporter.Reporter}.
     """
 
-    resultFactory = reporter.Reporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.Reporter
 
     def setUp(self):
         self.test = sample.FooTest("test_foo")
@@ -1135,7 +1133,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
     This just tests that the subunit reporter implements the basic interface.
     """
 
-    resultFactory = reporter.SubunitReporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.SubunitReporter
 
     def setUp(self):
         if reporter.TestProtocolClient is None:
@@ -1348,7 +1346,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
 
 
 class TimingReporterTests(ReporterTests):
-    resultFactory = reporter.TimingTextReporter  # type: Type[itrial.IReporter]
+    resultFactory: Type[itrial.IReporter] = reporter.TimingTextReporter
 
 
 class LoggingReporter(reporter.Reporter):
@@ -1406,7 +1404,7 @@ class AdaptedReporterTests(unittest.SynchronousTestCase):
         """
         try:
             raise exceptionInstance
-        except:
+        except BaseException:
             return Failure()
 
     def getWrappedResult(self):

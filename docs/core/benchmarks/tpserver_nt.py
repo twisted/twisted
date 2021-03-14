@@ -1,16 +1,17 @@
 """Non-twisted throughput server."""
-from __future__ import print_function
 
 import socket, signal, sys
+
 
 def signalhandler(*args):
     print("alarm!")
     sys.stdout.flush()
 
+
 signal.signal(signal.SIGALRM, signalhandler)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 8001))
+s.bind(("", 8001))
 s.listen(1)
 while 1:
     c, (h, p) = s.accept()

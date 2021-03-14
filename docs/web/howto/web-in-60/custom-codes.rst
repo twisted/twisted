@@ -10,7 +10,7 @@ Custom Response Codes
 
 
 
-The previous example introduced :api:`twisted.web.error.NoResource <NoResource>` , a Twisted Web error resource which
+The previous example introduced :py:class:`NoResource <twisted.web.resource.NoResource>`, a Twisted Web error resource which
 responds with a 404 (not found) code. This example will cover the APIs
 that ``NoResource`` uses to do this so that you can generate your own
 custom response codes as desired.
@@ -43,13 +43,13 @@ the request object, though, which none of the previous examples have done.
 
 
 
-The :api:`twisted.web.server.Request <Request>` object has
+The :py:class:`Request <twisted.web.server.Request>` object has
 shown up in a couple of places, but so far we've ignored it. It is a parameter
-to the :api:`twisted.web.resource.Resource.getChild <getChild>`
+to the :py:meth:`getChild <twisted.web.resource.Resource.getChild>`
 API as well as to render methods such as ``render_GET`` . As you might
 have suspected, it represents the request for which a response is to be
 generated. Additionally, it also represents the response being generated. In
-this example we're going to use its :api:`twisted.web.http.Request.setResponseCode <setResponseCode>` method to - you guessed
+this example we're going to use its :py:meth:`setResponseCode <twisted.web.http.Request.setResponseCode>` method to - you guessed
 it - set the response's status code.
 
 

@@ -66,7 +66,7 @@ def _has_ipv6():
         sock = socket.socket(socket.AF_INET6)
         sock.bind(("::1", 0))
         has_ipv6 = True
-    except socket.error:
+    except OSError:
         pass
 
     if sock:
@@ -646,11 +646,11 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
             if not isinstance(output, str):
                 output = output.decode("utf-8")
             kexAlgorithms = output.split()
-        except:
+        except BaseException:
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:
-            raise SkipTest("{} not supported by ssh client".format(keyExchangeAlgo))
+            raise SkipTest(f"{keyExchangeAlgo} not supported by ssh client")
 
         d = self.execute(
             "echo hello",

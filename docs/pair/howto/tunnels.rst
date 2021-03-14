@@ -14,10 +14,10 @@ Before reading this document, you may want to familiarize yourself with Linux tu
 
 Tuntap Ports
 ------------
-The :api:`twisted.pair.tuntap.TuntapPort <twisted.pair.tuntap.TuntapPort>` class is the entry point into the tun/tap functionality.
+The :py:class:`twisted.pair.tuntap.TuntapPort` class is the entry point into the tun/tap functionality.
 This class is initialized with an application-supplied protocol object and associates that object with a tun or tap device on the system.
-If the protocol provides :api:`twisted.pair.ethernet.IEthernetProtocol <twisted.pair.ethernet.IEthernetProtocol>` then it is associated with a tap device.
-Otherwise the protocol must provide :api:`twisted.pair.raw.IRawPacketProtocol <twisted.pair.raw.IRawPacketProtocol>` and it will be associated with a tun device.
+If the protocol provides :py:class:`twisted.pair.ethernet.IEthernetProtocol` then it is associated with a tap device.
+Otherwise the protocol must provide :py:class:`twisted.pair.raw.IRawPacketProtocol` and it will be associated with a tun device.
 
 .. code-block:: python
 
@@ -49,7 +49,7 @@ When a ``TuntapPort`` is associated with a tap device, it delivers whole etherne
 The higher level version, tun devices, strips off the ethernet layer before delivering data to the application.
 This means that a ``TuntapPort`` associated with a tun device most commonly delivers IP datagrams to its protocol (though if your network is being used to convey non-IP datagrams then it may deliver those instead).
 
-Both ``IEthernetProtocol`` and ``IRawSocketProtocol`` are similar to :api:`twisted.internet.protocol.DatagramProtocol <twisted.internet.protocol.DatagramProtocol>` .
+Both ``IEthernetProtocol`` and ``IRawSocketProtocol`` are similar to :py:class:`twisted.internet.protocol.DatagramProtocol` .
 Datagrams, either ethernet or otherwise, are delivered to the protocol's ``datagramReceived`` method.
 Conversely the protocol is associated with a transport with a ``write`` method that accepts datagrams for injection into the network.
 

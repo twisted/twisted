@@ -17,20 +17,22 @@ Maintainer: Glyph Lefkowitz
 """
 
 
-import attr
 import traceback
 import types
 import warnings
 from asyncio import iscoroutine
-from sys import exc_info, version_info
 from functools import wraps
+from sys import exc_info, implementation, version_info
+from typing import Optional
+
+import attr
 from incremental import Version
 
 # Twisted imports
-from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure
 from twisted.logger import Logger
-from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python import failure, lockfile
+from twisted.python.compat import cmp, comparable
+from twisted.python.deprecate import deprecated, warnAboutFunction
 
 try:
     from contextvars import copy_context as _copy_context
@@ -69,6 +71,13 @@ class TimeoutError(Exception):
     """
 
 
+class NotACoroutineError(TypeError):
+    """
+    This error is raised when a coroutine is expected and something else is
+    encountered.
+    """
+
+
 def logError(err):
     """
     Log and return failure.
@@ -82,7 +91,7 @@ def logError(err):
     return err
 
 
-def succeed(result):
+def succeed(result: object) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.callback(result)} called.
 
@@ -96,15 +105,13 @@ def succeed(result):
 
     @param result: The result to give to the Deferred's 'callback'
            method.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.callback(result)
     return d
 
 
-def fail(result=None):
+def fail(result: object = None) -> "Deferred":
     """
     Return a L{Deferred} that has already had C{.errback(result)} called.
 
@@ -114,8 +121,6 @@ def fail(result=None):
 
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
-
-    @rtype: L{Deferred}
     """
     d = Deferred()
     d.errback(result)
@@ -132,7 +137,7 @@ def execute(callable, *args, **kw):
     """
     try:
         result = callable(*args, **kw)
-    except:
+    except BaseException:
         return fail()
     else:
         return succeed(result)
@@ -160,7 +165,7 @@ def maybeDeferred(f, *args, **kw):
     """
     try:
         result = f(*args, **kw)
-    except:
+    except BaseException:
         return fail(failure.Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):
@@ -264,7 +269,7 @@ class Deferred:
     # sets it directly.
     debug = False
 
-    _chainedTo = None
+    _chainedTo: "Optional[Deferred]" = None
 
     def __init__(self, canceller=None):
         """
@@ -666,7 +671,7 @@ class Deferred:
                             )
                     finally:
                         current._runningCallbacks = False
-                except:
+                except BaseException:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
@@ -727,12 +732,12 @@ class Deferred:
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x%x" % (id(self._chainedTo),)
+            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
         elif result is _NO_RESULT:
             result = ""
         else:
-            result = " current result: %r" % (result,)
-        return "<%s at 0x%x%s>" % (cname, myID, result)
+            result = f" current result: {result!r}"
+        return f"<{cname} at 0x{myID:x}{result}>"
 
     __repr__ = __str__
 
@@ -763,7 +768,7 @@ class Deferred:
 
     def asFuture(self, loop):
         """
-        Adapt a L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
+        Adapt this L{Deferred} into a L{asyncio.Future} which is bound to C{loop}.
 
         @note: converting a L{Deferred} to an L{asyncio.Future} consumes both
             its result and its errors, so this method implicitly converts
@@ -774,9 +779,6 @@ class Deferred:
 
         @param loop: The asyncio event loop to bind the L{asyncio.Future} to.
         @type loop: L{asyncio.AbstractEventLoop} or similar
-
-        @param deferred: The Deferred to adapt.
-        @type deferred: L{Deferred}
 
         @return: A Future which will fire when the Deferred fires.
         @rtype: L{asyncio.Future}
@@ -833,7 +835,7 @@ class Deferred:
         def adapt(result):
             try:
                 extracted = result.result()
-            except:
+            except BaseException:
                 extracted = failure.Failure()
             adapt.actual.callback(extracted)
 
@@ -856,6 +858,52 @@ class Deferred:
         future.add_done_callback(adapt)
         return self
 
+    @classmethod
+    def fromCoroutine(cls, coro):
+        """
+        Schedule the execution of a coroutine that awaits on L{Deferred}s,
+        wrapping it in a L{Deferred} that will fire on success/failure of the
+        coroutine.
+
+        Coroutine functions return a coroutine object, similar to how
+        generators work. This function turns that coroutine into a Deferred,
+        meaning that it can be used in regular Twisted code. For example::
+
+            import treq
+            from twisted.internet.defer import Deferred
+            from twisted.internet.task import react
+
+            async def crawl(pages):
+                results = {}
+                for page in pages:
+                    results[page] = await treq.content(await treq.get(page))
+                return results
+
+            def main(reactor):
+                pages = [
+                    "http://localhost:8080"
+                ]
+                d = Deferred.fromCoroutine(crawl(pages))
+                d.addCallback(print)
+                return d
+
+            react(main)
+
+        @since: Twisted NEXT
+
+        @param coro: The coroutine object to schedule.
+        @type coro: A Python 3.5+ C{async def} coroutine or a Python 3.4+
+            C{yield from} coroutine.
+
+        @raise ValueError: If C{coro} is not a coroutine or generator.
+
+        @rtype: L{Deferred}
+        """
+        if not iscoroutine(coro) and not isinstance(coro, types.GeneratorType):
+            raise NotACoroutineError(f"{coro!r} is not a coroutine")
+
+        return _cancellableInlineCallbacks(coro)
+
 
 def _cancelledToTimedOutError(value, timeout):
     """
@@ -869,7 +917,9 @@ def _cancelledToTimedOutError(value, timeout):
     @type timeout: L{int}
 
     @rtype: C{value}
-    @raise: L{TimeoutError}
+    @raise TimeoutError: If C{value} is a L{Failure} that is a L{CancelledError}.
+    @raise Exception: If C{value} is a L{Failure} that is not a L{CancelledError},
+        it is re-raised.
 
     @since: 16.5
     """
@@ -886,29 +936,7 @@ def ensureDeferred(coro):
     coroutine. If a Deferred is passed to this function, it will be returned
     directly (mimicing C{asyncio}'s C{ensure_future} function).
 
-    Coroutine functions return a coroutine object, similar to how generators
-    work. This function turns that coroutine into a Deferred, meaning that it
-    can be used in regular Twisted code. For example::
-
-        import treq
-        from twisted.internet.defer import ensureDeferred
-        from twisted.internet.task import react
-
-        async def crawl(pages):
-            results = {}
-            for page in pages:
-                results[page] = await treq.content(await treq.get(page))
-            return results
-
-        def main(reactor):
-            pages = [
-                "http://localhost:8080"
-            ]
-            d = ensureDeferred(crawl(pages))
-            d.addCallback(print)
-            return d
-
-        react(main)
+    See L{Deferred.fromCoroutine} for examples of coroutines.
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     @type coro: A Python 3.5+ C{async def} C{coroutine}, a Python 3.4+
@@ -916,15 +944,15 @@ def ensureDeferred(coro):
 
     @rtype: L{Deferred}
     """
-
-    if iscoroutine(coro) or isinstance(coro, types.GeneratorType):
-        return _cancellableInlineCallbacks(coro)
-
-    if not isinstance(coro, Deferred):
-        raise ValueError("%r is not a coroutine or a Deferred" % (coro,))
-
-    # Must be a Deferred
-    return coro
+    if isinstance(coro, Deferred):
+        return coro
+    else:
+        try:
+            return Deferred.fromCoroutine(coro)
+        except NotACoroutineError:
+            # It's not a coroutine. Raise an exception, but say that it's also
+            # not a Deferred so the error makes sense.
+            raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
 
 
 class DebugInfo:
@@ -1140,7 +1168,7 @@ class DeferredList(Deferred):
             for deferred in self._deferredList:
                 try:
                     deferred.cancel()
-                except:
+                except BaseException:
                     log.failure("Exception raised from user supplied canceller")
 
 
@@ -1204,7 +1232,7 @@ class waitForDeferred:
 
         if not isinstance(d, Deferred):
             raise TypeError(
-                "You must give waitForDeferred a Deferred. You gave it %r." % (d,)
+                f"You must give waitForDeferred a Deferred. You gave it {d!r}."
             )
         self.d = d
 
@@ -1233,7 +1261,7 @@ def _deferGenerator(g, deferred):
         except StopIteration:
             deferred.callback(result)
             return deferred
-        except:
+        except BaseException:
             deferred.errback()
             return deferred
 
@@ -1429,8 +1457,11 @@ def _inlineCallbacks(result, g, status):
             # code.
             appCodeTrace = exc_info()[2].tb_next
 
-            # The contextvars backport and our no-op shim add an extra frame.
             if version_info < (3, 7):
+                # The contextvars backport and our no-op shim add an extra frame.
+                appCodeTrace = appCodeTrace.tb_next
+            elif implementation.name == "pypy":
+                # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
 
             if isFailure:
@@ -1467,7 +1498,7 @@ def _inlineCallbacks(result, g, status):
                 )
             status.deferred.callback(e.value)
             return
-        except:
+        except BaseException:
             status.deferred.errback()
             return
 

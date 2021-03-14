@@ -9,6 +9,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+import sys
 
 import hamcrest
 
@@ -59,7 +60,7 @@ from ._util import (
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
         http._IDeprecatedHTTPChannelToRequestInterface
     )
 ):
@@ -264,7 +265,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response = [
+    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -273,7 +274,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
             b"Content-Length: 13",
             b"'''\nNone\n'''\n",
         )
-    ]  # type: Union[Sequence[Sequence[bytes]], bytes]
+    ]
 
     def test_buffer(self):
         """
@@ -1137,7 +1138,7 @@ class IdentityTransferEncodingTests(TestCase):
         def finish(bytes):
             try:
                 decoder.dataReceived(b"foo")
-            except:
+            except BaseException:
                 failures.append(Failure())
 
         decoder = _IdentityTransferDecoder(5, self.data.append, finish)
@@ -1323,7 +1324,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         def finished(extra):
             try:
                 parser.noMoreData()
-            except:
+            except BaseException:
                 errors.append(Failure())
             else:
                 successes.append(True)
@@ -1655,7 +1656,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
+            requestLines.append(networkString(f"{i}: foo"))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
@@ -1994,6 +1995,33 @@ abasdfg
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
+    def test_multipartEmptyHeaderProcessingFailure(self):
+        """
+        When the multipart does not contain a header is should be skipped
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        # The parsing failure is encoding a NoneType key when name is not
+        # defined in Content-Disposition
+        req = b"""\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaBb1313
+Content-Length: 14
+
+--AaBb1313
+
+--AaBb1313--
+"""
+        channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(processed[0].args, {})
+
     def test_multipartFormData(self):
         """
         If the request has a Content-Type of C{multipart/form-data}, and the
@@ -2292,6 +2320,9 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
+    # FIXME: https://twistedmatrix.com/trac/ticket/10096
+    # Re-enable once the implementation is updated.
+    @skipIf(sys.version_info >= (3, 6, 13), "newer py3.6 parse_qs treat ; differently")
     def testParseqs(self):
         self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)
@@ -3668,7 +3699,7 @@ def sub(keys, d):
         corresponding values in C{d}.
     @rtype: L{dict}
     """
-    return dict([(k, d[k]) for k in keys])
+    return {k: d[k] for k in keys}
 
 
 class DeprecatedRequestAttributesTests(unittest.TestCase):

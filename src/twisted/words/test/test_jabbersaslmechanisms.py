@@ -139,7 +139,7 @@ class DigestMD5Tests(unittest.TestCase):
         """
         charset = "utf-8"
         nonce = b"OA6MG9tEQGm2hh"
-        nc = networkString("%08x" % (1,))
+        nc = networkString("{:08x}".format(1))
         cnonce = b"OA6MHXh6VqTrRk"
 
         username = "\u0418chris"

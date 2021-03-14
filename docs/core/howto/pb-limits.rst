@@ -43,7 +43,7 @@ Another limit imposed by Twisted's Banana implementation is a limit on
 the size of long integers.  The purpose of this limit is the same as the 
 ``SIZE_LIMIT`` .  By default, only integers between -2 ** 448 and 2
 ** 448 (exclusive) can be transferred.  This limit can be changed using 
-:api:`twisted.spread.banana.setPrefixLimit <twisted.spread.banana.setPrefixLimit>` .
+:py:func:`twisted.spread.banana.setPrefixLimit` .
 
   
 

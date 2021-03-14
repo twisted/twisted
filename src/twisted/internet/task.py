@@ -7,8 +7,6 @@ Scheduling utility methods and classes.
 """
 
 
-__metaclass__ = type
-
 import sys
 import time
 import warnings
@@ -281,7 +279,7 @@ class LoopingCall:
         else:
             func = reflect.safe_repr(self.f)
 
-        return "LoopingCall<%r>(%s, *%s, **%s)" % (
+        return "LoopingCall<{!r}>({}, *{}, **{})".format(
             self.interval,
             func,
             reflect.safe_repr(self.a),
@@ -502,7 +500,7 @@ class CooperativeTask:
             result = next(self._iterator)
         except StopIteration:
             self._completeWith(TaskDone(), self._iterator)
-        except:
+        except BaseException:
             self._completeWith(TaskFailed(), Failure())
         else:
             if isinstance(result, defer.Deferred):
@@ -822,9 +820,9 @@ def deferLater(clock, delay, callable=None, *args, **kw):
 
     @param callable: The object to call after the delay.
 
-    @param *args: The positional arguments to pass to C{callable}.
+    @param args: The positional arguments to pass to C{callable}.
 
-    @param **kw: The keyword arguments to pass to C{callable}.
+    @param kw: The keyword arguments to pass to C{callable}.
 
     @rtype: L{defer.Deferred}
 
@@ -844,7 +842,8 @@ def deferLater(clock, delay, callable=None, *args, **kw):
 
 def react(main, argv=(), _reactor=None):
     """
-    Call C{main} and run the reactor until the L{Deferred} it returns fires.
+    Call C{main} and run the reactor until the L{Deferred} it returns fires or
+    the coroutine it returns completes.
 
     This is intended as the way to start up an application with a well-defined
     completion condition.  Use it to write clients or one-off asynchronous
@@ -860,14 +859,14 @@ def react(main, argv=(), _reactor=None):
 
     The following demonstrates the signature of a C{main} function which can be
     used with L{react}::
-          def main(reactor, username, password):
-              return defer.succeed('ok')
+          async def main(reactor, username, password):
+              return "ok"
 
-          task.react(main, ('alice', 'secret'))
+          task.react(main, ("alice", "secret"))
 
-    @param main: A callable which returns a L{Deferred}. It should
-        take the reactor as its first parameter, followed by the elements of
-        C{argv}.
+    @param main: A callable which returns a L{Deferred} or
+        coroutine. It should take the reactor as its first
+        parameter, followed by the elements of C{argv}.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
         callable will be invoked with no additional arguments.
@@ -879,7 +878,7 @@ def react(main, argv=(), _reactor=None):
     """
     if _reactor is None:
         from twisted.internet import reactor as _reactor
-    finished = main(_reactor, *argv)
+    finished = defer.ensureDeferred(main(_reactor, *argv))
     codes = [0]
 
     stopping = []

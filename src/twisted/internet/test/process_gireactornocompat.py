@@ -22,4 +22,4 @@ try:
 except ImportError:
     sys.stdout.write("success")
 else:
-    sys.stdout.write("failure: %s was imported" % (gobject.__path__,))
+    sys.stdout.write(f"failure: {gobject.__path__} was imported")

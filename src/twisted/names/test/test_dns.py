@@ -8,20 +8,19 @@ Tests for twisted.names.dns.
 
 
 from io import BytesIO
-
 import struct
+from typing import cast
 
 from zope.interface.verify import verifyClass
 
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
-from twisted.trial import unittest
 from twisted.names import dns
-
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial import unittest
 
 RECORD_TYPES = [
     dns.Record_NS,
@@ -469,7 +468,7 @@ class RoundtripDNSTests(unittest.TestCase):
             k1, k2 = k(), k()
             hk1 = hash(k1)
             hk2 = hash(k2)
-            self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1, hk2, k))
+            self.assertEqual(hk1, hk2, f"{hk1} != {hk2} (for {k})")
 
     def test_Charstr(self):
         """
@@ -2489,7 +2488,7 @@ def assertIsSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertTrue(
         dns._isSubdomainOf(descendant, ancestor),
-        "%r is not a subdomain of %r" % (descendant, ancestor),
+        f"{descendant!r} is not a subdomain of {ancestor!r}",
     )
 
 
@@ -2508,7 +2507,7 @@ def assertIsNotSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertFalse(
         dns._isSubdomainOf(descendant, ancestor),
-        "%r is a subdomain of %r" % (descendant, ancestor),
+        f"{descendant!r} is a subdomain of {ancestor!r}",
     )
 
 
@@ -4841,12 +4840,15 @@ class Foo:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return dns._compactRepr(
-            self,
-            alwaysShow="alwaysShowField".split(),
-            fieldNames="field1 field2 alwaysShowField".split(),
-            flagNames="flagTrue flagFalse".split(),
-            sectionNames="section1 section2".split(),
+        return cast(
+            str,
+            dns._compactRepr(
+                self,
+                alwaysShow="alwaysShowField".split(),
+                fieldNames="field1 field2 alwaysShowField".split(),
+                flagNames="flagTrue flagFalse".split(),
+                sectionNames="section1 section2".split(),
+            ),
         )
 
 

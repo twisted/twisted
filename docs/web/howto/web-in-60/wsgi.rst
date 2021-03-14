@@ -11,8 +11,8 @@ WSGI
 
 
 The goal of this example is to show you how to
-use :api:`twisted.web.wsgi.WSGIResource <WSGIResource>` ,
-another existing :api:`twisted.web.resource.Resource <Resource>` subclass, to
+use :py:class:`WSGIResource <twisted.web.wsgi.WSGIResource>` ,
+another existing :py:class:`Resource <twisted.web.resource.Resource>` subclass, to
 serve `WSGI applications <http://www.python.org/dev/peps/pep-0333/>`_ 
 in a Twisted Web server.
 
@@ -107,7 +107,7 @@ pass the reactor to it.
 
 
 The second parameter passed to ``WSGIResource`` is
-a :api:`twisted.python.threadpool.ThreadPool <ThreadPool>` . ``WSGIResource`` 
+a :py:class:`ThreadPool <twisted.python.threadpool.ThreadPool>` . ``WSGIResource`` 
 uses this to actually call the application object passed in to it. To keep this
 example short, we're passing in the reactor's internal threadpool here, letting
 us skip its creation and shutdown-time destruction. For finer control over how
@@ -147,7 +147,7 @@ The example, sans interruption:
 
 Up to the point where the ``WSGIResource`` instance defined here
 exists in the resource hierarchy, the normal resource traversal rules
-apply: :api:`twisted.web.resource.Resource.getChild <getChild>` 
+apply: :py:meth:`getChild <twisted.web.resource.Resource.getChild>` 
 will be called to handle each segment. Once the ``WSGIResource`` is
 encountered, though, that process stops and all further URL handling is the
 responsibility of the WSGI application. This application does nothing with the

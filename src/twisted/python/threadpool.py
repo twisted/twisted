@@ -9,8 +9,8 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-
-import threading
+from threading import Thread, currentThread
+from typing import List
 
 from twisted._threads import pool as _pool
 from twisted.python import log, context
@@ -43,8 +43,8 @@ class ThreadPool:
     started = False
     name = None
 
-    threadFactory = threading.Thread
-    currentThread = staticmethod(threading.currentThread)
+    threadFactory = Thread
+    currentThread = staticmethod(currentThread)
     _pool = staticmethod(_pool)
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
@@ -65,10 +65,12 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = []
+        self.threads: List[Thread] = []
 
         def trackingThreadFactory(*a, **kw):
-            thread = self.threadFactory(*a, name=self._generateName(), **kw)
+            thread = self.threadFactory(  # type: ignore[misc]
+                *a, name=self._generateName(), **kw
+            )
             self.threads.append(thread)
             return thread
 
@@ -166,7 +168,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-%s-%s" % (self.name or id(self), self.workers)
+        return "PoolThread-{}-{}".format(self.name or id(self), self.workers)
 
     def stopAWorker(self):
         """
@@ -233,24 +235,26 @@ class ThreadPool:
 
         def inContext():
             try:
-                result = inContext.theWork()
+                result = inContext.theWork()  # type: ignore[attr-defined]
                 ok = True
-            except:
+            except BaseException:
                 result = Failure()
                 ok = False
 
-            inContext.theWork = None
-            if inContext.onResult is not None:
-                inContext.onResult(ok, result)
-                inContext.onResult = None
+            inContext.theWork = None  # type: ignore[attr-defined]
+            if inContext.onResult is not None:  # type: ignore[attr-defined]
+                inContext.onResult(ok, result)  # type: ignore[attr-defined]
+                inContext.onResult = None  # type: ignore[attr-defined]
             elif not ok:
                 log.err(result)
 
         # Avoid closing over func, ctx, args, kw so that we can carefully
         # manage their lifecycle.  See
         # test_threadCreationArgumentsCallInThreadWithCallback.
-        inContext.theWork = lambda: context.call(ctx, func, *args, **kw)
-        inContext.onResult = onResult
+        inContext.theWork = lambda: context.call(  # type: ignore[attr-defined]
+            ctx, func, *args, **kw
+        )
+        inContext.onResult = onResult  # type: ignore[attr-defined]
 
         self._team.do(inContext)
 
@@ -298,6 +302,6 @@ class ThreadPool:
         Dump some plain-text informational messages to the log about the state
         of this L{ThreadPool}.
         """
-        log.msg("waiters: %s" % (self.waiters,))
-        log.msg("workers: %s" % (self.working,))
-        log.msg("total: %s" % (self.threads,))
+        log.msg(f"waiters: {self.waiters}")
+        log.msg(f"workers: {self.working}")
+        log.msg(f"total: {self.threads}")

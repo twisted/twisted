@@ -191,7 +191,7 @@ class RawText(microdom.Text):
         nsprefixes=None,
         namespace=None,
     ):
-        writer.write("%s%s%s" % (indent, self.data, newl))
+        writer.write(f"{indent}{self.data}{newl}")
 
 
 def findNodes(parent, matcher, accum=None):

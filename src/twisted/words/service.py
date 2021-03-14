@@ -61,7 +61,9 @@ class Group:
                 self.remove(user, err.getErrorMessage())
 
     def add(self, user):
-        assert iwords.IChatClient.providedBy(user), "%r is not a chat client" % (user,)
+        assert iwords.IChatClient.providedBy(user), "{!r} is not a chat client".format(
+            user
+        )
         if user.name not in self.users:
             additions = []
             self.users[user.name] = user
@@ -210,11 +212,11 @@ class IRCUser(irc.IRC):
 
     # IChatClient implementation
     def userJoined(self, group, user):
-        self.join("%s!%s@%s" % (user.name, user.name, self.hostname), "#" + group.name)
+        self.join(f"{user.name}!{user.name}@{self.hostname}", "#" + group.name)
 
     def userLeft(self, group, user, reason=None):
         self.part(
-            "%s!%s@%s" % (user.name, user.name, self.hostname),
+            f"{user.name}!{user.name}@{self.hostname}",
             "#" + group.name,
             (reason or "leaving"),
         )
@@ -231,7 +233,9 @@ class IRCUser(irc.IRC):
         text = message.get("text", "<an unrepresentable message>")
         for L in text.splitlines():
             self.privmsg(
-                "%s!%s@%s" % (sender.name, sender.name, self.hostname), recipientName, L
+                f"{sender.name}!{sender.name}@{self.hostname}",
+                recipientName,
+                L,
             )
 
     def groupMetaUpdate(self, group, meta):
@@ -242,7 +246,7 @@ class IRCUser(irc.IRC):
                 self.name,
                 "#" + group.name,
                 topic,
-                "%s!%s@%s" % (author, author, self.hostname),
+                f"{author}!{author}@{self.hostname}",
             )
 
     # irc.IRC callbacks - starting with login related stuff.
@@ -361,7 +365,7 @@ class IRCUser(irc.IRC):
 
     def _cbLogin(self, result):
         (iface, avatar, logout) = result
-        assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
+        assert iface is iwords.IUser, f"Realm is buggy, got {iface!r}"
 
         # Let them send messages to the world
         del self.irc_PRIVMSG
@@ -697,9 +701,9 @@ class IRCUser(irc.IRC):
         """
         Send a group of LIST response lines
 
-        @type channel: C{list} of C{(str, int, str)}
-        @param channel: Information about the channels being sent:
-        their name, the number of participants, and their topic.
+        @type channels: C{list} of C{(str, int, str)}
+        @param channels: Information about the channels being sent:
+            their name, the number of participants, and their topic.
         """
         for (name, size, topic) in channels:
             self.sendMessage(irc.RPL_LIST, name, str(size), ":" + topic)
@@ -1229,7 +1233,7 @@ class WordsRealm:
 
 class InMemoryWordsRealm(WordsRealm):
     def __init__(self, *a, **kw):
-        super(InMemoryWordsRealm, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.users = {}
         self.groups = {}
 

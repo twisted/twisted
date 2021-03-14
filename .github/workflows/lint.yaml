@@ -8,13 +8,15 @@ on:
 
 jobs:
   lint:
-
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "lint,black,manifest-checker,twine"
+      TOXENV: "lint, newsfragment"
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        # Need history on all branches for newsfragment to work.
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v2

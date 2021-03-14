@@ -27,7 +27,7 @@ def _render(resource, request):
         else:
             return request.notifyFinish()
     else:
-        raise ValueError("Unexpected return value: %r" % (result,))
+        raise ValueError(f"Unexpected return value: {result!r}")
 
 
 class FlattenTestCase(TestCase):

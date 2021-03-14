@@ -16,7 +16,7 @@ describe how to extend applications written in such a way).  This
 extensibility is achieved through the definition of one or more
 APIs and a mechanism for collecting code plugins which
 implement this API to provide some additional functionality.
-At the base of this system is the :api:`twisted.plugin <twisted.plugin>` module.
+At the base of this system is the :py:mod:`twisted.plugin` module.
 
     
 
@@ -48,7 +48,7 @@ Writing Extensible Programs
 
 
     
-Taking advantage of :api:`twisted.plugin <twisted.plugin>` is
+Taking advantage of :py:mod:`twisted.plugin` is
 a two step process:
 
     
@@ -77,7 +77,7 @@ a two step process:
    
    
 #. 
-   At one or more places in your program, invoke :api:`twisted.plugin.getPlugins <twisted.plugin.getPlugins>` and iterate over its
+   At one or more places in your program, invoke :py:func:`twisted.plugin.getPlugins` and iterate over its
    result.
 
 
@@ -207,7 +207,7 @@ location.  Consider the following example.
 
     
 ``steelPlate`` and ``brassPlate`` now provide both
-:api:`twisted.plugin.IPlugin <IPlugin>` and ``IMaterial`` .
+:py:class:`IPlugin <twisted.plugin.IPlugin>` and ``IMaterial`` .
 All that remains is to make this module available at an appropriate
 location. For this, there are two options. The first of these is
 primarily useful during development: if a directory which
@@ -238,7 +238,7 @@ Alternate Plugin Packages
 
 
     
-:api:`twisted.plugin.getPlugins <getPlugins>` takes one
+:py:func:`getPlugins <twisted.plugin.getPlugins>` takes one
 additional argument not mentioned above.  If passed in, the 2nd argument
 should be a module or package to be used instead of
 ``twisted.plugins`` as the plugin meta-package.  If you

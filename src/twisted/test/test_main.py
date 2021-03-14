@@ -37,7 +37,7 @@ class MainTests(TestCase):
             output = f.getvalue().replace(b"\r\n", b"\n")
 
             options = TwistOptions()
-            message = "{}\n".format(options).encode("utf-8")
+            message = f"{options}\n".encode("utf-8")
             self.assertEqual(output, message)
 
         return d.addCallback(processEnded)
@@ -60,7 +60,7 @@ class MainTests(TestCase):
             output = f.getvalue().replace(b"\r\n", b"\n")
 
             options = trial.Options()
-            message = "{}\n".format(options).encode("utf-8")
+            message = f"{options}\n".encode("utf-8")
             self.assertEqual(output, message)
 
         return d.addCallback(processEnded)

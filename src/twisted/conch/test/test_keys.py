@@ -457,9 +457,7 @@ SUrCyZXsNh6VXwjs3gKQ
         passphrases.
         """
         key = keys.Key(self.rsaObj)
-        key_data = key.toString(
-            "openssh", passphrase="verschl\u00FCsselt".encode("UTF-8")
-        )
+        key_data = key.toString("openssh", passphrase="verschl\u00FCsselt".encode())
         self.assertEqual(
             keys.Key.fromString(key_data, passphrase="verschlu\u0308sselt"), key
         )
@@ -1289,9 +1287,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key(self.rsaObj)
         key_data = key.toString("openssh", passphrase="verschlu\u0308sselt")
         self.assertEqual(
-            keys.Key.fromString(
-                key_data, passphrase="verschl\u00FCsselt".encode("UTF-8")
-            ),
+            keys.Key.fromString(key_data, passphrase="verschl\u00FCsselt".encode()),
             key,
         )
         # U+FFFF is a "noncharacter" and guaranteed to have General_Category

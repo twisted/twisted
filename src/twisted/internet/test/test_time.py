@@ -5,8 +5,6 @@
 Tests for implementations of L{IReactorTime}.
 """
 
-__metaclass__ = type
-
 from twisted.python.log import msg
 from twisted.python.runtime import platform
 

@@ -14,7 +14,6 @@ socket the server side of this example is already listening on.  For example:
 
 See sendfd.py for the server side of this example.
 """
-from __future__ import print_function
 
 if __name__ == "__main__":
     import recvfd
@@ -49,14 +48,14 @@ class ReceiveFDProtocol(LineOnlyReceiver):
 
     def lineReceived(self, line):
         if self.descriptor is None:
-            print("Received {} without receiving descriptor!".format(line))
+            print(f"Received {line} without receiving descriptor!")
         else:
             # Use the previously received descriptor, along with the newly
             # provided information about which file it is, to present some
             # information to the user.
             data = os.read(self.descriptor, 80)
-            print("Received {} from the server.".format(line))
-            print("First 80 bytes are:\n{}\n".format(data))
+            print(f"Received {line} from the server.")
+            print(f"First 80 bytes are:\n{data}\n")
         os.close(self.descriptor)
         self.transport.loseConnection()
 

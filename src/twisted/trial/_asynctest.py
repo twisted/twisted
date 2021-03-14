@@ -25,7 +25,7 @@ from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
-_wait_is_running = []  # type: List[None]
+_wait_is_running: List[None] = []
 
 
 @implementer(itrial.ITestCase)
@@ -54,7 +54,7 @@ class TestCase(SynchronousTestCase):
         L{SynchronousTestCase.runTest} will be used as the test method. This is
         mostly useful for testing Trial.
         """
-        super(TestCase, self).__init__(methodName)
+        super().__init__(methodName)
 
     def assertFailure(self, deferred, *expectedFailures):
         """
@@ -65,14 +65,16 @@ class TestCase(SynchronousTestCase):
 
         def _cb(ignore):
             raise self.failureException(
-                "did not catch an error, instead got %r" % (ignore,)
+                f"did not catch an error, instead got {ignore!r}"
             )
 
         def _eb(failure):
             if failure.check(*expectedFailures):
                 return failure.value
             else:
-                output = "\nExpected: %r\nGot:\n%s" % (expectedFailures, str(failure))
+                output = "\nExpected: {!r}\nGot:\n{}".format(
+                    expectedFailures, str(failure)
+                )
                 raise self.failureException(output)
 
         return deferred.addCallbacks(_cb, _eb)
@@ -86,7 +88,7 @@ class TestCase(SynchronousTestCase):
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                "%r (%s) still running at %s secs" % (self, methodName, timeout)
+                f"{self!r} ({methodName}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
@@ -112,7 +114,9 @@ class TestCase(SynchronousTestCase):
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
-                "%r is a generator function and therefore will never run" % (method,)
+                "{!r} is a generator function and therefore will never run".format(
+                    method
+                )
             )
             return defer.fail(exc)
         d = defer.maybeDeferred(
@@ -190,29 +194,29 @@ class TestCase(SynchronousTestCase):
             result.stop()
         self._passed = False
 
+    @defer.inlineCallbacks
     def deferRunCleanups(self, ignored, result):
         """
-        Run any scheduled cleanups and report errors (if any to the result
+        Run any scheduled cleanups and report errors (if any) to the result.
         object.
         """
-        d = self._runCleanups()
-        d.addCallback(self._cbDeferRunCleanups, result)
-        return d
+        failures = []
+        for func, args, kwargs in self._cleanups[::-1]:
+            try:
+                yield func(*args, **kwargs)
+            except Exception:
+                failures.append(failure.Failure())
 
-    def _cbDeferRunCleanups(self, cleanupResults, result):
-        for flag, testFailure in cleanupResults:
-            if flag == defer.FAILURE:
-                result.addError(self, testFailure)
-                if testFailure.check(KeyboardInterrupt):
-                    result.stop()
-                self._passed = False
+        for f in failures:
+            result.addError(self, f)
+            self._passed = False
 
     def _cleanUp(self, result):
         try:
             clean = util._Janitor(self, result).postCaseCleanup()
             if not clean:
                 self._passed = False
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
             self._passed = False
         for error in self._observer.getErrors():
@@ -226,7 +230,7 @@ class TestCase(SynchronousTestCase):
     def _classCleanUp(self, result):
         try:
             util._Janitor(self, result).postClassCleanup()
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
 
     def _makeReactorMethod(self, name):
@@ -271,22 +275,6 @@ class TestCase(SynchronousTestCase):
             setattr(reactor, name, method)
         self._reactorMethods = {}
 
-    def _runCleanups(self):
-        """
-        Run the cleanups added with L{addCleanup} in order.
-
-        @return: A C{Deferred} that fires when all cleanups are run.
-        """
-
-        def _makeFunction(f, args, kwargs):
-            return lambda: f(*args, **kwargs)
-
-        callables = []
-        while len(self._cleanups) > 0:
-            f, args, kwargs = self._cleanups.pop()
-            callables.append(_makeFunction(f, args, kwargs))
-        return util._runSequentially(callables)
-
     def _runFixturesAndTest(self, result):
         """
         Really run C{setUp}, the test method, and C{tearDown}.  Any of these may
@@ -316,7 +304,7 @@ class TestCase(SynchronousTestCase):
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
         """
-        return super(TestCase, self).addCleanup(f, *args, **kwargs)
+        return super().addCleanup(f, *args, **kwargs)
 
     def getSuppress(self):
         return self._getSuppress()

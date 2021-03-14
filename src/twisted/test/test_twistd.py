@@ -240,7 +240,9 @@ class ServerOptionsTests(TestCase):
         self.assertEqual(
             indexes,
             sorted(indexes),
-            "reactor descriptions were not in alphabetical order: %r" % (helpOutput,),
+            "reactor descriptions were not in alphabetical order: {!r}".format(
+                helpOutput
+            ),
         )
 
     def test_postOptionsSubCommandCausesNoSave(self):
@@ -325,21 +327,13 @@ class ServerOptionsTests(TestCase):
             config.parseOptions,
             ["--logger", "twisted.test.test_twistd.FOOBAR"],
         )
-        if sys.version_info <= (3, 5):
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: 'module' object has no attribute 'FOOBAR'"
-                )
+        self.assertTrue(
+            e.args[0].startswith(
+                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                "imported: module 'twisted.test.test_twistd' "
+                "has no attribute 'FOOBAR'"
             )
-        else:
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: module 'twisted.test.test_twistd' "
-                    "has no attribute 'FOOBAR'"
-                )
-            )
+        )
         self.assertNotIn("\n", e.args[0])
 
     def test_version(self):
@@ -361,6 +355,15 @@ class ServerOptionsTests(TestCase):
         e = self.assertRaises(SystemExit, config.parseOptions, ["--version"])
         self.assertIs(e.code, None)
         self.assertEqual(stdout.getvalue(), expectedOutput)
+
+    def test_printSubCommandForUsageError(self):
+        """
+        Command is printed when an invalid option is requested.
+        """
+        stdout = StringIO()
+        config = twistd.ServerOptions(stdout=stdout)
+
+        self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -1813,7 +1816,7 @@ class DaemonizeTests(TestCase):
         def raisingWrite(fd, data):
             written.append((fd, data))
             if len(written) == 1:
-                raise IOError(errno.EINTR)
+                raise OSError(errno.EINTR)
 
         self.mockos.write = raisingWrite
         with AlternateReactor(FakeDaemonizingReactor()):
@@ -1842,7 +1845,7 @@ class DaemonizeTests(TestCase):
         def raisingRead(fd, size):
             read.append((fd, size))
             if len(read) == 1:
-                raise IOError(errno.EINTR)
+                raise OSError(errno.EINTR)
             return b"0"
 
         self.mockos.read = raisingRead
@@ -2070,7 +2073,7 @@ class StubApplicationRunnerWithSignal(twistd._SomeApplicationRunner):
     loggerFactory = CrippledAppLogger
 
     def __init__(self, config):
-        super(StubApplicationRunnerWithSignal, self).__init__(config)
+        super().__init__(config)
         self._signalValue = None
 
     def preApplication(self):

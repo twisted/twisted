@@ -172,7 +172,7 @@ class DomainWithDefaultDict:
         @return: A string containing the mapping of domain names to domain
             objects.
         """
-        return "<DomainWithDefaultDict %s>" % (self.domains,)
+        return f"<DomainWithDefaultDict {self.domains}>"
 
     def __repr__(self) -> str:
         """
@@ -182,7 +182,7 @@ class DomainWithDefaultDict:
         @return: A pseudo-executable string describing the underlying domain
             mapping of this object.
         """
-        return "DomainWithDefaultDict(%s)" % (self.domains,)
+        return f"DomainWithDefaultDict({self.domains})"
 
     def get(self, key, default=None):
         """
@@ -216,8 +216,8 @@ class DomainWithDefaultDict:
         dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>} or
-        failing to iterate over all the domain name/domain object pairs.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain name/domain object pairs.
 
         @rtype: iterator over 2-L{tuple} of (E{1}) L{bytes},
             (E{2}) L{IDomain} provider or L{None}
@@ -230,8 +230,8 @@ class DomainWithDefaultDict:
         Return an iterator over the domain names in this dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>} or
-        failing to iterate over all the domain names.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain names.
 
         @rtype: iterator over L{bytes}
         @return: An iterator over the domain names.
@@ -243,8 +243,8 @@ class DomainWithDefaultDict:
         Return an iterator over the domain objects in this dictionary.
 
         Using the returned iterator while adding or deleting entries from the
-        dictionary may result in a L{RuntimeError <exceptions.RuntimeError>}
-        or failing to iterate over all the domain objects.
+        dictionary may result in a L{RuntimeError} or failing to iterate over
+        all the domain objects.
 
         @rtype: iterator over L{IDomain} provider or
             L{None}
@@ -431,7 +431,7 @@ class FileMessage:
         @type line: L{bytes}
         @param line: A received line.
         """
-        self.fp.write(line + "\n")
+        self.fp.write(line + b"\n")
 
     def eomReceived(self):
         """
@@ -670,7 +670,7 @@ class FileMonitoringService(internet.TimerService):
         """
         try:
             mtime = os.path.getmtime(name)
-        except:
+        except BaseException:
             mtime = 0
         self.files.append([interval, name, callback, mtime])
         self.intervals.addInterval(interval)
@@ -697,10 +697,10 @@ class FileMonitoringService(internet.TimerService):
             name, callback, mtime = self.files[self.index][1:]
             try:
                 now = os.path.getmtime(name)
-            except:
+            except BaseException:
                 now = 0
             if now > mtime:
-                log.msg("%s changed, notifying listener" % (name,))
+                log.msg(f"{name} changed, notifying listener")
                 self.files[self.index][3] = now
                 callback(name)
         self._setupMonitor()

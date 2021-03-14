@@ -322,7 +322,7 @@ class LoopbackRelay:
         self.producer = None
 
     def logPrefix(self):
-        return "Loopback(%r)" % (self.target.__class__.__name__,)
+        return f"Loopback({self.target.__class__.__name__!r})"
 
 
 class LoopbackClientFactory(protocol.ClientFactory):

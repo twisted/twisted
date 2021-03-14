@@ -13,6 +13,7 @@ feature are supported.
 __all__ = ["ListenFDs"]
 
 from os import getpid
+from typing import Iterable, List, Mapping, Optional
 
 
 class ListenFDs:
@@ -26,7 +27,6 @@ class ListenFDs:
         consecutively numbered, with a fixed lowest "starting" descriptor.  This
         gives the default starting descriptor.  Since this must agree with the
         value systemd is using, it typically should not be overridden.
-    @type _START: C{int}
 
     @ivar _descriptors: A C{list} of C{int} giving the descriptors which were
         inherited.
@@ -34,7 +34,7 @@ class ListenFDs:
 
     _START = 3
 
-    def __init__(self, descriptors):
+    def __init__(self, descriptors: List[int]) -> None:
         """
         @param descriptors: The descriptors which will be returned from calls to
             C{inheritedDescriptors}.
@@ -42,7 +42,11 @@ class ListenFDs:
         self._descriptors = descriptors
 
     @classmethod
-    def fromEnvironment(cls, environ=None, start=None):
+    def fromEnvironment(
+        cls,
+        environ: Optional[Mapping[str, str]] = None,
+        start: Optional[int] = None,
+    ) -> "ListenFDs":
         """
         @param environ: A dictionary-like object to inspect to discover
             inherited descriptors.  By default, L{None}, indicating that the
@@ -58,11 +62,13 @@ class ListenFDs:
             descriptors which have been inherited.
         """
         if environ is None:
-            from os import environ
+            from os import environ as _environ
+
+            environ = _environ
         if start is None:
             start = cls._START
 
-        descriptors = []
+        descriptors: List[int] = []
 
         try:
             pid = int(environ["LISTEN_PID"])
@@ -75,13 +81,13 @@ class ListenFDs:
                 except (KeyError, ValueError):
                     pass
                 else:
-                    descriptors = range(start, start + count)
+                    descriptors = list(range(start, start + count))
                     del environ["LISTEN_PID"], environ["LISTEN_FDS"]
 
         return cls(descriptors)
 
-    def inheritedDescriptors(self):
+    def inheritedDescriptors(self) -> Iterable[int]:
         """
-        @return: The configured list of descriptors.
+        @return: The configured descriptors.
         """
         return list(self._descriptors)

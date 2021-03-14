@@ -1,15 +1,17 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from typing import Optional
+
 
 class Enum:
-    group = None  # type: str
+    group: Optional[str] = None
 
-    def __init__(self, label):
+    def __init__(self, label: str) -> None:
         self.label = label
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.group, self.label)
+        return f"<{self.group}: {self.label}>"
 
     def __str__(self) -> str:
         return self.label

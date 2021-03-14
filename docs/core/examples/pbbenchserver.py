@@ -3,7 +3,6 @@
 
 
 """Server for PB benchmark."""
-from __future__ import print_function
 
 from zope.interface import implementer
 
