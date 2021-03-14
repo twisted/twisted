@@ -89,7 +89,7 @@ jobs:
     - name: Tox info
       uses: twisted/python-info-action@v1
       with:
-        python-path: .tox/${{ env.TOX_ENV }}/*/python
+        python-path: .tox/${{ env.TOXENV }}/*/python
 
     - name: Test
       run: |
@@ -115,7 +115,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip tox pep517
         rm -rf dist/*
-        tox --no-test -e ${TOX_ENV}
+        tox --no-test -e ${TOXENV}
 
     - name: Runner info
       uses: twisted/python-info-action@v1
@@ -123,11 +123,11 @@ jobs:
     - name: Tox info
       uses: twisted/python-info-action@v1
       with:
-        python-path: .tox/${{ env.TOX_ENV }}/*/python
+        python-path: .tox/${{ env.TOXENV }}/*/python
 
     - name: Prepare release
       run: |
-        tox -e ${TOX_ENV}
+        tox -e ${TOXENV}
 
     - name: Display structure of files to be pushed
       run: ls -R dist/
