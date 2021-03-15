@@ -13,13 +13,13 @@ Add a few words about why this PR is needed and what is its scope.
 
 Add any comments about trade-offs (if any) made in this PR and the reasoning behind them.
 
-Add mentions of things that are not covered here and are planed to be done
-in separate PRs.
+Add mentions of things that are not covered here and are planed to be done in separate PRs.
 
 
 ## Contributor Checklist:
 
 * [ ] The associated ticket in Trac is here: https://twistedmatrix.com/trac/ticket/<!-- Create a new one at https://twistedmatrix.com/trac/newticket and replace this comment with the ticket number. -->
+* [ ] I ran `tox -e lint` to format my patch to meet the [Twisted Coding Standard](https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html)
 * [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: [News files](https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles))
 * [ ] The title of the PR starts with the associated Trac ticket number (without the `#` character).
 * [ ] I have updated the automated tests and checked that all checks for the PR are green.
