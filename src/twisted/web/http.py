@@ -1790,8 +1790,8 @@ class _IdentityTransferDecoder:
 
 class _ChunkedTransferDecoder:
     """
-    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
-    section 3.6.1.  This protocol can interpret the contents of a request or
+    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
+    section 4.1.  This protocol can interpret the contents of a request or
     response body which uses the I{chunked} Transfer-Encoding.  It cannot
     interpret any of the rest of the HTTP protocol.
 
