@@ -5,6 +5,7 @@
 Test that twisted scripts can be invoked as modules.
 """
 
+
 import sys
 from io import StringIO
 
@@ -15,9 +16,6 @@ from twisted.trial.unittest import TestCase
 
 class MainTests(TestCase):
     """Test that twisted scripts can be invoked as modules."""
-
-    # Force the full diff to make debugging easier on failures.
-    maxDiff = None
 
     def test_twisted(self):
         """Invoking python -m twisted should execute twist."""
@@ -47,12 +45,7 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(
-            p,
-            cmd,
-            [cmd, "-m", "twisted.trial", "--help"],
-            env=None,
-        )
+        reactor.spawnProcess(p, cmd, [cmd, "-m", "twisted.trial", "--help"], env=None)
         p.transport.closeStdin()
 
         # Fix up our sys args to match the command we issued
