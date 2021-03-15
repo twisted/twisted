@@ -5,7 +5,6 @@
 Test that twisted scripts can be invoked as modules.
 """
 
-import os
 import sys
 from io import StringIO
 
@@ -27,13 +26,7 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        # Enforce 80 columns as otherwise the test are failing when executed in debug mode
-        # or other places in which COLUMNS env var is defined.
-        # The environment is set for both parent and child processes.
-        self.patch(os, "environ", dict(os.environ, COLUMNS="80"))
-        reactor.spawnProcess(
-            p, cmd, [cmd, "-m", "twisted", "--help"], env=dict(os.environ, COLUMNS="80")
-        )
+        reactor.spawnProcess(p, cmd, [cmd, "-m", "twisted", "--help"], env=None)
         p.transport.closeStdin()
 
         # Fix up our sys args to match the command we issued
@@ -46,8 +39,9 @@ class MainTests(TestCase):
             output = f.getvalue()
 
             options = TwistOptions()
-            message = f"{options}\n".encode("utf-8")
-            self.assertEqual(output.splitlines(), message.splitlines())
+            self.assertTrue(
+                output.startswith(options.getSynopsis().encode("ascii")), output
+            )
 
         return d.addCallback(processEnded)
 
@@ -56,15 +50,11 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        # Enforce 80 columns as otherwise the test are failing when executed in debug mode
-        # or other places in which COLUMNS env var is defined.
-        # The environment is set for both parent and child processes.
-        self.patch(os, "environ", dict(os.environ, COLUMNS="80"))
         reactor.spawnProcess(
             p,
             cmd,
             [cmd, "-m", "twisted.trial", "--help"],
-            env=dict(os.environ, COLUMNS="80"),
+            env=None,
         )
         p.transport.closeStdin()
 
@@ -78,8 +68,9 @@ class MainTests(TestCase):
             output = f.getvalue()
 
             options = trial.Options()
-            message = f"{options}\n".encode("utf-8")
-            self.assertEqual(output.splitlines(), message.splitlines())
+            self.assertTrue(
+                output.startswith(options.getSynopsis().encode("ascii")), output
+            )
 
         return d.addCallback(processEnded)
 
