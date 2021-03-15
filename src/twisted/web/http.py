@@ -1842,7 +1842,9 @@ class _ChunkedTransferDecoder:
                 self.length = int(parts[0], 16)
             except ValueError:
                 raise _MalformedChunkedDataError("Chunk-size must be an integer.")
-            if self.length == 0:
+            if self.length < 0:
+                raise _MalformedChunkedDataError("Chunk-size must not be negative.")
+            elif self.length == 0:
                 self.state = "TRAILER"
             else:
                 self.state = "BODY"
