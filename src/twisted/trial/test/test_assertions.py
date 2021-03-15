@@ -1201,8 +1201,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
     async def noCurrentResult(self):
         await Deferred()
 
-    async def raisesException(self):
-        raise self.exception
+    async def raisesException(self, exception=None):
+        if exception is None:
+            exception = self.exception
+        raise exception
 
     def test_withoutResult(self):
         """
@@ -1230,14 +1232,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} that has the original failure
         traceback when called with a coroutine with a failure result.
         """
+        exception = Exception("Bad times")
         try:
-            self.successResultOf(self.raisesException())
+            self.successResultOf(self.raisesException(exception))
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Success result expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithoutResult(self):
         """
@@ -1298,14 +1298,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         the L{SynchronousTestCase.failureException} message contains the
         original exception traceback.
         """
+        exception = Exception("Bad times")
         try:
-            self.failureResultOf(self.raisesException(), KeyError)
+            self.failureResultOf(self.raisesException(exception), KeyError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Failure of type (builtins.KeyError) expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
@@ -1336,14 +1334,16 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} message contains the original
         exception traceback in the error message.
         """
-        try:
-            self.failureResultOf(self.raisesException(), KeyError, IOError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
+        exception = Exception("Bad times")
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+        try:
+            self.failureResultOf(self.raisesException(exception), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(
+                "Failure of type (builtins.KeyError or builtins.OSError) expected on",
+                str(e),
+            )
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_successResultOfWithSuccessResult(self):
         """
