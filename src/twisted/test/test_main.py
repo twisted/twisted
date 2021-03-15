@@ -5,7 +5,7 @@
 Test that twisted scripts can be invoked as modules.
 """
 
-
+import os
 import sys
 from io import StringIO
 
@@ -27,9 +27,12 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        # Enforce 80 columns as otherwise the test are failing when executed in debug mode.
+        # Enforce 80 columns as otherwise the test are failing when executed in debug mode
+        # or other places in which COLUMNS env var is defined.
+        # The environment is set for both parent and child processes.
+        self.patch(os, "environ", dict(os.environ, COLUMNS="80"))
         reactor.spawnProcess(
-            p, cmd, [cmd, "-m", "twisted", "--help"], env={"COLUMNS": "80"}
+            p, cmd, [cmd, "-m", "twisted", "--help"], env=dict(os.environ, COLUMNS="80")
         )
         p.transport.closeStdin()
 
@@ -53,9 +56,15 @@ class MainTests(TestCase):
         cmd = sys.executable
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        # Enforce 80 columns as otherwise the test are failing when executed in debug mode.
+        # Enforce 80 columns as otherwise the test are failing when executed in debug mode
+        # or other places in which COLUMNS env var is defined.
+        # The environment is set for both parent and child processes.
+        self.patch(os, "environ", dict(os.environ, COLUMNS="80"))
         reactor.spawnProcess(
-            p, cmd, [cmd, "-m", "twisted.trial", "--help"], env={"COLUMNS": "80"}
+            p,
+            cmd,
+            [cmd, "-m", "twisted.trial", "--help"],
+            env=dict(os.environ, COLUMNS="80"),
         )
         p.transport.closeStdin()
 
