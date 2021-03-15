@@ -8,8 +8,6 @@ Test that twisted scripts can be invoked as modules.
 import sys
 from io import StringIO
 
-from twisted.application.twist._options import TwistOptions
-from twisted.scripts import trial
 from twisted.internet import defer, reactor
 from twisted.test.test_process import Accumulator
 from twisted.trial.unittest import TestCase
@@ -38,9 +36,8 @@ class MainTests(TestCase):
             f = p.outF
             output = f.getvalue()
 
-            options = TwistOptions()
             self.assertTrue(
-                output.startswith(options.getSynopsis().encode("ascii")), output
+                b"-m twisted [options] plugin [plugin_options]" in output, output
             )
 
         return d.addCallback(processEnded)
@@ -67,10 +64,7 @@ class MainTests(TestCase):
             f = p.outF
             output = f.getvalue()
 
-            options = trial.Options()
-            self.assertTrue(
-                output.startswith(options.getSynopsis().encode("ascii")), output
-            )
+            self.assertTrue(b"-j, --jobs= " in output, output)
 
         return d.addCallback(processEnded)
 
