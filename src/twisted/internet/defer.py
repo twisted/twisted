@@ -934,14 +934,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @return: A L{Future} which will fire when the L{Deferred} fires.
         """
-        try:
-            createFuture = loop.create_future
-        except AttributeError:
-
-            def createFuture() -> Future:
-                return Future(loop=loop)
-
-        future = createFuture()
+        future = loop.create_future()
 
         def checkCancel(futureAgain: "Future[_DeferredResultT]") -> None:
             if futureAgain.cancelled():
