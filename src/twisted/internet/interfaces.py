@@ -58,6 +58,8 @@ if TYPE_CHECKING:
     else:
         ThreadPool = object  # type: ignore[misc, assignment]
 
+    from twisted.python.filepath import IFilePath
+
 
 class IAddress(Interface):
     """
@@ -2707,3 +2709,101 @@ class _ISupportsExitSignalCapturing(Interface):
         application, or None if no signal was delivered.
         """
     )
+
+
+class IAsyncReader(Interface):
+    """
+    a file or file-like object opened for reading asynchronously
+    """
+
+    def close() -> Deferred:
+        """
+        Close the file.
+
+        @return: a Deferred that is called back when the close succeeds.
+        """
+
+    def open(path: IFilePath) -> Deferred:
+        """
+        a classmethod constructor
+
+        opens the file for reading.
+
+        @return: A Deferred returning a IAsyncReader
+        """
+
+    def readChunk(offset: int, length: int) -> Deferred:
+        """
+        Read from the file.
+
+        This method returns a Deferred with the data as L{bytes}
+
+        @param offset: an integer that is the index to start from in the file.
+        @param length: the maximum length of data to return.  The actual amount
+        returned may less than this.  For normal disk files, however,
+        this should read the requested number (up to the end of the file).
+        """
+        # adapted from twisted.conch.interfaces.ISFTPFile
+
+    DEFAULT_CHUNK_SIZE=4096
+    
+    def send(
+        consumer: IConsumer, start: int = 0, chunkSize: int = DEFAULT_CHUNK_SIZE
+    ) -> Deferred:
+        """
+        Produce the contents of the file to the given consumer.
+
+        @param start: offset to begin reading from
+        @param chunkSize: size, in bytes, of each read
+        @return: A Deferred which fires when the file has been
+        consumed completely.
+        """
+        # adapted from L{twisted.protocols.ftp.IReadFile}
+        
+    def producer() -> IPushProducer:
+        """
+        returns a IPushProducer available during send()
+        """
+
+  
+class IAsyncWriter(Interface):
+    """
+    a file or file-like object opened for writing asynchronously
+    """
+
+    def close() -> Deferred:
+        """
+        Close the file.
+
+        @return: a Deferred that is called back when the close succeeds.
+        """
+
+    def open(path: IFilePath, create: bool = False) -> Deferred:
+        """
+        a classmethod constructor
+
+        opens the file for writing.
+
+        @param create: if True, create the file if it doesn't exist 
+
+        @return: A Deferred returning a IAsyncWriter
+        """
+
+    def writeChunk(offset: int, data: bytes) -> Deferred:
+        """
+        Write to the file.
+
+        @param offset: an integer that is the index to start from in the file.
+        @param data: a L{bytes} that is the data to write.
+
+        @return: a Deferred returning the number of bytes written
+        """
+
+    def receive(append: bool = False) -> IConsumer:
+        """
+        Write to the file using a C{IConsumer}
+
+        @param append: True if append to end of file
+        @return: A C{IConsumer} which is used to write data
+        """
+        # adapted from L{twisted.protocols.ftp.IWriteFile}
