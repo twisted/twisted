@@ -1266,7 +1266,10 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         L{_MalformedChunkedDataError} when the chunk size can't be decoded as
         a base-16 integer.
         """
-        p = http._ChunkedTransferDecoder(lambda data: None, lambda data: None)
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
         self.assertRaises(
             http._MalformedChunkedDataError, p.dataReceived, b"bloop\r\nabc\r\n"
         )
@@ -1276,7 +1279,10 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         L{_ChunkedTransferDecoder.dataReceived} raises
         L{_MalformedChunkedDataError} when the chunk size is negative.
         """
-        p = http._ChunkedTransferDecoder(lambda b: None, lambda b: None)
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
         self.assertRaises(
             http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
         )
