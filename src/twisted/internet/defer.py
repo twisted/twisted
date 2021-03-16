@@ -2055,7 +2055,7 @@ class QueueUnderflow(Exception):
     pass
 
 
-class DeferredQueue:
+class DeferredQueue(Generic[_T]):
     """
     An event driven queue.
 
@@ -2075,8 +2075,8 @@ class DeferredQueue:
     def __init__(
         self, size: Optional[int] = None, backlog: Optional[int] = None
     ) -> None:
-        self.waiting = []  # type: List[Deferred[object]]
-        self.pending = []  # type: List[object]
+        self.waiting = []  # type: List[Deferred[_T]]
+        self.pending = []  # type: List[_T]
         self.size = size
         self.backlog = backlog
 
@@ -2094,7 +2094,7 @@ class DeferredQueue:
         """
         self.waiting.remove(d)
 
-    def put(self, obj: object) -> None:
+    def put(self, obj: _T) -> None:
         """
         Add an object to this queue.
 
@@ -2107,7 +2107,7 @@ class DeferredQueue:
         else:
             raise QueueOverflow()
 
-    def get(self) -> Deferred[Any]:
+    def get(self) -> Deferred[_T]:
         """
         Attempt to retrieve and remove an object from the queue.
 
@@ -2120,7 +2120,7 @@ class DeferredQueue:
         if self.pending:
             return succeed(self.pending.pop(0))
         elif self.backlog is None or len(self.waiting) < self.backlog:
-            d = Deferred(canceller=self._cancelGet)  # type: Deferred[object]
+            d = Deferred(canceller=self._cancelGet)  # type: Deferred[_T]
             self.waiting.append(d)
             return d
         else:
