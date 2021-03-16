@@ -504,7 +504,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         self,
         timeout: float,
         clock: IReactorTime,
-        onTimeoutCancel: Callable[[object, float], object] = _cancelledToTimedOutError,
+        onTimeoutCancel: Optional[Callable[[object, float], object]] = None,
     ) -> "Deferred[_DeferredResultT]":
         """
         Time out this L{Deferred} by scheduling it to be cancelled after
@@ -526,13 +526,14 @@ class Deferred(Awaitable[_DeferredResultT]):
             otherwise cancelled before the timeout. It takes an arbitrary
             value, which is the value of this L{Deferred} at that exact point
             in time (probably a L{CancelledError} L{Failure}), and the
-            C{timeout}.  The default callable (if none is provided) will
+            C{timeout}.  The default callable (if C{None} is provided) will
             translate a L{CancelledError} L{Failure} into a L{TimeoutError}.
 
         @return: C{self}.
 
         @since: 16.5
         """
+
         timedOut = [False]
 
         def timeItOut() -> None:
@@ -545,11 +546,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             # if C{deferred} was timed out, call the translation function,
             # if provdied, otherwise just use L{cancelledToTimedOutError}
             if timedOut[0]:
-                # Default value used to be None and callers may be using None
-                if onTimeoutCancel is None:
-                    toCall = _cancelledToTimedOutError  # type: ignore[unreachable]
-                else:
-                    toCall = onTimeoutCancel
+                toCall = onTimeoutCancel or _cancelledToTimedOutError
                 return toCall(value, timeout)
             return value
 
