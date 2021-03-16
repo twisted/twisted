@@ -916,6 +916,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     # For PEP-492 support (async/await)
     # type note: base class "Awaitable" defined the type as:
     #     Callable[[], Generator[Any, None, _DeferredResultT]]
+    #     See: https://github.com/python/typeshed/issues/5125
     __await__ = __iter__  # type: ignore[assignment]
     __next__ = send
 
