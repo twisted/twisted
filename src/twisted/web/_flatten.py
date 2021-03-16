@@ -159,9 +159,7 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
-def _flattenElement(
-    request, root, write, slotData, renderFactory, dataEscaper, trampoline
-):
+def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -205,7 +203,7 @@ def _flattenElement(
         newRoot, dataEscaper=dataEscaper, renderFactory=renderFactory, write=write
     ):
         return _flattenElement(
-            request, newRoot, write, slotData, renderFactory, dataEscaper, trampoline
+            request, newRoot, write, slotData, renderFactory, dataEscaper
         )
 
     if isinstance(root, (bytes, str)):
@@ -274,9 +272,9 @@ def _flattenElement(
         escaped = "&#%d;" % (root.ordinal,)
         write(escaped.encode("ascii"))
     elif isinstance(root, Deferred):
-        yield trampoline(root).addCallback(lambda result: (result, keepGoing(result)))
+        yield root.addCallback(lambda result: (result, keepGoing(result)))
     elif iscoroutine(root):
-        d = trampoline(ensureDeferred(root))
+        d = ensureDeferred(root)
         yield d.addCallback(lambda result: (result, keepGoing(result)))
     elif IRenderable.providedBy(root):
         result = root.render(request)
@@ -285,7 +283,7 @@ def _flattenElement(
         raise UnsupportedType(root)
 
 
-def _flattenTree(request, root, write, trampoline):
+def _flattenTree(request, root, write):
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -306,9 +304,7 @@ def _flattenTree(request, root, write, trampoline):
         flattening C{root}.  The returned iterator must not be iterated again
         until the L{Deferred} is called back.
     """
-    stack = [
-        _flattenElement(request, root, write, [], None, escapeForContent, trampoline)
-    ]
+    stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
     while stack:
         try:
             frame = stack[-1].gi_frame
@@ -330,55 +326,9 @@ def _flattenTree(request, root, write, trampoline):
                     stack.append(toFlatten)
                     return original
 
-                yield trampoline(element).addCallback(cbx)
+                yield element.addCallback(cbx)
             else:
                 stack.append(element)
-
-
-@contextmanager
-def _trampoline():
-    """
-    A context manager for flattening the execution of Deferreds and preventing
-    recursion errors when accounting for large numbers of synchronous Deferred
-    callback executions.  Use like so::
-
-        def topLevelAPI():
-            with _trampoline() as safelyRecurse:
-                return maybeRecursive(someData, safelyRecurse)
-
-        def maybeRecursive(data, safelyRecurse):
-            if recursionCondition(data):
-                return (safelyRecurse(someDeferred())
-                        .addCallback(lambda result:
-                                     maybeRecursive(result, safelyRecurse)))
-            else:
-                return data
-
-    This will unwind the stack at the exit of trampoline() but also unwind the
-    stack of any future invocations of C{maybeRecursive}.
-
-    @note: This might be a convenient function to have publicly as
-        C{twisted.internet.defer.trampoline()}.
-    """
-    queue = deque()
-    running = False
-
-    def bounce():
-        nonlocal running
-        running = True
-        while queue:
-            queue.popleft().unpause()
-        running = False
-
-    def jump(deferred):
-        deferred.pause()
-        queue.append(deferred)
-        if not running:
-            bounce()
-        return deferred
-
-    yield jump
-    bounce()
 
 
 async def _awaitEverything(iterable):
@@ -416,10 +366,7 @@ def flatten(request, root, write):
         has been completely flattened into C{write} or which will be errbacked
         if an unexpected exception occurs.
     """
-    with _trampoline() as trampoline:
-        return ensureDeferred(
-            _awaitEverything(_flattenTree(request, root, write, trampoline))
-        )
+    return ensureDeferred(_awaitEverything(_flattenTree(request, root, write)))
 
 
 def flattenString(request, root):
