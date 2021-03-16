@@ -176,7 +176,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callbackResults, (("hello",), {}))
         self.assertEqual(self.callback2Results, (("hello",), {}))
 
-    def testAddCallbacksNoneErrback(self):
+    def test_addCallbacksNoneErrback(self):
         """
         If given None for an errback, addCallbacks uses a pass-through.
         """
@@ -190,7 +190,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.errbackResults[0][0].value, error)
         self.assertEqual(self.errbackResults[1], {})
 
-    def testAddCallbacksNoneCallbackArgs(self):
+    def test_addCallbacksNoneCallbackArgs(self):
         """
         If given None as a callback args and kwargs, () and {} are used.
         """
@@ -200,7 +200,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (("hello",), {}))
 
-    def testAddCallbacksNoneErrbackArgs(self):
+    def test_addCallbacksNoneErrbackArgs(self):
         """
         If given None as a errback args and kwargs, () and {} are used.
         """
