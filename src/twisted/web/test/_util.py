@@ -30,7 +30,7 @@ def _render(resource, request):
         raise ValueError(f"Unexpected return value: {result!r}")
 
 
-class FlattenTestCase(TestCase):
+class FlattenTestCase(SynchronousTestCase):
     """
     A test case that assists with testing L{twisted.web._flatten}.
     """

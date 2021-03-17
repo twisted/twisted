@@ -15,7 +15,7 @@ from collections import OrderedDict
 
 from zope.interface import implementer
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.test.testutils import XMLAssertionMixin
 
 from twisted.internet.defer import passthru, succeed, gatherResults
