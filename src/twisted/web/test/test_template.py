@@ -10,7 +10,7 @@ from io import StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import succeed, gatherResults
+from twisted.internet.defer import succeed
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
