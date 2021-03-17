@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_flatten -*-
+# -*- test-case-name: twisted.web.test.test_flatten,twisted.web.test.test_template -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -159,6 +159,25 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
+def _fork(d):
+    """
+    Create a new L{Deferred} based on C{d} that will fire and fail with C{d}'s
+    result or error, but will not modify C{d}'s callback type.
+    """
+    d2 = Deferred()
+
+    def callback(result):
+        d2.callback(result)
+        return result
+
+    def errback(failure):
+        d2.errback(failure)
+        return failure
+
+    d.addCallbacks(callback, errback)
+    return d2
+
+
 def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
@@ -205,6 +224,9 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )
+
+    def keepGoingAsync(result):
+        return result.addCallback(keepGoing)
 
     if isinstance(root, (bytes, str)):
         write(dataEscaper(root))
@@ -272,10 +294,9 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         escaped = "&#%d;" % (root.ordinal,)
         write(escaped.encode("ascii"))
     elif isinstance(root, Deferred):
-        yield root.addCallback(lambda result: (result, keepGoing(result)))
+        yield keepGoingAsync(_fork(root))
     elif iscoroutine(root):
-        d = ensureDeferred(root)
-        yield d.addCallback(lambda result: (result, keepGoing(result)))
+        yield keepGoingAsync(Deferred.fromCoroutine(root))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield keepGoing(result, renderFactory=root)
@@ -283,7 +304,7 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         raise UnsupportedType(root)
 
 
-def _flattenTree(request, root, write):
+async def _flattenTree(request, root, write):
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -299,10 +320,7 @@ def _flattenTree(request, root, write):
     @param write: A callable which will be invoked with each L{bytes} produced
         by flattening C{root}.
 
-    @return: An iterator which yields objects of type L{bytes} and L{Deferred}.
-        A L{Deferred} is only yielded when one is encountered in the process of
-        flattening C{root}.  The returned iterator must not be iterated again
-        until the L{Deferred} is called back.
+    @return: A C{Deferred}-returning coroutine that resolves to C{None}.
     """
     stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
     while stack:
@@ -320,27 +338,9 @@ def _flattenTree(request, root, write):
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             if isinstance(element, Deferred):
-
-                def cbx(originalAndToFlatten):
-                    original, toFlatten = originalAndToFlatten
-                    stack.append(toFlatten)
-                    return original
-
-                yield element.addCallback(cbx)
+                stack.append(await element)
             else:
                 stack.append(element)
-
-
-async def _awaitEverything(iterable):
-    """
-    Await each value in the iterable, completing when they're all done.
-
-    @param iterator: An iterator of L{Deferred}s
-
-    @return: C{None}
-    """
-    for value in iterable:
-        await value
 
 
 def flatten(request, root, write):
@@ -366,7 +366,7 @@ def flatten(request, root, write):
         has been completely flattened into C{write} or which will be errbacked
         if an unexpected exception occurs.
     """
-    return ensureDeferred(_awaitEverything(_flattenTree(request, root, write)))
+    return ensureDeferred(_flattenTree(request, root, write))
 
 
 def flattenString(request, root):
