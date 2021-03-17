@@ -14,8 +14,6 @@ from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
 from inspect import iscoroutine
-from contextlib import contextmanager
-from collections import deque
 
 from twisted.python.compat import nativeString
 from twisted.internet.defer import Deferred, ensureDeferred
