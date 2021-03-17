@@ -13,3 +13,6 @@ source=
 [report]
 precision = 2
 ignore_errors = True
+exclude_lines =
+    if TYPE_CHECKING
+    \s*\.\.\.$
