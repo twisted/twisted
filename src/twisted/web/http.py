@@ -1888,12 +1888,13 @@ class _ChunkedTransferDecoder:
         if len(self._buffer) >= self.length:
             chunk = memoryview(self._buffer)[: self.length].tobytes()
             del self._buffer[: self.length]
-            self.dataCallback(chunk)
             self.state = "CRLF"
+            self.dataCallback(chunk)
         elif self._buffer:
-            self.dataCallback(bytes(self._buffer))
-            self.length -= len(self._buffer)
+            chunk = bytes(self._buffer)
+            self.length -= len(chunk)
             self._buffer = bytearray()
+            self.dataCallback(chunk)
         return True
 
     def _dataReceived_FINISHED(self) -> bool:
