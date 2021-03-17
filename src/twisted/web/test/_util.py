@@ -56,25 +56,14 @@ class FlattenTestCase(TestCase):
             L{target}.
         @rtype: L{bytes}
         """
-        results = []
-        it = self.assertFlattensTo(root, target)
-        it.addBoth(results.append)
-        # Do our best to clean it up if something goes wrong.
-        self.addCleanup(it.cancel)
-        if not results:
-            self.fail("Rendering did not complete immediately.")
-        result = results[0]
-        if isinstance(result, Failure):
-            result.raiseException()
-        return results[0]
+        return self.successResultOf(self.assertFlattensTo(root, target))
 
     def assertFlatteningRaises(self, root, exn):
         """
         Assert flattening a root element raises a particular exception.
         """
-        d = self.assertFailure(self.assertFlattensTo(root, b""), FlattenerError)
-        d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
-        return d
+        failure = self.failureResultOf(self.assertFlattensTo(root, b""), FlattenerError)
+        self.assertIsInstance(failure.value._exception, exn)
 
 
 def assertIsFilesystemTemporary(case, fileObj):
