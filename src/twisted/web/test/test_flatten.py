@@ -418,7 +418,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 HERE = (lambda: None).__code__.co_filename
 
 
-class FlattenerErrorTests(TestCase):
+class FlattenerErrorTests(SynchronousTestCase):
     """
     Tests for L{FlattenerError}.
     """
