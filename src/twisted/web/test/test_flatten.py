@@ -278,7 +278,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that CDATA is correctly flattened and escaped.
         """
         self.assertFlattensImmediately(CDATA("foo bar"), b"<![CDATA[foo bar]]>"),
-        self.assertFlattensImmediately(CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>")
+        self.assertFlattensImmediately(
+            CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>"
+        )
 
     def test_serializeUnicode(self):
         """
