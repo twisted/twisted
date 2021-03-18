@@ -48,6 +48,8 @@ steps:
   - script: 'python -m tox -e alldeps-withcov-posix'
     displayName: 'Run tests'
     continueOnError: ${{ parameters.allowFailure }}
+    env:
+      TRIAL_ARGS: "-j 2"
 
 - ${{ if eq(parameters.platform, 'windows') }}:
   - script: 'python -m tox -e alldeps-withcov-windows'
@@ -57,6 +59,6 @@ steps:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
 - script:  |
-    python -m tox -e coverage-preparecoveralls-push
-    bash <(curl -s https://codecov.io/bash) -N "${{parameters.platform}}-${{parameters.pythonVersion}}-alldeps-withcov"
+    python -m tox -e coverage-prepare,coveralls-push
+    bash <(curl -s https://codecov.io/bash) -N "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
   displayName: 'Report coverage'
