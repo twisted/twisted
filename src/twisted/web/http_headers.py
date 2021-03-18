@@ -221,7 +221,7 @@ class Headers:
             )
 
         # We secretly know getRawHeaders is really returning a list
-        values = cast(list, self.getRawHeaders(name, default=[]))
+        values = cast(List[AnyStr], self.getRawHeaders(name, default=[]))
         values.append(value)
 
         self.setRawHeaders(name, values)
