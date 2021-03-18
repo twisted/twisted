@@ -1890,7 +1890,7 @@ class _ChunkedTransferDecoder:
             del self._buffer[: self.length]
             self.state = "CRLF"
             self.dataCallback(chunk)
-        elif self._buffer:
+        else:
             chunk = bytes(self._buffer)
             self.length -= len(chunk)
             self._buffer = bytearray()

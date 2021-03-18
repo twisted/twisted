@@ -1262,9 +1262,10 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         chunks = []
         finished = []
         p = http._ChunkedTransferDecoder(chunks.append, finished.append)
+        p.dataReceived(b"")
         for s in iterbytes(b"3\r\nabc\r\n5\r\n12345\r\n0\r\n\r\n"):
-            p.dataReceived(b"")
             p.dataReceived(s)
+            p.dataReceived(b"")
         self.assertEqual(chunks, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
 
