@@ -1,0 +1,2 @@
+twisted.web.http_headers.getRawHeaders and twisted.web.http_headers.getAllRawHeaders are now typed to return immutable sequences of header values instead of lists.
+twisted.web.http_headers.getRawHeaders is not typed to return a non-optional value if a non-None default value is given.
