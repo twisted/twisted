@@ -1545,10 +1545,12 @@ class AppLoggerTests(TestCase):
         sut = app.AppLogger({"logfile": filename})
 
         observer = sut._getLogObserver()
-        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
+
+        logger.globalLogPublisher.removeObserver(observer)
 
     def test_stop(self):
         """
@@ -1687,7 +1689,7 @@ class UnixAppLoggerTests(TestCase):
         sut = UnixAppLogger({"logfile": filename})
 
         observer = sut._getLogObserver()
-        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1721,7 +1723,7 @@ class UnixAppLoggerTests(TestCase):
         sut = UnixAppLogger({"logfile": filename})
 
         observer = sut._getLogObserver()
-        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(self.signals, [])
 
