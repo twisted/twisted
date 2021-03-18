@@ -783,9 +783,9 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method: bytes = b"(no method yet)"
-    clientproto: bytes = b"(no clientproto yet)"
-    uri = "(no uri yet)"
+    method = b"(no method yet)"
+    clientproto = b"(no clientproto yet)"
+    uri = b"(no uri yet)"
     startedWriting = 0
     chunked = 0
     sentLength = 0  # content-length of response, or total bytes sent via chunking
