@@ -1869,14 +1869,29 @@ class _ChunkedTransferDecoder:
         return True
 
     def _dataReceived_CRLF(self) -> bool:
+        """
+        Await the carriage return and line feed characters that follow the
+        chunk data.
+
+        @returns: C{True} when the CRLF have been read, otherwise C{False}.
+        """
+        # TODO: https://twistedmatrix.com/trac/ticket/10137
         if self._buffer.startswith(b"\r\n"):
             self.state = "CHUNK_LENGTH"
             del self._buffer[0:2]
             return True
-        else:
-            return False
+        return False
 
     def _dataReceived_TRAILER(self) -> bool:
+        """
+        Await the carriage return and line feed characters that follow the
+        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
+        state C{'FINISHED'}.
+
+        @returns: C{False}, as there is either insufficient data to continue,
+            or no data remains.
+        """
+        # TODO: https://twistedmatrix.com/trac/ticket/10137
         if self._buffer.startswith(b"\r\n"):
             data = memoryview(self._buffer)[2:].tobytes()
             del self._buffer[:]
@@ -1885,6 +1900,12 @@ class _ChunkedTransferDecoder:
         return False
 
     def _dataReceived_BODY(self) -> bool:
+        """
+        Deliver any available chunk data to the C{dataCallback}. When all the
+        remaining data for the chunk arrives, switch to state C{'CRLF'}.
+
+        @returns: C{True} to continue processing of any buffered data.
+        """
         if len(self._buffer) >= self.length:
             chunk = memoryview(self._buffer)[: self.length].tobytes()
             del self._buffer[: self.length]
@@ -1893,11 +1914,16 @@ class _ChunkedTransferDecoder:
         else:
             chunk = bytes(self._buffer)
             self.length -= len(chunk)
-            self._buffer = bytearray()
+            del self._buffer[:]
             self.dataCallback(chunk)
         return True
 
     def _dataReceived_FINISHED(self) -> bool:
+        """
+        Once C{finishCallback} has been invoked receipt of additional data
+        raises L{RuntimeError} because it represents a programming error in
+        the caller.
+        """
         raise RuntimeError(
             "_ChunkedTransferDecoder.dataReceived called after last "
             "chunk was processed"
