@@ -1,0 +1,1 @@
+t.n.client.Resolver will no longer throw an AttributeError if a zone transfer times out.

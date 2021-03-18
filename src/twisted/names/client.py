@@ -430,18 +430,20 @@ class Resolver(common.ResolverBase):
         )
 
         def eliminateTimeout(failure):
-            controller.timeoutCall.cancel()
-            controller.timeoutCall = None
+            timeoutCall = controller.timeoutCall
+            if timeoutCall is not None:
+                controller.timeoutCall = None
+                timeoutCall.cancel()
             return failure
 
-        return d.addCallbacks(
-            self._cbLookupZone, eliminateTimeout, callbackArgs=(connector,)
-        )
+        return d.addBoth(eliminateTimeout).addCallback(self._cbLookupZone, connector)
 
     def _timeoutZone(self, d, controller, connector, seconds):
-        connector.disconnect()
+        # We are the timeout callback, so we should clear the timeout ivar
         controller.timeoutCall = None
+        assert controller.deferred is d
         controller.deferred = None
+        connector.disconnect()
         d.errback(
             error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,))
         )
