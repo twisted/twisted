@@ -56,5 +56,7 @@ steps:
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
-- script: 'python -m tox -e coverage-prepare,codecov-push,coveralls-push'
+- script:  |
+    python -m tox -e coverage-preparecoveralls-push
+    bash <(curl -s https://codecov.io/bash) -N "${{parameters.platform}}-${{parameters.pythonVersion}}-alldeps-withcov"
   displayName: 'Report coverage'
