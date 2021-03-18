@@ -49,7 +49,7 @@ steps:
     displayName: 'Run tests'
     continueOnError: ${{ parameters.allowFailure }}
     env:
-      TRIAL_ARGS: "-j 2"
+      TRIAL_ARGS: "-j 4"
 
 - ${{ if eq(parameters.platform, 'windows') }}:
   - script: 'python -m tox -e alldeps-withcov-windows'
@@ -60,5 +60,5 @@ steps:
 
 - bash:  |
     python -m tox -e coverage-prepare,coveralls-push
-    bash <(curl -s https://codecov.io/bash) -N "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
+    bash <(curl -s https://codecov.io/bash) -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
   displayName: 'Report coverage'
