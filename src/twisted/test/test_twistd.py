@@ -1542,9 +1542,10 @@ class AppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = app.AppLogger({"logfile": filename})
+        sut = app.AppLogger({"logfile": filename})
 
-        logger._getLogObserver()
+        observer = sut._getLogObserver()
+        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1595,7 +1596,7 @@ class AppLoggerTests(TestCase):
 
         self.assertIn("starting up", textFromEventDict(logs[0]))
         warnings = self.flushWarnings([self.test_legacyObservers])
-        self.assertEqual(len(warnings), 0)
+        self.assertEqual(len(warnings), 0, warnings)
 
     def test_unmarkedObserversDeprecated(self):
         """
@@ -1611,7 +1612,7 @@ class AppLoggerTests(TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings([self.test_unmarkedObserversDeprecated])
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(warnings), 1, warnings)
         self.assertEqual(
             warnings[0]["message"],
             (
@@ -1683,8 +1684,10 @@ class UnixAppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1715,8 +1718,10 @@ class UnixAppLoggerTests(TestCase):
 
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(logger.globalLogPublisher.removeObserver, observer)
 
         self.assertEqual(self.signals, [])
 
