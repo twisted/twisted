@@ -26,6 +26,10 @@ parameters:
   default: false
 
 steps:
+- checkout: self
+  clean: true
+  fetchDepth: 1
+
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"
   inputs:
