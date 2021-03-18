@@ -7,6 +7,7 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
+import enum
 from typing import (
     Any,
     AnyStr,
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
     else:
         ThreadPool = object  # type: ignore[misc, assignment]
 
-    from twisted.python.filepath import IFilePath
+    from twisted.python.filepath import FilePath
 
 
 class IAddress(Interface):
@@ -2711,28 +2712,22 @@ class _ISupportsExitSignalCapturing(Interface):
     )
 
 
+DEFAULT_CHUNK_SIZE = 4096
+
+
 class IAsyncReader(Interface):
     """
     a file or file-like object opened for reading asynchronously
     """
 
-    def close() -> Deferred:
+    def close() -> "Deferred":
         """
         Close the file.
 
         @return: a Deferred that is called back when the close succeeds.
         """
 
-    def open(path: IFilePath) -> Deferred:
-        """
-        a classmethod constructor
-
-        opens the file for reading.
-
-        @return: A Deferred returning a IAsyncReader
-        """
-
-    def readChunk(offset: int, length: int) -> Deferred:
+    def readChunk(offset: int, length: int) -> "Deferred":
         """
         Read from the file.
 
@@ -2745,11 +2740,9 @@ class IAsyncReader(Interface):
         """
         # adapted from twisted.conch.interfaces.ISFTPFile
 
-    DEFAULT_CHUNK_SIZE=4096
-    
     def send(
         consumer: IConsumer, start: int = 0, chunkSize: int = DEFAULT_CHUNK_SIZE
-    ) -> Deferred:
+    ) -> "Deferred":
         """
         Produce the contents of the file to the given consumer.
 
@@ -2759,37 +2752,26 @@ class IAsyncReader(Interface):
         consumed completely.
         """
         # adapted from L{twisted.protocols.ftp.IReadFile}
-        
+
     def producer() -> IPushProducer:
         """
         returns a IPushProducer available during send()
         """
 
-  
+
 class IAsyncWriter(Interface):
     """
     a file or file-like object opened for writing asynchronously
     """
 
-    def close() -> Deferred:
+    def close() -> "Deferred":
         """
         Close the file.
 
         @return: a Deferred that is called back when the close succeeds.
         """
 
-    def open(path: IFilePath, create: bool = False) -> Deferred:
-        """
-        a classmethod constructor
-
-        opens the file for writing.
-
-        @param create: if True, create the file if it doesn't exist 
-
-        @return: A Deferred returning a IAsyncWriter
-        """
-
-    def writeChunk(offset: int, data: bytes) -> Deferred:
+    def writeChunk(offset: int, data: bytes) -> "Deferred":
         """
         Write to the file.
 
@@ -2797,6 +2779,13 @@ class IAsyncWriter(Interface):
         @param data: a L{bytes} that is the data to write.
 
         @return: a Deferred returning the number of bytes written
+        """
+
+    def flush() -> "Deferred":
+        """
+        Flush to disc
+
+        @return: a Deferred that is called back when the flush succeeds.
         """
 
     def receive(append: bool = False) -> IConsumer:
@@ -2807,3 +2796,31 @@ class IAsyncWriter(Interface):
         @return: A C{IConsumer} which is used to write data
         """
         # adapted from L{twisted.protocols.ftp.IWriteFile}
+
+
+class FileAsyncFlags(enum.Flag):
+    READ = 1
+    OVERWRITE = 2
+    TRUNCATE = 4
+    CREATE = 8
+    EXCLUSIVE = 16
+
+
+class IReactorFileAsync(Interface):
+    """
+    interface for reactors where the OS offers an async file I/O API
+    """
+
+    def openAsync(path: "FilePath", flags: FileAsyncFlags) -> "Deferred":
+        """
+        Open a file for asynchronous access
+
+        @param flags: controls opening mode
+        - B{READ} open the file for reading (all other flags imply writing)
+        - B{OVERWRITE} the file is overwritten
+        - B{TRUNCATE} the file is truncated
+        - B{CREATE} create the file if it doesn't exist
+        - B{EXCLUSIVE} create the file (if it exists already, error)
+
+        @return: a Deferred returning L{IAsyncWriter} or L{IAsyncReader}
+        """
