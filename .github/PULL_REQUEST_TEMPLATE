@@ -32,7 +32,7 @@ Add mentions of things that are not covered here and are planed to be done in se
 Merge pull request #123 from twisted/4356-branch-name-with-trac-id
 
 Author: <github_username>, <github_usernames_if_more_authors>
-Reviewer: <github_username>, <github_usernames_if_more_reviewers>
+Reviewer: <github_username>, @<github_username_if_more_reviewers>
 Fixes: ticket:<trac_ticket_number>, ticket:<another_if_more_in_one_PR>
 
 Long description providing a summary of these changes.
