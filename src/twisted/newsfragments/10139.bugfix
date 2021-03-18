@@ -1,0 +1,1 @@
+Fix type hint for http.Request.uri (from str to bytes).
