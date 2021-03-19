@@ -126,7 +126,7 @@ def succeed(result: _T) -> "Deferred[_T]":
     @param result: The result to give to the Deferred's 'callback'
            method.
     """
-    d = Deferred()  # type: Deferred[_T]
+    d: Deferred[_T] = Deferred()
     d.callback(result)
     return d
 
@@ -142,7 +142,7 @@ def fail(result: Optional[Union[Failure, BaseException]] = None) -> "Deferred[An
     @raise NoCurrentExceptionError: If C{result} is L{None} but there is no
         current exception state.
     """
-    d = Deferred()  # type: Deferred[Any]
+    d: Deferred[Any] = Deferred()
     d.errback(result)
     return d
 
@@ -293,7 +293,7 @@ _CallbackChain = Tuple[
     ],
 ]
 
-_NONE_KWARGS = MappingProxyType({})  # type: _CallbackKeywordArguments
+_NONE_KWARGS: _CallbackKeywordArguments = MappingProxyType({})
 
 
 _DeferredResultT = TypeVar("_DeferredResultT", contravariant=True)
@@ -339,7 +339,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     called = False
     paused = 0
-    _debugInfo = None  # type: Optional[DebugInfo]
+    _debugInfo: Optional[DebugInfo] = None
     _suppressAlreadyCalled = False
 
     # Are we currently running a user-installed callback?  Meant to prevent
@@ -379,7 +379,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks = []  # type: List[_CallbackChain]
+        self.callbacks: List[_CallbackChain] = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
@@ -759,7 +759,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain = [self]  # type: List[Deferred[Any]]
+        chain: List[Deferred[Any]] = [self]
 
         while chain:
             current = chain[-1]
@@ -1078,9 +1078,9 @@ class DebugInfo:
     Deferred debug helper.
     """
 
-    failResult = None  # type: Optional[Failure]
-    creator = None  # type: Optional[List[str]]
-    invoker = None  # type: Optional[List[str]]
+    failResult: Optional[Failure] = None
+    creator: Optional[List[str]] = None
+    invoker: Optional[List[str]] = None
 
     def _getDebugTracebacks(self) -> str:
         info = ""
@@ -1222,9 +1222,9 @@ class DeferredList(Deferred[object]):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         """
         self._deferredList = list(deferredList)
-        self.resultList = [None] * len(
+        self.resultList: List[Optional[_DeferredListResult]] = [None] * len(
             self._deferredList
-        )  # type: List[Optional[_DeferredListResult]]
+        )
         Deferred.__init__(self)
         if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
@@ -1339,7 +1339,7 @@ class waitForDeferred:
     See L{deferredGenerator}.
     """
 
-    result = _NO_RESULT  # type: Any
+    result: Any = _NO_RESULT
 
     def __init__(self, d: Deferred[object]) -> None:
         warnings.warn(
@@ -1384,7 +1384,7 @@ def _deferGenerator(
     # type note: List[Any] because you can't annotate List items by index.
     #     …better fix would be to create a class, but we need to jettison
     #     deferredGenerator anyway.
-    waiting = [True, None]  # type: List[Any]
+    waiting: List[Any] = [True, None]
 
     while 1:
         try:
@@ -1532,8 +1532,8 @@ class _CancellationStatus:
         L{_inlineCallbacks} must fill out before returning)
     """
 
-    deferred = attr.ib()  # type: Deferred[object]
-    waitingOn = attr.ib(default=None)  # type: Optional[Deferred[object]]
+    deferred: Deferred[object] = attr.ib()
+    waitingOn: Optional[Deferred[object]] = attr.ib(default=None)
 
 
 @_extraneous
@@ -1569,7 +1569,7 @@ def _inlineCallbacks(
     # recursion.
 
     # waiting for result?  # result
-    waiting = [True, None]  # type: List[Any]
+    waiting: List[Any] = [True, None]
 
     # Get the current contextvars Context object.
     current_context = _copy_context()
@@ -1715,7 +1715,7 @@ def _cancellableInlineCallbacks(
         it.callbacks.extend(tmp)
         it.errback(_InternalInlineCallbacksCancelledError())
 
-    deferred = Deferred(cancel)  # type: Deferred[object]
+    deferred: Deferred[object] = Deferred(cancel)
     status = _CancellationStatus(deferred)
 
     def handleCancel(result: Failure) -> Deferred[object]:
@@ -1847,7 +1847,7 @@ _ConcurrencyPrimitiveT = TypeVar(
 
 class _ConcurrencyPrimitive(ABC, Generic[_DeferredResultT]):
     def __init__(self: _ConcurrencyPrimitiveT) -> None:
-        self.waiting = []  # type: List[Deferred[_ConcurrencyPrimitiveT]]
+        self.waiting: List[Deferred[_ConcurrencyPrimitiveT]] = []
 
     def _releaseAndReturn(self, r: _T) -> _T:
         self.release()
@@ -1943,7 +1943,7 @@ class DeferredLock(_ConcurrencyPrimitive):
         @return: a L{Deferred} which fires on lock acquisition.
         @rtype: a L{Deferred}
         """
-        d = Deferred(canceller=self._cancelAcquire)  # type: Deferred[_DeferredLockT]
+        d: Deferred[_DeferredLockT] = Deferred(canceller=self._cancelAcquire)
         if self.locked:
             self.waiting.append(d)
         else:
@@ -2020,9 +2020,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
         assert (
             self.tokens >= 0
         ), "Internal inconsistency??  tokens should never be negative"
-        d = Deferred(
-            canceller=self._cancelAcquire
-        )  # type: Deferred[_DeferredSemaphoreT]
+        d: Deferred[_DeferredSemaphoreT] = Deferred(canceller=self._cancelAcquire)
         if not self.tokens:
             self.waiting.append(d)
         else:
@@ -2076,8 +2074,8 @@ class DeferredQueue(Generic[_T]):
     def __init__(
         self, size: Optional[int] = None, backlog: Optional[int] = None
     ) -> None:
-        self.waiting = []  # type: List[Deferred[_T]]
-        self.pending = []  # type: List[_T]
+        self.waiting: List[Deferred[_T]] = []
+        self.pending: List[_T] = []
         self.size = size
         self.backlog = backlog
 
@@ -2121,7 +2119,7 @@ class DeferredQueue(Generic[_T]):
         if self.pending:
             return succeed(self.pending.pop(0))
         elif self.backlog is None or len(self.waiting) < self.backlog:
-            d = Deferred(canceller=self._cancelGet)  # type: Deferred[_T]
+            d: Deferred[_T] = Deferred(canceller=self._cancelGet)
             self.waiting.append(d)
             return d
         else:
@@ -2151,8 +2149,8 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
     """
 
     _interval = 1
-    _tryLockCall = None  # type: Optional[IDelayedCall]
-    _timeoutCall = None  # type: Optional[IDelayedCall]
+    _tryLockCall: Optional[IDelayedCall] = None
+    _timeoutCall: Optional[IDelayedCall] = None
 
     def __init__(self, name: str, scheduler: Optional[IReactorTime] = None) -> None:
         """
@@ -2207,9 +2205,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
             else:
                 d.errback(reason)
 
-        d = Deferred(
-            lambda deferred: _cancelLock(CancelledError())
-        )  # type: Deferred[None]
+        d: Deferred[None] = Deferred(lambda deferred: _cancelLock(CancelledError()))
 
         def _tryLock() -> None:
             if self.lock():

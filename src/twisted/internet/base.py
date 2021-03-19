@@ -335,7 +335,7 @@ class ThreadedResolver:
             timeoutDelay = sum(timeout)
         else:
             timeoutDelay = 60
-        userDeferred = defer.Deferred()  # type: Deferred[str]
+        userDeferred: Deferred[str] = defer.Deferred()
         lookupDeferred = threads.deferToThreadPool(
             self.reactor,
             cast(IReactorThreads, self.reactor).getThreadPool(),
