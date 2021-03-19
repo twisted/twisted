@@ -783,9 +783,9 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method: bytes = b"(no method yet)"
-    clientproto: bytes = b"(no clientproto yet)"
-    uri = "(no uri yet)"
+    method = b"(no method yet)"
+    clientproto = b"(no clientproto yet)"
+    uri = b"(no uri yet)"
     startedWriting = 0
     chunked = 0
     sentLength = 0  # content-length of response, or total bytes sent via chunking
@@ -1703,7 +1703,7 @@ class PotentialDataLoss(Exception):
 
 class _MalformedChunkedDataError(Exception):
     """
-    C{_ChunkedTranferDecoder} raises L{_MalformedChunkedDataError} from its
+    C{_ChunkedTransferDecoder} raises L{_MalformedChunkedDataError} from its
     C{dataReceived} method when it encounters malformed data. This exception
     indicates a client-side error. If this exception is raised, the connection
     should be dropped with a 400 error.
@@ -1786,8 +1786,8 @@ class _IdentityTransferDecoder:
 
 class _ChunkedTransferDecoder:
     """
-    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
-    section 3.6.1.  This protocol can interpret the contents of a request or
+    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
+    section 4.1.  This protocol can interpret the contents of a request or
     response body which uses the I{chunked} Transfer-Encoding.  It cannot
     interpret any of the rest of the HTTP protocol.
 
@@ -1838,7 +1838,9 @@ class _ChunkedTransferDecoder:
                 self.length = int(parts[0], 16)
             except ValueError:
                 raise _MalformedChunkedDataError("Chunk-size must be an integer.")
-            if self.length == 0:
+            if self.length < 0:
+                raise _MalformedChunkedDataError("Chunk-size must not be negative.")
+            elif self.length == 0:
                 self.state = "TRAILER"
             else:
                 self.state = "BODY"

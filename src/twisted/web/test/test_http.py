@@ -1260,6 +1260,33 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
 
+    def test_malformedChunkSize(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size can't be decoded as
+        a base-16 integer.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"bloop\r\nabc\r\n"
+        )
+
+    def test_malformedChunkSizeNegative(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size is negative.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
+        )
+
     def test_finish(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length

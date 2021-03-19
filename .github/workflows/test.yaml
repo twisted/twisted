@@ -20,17 +20,23 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "${{ matrix.tox-env }}-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
-    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}-withcov-posix
+      TOXENV: "${{ matrix.tox-env }}"
+      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
+      TRIAL_ARGS: "${{ matrix.trial-args }}"
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
+      fail-fast: false
       matrix:
         # Run on the minimum micro Python version that we can get on CI.
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5, pypy-3.6, pypy-3.7]
-        tox-env: [alldeps]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
+        tox-env: ['alldeps-withcov-posix']
         noipv6: ['']
+        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+        # Trial distributed jobs enabled to speed up the CI jobs.
+        trial-args: ['-j 4']
 
         include:
 
@@ -38,14 +44,26 @@ jobs:
           # runtime and production code.
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
+          # Distributed test run is disabled here so that we also have
+          # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
-            tox-env: nodeps
+            tox-env: nodeps-withcov-posix
+            trial-args: ''
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
-            tox-env: alldeps
+            tox-env: alldeps-withcov-posix
             noipv6: -noipv6
+          # On PYPY concurrent test jobs result in random failures so for now
+          # run non-distributed tests.
+          - python-version: pypy-3.6
+            tox-env: alldeps-withcov-posix
+            trial-args:
+          - python-version: pypy-3.7
+            tox-env: alldeps-withcov-posix
+            trial-args:
+
 
     steps:
     - uses: actions/checkout@v2
@@ -95,6 +113,11 @@ jobs:
       run: |
         python --version
         tox -q
+
+    - name: Publish coverage
+      # We want to publish coverage even on failure.
+      if: contains(matrix['tox-env'], 'withcov') || failure()
+      run: tox -e coverage-prepare,codecov-push,coveralls-push
 
 
   pypi-publish:

@@ -47,7 +47,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         self.opened: List[Tuple[str, Optional[str]]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> object:
+        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
             if name == "nocanopen":
                 raise OSError(None, None, name)
 
