@@ -1521,7 +1521,7 @@ def returnValue(val: object) -> NoReturn:
     raise _DefGen_Return(val)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class _CancellationStatus:
     """
     Cancellation status of an L{inlineCallbacks} invocation.
@@ -1532,8 +1532,8 @@ class _CancellationStatus:
         L{_inlineCallbacks} must fill out before returning)
     """
 
-    deferred: Deferred[object] = attr.ib()
-    waitingOn: Optional[Deferred[object]] = attr.ib(default=None)
+    deferred: Deferred[object]
+    waitingOn: Optional[Deferred[object]] = None
 
 
 @_extraneous

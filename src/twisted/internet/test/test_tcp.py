@@ -14,11 +14,12 @@ import os
 import socket
 
 from functools import wraps
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, List, Callable
 from unittest import skipIf
 
 import attr
 
+from typing_extensions import ClassVar
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
@@ -964,7 +965,7 @@ class _IExhaustsFileDescriptors(Interface):
 
 
 @implementer(_IExhaustsFileDescriptors)
-@attr.s
+@attr.s(auto_attribs=True)
 class _ExhaustsFileDescriptors:
     """
     A class that triggers C{EMFILE} by creating as many file
@@ -977,10 +978,14 @@ class _ExhaustsFileDescriptors:
         for passing to L{os.close}.
     """
 
-    _log = Logger()
-    _fileDescriptorFactory = attr.ib(default=lambda: os.dup(0), repr=False)
-    _close = attr.ib(default=os.close, repr=False)
-    _fileDescriptors = attr.ib(default=attr.Factory(list), init=False, repr=False)
+    _log: ClassVar[Logger] = Logger()
+    _fileDescriptorFactory: Callable[[], int] = attr.ib(
+        default=lambda: os.dup(0), repr=False
+    )
+    _close: Callable[[int], None] = attr.ib(default=os.close, repr=False)
+    _fileDescriptors: List[int] = attr.ib(
+        default=attr.Factory(list), init=False, repr=False
+    )
 
     def exhaust(self):
         """

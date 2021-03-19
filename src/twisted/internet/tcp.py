@@ -13,13 +13,14 @@ import socket
 import sys
 import os
 import struct
-from typing import Optional
+from typing import Optional, Callable, List
 
 import attr
 
 from zope.interface import Interface, implementer
+import typing_extensions
 
-from twisted.logger import Logger
+from twisted.logger import Logger, ILogObserver, LogEvent
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     ITCPTransport,
@@ -934,8 +935,13 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
+class _HasClose(typing_extensions.Protocol):
+    def close(self) -> object:
+        ...
+
+
 @implementer(_IFileDescriptorReservation)
-@attr.s
+@attr.s(auto_attribs=True)
 class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
@@ -946,10 +952,10 @@ class _FileDescriptorReservation:
         returns an object with a C{close} method.
     """
 
-    _log = Logger()
+    _log: typing_extensions.ClassVar[Logger] = Logger()
 
-    _fileFactory = attr.ib()
-    _fileDescriptor = attr.ib(init=False, default=None)
+    _fileFactory: Callable[[], _HasClose]
+    _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
 
     def available(self):
         """
@@ -1085,7 +1091,7 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
@@ -1099,9 +1105,9 @@ class _BuffersLogs:
     @type _observer: L{twisted.logger.ILogObserver}.
     """
 
-    _namespace = attr.ib()
-    _observer = attr.ib()
-    _logs = attr.ib(default=attr.Factory(list))
+    _namespace: str
+    _observer: ILogObserver
+    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
