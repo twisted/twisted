@@ -1870,12 +1870,13 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_CRLF(self) -> bool:
         """
-        Await the carriage return and line feed characters that follow the
+        Await the carriage return and line feed characters that are the end of chunk marker that follow the
         chunk data.
 
         @returns: C{True} when the CRLF have been read, otherwise C{False}.
         """
         # TODO: https://twistedmatrix.com/trac/ticket/10137
+        # It should raise an error when receiving malformed end of chunk markers.
         if self._buffer.startswith(b"\r\n"):
             self.state = "CHUNK_LENGTH"
             del self._buffer[0:2]
