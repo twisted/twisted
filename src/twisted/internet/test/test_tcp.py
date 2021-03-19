@@ -14,12 +14,11 @@ import os
 import socket
 
 from functools import wraps
-from typing import Optional, Sequence, Type, List, Callable
+from typing import Optional, Sequence, Type, List, Callable, ClassVar
 from unittest import skipIf
 
 import attr
 
-from typing_extensions import ClassVar
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 

@@ -13,7 +13,7 @@ import socket
 import sys
 import os
 import struct
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, ClassVar
 
 import attr
 
@@ -952,7 +952,7 @@ class _FileDescriptorReservation:
         returns an object with a C{close} method.
     """
 
-    _log: typing_extensions.ClassVar[Logger] = Logger()
+    _log: ClassVar[Logger] = Logger()
 
     _fileFactory: Callable[[], _HasClose]
     _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
