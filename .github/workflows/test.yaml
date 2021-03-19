@@ -138,7 +138,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip tox pep517
         rm -rf dist/*
-        tox --no-test -e ${TOXENV}
+        tox --notest -e ${TOXENV}
 
     - name: Runner info
       uses: twisted/python-info-action@v1
