@@ -300,6 +300,48 @@ _DeferredResultT = TypeVar("_DeferredResultT", contravariant=True)
 _NextDeferredResultT = TypeVar("_NextDeferredResultT", covariant=True)
 
 
+class DebugInfo:
+    """
+    Deferred debug helper.
+    """
+
+    failResult: Optional[Failure] = None
+    creator: Optional[List[str]] = None
+    invoker: Optional[List[str]] = None
+
+    def _getDebugTracebacks(self) -> str:
+        info = ""
+        if self.creator is not None:
+            info += " C: Deferred was created:\n C:"
+            info += "".join(self.creator).rstrip().replace("\n", "\n C:")
+            info += "\n"
+        if self.invoker is not None:
+            info += " I: First Invoker was:\n I:"
+            info += "".join(self.invoker).rstrip().replace("\n", "\n I:")
+            info += "\n"
+        return info
+
+    def __del__(self) -> None:
+        """
+        Print tracebacks and die.
+
+        If the *last* (and I do mean *last*) callback leaves me in an error
+        state, print a traceback (if said errback is a L{Failure}).
+        """
+        if self.failResult is not None:
+            # Note: this is two separate messages for compatibility with
+            # earlier tests; arguably it should be a single error message.
+            log.critical("Unhandled error in Deferred:", isError=True)
+
+            debugInfo = self._getDebugTracebacks()
+            if debugInfo:
+                format = "(debug: {debugInfo})"
+            else:
+                format = ""
+
+            log.failure(format, self.failResult, debugInfo=debugInfo)
+
+
 class Deferred(Awaitable[_DeferredResultT]):
     """
     This is a callback which will be put off until later.
@@ -1071,48 +1113,6 @@ def ensureDeferred(
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
             raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
-
-
-class DebugInfo:
-    """
-    Deferred debug helper.
-    """
-
-    failResult: Optional[Failure] = None
-    creator: Optional[List[str]] = None
-    invoker: Optional[List[str]] = None
-
-    def _getDebugTracebacks(self) -> str:
-        info = ""
-        if self.creator is not None:
-            info += " C: Deferred was created:\n C:"
-            info += "".join(self.creator).rstrip().replace("\n", "\n C:")
-            info += "\n"
-        if self.invoker is not None:
-            info += " I: First Invoker was:\n I:"
-            info += "".join(self.invoker).rstrip().replace("\n", "\n I:")
-            info += "\n"
-        return info
-
-    def __del__(self) -> None:
-        """
-        Print tracebacks and die.
-
-        If the *last* (and I do mean *last*) callback leaves me in an error
-        state, print a traceback (if said errback is a L{Failure}).
-        """
-        if self.failResult is not None:
-            # Note: this is two separate messages for compatibility with
-            # earlier tests; arguably it should be a single error message.
-            log.critical("Unhandled error in Deferred:", isError=True)
-
-            debugInfo = self._getDebugTracebacks()
-            if debugInfo:
-                format = "(debug: {debugInfo})"
-            else:
-                format = ""
-
-            log.failure(format, self.failResult, debugInfo=debugInfo)
 
 
 @comparable
