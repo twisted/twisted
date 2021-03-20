@@ -100,8 +100,6 @@ import cgi
 import math
 import os
 import re
-
-# system imports
 import tempfile
 import time
 import warnings
@@ -111,10 +109,10 @@ from urllib.parse import (
     urlparse as _urlparse,
     unquote_to_bytes as unquote,
 )
+from typing import Callable
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-# twisted imports
 from incremental import Version
 from twisted.logger import Logger
 from twisted.internet import address, interfaces, protocol
@@ -1803,7 +1801,7 @@ class _ChunkedTransferDecoder:
     noticed. -exarkun
 
     @ivar dataCallback: A one-argument callable which will be invoked each
-        time application data is received.
+        time application data is received. This callback is not reentrant.
 
     @ivar finishCallback: A one-argument callable which will be invoked when
         the terminal chunk is received.  It will be invoked with all bytes
@@ -1825,75 +1823,124 @@ class _ChunkedTransferDecoder:
 
     state = "CHUNK_LENGTH"
 
-    def __init__(self, dataCallback, finishCallback):
+    def __init__(
+        self,
+        dataCallback: Callable[[bytes], None],
+        finishCallback: Callable[[bytes], None],
+    ) -> None:
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
-        self._buffer = b""
+        self._buffer = bytearray()
+        self._start = 0
 
-    def _dataReceived_CHUNK_LENGTH(self, data):
-        if b"\r\n" in data:
-            line, rest = data.split(b"\r\n", 1)
-            parts = line.split(b";")
-            try:
-                self.length = int(parts[0], 16)
-            except ValueError:
-                raise _MalformedChunkedDataError("Chunk-size must be an integer.")
-            if self.length < 0:
-                raise _MalformedChunkedDataError("Chunk-size must not be negative.")
-            elif self.length == 0:
-                self.state = "TRAILER"
-            else:
-                self.state = "BODY"
-            return rest
+    def _dataReceived_CHUNK_LENGTH(self) -> bool:
+        """
+        Read the chunk size line, ignoring any extensions.
+
+        @returns: C{True} once the line has been read and removed from
+            C{self._buffer}.  C{False} when more data is required.
+
+        @raises _MalformedChunkedDataError: when the chunk size cannot be
+            decoded.
+        """
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+        if eolIndex == -1:
+            self._start = len(self._buffer) - 1
+            return False
+
+        endOfLengthIndex = self._buffer.find(b";", 0, eolIndex)
+        if endOfLengthIndex == -1:
+            endOfLengthIndex = eolIndex
+        try:
+            length = int(self._buffer[0:endOfLengthIndex], 16)
+        except ValueError:
+            raise _MalformedChunkedDataError("Chunk-size must be an integer.")
+
+        if length < 0:
+            raise _MalformedChunkedDataError("Chunk-size must not be negative.")
+        elif length == 0:
+            self.state = "TRAILER"
         else:
-            self._buffer = data
-            return b""
+            self.state = "BODY"
 
-    def _dataReceived_CRLF(self, data):
-        if data.startswith(b"\r\n"):
+        self.length = length
+        del self._buffer[0 : eolIndex + 2]
+        self._start = 0
+        return True
+
+    def _dataReceived_CRLF(self) -> bool:
+        """
+        Await the carriage return and line feed characters that are the end of chunk marker that follow the
+        chunk data.
+
+        @returns: C{True} when the CRLF have been read, otherwise C{False}.
+        """
+        # TODO: https://twistedmatrix.com/trac/ticket/10137
+        # It should raise an error when receiving malformed end of chunk markers.
+        if self._buffer.startswith(b"\r\n"):
             self.state = "CHUNK_LENGTH"
-            return data[2:]
-        else:
-            self._buffer = data
-            return b""
+            del self._buffer[0:2]
+            return True
+        return False
 
-    def _dataReceived_TRAILER(self, data):
-        if data.startswith(b"\r\n"):
-            data = data[2:]
+    def _dataReceived_TRAILER(self) -> bool:
+        """
+        Await the carriage return and line feed characters that follow the
+        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
+        state C{'FINISHED'}.
+
+        @returns: C{False}, as there is either insufficient data to continue,
+            or no data remains.
+        """
+        # TODO: https://twistedmatrix.com/trac/ticket/10137
+        if self._buffer.startswith(b"\r\n"):
+            data = memoryview(self._buffer)[2:].tobytes()
+            del self._buffer[:]
             self.state = "FINISHED"
             self.finishCallback(data)
-        else:
-            self._buffer = data
-        return b""
+        return False
 
-    def _dataReceived_BODY(self, data):
-        if len(data) >= self.length:
-            chunk, data = data[: self.length], data[self.length :]
-            self.dataCallback(chunk)
+    def _dataReceived_BODY(self) -> bool:
+        """
+        Deliver any available chunk data to the C{dataCallback}. When all the
+        remaining data for the chunk arrives, switch to state C{'CRLF'}.
+
+        @returns: C{True} to continue processing of any buffered data.
+        """
+        if len(self._buffer) >= self.length:
+            chunk = memoryview(self._buffer)[: self.length].tobytes()
+            del self._buffer[: self.length]
             self.state = "CRLF"
-            return data
-        elif len(data) < self.length:
-            self.length -= len(data)
-            self.dataCallback(data)
-            return b""
+            self.dataCallback(chunk)
+        else:
+            chunk = bytes(self._buffer)
+            self.length -= len(chunk)
+            del self._buffer[:]
+            self.dataCallback(chunk)
+        return True
 
-    def _dataReceived_FINISHED(self, data):
+    def _dataReceived_FINISHED(self) -> bool:
+        """
+        Once C{finishCallback} has been invoked receipt of additional data
+        raises L{RuntimeError} because it represents a programming error in
+        the caller.
+        """
         raise RuntimeError(
             "_ChunkedTransferDecoder.dataReceived called after last "
             "chunk was processed"
         )
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Interpret data from a request or response body which uses the
         I{chunked} Transfer-Encoding.
         """
-        data = self._buffer + data
-        self._buffer = b""
-        while data:
-            data = getattr(self, f"_dataReceived_{self.state}")(data)
+        self._buffer += data
+        goOn = True
+        while goOn and self._buffer:
+            goOn = getattr(self, "_dataReceived_" + self.state)()
 
-    def noMoreData(self):
+    def noMoreData(self) -> None:
         """
         Verify that all data has been received.  If it has not been, raise
         L{_DataLoss}.

@@ -1240,6 +1240,35 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
 
+    def test_long(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} delivers partial chunk data as
+        soon as it is received.
+        """
+        data = []
+        finished = []
+        p = http._ChunkedTransferDecoder(data.append, finished.append)
+        p.dataReceived(b"a;\r\n12345")
+        p.dataReceived(b"67890")
+        p.dataReceived(b"\r\n0;\r\n\r\n...")
+        self.assertEqual(data, [b"12345", b"67890"])
+        self.assertEqual(finished, [b"..."])
+
+    def test_empty(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} is robust against receiving
+        a zero-length input.
+        """
+        chunks = []
+        finished = []
+        p = http._ChunkedTransferDecoder(chunks.append, finished.append)
+        p.dataReceived(b"")
+        for s in iterbytes(b"3\r\nabc\r\n5\r\n12345\r\n0\r\n\r\n"):
+            p.dataReceived(s)
+            p.dataReceived(b"")
+        self.assertEqual(chunks, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
+        self.assertEqual(finished, [b""])
+
     def test_newlines(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} doesn't treat CR LF pairs
