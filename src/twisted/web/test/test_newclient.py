@@ -288,41 +288,15 @@ class _HTTPParserTests:
         protocol = HTTPParser()
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(b"HTTP/1.1 200 OK" + self.sep)
+        protocol.dataReceived(b"Content-Length: 123" + self.sep)
         protocol.dataReceived(b"X-Foo: bar" + self.sep)
         protocol.dataReceived(b"X-Foo: baz" + self.sep)
         protocol.dataReceived(self.sep)
-        expected = [(b"X-Foo", [b"bar", b"baz"])]
-        self.assertEqual(expected, list(protocol.headers.getAllRawHeaders()))
-
-    def test_connectionControlHeaders(self):
-        """
-        L{HTTPParser.isConnectionControlHeader} returns C{True} for headers
-        which are always connection control headers (similar to "hop-by-hop"
-        headers from RFC 2616 section 13.5.1) and C{False} for other headers.
-        """
-        protocol = HTTPParser()
-        connHeaderNames = [
-            b"content-length",
-            b"connection",
-            b"keep-alive",
-            b"te",
-            b"trailers",
-            b"transfer-encoding",
-            b"upgrade",
-            b"proxy-connection",
+        expected = [
+            (b"Content-Length", [b"123"]),
+            (b"X-Foo", [b"bar", b"baz"]),
         ]
-
-        for header in connHeaderNames:
-            self.assertTrue(
-                protocol.isConnectionControlHeader(header),
-                "Expecting %r to be a connection control header, but "
-                "wasn't" % (header,),
-            )
-        self.assertFalse(
-            protocol.isConnectionControlHeader(b"date"),
-            "Expecting the arbitrarily selected 'date' header to not be "
-            "a connection control header, but was.",
-        )
+        self.assertEqual(expected, list(protocol.headers.getAllRawHeaders()))
 
     def test_switchToBodyMode(self):
         """
@@ -513,7 +487,6 @@ class HTTPClientParserTests(TestCase):
         protocol.dataReceived(b"HTTP/1.1 200 OK\r\n")
         protocol.dataReceived(b"X-Foo: bar\r\n")
         protocol.dataReceived(b"\r\n")
-        self.assertEqual(protocol.connHeaders, Headers({}))
         self.assertEqual(protocol.response.headers, Headers({b"x-foo": [b"bar"]}))
         self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
 
@@ -530,31 +503,10 @@ class HTTPClientParserTests(TestCase):
         protocol.dataReceived(b"X-Multiline: a\r\n")
         protocol.dataReceived(b"    b\r\n")
         protocol.dataReceived(b"\r\n")
-        self.assertEqual(protocol.connHeaders, Headers({}))
         self.assertEqual(
             protocol.response.headers, Headers({b"x-multiline": [b"a    b"]})
         )
         self.assertIdentical(protocol.response.length, UNKNOWN_LENGTH)
-
-    def test_connectionHeaders(self):
-        """
-        The connection control headers are added to the parser's C{connHeaders}
-        L{Headers} instance.
-        """
-        protocol = HTTPClientParser(
-            Request(b"GET", b"/", _boringHeaders, None), lambda rest: None
-        )
-        protocol.makeConnection(StringTransport())
-        protocol.dataReceived(b"HTTP/1.1 200 OK\r\n")
-        protocol.dataReceived(b"Content-Length: 123\r\n")
-        protocol.dataReceived(b"Connection: close\r\n")
-        protocol.dataReceived(b"\r\n")
-        self.assertEqual(protocol.response.headers, Headers({}))
-        self.assertEqual(
-            protocol.connHeaders,
-            Headers({b"content-length": [b"123"], b"connection": [b"close"]}),
-        )
-        self.assertEqual(protocol.response.length, 123)
 
     def test_headResponseContentLengthEntityHeader(self):
         """
@@ -571,7 +523,6 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(
             protocol.response.headers, Headers({b"content-length": [b"123"]})
         )
-        self.assertEqual(protocol.connHeaders, Headers({}))
         self.assertEqual(protocol.response.length, 0)
 
     def test_contentLength(self):
@@ -872,7 +823,6 @@ class HTTPClientParserTests(TestCase):
         self.assertTrue(getattr(protocol, "response", None) is None)
         self.assertEqual(protocol.state, STATUS)
         self.assertEqual(len(list(protocol.headers.getAllRawHeaders())), 0)
-        self.assertEqual(len(list(protocol.connHeaders.getAllRawHeaders())), 0)
         self.assertTrue(protocol._everReceivedData)
 
     def test_1XXFollowedByFinalResponseOnlyEmitsFinal(self):
@@ -896,8 +846,9 @@ class HTTPClientParserTests(TestCase):
         protocol.dataReceived(sample103Response + following200Response)
 
         self.assertEqual(protocol.response.code, 200)
-        self.assertEqual(protocol.response.headers, Headers({}))
-        self.assertEqual(protocol.connHeaders, Headers({b"content-length": [b"123"]}))
+        self.assertEqual(
+            protocol.response.headers, Headers({b"content-length": [b"123"]})
+        )
         self.assertEqual(protocol.response.length, 123)
 
     def test_multiple1XXResponsesAreIgnored(self):
@@ -926,8 +877,9 @@ class HTTPClientParserTests(TestCase):
         )
 
         self.assertEqual(protocol.response.code, 200)
-        self.assertEqual(protocol.response.headers, Headers({}))
-        self.assertEqual(protocol.connHeaders, Headers({b"content-length": [b"123"]}))
+        self.assertEqual(
+            protocol.response.headers, Headers({b"content-length": [b"123"]})
+        )
         self.assertEqual(protocol.response.length, 123)
 
     def test_ignored1XXResponseCausesLog(self):

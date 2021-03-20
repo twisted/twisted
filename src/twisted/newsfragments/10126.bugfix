@@ -1,0 +1,1 @@
+twisted.web.client.HTTPConnectionPool no longer strips connection headers, such as Content-Length, from the resulting response objects.

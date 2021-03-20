@@ -227,20 +227,8 @@ class HTTPParser(LineReceiver):
     # HTTP headers delimited by \n instead of \r\n.
     delimiter = b"\n"
 
-    CONNECTION_CONTROL_HEADERS = {
-        b"content-length",
-        b"connection",
-        b"keep-alive",
-        b"te",
-        b"trailers",
-        b"transfer-encoding",
-        b"upgrade",
-        b"proxy-connection",
-    }
-
     def connectionMade(self):
         self.headers = Headers()
-        self.connHeaders = Headers()
         self.state = STATUS
         self._partialHeader = None
 
@@ -291,18 +279,6 @@ class HTTPParser(LineReceiver):
         """
         self.bodyDecoder.dataReceived(data)
 
-    def isConnectionControlHeader(self, name):
-        """
-        Return C{True} if the given lower-cased name is the name of a
-        connection control header (rather than an entity header).
-
-        According to RFC 2616, section 14.10, the tokens in the Connection
-        header are probably relevant here.  However, I am not sure what the
-        practical consequences of either implementing or ignoring that are.
-        So I leave it unimplemented for the time being.
-        """
-        return name in self.CONNECTION_CONTROL_HEADERS
-
     def statusReceived(self, status):
         """
         Callback invoked whenever the first line of a new message is received.
@@ -317,12 +293,7 @@ class HTTPParser(LineReceiver):
         """
         Store the given header in C{self.headers}.
         """
-        name = name.lower()
-        if self.isConnectionControlHeader(name):
-            headers = self.connHeaders
-        else:
-            headers = self.headers
-        headers.addRawHeader(name, value)
+        self.headers.addRawHeader(name.lower(), value)
 
     def allHeadersReceived(self):
         """
@@ -434,15 +405,6 @@ class HTTPClientParser(HTTPParser):
         self.state = DONE
         self.finisher(rest)
 
-    def isConnectionControlHeader(self, name):
-        """
-        Content-Length in the response to a HEAD request is an entity header,
-        not a connection control header.
-        """
-        if self.request.method == b"HEAD" and name == b"content-length":
-            return False
-        return HTTPParser.isConnectionControlHeader(self, name)
-
     def allHeadersReceived(self):
         """
         Figure out how long the response body is going to be by examining
@@ -468,9 +430,7 @@ class HTTPClientParser(HTTPParser):
             self._finished(self.clearLineBuffer())
             self.response._bodyDataFinished()
         else:
-            transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                b"transfer-encoding"
-            )
+            transferEncodingHeaders = self.headers.getRawHeaders(b"transfer-encoding")
             if transferEncodingHeaders:
 
                 # This could be a KeyError.  However, that would mean we do not
@@ -488,7 +448,7 @@ class HTTPClientParser(HTTPParser):
                 # allow the transfer decoder to set the response object's
                 # length attribute.
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders(b"content-length")
+                contentLengthHeaders = self.headers.getRawHeaders(b"content-length")
                 if contentLengthHeaders is None:
                     contentLength = None
                 elif len(contentLengthHeaders) == 1:
