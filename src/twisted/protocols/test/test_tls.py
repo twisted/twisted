@@ -146,6 +146,8 @@ def buildTLSProtocol(
     """
     Create a protocol hooked up to a TLS transport hooked up to a
     StringTransport.
+
+    @param serverMethod: The TLS method accepted by the server-side and used by the created protocol. Set to to C{None} to use the default method used by your OpenSSL library.
     """
     # We want to accumulate bytes without disconnecting, so set high limit:
     clientProtocol = AccumulatingProtocol(999999999999)
@@ -1119,6 +1121,14 @@ class TLSProducerTests(TestCase):
     def setupStreamingProducer(
         self, transport=None, fakeConnection=None, server=False, serverMethod=None
     ):
+        """
+        Create a new client-side protocol that is connected to a remote TLS server.
+
+        @param serverMethod: The TLS method accepted by the server-side. Set to to C{None} to use the default method used by your OpenSSL library.
+
+        @return: A tuple with high level client protocol, the low-level client-side TLS protocol, and a producer that is used to send data to the client.
+        """
+
         class HistoryStringTransport(StringTransport):
             def __init__(self):
                 StringTransport.__init__(self)

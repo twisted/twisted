@@ -41,7 +41,6 @@ class ServerTLSContext:
     """
 
     isClient = 0
-    _context = None
 
     def __init__(self, filename=certPath, method=None):
         self.filename = filename
