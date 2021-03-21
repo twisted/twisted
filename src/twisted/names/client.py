@@ -28,7 +28,15 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.internet import error, defer, interfaces, protocol
 from twisted.python import log, failure
-from twisted.names import dns, common, resolve, cache, root, hosts as hostsModule
+from twisted.names import (
+    dns,
+    common,
+    resolve,
+    cache,
+    root,
+    hosts as hostsModule,
+    error as dnsError,
+)
 from twisted.internet.abstract import isIPv6Address
 
 
@@ -425,32 +433,37 @@ class Resolver(common.ResolverBase):
         factory.noisy = False  # stfu
 
         connector = self._reactor.connectTCP(host, port, factory)
+
+        def handleTimeout(d, controller, seconds):
+            # We are the timeout callback, so we should clear the timeout ivar
+            controller.timeoutCall = None
+            assert controller.deferred is d
+            controller.deferred = None
+            d.errback(
+                dnsError.DNSQueryTimeoutError(
+                    "Zone lookup timed out after %d seconds" % (seconds,)
+                )
+            )
+
         controller.timeoutCall = self._reactor.callLater(
-            timeout or 10, self._timeoutZone, d, controller, connector, timeout or 10
+            timeout or 10, handleTimeout, d, controller, timeout or 10
         )
 
-        def eliminateTimeout(failure):
+        def teardown(value, connector):
             timeoutCall = controller.timeoutCall
             if timeoutCall is not None:
                 controller.timeoutCall = None
                 timeoutCall.cancel()
-            return failure
 
-        return d.addBoth(eliminateTimeout).addCallback(self._cbLookupZone, connector)
+            if connector is not None:
+                connector.disconnect()
 
-    def _timeoutZone(self, d, controller, connector, seconds):
-        # We are the timeout callback, so we should clear the timeout ivar
-        controller.timeoutCall = None
-        assert controller.deferred is d
-        controller.deferred = None
-        connector.disconnect()
-        d.errback(
-            error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,))
-        )
+            return value
 
-    def _cbLookupZone(self, result, connector):
-        connector.disconnect()
-        return (result, [], [])
+        def cb(result):
+            return (result, [], [])
+
+        return d.addBoth(teardown, connector).addCallback(cb)
 
 
 class AXFRController:

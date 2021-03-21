@@ -16,11 +16,12 @@ from struct import pack
 
 from twisted.trial import unittest
 
-from twisted.internet import reactor, defer, error
+from twisted.internet import reactor, defer, error, protocol
 from twisted.internet.defer import succeed
+from twisted.internet.testing import AccumulatingProtocol
 from twisted.names import client, server, common, authority, dns
 from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA, Query
-from twisted.names.error import DomainError
+from twisted.names.error import DomainError, DNSQueryTimeoutError
 from twisted.names.client import Resolver
 from twisted.names.secondary import SecondaryAuthorityService, SecondaryAuthority
 from twisted.python.compat import nativeString
@@ -42,6 +43,34 @@ class NoFileAuthority(authority.FileAuthority):
         # Yes, skip FileAuthority
         common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
+
+
+class EasilyStartledProtocol(AccumulatingProtocol):
+    """
+    Subclass of L{AccumulatingProtocol} which drops the connection
+    as soon as it receives any data.
+    """
+
+    def dataReceived(self, data):
+        super().dataReceived(data)
+        self.transport.loseConnection()
+
+
+class RecordingServerFactory(protocol.ServerFactory):
+    """
+    Factory which records its protocol instances in a list.
+
+    @ivar instances: A list of L{Protocol} instances created by this factory.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.instances: List[AccumulatingProtocol] = []
+
+    def buildProtocol(self, addr):
+        newProtocol = super().buildProtocol(addr)
+        self.instances.append(newProtocol)
+        return newProtocol
 
 
 soa_record = dns.Record_SOA(
@@ -470,6 +499,58 @@ class ServerDNSTests(unittest.TestCase):
         resolver = Resolver(servers=[("nameserver.invalid", 53)])
         return self.assertFailure(
             resolver.lookupZone("impossible.invalid"), error.DNSLookupError
+        )
+
+    def _testHelper_zoneTransferFailure(self, protocolClass, expectedFailure, **kwargs):
+        factory = RecordingServerFactory.forProtocol(protocolClass)
+        nonresponsiveTCP = reactor.listenTCP(0, factory, interface="127.0.0.1")
+        self.addCleanup(nonresponsiveTCP.stopListening)
+        server = nonresponsiveTCP.getHost()
+        resolver = Resolver(servers=[(server.host, server.port)])
+        d = self.assertFailure(
+            resolver.lookupZone("test-domain.com", **kwargs), expectedFailure
+        )
+
+        def _waitAnd(r, fn, *args):
+            # We need to wait a moment before calling _furtherChecks
+            # for the TCP closure to work its way through the stack
+            # and show up as accumulator.closed==True.
+            d = defer.Deferred()
+            d.addCallback(fn, *args)
+            reactor.callLater(0.01, d.callback, r)
+            return d
+
+        def _furtherChecks(r, testCase, factory):
+            testCase.assertEqual(len(factory.instances), 1)
+            accumulator = factory.instances[0]
+            testCase.assertTrue(accumulator.made)
+            testCase.assertGreater(
+                len(accumulator.data), 0, msg="Query was received by DNS server"
+            )
+            testCase.assertTrue(accumulator.closed)
+            return r
+
+        return d.addCallback(_waitAnd, _furtherChecks, self, factory)
+
+    def test_zoneTransferConnectionDrops(self):
+        """
+        An AXFR TCP transfer whose connection is lost before a
+        response is received should result in an errback.
+        """
+        return self._testHelper_zoneTransferFailure(
+            EasilyStartledProtocol,
+            DomainError,
+        )
+
+    test_zoneTransferConnectionDrops.todo = "Bug #3428"
+
+    def test_zoneTransferTimesOut(self):
+        """
+        An AXFR TCP transfer which never receives a response from the
+        server should cleanly time out.
+        """
+        return self._testHelper_zoneTransferFailure(
+            AccumulatingProtocol, DNSQueryTimeoutError, timeout=1
         )
 
     def test_similarZonesDontInterfere(self):
