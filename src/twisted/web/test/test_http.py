@@ -1327,9 +1327,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         self.assertRaises(
-            http._MalformedChunkedDataError,
-            p.dataReceived,
-            b"3\r\nabc!!!!"
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
         )
 
     def test_malformedChunkEndFinal(self):
@@ -1343,9 +1341,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         self.assertRaises(
-            http._MalformedChunkedDataError,
-            p.dataReceived,
-            b"3\r\nabc\r\n0\r\n!!"
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
         )
 
     def test_finish(self):
