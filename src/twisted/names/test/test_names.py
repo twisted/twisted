@@ -9,10 +9,12 @@ Test cases for twisted.names.
 import copy
 import operator
 import socket
+import typing
 
 from io import BytesIO
 from functools import partial, reduce
 from struct import pack
+from typing import Any, List, Type
 
 from twisted.trial import unittest
 
@@ -32,6 +34,9 @@ from twisted.test.proto_helpers import (
     MemoryReactorClock,
     waitUntilAllDisconnected,
 )
+
+
+T = typing.TypeVar("T")
 
 
 def justPayload(results):
@@ -501,13 +506,18 @@ class ServerDNSTests(unittest.TestCase):
             resolver.lookupZone("impossible.invalid"), error.DNSLookupError
         )
 
-    def _testHelper_zoneTransferFailure(self, protocolClass, expectedFailure, **kwargs):
+    def _testHelper_zoneTransferFailure(
+        self,
+        protocolClass: Type[AccumulatingProtocol],
+        expectedFailure: Type[Exception],
+        **kwargs: Any,
+    ) -> defer.Deferred:
         factory = RecordingServerFactory.forProtocol(protocolClass)
-        nonresponsiveTCP = reactor.listenTCP(0, factory, interface="127.0.0.1")
+        nonresponsiveTCP = reactor.listenTCP(0, factory, interface="127.0.0.1")  # type: ignore[attr-defined]
         self.addCleanup(nonresponsiveTCP.stopListening)
         server = nonresponsiveTCP.getHost()
         resolver = Resolver(servers=[(server.host, server.port)])
-        d = self.assertFailure(
+        d: defer.Deferred = self.assertFailure(
             resolver.lookupZone("test-domain.com", **kwargs), expectedFailure
         )
 
@@ -520,7 +530,9 @@ class ServerDNSTests(unittest.TestCase):
             reactor.callLater(0.01, d.callback, r)
             return d
 
-        def _furtherChecks(r, testCase, factory):
+        def _furtherChecks(
+            r: T, testCase: "ServerDNSTests", factory: RecordingServerFactory
+        ) -> T:
             testCase.assertEqual(len(factory.instances), 1)
             accumulator = factory.instances[0]
             testCase.assertTrue(accumulator.made)
@@ -532,7 +544,7 @@ class ServerDNSTests(unittest.TestCase):
 
         return d.addCallback(_waitAnd, _furtherChecks, self, factory)
 
-    def test_zoneTransferConnectionDrops(self):
+    def test_zoneTransferConnectionDrops(self) -> defer.Deferred:
         """
         An AXFR TCP transfer whose connection is lost before a
         response is received should result in an errback.
@@ -542,9 +554,9 @@ class ServerDNSTests(unittest.TestCase):
             DomainError,
         )
 
-    test_zoneTransferConnectionDrops.todo = "Bug #3428"
+    test_zoneTransferConnectionDrops.todo = "Bug #3428"  # type: ignore[attr-defined]
 
-    def test_zoneTransferTimesOut(self):
+    def test_zoneTransferTimesOut(self) -> defer.Deferred:
         """
         An AXFR TCP transfer which never receives a response from the
         server should cleanly time out.
