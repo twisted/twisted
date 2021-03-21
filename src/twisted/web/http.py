@@ -25,8 +25,13 @@ also useful for HTTP clients (such as the chunked encoding parser).
     pre-condition (for example, the condition represented by an I{If-None-Match}
     header is present in the request) has failed.  This should typically
     indicate that the server has not taken the requested action.
-"""
 
+@var MAX_CHUNK_SIZE_LINE_LENGTH: Maximum allowable length of the
+    CRLF-terminated line that indicates the size of a chunk and the extensions
+    associated with it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC
+    7230 section 4.1). This limits how much data may be buffered when decoding
+    the line.
+"""
 
 __all__ = [
     "SWITCHING",
@@ -1782,6 +1787,9 @@ class _IdentityTransferDecoder:
             raise _DataLoss()
 
 
+MAX_CHUNK_SIZE_LINE_LENGTH = 4096
+
+
 class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
@@ -1841,10 +1849,23 @@ class _ChunkedTransferDecoder:
             C{self._buffer}.  C{False} when more data is required.
 
         @raises _MalformedChunkedDataError: when the chunk size cannot be
-            decoded.
+            decoded or the length of the line exceeds L{MAX
         """
         eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex >= MAX_CHUNK_SIZE_LINE_LENGTH or (
+            eolIndex == -1 and len(self._buffer) > MAX_CHUNK_SIZE_LINE_LENGTH
+        ):
+            raise _MalformedChunkedDataError(
+                "Chunk size line exceeds maximum of {} bytes.".format(
+                    MAX_CHUNK_SIZE_LINE_LENGTH
+                )
+            )
+
         if eolIndex == -1:
+            # Restart the search upon receipt of more data at the start of the
+            # new data, minus one in case the last character of the buffer is
+            # CR.
             self._start = len(self._buffer) - 1
             return False
 
