@@ -83,7 +83,7 @@ class HAProxyWrappingFactory(policies.WrappingFactory):
             logPrefix = self.wrappedFactory.logPrefix()
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
-        return "{} (PROXY)".format(logPrefix)
+        return f"{logPrefix} (PROXY)"
 
 
 def proxyEndpoint(wrappedEndpoint):

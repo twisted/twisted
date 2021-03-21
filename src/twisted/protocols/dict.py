@@ -122,9 +122,7 @@ class DictClient(basic.LineReceiver):
                 return
             code = int(line[:3])
             line = line[4:]
-        method = getattr(
-            self, "dictCode_{}_{}".format(code, self.state), self.dictCode_default
-        )
+        method = getattr(self, f"dictCode_{code}_{self.state}", self.dictCode_default)
         method(line)
 
     def dictCode_default(self, line):

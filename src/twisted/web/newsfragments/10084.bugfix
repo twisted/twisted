@@ -1,0 +1,1 @@
+Fixed an error where twisted.web.http.requestReceived() tries to encode a NoneType returned by cgi.parse_multipart when a multipart body does not contain a "content-disposition" definition.

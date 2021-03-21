@@ -235,19 +235,19 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if nsPrefix is None:
                 attrKey = attrName
             else:
-                attrKey = "{}:{}".format(nsPrefix, attrName)
+                attrKey = f"{nsPrefix}:{attrName}"
             nonTemplateAttrs[attrKey] = v
 
         if ns == TEMPLATE_NAMESPACE and name == "attr":
             if not self.stack:
                 # TODO: define a better exception for this?
                 raise AssertionError(
-                    "<{{{}}}attr> as top-level element".format(TEMPLATE_NAMESPACE)
+                    f"<{{{TEMPLATE_NAMESPACE}}}attr> as top-level element"
                 )
             if "name" not in nonTemplateAttrs:
                 # TODO: same here
                 raise AssertionError(
-                    "<{{{}}}attr> requires a name attribute".format(TEMPLATE_NAMESPACE)
+                    f"<{{{TEMPLATE_NAMESPACE}}}attr> requires a name attribute"
                 )
             el = Tag(
                 "",
@@ -459,7 +459,7 @@ class XMLFile:
                 return _flatsaxParse(f)
 
     def __repr__(self) -> str:
-        return "<XMLFile of {!r}>".format(self._path)
+        return f"<XMLFile of {self._path!r}>"
 
     def load(self):
         """
@@ -621,7 +621,7 @@ class _TagFactory:
         # allow for E.del as E.del_
         tagName = tagName.rstrip("_")
         if tagName not in VALID_HTML_TAG_NAMES:
-            raise AttributeError("unknown tag {!r}".format(tagName))
+            raise AttributeError(f"unknown tag {tagName!r}")
         return Tag(tagName)
 
 

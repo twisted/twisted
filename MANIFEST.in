@@ -27,7 +27,6 @@ exclude azure-pipelines
 recursive-exclude azure-pipelines *
 prune bin
 prune admin
-prune .travis
 prune .github
 prune docs/_build
 

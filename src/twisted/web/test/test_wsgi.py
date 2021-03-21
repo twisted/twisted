@@ -878,7 +878,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def getFileType(self):
         raise NotImplementedError(
-            "{}.getFile must be implemented".format(self.__class__.__name__)
+            f"{self.__class__.__name__}.getFile must be implemented"
         )
 
     def _renderAndReturnReaderResult(self, reader, content):
@@ -1482,7 +1482,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not ({!r}, 'value')".format(key),
+                f"header must be (str, str) tuple, not ({key!r}, 'value')",
                 str(error),
             )
 
@@ -1504,7 +1504,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not ('key', {!r})".format(value),
+                f"header must be (str, str) tuple, not ('key', {value!r})",
                 str(error),
             )
 

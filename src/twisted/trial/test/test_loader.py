@@ -160,9 +160,7 @@ class FileTests(packages.SysPathManglingTest):
         emptyDir.createDirectory()
 
         err = self.assertRaises(ValueError, runner.filenameToModule, emptyDir.path)
-        self.assertEqual(
-            str(err), "{!r} is not a package directory".format(emptyDir.path)
-        )
+        self.assertEqual(str(err), f"{emptyDir.path!r} is not a package directory")
 
     def test_filenameNotPython(self):
         """

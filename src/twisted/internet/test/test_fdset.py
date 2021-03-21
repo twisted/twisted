@@ -290,7 +290,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
             # no chance to notice the socket is no longer valid.
-            raise SkipTest("{!r} cannot detect lost file descriptors".format(name))
+            raise SkipTest(f"{name!r} cannot detect lost file descriptors")
 
         client, server = self._connectedPair()
 

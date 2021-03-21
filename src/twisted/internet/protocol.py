@@ -29,7 +29,7 @@ class Factory:
     self.protocol.
     """
 
-    protocol = None  # type: Optional[Callable[[], Protocol]]
+    protocol: "Optional[Callable[[], Protocol]]" = None
 
     numPorts = 0
     noisy = True
@@ -189,7 +189,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
     def __repr__(self) -> str:
-        return "<ClientCreator factory: {!r}>".format(self.instance)
+        return f"<ClientCreator factory: {self.instance!r}>"
 
     def buildProtocol(self, addr):
         """
@@ -394,7 +394,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning {} on explicit request".format(connector))
+                log.msg(f"Abandoning {connector} on explicit request")
             return
 
         if connector is None:
@@ -494,7 +494,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None  # type: Optional[ITransport]
+    transport: Optional[ITransport] = None
 
     def makeConnection(self, transport):
         """
@@ -543,7 +543,7 @@ class Protocol(BaseProtocol):
     see the L{twisted.protocols.basic} module for a few of them.
     """
 
-    factory = None  # type: Optional[Factory]
+    factory: Optional[Factory] = None
 
     def logPrefix(self):
         """

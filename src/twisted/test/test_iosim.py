@@ -72,12 +72,12 @@ class StrictPushProducer:
 
     def pauseProducing(self):
         if self._state != "running":
-            raise ValueError("Cannot pause {} IPushProducer".format(self._state))
+            raise ValueError(f"Cannot pause {self._state} IPushProducer")
         self._state = "paused"
 
     def resumeProducing(self):
         if self._state != "paused":
-            raise ValueError("Cannot resume {} IPushProducer".format(self._state))
+            raise ValueError(f"Cannot resume {self._state} IPushProducer")
         self._state = "running"
 
 

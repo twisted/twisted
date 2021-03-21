@@ -48,7 +48,7 @@ class MessageLogger:
     def log(self, message):
         """Write a message to the file."""
         timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
-        self.file.write("{} {}\n".format(timestamp, message))
+        self.file.write(f"{timestamp} {message}\n")
         self.file.flush()
 
     def close(self):
@@ -85,7 +85,7 @@ class LogBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
         user = user.split("!", 1)[0]
-        self.logger.log("<{}> {}".format(user, msg))
+        self.logger.log(f"<{user}> {msg}")
 
         # Check to see if they're sending me a private message
         if channel == self.nickname:
@@ -97,12 +97,12 @@ class LogBot(irc.IRCClient):
         if msg.startswith(self.nickname + ":"):
             msg = "%s: I am a log bot" % user
             self.msg(channel, msg)
-            self.logger.log("<{}> {}".format(self.nickname, msg))
+            self.logger.log(f"<{self.nickname}> {msg}")
 
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""
         user = user.split("!", 1)[0]
-        self.logger.log("* {} {}".format(user, msg))
+        self.logger.log(f"* {user} {msg}")
 
     # irc callbacks
 
@@ -110,7 +110,7 @@ class LogBot(irc.IRCClient):
         """Called when an IRC user changes their nickname."""
         old_nick = prefix.split("!")[0]
         new_nick = params[0]
-        self.logger.log("{} is now known as {}".format(old_nick, new_nick))
+        self.logger.log(f"{old_nick} is now known as {new_nick}")
 
     # For fun, override the method that determines how a nickname is changed on
     # collisions. The default method appends an underscore.

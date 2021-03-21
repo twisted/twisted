@@ -156,7 +156,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
+    protocol: "Type[protocol.Protocol]" = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -676,7 +676,7 @@ class SmartHostSMTPRelayingManager:
         filenames of messages the managed relayer is responsible for.
     """
 
-    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
+    factory: Type[protocol.ClientFactory] = SMTPManagedRelayerFactory
 
     PORT = 25
 
@@ -1087,7 +1087,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(error.DNSNameError("No MX records for {!r}".format(domain)))
+            return Failure(error.DNSNameError(f"No MX records for {domain!r}"))
 
     def _ebMX(self, failure, domain):
         """
@@ -1135,5 +1135,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise OSError("No MX found for {!r}".format(domain))
+            raise OSError(f"No MX found for {domain!r}")
         return failure

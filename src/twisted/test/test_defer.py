@@ -176,6 +176,44 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callbackResults, (("hello",), {}))
         self.assertEqual(self.callback2Results, (("hello",), {}))
 
+    def test_addCallbacksNoneErrback(self):
+        """
+        If given None for an errback, addCallbacks uses a pass-through.
+        """
+        error = GenericError("oopsie")
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, None)
+        deferred.errback(error)
+        deferred.addErrback(self._errback)
+        self.assertIsNone(self.callbackResults)
+        self.assertEqual(len(self.errbackResults[0]), 1)
+        self.assertEqual(self.errbackResults[0][0].value, error)
+        self.assertEqual(self.errbackResults[1], {})
+
+    def test_addCallbacksNoneCallbackArgs(self):
+        """
+        If given None as a callback args and kwargs, () and {} are used.
+        """
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, self._errback, None, None, (), {})
+        deferred.callback("hello")
+        self.assertIsNone(self.errbackResults)
+        self.assertEqual(self.callbackResults, (("hello",), {}))
+
+    def test_addCallbacksNoneErrbackArgs(self):
+        """
+        If given None as a errback args and kwargs, () and {} are used.
+        """
+        error = GenericError("oopsie")
+        deferred = defer.Deferred()
+        deferred.addCallbacks(self._callback, self._errback, (), {}, None, None)
+        deferred.errback(error)
+        deferred.addErrback(self._errback)
+        self.assertIsNone(self.callbackResults)
+        self.assertEqual(len(self.errbackResults[0]), 1)
+        self.assertEqual(self.errbackResults[0][0].value, error)
+        self.assertEqual(self.errbackResults[1], {})
+
     def testDeferredList(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()
@@ -658,15 +696,27 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} should retrieve the result of a synchronous
         function and pass it to its resulting L{defer.Deferred}.
         """
+        result = object()
+        S, E = [], []
+        d = defer.maybeDeferred(lambda: result)
+        d.addCallbacks(S.append, E.append)
+        self.assertEqual(E, [])
+        self.assertEqual(len(S), 1)
+        self.assertIdentical(S[0], result)
+
+    def test_maybeDeferredSyncWithArgs(self):
+        """
+        L{defer.maybeDeferred} should pass arguments to the called function.
+        """
         S, E = [], []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
         self.assertEqual(E, [])
         self.assertEqual(S, [15])
 
-    def test_maybeDeferredSyncError(self):
+    def test_maybeDeferredSyncException(self):
         """
-        L{defer.maybeDeferred} should catch exception raised by a synchronous
+        L{defer.maybeDeferred} should catch an exception raised by a synchronous
         function and errback its resulting L{defer.Deferred} with it.
         """
         S, E = [], []
@@ -679,6 +729,22 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(S, [])
         self.assertEqual(len(E), 1)
         self.assertEqual(str(E[0].value), expected)
+
+    def test_maybeDeferredSyncFailure(self):
+        """
+        L{defer.maybeDeferred} should handle a L{failure.Failure} returned by a
+        function and errback with it.
+        """
+        S, E = [], []
+        try:
+            "10" + 5
+        except TypeError:
+            expected = failure.Failure()
+        d = defer.maybeDeferred(lambda: expected)
+        d.addCallbacks(S.append, E.append)
+        self.assertEqual(S, [])
+        self.assertEqual(len(E), 1)
+        self.assertIdentical(E[0], expected)
 
     def test_maybeDeferredAsync(self):
         """
@@ -1227,7 +1293,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         d = defer.Deferred()
         address = id(d)
-        self.assertEqual(repr(d), "<Deferred at 0x{:x}>".format(address))
+        self.assertEqual(repr(d), f"<Deferred at 0x{address:x}>")
 
     def test_reprWithResult(self):
         """
@@ -2004,7 +2070,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "Unhandled Error\nTraceback "
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {!r}".format(expected),
+            f"Expected message starting with: {expected!r}",
         )
 
     def test_errorLogDebugInfo(self):
@@ -2029,7 +2095,7 @@ class LogTests(unittest.SynchronousTestCase):
         expected = "(debug:  I"
         self.assertTrue(
             msg.startswith(expected),
-            "Expected message starting with: {!r}".format(expected),
+            f"Expected message starting with: {expected!r}",
         )
 
     def test_chainedErrorCleanup(self):

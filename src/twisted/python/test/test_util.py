@@ -109,9 +109,7 @@ class NameToLabelTests(TestCase):
         ]
         for inp, out in nameData:
             got = util.nameToLabel(inp)
-            self.assertEqual(
-                got, out, "nameToLabel({!r}) == {!r} != {!r}".format(inp, got, out)
-            )
+            self.assertEqual(got, out, f"nameToLabel({inp!r}) == {got!r} != {out!r}")
 
 
 class UntilConcludesTests(TestCase):

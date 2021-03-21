@@ -503,11 +503,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
     # IReactorSocket (no AF_UNIX on Windows)
 
     if unixEnabled:
-        _supportedAddressFamilies = (
+        _supportedAddressFamilies: Sequence[socket.AddressFamily] = (
             socket.AF_INET,
             socket.AF_INET6,
             socket.AF_UNIX,
-        )  # type: Sequence[socket.AddressFamily]
+        )
     else:
         _supportedAddressFamilies = (
             socket.AF_INET,

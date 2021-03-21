@@ -195,9 +195,7 @@ def getKex(kexAlgorithm):
     @raises ConchError: if the key exchange algorithm is not found.
     """
     if kexAlgorithm not in _kexAlgorithms:
-        raise error.ConchError(
-            "Unsupported key exchange algorithm: {}".format(kexAlgorithm)
-        )
+        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm}")
     return _kexAlgorithms[kexAlgorithm]
 
 

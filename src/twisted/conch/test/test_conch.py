@@ -650,7 +650,7 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:
-            raise SkipTest("{} not supported by ssh client".format(keyExchangeAlgo))
+            raise SkipTest(f"{keyExchangeAlgo} not supported by ssh client")
 
         d = self.execute(
             "echo hello",

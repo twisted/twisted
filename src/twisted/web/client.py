@@ -392,7 +392,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
     def __repr__(self) -> str:
-        return "<{}: {}>".format(self.__class__.__name__, self.url)
+        return f"<{self.__class__.__name__}: {self.url}>"
 
     def setURL(self, url):
         _ensureValidURI(url.strip())
@@ -1610,7 +1610,7 @@ class _StandardEndpointFactory:
             )
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: {!r}".format(uri.scheme))
+            raise SchemeNotSupported(f"Unsupported scheme: {uri.scheme!r}")
 
 
 @implementer(IAgent)

@@ -8,13 +8,23 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.serverFromString}
 @see: L{twisted.internet.endpoints.clientFromString}
 """
-
+from typing import cast, Optional
 
 from twisted.application.internet import StreamServerEndpointService
-from twisted.internet import endpoints
+from twisted.internet import endpoints, interfaces
 
 
-def service(description, factory, reactor=None):
+def _getReactor() -> interfaces.IReactorCore:
+    from twisted.internet import reactor
+
+    return cast(interfaces.IReactorCore, reactor)
+
+
+def service(
+    description: str,
+    factory: interfaces.IProtocolFactory,
+    reactor: Optional[interfaces.IReactorCore] = None,
+) -> StreamServerEndpointService:
     """
     Return the service corresponding to a description.
 
@@ -33,7 +43,7 @@ def service(description, factory, reactor=None):
     @see: L{twisted.internet.endpoints.serverFromString}
     """
     if reactor is None:
-        from twisted.internet import reactor
+        reactor = _getReactor()
 
     svc = StreamServerEndpointService(
         endpoints.serverFromString(reactor, description), factory
@@ -42,7 +52,9 @@ def service(description, factory, reactor=None):
     return svc
 
 
-def listen(description, factory):
+def listen(
+    description: str, factory: interfaces.IProtocolFactory
+) -> interfaces.IListeningPort:
     """
     Listen on a port corresponding to a description.
 
@@ -63,7 +75,9 @@ def listen(description, factory):
     from twisted.internet import reactor
 
     name, args, kw = endpoints._parseServer(description, factory)
-    return getattr(reactor, "listen" + name)(*args, **kw)
+    return cast(
+        interfaces.IListeningPort, getattr(reactor, "listen" + name)(*args, **kw)
+    )
 
 
 __all__ = ["service", "listen"]

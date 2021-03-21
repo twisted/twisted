@@ -434,7 +434,7 @@ class Telnet(protocol.Protocol):
             self.him = self._Perspective()
 
         def __repr__(self) -> str:
-            return "<_OptionState us={} him={}>".format(self.us, self.him)
+            return f"<_OptionState us={self.us} him={self.him}>"
 
     def getOptionState(self, opt):
         return self.options.setdefault(opt, self._OptionState())
@@ -831,7 +831,7 @@ class Telnet(protocol.Protocol):
         @raise NotImplementedError: Always raised.
         """
         raise NotImplementedError(
-            "Don't know how to disable local telnet option {!r}".format(option)
+            f"Don't know how to disable local telnet option {option!r}"
         )
 
     def disableRemote(self, option):
@@ -846,7 +846,7 @@ class Telnet(protocol.Protocol):
         @raise NotImplementedError: Always raised.
         """
         raise NotImplementedError(
-            "Don't know how to disable remote telnet option {!r}".format(option)
+            f"Don't know how to disable remote telnet option {option!r}"
         )
 
 

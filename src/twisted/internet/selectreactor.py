@@ -49,7 +49,7 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase = object  # type: Type[object]
+    _extraBase: Type[object] = object
 else:
     _extraBase = _ThreadedWin32EventsMixin
 

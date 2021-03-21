@@ -40,7 +40,7 @@ class LimitedHistoryLogObserver:
         @param size: The maximum number of events to buffer.  If L{None}, the
             buffer is unbounded.
         """
-        self._buffer = deque(maxlen=size)  # type: Deque[LogEvent]
+        self._buffer: Deque[LogEvent] = deque(maxlen=size)
 
     def __call__(self, event: LogEvent) -> None:
         self._buffer.append(event)

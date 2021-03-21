@@ -68,7 +68,7 @@ class ListenFDs:
         if start is None:
             start = cls._START
 
-        descriptors = []  # type: List[int]
+        descriptors: List[int] = []
 
         try:
             pid = int(environ["LISTEN_PID"])
