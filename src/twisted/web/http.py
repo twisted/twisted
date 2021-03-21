@@ -1870,18 +1870,23 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_CRLF(self) -> bool:
         """
-        Await the carriage return and line feed characters that are the end of chunk marker that follow the
-        chunk data.
+        Await the carriage return and line feed characters that are the end of
+        chunk marker that follow the chunk data.
 
         @returns: C{True} when the CRLF have been read, otherwise C{False}.
+
+        @raises _MalformedChunkedDataError: when anything other than CRLF are
+            received.
         """
-        # TODO: https://twistedmatrix.com/trac/ticket/10137
-        # It should raise an error when receiving malformed end of chunk markers.
-        if self._buffer.startswith(b"\r\n"):
-            self.state = "CHUNK_LENGTH"
-            del self._buffer[0:2]
-            return True
-        return False
+        if len(self._buffer) < 2:
+            return False
+
+        if not self._buffer.startswith(b"\r\n"):
+            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+
+        self.state = "CHUNK_LENGTH"
+        del self._buffer[0:2]
+        return True
 
     def _dataReceived_TRAILER(self) -> bool:
         """
@@ -1891,13 +1896,20 @@ class _ChunkedTransferDecoder:
 
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
+
+        @raises _MalformedChunkedDataError: when anything other than CRLF is
+            received.
         """
-        # TODO: https://twistedmatrix.com/trac/ticket/10137
-        if self._buffer.startswith(b"\r\n"):
-            data = memoryview(self._buffer)[2:].tobytes()
-            del self._buffer[:]
-            self.state = "FINISHED"
-            self.finishCallback(data)
+        if len(self._buffer) < 2:
+            return False
+
+        if not self._buffer.startswith(b"\r\n"):
+            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+
+        data = memoryview(self._buffer)[2:].tobytes()
+        del self._buffer[:]
+        self.state = "FINISHED"
+        self.finishCallback(data)
         return False
 
     def _dataReceived_BODY(self) -> bool:
