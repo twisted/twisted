@@ -1,1 +1,1 @@
-twisted.internet.iocpreactor.udp now properly re-queues its listener when there is a failure conidition on the read from the socket.
+twisted.internet.iocpreactor.udp now properly re-queues its listener when there is a failure condition on the read from the socket.

@@ -307,7 +307,7 @@ class UDPTests(TestCase):
         d.addCallback(cbFinished)
         return d
 
-    def test_server_read_failure(self):
+    def test_serverReadFailure(self):
         """
         When a server fails to successfully read a packet the server should
         still be able to process future packets.
@@ -318,13 +318,13 @@ class UDPTests(TestCase):
         """
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
-        client_port = reactor.listenUDP(0, client, interface="127.0.0.1")
+        clientPort = reactor.listenUDP(0, client, interface="127.0.0.1")
         test_data_to_send = b"Sending test packet to server"
 
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
         serverGotData = server.packetReceived = defer.Deferred()
-        server_port = reactor.listenUDP(0, server, interface="127.0.0.1")
+        serverPort = reactor.listenUDP(0, server, interface="127.0.0.1")
 
         server_client_started_d = defer.DeferredList(
             [clientStarted, serverStarted], fireOnOneErrback=True
@@ -340,7 +340,7 @@ class UDPTests(TestCase):
                 b"write to port no one is listening to", ("127.0.0.1", 80)
             )
             client.transport.write(
-                test_data_to_send, ("127.0.0.1", server_port._realPortNumber)
+                test_data_to_send, ("127.0.0.1", serverPort._realPortNumber)
             )
 
         server_client_started_d.addCallback(cbClientAndServerStarted)
@@ -357,8 +357,8 @@ class UDPTests(TestCase):
         def cleanup(ignored):
             return defer.DeferredList(
                 [
-                    defer.maybeDeferred(client_port.stopListening),
-                    defer.maybeDeferred(server_port.stopListening),
+                    defer.maybeDeferred(clientPort.stopListening),
+                    defer.maybeDeferred(serverPort.stopListening),
                 ],
                 fireOnOneErrback=True,
             )
