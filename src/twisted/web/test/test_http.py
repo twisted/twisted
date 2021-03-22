@@ -1316,6 +1316,34 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
         )
 
+    def test_malformedChunkEnd(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk is followed by characters
+        other than C{\r\n}.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
+        )
+
+    def test_malformedChunkEndFinal(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the terminal zero-length chunk is
+        followed by characters other than C{\r\n}.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
+        )
+
     def test_finish(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length
