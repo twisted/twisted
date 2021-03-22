@@ -35,7 +35,7 @@ Then we create an instance of the Site factory with that resource::
 
 Now we glue that factory to a TCP port::
 
-    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(factory)
 
 Finally, we start the reactor so it can make the program work::
