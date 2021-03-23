@@ -102,7 +102,7 @@ class TwistOptions(Options):
 
             return cast(IReactorCore, reactor)
         else:
-            return cast(IReactorCore, installReactor(name))
+            return installReactor(name)
 
     def opt_log_level(self, levelName: str) -> None:
         """

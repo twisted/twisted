@@ -17,10 +17,15 @@ from typing import (
     TypeVar,
     Tuple,
     Union,
+    cast,
+    overload,
 )
 from collections.abc import Sequence as _Sequence
 
 from twisted.python.compat import comparable, cmp
+
+
+_T = TypeVar("_T")
 
 
 def _dashCapitalize(name: bytes) -> bytes:
@@ -215,22 +220,25 @@ class Headers:
                 "bytes or str" % (type(value),)
             )
 
-        values = self.getRawHeaders(name)
-
-        if values is not None:
-            values.append(value)
-        else:
-            values = [value]
+        # We secretly know getRawHeaders is really returning a list
+        values = cast(List[AnyStr], self.getRawHeaders(name, default=[]))
+        values.append(value)
 
         self.setRawHeaders(name, values)
 
-    _T = TypeVar("_T")
+    @overload
+    def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]:
+        ...
+
+    @overload
+    def getRawHeaders(self, name: AnyStr, default: _T) -> Union[Sequence[AnyStr], _T]:
+        ...
 
     def getRawHeaders(
         self, name: AnyStr, default: Optional[_T] = None
-    ) -> Union[List[AnyStr], Optional[_T]]:
+    ) -> Union[Sequence[AnyStr], Optional[_T]]:
         """
-        Returns a list of headers matching the given name as the raw string
+        Returns a sequence of headers matching the given name as the raw string
         given.
 
         @param name: The name of the HTTP header to get the values of.
@@ -238,7 +246,7 @@ class Headers:
         @param default: The value to return if no header with the given C{name}
             exists.
 
-        @return: If the named header is present, a L{list} of its
+        @return: If the named header is present, a sequence of its
             values.  Otherwise, C{default}.
         """
         encodedName = self._encodeName(name)
@@ -250,7 +258,7 @@ class Headers:
             return [v.decode("utf8") for v in values]
         return values
 
-    def getAllRawHeaders(self) -> Iterator[Tuple[bytes, List[bytes]]]:
+    def getAllRawHeaders(self) -> Iterator[Tuple[bytes, Sequence[bytes]]]:
         """
         Return an iterator of key, value pairs of all headers contained in this
         object, as L{bytes}.  The keys are capitalized in canonical

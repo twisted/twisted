@@ -1706,7 +1706,7 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 
 @implementer(ICipher)
-@attr.s(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class OpenSSLCipher:
     """
     A representation of an OpenSSL cipher.
@@ -1716,7 +1716,7 @@ class OpenSSLCipher:
     @type fullName: L{unicode}
     """
 
-    fullName = attr.ib()
+    fullName: str
 
 
 @lru_cache(maxsize=32)
