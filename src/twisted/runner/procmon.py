@@ -5,6 +5,8 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
+from typing import List, Optional, Dict
+
 import attr
 import incremental
 
@@ -15,7 +17,7 @@ from twisted.protocols import basic
 from twisted.logger import Logger
 
 
-@attr.s(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class _Process:
     """
     The parameters of a process to be restarted.
@@ -37,11 +39,11 @@ class _Process:
     @type cwd: C{str}
     """
 
-    args = attr.ib()
-    uid = attr.ib(default=None)
-    gid = attr.ib(default=None)
-    env = attr.ib(default=attr.Factory(dict))
-    cwd = attr.ib(default=None)
+    args: List[str]
+    uid: Optional[int] = None
+    gid: Optional[int] = None
+    env: Dict[str, str] = attr.ib(default=attr.Factory(dict))
+    cwd: Optional[str] = None
 
     @deprecate.deprecated(incremental.Version("Twisted", 18, 7, 0))
     def toTuple(self):
