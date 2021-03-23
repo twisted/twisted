@@ -11,7 +11,7 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 from zope.interface import implementer
 
 from twisted.python import log, failure, components
