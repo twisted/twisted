@@ -1312,7 +1312,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         def cbSent(result):
             """
-            Called from data transport when tranfer is done.
+            Called from data transport when transfer is done.
             """
             return (TXFR_COMPLETE_OK,)
 

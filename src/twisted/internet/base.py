@@ -292,19 +292,21 @@ class ThreadedResolver:
 
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
-        self._runningQueries: Dict[Deferred, Tuple[Deferred, IDelayedCall]] = {}
+        self._runningQueries: Dict[
+            Deferred[str], Tuple[Deferred[str], IDelayedCall]
+        ] = {}
 
     def _fail(self, name: str, err: str) -> Failure:
         lookupError = error.DNSLookupError(f"address {name!r} not found: {err}")
         return Failure(lookupError)
 
-    def _cleanup(self, name: str, lookupDeferred: Deferred) -> None:
+    def _cleanup(self, name: str, lookupDeferred: Deferred[str]) -> None:
         userDeferred, cancelCall = self._runningQueries[lookupDeferred]
         del self._runningQueries[lookupDeferred]
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: object, name: str, lookupDeferred: Deferred
+        self, result: str, name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -321,7 +323,7 @@ class ThreadedResolver:
 
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         """
         See L{twisted.internet.interfaces.IResolverSimple.getHostByName}.
 
@@ -333,7 +335,7 @@ class ThreadedResolver:
             timeoutDelay = sum(timeout)
         else:
             timeoutDelay = 60
-        userDeferred = defer.Deferred()
+        userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
             self.reactor,
             cast(IReactorThreads, self.reactor).getThreadPool(),
@@ -352,7 +354,7 @@ class ThreadedResolver:
 class BlockingResolver:
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         try:
             address = socket.gethostbyname(name)
         except OSError:
@@ -487,7 +489,7 @@ class _ThreePhaseEvent:
         """
         self.state = "BEFORE"
         self.finishedBefore = []
-        beforeResults: List[object] = []
+        beforeResults: List[Deferred[object]] = []
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
@@ -691,7 +693,9 @@ class ReactorBase(PluggableResolverMixin):
         )
 
     # IReactorCore
-    def resolve(self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> Deferred:
+    def resolve(
+        self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
+    ) -> Deferred[str]:
         """
         Return a Deferred that will resolve a hostname."""
         if not name:

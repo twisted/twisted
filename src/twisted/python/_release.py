@@ -483,7 +483,7 @@ class BuildAPIDocsScript:
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",
-            "http://twistedmatrix.com/",
+            "https://twistedmatrix.com/",
             sourceURL,
             projectRoot.child("twisted"),
             output,
