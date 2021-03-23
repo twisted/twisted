@@ -1292,7 +1292,7 @@ class BaseConnector(ABC):
                 pass
             del self.timeoutID
 
-    def buildProtocol(self, addr: Tuple[str, int]) -> IProtocol:
+    def buildProtocol(self, addr: IAddress) -> Optional[IProtocol]:
         self.state = "connected"
         self.cancelTimeout()
         return self.factory.buildProtocol(addr)

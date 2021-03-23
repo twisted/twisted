@@ -16,7 +16,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
-from twisted.internet.interfaces import ITransport
+from twisted.internet.interfaces import IAddress, ITransport
 from twisted.logger import _loggerFor
 
 
@@ -112,7 +112,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr: Tuple[str, int]) -> "Protocol":
+    def buildProtocol(self, addr: IAddress) -> "Optional[Protocol]":
         """
         Create an instance of a subclass of Protocol.
 
@@ -125,7 +125,7 @@ class Factory:
 
         Override this method to alter how Protocol instances get created.
 
-        @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
+        @param addr: an object implementing L{IAddress}
         """
         assert self.protocol is not None
         p = self.protocol()
