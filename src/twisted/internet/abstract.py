@@ -68,9 +68,9 @@ class _ConsumerMixin:
 
     """
 
-    producer = None
-    producerPaused = False
-    streamingProducer = False
+    producer: Union[interfaces.IPullProducer, interfaces.IPushProducer, None] = None
+    producerPaused: bool = False
+    streamingProducer: bool = False
 
     def startWriting(self):
         """

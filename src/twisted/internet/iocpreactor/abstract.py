@@ -5,7 +5,7 @@
 Abstract file handle class
 """
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from twisted.internet import main, error, interfaces
 from twisted.internet.abstract import _ConsumerMixin, _LogOwner, ReadableBuffer
@@ -30,6 +30,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     File handle that can read and write asynchronously
     """
 
+    producer: Optional[interfaces.IPushProducer]
     # read stuff
     maxReadBuffers = 16
     readBufferSize = 4096
