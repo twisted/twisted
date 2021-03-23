@@ -1550,8 +1550,6 @@ class AppLoggerTests(TestCase):
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
 
-        logger.globalLogPublisher.removeObserver(observer)
-
     def test_stop(self):
         """
         L{app.AppLogger.stop} removes the observer created in C{start}, and
