@@ -26,10 +26,10 @@ knownPlatforms = {
 }
 
 
-_timeFunctions = {
+_timeFunctions: Dict[Optional[str], Callable] = {
     #'win32': time.clock,
     "win32": time.time,
-}  # type: Dict[Optional[str], Callable]
+}
 
 
 class Platform:
@@ -37,7 +37,7 @@ class Platform:
     Gives us information about the platform we're running on.
     """
 
-    type = knownPlatforms.get(os.name)  # type: Optional[str]
+    type: Optional[str] = knownPlatforms.get(os.name)
     seconds = staticmethod(_timeFunctions.get(type, time.time))
     _platform = sys.platform
 

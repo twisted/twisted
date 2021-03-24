@@ -43,7 +43,7 @@ def add(fd: int, path: FilePath, mask: int) -> int:
     """
     wd = cast(int, libc.inotify_add_watch(fd, path.asBytesMode().path, mask))
     if wd < 0:
-        raise INotifyError("Failed to add watch on '{!r}' - ({!r})".format(path, wd))
+        raise INotifyError(f"Failed to add watch on '{path!r}' - ({wd!r})")
     return wd
 
 

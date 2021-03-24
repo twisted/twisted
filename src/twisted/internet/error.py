@@ -92,7 +92,7 @@ class ConnectError(Exception):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.osError:
-            s = "{}: {}".format(s, self.osError)
+            s = f"{s}: {self.osError}"
         if self.args[0]:
             s = "{}: {}".format(s, self.args[0])
         s = "%s." % s

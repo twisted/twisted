@@ -38,7 +38,7 @@ class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
         for modinfo in where.walkModules(importPackages=importPackages):
             if modinfo.name == modname:
                 return modinfo
-        self.fail("Unable to find module {!r} through iteration.".format(modname))
+        self.fail(f"Unable to find module {modname!r} through iteration.")
 
 
 class BasicTests(TwistedModulesTestCase):

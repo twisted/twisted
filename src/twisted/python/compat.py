@@ -37,7 +37,7 @@ from io import IOBase
 from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
-from types import MethodType as _MethodType
+from types import FrameType, MethodType as _MethodType
 from typing import Any, AnyStr, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
@@ -187,22 +187,21 @@ def items(d):
     return list(d.items())
 
 
-def currentframe(n=0):
+def currentframe(n: int = 0) -> FrameType:
     """
     In Python 3, L{inspect.currentframe} does not take a stack-level argument.
     Restore that functionality from Python 2 so we don't have to re-implement
     the C{f_back}-walking loop in places where it's called.
 
     @param n: The number of stack levels above the caller to walk.
-    @type n: L{int}
 
     @return: a frame, n levels up the stack from the caller.
-    @rtype: L{types.FrameType}
     """
     f = inspect.currentframe()
     for x in range(n + 1):
         assert f is not None
         f = f.f_back
+    assert f is not None
     return f
 
 
@@ -225,14 +224,16 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-def cmp(a, b):
+# type note: Can't find a Comparable type, despite
+# https://github.com/python/typing/issues/59
+def cmp(a: object, b: object) -> int:
     """
     Compare two objects.
 
     Returns a negative number if C{a < b}, zero if they are equal, and a
     positive number if C{a > b}.
     """
-    if a < b:
+    if a < b:  # type: ignore[operator]
         return -1
     elif a == b:
         return 0
@@ -500,7 +501,7 @@ def _constructMethod(cls, name, self):
     @type self: any object
 
     @return: a bound method
-    @rtype: L{types.MethodType}
+    @rtype: L{_MethodType}
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
@@ -537,8 +538,7 @@ def _get_async_param(isAsync=None, **kwargs):
 
 def _pypy3BlockingHack():
     """
-    Work around U{this pypy bug
-    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:

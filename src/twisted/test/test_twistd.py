@@ -327,21 +327,13 @@ class ServerOptionsTests(TestCase):
             config.parseOptions,
             ["--logger", "twisted.test.test_twistd.FOOBAR"],
         )
-        if sys.version_info <= (3, 5):
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: 'module' object has no attribute 'FOOBAR'"
-                )
+        self.assertTrue(
+            e.args[0].startswith(
+                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                "imported: module 'twisted.test.test_twistd' "
+                "has no attribute 'FOOBAR'"
             )
-        else:
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: module 'twisted.test.test_twistd' "
-                    "has no attribute 'FOOBAR'"
-                )
-            )
+        )
         self.assertNotIn("\n", e.args[0])
 
     def test_version(self):
@@ -1550,9 +1542,10 @@ class AppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = app.AppLogger({"logfile": filename})
+        sut = app.AppLogger({"logfile": filename})
 
-        logger._getLogObserver()
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1603,7 +1596,7 @@ class AppLoggerTests(TestCase):
 
         self.assertIn("starting up", textFromEventDict(logs[0]))
         warnings = self.flushWarnings([self.test_legacyObservers])
-        self.assertEqual(len(warnings), 0)
+        self.assertEqual(len(warnings), 0, warnings)
 
     def test_unmarkedObserversDeprecated(self):
         """
@@ -1619,7 +1612,7 @@ class AppLoggerTests(TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings([self.test_unmarkedObserversDeprecated])
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(warnings), 1, warnings)
         self.assertEqual(
             warnings[0]["message"],
             (
@@ -1691,8 +1684,10 @@ class UnixAppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1723,8 +1718,10 @@ class UnixAppLoggerTests(TestCase):
 
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(self.signals, [])
 

@@ -66,7 +66,7 @@ def printResult(result):
     answers, authority, additional = result
     if answers:
         sys.stdout.write(
-            ", ".join("{} IN {}".format(a.name.name, a.payload) for a in answers) + "\n"
+            ", ".join(f"{a.name.name} IN {a.payload}" for a in answers) + "\n"
         )
 
 
@@ -86,7 +86,7 @@ def main(reactor, *argv):
         options.parseOptions(argv)
     except usage.UsageError as errortext:
         sys.stderr.write(str(options) + "\n")
-        sys.stderr.write("ERROR: {}\n".format(errortext))
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
     pending = []

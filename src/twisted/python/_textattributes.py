@@ -37,7 +37,7 @@ class _Attribute(FancyEqMixin):
     @ivar children: Child attributes.
     """
 
-    compareAttributes = ("children",)  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ("children",)
 
     def __init__(self):
         self.children = []
@@ -206,7 +206,7 @@ class DefaultFormattingState(FancyEqMixin):
     text.
     """
 
-    compareAttributes = ("_dummy",)  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ("_dummy",)
 
     _dummy = 0
 
@@ -295,7 +295,7 @@ def flatten(output, attrs, attributeRenderer="toVT102"):
     @return: A string expressing the text and display attributes specified by
         L{output}.
     """
-    flattened = []  # type: List[str]
+    flattened: List[str] = []
     output.serialize(flattened.append, attrs, attributeRenderer)
     return "".join(flattened)
 

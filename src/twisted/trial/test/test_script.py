@@ -202,9 +202,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(filename)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual(
-                "File {!r} doesn't exist\n".format(filename), buffy.getvalue()
-            )
+            self.assertEqual(f"File {filename!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -227,9 +225,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(moduleName)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual(
-                "File {!r} doesn't exist\n".format(moduleName), buffy.getvalue()
-            )
+            self.assertEqual(f"File {moduleName!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -307,7 +303,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         for filename in ["test_script.py", "twisted/trial/test/test_script.py"]:
             self.assertTrue(
                 trial.isTestFile(filename),
-                "{!r} should be a test file".format(filename),
+                f"{filename!r} should be a test file",
             )
         for filename in [
             "twisted/trial/test/moduletest.py",
@@ -316,7 +312,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         ]:
             self.assertFalse(
                 trial.isTestFile(filename),
-                "{!r} should *not* be a test file".format(filename),
+                f"{filename!r} should *not* be a test file",
             )
 
 

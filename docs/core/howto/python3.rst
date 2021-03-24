@@ -4,7 +4,7 @@ Porting to Python 3
 Introduction
 ------------
 
-Twisted currently supports only Python 3.5+.
+Twisted currently supports only Python 3.6+.
 This document covers Twisted-specific issues in porting your code to Python 3.
 
 API Differences

@@ -631,7 +631,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString("bad packet length {}".format(packetLen)),
+                networkString(f"bad packet length {packetLen}"),
             )
             return
         if len(self.buf) < packetLen + 4 + ms:
@@ -733,7 +733,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, "ssh_{}".format(messageType), None)
+            f = getattr(self, f"ssh_{messageType}", None)
             if f is not None:
                 f(payload)
             else:
@@ -1292,7 +1292,7 @@ class SSHTransportBase(protocol.Protocol):
             )
         else:
             raise UnsupportedAlgorithm(
-                "Cannot encode elliptic curve public key for {!r}".format(self.kexAlg)
+                f"Cannot encode elliptic curve public key for {self.kexAlg!r}"
             )
 
     def _generateECSharedSecret(self, ecPriv, theirECPubBytes):

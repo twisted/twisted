@@ -19,7 +19,6 @@ jobs:
 - template: 'macos_test_jobs.yml'
   parameters:
     pythonVersions:
-      py35: "3.5"
       py36: "3.6"
       py37: "3.7"
       py38: "3.8"
@@ -28,7 +27,6 @@ jobs:
 - template: 'windows_test_jobs.yml'
   parameters:
     pythonVersions:
-      py35: "3.5"
       py36: "3.6"
       py37: "3.7"
       py38: "3.8"
@@ -38,7 +36,6 @@ jobs:
 - template: 'windows_test_jobs.yml'
   parameters:
     pythonVersions:
-      py35: "3.5"
       py36: "3.6"
       py37: "3.7"
       py38: "3.8"

@@ -149,10 +149,10 @@ class Angle(FancyEqMixin):
         Angles.HEADING: "Heading",
     }
 
-    compareAttributes = (
+    compareAttributes: ClassVar[Sequence[str]] = (
         "angleType",
         "inDecimalDegrees",
-    )  # type: ClassVar[Sequence[str]]
+    )
 
     def __init__(self, angle=None, angleType=None):
         """
@@ -482,7 +482,7 @@ class Altitude(FancyEqMixin):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Altitude ({} m)>".format(self._altitude)
+        return f"<Altitude ({self._altitude} m)>"
 
 
 class _BaseSpeed(FancyEqMixin):
@@ -549,7 +549,7 @@ class _BaseSpeed(FancyEqMixin):
         @rtype: C{str}
         """
         speedValue = round(self.inMetersPerSecond, 2)
-        return "<{} ({} m/s)>".format(self.__class__.__name__, speedValue)
+        return f"<{self.__class__.__name__} ({speedValue} m/s)>"
 
 
 class Speed(_BaseSpeed):
@@ -568,7 +568,7 @@ class Speed(_BaseSpeed):
         @raises ValueError: Raised if C{speed} is negative.
         """
         if speed < 0:
-            raise ValueError("negative speed: {!r}".format(speed))
+            raise ValueError(f"negative speed: {speed!r}")
 
         _BaseSpeed.__init__(self, speed)
 
@@ -846,7 +846,7 @@ class PositioningBeacon:
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Beacon ({s.identifier})>".format(s=self)
+        return f"<Beacon ({self.identifier})>"
 
 
 class Satellite(PositioningBeacon):

@@ -11,10 +11,9 @@
 
     <nav class="navbar navbar-default">
       <div class="container">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="index.html">
-            Twisted API Documentation
-          </a>
+        <div class="navbar-header navbar-brand">
+          <t:transparent t:render="project">Some Project</t:transparent>
+          <a href="index.html">API Documentation</a>
         </div>
       </div>
     </nav>
@@ -27,14 +26,13 @@
       </div>
     </div>
 
-    <div id="showPrivate">
-      <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
-    </div>
-
     <div class="container">
 
       <div class="page-header">
         <t:slot name="heading"><h1>Heading</h1></t:slot>
+        <div id="showPrivate">
+          <button class="btn btn-link" onclick="togglePrivate()">Toggle Private API</button>
+        </div>
       </div>
 
       <div class="categoryHeader">

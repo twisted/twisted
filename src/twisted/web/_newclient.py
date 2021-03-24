@@ -607,7 +607,7 @@ def _ensureValidMethod(method):
     """
     if _VALID_METHOD.match(method):
         return method
-    raise ValueError("Invalid method {!r}".format(method))
+    raise ValueError(f"Invalid method {method!r}")
 
 
 _VALID_URI = re.compile(br"\A[\x21-\x7e]+\Z")
@@ -633,7 +633,7 @@ def _ensureValidURI(uri):
     """
     if _VALID_URI.match(uri):
         return uri
-    raise ValueError("Invalid URI {!r}".format(uri))
+    raise ValueError(f"Invalid URI {uri!r}")
 
 
 @implementer(IClientRequest)
@@ -1029,9 +1029,7 @@ def makeStatefulDispatcher(name, template):
     def dispatcher(self, *args, **kwargs):
         func = getattr(self, "_" + name + "_" + self._state, None)
         if func is None:
-            raise RuntimeError(
-                "{!r} has no {} method in state {}".format(self, name, self._state)
-            )
+            raise RuntimeError(f"{self!r} has no {name} method in state {self._state}")
         return func(*args, **kwargs)
 
     dispatcher.__doc__ = template.__doc__

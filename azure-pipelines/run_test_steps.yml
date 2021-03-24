@@ -9,7 +9,6 @@ parameters:
 - name: pythonVersion
   type: string
   values:
-  - '3.5'
   - '3.6'
   - '3.7'
   - '3.8'
@@ -27,6 +26,10 @@ parameters:
   default: false
 
 steps:
+- checkout: self
+  clean: true
+  fetchDepth: 1
+
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"
   inputs:
@@ -49,6 +52,8 @@ steps:
   - script: 'python -m tox -e alldeps-withcov-posix'
     displayName: 'Run tests'
     continueOnError: ${{ parameters.allowFailure }}
+    env:
+      TRIAL_ARGS: "-j 4"
 
 - ${{ if eq(parameters.platform, 'windows') }}:
   - script: 'python -m tox -e alldeps-withcov-windows'
@@ -57,5 +62,7 @@ steps:
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
-- script: 'python -m tox -e coverage-prepare,coveralls-push'
+- bash:  |
+    python -m tox -e coverage-prepare,coveralls-push
+    bash <(curl -s https://codecov.io/bash) -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
   displayName: 'Report coverage'

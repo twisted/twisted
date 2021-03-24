@@ -81,7 +81,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _repr = None  # type: Optional[str]
+    _repr: Optional[str] = None
 
     def __init__(
         self,
@@ -238,7 +238,7 @@ class DelayedCall:
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
             if hasattr(self.func, "__qualname__"):
-                func = self.func.__qualname__  # type: Optional[str]
+                func: Optional[str] = self.func.__qualname__
             elif hasattr(self.func, "__name__"):
                 func = self.func.func_name  # type: ignore[attr-defined]
                 if hasattr(self.func, "im_class"):
@@ -292,21 +292,21 @@ class ThreadedResolver:
 
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
-        self._runningQueries = {}  # type: Dict[Deferred, Tuple[Deferred, IDelayedCall]]
+        self._runningQueries: Dict[
+            Deferred[str], Tuple[Deferred[str], IDelayedCall]
+        ] = {}
 
     def _fail(self, name: str, err: str) -> Failure:
-        lookupError = error.DNSLookupError(
-            "address {!r} not found: {}".format(name, err)
-        )
+        lookupError = error.DNSLookupError(f"address {name!r} not found: {err}")
         return Failure(lookupError)
 
-    def _cleanup(self, name: str, lookupDeferred: Deferred) -> None:
+    def _cleanup(self, name: str, lookupDeferred: Deferred[str]) -> None:
         userDeferred, cancelCall = self._runningQueries[lookupDeferred]
         del self._runningQueries[lookupDeferred]
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: object, name: str, lookupDeferred: Deferred
+        self, result: str, name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -323,7 +323,7 @@ class ThreadedResolver:
 
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         """
         See L{twisted.internet.interfaces.IResolverSimple.getHostByName}.
 
@@ -335,7 +335,7 @@ class ThreadedResolver:
             timeoutDelay = sum(timeout)
         else:
             timeoutDelay = 60
-        userDeferred = defer.Deferred()
+        userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
             self.reactor,
             cast(IReactorThreads, self.reactor).getThreadPool(),
@@ -354,11 +354,11 @@ class ThreadedResolver:
 class BlockingResolver:
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         try:
             address = socket.gethostbyname(name)
         except OSError:
-            msg = "address {!r} not found".format(name)
+            msg = f"address {name!r} not found"
             err = error.DNSLookupError(msg)
             return defer.fail(err)
         else:
@@ -406,9 +406,9 @@ class _ThreePhaseEvent:
     """
 
     def __init__(self) -> None:
-        self.before = []  # type: List[_ThreePhaseEventTrigger]
-        self.during = []  # type: List[_ThreePhaseEventTrigger]
-        self.after = []  # type: List[_ThreePhaseEventTrigger]
+        self.before: List[_ThreePhaseEventTrigger] = []
+        self.during: List[_ThreePhaseEventTrigger] = []
+        self.after: List[_ThreePhaseEventTrigger] = []
         self.state = "BASE"
 
     def addTrigger(
@@ -416,7 +416,7 @@ class _ThreePhaseEvent:
         phase: str,
         callable: _ThreePhaseEventTriggerCallable,
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _ThreePhaseEventTriggerHandle:
         """
         Add a trigger to the indicate phase.
@@ -489,7 +489,7 @@ class _ThreePhaseEvent:
         """
         self.state = "BEFORE"
         self.finishedBefore = []
-        beforeResults = []  # type: List[object]
+        beforeResults: List[Deferred[object]] = []
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
@@ -526,8 +526,8 @@ class PluggableResolverMixin:
     @ivar _nameResolver: The installed L{IHostnameResolver}.
     """
 
-    resolver = BlockingResolver()  # type: IResolverSimple
-    _nameResolver = _SimpleResolverComplexifier(resolver)  # type: IHostnameResolver
+    resolver: IResolverSimple = BlockingResolver()
+    _nameResolver: IHostnameResolver = _SimpleResolverComplexifier(resolver)
 
     # IReactorPluggableResolver
     def installResolver(self, resolver: IResolverSimple) -> IResolverSimple:
@@ -606,10 +606,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.threadCallQueue = []  # type: List[_ThreadCall]
-        self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
-        self._pendingTimedCalls = []  # type: List[DelayedCall]
-        self._newTimedCalls = []  # type: List[DelayedCall]
+        self.threadCallQueue: List[_ThreadCall] = []
+        self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
+        self._pendingTimedCalls: List[DelayedCall] = []
+        self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
         self.running = False
         self._started = False
@@ -617,8 +617,8 @@ class ReactorBase(PluggableResolverMixin):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
-        self._internalReaders = set()  # type: Set[Any]
-        self.waker = None  # type: Any
+        self._internalReaders: Set[Any] = set()
+        self.waker: Any = None
 
         # Arrange for the running attribute to change to True at the right time
         # and let a subclass possibly do other things at that time (eg install
@@ -693,7 +693,9 @@ class ReactorBase(PluggableResolverMixin):
         )
 
     # IReactorCore
-    def resolve(self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> Deferred:
+    def resolve(
+        self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
+    ) -> Deferred[str]:
         """
         Return a Deferred that will resolve a hostname."""
         if not name:
@@ -787,12 +789,12 @@ class ReactorBase(PluggableResolverMixin):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _SystemEventID:
         """
         See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
+        assert builtins.callable(callable), f"{callable} is not callable"
         if eventType not in self._eventTriggers:
             self._eventTriggers[eventType] = _ThreePhaseEvent()
         return _SystemEventID(
@@ -868,8 +870,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
-        assert delay >= 0, "{} is not greater than or equal to 0 seconds".format(delay)
+        assert builtins.callable(callable), f"{callable} is not callable"
+        assert delay >= 0, f"{delay} is not greater than or equal to 0 seconds"
         delayedCall = DelayedCall(
             self.seconds() + delay,
             callable,
@@ -1101,9 +1103,7 @@ class ReactorBase(PluggableResolverMixin):
         for arg in args:
             _arg = argChecker(arg)
             if _arg is None:
-                raise TypeError(
-                    "Arguments contain a non-string value: {!r}".format(arg)
-                )
+                raise TypeError(f"Arguments contain a non-string value: {arg!r}")
             else:
                 outputArgs.append(_arg)
 
@@ -1151,7 +1151,7 @@ class ReactorBase(PluggableResolverMixin):
             See
             L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
-            assert callable(f), "{} is not callable".format(f)
+            assert callable(f), f"{f} is not callable"
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
             # won't work in Jython.
@@ -1218,7 +1218,7 @@ class ReactorBase(PluggableResolverMixin):
         def callFromThread(
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
-            assert callable(f), "{} is not callable".format(f)
+            assert callable(f), f"{f} is not callable"
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kwargs))
 
@@ -1267,7 +1267,7 @@ class BaseConnector(ABC):
         if not self.factoryStarted:
             self.factory.doStart()
             self.factoryStarted = 1
-        self.transport = self._makeTransport()  # type: Optional[Client]
+        self.transport: Optional[Client] = self._makeTransport()
         if self.timeout is not None:
             self.timeoutID = self.reactor.callLater(
                 self.timeout, self.transport.failIfNotConnected, error.TimeoutError()
@@ -1335,8 +1335,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None  # type: socket.AddressFamily
-    socketType = None  # type: socket.SocketKind
+    addressFamily: socket.AddressFamily = None  # type: ignore[assignment]
+    socketType: socket.SocketKind = None  # type: ignore[assignment]
 
     def createInternetSocket(self) -> socket.socket:
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1441,4 +1441,4 @@ class _SignalReactorMixin:
                 log.msg("Main loop terminated.")
 
 
-__all__ = []  # type: List[str]
+__all__: List[str] = []

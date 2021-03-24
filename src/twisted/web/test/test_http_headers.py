@@ -296,7 +296,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({{{!r}: [{!r}, {!r}]}})".format(foo, bar, baz),
+            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_reprWithRawBytes(self):
@@ -313,7 +313,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz\xe1"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({{{!r}: [{!r}, {!r}]}})".format(foo, bar, baz),
+            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_subclassRepr(self):
@@ -330,7 +330,7 @@ class BytesHeadersTests(TestCase):
 
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            "FunnyHeaders({{{!r}: [{!r}, {!r}]}})".format(foo, bar, baz),
+            f"FunnyHeaders({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_copy(self):

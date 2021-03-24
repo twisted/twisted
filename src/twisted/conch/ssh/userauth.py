@@ -143,18 +143,16 @@ class SSHUserAuthServer(service.SSHService):
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError("unsupported authentication, failing"))
         kind = nativeString(kind.replace(b"-", b"_"))
-        f = getattr(self, "auth_{}".format(kind), None)
+        f = getattr(self, f"auth_{kind}", None)
         if f:
             ret = f(data)
             if not ret:
                 return defer.fail(
-                    error.ConchError(
-                        "{} return None instead of a Deferred".format(kind)
-                    )
+                    error.ConchError(f"{kind} return None instead of a Deferred")
                 )
             else:
                 return ret
-        return defer.fail(error.ConchError("bad auth type: {}".format(kind)))
+        return defer.fail(error.ConchError(f"bad auth type: {kind}"))
 
     def ssh_USERAUTH_REQUEST(self, packet):
         """
@@ -192,9 +190,7 @@ class SSHUserAuthServer(service.SSHService):
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport, self.nextService)
         if not service:
-            raise error.ConchError(
-                "could not get next service: {}".format(self.nextService)
-            )
+            raise error.ConchError(f"could not get next service: {self.nextService}")
         self._log.debug(
             "{user!r} authenticated with {method!r}", user=self.user, method=self.method
         )
