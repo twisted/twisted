@@ -56,7 +56,13 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = list(self.privateKeys.keys())
+        # Advertise only the host-key algorithms that correspond to
+        # keys we have
+        t.supportedPublicKeys = [
+            keyAlgorithm
+            for keyAlgorithm in t.supportedPublicKeys
+            if keyAlgorithm in self.privateKeys
+        ]
         if not self.primes:
             self._log.info(
                 "disabling non-fixed-group key exchange algorithms "
