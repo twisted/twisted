@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info, implementation, version_info
 import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
@@ -43,7 +43,7 @@ from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python.failure import Failure, _extraneous
 from twisted.python import lockfile
-from twisted.python.compat import cmp, comparable, _PYPY
+from twisted.python.compat import cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
 
 try:
@@ -1612,7 +1612,7 @@ def _inlineCallbacks(
                 # The contextvars backport and our no-op shim add an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
-            elif _PYPY:
+            elif implementation.name == "pypy":
                 # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
