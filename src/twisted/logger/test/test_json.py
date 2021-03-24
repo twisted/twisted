@@ -7,13 +7,11 @@ Tests for L{twisted.logger._json}.
 
 from io import StringIO, BytesIO
 from typing import Any, IO, List, Optional, Sequence, cast
-from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 
@@ -102,7 +100,6 @@ class SaveLoadTests(TestCase):
             {"\u1234": "\u4321", "3": {"unpersistable": True}},
         )
 
-    @skipIf(_PYPY, "https://bitbucket.org/pypy/pypy/issues/3052/")
     def test_saveBytes(self) -> None:
         """
         Any L{bytes} objects will be saved as if they are latin-1 so they can
