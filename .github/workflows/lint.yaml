@@ -28,6 +28,19 @@ jobs:
         python -m pip install --upgrade pip tox
         tox --notest
 
+    - name: Runner info
+      uses: twisted/python-info-action@v1
+
+    - name: Tox lint info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/lint/*/python
+
+    - name: Tox newsfragment info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/newsfragment/*/python
+
     - name: Lint
       run: |
         python --version
