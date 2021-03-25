@@ -25,7 +25,7 @@ else:
 
 
 # The Twisted version in which UsernameHashedPassword is first deprecated.
-_uhpVersion = Version("Twisted", "NEXT", 0, 0)
+_uhpVersion = Version("Twisted", 21, 2, 0)
 
 
 class ITestable(Interface):

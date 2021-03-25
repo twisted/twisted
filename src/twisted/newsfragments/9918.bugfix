@@ -1,1 +1,0 @@
-Descriptive error messages from twisted.internet.error are now present when running with 'python -OO'.

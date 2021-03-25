@@ -1599,7 +1599,7 @@ class POP3ClientDeprecationTests(unittest.TestCase):
         self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]["message"],
-            "twisted.mail.pop3client was deprecated in Twisted NEXT. "
+            "twisted.mail.pop3client was deprecated in Twisted 21.2.0. "
             "Use twisted.mail.pop3 instead.",
         )
         self.assertEqual(len(warningsShown), 1)

@@ -1,1 +1,0 @@
-Comparator methods such as __eq__() now always return NotImplemented for uncomparable types.
