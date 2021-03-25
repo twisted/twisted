@@ -1,1 +1,0 @@
-INotify will close its file descriptor if a directory is automatically removed by twisted from the watchlist because it's deleted, avoiding orphaned filedescriptors.
