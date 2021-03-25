@@ -111,9 +111,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(self.filePath(b""))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(
-            str(e), "non-integer PID value in PID file: {!r}".format(pidValue)
-        )
+        self.assertEqual(str(e), f"non-integer PID value in PID file: {pidValue!r}")
 
     def test_readWithBogusPID(self) -> None:
         """
@@ -124,9 +122,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         pidFile = PIDFile(self.filePath(pidValue))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(
-            str(e), "non-integer PID value in PID file: {!r}".format(pidValue)
-        )
+        self.assertEqual(str(e), f"non-integer PID value in PID file: {pidValue!r}")
 
     def test_readDoesntExist(self) -> None:
         """

@@ -1,10 +1,16 @@
 #!/usr/bin/env python
-
+#
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+#
 # This script is not meant to be distributed to users of Twisted.
-# It is only for use in making upstream Twisted releases.
+# It is used for:
+# * testing the API docs (via CI)
+# * getting local version for API docs (via tox).
+#
+# The script is also used by pydoctor CI tests: tox -e twisted-apidoc
+# https://github.com/twisted/pydoctor/blob/master/tox.ini
+#
 
 import sys
 from twisted.python._release import BuildAPIDocsScript

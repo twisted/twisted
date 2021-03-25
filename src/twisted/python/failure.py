@@ -56,10 +56,10 @@ def format_frames(frames, write, detail="default"):
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:
-            w("{}:{}:{}\n".format(filename, lineno, method))
+            w(f"{filename}:{lineno}:{method}\n")
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
-            w('  File "{}", line {}, in {}\n'.format(filename, lineno, method))
+            w(f'  File "{filename}", line {lineno}, in {method}\n')
             w("    %s\n" % linecache.getline(filename, lineno).strip())
     elif detail == "verbose-vars-not-captured":
         for method, filename, lineno, localVars, globalVars in frames:
@@ -705,7 +705,7 @@ class Failure(BaseException):
         if self.frames:
             if not elideFrameworkCode:
                 format_frames(self.stack[-traceupLength:], w, formatDetail)
-                w("{}\n".format(EXCEPTION_CAUGHT_HERE))
+                w(f"{EXCEPTION_CAUGHT_HERE}\n")
             format_frames(self.frames, w, formatDetail)
         elif not detail == "brief":
             # Yeah, it's not really a traceback, despite looking like one...

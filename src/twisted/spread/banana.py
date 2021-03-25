@@ -246,9 +246,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     # the sender issues VOCAB only for dialect pb
                     gotItem(item)
                 else:
-                    raise NotImplementedError(
-                        "Invalid item for pb protocol {!r}".format(item)
-                    )
+                    raise NotImplementedError(f"Invalid item for pb protocol {item!r}")
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
@@ -256,7 +254,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 else:
                     return
             else:
-                raise NotImplementedError("Invalid Type Byte {!r}".format(typebyte))
+                raise NotImplementedError(f"Invalid Type Byte {typebyte!r}")
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)

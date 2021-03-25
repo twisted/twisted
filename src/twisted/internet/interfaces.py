@@ -48,7 +48,7 @@ if TYPE_CHECKING:
         ServerFactory,
     )
     from twisted.internet.ssl import ClientContextFactory
-    from twisted.names.dns import Query
+    from twisted.names.dns import Query, RRHeader
     from twisted.protocols.tls import TLSMemoryBIOProtocol
 
     from twisted.python.runtime import platform
@@ -104,7 +104,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred":
+    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -221,7 +221,9 @@ class IHostnameResolver(Interface):
 
 
 class IResolver(IResolverSimple):
-    def query(query: "Query", timeout: Sequence[int]) -> "Deferred":
+    def query(
+        query: "Query", timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Dispatch C{query} to the method which can handle its type.
 
@@ -239,7 +241,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupAddress(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A record lookup.
 
@@ -256,7 +260,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress6(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupAddress6(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A6 record lookup.
 
@@ -273,7 +279,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupIPV6Address(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupIPV6Address(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AAAA record lookup.
 
@@ -290,7 +298,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailExchange(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupMailExchange(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MX record lookup.
 
@@ -307,7 +317,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNameservers(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupNameservers(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an NS record lookup.
 
@@ -324,7 +336,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupCanonicalName(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupCanonicalName(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a CNAME record lookup.
 
@@ -341,7 +355,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailBox(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupMailBox(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MB record lookup.
 
@@ -358,7 +374,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailGroup(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupMailGroup(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MG record lookup.
 
@@ -375,7 +393,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailRename(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupMailRename(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MR record lookup.
 
@@ -392,7 +412,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupPointer(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupPointer(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a PTR record lookup.
 
@@ -409,7 +431,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAuthority(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupAuthority(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SOA record lookup.
 
@@ -426,7 +450,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNull(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupNull(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NULL record lookup.
 
@@ -443,7 +469,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupWellKnownServices(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupWellKnownServices(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a WKS record lookup.
 
@@ -460,7 +488,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupHostInfo(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupHostInfo(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a HINFO record lookup.
 
@@ -477,7 +507,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailboxInfo(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupMailboxInfo(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MINFO record lookup.
 
@@ -494,7 +526,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupText(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupText(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a TXT record lookup.
 
@@ -511,7 +545,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupResponsibility(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupResponsibility(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an RP record lookup.
 
@@ -528,7 +564,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAFSDatabase(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupAFSDatabase(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AFSDB record lookup.
 
@@ -545,7 +583,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupService(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupService(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SRV record lookup.
 
@@ -562,7 +602,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAllRecords(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupAllRecords(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an ALL_RECORD lookup.
 
@@ -579,7 +621,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupSenderPolicy(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupSenderPolicy(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a SPF record lookup.
 
@@ -596,7 +640,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNamingAuthorityPointer(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupNamingAuthorityPointer(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NAPTR record lookup.
 
@@ -613,7 +659,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupZone(name: str, timeout: Sequence[int]) -> "Deferred":
+    def lookupZone(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AXFR record lookup.
 
@@ -1287,7 +1335,7 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> "Deferred":
+    def resolve(name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         Return a L{twisted.internet.defer.Deferred} that will resolve
         a hostname.
@@ -1344,7 +1392,7 @@ class IReactorCore(Interface):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> Any:
         """
         Add a function to be called when a system event occurs.
@@ -1978,7 +2026,7 @@ class IProtocolFactory(Interface):
     Interface for protocol factories.
     """
 
-    def buildProtocol(addr: Tuple[str, int]) -> Optional[IProtocol]:
+    def buildProtocol(addr: IAddress) -> Optional[IProtocol]:
         """
         Called when a connection has been established to addr.
 
@@ -2266,7 +2314,7 @@ class ITLSTransport(ITCPTransport):
             For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
             servers, use L{twisted.internet.ssl.CertificateOptions}.
 
-        @param contextFactory: L{IOpenSSLClientConnectionCreator} or
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
@@ -2559,7 +2607,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> "Deferred":
+    def joinGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2567,7 +2615,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> "Deferred":
+    def leaveGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Leave multicast group, return L{Deferred} of success.
         """
@@ -2581,7 +2629,7 @@ class IStreamClientEndpoint(Interface):
     @since: 10.1
     """
 
-    def connect(protocolFactory: IProtocolFactory) -> "Deferred":
+    def connect(protocolFactory: IProtocolFactory) -> "Deferred[IProtocol]":
         """
         Connect the C{protocolFactory} to the location specified by this
         L{IStreamClientEndpoint} provider.
@@ -2602,7 +2650,7 @@ class IStreamServerEndpoint(Interface):
     @since: 10.1
     """
 
-    def listen(protocolFactory: IProtocolFactory) -> "Deferred":
+    def listen(protocolFactory: IProtocolFactory) -> "Deferred[IListeningPort]":
         """
         Listen with C{protocolFactory} at the location specified by this
         L{IStreamServerEndpoint} provider.

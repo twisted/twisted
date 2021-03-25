@@ -9,7 +9,7 @@ Asynchronous Messaging Protocol Overview
 ========================================
 
 
-The purpose of this guide is to describe the uses for and usage of :api:`twisted.protocols.amp <twisted.protocols.amp>` beyond what is explained in the API documentation.  It will show you how to implement an AMP server which can respond to commands or interact directly with individual messages.  It will also show you how to implement an AMP client which can issue commands to a server.
+The purpose of this guide is to describe the uses for and usage of :py:mod:`twisted.protocols.amp` beyond what is explained in the API documentation.  It will show you how to implement an AMP server which can respond to commands or interact directly with individual messages.  It will also show you how to implement an AMP client which can issue commands to a server.
 
     
 
@@ -25,7 +25,7 @@ Setting Up
 
 
     
-AMP runs over a stream-oriented connection-based protocol, such as TCP or SSL.  Before you can use any features of the AMP protocol, you need a connection.  The protocol class to use to establish an AMP connection is :api:`twisted.protocols.amp.AMP <AMP>` .  Connection setup works as it does for almost all protocols in Twisted.  For example, you can set up a listening AMP server using a server endpoint:
+AMP runs over a stream-oriented connection-based protocol, such as TCP or SSL.  Before you can use any features of the AMP protocol, you need a connection.  The protocol class to use to establish an AMP connection is :py:class:`AMP <twisted.protocols.amp.AMP>` .  Connection setup works as it does for almost all protocols in Twisted.  For example, you can set up a listening AMP server using a server endpoint:
 
     
 
@@ -53,7 +53,7 @@ Commands
 
 
     
-Either side of an AMP connection can issue a command to the other side.  Each kind of command is represented as a subclass of :api:`twisted.protocols.amp.Command <Command>` .  A ``Command`` defines arguments, response values, and error conditions.
+Either side of an AMP connection can issue a command to the other side.  Each kind of command is represented as a subclass of :py:class:`Command <twisted.protocols.amp.Command>` .  A ``Command`` defines arguments, response values, and error conditions.
 
     
 

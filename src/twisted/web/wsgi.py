@@ -405,18 +405,14 @@ class _WSGIResponse:
 
             # However, the sequence MUST contain only 2 elements.
             if len(header) != 2:
-                raise TypeError(
-                    "header must be a (str, str) tuple, not {!r}".format(header)
-                )
+                raise TypeError(f"header must be a (str, str) tuple, not {header!r}")
 
             # Both elements MUST be native strings. Non-native strings will be
             # rejected by the underlying HTTP machinery in any case, but we
             # reject them here in order to provide a more informative error.
             for elem in header:
                 if not isinstance(elem, str):
-                    raise TypeError(
-                        "header must be (str, str) tuple, not {!r}".format(header)
-                    )
+                    raise TypeError(f"header must be (str, str) tuple, not {header!r}")
 
         self.status = status
         self.headers = headers

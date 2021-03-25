@@ -164,7 +164,7 @@ class InsensitiveDict(MutableMapping):
         """
         String representation of the dictionary.
         """
-        items = ", ".join([("{!r}: {!r}".format(k, v)) for k, v in self.items()])
+        items = ", ".join([(f"{k!r}: {v!r}") for k, v in self.items()])
         return "InsensitiveDict({%s})" % items
 
     def iterkeys(self):
@@ -186,7 +186,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
@@ -449,12 +449,12 @@ def searchupwards(start, files=[], dirs=[]):
         candidate = join(parents) + os.sep
         allpresent = 1
         for f in files:
-            if not exists("{}{}".format(candidate, f)):
+            if not exists(f"{candidate}{f}"):
                 allpresent = 0
                 break
         if allpresent:
             for d in dirs:
-                if not isdir("{}{}".format(candidate, d)):
+                if not isdir(f"{candidate}{d}"):
                     allpresent = 0
                     break
         if allpresent:
@@ -609,7 +609,9 @@ class FancyStrMixin:
     """
 
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]
+    showAttributes: Sequence[
+        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+    ] = ()
 
     def __str__(self) -> str:
         r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
@@ -639,7 +641,7 @@ class FancyEqMixin:
     C{compareAttributes}.
     """
 
-    compareAttributes = ()  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ()
 
     def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
@@ -733,8 +735,8 @@ def switchUID(uid, gid, euid=False):
     if uid is not None:
         if uid == getuid():
             uidText = euid and "euid" or "uid"
-            actionText = "tried to drop privileges and set{} {}".format(uidText, uid)
-            problemText = "{} is already {}".format(uidText, getuid())
+            actionText = f"tried to drop privileges and set{uidText} {uid}"
+            problemText = f"{uidText} is already {getuid()}"
             warnings.warn(
                 "{} but {}; should we be root? Continuing.".format(
                     actionText, problemText
@@ -846,9 +848,9 @@ def uidFromString(uidString):
     """
     Convert a user identifier, as a string, into an integer UID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a UID or the
-        name of a user which can be converted to a UID via L{pwd.getpwnam}.
+    @type uidString: C{str}
+    @param uidString: A string giving the base-ten representation of a UID or
+        the name of a user which can be converted to a UID via L{pwd.getpwnam}.
 
     @rtype: C{int}
     @return: The integer UID corresponding to the given string.
@@ -868,9 +870,9 @@ def gidFromString(gidString):
     """
     Convert a group identifier, as a string, into an integer GID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a GID or the
-        name of a group which can be converted to a GID via L{grp.getgrnam}.
+    @type gidString: C{str}
+    @param gidString: A string giving the base-ten representation of a GID or
+        the name of a group which can be converted to a GID via L{grp.getgrnam}.
 
     @rtype: C{int}
     @return: The integer GID corresponding to the given string.

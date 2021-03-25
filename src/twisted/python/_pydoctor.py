@@ -60,7 +60,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if name == "zope.interface.adapter.AdapterRegistry":
                 # FIXME:
                 # https://github.com/zopefoundation/zope.interface/issues/41
-                relativeLink = "adapter.html"  # type: Optional[str]
+                relativeLink: Optional[str] = "adapter.html"
             else:
                 # Not a known exception.
                 relativeLink = None
@@ -68,7 +68,7 @@ class TwistedSphinxInventory(SphinxInventory):
             if relativeLink is None:
                 return None
 
-            return "{}/{}".format(baseURL, relativeLink)
+            return f"{baseURL}/{relativeLink}"
 
         return None
 
@@ -83,7 +83,10 @@ def getDeprecated(self, decorators):
         if isinstance(a, ast.Call):
             fn = astbuilder.node2fullname(a.func, self)
 
-            if fn == "twisted.python.deprecate.deprecated":
+            if fn in (
+                "twisted.python.deprecate.deprecated",
+                "twisted.python.deprecate.deprecatedProperty",
+            ):
                 try:
                     self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
                 except AttributeError:

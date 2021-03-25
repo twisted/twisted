@@ -126,7 +126,7 @@ class DigestMD5:
             challenge.
         @type username: C{unicode}
 
-        @param username: The authentication password to use to respond to a
+        @param password: The authentication password to use to respond to a
             challenge.
         @type password: C{unicode}
         """
@@ -134,9 +134,9 @@ class DigestMD5:
         self.password = password
         self.defaultRealm = host
 
-        self.digest_uri = "{}/{}".format(serv_type, host)
+        self.digest_uri = f"{serv_type}/{host}"
         if serv_name is not None:
-            self.digest_uri += "/{}".format(serv_name)
+            self.digest_uri += f"/{serv_name}"
 
     def getInitialResponse(self):
         return None

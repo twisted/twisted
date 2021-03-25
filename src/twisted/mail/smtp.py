@@ -788,7 +788,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             msg = "Could not send e-mail"
             resultLen = len(resultList)
             if resultLen > 1:
-                msg += " ({} failures out of {} recipients)".format(failures, resultLen)
+                msg += f" ({failures} failures out of {resultLen} recipients)"
             self.sendCode(550, networkString(msg))
         else:
             self.sendCode(250, b"Delivery in progress")
@@ -805,7 +805,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.deliveryFactory = None
             self.delivery = avatar
         else:
-            raise RuntimeError("{} is not a supported interface".format(iface.__name__))
+            raise RuntimeError(f"{iface.__name__} is not a supported interface")
         self._onLogout = logout
         self.challenger = None
 
@@ -1008,7 +1008,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             self.sendError(
                 SMTPProtocolError(
                     -1,
-                    "Invalid response from SMTP server: {}".format(line),
+                    f"Invalid response from SMTP server: {line}",
                     self.log.str(),
                 )
             )
@@ -1875,7 +1875,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender  # type: Type[SMTPClient]
+    protocol: Type[SMTPClient] = SMTPSender
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5, timeout=None):
         """
@@ -2137,7 +2137,7 @@ def sendmail(
 
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
-    @type to_addr: L{list} of L{bytes} or L{bytes}
+    @type to_addrs: L{list} of L{bytes} or L{bytes}
 
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
@@ -2238,7 +2238,7 @@ def xtext_encode(s, errors=None):
     for ch in iterbytes(s):
         o = ord(ch)
         if ch == "+" or ch == "=" or o < 33 or o > 126:
-            r.append(networkString("+{:02X}".format(o)))
+            r.append(networkString(f"+{o:02X}"))
         else:
             r.append(bytes((o,)))
     return (b"".join(r), len(s))

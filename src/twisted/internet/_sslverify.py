@@ -327,9 +327,7 @@ class DistinguishedName(dict):
 
     def __setattr__(self, attr, value):
         if attr not in _x509names:
-            raise AttributeError(
-                "{} is not a valid OpenSSL X509 name field".format(attr)
-            )
+            raise AttributeError(f"{attr} is not a valid OpenSSL X509 name field")
         realAttr = _x509names[attr]
         if not isinstance(value, bytes):
             value = value.encode("ascii")
@@ -410,9 +408,7 @@ def _handleattrhelper(Class, transport, methodName):
     and null certificates and raises the appropriate exception or returns the
     appropriate certificate object.
     """
-    method = getattr(
-        transport.getHandle(), "get_{}_certificate".format(methodName), None
-    )
+    method = getattr(transport.getHandle(), f"get_{methodName}_certificate", None)
     if method is None:
         raise CertificateError(
             "non-TLS transport {!r} did not have {} certificate".format(
@@ -583,9 +579,7 @@ class CertificateRequest(CertBase):
         dn = DistinguishedName()
         dn._copyFrom(req.get_subject())
         if not req.verify(req.get_pubkey()):
-            raise VerifyError(
-                "Can't verify that request for {!r} is self-signed.".format(dn)
-            )
+            raise VerifyError(f"Can't verify that request for {dn!r} is self-signed.")
         return Class(req)
 
     def dump(self, format=crypto.FILETYPE_ASN1):
@@ -737,7 +731,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
     def __repr__(self) -> str:
-        return "<{} {}>".format(self.__class__.__name__, self.keyHash())
+        return f"<{self.__class__.__name__} {self.keyHash()}>"
 
     def keyHash(self):
         """
@@ -761,7 +755,7 @@ class PublicKey:
         return h.hexdigest()
 
     def inspect(self):
-        return "Public Key with Hash: {}".format(self.keyHash())
+        return f"Public Key with Hash: {self.keyHash()}"
 
 
 class KeyPair(PublicKey):
@@ -1192,7 +1186,7 @@ def optionsForClientTLS(
     clientCertificate=None,
     acceptableProtocols=None,
     *,
-    extraCertificateOptions=None
+    extraCertificateOptions=None,
 ):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
@@ -1712,7 +1706,7 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 
 @implementer(ICipher)
-@attr.s(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class OpenSSLCipher:
     """
     A representation of an OpenSSL cipher.
@@ -1722,7 +1716,7 @@ class OpenSSLCipher:
     @type fullName: L{unicode}
     """
 
-    fullName = attr.ib()
+    fullName: str
 
 
 @lru_cache(maxsize=32)
@@ -1870,7 +1864,7 @@ class _ChooseDiffieHellmanEllipticCurve:
     @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
 
     @param openSSLlib: The OpenSSL C{cffi} library module.
-    @param openSSLlib: The OpenSSL L{crypto} module.
+    @param openSSLcrypto: The OpenSSL L{crypto} module.
 
     @see: L{crypto}
     """

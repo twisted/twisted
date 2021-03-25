@@ -91,7 +91,7 @@ class LogBeginner:
         self._log = Logger(observer=publisher)
         self._stdio = stdio
         self._warningsModule = warningsModule
-        self._temporaryObserver = LogPublisher(
+        self._temporaryObserver: Optional[ILogObserver] = LogPublisher(
             self._initialBuffer,
             FilteringLogObserver(
                 FileLogObserver(
@@ -105,7 +105,7 @@ class LogBeginner:
                 ),
                 [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)],
             ),
-        )  # type: Optional[ILogObserver]
+        )
         self._previousBegin = ("", 0)
         publisher.addObserver(self._temporaryObserver)
         self._oldshowwarning = warningsModule.showwarning

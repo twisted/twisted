@@ -120,7 +120,7 @@ def _split(sentence):
     elif sentence[-1:] == b"*":  # Sentence without checksum
         return sentence[1:-1].split(b",")
     else:
-        raise base.InvalidSentence("malformed sentence {}".format(sentence))
+        raise base.InvalidSentence(f"malformed sentence {sentence}")
 
 
 def _validateChecksum(sentence):
@@ -139,7 +139,7 @@ def _validateChecksum(sentence):
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, [ord(x) for x in iterbytes(source)])
         if computed != reference:
-            raise base.InvalidChecksum("{:02x} != {:02x}".format(computed, reference))
+            raise base.InvalidChecksum(f"{computed:02x} != {reference:02x}")
 
 
 class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
@@ -527,7 +527,7 @@ class NMEAAdapter:
         elif coordinateType is Angles.VARIATION:
             hemisphereKey = "magneticVariationDirection"
         else:
-            raise ValueError("unknown coordinate type {}".format(coordinateType))
+            raise ValueError(f"unknown coordinate type {coordinateType}")
 
         hemisphere = getattr(self.currentSentence, hemisphereKey).upper()
 
@@ -536,7 +536,7 @@ class NMEAAdapter:
         elif hemisphere in "SW":
             return -1
         else:
-            raise ValueError("bad hemisphere/direction: {}".format(hemisphere))
+            raise ValueError(f"bad hemisphere/direction: {hemisphere}")
 
     def _convert(self, key, converter):
         """

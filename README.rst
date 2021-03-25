@@ -11,7 +11,7 @@ For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 3.5+.
+Twisted is an event-based framework for internet applications, supporting Python 3.6+.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -85,7 +85,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2020 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

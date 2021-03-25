@@ -413,9 +413,9 @@ class ICredentialFactory(Interface):
         """
         Generate a new challenge to be sent to a client.
 
-        @type peer: L{twisted.web.http.Request}
-        @param peer: The request the response to which this challenge will be
-            included.
+        @type request: L{twisted.web.http.Request}
+        @param request: The request the response to which this challenge will
+            be included.
 
         @rtype: L{dict}
         @return: A mapping from L{str} challenge fields to associated L{str}

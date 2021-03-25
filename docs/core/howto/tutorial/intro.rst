@@ -109,7 +109,7 @@ The Reactor
 
 
 
-You don't call Twisted, Twisted calls you. The :api:`twisted.internet.reactor <reactor>` is Twisted's main event loop, similar to
+You don't call Twisted, Twisted calls you. The :py:mod:`reactor <twisted.internet.reactor>` is Twisted's main event loop, similar to
 the main loop in other toolkits available in Python (Qt, wx, and Gtk). There is
 exactly one reactor in any running Twisted application. Once started it loops
 over and over again, responding to network events and making scheduled calls to
@@ -207,7 +207,7 @@ Read Username, Drop Connections
 .. literalinclude:: listings/finger/finger04.py
 
 
-Here we make ``FingerProtocol`` inherit from :api:`twisted.protocols.basic.LineReceiver <LineReceiver>` , so that we get data-based
+Here we make ``FingerProtocol`` inherit from :py:class:`LineReceiver <twisted.protocols.basic.LineReceiver>` , so that we get data-based
 events on a line-by-line basis. We respond to the event of receiving the line
 with shutting down the connection.
 
@@ -503,8 +503,8 @@ the protocol or the factory.  Any services (such as the one we created with
 ``strports.service``) which have the application as their parent will be
 started when the application is started by twistd.  The application object is
 more useful for returning an object that supports the
-:api:`twisted.application.service.IService <IService>` , :api:`twisted.application.service.IServiceCollection <IServiceCollection>` , :api:`twisted.application.service.IProcess <IProcess>` ,
-and :api:`twisted.persisted.sob.IPersistable <sob.IPersistable>`
+:py:class:`IService <twisted.application.service.IService>` , :py:class:`IServiceCollection <twisted.application.service.IServiceCollection>` , :py:class:`IProcess <twisted.application.service.IProcess>` ,
+and :py:class:`sob.IPersistable <twisted.persisted.sob.IPersistable>`
 interfaces with the given parameters; we'll be seeing these in the
 next part of the tutorial. As the parent of the endpoint we opened, the
 application lets us manage the endpoint.

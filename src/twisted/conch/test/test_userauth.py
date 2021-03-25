@@ -23,7 +23,7 @@ from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-keys = None  # type: Optional[ModuleType]
+keys: Optional[ModuleType] = None
 if requireModule("cryptography") and requireModule("pyasn1"):
     from twisted.conch.ssh.common import NS
     from twisted.conch.checkers import SSHProtocolChecker
