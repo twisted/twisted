@@ -61,6 +61,7 @@ steps:
     continueOnError: ${{ parameters.allowFailure }}
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
+      TRIAL_ARGS: "-j 1"
 
 - bash:  |
     python -m tox -e coverage-prepare,coveralls-push
