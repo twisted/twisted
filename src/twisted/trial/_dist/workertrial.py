@@ -65,11 +65,14 @@ class WorkerStdouObserver(StringIO):
     protocol.
     """
 
+    encoding = sys.stdout.encoding
+
     def __init__(self, protocol):
         """
         @param protocol: a connected C{AMP} protocol instance.
         @type protocol: C{AMP}
         """
+        super().__init__()
         self._protocol = protocol
 
     def write(self, data):
@@ -88,7 +91,8 @@ class IOWrapper(TextIOWrapper):
 
 class WorkerStdin(StringIO):
     """
-    Placeholder to raise an error is a test tries to use the standard input.
+    Placeholder to raise an error is a test tries to use the standard input
+    at the high level.
     """
 
     def read(self):
@@ -104,15 +108,16 @@ def main(_fdopen=os.fdopen):
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
     @type _fdopen: C{callable}
     """
-    # Prepare the subprocess communication pipes as soon as possible.
-    os.dup2(0, _WORKER_AMP_STDIN, inheritable=False)
-    os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
-    r, w = os.pipe()
-    os.dup2(r, 0, inheritable=True)
-    os.dup2(w, 1, inheritable=True)
+    if _fdopen == os.fdopen:
+        # Prepare the subprocess communication pipes as soon as possible.
+        os.dup2(0, _WORKER_AMP_STDIN, inheritable=False)
+        os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
 
-    sys.stdin = IOWrapper(os.fdopen(0, "r"))
-    sys.stdout = IOWrapper(os.fdopen(1, "w"))
+        # At the low leve, restore stdin/stdout pipes
+        # that are not connected to AMP.
+        in_file, out_file = os.pipe()
+        os.dup2(in_file, 0, inheritable=True)
+        os.dup2(out_file, 1, inheritable=True)
 
     config = WorkerOptions()
     config.parseOptions()
@@ -126,8 +131,14 @@ def main(_fdopen=os.fdopen):
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
-    sys.stdin = WorkerStdin()
-    sys.stdout = WorkerStdouObserver(workerProtocol)
+
+    if _fdopen == os.fdopen:
+        # Only collect high-level streams when not running under unit-tests.
+        sys.stdin = WorkerStdin()
+        # Redirect the sys.stdout generate by the worker to the
+        # centralized log file.
+        sys.stdout = WorkerStdouObserver(workerProtocol)
+
     startLoggingWithObserver(observer.emit, False)
 
     while True:
