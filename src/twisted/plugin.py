@@ -13,6 +13,8 @@ Plugin system for Twisted.
 
 import os
 import sys
+import types
+from typing import TypeVar, Optional, Iterable, Type
 
 from zope.interface import Interface, providedBy
 
@@ -185,7 +187,18 @@ def getCache(module):
     return allCachesCombined
 
 
-def getPlugins(interface, package=None):
+def _pluginsPackage() -> types.ModuleType:
+    import twisted.plugins as package
+
+    return package
+
+
+_TInterface = TypeVar("_TInterface", bound=Interface)
+
+
+def getPlugins(
+    interface: Type[_TInterface], package: Optional[types.ModuleType] = None
+) -> Iterable[_TInterface]:
     """
     Retrieve all plugins implementing the given interface beneath the given module.
 
@@ -198,7 +211,7 @@ def getPlugins(interface, package=None):
     @return: An iterator of plugins.
     """
     if package is None:
-        import twisted.plugins as package
+        package = _pluginsPackage()
     allDropins = getCache(package)
     for key, dropin in allDropins.items():
         for plugin in dropin.plugins:
