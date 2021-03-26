@@ -13,6 +13,7 @@ the workers.
 import sys
 import os
 import errno
+from io import StringIO
 
 
 def _setupPath(environ):
@@ -58,9 +59,39 @@ class WorkerLogObserver:
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
+class WorkerStdouObserver(StringIO):
+    """
+    Handles the forwarding of the sub-process stdout to the managing AMP
+    protocol.
+    """
+
+    def __init__(self, protocol):
+        """
+        @param protocol: a connected C{AMP} protocol instance.
+        @type protocol: C{AMP}
+        """
+        self._protocol = protocol
+
+    def write(self, data):
+        from twisted.trial._dist import managercommands
+
+        self._protocol.callRemote(managercommands.TestWrite, out=data)
+
+
+class WorkerStdin(StringIO):
+    """
+    Placeholder to raise an error is a test tries to use the standard input.
+    """
+
+    def read(self):
+        raise AssertionError("Reading from stdin inside a test is not supported.")
+
+
 def main(_fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
+
+    This is called in the sub-process spawned by L{DistTrialRunner}.
 
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
     @type _fdopen: C{callable}
@@ -77,6 +108,8 @@ def main(_fdopen=os.fdopen):
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
+    sys.stdin = WorkerStdin()
+    sys.stdout = WorkerStdouObserver(workerProtocol)
     startLoggingWithObserver(observer.emit, False)
 
     while True:

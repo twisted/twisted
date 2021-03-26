@@ -37,7 +37,7 @@ class FakeTransport:
     A simple fake process transport.
     """
 
-    def writeToChild(self, fd, data):
+    def write(self, data):
         """
         Ignore write calls.
         """

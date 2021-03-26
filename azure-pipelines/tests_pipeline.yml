@@ -13,6 +13,7 @@ variables:
   INFRASTRUCTURE: "AZUREPIPELINES"
   TRIAL_REPORTER: "verbose"
   CI: "true"
+  TRIAL_ARGS: "-j 4"
 
 jobs:
 

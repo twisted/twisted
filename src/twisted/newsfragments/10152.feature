@@ -1,0 +1,1 @@
+Distributed trial test execution is now supported on Windows.

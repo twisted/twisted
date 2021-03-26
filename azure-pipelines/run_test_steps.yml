@@ -52,8 +52,6 @@ steps:
   - script: 'python -m tox -e alldeps-withcov-posix'
     displayName: 'Run tests'
     continueOnError: ${{ parameters.allowFailure }}
-    env:
-      TRIAL_ARGS: "-j 4"
 
 - ${{ if eq(parameters.platform, 'windows') }}:
   - script: 'python -m tox -e alldeps-withcov-windows'
