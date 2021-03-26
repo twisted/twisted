@@ -189,6 +189,8 @@ class LocalWorkerTransport:
     """
     A stub transport implementation used to support L{AMP} over a
     L{ProcessProtocol} transport.
+
+    This is called from the main (control) process.
     """
 
     def __init__(self, transport):

@@ -50,7 +50,7 @@ class WorkerLogObserverTests(TestCase):
         self.assertEqual(calls, [(managercommands.TestWrite, {"out": "Some log"})])
 
 
-class MainTests(TestCase):
+class MainTests:
     """
     Tests for L{main}.
     """

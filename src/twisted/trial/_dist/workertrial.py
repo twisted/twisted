@@ -13,7 +13,7 @@ the workers.
 import sys
 import os
 import errno
-from io import StringIO
+from io import StringIO, TextIOWrapper
 
 
 def _setupPath(environ):
@@ -78,6 +78,14 @@ class WorkerStdouObserver(StringIO):
         self._protocol.callRemote(managercommands.TestWrite, out=data)
 
 
+class IOWrapper(TextIOWrapper):
+    encoding = "utf-8"
+
+    def __init__(self, fd):
+        super().__init__(fd)
+        self.encoding = "utf-8"
+
+
 class WorkerStdin(StringIO):
     """
     Placeholder to raise an error is a test tries to use the standard input.
@@ -96,6 +104,16 @@ def main(_fdopen=os.fdopen):
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
     @type _fdopen: C{callable}
     """
+    # Prepare the subprocess communication pipes as soon as possible.
+    os.dup2(0, _WORKER_AMP_STDIN, inheritable=False)
+    os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
+    r, w = os.pipe()
+    os.dup2(r, 0, inheritable=True)
+    os.dup2(w, 1, inheritable=True)
+
+    sys.stdin = IOWrapper(os.fdopen(0, "r"))
+    sys.stdout = IOWrapper(os.fdopen(1, "w"))
+
     config = WorkerOptions()
     config.parseOptions()
 

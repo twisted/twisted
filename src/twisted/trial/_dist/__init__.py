@@ -42,6 +42,6 @@ This package implements the distributed Trial test runner:
 """
 
 # File descriptors numbers used to set up pipes with the worker.
-_WORKER_AMP_STDIN = 0
+_WORKER_AMP_STDIN = 3
 
-_WORKER_AMP_STDOUT = 1
+_WORKER_AMP_STDOUT = 4
