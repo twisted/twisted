@@ -7,12 +7,16 @@
 Implementation of C{AMP} worker commands, and main executable entry point for
 the workers.
 
+This is the code executed in the remote sub-process.
+
 @since: 12.3
 """
 
 import sys
 import os
 import errno
+from io import StringIO
+from typing import Callable
 
 
 def _setupPath(environ):
@@ -31,7 +35,8 @@ _setupPath(os.environ)
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
 from twisted.trial._dist.options import WorkerOptions
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist import managercommands, _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist.worker import WorkerProtocol
 
 
 class WorkerLogObserver:
@@ -39,10 +44,9 @@ class WorkerLogObserver:
     A log observer that forward its output to a C{AMP} protocol.
     """
 
-    def __init__(self, protocol):
+    def __init__(self, protocol: WorkerProtocol):
         """
         @param protocol: a connected C{AMP} protocol instance.
-        @type protocol: C{AMP}
         """
         self.protocol = protocol
 
@@ -50,25 +54,53 @@ class WorkerLogObserver:
         """
         Produce a log output.
         """
-        from twisted.trial._dist import managercommands
-
         text = textFromEventDict(eventDict)
         if text is None:
             return
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
-def main(_fdopen=os.fdopen):
+class WorkerStdout(StringIO):
+    """
+    Handles forwarding of the sub-process sys.stdout to the central
+    disttrial process via the AMP protocol.
+    """
+
+    # Always use UTF-8 as this is the encoding used over our AMP.
+    encoding = "utf-8"
+
+    def __init__(self, protocol: WorkerProtocol):
+        """
+        @param protocol: a connected C{AMP} protocol instance.
+        """
+        super().__init__()
+        self._protocol = protocol
+
+    def write(self, s: str):
+        """
+        @param s: The string to be forwarded.
+        """
+        if not isinstance(s, str):
+            raise TypeError(f"string argument expected, got {type(str)}")
+
+        # Just forward the data without any proceesing as at the AMP
+        # protocol `out` is defined as Unicode and AMP will handle the
+        # utf-8 encoding.
+        self._protocol.callRemote(managercommands.TestWrite, out=s)
+
+
+def main(_fdopen: Callable = os.fdopen, _captureSysStdout: bool = False):
     """
     Main function to be run if __name__ == "__main__".
 
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
-    @type _fdopen: C{callable}
+
+    @param _captureSysStdout: When C{True}, it will replace the standard output
+      with an implementation that forward the stream to the distrial control process.
+      here to make sure we don't accidentally mess with C{sys.stdout} during testing.
     """
     config = WorkerOptions()
     config.parseOptions()
-
-    from twisted.trial._dist.worker import WorkerProtocol
 
     workerProtocol = WorkerProtocol(config["force-gc"])
 
@@ -78,6 +110,13 @@ def main(_fdopen=os.fdopen):
 
     observer = WorkerLogObserver(workerProtocol)
     startLoggingWithObserver(observer.emit, False)
+
+    if _captureSysStdout:
+        # Only replace high-level streams when not running under unit-tests.
+        #
+        # Redirect the sys.stdout generate by the worker to the
+        # centralized log file.
+        sys.stdout = WorkerStdout(workerProtocol)
 
     while True:
         try:
@@ -104,4 +143,4 @@ def main(_fdopen=os.fdopen):
 
 
 if __name__ == "__main__":
-    main()
+    main(_captureSysStdout=True)
