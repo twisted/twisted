@@ -19,6 +19,7 @@ from typing import (
     AnyStr,
     Callable,
     Dict,
+    Iterable,
     List,
     Mapping,
     NewType,
@@ -237,13 +238,14 @@ class DelayedCall:
         if hasattr(self, "func"):
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
-            if hasattr(self.func, "__qualname__"):
-                func: Optional[str] = self.func.__qualname__
-            elif hasattr(self.func, "__name__"):
-                func = self.func.func_name  # type: ignore[attr-defined]
-                if hasattr(self.func, "im_class"):
-                    func = self.func.im_class.__name__ + "." + func  # type: ignore[attr-defined]
-            else:
+            func = getattr(self.func, "__qualname__", None)
+            if func is None:
+                func = getattr(self.func, "__name__", None)
+                if func is not None:
+                    imClass = getattr(self.func, "im_class", None)
+                    if imClass is not None:
+                        func = f"{imClass}.{func}"
+            if func is None:
                 func = reflect.safe_repr(self.func)
         else:
             func = None
@@ -907,7 +909,7 @@ class ReactorBase(PluggableResolverMixin):
     def _cancelCallLater(self, delayedCall: DelayedCall) -> None:
         self._cancellations += 1
 
-    def getDelayedCalls(self) -> List[IDelayedCall]:
+    def getDelayedCalls(self) -> Iterable[IDelayedCall]:
         """
         Return all the outstanding delayed calls in the system.
         They are returned in no particular order.

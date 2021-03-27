@@ -1194,11 +1194,11 @@ class IReactorTime(Interface):
                  C{reset()} methods.
         """
 
-    def getDelayedCalls() -> List["IDelayedCall"]:
+    def getDelayedCalls() -> Iterable["IDelayedCall"]:
         """
         Retrieve all currently scheduled delayed calls.
 
-        @return: A list of L{IDelayedCall} providers representing all
+        @return: An iterable of L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
                  returned by C{callLater} but not yet called or cancelled.
         """

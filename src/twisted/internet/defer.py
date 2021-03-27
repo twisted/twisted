@@ -631,7 +631,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         d._chainedTo = self
         return self.addCallbacks(d.callback, d.errback)
 
-    def callback(self, result: _DeferredResultT) -> None:
+    def callback(self, result: Union[_DeferredResultT, Failure]) -> None:
         """
         Run all success callbacks that have been added to this L{Deferred}.
 
