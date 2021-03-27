@@ -741,20 +741,17 @@ class IAgent(Interface):
             send no extra headers).  An implementation may add its own headers
             to this (for example for client identification or content
             negotiation).
-        @type headers: L{Headers} or L{None}
 
         @param bodyProducer: An object which can generate bytes to make up the
             body of this request (for example, the properly encoded contents of
             a file for a file upload).  Or, L{None} if the request is to have
             no body.
-        @type bodyProducer: L{IBodyProducer} provider
 
         @return: A L{Deferred} that fires with an L{IResponse} provider when
             the header of the response has been received (regardless of the
             response status code) or with a L{Failure} if there is any problem
             which prevents that response from being received (including
             problems that prevent the request from being sent).
-        @rtype: L{Deferred}
         """
 
 
