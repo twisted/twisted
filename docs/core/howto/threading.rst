@@ -9,7 +9,7 @@ Using Threads in Twisted
 How Twisted Uses Threads Itself
 -------------------------------
 
-All callbacks registered with the reactor - for example, ``dataReceived``, ``connectionLost``, or any higher-level method that comes from these, such as ``render_GET`` in twisted.web, or a callback added to a ``Deferred`` - are called from ``reactor.run``.
+All callbacks registered with the reactor — for example, ``dataReceived``, ``connectionLost``, or any higher-level method that comes from these, such as ``render_GET`` in twisted.web, or a callback added to a ``Deferred`` — are called from ``reactor.run``.
 The terminology around this is that we say these callbacks are run in the "main thread", or "reactor thread" or "I/O thread".
 
 Therefore, internally, Twisted makes very little use of threads.
@@ -17,9 +17,9 @@ This is not to say that it makes *no* use of threads; there are plenty of APIs w
 One prominent example of this is system hostname resolution: unless you have configured Twisted to use its own DNS client in ``twisted.names``, it will have to use your operating system's blocking APIs to map host names to IP addresses, in the reactor's thread pool.
 However, this is something you only need to know about for resource-tuning purposes, like setting the number of threads to use; otherwise, it is an implementation detail you can ignore.
 
-It is a common mistake is to think that because Twisted can manage multiple connections at once, things are happening in multiple threads, and so you need to carefully manage locks.
+It is a common mistake to think that because Twisted can manage multiple connections at once, things are happening in multiple threads, and so you need to carefully manage locks.
 Lucky for you, Twisted does most things in one thread!
-This document will explain how to interact with existing APIs which need to be run within their own threads because they block.
+This document explains how to interact with existing APIs which need to be run within their own threads because they block.
 If you're just using Twisted's own APIs, the rule for threads is simply "don't use them".
 
 Invoking Twisted From Other Threads
@@ -44,7 +44,7 @@ In this example, ``callFromWhateverThreadYouWant`` is thread-safe and can be inv
 
 .. note::
 
-    There are many objects within Twisted that represent values - for example, :py:class:`FilePath <twisted.python.filepath.FilePath>` and :py:class:`URLPath <twisted.python.urlpath.URLPath>` - which you may construct yourself.
+    There are many objects within Twisted that represent values — for example, :py:class:`FilePath <twisted.python.filepath.FilePath>` and :py:class:`URLPath <twisted.python.urlpath.URLPath>` — which you may construct yourself.
     These may be safely constructed and used within a non-reactor thread as long as they are not shared with other threads.
     However, you should be sure that these objects do not share any state, especially not with the reactor.
     One good rule of thumb is that any object whose methods return ``Deferred``\ s is almost certainly touching the reactor at some point, and should never be accessed from a non-reactor thread.
@@ -53,11 +53,10 @@ Running Code In Threads
 -----------------------
 
 Sometimes we may want to run code in a non-reactor thread, to avoid blocking the reactor.
-Twisted provides an API for doing so, the :py:meth:`callInThread <twisted.internet.interfaces.IReactorInThreads.callInThread>` method on the reactor.
+Twisted provides a low-level API for doing so, the :py:meth:`callInThread <twisted.internet.interfaces.IReactorInThreads.callInThread>` method on the reactor.
 
 For example, to run a method in a non-reactor thread we can do::
 
-    from __future__ import print_function
     from twisted.internet import reactor
 
     def aSillyBlockingMethod(x):
@@ -76,11 +75,11 @@ This means that depending on what other work has been submitted to the pool, you
     Therefore, you should not submit *tasks which depend on other tasks in order to complete* to be executed by ``callInThread``.
     An example of such a task would be something like this::
 
-        from __future__ import print_function
-
         q = Queue()
+
         def blocker():
             print(q.get() + q.get())
+
         def unblocker(a, b):
             q.put(a)
             q.put(b)
@@ -93,15 +92,18 @@ This means that depending on what other work has been submitted to the pool, you
 Getting Results
 ---------------
 
-callInThread and callFromThread allow you to move the execution of your code out of and into the reactor thread, respectively, but that isn't always enough.
+``callInThread`` and ``callFromThread`` allow you to move the execution of your code out of and into the reactor thread, respectively, but that isn't always enough.
 
-When we run some code, we often want to know what its result was.  For this, Twisted provides two methods: :py:func:`deferToThread <twisted.internet.threads.deferToThread>` and :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`, defined in the ``twisted.internet.threads`` module.
+When we run some code, we often want to know what its result was.
+For this, Twisted provides two methods:
+:py:func:`deferToThread <twisted.internet.threads.deferToThread>` and :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`,
+defined in the :py:mod:`twisted.internet.threads` module.
 
-To get a result from some blocking code back into the reactor thread, we can use :py:func:`deferToThread <twisted.internet.threads.deferToThread>` to execute it instead of callFromThread.
+To get a result from some blocking code back into the reactor thread,
+we can use :py:func:`deferToThread <twisted.internet.threads.deferToThread>` to execute it instead of ``callFromThread``.
 
 ::
 
-    from __future__ import print_function
     from twisted.internet import reactor, threads
 
     def doLongCalculation():
@@ -116,7 +118,8 @@ To get a result from some blocking code back into the reactor thread, we can use
     d.addCallback(printResult)
     reactor.run()
 
-Similarly, if you want some code running in a non-reactor thread to invoke some code in the reactor thread and get its result, you can use :py:func:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
+Similarly, if you want some code running in a non-reactor thread to invoke some code in the reactor thread and get its result,
+you can use :py:func:`blockingCallFromThread <twisted.internet.threads.blockingCallFromThread>`::
 
     from twisted.internet import threads, reactor, defer
     from twisted.web.client import Agent
@@ -126,8 +129,12 @@ Similarly, if you want some code running in a non-reactor thread to invoke some 
         agent = Agent(reactor)
         try:
             result = threads.blockingCallFromThread(
-                reactor, agent.request, "GET", "http://twistedmatrix.com/"))
-        except Error as exc:
+                reactor,
+                agent.request,
+                b"GET",
+                b"https://twistedmatrix.com/",
+            )
+        except Exception as exc:
             print(exc)
         else:
             print(result)
@@ -137,7 +144,7 @@ Similarly, if you want some code running in a non-reactor thread to invoke some 
     reactor.run()
 
 ``blockingCallFromThread`` will return the object or raise the exception returned or raised by the function passed to it.
-If the function passed to it returns a Deferred, it will return the value the Deferred is called back with or raise the exception it is errbacked with.
+If the function passed to it returns a :py:class:`Deferred`, it will return the value the deferred is fired with or raise the exception it is failed with.
 
 Managing the Reactor Thread Pool
 --------------------------------
