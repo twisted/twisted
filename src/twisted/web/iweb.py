@@ -13,6 +13,7 @@ from typing import Optional
 
 from zope.interface import Interface, Attribute
 
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
@@ -724,7 +725,7 @@ class IAgent(Interface):
         uri: bytes,
         headers: Optional[Headers] = None,
         bodyProducer: Optional[IBodyProducer] = None,
-    ):
+    ) -> Deferred[IResponse]:
         """
         Request the resource at the given location.
 
