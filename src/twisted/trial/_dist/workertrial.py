@@ -7,6 +7,8 @@
 Implementation of C{AMP} worker commands, and main executable entry point for
 the workers.
 
+This is the code executed in the distributed sub-processes.
+
 @since: 12.3
 """
 
@@ -59,13 +61,13 @@ class WorkerLogObserver:
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
-class WorkerStdouObserver(StringIO):
+class WorkerStdout(StringIO):
     """
-    Handles the forwarding of the sub-process stdout to the managing AMP
-    protocol.
+    Handles the forwarding of the sub-process sys.stdout to the central
+    disttrial process via the AMP protocol.
     """
 
-    encoding = sys.stdout.encoding
+    encoding = "utf-8"
 
     def __init__(self, protocol):
         """
@@ -137,7 +139,7 @@ def main(_fdopen=os.fdopen):
         sys.stdin = WorkerStdin()
         # Redirect the sys.stdout generate by the worker to the
         # centralized log file.
-        sys.stdout = WorkerStdouObserver(workerProtocol)
+        sys.stdout = WorkerStdout(workerProtocol)
 
     startLoggingWithObserver(observer.emit, False)
 

@@ -13,6 +13,7 @@ from io import BytesIO
 from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
+from twisted.python import log
 from twisted.python.compat import iterbytes
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -185,6 +186,8 @@ a"""
         Test buffering for different packet size, checking received matches
         expected data.
         """
+        sys.stdout.write("from-stdou-BLAAAA\n")
+        log.msg("from-log-TRAAAAA.")
         for packet_size in range(1, 10):
             t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
