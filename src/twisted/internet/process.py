@@ -33,10 +33,8 @@ from twisted.internet.interfaces import IProcessTransport
 
 if platform.isWindows():
     raise ImportError(
-        (
-            "twisted.internet.process does not work on Windows. "
-            "Use the reactor.spawnProcess() API instead."
-        )
+        "twisted.internet.process does not work on Windows. "
+        "Use the reactor.spawnProcess() API instead."
     )
 
 try:
@@ -58,7 +56,7 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}  # type: Dict[int, Callable]
+reapProcessHandlers: Dict[int, Callable] = {}
 
 
 def reapAllProcesses():
@@ -83,8 +81,8 @@ def registerReapProcessHandler(pid, process):
         raise RuntimeError("Try to register an already registered process.")
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
-    except:  # noqa
-        log.msg("Failed to reap {}:".format(pid))
+    except BaseException:
+        log.msg(f"Failed to reap {pid}:")
         log.err()
 
         if pid is None:
@@ -277,7 +275,7 @@ class _BaseProcess(BaseProcess):
     Base class for Process and PTYProcess.
     """
 
-    status = None  # type: Optional[int]
+    status: Optional[int] = None
     pid = None
 
     def reapProcess(self):
@@ -302,8 +300,8 @@ class _BaseProcess(BaseProcess):
                     pid = None
                 else:
                     raise
-        except:  # noqa
-            log.msg("Failed to reap {}:".format(self.pid))
+        except BaseException:
+            log.msg(f"Failed to reap {self.pid}:")
             log.err()
             pid = None
         if pid:
@@ -330,7 +328,7 @@ class _BaseProcess(BaseProcess):
         @type signalID: C{str} or C{int}
         """
         if signalID in ("HUP", "STOP", "INT", "KILL", "TERM"):
-            signalID = getattr(signal, "SIG%s" % (signalID,))
+            signalID = getattr(signal, f"SIG{signalID}")
         if self.pid is None:
             raise ProcessExitedAlready()
         try:
@@ -374,7 +372,7 @@ class _BaseProcess(BaseProcess):
         gc.disable()
         try:
             self.pid = os.fork()
-        except:
+        except BaseException:
             # Still in the parent process
             if collectorEnabled:
                 gc.enable()
@@ -398,7 +396,7 @@ class _BaseProcess(BaseProcess):
                     sys.settrace(None)
                     self._setupChild(**kwargs)
                     self._execChild(path, uid, gid, executable, args, environment)
-                except:
+                except BaseException:
                     # If there are errors, try to write something descriptive
                     # to stderr before exiting.
 
@@ -424,16 +422,16 @@ class _BaseProcess(BaseProcess):
                         # objects.
 
                         stderr = io.TextIOWrapper(os.fdopen(2, "wb"), encoding="utf-8")
-                        msg = (
-                            "Upon execvpe {0} {1} in environment id {2}" "\n:"
-                        ).format(executable, str(args), id(environment))
+                        msg = ("Upon execvpe {} {} in environment id {}" "\n:").format(
+                            executable, str(args), id(environment)
+                        )
                         stderr.write(msg)
                         traceback.print_exc(file=stderr)
                         stderr.flush()
 
                         for fd in range(3):
                             os.close(fd)
-                    except:
+                    except BaseException:
                         # Handle all errors during the error-reporting process
                         # silently to ensure that the child terminates.
                         pass
@@ -474,7 +472,7 @@ class _BaseProcess(BaseProcess):
         """
         String representation of a process.
         """
-        return "<%s pid=%s status=%s>" % (
+        return "<{} pid={} status={}>".format(
             self.__class__.__name__,
             self.pid,
             self.status,
@@ -535,7 +533,7 @@ class _FDDetector:
         for impl in self._implementations:
             try:
                 before = impl()
-            except:
+            except BaseException:
                 continue
             with self.openfile("/dev/null", "r"):
                 after = impl()
@@ -698,7 +696,7 @@ class Process(_BaseProcess):
                     fdmap[childFD] = readFD  # child reads from this
                     helpers[childFD] = writeFD  # parent writes to this
                 else:
-                    assert type(target) == int, "%r should be an int" % (target,)
+                    assert type(target) == int, f"{target!r} should be an int"
                     fdmap[childFD] = target  # parent ignores this
             if debug:
                 print("fdmap", fdmap)
@@ -707,7 +705,7 @@ class Process(_BaseProcess):
             # the child only cares about fdmap.values()
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
-        except:
+        except BaseException:
             for pipe in _openedPipes:
                 os.close(pipe)
             raise
@@ -732,7 +730,7 @@ class Process(_BaseProcess):
             # the 'transport' is used for some compatibility methods
             if self.proto is not None:
                 self.proto.makeConnection(self)
-        except:
+        except BaseException:
             log.err()
 
         # The reactor might not be running yet.  This might call back into
@@ -784,7 +782,7 @@ class Process(_BaseProcess):
                 continue
             try:
                 os.close(fd)
-            except:
+            except BaseException:
                 pass
 
         # at this point, the only fds still open are the ones that need to
@@ -827,8 +825,8 @@ class Process(_BaseProcess):
 
         old = []
         for fd in fdmap.values():
-            if not fd in old:
-                if not fd in fdmap.keys():
+            if fd not in old:
+                if fd not in fdmap.keys():
                     old.append(fd)
         if debug:
             print("old", old, file=errfd)
@@ -849,12 +847,12 @@ class Process(_BaseProcess):
             self.pipes[childFD].loseConnection()
 
     def pauseProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.stopReading()
 
     def resumeProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.startReading()
 
@@ -922,7 +920,7 @@ class Process(_BaseProcess):
         del self.pipes[childFD]
         try:
             self.proto.childConnectionLost(childFD)
-        except:
+        except BaseException:
             log.err()
         self.maybeCallProcessEnded()
 
@@ -1005,7 +1003,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
                 masterfd=masterfd,
                 slavefd=slavefd,
             )
-        except:
+        except BaseException:
             if not isinstance(usePTY, (tuple, list)):
                 os.close(masterfd)
                 os.close(slavefd)
@@ -1020,7 +1018,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         self.status = -1
         try:
             self.proto.makeConnection(self)
-        except:
+        except BaseException:
             log.err()
         registerReapProcessHandler(self.pid, self)
 
@@ -1067,7 +1065,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             if fd > 2:
                 try:
                     os.close(fd)
-                except:
+                except BaseException:
                     pass
 
         self._resetSignalDisposition()

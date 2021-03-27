@@ -11,9 +11,11 @@ from twisted.internet.protocol import Protocol
 from twisted.internet.error import ConnectionDone
 
 try:
-    from twisted.internet import serialport
+    from twisted.internet import serialport as _serialport
 except ImportError:
-    serialport = None  # type: ignore[assignment]
+    serialport = None
+else:
+    serialport = _serialport
 
 
 class DoNothing:

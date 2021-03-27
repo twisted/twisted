@@ -59,11 +59,11 @@ class Persistent:
             finalname = filename
             filename = finalname + "-2"
         elif tag:
-            filename = "%s-%s-2.%s" % (self.name, tag, ext)
-            finalname = "%s-%s.%s" % (self.name, tag, ext)
+            filename = f"{self.name}-{tag}-2.{ext}"
+            finalname = f"{self.name}-{tag}.{ext}"
         else:
-            filename = "%s-2.%s" % (self.name, ext)
-            finalname = "%s.%s" % (self.name, ext)
+            filename = f"{self.name}-2.{ext}"
+            finalname = f"{self.name}.{ext}"
         return finalname, filename
 
     def _saveTemp(self, filename, dumpFunc):
@@ -93,7 +93,6 @@ class Persistent:
         ext, dumpFunc = self._getStyle()
         if passphrase is not None:
             raise TypeError("passphrase must be None")
-            ext = "e" + ext
         finalname, filename = self._getFilename(filename, ext, tag)
         log.msg("Saving " + self.name + " application to " + finalname + "...")
         self._saveTemp(filename, dumpFunc)
@@ -170,7 +169,7 @@ def loadValueFromFile(filename, variable):
     @param filename: string
     @param variable: string
     """
-    with open(filename, "r") as fileObj:
+    with open(filename) as fileObj:
         data = fileObj.read()
     d = {"__file__": filename}
     codeObj = compile(data, filename, "exec")

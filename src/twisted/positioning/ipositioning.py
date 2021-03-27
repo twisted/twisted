@@ -29,8 +29,8 @@ class IPositioningReceiver(Interface):
         """
         Method called when position error is received.
 
-        @param positioningError: The position error.
-        @type positioningError: L{twisted.positioning.base.PositionError}
+        @param positionError: The position error.
+        @type positionError: L{twisted.positioning.base.PositionError}
         """
 
     def timeReceived(time):

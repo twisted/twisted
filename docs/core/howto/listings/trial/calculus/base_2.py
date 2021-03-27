@@ -1,9 +1,7 @@
 # -*- test-case-name: calculus.test.test_base_2 -*-
 
-from __future__ import division
 
-
-class Calculation(object):
+class Calculation:
     def add(self, a, b):
         return a + b
 

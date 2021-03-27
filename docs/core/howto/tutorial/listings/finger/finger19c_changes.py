@@ -5,6 +5,7 @@ import os
 
 # Yet another back-end
 
+
 @implementer(IFingerService)
 class LocalFingerService(service.Service):
     def getUser(self, user):
@@ -14,17 +15,16 @@ class LocalFingerService(service.Service):
         except KeyError:
             return defer.succeed("No such user")
         try:
-            f = open(os.path.join(entry[5],'.plan'))
-        except (IOError, OSError):
+            f = open(os.path.join(entry[5], ".plan"))
+        except OSError:
             return defer.succeed("No such user")
         with f:
             data = f.read()
         data = data.strip()
         return defer.succeed(data)
-    
+
     def getUsers(self):
         return defer.succeed([])
-
 
 
 f = LocalFingerService()

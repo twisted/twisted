@@ -298,7 +298,7 @@ class JellyTests(TestCase):
         should produce objects which represent the values of the original
         inputs.
         """
-        inputList = [set([1, 2, 3])]
+        inputList = [{1, 2, 3}]
         output = jelly.unjelly(jelly.jelly(inputList))
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
@@ -320,7 +320,7 @@ class JellyTests(TestCase):
         L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
-        inputList = [set([1, 2, 3])]
+        inputList = [{1, 2, 3}]
         self._testSecurity(inputList, b"set")
 
     def test_frozensetSecurity(self):
@@ -340,7 +340,7 @@ class JellyTests(TestCase):
         """
         inputList = [jelly._sets.Set([1, 2, 3])]
         inputJelly = jelly.jelly(inputList)
-        self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
+        self.assertEqual(inputJelly, jelly.jelly([{1, 2, 3}]))
         output = jelly.unjelly(inputJelly)
         # Even if the class is different, it should coerce to the same list
         self.assertEqual(list(inputList[0]), list(output[0]))
@@ -395,7 +395,7 @@ class JellyTests(TestCase):
         self.assertIs(z[0][0], z)
 
     def test_str(self):
-        x = str("blah")
+        x = "blah"
         y = jelly.unjelly(jelly.jelly(x))
         self.assertEqual(x, y)
         self.assertEqual(type(x), type(y))

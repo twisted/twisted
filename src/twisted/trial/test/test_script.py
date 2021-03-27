@@ -202,7 +202,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(filename)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual("File %r doesn't exist\n" % (filename,), buffy.getvalue())
+            self.assertEqual(f"File {filename!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -225,9 +225,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(moduleName)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual(
-                "File %r doesn't exist\n" % (moduleName,), buffy.getvalue()
-            )
+            self.assertEqual(f"File {moduleName!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -298,13 +296,14 @@ class TestModuleTests(unittest.SynchronousTestCase):
         modules = trial.getTestModules(sibpath("scripttest.py"))
         self.assertEqual(
             set(modules),
-            set(["twisted.trial.test.test_log", "twisted.trial.test.test_runner"]),
+            {"twisted.trial.test.test_log", "twisted.trial.test.test_runner"},
         )
 
     def test_looksLikeTestModule(self):
         for filename in ["test_script.py", "twisted/trial/test/test_script.py"]:
             self.assertTrue(
-                trial.isTestFile(filename), "%r should be a test file" % (filename,)
+                trial.isTestFile(filename),
+                f"{filename!r} should be a test file",
             )
         for filename in [
             "twisted/trial/test/moduletest.py",
@@ -313,7 +312,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         ]:
             self.assertFalse(
                 trial.isTestFile(filename),
-                "%r should *not* be a test file" % (filename,),
+                f"{filename!r} should *not* be a test file",
             )
 
 
@@ -856,7 +855,7 @@ class HelpOrderTests(unittest.TestCase):
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "%s.*%s" % (re.escape(orderName), re.escape(orderDesc)),
+                "{}.*{}".format(re.escape(orderName), re.escape(orderDesc)),
                 output,
             )
 

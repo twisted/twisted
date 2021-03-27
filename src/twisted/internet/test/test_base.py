@@ -124,7 +124,7 @@ class ThreadedResolverTests(TestCase):
         self.addCleanup(reactor._stop)
 
         def fakeGetHostByName(name):
-            raise IOError("ENOBUFS (this is a funny joke)")
+            raise OSError("ENOBUFS (this is a funny joke)")
 
         self.patch(socket, "gethostbyname", fakeGetHostByName)
 

@@ -23,19 +23,19 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
 from twisted.internet.iocpreactor import tcp, udp
 
-
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory
+    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 except ImportError:
+    TLSMemoryBIOFactory = None
     # Either pyOpenSSL isn't installed, or it is too old for this code to work.
     # The reactor won't provide IReactorSSL.
-    TLSMemoryBIOFactory = None  # type: ignore[assignment,misc]
-    _extraInterfaces = ()  # type: Tuple[Type[interfaces.IReactorSSL], ...]
+    _extraInterfaces: Tuple[Type[interfaces.IReactorSSL], ...] = ()
     warnings.warn(
         "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
         "It is missing, so the reactor will not support SSL APIs."
     )
 else:
+    TLSMemoryBIOFactory = _TLSMemoryBIOFactory
     _extraInterfaces = (interfaces.IReactorSSL,)
 
 MAX_TIMEOUT = 2000  # 2 seconds, see doIteration for explanation
@@ -129,7 +129,7 @@ class IOCPReactor(
                 why = _NO_FILEDESC
             if why:
                 return  # ignore handles that were closed
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

@@ -25,7 +25,6 @@ telnet server is required; for the ssh server, "username" is the username and
 "password" is the password.
 """
 
-from __future__ import division
 
 import string, random
 
@@ -38,7 +37,6 @@ from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.cred import checkers, portal
 from twisted.internet import protocol, reactor, task
 from twisted.python import log
-
 
 
 class DrawableCanvas(window.Canvas):
@@ -67,7 +65,7 @@ class DrawableCanvas(window.Canvas):
         self.repaint()
 
     def keystrokeReceived(self, keyID, modifier):
-        if keyID == b'\r' or keyID == b'\v':
+        if keyID == b"\r" or keyID == b"\v":
             return
         window.Canvas.keystrokeReceived(self, keyID, modifier)
         if self.x >= self.width:
@@ -129,14 +127,16 @@ class ButtonDemo(insults.TerminalProtocol):
         t3 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
         t4 = window.TextOutputArea(longLines=window.TextOutputArea.TRUNCATE)
         for _t in t1, t2, t3, t4:
-            _t.setText(((b'This is a very long string.  ' * 3) + b'\n') * 3)
+            _t.setText(((b"This is a very long string.  " * 3) + b"\n") * 3)
 
         vp = window.Viewport(t3)
         d = [1]
+
         def spin():
             vp.xOffset += d[0]
             if vp.xOffset == 0 or vp.xOffset == 25:
                 d[0] *= -1
+
         self.call = task.LoopingCall(spin)
         self.call.start(0.25, now=False)
         hbox.addChild(window.Border(vp))
@@ -168,7 +168,6 @@ class ButtonDemo(insults.TerminalProtocol):
         self.terminal.eraseDisplay()
         self._redraw()
 
-
     def keystrokeReceived(self, keyID, modifier):
         self.window.keystrokeReceived(keyID, modifier)
 
@@ -176,7 +175,7 @@ class ButtonDemo(insults.TerminalProtocol):
         self.canvas.clear()
 
     def _setText(self, text):
-        self.input.setText(b'')
+        self.input.setText(b"")
         self.output.setText(text)
 
 
@@ -184,18 +183,21 @@ def makeService(args):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
-                                         insults.ServerProtocol,
-                                         args['protocolFactory'],
-                                         *args.get('protocolArgs', ()),
-                                         **args.get('protocolKwArgs', {}))
-    tsvc = internet.TCPServer(args['telnet'], f)
+    f.protocol = lambda: TelnetTransport(
+        TelnetBootstrapProtocol,
+        insults.ServerProtocol,
+        args["protocolFactory"],
+        *args.get("protocolArgs", ()),
+        **args.get("protocolKwArgs", {}),
+    )
+    tsvc = internet.TCPServer(args["telnet"], f)
 
     def chainProtocolFactory():
         return insults.ServerProtocol(
-            args['protocolFactory'],
-            *args.get('protocolArgs', ()),
-            **args.get('protocolKwArgs', {}))
+            args["protocolFactory"],
+            *args.get("protocolArgs", ()),
+            **args.get("protocolKwArgs", {}),
+        )
 
     rlm = TerminalRealm()
     rlm.chainedProtocolFactory = chainProtocolFactory
@@ -203,15 +205,16 @@ def makeService(args):
     f = ConchFactory(ptl)
     f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
     f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
-    csvc = internet.TCPServer(args['ssh'], f)
+    csvc = internet.TCPServer(args["ssh"], f)
 
     m = service.MultiService()
     tsvc.setServiceParent(m)
     csvc.setServiceParent(m)
     return m
 
+
 application = service.Application("Window Demo")
 
-makeService({'protocolFactory': ButtonDemo,
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
+makeService(
+    {"protocolFactory": ButtonDemo, "telnet": 6023, "ssh": 6022}
+).setServiceParent(application)

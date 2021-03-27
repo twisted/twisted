@@ -19,7 +19,7 @@ from twisted.python import reflect
 from twisted.python.compat import iterbytes
 from twisted.logger import Logger
 
-_counters = {}  # type: Dict[str, int]
+_counters: Dict[str, int] = {}
 
 
 class Logging:
@@ -39,14 +39,14 @@ class Logging:
         self._logFile = open(key + "-" + str(count), "w")
 
     def __str__(self) -> str:
-        return str(super(Logging, self).__getattribute__("original"))
+        return str(super().__getattribute__("original"))
 
     def __repr__(self) -> str:
-        return repr(super(Logging, self).__getattribute__("original"))
+        return repr(super().__getattribute__("original"))
 
     def __getattribute__(self, name):
-        original = super(Logging, self).__getattribute__("original")
-        logFile = super(Logging, self).__getattribute__("_logFile")
+        original = super().__getattribute__("original")
+        logFile = super().__getattribute__("_logFile")
         logFile.write(name + "\n")
         return getattr(original, name)
 
@@ -323,9 +323,7 @@ class LocalTerminalBufferMixin:
     def makeConnection(self, transport):
         self.terminalCopy = helper.TerminalBuffer()
         self.terminalCopy.connectionMade()
-        return super(LocalTerminalBufferMixin, self).makeConnection(
-            TransportSequence(transport, self.terminalCopy)
-        )
+        return super().makeConnection(TransportSequence(transport, self.terminalCopy))
 
     def __str__(self) -> str:
         return str(self.terminalCopy)

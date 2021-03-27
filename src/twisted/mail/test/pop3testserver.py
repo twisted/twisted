@@ -128,7 +128,7 @@ class POP3TestServer(basic.LineReceiver):
             try:
                 self.tmpUser = line.split(" ")[1]
                 resp = VALID_RESPONSE
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)
@@ -145,7 +145,7 @@ class POP3TestServer(basic.LineReceiver):
                     self.loggedIn = True
                 else:
                     resp = AUTH_DECLINED
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)

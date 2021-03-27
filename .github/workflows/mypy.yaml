@@ -16,7 +16,6 @@ on:
 
 jobs:
   test_run:
-
     runs-on: ubuntu-latest
 
     steps:

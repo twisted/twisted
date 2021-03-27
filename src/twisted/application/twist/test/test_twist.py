@@ -6,19 +6,21 @@ Tests for L{twisted.application.twist._twist}.
 """
 
 from sys import stdout
+from typing import Any, Dict, List
 
+from twisted.internet.interfaces import IReactorCore
 from twisted.logger import LogLevel, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
-from ...service import IService, MultiService
+from twisted.test.test_twistd import SignalCapturingMemoryReactor
+import twisted.trial.unittest
+
 from ...runner._exit import ExitStatus
 from ...runner._runner import Runner
 from ...runner.test.test_runner import DummyExit
+from ...service import IService, MultiService
 from ...twist import _twist
 from .._options import TwistOptions
 from .._twist import Twist
-from twisted.test.test_twistd import SignalCapturingMemoryReactor
-
-import twisted.trial.unittest
 
 
 class TwistTests(twisted.trial.unittest.TestCase):
@@ -26,43 +28,43 @@ class TwistTests(twisted.trial.unittest.TestCase):
     Tests for L{Twist}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.patchInstallReactor()
 
-    def patchExit(self):
+    def patchExit(self) -> None:
         """
         Patch L{_twist.exit} so we can capture usage and prevent actual exits.
         """
         self.exit = DummyExit()
         self.patch(_twist, "exit", self.exit)
 
-    def patchInstallReactor(self):
+    def patchInstallReactor(self) -> None:
         """
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors = {}
+        self.installedReactors: Dict[str, IReactorCore] = {}
 
-        def installReactor(_, name):
+        def installReactor(_: TwistOptions, name: str) -> IReactorCore:
             reactor = MemoryReactor()
             self.installedReactors[name] = reactor
             return reactor
 
         self.patch(TwistOptions, "installReactor", installReactor)
 
-    def patchStartService(self):
+    def patchStartService(self) -> None:
         """
         Patch L{MultiService.startService} so we can capture usage and prevent
         actual starts.
         """
-        self.serviceStarts = []
+        self.serviceStarts: List[IService] = []
 
-        def startService(service):
+        def startService(service: IService) -> None:
             self.serviceStarts.append(service)
 
         self.patch(MultiService, "startService", startService)
 
-    def test_optionsValidArguments(self):
+    def test_optionsValidArguments(self) -> None:
         """
         L{Twist.options} given valid arguments returns options.
         """
@@ -70,7 +72,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
 
         self.assertIsInstance(options, TwistOptions)
 
-    def test_optionsInvalidArguments(self):
+    def test_optionsInvalidArguments(self) -> None:
         """
         L{Twist.options} given invalid arguments exits with
         L{ExitStatus.EX_USAGE} and an error/usage message.
@@ -80,10 +82,17 @@ class TwistTests(twisted.trial.unittest.TestCase):
         Twist.options(["twist", "--bogus-bagels"])
 
         self.assertIdentical(self.exit.status, ExitStatus.EX_USAGE)
-        self.assertTrue(self.exit.message.startswith("Error: "))
-        self.assertTrue(self.exit.message.endswith("\n\n{}".format(TwistOptions())))
+        self.assertIsNotNone(self.exit.message)
+        self.assertTrue(
+            self.exit.message.startswith("Error: ")  # type: ignore[union-attr]
+        )
+        self.assertTrue(
+            self.exit.message.endswith(  # type: ignore[union-attr]
+                f"\n\n{TwistOptions()}"
+            )
+        )
 
-    def test_service(self):
+    def test_service(self) -> None:
         """
         L{Twist.service} returns an L{IService}.
         """
@@ -91,7 +100,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         service = Twist.service(options.plugins["web"], options.subOptions)
         self.assertTrue(IService.providedBy(service))
 
-    def test_startService(self):
+    def test_startService(self) -> None:
         """
         L{Twist.startService} starts the service and registers a trigger to
         stop the service when the reactor shuts down.
@@ -99,8 +108,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
         options = Twist.options(["twist", "web"])
 
         reactor = options["reactor"]
+        subCommand = options.subCommand
+        assert subCommand is not None
         service = Twist.service(
-            plugin=options.plugins[options.subCommand],
+            plugin=options.plugins[subCommand],
             options=options.subOptions,
         )
 
@@ -113,7 +124,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
             reactor.triggers["before"]["shutdown"], [(service.stopService, (), {})]
         )
 
-    def test_run(self):
+    def test_run(self) -> None:
         """
         L{Twist.run} runs the runner with arguments corresponding to the given
         options.
@@ -139,7 +150,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
             ),
         )
 
-    def test_main(self):
+    def test_main(self) -> None:
         """
         L{Twist.main} runs the runner with arguments corresponding to the given
         command line arguments.
@@ -149,12 +160,12 @@ class TwistTests(twisted.trial.unittest.TestCase):
         runners = []
 
         class Runner:
-            def __init__(self, **kwargs):
+            def __init__(self, **kwargs: Any) -> None:
                 self.args = kwargs
                 self.runs = 0
                 runners.append(self)
 
-            def run(self):
+            def run(self) -> None:
                 self.runs += 1
 
         self.patch(_twist, "Runner", Runner)
@@ -181,10 +192,10 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
     to signals and the reactor.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.exitWithSignalCalled = False
 
-        def fakeExitWithSignal(sig):
+        def fakeExitWithSignal(sig: int) -> None:
             """
             Fake to capture whether L{twisted.application._exitWithSignal
             was called.
@@ -196,7 +207,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
         self.patch(_twist, "_exitWithSignal", fakeExitWithSignal)
 
-        def startLogging(_):
+        def startLogging(_: Runner) -> None:
             """
             Prevent Runner from adding new log observers or other
             tests outside this module will fail.
@@ -206,7 +217,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
 
         self.patch(Runner, "startLogging", startLogging)
 
-    def test_twistReactorDoesntExitWithSignal(self):
+    def test_twistReactorDoesntExitWithSignal(self) -> None:
         """
         _exitWithSignal is not called if the reactor's _exitSignal attribute
         is zero.
@@ -220,7 +231,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         Twist.run(options)
         self.assertFalse(self.exitWithSignalCalled)
 
-    def test_twistReactorHasNoExitSignalAttr(self):
+    def test_twistReactorHasNoExitSignalAttr(self) -> None:
         """
         _exitWithSignal is not called if the runner's reactor does not
         implement L{twisted.internet.interfaces._ISupportsExitSignalCapturing}
@@ -232,7 +243,7 @@ class TwistExitTests(twisted.trial.unittest.TestCase):
         Twist.run(options)
         self.assertFalse(self.exitWithSignalCalled)
 
-    def test_twistReactorExitsWithSignal(self):
+    def test_twistReactorExitsWithSignal(self) -> None:
         """
         _exitWithSignal is called if the runner's reactor exits due
         to a signal.

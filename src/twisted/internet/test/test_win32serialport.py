@@ -34,7 +34,7 @@ if serialport is not None:
 
     class RegularFileSerial(serial.Serial):
         def __init__(self, *args, **kwargs):
-            super(RegularFileSerial, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self.captured_args = args
             self.captured_kwargs = kwargs
 
@@ -56,7 +56,7 @@ if serialport is not None:
             self.comstat = serial.win32.COMSTAT
             self.comstat.cbInQue = cbInQue
 
-            super(RegularFileSerialPort, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def _clearCommError(self):
             return True, self.comstat

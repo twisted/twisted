@@ -61,7 +61,7 @@ class UtilTests(TestCase):
         name = self.mktemp()
 
         def fakeRename(src, dst):
-            raise IOError(errno.EIO, None)
+            raise OSError(errno.EIO, None)
 
         self.patch(lockfile, "rename", fakeRename)
         exc = self.assertRaises(IOError, lockfile.symlink, name, "foo")
@@ -92,7 +92,7 @@ class UtilTests(TestCase):
         name = self.mktemp()
 
         def fakeOpen(path, mode):
-            raise IOError(errno.EACCES, None)
+            raise OSError(errno.EACCES, None)
 
         self.patch(lockfile, "_open", fakeOpen)
         exc = self.assertRaises(IOError, lockfile.readlink, name)
@@ -298,7 +298,7 @@ class LockingTests(TestCase):
             # While another process is doing os.rmdir which the
             # Windows implementation of rmlink does, a readlink call
             # will fail with EACCES.
-            raise IOError(errno.EACCES, None)
+            raise OSError(errno.EACCES, None)
 
         self.patch(lockfile, "readlink", fakeReadlink)
 

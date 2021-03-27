@@ -138,7 +138,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         class WithRenderer(Element):
             def __init__(self, value, loader):
                 self.value = value
-                super(WithRenderer, self).__init__(loader)
+                super().__init__(loader)
 
             @renderer
             def stuff(self, request, tag):
@@ -248,14 +248,15 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         def verifyComment(c):
             self.assertTrue(
                 c.startswith(b"<!--"),
-                "%r does not start with the comment prefix" % (c,),
+                f"{c!r} does not start with the comment prefix",
             )
             self.assertTrue(
-                c.endswith(b"-->"), "%r does not end with the comment suffix" % (c,)
+                c.endswith(b"-->"),
+                f"{c!r} does not end with the comment suffix",
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(c) >= 7, "%r is too short to be a legal comment" % (c,))
+            self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
             self.assertNotIn(b"--", content)
             self.assertNotIn(b">", content)

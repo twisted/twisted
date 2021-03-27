@@ -164,7 +164,7 @@ class InsensitiveDict(MutableMapping):
         """
         String representation of the dictionary.
         """
-        items = ", ".join([("%r: %r" % (k, v)) for k, v in self.items()])
+        items = ", ".join([(f"{k!r}: {v!r}") for k, v in self.items()])
         return "InsensitiveDict({%s})" % items
 
     def iterkeys(self):
@@ -186,7 +186,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
@@ -225,12 +225,12 @@ def uniquify(lst):
     Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
     """
-    dct = {}
+    seen = set()
     result = []
     for k in lst:
-        if k not in dct:
+        if k not in seen:
             result.append(k)
-        dct[k] = 1
+        seen.add(k)
     return result
 
 
@@ -302,7 +302,7 @@ def _getpass(prompt):
 
     try:
         return getpass.getpass(prompt)
-    except IOError as e:
+    except OSError as e:
         if e.errno == errno.EINTR:
             raise KeyboardInterrupt
         raise
@@ -340,7 +340,7 @@ def getPassword(
                 try:
                     old = sys.stdin, sys.stdout
                     sys.stdin = sys.stdout = open("/dev/tty", "r+")
-                except:
+                except BaseException:
                     raise RuntimeError("Cannot obtain a TTY")
             else:
                 password = sys.stdin.readline()
@@ -386,7 +386,7 @@ def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[%s%s%s]" % (doneChar * done, currentChar, undoneChar * toDo)
+        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
         if force:
             last[0] = result
             return result
@@ -424,7 +424,7 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print("method %s of %s at %s" % (frame.f_code.co_name, k, id(se)))
+        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
     else:
         print(
             "function %s in %s, line %s"
@@ -449,12 +449,12 @@ def searchupwards(start, files=[], dirs=[]):
         candidate = join(parents) + os.sep
         allpresent = 1
         for f in files:
-            if not exists("%s%s" % (candidate, f)):
+            if not exists(f"{candidate}{f}"):
                 allpresent = 0
                 break
         if allpresent:
             for d in dirs:
-                if not isdir("%s%s" % (candidate, d)):
+                if not isdir(f"{candidate}{d}"):
                     allpresent = 0
                     break
         if allpresent:
@@ -609,7 +609,9 @@ class FancyStrMixin:
     """
 
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
+    showAttributes: Sequence[
+        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+    ] = ()
 
     def __str__(self) -> str:
         r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
@@ -618,10 +620,10 @@ class FancyStrMixin:
         #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(" %s=%r" % (attr, getattr(self, attr)))
+                r.append(" {}={!r}".format(attr, getattr(self, attr)))
             elif len(attr) == 2:
                 attr = cast(Tuple[str, Callable], attr)
-                r.append((" %s=" % (attr[0],)) + attr[1](getattr(self, attr[0])))
+                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
             else:
                 attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
@@ -639,7 +641,7 @@ class FancyEqMixin:
     C{compareAttributes}.
     """
 
-    compareAttributes = ()  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ()
 
     def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
@@ -733,8 +735,8 @@ def switchUID(uid, gid, euid=False):
     if uid is not None:
         if uid == getuid():
             uidText = euid and "euid" or "uid"
-            actionText = "tried to drop privileges and set{} {}".format(uidText, uid)
-            problemText = "{} is already {}".format(uidText, getuid())
+            actionText = f"tried to drop privileges and set{uidText} {uid}"
+            problemText = f"{uidText} is already {getuid()}"
             warnings.warn(
                 "{} but {}; should we be root? Continuing.".format(
                     actionText, problemText
@@ -751,19 +753,19 @@ def untilConcludes(f, *a, **kw):
 
     @param f: A function to call.
 
-    @param *a: Positional arguments to pass to C{f}.
+    @param a: Positional arguments to pass to C{f}.
 
-    @param **kw: Keyword arguments to pass to C{f}.
+    @param kw: Keyword arguments to pass to C{f}.
 
     @return: Whatever C{f} returns.
 
-    @raise: Whatever C{f} raises, except for C{IOError} or C{OSError} with
+    @raise Exception: Whatever C{f} raises, except for C{OSError} with
         C{errno} set to C{EINTR}.
     """
     while True:
         try:
             return f(*a, **kw)
-        except (IOError, OSError) as e:
+        except OSError as e:
             if e.args[0] == errno.EINTR:
                 continue
             raise
@@ -846,9 +848,9 @@ def uidFromString(uidString):
     """
     Convert a user identifier, as a string, into an integer UID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a UID or the
-        name of a user which can be converted to a UID via L{pwd.getpwnam}.
+    @type uidString: C{str}
+    @param uidString: A string giving the base-ten representation of a UID or
+        the name of a user which can be converted to a UID via L{pwd.getpwnam}.
 
     @rtype: C{int}
     @return: The integer UID corresponding to the given string.
@@ -868,9 +870,9 @@ def gidFromString(gidString):
     """
     Convert a group identifier, as a string, into an integer GID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a GID or the
-        name of a group which can be converted to a GID via L{grp.getgrnam}.
+    @type gidString: C{str}
+    @param gidString: A string giving the base-ten representation of a GID or
+        the name of a group which can be converted to a GID via L{grp.getgrnam}.
 
     @rtype: C{int}
     @return: The integer GID corresponding to the given string.
@@ -902,8 +904,8 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
     @param function: the function run with the specific permission.
     @type function: any callable
 
-    @param *args: arguments passed to C{function}
-    @param **kwargs: keyword arguments passed to C{function}
+    @param args: arguments passed to C{function}
+    @param kwargs: keyword arguments passed to C{function}
     """
     uid, gid = os.geteuid(), os.getegid()
     if uid == euid and gid == egid:

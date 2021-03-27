@@ -92,8 +92,7 @@ class CooperatorTests(unittest.TestCase):
         c = task.Cooperator()
 
         def myiter():
-            for myiter.value in range(3):
-                yield myiter.value
+            yield from range(3)
 
         myiter.value = -1
         d = c.coiterate(myiter())
@@ -139,8 +138,8 @@ class CooperatorTests(unittest.TestCase):
         c = task.Cooperator()
 
         def myiter():
-            if 0:
-                yield None
+            if False:
+                yield None  # type: ignore[unreachable]
             else:
                 raise RuntimeError()
 
@@ -224,7 +223,7 @@ class CooperatorTests(unittest.TestCase):
                 self.func = func
 
             def __repr__(self) -> str:
-                return "<FakeCall %r>" % (self.func,)
+                return f"<FakeCall {self.func!r}>"
 
         def sched(f):
             self.assertFalse(calls, repr(calls))

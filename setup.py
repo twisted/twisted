@@ -7,16 +7,20 @@
 Setuptools installer for Twisted.
 """
 
-import sys
+import pathlib
+import re
+
 import setuptools
 
-if __name__ == "__main__":
 
-    _setup = {}
-    with open("src/twisted/python/_setup.py") as f:
-        exec(f.read(), _setup)
-
-    try:
-        setuptools.setup(**_setup["getSetupArgs"]())
-    except KeyboardInterrupt:
-        sys.exit(1)
+setuptools.setup(
+    # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
+    # location on GitHub so that they function when the long description is
+    # displayed on PyPI.
+    long_description=re.sub(
+        r"`([^`]+)\s+<(?!https?://)([^>]+)>`_",
+        r"`\1 <https://github.com/twisted/twisted/blob/trunk/\2>`_",
+        pathlib.Path("README.rst").read_text(encoding="utf8"),
+        flags=re.I,
+    )
+)

@@ -138,7 +138,7 @@ def counter(counter=itertools.count()):
 
 def makeCertificate(**kw):
     keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 1024)
+    keypair.generate_key(TYPE_RSA, 2048)
 
     certificate = X509()
     certificate.gmtime_adj_notBefore(0)
@@ -333,7 +333,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
             @return: an SSL context using a certificate and key.
             @rtype: C{OpenSSL.SSL.Context}
             """
-            ctx = SSL.Context(SSL.TLSv1_METHOD)
+            ctx = SSL.Context(SSL.SSLv23_METHOD)
             if chainedCertFile is not None:
                 ctx.use_certificate_chain_file(chainedCertFile)
             ctx.use_privatekey_file(privateKeyFile)
@@ -729,7 +729,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
         L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
-        super(OpenSSLOptionsTests, self).setUp()
+        super().setUp()
         self.patch(
             sslverify,
             "_ChooseDiffieHellmanEllipticCurve",
@@ -1413,8 +1413,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertIn(k, s, "%r was not in inspect output." % (k,))
-            self.assertIn(k.title(), s, "%r was not in inspect output." % (k,))
+            self.assertIn(k, s, f"{k!r} was not in inspect output.")
+            self.assertIn(k.title(), s, f"{k!r} was not in inspect output.")
 
     def testInspectDistinguishedNameWithoutAllFields(self):
         n = sslverify.DN(localityName=b"locality name")
@@ -1427,8 +1427,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertNotIn(k, s, "%r was in inspect output." % (k,))
-            self.assertNotIn(k.title(), s, "%r was in inspect output." % (k,))
+            self.assertNotIn(k, s, f"{k!r} was in inspect output.")
+            self.assertNotIn(k.title(), s, f"{k!r} was in inspect output.")
         self.assertIn("locality name", s)
         self.assertIn("Locality Name", s)
 
@@ -1542,10 +1542,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertTrue(opts.fixBrokenPeers)
         self.assertTrue(opts.enableSessionTickets)
 
-    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]  # noqa
+    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]
         util.suppress(
             category=DeprecationWarning,
-            message="twisted\.internet\._sslverify\.*__[gs]etstate__",
+            message=r"twisted\.internet\._sslverify\.*__[gs]etstate__",
         )
     ]
 
@@ -1764,18 +1764,18 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
         # and OpenSSL only supports ECHDE groups with TLS 1.3:
         # https://wiki.openssl.org/index.php/TLS1.3#Groups
         #
-        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.2 to
+        # so TLS 1.3 implies ECDHE.  Force this test to use TLS 1.3 to
         # ensure ECDH is selected when it might not be.
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
             ),
             sslverify.OpenSSLCertificateOptions(
                 requireCertificate=False,
-                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
+                lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_3,
             ),
             onData=onData,
         )

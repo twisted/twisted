@@ -13,8 +13,8 @@ __all__ = ["UserDatabase", "ShadowDatabase"]
 class _UserRecord:
     """
     L{_UserRecord} holds the user data for a single user in L{UserDatabase}.
-    It corresponds to L{pwd.struct_passwd}.  See that class for attribute
-    documentation.
+    It corresponds to the C{passwd} structure from the L{pwd} module.
+    See that module for attribute documentation.
     """
 
     def __init__(self, name, password, uid, gid, gecos, home, shell):

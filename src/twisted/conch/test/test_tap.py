@@ -148,5 +148,5 @@ class MakeServiceTests(TestCase):
         service = tap.makeService(config)
         portal = service.factory.portal
         self.assertEqual(
-            set(portal.checkers.keys()), set([ISSHPrivateKey, IUsernamePassword])
+            set(portal.checkers.keys()), {ISSHPrivateKey, IUsernamePassword}
         )

@@ -29,6 +29,8 @@ algorithms = {
 }
 
 # DigestCalcHA1
+
+
 def calcHA1(
     pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce, preHA1=None
 ):
@@ -50,10 +52,8 @@ def calcHA1(
 
     if preHA1 and (pszUserName or pszRealm or pszPassword):
         raise TypeError(
-            (
-                "preHA1 is incompatible with the pszUserName, "
-                "pszRealm, and pszPassword arguments"
-            )
+            "preHA1 is incompatible with the pszUserName, "
+            "pszRealm, and pszPassword arguments"
         )
 
     if preHA1 is None:
@@ -85,7 +85,7 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     """
     Compute H(A2) from RFC 2617.
 
-    @param pszAlg: The name of the algorithm to use to calculate the digest.
+    @param algo: The name of the algorithm to use to calculate the digest.
         Currently supported are md5, md5-sess, and sha.
     @param pszMethod: The request method.
     @param pszDigestUri: The request URI.

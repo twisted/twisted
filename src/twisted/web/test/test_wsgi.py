@@ -5,8 +5,6 @@
 Tests for L{twisted.web.wsgi}.
 """
 
-__metaclass__ = type
-
 from sys import exc_info
 from urllib.parse import quote as urlquote
 import tempfile
@@ -49,7 +47,7 @@ class SynchronousThreadPool:
         """
         try:
             f(*a, **kw)
-        except:
+        except BaseException:
             # callInThread doesn't let exceptions propagate to the caller.
             # None is always returned and any exception raised gets logged
             # later on.
@@ -336,7 +334,7 @@ class WSGITestsMixin:
                     content = iter(())  # No content.
                 else:
                     content = application(environ, startResponse)
-            except:
+            except BaseException:
                 result.errback()
                 startResponse("500 Error", [])
                 return iter(())
@@ -880,7 +878,7 @@ class InputStreamTestMixin(WSGITestsMixin):
 
     def getFileType(self):
         raise NotImplementedError(
-            "%s.getFile must be implemented" % (self.__class__.__name__,)
+            f"{self.__class__.__name__}.getFile must be implemented"
         )
 
     def _renderAndReturnReaderResult(self, reader, content):
@@ -1484,7 +1482,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not (%r, 'value')" % (key,),
+                f"header must be (str, str) tuple, not ({key!r}, 'value')",
                 str(error),
             )
 
@@ -1506,7 +1504,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         def checkMessage(error):
             self.assertEqual(
-                "header must be (str, str) tuple, not ('key', %r)" % (value,),
+                f"header must be (str, str) tuple, not ('key', {value!r})",
                 str(error),
             )
 
@@ -1758,7 +1756,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         try:
             raise SomeException()
-        except:
+        except BaseException:
             excInfo = exc_info()
 
         reraised = []
@@ -1769,7 +1767,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                 yield b"foo"
                 try:
                     startResponse("500 ERR", [], excInfo)
-                except:
+                except BaseException:
                     reraised.append(exc_info())
 
             return application
@@ -1989,7 +1987,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 
@@ -2022,7 +2020,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 
@@ -2054,7 +2052,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory(ThreadVerifier)
 
         def cbRendered(ignored):
-            self.assertEqual(set(invoked), set([getThreadID()]))
+            self.assertEqual(set(invoked), {getThreadID()})
 
         d.addCallback(cbRendered)
 

@@ -18,7 +18,7 @@ class LogCaptureTests(TestCase):
 
     log = Logger()
 
-    def test_capture(self):
+    def test_capture(self) -> None:
         """
         Events logged within context are captured.
         """

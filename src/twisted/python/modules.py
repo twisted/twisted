@@ -57,13 +57,12 @@ the modules outside the standard library's python-files directory::
 """
 
 
-__metaclass__ = type
-
 # let's try to keep path imports to a minimum...
 from os.path import dirname, split as splitpath
 
 import sys
 import inspect
+from typing import cast
 import warnings
 import zipimport
 
@@ -181,8 +180,7 @@ class _ModuleIteratorHelper:
         """
         yield self
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=importPackages):
-                yield module
+            yield from package.walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -221,7 +219,7 @@ class _ModuleIteratorHelper:
 
         to retrieve this module.
 
-        @raise: KeyError if the module is not found.
+        @raise KeyError: if the module is not found.
 
         @return: a PythonModule.
         """
@@ -271,7 +269,7 @@ class PythonAttribute:
         self.pythonValue = pythonValue
 
     def __repr__(self) -> str:
-        return "PythonAttribute<%r>" % (self.name,)
+        return f"PythonAttribute<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -333,7 +331,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         Return a string representation including the module name.
         """
-        return "PythonModule<%r>" % (self.name,)
+        return f"PythonModule<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -379,7 +377,7 @@ class PythonModule(_ModuleIteratorHelper):
 
         @return: a genuine python module.
 
-        @raise: any type of exception.  Importing modules is a risky business;
+        @raise Exception: Importing modules is a risky business;
         the erorrs of any code run at module scope may be raised from here, as
         well as ImportError if something bizarre happened to the system path
         between the discovery of this PythonModule object and the attempt to
@@ -390,7 +388,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         try:
             return self.pathEntry.pythonPath.moduleLoader(self.name)
-        except:  # this needs more thought...
+        except BaseException:  # this needs more thought...
             if default is not _nothing:
                 return default
             raise
@@ -400,13 +398,13 @@ class PythonModule(_ModuleIteratorHelper):
         PythonModules with the same name are equal.
         """
         if isinstance(other, PythonModule):
-            return other.name == self.name
+            return cast(bool, other.name == self.name)
         return NotImplemented
 
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self).walkModules(importPackages=importPackages)
+        return super().walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -457,7 +455,7 @@ class PathEntry(_ModuleIteratorHelper):
         return self
 
     def __repr__(self) -> str:
-        return "PathEntry<%r>" % (self.filePath,)
+        return f"PathEntry<{self.filePath!r}>"
 
     def _packagePaths(self):
         yield self.filePath
@@ -740,15 +738,14 @@ class PythonPath:
         """
         Display my sysPath and moduleDict in a string representation.
         """
-        return "PythonPath(%r,%r)" % (self.sysPath, self.moduleDict)
+        return f"PythonPath({self.sysPath!r},{self.moduleDict!r})"
 
     def iterModules(self):
         """
         Yield all top-level modules on my sysPath.
         """
         for entry in self.iterEntries():
-            for module in entry.iterModules():
-                yield module
+            yield from entry.iterModules()
 
     def walkModules(self, importPackages=False):
         """
@@ -756,8 +753,7 @@ class PythonPath:
         submodule in each package or entry.
         """
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=False):
-                yield module
+            yield from package.walkModules(importPackages=False)
 
 
 theSystemPath = PythonPath()
@@ -776,8 +772,6 @@ def iterModules():
     """
     Iterate all modules and top-level packages on the global Python path, but
     do not descend into packages.
-
-    @param importPackages: Import packages as they are seen.
     """
     return theSystemPath.iterModules()
 

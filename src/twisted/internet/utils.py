@@ -41,7 +41,7 @@ class _UnexpectedErrorOutput(IOError):
     """
 
     def __init__(self, text, processEnded):
-        IOError.__init__(self, "got stderr: %r" % (text,))
+        IOError.__init__(self, f"got stderr: {text!r}")
         self.processEnded = processEnded
 
 
@@ -203,7 +203,7 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
     addedFilters = warnings.filters[: len(suppressedWarnings)]
     try:
         result = f(*a, **kw)
-    except:  # noqa
+    except BaseException:
         exc_info = sys.exc_info()
         _resetWarningFilters(None, addedFilters)
         raise exc_info[1].with_traceback(exc_info[2])

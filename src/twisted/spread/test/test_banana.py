@@ -148,7 +148,7 @@ class BananaTests(BananaTestBase):
             object.
         """
         exc = self.assertRaises(banana.BananaError, self.enc.sendEncoded, obj)
-        self.assertIn("Banana cannot send {0} objects".format(name), str(exc))
+        self.assertIn(f"Banana cannot send {name} objects", str(exc))
 
     def test_int(self):
         """

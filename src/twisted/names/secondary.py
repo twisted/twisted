@@ -58,7 +58,8 @@ class SecondaryAuthorityService(service.Service):
             C{int} giving a port number.  Together, these define where zone
             transfers will be attempted from.
 
-        @param domain: A C{bytes} giving the domain to transfer.
+        @param domains: Domain names for which to perform zone transfers.
+        @type domains: sequence of L{bytes}
 
         @return: A new instance of L{SecondaryAuthorityService}.
         """

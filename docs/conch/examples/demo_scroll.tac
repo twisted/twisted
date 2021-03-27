@@ -37,10 +37,9 @@ from twisted.internet import protocol
 from twisted.python import log
 
 
-
 class DemoProtocol(insults.TerminalProtocol):
-    """Copies input to an upwards scrolling region.
-    """
+    """Copies input to an upwards scrolling region."""
+
     width = 80
     height = 24
 
@@ -55,19 +54,19 @@ class DemoProtocol(insults.TerminalProtocol):
 
         self.terminal.setScrollRegion(0, height - 1)
         self.terminal.cursorPosition(0, height)
-        self.terminal.write('> ')
+        self.terminal.write("> ")
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: %r" % (seq,))
+        log.msg(f"Client sent something weird: {seq!r}")
 
     def keystrokeReceived(self, keyID, modifier):
-        if keyID == '\r':
+        if keyID == "\r":
             self.terminal.cursorPosition(0, self.height - 2)
             self.terminal.nextLine()
-            self.terminal.write(''.join(self.buffer))
+            self.terminal.write("".join(self.buffer))
             self.terminal.cursorPosition(0, self.height - 1)
             self.terminal.eraseToLineEnd()
-            self.terminal.write('> ')
+            self.terminal.write("> ")
             self.buffer = []
         elif keyID in list(string.printable):
             self.terminal.write(keyID)
@@ -78,18 +77,21 @@ def makeService(args):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
-                                         insults.ServerProtocol,
-                                         args['protocolFactory'],
-                                         *args.get('protocolArgs', ()),
-                                         **args.get('protocolKwArgs', {}))
-    tsvc = internet.TCPServer(args['telnet'], f)
+    f.protocol = lambda: TelnetTransport(
+        TelnetBootstrapProtocol,
+        insults.ServerProtocol,
+        args["protocolFactory"],
+        *args.get("protocolArgs", ()),
+        **args.get("protocolKwArgs", {}),
+    )
+    tsvc = internet.TCPServer(args["telnet"], f)
 
     def chainProtocolFactory():
         return insults.ServerProtocol(
-            args['protocolFactory'],
-            *args.get('protocolArgs', ()),
-            **args.get('protocolKwArgs', {}))
+            args["protocolFactory"],
+            *args.get("protocolArgs", ()),
+            **args.get("protocolKwArgs", {}),
+        )
 
     rlm = TerminalRealm()
     rlm.chainedProtocolFactory = chainProtocolFactory
@@ -97,15 +99,16 @@ def makeService(args):
     f = ConchFactory(ptl)
     f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
     f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
-    csvc = internet.TCPServer(args['ssh'], f)
+    csvc = internet.TCPServer(args["ssh"], f)
 
     m = service.MultiService()
     tsvc.setServiceParent(m)
     csvc.setServiceParent(m)
     return m
 
+
 application = service.Application("Scroll Region Demo App")
 
-makeService({'protocolFactory': DemoProtocol,
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
+makeService(
+    {"protocolFactory": DemoProtocol, "telnet": 6023, "ssh": 6022}
+).setServiceParent(application)

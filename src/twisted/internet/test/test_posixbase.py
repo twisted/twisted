@@ -84,7 +84,7 @@ class PosixReactorBaseTests(TestCase):
         reactor.addReader(reader)
         reactor.addWriter(writer)
         removed = reactor._removeAll(reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
+        self.assertEqual(set(removed), {reader, writer})
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
 
@@ -289,3 +289,12 @@ class ConnectedDatagramPortTests(TestCase):
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
         self.assertTrue(self.called)
+
+
+class WakerTests(TestCase):
+    def test_noWakerConstructionWarnings(self):
+        waker = _Waker(reactor=None)
+        warnings = self.flushWarnings()
+        # explicitly close the sockets
+        waker.connectionLost(None)
+        self.assertEqual(len(warnings), 0)

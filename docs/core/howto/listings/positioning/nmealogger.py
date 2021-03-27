@@ -4,7 +4,6 @@
 """
 Connects to an NMEA device, logs beacon information and position.
 """
-from __future__ import print_function
 
 import sys
 from twisted.internet import reactor, serialport
@@ -14,21 +13,18 @@ from twisted.python import log, usage
 
 class PositioningReceiver(base.BasePositioningReceiver):
     def positionReceived(self, latitude, longitude):
-        log.msg("I'm at {} lat, {} lon".format(latitude, longitude))
-
+        log.msg(f"I'm at {latitude} lat, {longitude} lon")
 
     def beaconInformationReceived(self, beaconInformation):
         template = "{0.seen} beacons seen, {0.used} beacons used"
         log.msg(template.format(beaconInformation))
 
 
-
 class Options(usage.Options):
     optParameters = [
-        ['baud-rate', 'b', 4800, "Baud rate (default: 4800)"],
-        ['serial-port', 'p', '/dev/ttyS0', 'Serial Port device'],
+        ["baud-rate", "b", 4800, "Baud rate (default: 4800)"],
+        ["serial-port", "p", "/dev/ttyS0", "Serial Port device"],
     ]
-
 
 
 def run():
@@ -49,7 +45,6 @@ def run():
     serialport.SerialPort(proto, port, reactor, baudrate=baudrate)
 
     reactor.run()
-
 
 
 if __name__ == "__main__":

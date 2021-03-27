@@ -7,6 +7,8 @@ Tests for the implementation of the ssh-userauth service.
 Maintainer: Paul Swartz
 """
 
+from types import ModuleType
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -21,13 +23,13 @@ from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
+keys: Optional[ModuleType] = None
 if requireModule("cryptography") and requireModule("pyasn1"):
     from twisted.conch.ssh.common import NS
     from twisted.conch.checkers import SSHProtocolChecker
     from twisted.conch.ssh import keys, userauth, transport
     from twisted.conch.test import keydata
 else:
-    keys = None  # type: ignore[assignment]
 
     class transport:  # type: ignore[no-redef]
         class SSHTransportBase:

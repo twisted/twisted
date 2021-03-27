@@ -53,7 +53,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         and an absolute path to the zip file.
         """
         child = self.path.child("foo")
-        pathRepr = "ZipPath(%r)" % (
+        pathRepr = "ZipPath({!r})".format(
             os.path.abspath(self.nativecmn + ".zip" + os.sep + "foo"),
         )
 
@@ -86,7 +86,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         name and an absolute path to the zip file.
         """
         path = ZipArchive(self.nativecmn + ".zip")
-        pathRepr = "ZipArchive(%r)" % (os.path.abspath(self.nativecmn + ".zip"),)
+        pathRepr = "ZipArchive({!r})".format(os.path.abspath(self.nativecmn + ".zip"))
 
         # Check for an absolute path
         self.assertEqual(repr(path), pathRepr)

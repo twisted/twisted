@@ -208,7 +208,7 @@ class TestLookupProcedure(XMLRPC):
         if procedureName == "echo":
             return self.echo
         raise xmlrpc.NoSuchFunction(
-            self.NOT_FOUND, "procedure %s not found" % (procedureName,)
+            self.NOT_FOUND, f"procedure {procedureName} not found"
         )
 
 

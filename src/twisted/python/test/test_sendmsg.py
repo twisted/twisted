@@ -79,7 +79,7 @@ class _FDHolder:
         If C{self._fd} is unclosed, raise a warning.
         """
         if self._fd:
-            warnings.warn("FD %s was not closed!" % (self._fd,), ResourceWarning)
+            warnings.warn(f"FD {self._fd} was not closed!", ResourceWarning)
             self.close()
 
     def __enter__(self):
@@ -265,7 +265,7 @@ class SendmsgTests(TestCase):
         for i in range(8 * 1024):
             try:
                 sendmsg(self.input, b"x" * 1024, flags=MSG_DONTWAIT)
-            except error as e:
+            except OSError as e:
                 self.assertEqual(e.args[0], errno.EAGAIN)
                 break
         else:

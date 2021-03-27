@@ -81,10 +81,10 @@ class SerialNumber(FancyStrMixin):
 
         @param other: The foreign L{object} to be checked.
         @return: C{other} after compatibility checks and possible coercion.
-        @raises: L{TypeError} if C{other} is not compatible.
+        @raise TypeError: If C{other} is not compatible.
         """
         if not isinstance(other, SerialNumber):
-            raise TypeError("cannot compare or combine %r and %r" % (self, other))
+            raise TypeError(f"cannot compare or combine {self!r} and {other!r}")
 
         if self._serialBits != other._serialBits:
             raise TypeError(
@@ -193,7 +193,7 @@ class SerialNumber(FancyStrMixin):
 
         @see: U{http://tools.ietf.org/html/rfc1982#section-3.1}
 
-        @raises: L{ArithmeticError} if C{other} is more than C{_maxAdd}
+        @raise ArithmeticError: If C{other} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
         try:

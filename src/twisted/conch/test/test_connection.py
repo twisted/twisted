@@ -206,8 +206,6 @@ class ConnectionTests(unittest.TestCase):
 
     if not cryptography:
         skip = "Cannot run without cryptography"
-    if test_userauth.transport is None:
-        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)
@@ -374,7 +372,7 @@ class ConnectionTests(unittest.TestCase):
             common.NS(b"conch-error-args") + b"\x00\x00\x00\x01" * 4
         )
         errors = self.flushLoggedErrors(error.ConchError)
-        self.assertEqual(len(errors), 1, "Expected one error, got: %r" % (errors,))
+        self.assertEqual(len(errors), 1, f"Expected one error, got: {errors!r}")
         self.assertEqual(errors[0].value.args, (123, "error args in wrong order"))
         self.assertEqual(
             self.transport.packets,
@@ -829,9 +827,6 @@ class CleanConnectionShutdownTests(unittest.TestCase):
 
     if not cryptography:
         skip = "Cannot run without cryptography"
-
-    if test_userauth.transport is None:
-        skip = "Cannot run without both cryptography and pyasn1"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)

@@ -34,7 +34,7 @@ def testNames(tests):
 
 class FinderPy3Tests(packages.SysPathManglingTest):
     def setUp(self):
-        super(FinderPy3Tests, self).setUp()
+        super().setUp()
         self.loader = runner.TestLoader()
 
     def test_findNonModule(self):
@@ -160,7 +160,7 @@ class FileTests(packages.SysPathManglingTest):
         emptyDir.createDirectory()
 
         err = self.assertRaises(ValueError, runner.filenameToModule, emptyDir.path)
-        self.assertEqual(str(err), "%r is not a package directory" % (emptyDir.path,))
+        self.assertEqual(str(err), f"{emptyDir.path!r} is not a package directory")
 
     def test_filenameNotPython(self):
         """
@@ -579,8 +579,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
                         if attr.name.split(".")[-1].startswith("test"):
                             testMethods.append(attr)
                     sortedMethods = sorted(testMethods, key=sorter)  # THREE
-                    for methinfo in sortedMethods:
-                        yield methinfo
+                    yield from sortedMethods
 
     def loadSortedPackages(self, sorter=runner.name):
         """
@@ -612,7 +611,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
         def sillySorter(s):
             # This has to work on fully-qualified class names and class
             # objects, which is silly, but it's the "spec", such as it is.
-            #             if isinstance(s, type) or isinstance(s, types.ClassType):
+            #             if isinstance(s, type):
             #                 return s.__module__+'.'+s.__name__
             n = runner.name(s)
             d = md5(n.encode("utf8")).hexdigest()

@@ -290,6 +290,8 @@ class CryptTests(TestCase):
         for salt in (None, "ab"):
             try:
                 cryptedCorrect = crypt.crypt(password, salt)
+                if isinstance(cryptedCorrect, bytes):
+                    cryptedCorrect = cryptedCorrect.decode("utf-8")
             except TypeError:
                 # Older Python versions would throw a TypeError if
                 # a value of None was is used for the salt.
@@ -309,6 +311,8 @@ class CryptTests(TestCase):
                 continue
             password = "interesting password xyz"
             crypted = crypt.crypt(password, cryptMethod)
+            if isinstance(crypted, bytes):
+                crypted = crypted.decode("utf-8")
             incorrectCrypted = crypted + "blahfooincorrect"
             result = cred_unix.verifyCryptedPassword(crypted, password)
             self.assertTrue(result)
@@ -560,7 +564,7 @@ class OptionsSupportsAllInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
-    supportedInterfaces = []  # type: Sequence[Type[Interface]]
+    supportedInterfaces: Sequence[Type[Interface]] = []
 
 
 class LimitingInterfacesTests(TestCase):

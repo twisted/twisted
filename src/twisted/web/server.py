@@ -107,8 +107,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = None  # type: Optional[List[bytes]]
-    postpath = None  # type: Optional[bytes]
+    prepath: Optional[List[bytes]] = None
+    postpath: Optional[List[bytes]] = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None
@@ -227,7 +227,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 if encoder is not None:
                     self._encoder = encoder
             self.render(resrc)
-        except:
+        except BaseException:
             self.processingFailed(failure.Failure())
 
     def write(self, data):
@@ -750,7 +750,7 @@ class Session(components.Componentized):
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
+version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
@@ -824,7 +824,7 @@ class Site(http.HTTPFactory):
         @param uid: Unique ID of the session.
         @type uid: L{bytes}.
 
-        @raise: L{KeyError} if the session is not found.
+        @raise KeyError: If the session is not found.
         """
         return self.sessions[uid]
 

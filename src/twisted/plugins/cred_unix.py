@@ -42,7 +42,10 @@ def verifyCryptedPassword(crypted, pw):
     if isinstance(crypted, bytes):
         crypted = crypted.decode("utf-8")
     try:
-        return crypt.crypt(pw, crypted) == crypted
+        crypted_check = crypt.crypt(pw, crypted)
+        if isinstance(crypted_check, bytes):
+            crypted_check = crypted_check.decode("utf-8")
+        return crypted_check == crypted
     except OSError:
         return False
 
@@ -95,8 +98,8 @@ class UNIXChecker:
         and see if it it matches it matches C{password}.
 
         @param spwd: Module which provides functions which
-                    access to the Unix shadow password database.
-        @type pwd: C{module}
+                     access to the Unix shadow password database.
+        @type spwd: C{module}
         @param username: The user to look up in the Unix password database.
         @type username: L{unicode}/L{str} or L{bytes}
         @param password: The password to compare.

@@ -9,10 +9,11 @@ A rotating, browsable log file.
 
 
 # System Imports
-import os
 import glob
-import time
+import os
 import stat
+import time
+from typing import BinaryIO, Optional, cast
 
 from twisted.python import threadable
 
@@ -24,7 +25,9 @@ class BaseLogFile:
 
     synchronized = ["write", "rotate"]
 
-    def __init__(self, name, directory, defaultMode=None):
+    def __init__(
+        self, name: str, directory: str, defaultMode: Optional[int] = None
+    ) -> None:
         """
         Create a log file.
 
@@ -37,7 +40,9 @@ class BaseLogFile:
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):
-            self.defaultMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
+            self.defaultMode: Optional[int] = stat.S_IMODE(
+                os.stat(self.path)[stat.ST_MODE]
+            )
         else:
             self.defaultMode = defaultMode
         self._openFile()
@@ -65,18 +70,18 @@ class BaseLogFile:
         """
         self.closed = False
         if os.path.exists(self.path):
-            self._file = open(self.path, "rb+", 0)
+            self._file = cast(BinaryIO, open(self.path, "rb+", 0))
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
                 oldUmask = os.umask(0o777)
                 try:
-                    self._file = open(self.path, "wb+", 0)
+                    self._file = cast(BinaryIO, open(self.path, "wb+", 0))
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = open(self.path, "wb+", 0)
+                self._file = cast(BinaryIO, open(self.path, "wb+", 0))
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
@@ -112,7 +117,7 @@ class BaseLogFile:
         """
         self.closed = True
         self._file.close()
-        self._file = None
+        del self._file
 
     def reopen(self):
         """
@@ -262,7 +267,7 @@ class DailyLogFile(BaseLogFile):
         """Return the suffix given a (year, month, day) tuple or unixtime"""
         try:
             return "_".join(map(str, tupledate))
-        except:
+        except BaseException:
             # try taking a float unixtime
             return "_".join(map(str, self.toDate(tupledate)))
 
@@ -270,7 +275,7 @@ class DailyLogFile(BaseLogFile):
         """Given a unix time, return a LogReader for an old log file."""
         if self.toDate(identifier) == self.lastDate:
             return self.getCurrentLog()
-        filename = "%s.%s" % (self.path, self.suffix(identifier))
+        filename = "{}.{}".format(self.path, self.suffix(identifier))
         if not os.path.exists(filename):
             raise ValueError("no such logfile exists")
         return LogReader(filename)
@@ -291,7 +296,7 @@ class DailyLogFile(BaseLogFile):
         """
         if not (os.access(self.directory, os.W_OK) and os.access(self.path, os.W_OK)):
             return
-        newpath = "%s.%s" % (self.path, self.suffix(self.lastDate))
+        newpath = "{}.{}".format(self.path, self.suffix(self.lastDate))
         if os.path.exists(newpath):
             return
         self._file.close()
@@ -317,7 +322,7 @@ class LogReader:
         The comments about binary-mode for L{BaseLogFile._openFile} also apply
         here.
         """
-        self._file = open(name, "r")
+        self._file = open(name)  # Optional[BinaryIO]
 
     def readLines(self, lines=10):
         """Read a list of lines from the log file.

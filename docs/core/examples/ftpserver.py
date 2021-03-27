@@ -37,8 +37,7 @@ from twisted.internet import reactor
 #   grimmtooth:bozo2
 # =====================
 #
-p = Portal(FTPRealm('./'),
-           [AllowAnonymousAccess(), FilePasswordDB("pass.dat")])
+p = Portal(FTPRealm("./"), [AllowAnonymousAccess(), FilePasswordDB("pass.dat")])
 
 #
 # Once the portal is set up, start up the FTPFactory and pass the portal to

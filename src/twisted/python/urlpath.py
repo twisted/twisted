@@ -6,10 +6,8 @@
 L{URLPath}, a representation of a URL.
 """
 
-
+from typing import cast
 from urllib.parse import quote as urlquote, unquote as urlunquote, urlunsplit
-
-from twisted.python.compat import nativeString
 
 from hyperlink import URL as _URL
 
@@ -26,7 +24,7 @@ def _rereconstituter(name):
     @return: a descriptor which retrieves the private version of the attribute
         on get and calls rerealize on set.
     """
-    privateName = nativeString("_") + name
+    privateName = "_" + name
     return property(
         lambda self: getattr(self, privateName),
         lambda self, value: (
@@ -139,12 +137,7 @@ class URLPath:
         @rtype: L{URLPath}
         """
         if not isinstance(url, str):
-            raise ValueError("'url' must be a str or unicode")
-        if isinstance(url, bytes):
-            # On Python 2, accepting 'str' (for compatibility) means we might
-            # get 'bytes'.  On py3, this will not work with bytes due to the
-            # check above.
-            return klass.fromBytes(url)
+            raise ValueError("'url' must be a str")
         return klass._fromURL(_URL.fromText(url))
 
     @classmethod
@@ -163,10 +156,6 @@ class URLPath:
         if not isinstance(url, bytes):
             raise ValueError("'url' must be bytes")
         quoted = urlquote(url, safe=_allascii)
-        if isinstance(quoted, bytes):
-            # This will only be bytes on python 2, where we can transform it
-            # into unicode.  On python 3, urlquote always returns str.
-            quoted = quoted.decode("ascii")
         return klass.fromString(quoted)
 
     @classmethod
@@ -211,7 +200,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -226,7 +215,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -238,7 +227,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -250,7 +239,7 @@ class URLPath:
 
         @param keepQuery: Whether to keep the query parameters on the returned
             L{URLPath}.
-        @type: keepQuery: L{bool}
+        @type keepQuery: L{bool}
 
         @return: a new L{URLPath}
         """
@@ -273,14 +262,14 @@ class URLPath:
         """
         The L{str} of a L{URLPath} is its URL text.
         """
-        return nativeString(self._url.asURI().asText())
+        return cast(str, self._url.asURI().asText())
 
     def __repr__(self) -> str:
         """
         The L{repr} of a L{URLPath} is an eval-able expression which will
         construct a similar L{URLPath}.
         """
-        return "URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)" % (
+        return "URLPath(scheme={!r}, netloc={!r}, path={!r}, query={!r}, fragment={!r})".format(
             self.scheme,
             self.netloc,
             self.path,

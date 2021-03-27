@@ -886,7 +886,7 @@ class AddCleanupMixin:
         """
         Setup our test case
         """
-        super(AddCleanupMixin, self).setUp()
+        super().setUp()
         self.result = reporter.TestResult()
         self.test = self.AddCleanup()
 

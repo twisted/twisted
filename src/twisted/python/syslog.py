@@ -87,7 +87,9 @@ class SyslogObserver:
                 firstLine = False
             else:
                 line = "\t" + line
-            self.syslog(priority | facility, "[%s] %s" % (eventDict["system"], line))
+            self.syslog(
+                priority | facility, "[{}] {}".format(eventDict["system"], line)
+            )
 
 
 def startLogging(

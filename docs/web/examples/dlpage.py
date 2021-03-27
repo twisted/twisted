@@ -17,7 +17,9 @@ import sys
 
 # The function downloads a page and saves it to a file, in this case, it saves
 # the page to "foo".
-downloadPage(sys.argv[1], "foo").addCallbacks(
-   lambda value:reactor.stop(),
-   lambda error:(println("an error occurred",error),reactor.stop()))
+url = sys.argv[1].encode("ascii")
+downloadPage(url, "foo").addCallbacks(
+    lambda value: reactor.stop(),
+    lambda error: (println("an error occurred", error), reactor.stop()),
+)
 reactor.run()

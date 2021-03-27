@@ -8,10 +8,12 @@ from twisted.python import log
 from twisted.cred import credentials, error
 from twisted.internet import defer
 
+
 class IMailbox(Interface):
     """
     Interface specification for mailbox.
     """
+
     def deleteMessage(index):
         pass
 
@@ -23,13 +25,13 @@ class POP3(basic.LineReceiver):
 
     def do_DELE(self, i):
         # uses self.mbox, which is set after login
-        i = int(i)-1
+        i = int(i) - 1
         self.mbox.deleteMessage(i)
         self.successResponse()
 
     def do_USER(self, user):
         self._userIs = user
-        self.successResponse('USER accepted, send PASS')
+        self.successResponse("USER accepted, send PASS")
 
     def do_PASS(self, password):
         if self._userIs is None:
@@ -43,9 +45,7 @@ class POP3(basic.LineReceiver):
     def authenticateUserPASS(self, user, password):
         if self.portal is not None:
             return self.portal.login(
-                credentials.UsernamePassword(user, password),
-                None,
-                IMailbox
+                credentials.UsernamePassword(user, password), None, IMailbox
             )
         raise error.UnauthorizedLogin()
 
@@ -53,11 +53,11 @@ class POP3(basic.LineReceiver):
         interface, avatar, logout = ial
 
         if interface is not IMailbox:
-            self.failResponse('Authentication failed')
+            self.failResponse("Authentication failed")
             log.err("_cbMailbox() called with an interface other than IMailbox")
             return
 
         self.mbox = avatar
         self._onLogout = logout
-        self.successResponse('Authentication succeeded')
+        self.successResponse("Authentication succeeded")
         log.msg("Authenticated login for " + user)

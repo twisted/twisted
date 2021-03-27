@@ -216,6 +216,7 @@ class Resolver(common.ResolverBase):
                     )
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
+
                     def cbResolved(results):
                         answers, authority, additional = results
                         answers.insert(0, previous)

@@ -13,22 +13,27 @@ from twisted.python.filepath import FilePath
 here = FilePath(__file__).parent().parent()
 twistedPath = here.child("src").child("twisted")
 
+
 def mv(fromPath):
 
     for fn in fromPath.walk():
         if fn.isfile():
-            os.system("git mv {fr} {to}"
-                      .format(
-                          fr=fn.path,
-                          to=fn.parent().parent().child(
-                              'newsfragments').child(fn.basename()).path
+            os.system(
+                "git mv {fr} {to}".format(
+                    fr=fn.path,
+                    to=fn.parent()
+                    .parent()
+                    .child("newsfragments")
+                    .child(fn.basename())
+                    .path,
+                )
+            )
 
-                      ))
 
-if twistedPath.child('topfiles').exists():
-    mv(twistedPath.child('topfiles'))
+if twistedPath.child("topfiles").exists():
+    mv(twistedPath.child("topfiles"))
 
 for child in twistedPath.listdir():
-    path = twistedPath.child(child).child('topfiles')
+    path = twistedPath.child(child).child("topfiles")
     if path.exists():
         mv(path)

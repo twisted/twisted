@@ -48,7 +48,7 @@ class LocalAsRemote:
         try:
             method = getattr(self, "async_" + name)
             return defer.succeed(method(*args, **kw))
-        except:
+        except BaseException:
             f = Failure()
             if self.reportAllTracebacks:
                 f.printTraceback()
