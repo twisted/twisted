@@ -1293,6 +1293,8 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         """
         L{_ChunkedTransferDecoder.dataReceived} raises
         L{_MalformedChunkedDataError} when the chunk size line exceeds 4 KiB.
+        This applies even when the data has already been received and buffered
+        so that behavior is consistent regardless of how bytes are framed.
         """
         p = http._ChunkedTransferDecoder(
             lambda b: None,  # pragma: nocov
