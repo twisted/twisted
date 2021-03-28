@@ -26,11 +26,10 @@ also useful for HTTP clients (such as the chunked encoding parser).
     header is present in the request) has failed.  This should typically
     indicate that the server has not taken the requested action.
 
-@var MAX_CHUNK_SIZE_LINE_LENGTH: Maximum allowable length of the
-    CRLF-terminated line that indicates the size of a chunk and the extensions
-    associated with it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC
-    7230 section 4.1). This limits how much data may be buffered when decoding
-    the line.
+@var maxChunkSizeLineLength: Maximum allowable length of the CRLF-terminated
+    line that indicates the size of a chunk and the extensions associated with
+    it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
+    This limits how much data may be buffered when decoding the line.
 """
 
 __all__ = [
@@ -1787,7 +1786,7 @@ class _IdentityTransferDecoder:
             raise _DataLoss()
 
 
-MAX_CHUNK_SIZE_LINE_LENGTH = 4096
+maxChunkSizeLineLength = 4096
 
 
 class _ChunkedTransferDecoder:
@@ -1849,16 +1848,16 @@ class _ChunkedTransferDecoder:
             C{self._buffer}.  C{False} when more data is required.
 
         @raises _MalformedChunkedDataError: when the chunk size cannot be
-            decoded or the length of the line exceeds L{MAX
+            decoded or the length of the line exceeds L{maxChunkSizeLineLength}.
         """
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
-        if eolIndex >= MAX_CHUNK_SIZE_LINE_LENGTH or (
-            eolIndex == -1 and len(self._buffer) > MAX_CHUNK_SIZE_LINE_LENGTH
+        if eolIndex >= maxChunkSizeLineLength or (
+            eolIndex == -1 and len(self._buffer) > maxChunkSizeLineLength
         ):
             raise _MalformedChunkedDataError(
                 "Chunk size line exceeds maximum of {} bytes.".format(
-                    MAX_CHUNK_SIZE_LINE_LENGTH
+                    maxChunkSizeLineLength
                 )
             )
 
