@@ -7,15 +7,12 @@
 Implementation of C{AMP} worker commands, and main executable entry point for
 the workers.
 
-This is the code executed in the distributed sub-processes.
-
 @since: 12.3
 """
 
 import sys
 import os
 import errno
-from io import StringIO, TextIOWrapper
 
 
 def _setupPath(environ):
@@ -61,46 +58,6 @@ class WorkerLogObserver:
         self.protocol.callRemote(managercommands.TestWrite, out=text)
 
 
-class WorkerStdout(StringIO):
-    """
-    Handles the forwarding of the sub-process sys.stdout to the central
-    disttrial process via the AMP protocol.
-    """
-
-    encoding = "utf-8"
-
-    def __init__(self, protocol):
-        """
-        @param protocol: a connected C{AMP} protocol instance.
-        @type protocol: C{AMP}
-        """
-        super().__init__()
-        self._protocol = protocol
-
-    def write(self, data):
-        from twisted.trial._dist import managercommands
-
-        self._protocol.callRemote(managercommands.TestWrite, out=data)
-
-
-class IOWrapper(TextIOWrapper):
-    encoding = "utf-8"
-
-    def __init__(self, fd):
-        super().__init__(fd)
-        self.encoding = "utf-8"
-
-
-class WorkerStdin(StringIO):
-    """
-    Placeholder to raise an error is a test tries to use the standard input
-    at the high level.
-    """
-
-    def read(self):
-        raise AssertionError("Reading from stdin inside a test is not supported.")
-
-
 def main(_fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
@@ -111,12 +68,19 @@ def main(_fdopen=os.fdopen):
     @type _fdopen: C{callable}
     """
     if _fdopen == os.fdopen:
-        # Prepare the subprocess communication pipes as soon as possible.
+        # Prepare the subprocess communication pipes as soon as possible,
+        # But not when the test is executed under tests.
+        #
+        # At the low level move AMP pipes from stdout/stdin file descriptors
+        # to new file descriptions so that normal code will not read/write from
+        # AMP when wanting to communicate with the standard pipes.
+        # Restore new stdin/stdout pipes hat are not connected to AMP.
         os.dup2(0, _WORKER_AMP_STDIN, inheritable=False)
         os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
-
-        # At the low leve, restore stdin/stdout pipes
-        # that are not connected to AMP.
+        # FIXME: https://twistedmatrix.com/trac/ticket/10156
+        # For now the new pipes are not connected to AMP.
+        # In a separate ticket we need to add support for stdin/stdout communicaion
+        # over AMP.
         in_file, out_file = os.pipe()
         os.dup2(in_file, 0, inheritable=True)
         os.dup2(out_file, 1, inheritable=True)
@@ -133,14 +97,6 @@ def main(_fdopen=os.fdopen):
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
-
-    if _fdopen == os.fdopen:
-        # Only collect high-level streams when not running under unit-tests.
-        sys.stdin = WorkerStdin()
-        # Redirect the sys.stdout generate by the worker to the
-        # centralized log file.
-        sys.stdout = WorkerStdout(workerProtocol)
-
     startLoggingWithObserver(observer.emit, False)
 
     while True:

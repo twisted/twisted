@@ -329,7 +329,7 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.outReceived} forward the data to the AMP protocol.
         """
         localWorker = self.tidyLocalWorker(FakeAMProtocol(), ".", "test.log")
-        data = b"The quick brown fox jumps over the lazy dog"
+        data = b"AMP Box Data"
         localWorker.outReceived(data)
         self.assertEqual(data, localWorker._ampProtocol.dataString)
 

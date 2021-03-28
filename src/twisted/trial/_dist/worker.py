@@ -6,8 +6,6 @@
 """
 This module implements the worker classes.
 
-This is the code executed in the main (local) control process.
-
 @since: 12.3
 """
 
@@ -29,7 +27,7 @@ from twisted.trial._dist.workerreporter import WorkerReporter
 
 class WorkerProtocol(AMP):
     """
-    The remote (subprocess) worker-side trial distributed protocol.
+    The worker-side trial distributed protocol.
     """
 
     def __init__(self, forceGarbageCollection=False):
@@ -191,8 +189,6 @@ class LocalWorkerTransport:
     """
     A stub transport implementation used to support L{AMP} over a
     L{ProcessProtocol} transport.
-
-    This is called from the main (local/control) process.
     """
 
     def __init__(self, transport):
