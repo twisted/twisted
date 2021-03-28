@@ -76,20 +76,25 @@ class WorkerStdout(StringIO):
         super().__init__()
         self._protocol = protocol
 
-    def write(self, s: str):
+    def write(self, s: str) -> int:
         """
         @param s: The string to be forwarded.
+
+        @return: Always returns the length of C{s}, being optimistic that the
+          delivery to remote process is successful.
+          This is async API the low-level data delivery is done async.
         """
         if not isinstance(s, str):
             raise TypeError(f"string argument expected, got {type(str)}")
 
         # Just forward the data without any proceesing as at the AMP
         # protocol `out` is defined as Unicode and AMP will handle the
-        # utf-8 encoding.
+        # UTF-8 encoding.
         self._protocol.callRemote(managercommands.TestWrite, out=s)
+        return len(s)
 
 
-def main(_fdopen: Callable = os.fdopen, _captureSysStdout: bool = False):
+def main(_fdopen: Callable = os.fdopen, _captureSysStdout: bool = False) -> None:
     """
     Main function to be run if __name__ == "__main__".
 
