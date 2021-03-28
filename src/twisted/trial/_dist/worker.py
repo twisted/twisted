@@ -22,7 +22,6 @@ from twisted.python.reflect import namedObject
 from twisted.trial.unittest import Todo
 from twisted.trial.runner import TrialSuite, TestLoader
 from twisted.trial._dist import workercommands, managercommands
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from twisted.trial._dist.workerreporter import WorkerReporter
 
 
@@ -199,14 +198,14 @@ class LocalWorkerTransport:
         """
         Forward data to transport.
         """
-        self._transport.writeToChild(_WORKER_AMP_STDIN, data)
+        self._transport.write(data)
 
     def writeSequence(self, sequence):
         """
         Emulate C{writeSequence} by iterating data in the C{sequence}.
         """
         for data in sequence:
-            self._transport.writeToChild(_WORKER_AMP_STDIN, data)
+            self._transport.write(data)
 
     def loseConnection(self):
         """
@@ -253,7 +252,6 @@ class LocalWorker(ProcessProtocol):
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
         if not os.path.exists(self._logDirectory):
             os.makedirs(self._logDirectory)
-        self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
         self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
         self._testLog = open(os.path.join(self._logDirectory, self._logFile), "w")
         self._ampProtocol.setTestStream(self._testLog)
@@ -268,7 +266,6 @@ class LocalWorker(ProcessProtocol):
         On connection lost, close the log files that we're managing for stdin
         and stdout.
         """
-        self._outLog.close()
         self._errLog.close()
         self._testLog.close()
 
@@ -285,20 +282,10 @@ class LocalWorker(ProcessProtocol):
         """
         Send data received from stdout to log.
         """
-
-        self._outLog.write(data)
+        self._ampProtocol.dataReceived(data)
 
     def errReceived(self, data):
         """
         Write error data to log.
         """
         self._errLog.write(data)
-
-    def childDataReceived(self, childFD, data):
-        """
-        Handle data received on the specific pipe for the C{_ampProtocol}.
-        """
-        if childFD == _WORKER_AMP_STDOUT:
-            self._ampProtocol.dataReceived(data)
-        else:
-            ProcessProtocol.childDataReceived(self, childFD, data)

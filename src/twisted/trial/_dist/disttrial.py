@@ -22,7 +22,6 @@ from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 
 
 class DistTrialRunner:
@@ -115,13 +114,6 @@ class DistTrialRunner:
         @param arguments: Extra arguments passed to the processes.
         """
         workertrialPath = theSystemPath["twisted.trial._dist.workertrial"].filePath.path
-        childFDs = {
-            0: "w",
-            1: "r",
-            2: "r",
-            _WORKER_AMP_STDIN: "w",
-            _WORKER_AMP_STDOUT: "r",
-        }
         environ = os.environ.copy()
         # Add an environment variable containing the raw sys.path, to be used by
         # subprocesses to make sure it's identical to the parent. See
@@ -130,7 +122,7 @@ class DistTrialRunner:
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
-            spawner(worker, sys.executable, args=args, childFDs=childFDs, env=environ)
+            spawner(worker, sys.executable, args=args, env=environ)
 
     def _driveWorker(self, worker, result, testCases, cooperate):
         """

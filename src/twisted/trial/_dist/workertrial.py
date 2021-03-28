@@ -62,9 +62,29 @@ def main(_fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
 
+    This is called in the sub-process spawned by L{DistTrialRunner}.
+
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
     @type _fdopen: C{callable}
     """
+    if _fdopen == os.fdopen:
+        # Prepare the subprocess communication pipes as soon as possible,
+        # But not when the test is executed under tests.
+        #
+        # At the low level move AMP pipes from stdout/stdin file descriptors
+        # to new file descriptions so that normal code will not read/write from
+        # AMP when wanting to communicate with the standard pipes.
+        # Restore new stdin/stdout pipes hat are not connected to AMP.
+        os.dup2(0, _WORKER_AMP_STDIN, inheritable=False)
+        os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
+        # FIXME: https://twistedmatrix.com/trac/ticket/10156
+        # For now the new pipes are not connected to AMP.
+        # In a separate ticket we need to add support for stdin/stdout communication
+        # over AMP.
+        in_file, out_file = os.pipe()
+        os.dup2(in_file, 0, inheritable=True)
+        os.dup2(out_file, 1, inheritable=True)
+
     config = WorkerOptions()
     config.parseOptions()
 
