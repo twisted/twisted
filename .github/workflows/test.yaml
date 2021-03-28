@@ -106,19 +106,21 @@ jobs:
         python --version
         tox -q
 
-    - name: Publish coverage
+    - name: Generate xMl and publish codecov.io
       # We want to publish coverage even on failure.
       if: contains(matrix['tox-env'], 'withcov') || failure()
       run: |
         python -m coverage xml -o coverage.xml -i
-        python -m codecov -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml &&
-        PID1=$!
-        python -m coveralls &&
-        PID2=$!
-        wait $PID1
-        wait $PID2
+        python -m codecov -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
       env:
         COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
+
+    - name: Publish coveralls
+      # We want to publish coverage even on failure.
+      if: contains(matrix['tox-env'], 'withcov') || failure()
+      run: |
+        python -m coveralls
+
 
 
   pypi-publish:
