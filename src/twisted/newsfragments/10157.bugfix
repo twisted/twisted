@@ -1,0 +1,6 @@
+twisted.trial._dist.worker.LocalWorker.connectionMade now always writes the
+log file using UTF-8 encoding.
+In previous versions it was using the system default encoding.
+This was causing encoding errors as the distributed trial workers are sending
+Unicode data and the system default encoding might now always be Unicode compatible.
+For example, it can be CP1252 on Windows.
