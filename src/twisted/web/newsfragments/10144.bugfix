@@ -1,0 +1,1 @@
+The server-side HTTP/1.1 chunking implementation now limits the length of the chunk size line (which includes chunk extensions) to twisted.web.http.MAX_CHUNK_SIZE_LINE_LENGTH, 4 KiB, so that it may not consume an unbounded amount of memory.
