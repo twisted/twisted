@@ -255,7 +255,15 @@ class LocalWorker(ProcessProtocol):
             os.makedirs(self._logDirectory)
         self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
         self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
-        self._testLog = open(os.path.join(self._logDirectory, self._logFile), "w")
+        # Log data is received via AMP which is UTF-8 unicode.
+        # The log file should be written using a Unicode encoding, and not
+        # the default system encoding which might not be Unicode compatible.
+        self._testLog = open(
+            os.path.join(self._logDirectory, self._logFile),
+            "w",
+            encoding="utf-8",
+            errors="backslashreplace",
+        )
         self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory
         d = self._ampProtocol.callRemote(workercommands.Start, directory=logDirectory)

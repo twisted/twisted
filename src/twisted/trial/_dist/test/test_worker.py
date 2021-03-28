@@ -341,13 +341,17 @@ class LocalWorkerTests(TestCase):
     def test_unicodeLogFileUTF8(self):
         """
         L{LocalWorker} write the log data in UTF-8 encoding regardless of the
-        default python encoding
+        default python encoding.
         """
         amp = SpyDataLocalWorkerAMP()
         tempDir = FilePath(self.mktemp())
         logFile = tempDir.child("test.log")
 
-        def getLatin1(do_setlocale=True):
+        def getLatin1(do_setlocale: bool = True) -> str:
+            """
+            A replacement for L{locale.getpreferredencoding} that always
+            returns the Latin-1 encoding.
+            """
             return "latin-1"
 
         self.patch(_bootlocale, "getpreferredencoding", getLatin1)
