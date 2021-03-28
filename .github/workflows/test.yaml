@@ -112,15 +112,14 @@ jobs:
       run: |
         python -m coverage xml -o coverage.xml -i
         python -m codecov -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
-      env:
-        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 
     - name: Publish coveralls
       # We want to publish coverage even on failure.
       if: contains(matrix['tox-env'], 'withcov') || failure()
       run: |
         python -m coveralls
-
+      env:
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 
 
   pypi-publish:
