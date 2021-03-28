@@ -28,7 +28,7 @@ parameters:
 steps:
 - checkout: self
   clean: true
-  fetchDepth: 1
+  fetchDepth: 2
 
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"
@@ -45,7 +45,7 @@ steps:
    python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
   displayName: 'Get Python Information'
 
-- script: 'python -m pip install -U pip setuptools tox coveralls'
+- script: 'python -m pip install -U pip setuptools tox coveralls pyyaml'
   displayName: 'Update pip & install tox'
 
 - ${{ if eq(parameters.platform, 'macos') }}:
@@ -62,7 +62,15 @@ steps:
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
-- bash:  |
-    bash <(curl -s https://codecov.io/bash) -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
+- bash: |
+    bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
+  displayName: 'Report codecov.io'
+
+- bash: |
+    export CIRCLE_BRANCH=$BUILD_SOURCEBRANCH
     python -m coveralls
-  displayName: 'Report coverage'
+  displayName: 'Report coveralls'
+  env:
+    CIRCLECI: 1
+    CIRCLE_BUILD_NUM: $(Build.BuildNumber)
+    COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
