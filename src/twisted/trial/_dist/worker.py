@@ -262,7 +262,7 @@ class LocalWorker(ProcessProtocol):
             os.path.join(self._logDirectory, self._logFile),
             "w",
             encoding="utf-8",
-            errors="backslashreplace",
+            errors="strict",
         )
         self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory

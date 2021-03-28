@@ -340,8 +340,8 @@ class LocalWorkerTests(TestCase):
 
     def test_unicodeLogFileUTF8(self):
         """
-        L{LocalWorker} write the log data in UTF-8 encoding regardless of the
-        default python encoding.
+        L{LocalWorker} write the log data with local newlines but
+        in UTF-8 encoding regardless of the default encoding.
         """
         amp = SpyDataLocalWorkerAMP()
         tempDir = FilePath(self.mktemp())
@@ -366,7 +366,10 @@ class LocalWorkerTests(TestCase):
         finally:
             worker._testLog.close()
 
-        self.assertEqual(b"Here comes the \xe2\x98\x89!\n", logFile.getContent())
+        self.assertEqual(
+            b"Here comes the \xe2\x98\x89!" + os.linesep.encode("ascii"),
+            logFile.getContent(),
+        )
 
     def test_outReceived(self):
         """
