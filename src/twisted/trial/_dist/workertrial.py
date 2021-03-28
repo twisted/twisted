@@ -79,7 +79,7 @@ def main(_fdopen=os.fdopen):
         os.dup2(1, _WORKER_AMP_STDOUT, inheritable=False)
         # FIXME: https://twistedmatrix.com/trac/ticket/10156
         # For now the new pipes are not connected to AMP.
-        # In a separate ticket we need to add support for stdin/stdout communicaion
+        # In a separate ticket we need to add support for stdin/stdout communication
         # over AMP.
         in_file, out_file = os.pipe()
         os.dup2(in_file, 0, inheritable=True)
