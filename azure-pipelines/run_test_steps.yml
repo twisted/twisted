@@ -45,7 +45,7 @@ steps:
    python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
   displayName: 'Get Python Information'
 
-- script: 'python -m pip install -U pip setuptools tox'
+- script: 'python -m pip install -U pip setuptools tox coveralls'
   displayName: 'Update pip & install tox'
 
 - ${{ if eq(parameters.platform, 'macos') }}:
@@ -63,6 +63,6 @@ steps:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
 - bash:  |
-    python -m tox -e coverage-prepare,coveralls-push
-    bash <(curl -s https://codecov.io/bash) -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
+    bash <(curl -s https://codecov.io/bash) -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
+    python -m coveralls
   displayName: 'Report coverage'
