@@ -119,7 +119,7 @@ jobs:
       run: |
         python -m coveralls
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 
 
   pypi-publish:

@@ -63,9 +63,12 @@ steps:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
 - bash: |
+    python -m coverage xml -o coverage.xml -i
     bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
   displayName: 'Report codecov.io'
 
+# Coveralls has no support for Azure so we pretend to be CircleCI.
+# See https://github.com/lemurheavy/coveralls-public/issues/1272
 - bash: |
     export CIRCLE_BRANCH=$BUILD_SOURCEBRANCH
     python -m coveralls
