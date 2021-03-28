@@ -1826,6 +1826,17 @@ class _ChunkedTransferDecoder:
         read. For C{'BODY'}, the contents of a chunk are being read. For
         C{'FINISHED'}, the last chunk has been completely read and no more
         input is valid.
+
+    @ivar _buffer: Accumulated received data for the current state. At each
+        state transition this is truncated at the front so that index 0 is
+        where the next state shall begin.
+
+    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
+        the buffer at which search for CRLF should resume. Resuming the search
+        at this position avoids doing quadratic work if the chunk length line
+        arrives over many calls to C{dataReceived}.
+
+        Not used in any other state.
     """
 
     state = "CHUNK_LENGTH"
