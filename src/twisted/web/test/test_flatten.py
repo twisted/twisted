@@ -561,3 +561,6 @@ class FlattenerErrorTests(SynchronousTestCase):
                 flags=re.MULTILINE,
             ),
         )
+        # The original exception is unmodified and will be logged separately if
+        # unhandled.
+        self.failureResultOf(failing, RuntimeError)
