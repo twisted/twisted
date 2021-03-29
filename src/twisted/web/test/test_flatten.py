@@ -19,7 +19,6 @@ from twisted.internet.defer import Deferred, gatherResults, passthru, succeed
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.error import (
     FlattenerError,
-    MissingRenderMethod,
     UnfilledSlot,
     UnsupportedType,
 )
