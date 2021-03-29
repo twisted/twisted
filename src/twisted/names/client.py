@@ -455,8 +455,7 @@ class Resolver(common.ResolverBase):
                 controller.timeoutCall = None
                 timeoutCall.cancel()
 
-            if connector is not None:
-                connector.disconnect()
+            connector.disconnect()
 
             return value
 
