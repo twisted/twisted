@@ -106,16 +106,16 @@ jobs:
         python --version
         tox -q
 
-    - name: Generate xMl and publish codecov.io
+    - name: Generate XML and publish to Codecov
       # We want to publish coverage even on failure.
-      if: contains(matrix['tox-env'], 'withcov') || failure()
+      if: always()
       run: |
         python -m coverage xml -o coverage.xml -i
         python -m codecov -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
 
-    - name: Publish coveralls
+    - name: Publish to Coveralls
       # We want to publish coverage even on failure.
-      if: contains(matrix['tox-env'], 'withcov') || failure()
+      if: always()
       run: |
         python -m coveralls
       env:

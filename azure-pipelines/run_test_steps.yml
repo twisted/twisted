@@ -47,7 +47,7 @@ steps:
    python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
   displayName: 'Get Python Information'
 
-- script: 'python -m pip install -U pip setuptools tox coveralls pyyaml'
+- script: 'python -m pip install -U pip setuptools tox coveralls'
   displayName: 'Update pip & install tox'
 
 - ${{ if eq(parameters.platform, 'macos') }}:
@@ -66,15 +66,17 @@ steps:
 
 - bash: |
     python -m coverage xml -o coverage.xml -i
-    bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
-  displayName: 'Generate XMl and report codecov.io'
+    bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -v -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}"
+  displayName: 'Generate XML and report to Codecov'
+  condition: always()
 
 # Coveralls has no support for Azure so we pretend to be CircleCI.
 # See https://github.com/lemurheavy/coveralls-public/issues/1272
 - bash: |
     export CIRCLE_BRANCH=$BUILD_SOURCEBRANCH
     python -m coveralls
-  displayName: 'Report coveralls'
+  displayName: 'Report to Coveralls'
+  condition: always()
   env:
     CIRCLECI: 1
     CIRCLE_BUILD_NUM: $(Build.BuildNumber)
