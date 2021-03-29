@@ -14,11 +14,11 @@ import sys
 import os
 import struct
 from typing import Optional, Callable, List, ClassVar
+from typing_extensions import Protocol as TypeProtocol
 
 import attr
 
 from zope.interface import Interface, implementer
-import typing_extensions
 
 from twisted.logger import Logger, ILogObserver, LogEvent
 from twisted.internet.interfaces import (
@@ -935,7 +935,7 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
-class _HasClose(typing_extensions.Protocol):
+class _HasClose(TypeProtocol):
     def close(self) -> object:
         ...
 

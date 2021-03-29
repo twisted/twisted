@@ -950,7 +950,7 @@ class Deferred(Awaitable[_DeferredResultT]):
             # exception"
             assert self._debugInfo is not None
             self._debugInfo.failResult = None
-            result.value.__failure__ = result
+            result.value.__failure__ = result  # type: ignore[attr-defined]
             raise result.value
         else:
             raise StopIteration(result)
@@ -1540,8 +1540,8 @@ class _CancellationStatus:
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[_T], object, None],
-        Coroutine[Deferred[_T], object, None],
+        Generator[Deferred[_T], object, _T],
+        Coroutine[Deferred[_T], object, _T],
     ],
     status: _CancellationStatus,
 ) -> None:

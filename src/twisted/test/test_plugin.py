@@ -97,7 +97,9 @@ class PluginTests(unittest.TestCase):
         """
         self.package.child("dropin.cache").remove()
 
-    def _withCacheness(meth: Callable):
+    def _withCacheness(
+        meth: Callable[["PluginTests"], None]
+    ) -> Callable[[object], None]:
         """
         This is a paranoid test wrapper, that calls C{meth} 2 times, clear the
         cache, and calls it 2 other times. It's supposed to ensure that the
