@@ -553,7 +553,7 @@ class FlattenerErrorTests(SynchronousTestCase):
                       \\[<unrenderable>\\]
                       <unrenderable>
                       .*
-                      File ".*", line 330, in _flattenTree
+                      File ".*", line \\d*, in _flattenTree
                         element = await element
                     RuntimeError: example
                     """
