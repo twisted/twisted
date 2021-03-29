@@ -325,6 +325,8 @@ async def _flattenTree(request, root, write):
         try:
             frame = stack[-1].gi_frame
             element = next(stack[-1])
+            if isinstance(element, Deferred):
+                element = await element
         except StopIteration:
             stack.pop()
         except Exception as e:
@@ -335,10 +337,7 @@ async def _flattenTree(request, root, write):
             roots.append(frame.f_locals["root"])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if isinstance(element, Deferred):
-                stack.append(await element)
-            else:
-                stack.append(element)
+            stack.append(element)
 
 
 def flatten(request, root, write):

@@ -7,26 +7,37 @@ L{twisted.web._flatten}.
 """
 
 import sys
+import re
 import traceback
+from collections import OrderedDict
+from textwrap import dedent
 
+from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
 
-from collections import OrderedDict
-
-from zope.interface import implementer
-
+from twisted.internet.defer import Deferred, gatherResults, passthru, succeed
 from twisted.trial.unittest import SynchronousTestCase
-from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.internet.defer import passthru, succeed, gatherResults
-
+from twisted.web.error import (
+    FlattenerError,
+    MissingRenderMethod,
+    UnfilledSlot,
+    UnsupportedType,
+)
 from twisted.web.iweb import IRenderable
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
-from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.template import Element, renderer, TagLoader, flattenString
-
+from twisted.web.template import (
+    CDATA,
+    CharRef,
+    Comment,
+    Element,
+    Tag,
+    TagLoader,
+    flattenString,
+    renderer,
+    slot,
+    tags,
+)
 from twisted.web.test._util import FlattenTestCase
+from zope.interface import implementer
 
 
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):
@@ -505,5 +516,48 @@ class FlattenerErrorTests(SynchronousTestCase):
                 f.__code__.co_firstlineno + 1,
                 HERE,
                 g.__code__.co_firstlineno + 1,
+            ),
+        )
+
+    def test_asynchronousFlattenError(self):
+        """
+        When flattening a renderer which raises an exception asynchronously,
+        the error is reported when it occurs.
+        """
+        failing = Deferred()
+
+        @implementer(IRenderable)
+        class NotActuallyRenderable:
+            "No methods provided; this will fail"
+
+            def __repr__(self):
+                return "<unrenderable>"
+
+            def lookupRenderMethod(self, name):
+                raise MissingRenderMethod(name)
+
+            def render(self, request):
+                return failing
+
+        flattening = flattenString(None, [NotActuallyRenderable()])
+        self.assertNoResult(flattening)
+        exc = RuntimeError("example")
+        failing.errback(exc)
+        failure = self.failureResultOf(flattening, FlattenerError)
+        self.assertRegex(
+            str(failure.value),
+            re.compile(
+                dedent(
+                    """\
+                    Exception while flattening:
+                      \\[<unrenderable>\\]
+                      <unrenderable>
+                      .*
+                      File ".*", line 330, in _flattenTree
+                        element = await element
+                    RuntimeError: example
+                    """
+                ),
+                flags=re.MULTILINE,
             ),
         )
