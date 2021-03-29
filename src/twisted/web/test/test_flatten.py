@@ -534,7 +534,7 @@ class FlattenerErrorTests(SynchronousTestCase):
                 return "<unrenderable>"
 
             def lookupRenderMethod(self, name):
-                raise MissingRenderMethod(name)
+                ...
 
             def render(self, request):
                 return failing
