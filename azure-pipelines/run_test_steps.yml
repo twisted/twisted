@@ -28,8 +28,8 @@ parameters:
 steps:
 - checkout: self
   clean: true
-  # A minimum dept of 2 is required, as for PR head is the auto-merge commit
-  # and we need the last commit from PR to report the coverage.
+  # A minimum depth of 2 is required, as the default is the auto-merge commit
+  # and we need the last commit from the PR to report the coverage.
   fetchDepth: 2
 
 - task: UsePythonVersion@0
