@@ -1786,7 +1786,7 @@ class _IdentityTransferDecoder:
             raise _DataLoss()
 
 
-maxChunkSizeLineLength = 4096
+maxChunkSizeLineLength = 1024
 
 
 class _ChunkedTransferDecoder:
