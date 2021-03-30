@@ -2,6 +2,8 @@
 branch = True
 parallel = True
 source = twisted
+omit =
+    .tox/*/tmp/_trial_temp/*
 
 [paths]
 source=

@@ -107,8 +107,7 @@ jobs:
         python --version
         tox -q
 
-    - name: Prepare coverate
-      # We want to publish coverage even on failure.
+    - name: Prepare coverage
       if: always()
       continue-on-error: true
       run: |
@@ -129,11 +128,10 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      # We want to publish coverage even on failure.
       if: always()
       continue-on-error: true
       run: |
-        python -m coveralls
+        python -m coveralls -v
       env:
         COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 

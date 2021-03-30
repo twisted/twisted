@@ -88,7 +88,7 @@ steps:
     export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
     export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
     export CI_BUILD_URL=$SYSTEM_PULLREQUEST_SOURCEREPOSITORYURI/pull/$CI_PULL_REQUEST
-    python -m coveralls
+    python -m coveralls -v
   displayName: 'Report to Coveralls'
   condition: always()
   continueOnError: true
