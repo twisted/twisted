@@ -1289,6 +1289,34 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
 
+    def test_oversizedChunkSizeLine(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size line exceeds 4 KiB.
+        This applies even when the data has already been received and buffered
+        so that behavior is consistent regardless of how bytes are framed.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3;" + b"." * http.maxChunkSizeLineLength + b"\r\nabc\r\n",
+        )
+
+    def test_oversizedChunkSizeLinePartial(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the amount of data buffered while
+        looking for the end of the chunk size line exceeds 4 KiB so
+        that buffering does not continue without bound.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"." * (http.maxChunkSizeLineLength + 1),
+        )
+
     def test_malformedChunkSize(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} raises
