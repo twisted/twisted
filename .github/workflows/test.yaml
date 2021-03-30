@@ -109,6 +109,7 @@ jobs:
 
     - uses: codecov/codecov-action@v1
       if: always()
+      continue-on-error: true
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -118,6 +119,7 @@ jobs:
     - name: Publish to Coveralls
       # We want to publish coverage even on failure.
       if: always()
+      continue-on-error: true
       run: |
         python -m coveralls
       env:
