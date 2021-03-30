@@ -28,6 +28,9 @@ parameters:
 steps:
 - checkout: self
   clean: true
+  # A minimum depth of 2 is required, as the HEAD is the auto-merge commit
+  # and we need the last commit from the PR to report the coverage.
+  fetchDepth: 2
 
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"

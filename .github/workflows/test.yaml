@@ -67,6 +67,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        # A minimum depth of 2 is required, as the HEAD is the auto-merge commit
+        # and we need the last commit from the PR to report the coverage.
+        fetch-depth: 2
 
     - name: Set up Python
       uses: actions/setup-python@v2
