@@ -47,13 +47,14 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
             tox-env: nodeps-withcov-posix
-            trial-args: ''
+            trial-args: '-j 4'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
             tox-env: alldeps-withcov-posix
             noipv6: -noipv6
+            trial-args: '-j 4'
           # On PYPY concurrent test jobs result in random failures so for now
           # run non-distributed tests.
           - python-version: pypy-3.6
