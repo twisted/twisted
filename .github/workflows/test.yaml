@@ -98,7 +98,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox codecov coveralls
+        python -m pip install --upgrade pip tox coveralls
         tox --notest
 
     - name: Test
@@ -110,7 +110,6 @@ jobs:
       # We want to publish coverage even on failure.
       if: always()
       run: |
-        python -m coverage xml -o coverage.xml -i
         # Bash is the recommended uploader.
         # See: https://github.com/codecov/example-python#faq
         bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml

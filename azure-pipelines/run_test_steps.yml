@@ -65,7 +65,6 @@ steps:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
 - bash: |
-    python -m coverage xml -o coverage.xml -i
     bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}"
   displayName: 'Generate XML and report to Codecov'
   condition: always()
