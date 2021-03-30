@@ -67,10 +67,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        # A minimum depth of 2 is required, as the HEAD is the auto-merge commit
-        # and we need the last commit from the PR to report the coverage.
-        fetch-depth: 2
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -111,13 +107,13 @@ jobs:
         python --version
         tox -q
 
-    - name: Generate XML and publish to Codecov
-      # We want to publish coverage even on failure.
+    - uses: codecov/codecov-action@v1
       if: always()
-      run: |
-        # Bash is the recommended uploader.
-        # See: https://github.com/codecov/example-python#faq
-        bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
+      with:
+        files: coverage.xml
+        name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        fail_ci_if_error: true
+        functionalities: gcov,search
 
     - name: Publish to Coveralls
       # We want to publish coverage even on failure.
