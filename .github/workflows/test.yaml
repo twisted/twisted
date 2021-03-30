@@ -111,7 +111,9 @@ jobs:
       if: always()
       run: |
         python -m coverage xml -o coverage.xml -i
-        python -m codecov -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
+        # Bash is the recommended uploader.
+        # See: https://github.com/codecov/example-python#faq
+        bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}' -X search -X gcov -f coverage.xml
 
     - name: Publish to Coveralls
       # We want to publish coverage even on failure.
