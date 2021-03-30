@@ -1300,7 +1300,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,
-            b"3;" + b"." * 4096 + b"\r\nabc\r\n",
+            b"3;" + b"." * http.maxChunkSizeLineLength + b"\r\nabc\r\n",
         )
 
     def test_oversizedChunkSizeLinePartial(self):
@@ -1314,7 +1314,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,
-            b"." * 4097,
+            b"." * (http.maxChunkSizeLineLength + 1),
         )
 
     def test_malformedChunkSize(self):
