@@ -82,8 +82,12 @@ steps:
   condition: always()
   continueOnError: true
 
-# Coveralls has no support for Azure so we pretend to be CircleCI.
-# See https://github.com/lemurheavy/coveralls-public/issues/1272
+# We are using a 3rd part tools to upload to Coveralls
+# See https://github.com/TheKevJames/coveralls-python
+# It has no support for Azure so we pretend to be CircleCI so that
+# we can differentiate from GitHub Actions.
+# https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/api.py#L147
+# https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/git.py#L31
 - bash: |
     export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
     export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
@@ -93,6 +97,6 @@ steps:
   condition: always()
   continueOnError: true
   env:
-    CI_NAME: 'azure-pipelines'
-    CI_BUILD_NUMBER: $(Build.BuildNumber)
+    CIRCLE_WORKFLOW_ID: $(Build.BuildNumber)
+    CIRCLECI: 1
     COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
