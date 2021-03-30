@@ -47,7 +47,7 @@ steps:
    python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
   displayName: 'Get Python Information'
 
-- script: 'python -m pip install -U pip setuptools tox coveralls'
+- script: 'python -m pip install -U pip setuptools tox coverage coveralls'
   displayName: 'Update pip & install tox'
 
 - ${{ if eq(parameters.platform, 'macos') }}:
@@ -65,6 +65,18 @@ steps:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
 - bash: |
+    # sub-process coverage are generated in separate files so we combine them
+    # to get an unified coverage for the local run.
+    # The XML is generate to be used with 3rd party tools like diff-cover.
+    python -m coverage combine
+    python -m coverage xml -o coverage.xml -i
+    python -m coverage report
+
+  displayName: 'Prepare coverage'
+  condition: always()
+  continueOnError: true
+
+- bash: |
     bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}"
   displayName: 'Report to Codecov'
   condition: always()
@@ -73,12 +85,14 @@ steps:
 # Coveralls has no support for Azure so we pretend to be CircleCI.
 # See https://github.com/lemurheavy/coveralls-public/issues/1272
 - bash: |
-    export CIRCLE_BRANCH=$BUILD_SOURCEBRANCH
+    export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
+    export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
+    export CI_BUILD_URL=$SYSTEM_PULLREQUEST_SOURCEREPOSITORYURI/pull/$CI_PULL_REQUEST
     python -m coveralls
   displayName: 'Report to Coveralls'
   condition: always()
   continueOnError: true
   env:
-    CIRCLECI: 1
-    CIRCLE_BUILD_NUM: $(Build.BuildNumber)
+    CI_NAME: 'azure-pipelines'
+    CI_BUILD_NUMBER: $(Build.BuildNumber)
     COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'

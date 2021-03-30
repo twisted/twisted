@@ -107,6 +107,18 @@ jobs:
         python --version
         tox -q
 
+    - name: Prepare coverate
+      # We want to publish coverage even on failure.
+      if: always()
+      continue-on-error: true
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report
+
     - uses: codecov/codecov-action@v1
       if: always()
       continue-on-error: true
