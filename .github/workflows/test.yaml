@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
-      TRIAL_ARGS: "${{ matrix.trial-args }}"
+      TRIAL_ARGS: "-j 4"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
       fail-fast: false
@@ -47,22 +47,20 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
             tox-env: nodeps-withcov-posix
-            trial-args: '-j 4'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
             tox-env: alldeps-withcov-posix
             noipv6: -noipv6
-            trial-args: '-j 4'
-          # On PYPY concurrent test jobs result in random failures so for now
-          # run non-distributed tests.
+          # On PYPY coverage is very slow (5min vs 30min) as there is no C
+          # extension.
+          # There is very little PYPY specific code so there is not much to
+          # gain from reporting coverage.
           - python-version: pypy-3.6
-            tox-env: alldeps-withcov-posix
-            trial-args:
+            tox-env: alldeps-nocov-posix
           - python-version: pypy-3.7
-            tox-env: alldeps-withcov-posix
-            trial-args:
+            tox-env: alldeps-nocov-posix
 
 
     steps:
@@ -99,7 +97,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox coveralls
+        python -m pip install --upgrade pip tox coverage coveralls
         tox --notest
 
     - name: Test
@@ -108,7 +106,7 @@ jobs:
         tox -q
 
     - name: Prepare coverage
-      if: always()
+      if: always() && contains(matrix['tox-env'], 'withcov')
       continue-on-error: true
       run: |
         # sub-process coverage are generated in separate files so we combine them
@@ -116,11 +114,10 @@ jobs:
         # The XML is generate to be used with 3rd party tools like diff-cover.
         python -m coverage combine
         python -m coverage xml -o coverage.xml -i
-        python -m coverage report
+        python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v1
-      if: always()
-      continue-on-error: true
+      if: always() && contains(matrix['tox-env'], 'withcov')
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -128,7 +125,7 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      if: always()
+      if: always() && contains(matrix['tox-env'], 'withcov')
       continue-on-error: true
       run: |
         python -m coveralls -v
