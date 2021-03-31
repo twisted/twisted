@@ -8,7 +8,9 @@
 codecov:
   require_ci_to_pass: yes
   notify:
-    after_n_builds: 7
+    # We have at least 10 builds in GitHub Actions and 12 in Azure
+    # and lint + mypy + docs + ReadTheDocs
+    after_n_builds: 15
     wait_for_ci: yes
 
 coverage:
