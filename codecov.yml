@@ -1,9 +1,16 @@
 #
-# For documentation see https://codecov.io/gh/twisted/twisted/settings/yaml
+# For documentation: https://docs.codecov.io/docs/codecovyml-reference
+# Twisted settings: https://codecov.io/gh/twisted/twisted/settings/yaml
 #
 # We want 100% coverage for new patches to make sure we are always increasing
 # the coverage.
 #
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 7
+    wait_for_ci: yes
+
 coverage:
   precision: 2
   round: down
@@ -12,4 +19,12 @@ coverage:
       default:
         target: 100%
 
-comment: off
+# We don't want to receive general PR comments about coverage.
+# We have the commit status checks and that should be enough.
+# See https://docs.codecov.io/docs/pull-request-comments
+comment: false
+
+# See https://docs.codecov.io/docs/github-checks
+github_checks:
+  # We want codecov to send inline PR comments for missing coverage.
+  annotations: true
