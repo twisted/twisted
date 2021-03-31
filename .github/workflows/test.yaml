@@ -104,12 +104,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox coverage coveralls
-        tox --notest
 
     - name: Test
       run: |
-        python --version
-        tox -q ${{ matrix.trial-target }}
+        tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
       if: always() && contains(matrix['tox-env'], 'withcov')
