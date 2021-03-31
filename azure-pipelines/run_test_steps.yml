@@ -28,7 +28,9 @@ parameters:
 steps:
 - checkout: self
   clean: true
-  fetchDepth: 1
+  # A minimum depth of 2 is required, as the HEAD is the auto-merge commit
+  # and we need the last commit from the PR to report the coverage.
+  fetchDepth: 2
 
 - task: UsePythonVersion@0
   displayName: "Use Python ${{ parameters.pythonVersion }}"
@@ -45,7 +47,7 @@ steps:
    python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]"
   displayName: 'Get Python Information'
 
-- script: 'python -m pip install -U pip setuptools tox'
+- script: 'python -m pip install -U pip setuptools tox coverage coveralls'
   displayName: 'Update pip & install tox'
 
 - ${{ if eq(parameters.platform, 'macos') }}:
@@ -62,7 +64,39 @@ steps:
     env:
       TWISTED_REACTOR: ${{ parameters.windowsReactor }}
 
-- bash:  |
-    python -m tox -e coverage-prepare,coveralls-push
-    bash <(curl -s https://codecov.io/bash) -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}-alldeps-withcov"
-  displayName: 'Report coverage'
+- bash: |
+    # sub-process coverage are generated in separate files so we combine them
+    # to get an unified coverage for the local run.
+    # The XML is generate to be used with 3rd party tools like diff-cover.
+    python -m coverage combine
+    python -m coverage xml -o coverage.xml -i
+    python -m coverage report
+
+  displayName: 'Prepare coverage'
+  condition: always()
+  continueOnError: true
+
+- bash: |
+    bash <(curl -s https://codecov.io/bash) -X search -X gcov -f coverage.xml -n "${{ parameters.platform }}-${{ parameters.pythonVersion }}"
+  displayName: 'Report to Codecov'
+  condition: always()
+  continueOnError: true
+
+# We are using a 3rd part tools to upload to Coveralls
+# See https://github.com/TheKevJames/coveralls-python
+# It has no support for Azure so we pretend to be CircleCI so that
+# we can differentiate from GitHub Actions.
+# https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/api.py#L147
+# https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/git.py#L31
+- bash: |
+    export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
+    export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
+    export CI_BUILD_URL=$SYSTEM_PULLREQUEST_SOURCEREPOSITORYURI/pull/$CI_PULL_REQUEST
+    python -m coveralls -v
+  displayName: 'Report to Coveralls'
+  condition: always()
+  continueOnError: true
+  env:
+    CIRCLE_WORKFLOW_ID: $(Build.BuildNumber)
+    CIRCLECI: 1
+    COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
