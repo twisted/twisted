@@ -546,8 +546,8 @@ class ServerDNSTests(unittest.TestCase):
 
     def test_zoneTransferConnectionDrops(self) -> defer.Deferred:
         """
-        An AXFR TCP transfer whose connection is lost before a
-        response is received should result in an errback.
+        If the TCP connection initiated by L{Resolver.lookupZone} is lost before any
+        response is received, the deferred will errback.
         """
         return self._testHelper_zoneTransferFailure(
             EasilyStartledProtocol,
@@ -558,8 +558,9 @@ class ServerDNSTests(unittest.TestCase):
 
     def test_zoneTransferTimesOut(self) -> defer.Deferred:
         """
-        An AXFR TCP transfer which never receives a response from the
-        server should cleanly time out.
+        The deferred returned by L{Resolver.lookupZone} fails with
+        L{DNSQueryTimeoutError} if the DNS server does not respond
+        within the timeout interval.
         """
         return self._testHelper_zoneTransferFailure(
             AccumulatingProtocol, DNSQueryTimeoutError, timeout=1
