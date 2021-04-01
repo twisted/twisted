@@ -109,6 +109,16 @@ class LineTests(unittest.TestCase):
         m = text.endsInNewline(s)
         self.assertFalse(m)
 
+    def test_removeLeadingTrailingBlanks(self):
+        s = "foo\n"
+        self.assertEqual(text.removeLeadingTrailingBlanks(s), "foo\n")
+
+        s = "\n  \n\n  foo\nbar  \n  "
+        self.assertEqual(text.removeLeadingTrailingBlanks(s), "  foo\nbar  \n")
+
+        s = " foo"
+        self.assertEqual(text.removeLeadingTrailingBlanks(s), " foo\n")
+
 
 class StringyStringTests(unittest.TestCase):
     """

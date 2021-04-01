@@ -27,6 +27,7 @@ import os
 import platform
 import socket
 import sys
+import typing
 import urllib.parse as urllib_parse
 import warnings
 from collections.abc import Sequence
@@ -38,9 +39,12 @@ from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
 from types import FrameType, MethodType as _MethodType
-from typing import Any, AnyStr, cast, Dict, Iterator, Mapping, Union, Optional
+from typing import Any, cast, Dict, Iterator, Mapping, Union, Optional, TypeVar
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
+
+if typing.TYPE_CHECKING:
+    from _typeshed import ReadableBuffer
 
 from incremental import Version
 
@@ -359,7 +363,21 @@ def nativeString(s: Union[str, bytes]) -> str:
     return s
 
 
-def _matchingString(constantString: Union[bytes, str], inputString: AnyStr) -> AnyStr:
+# WhateverString is different from typing.AnyString in that it can accept a
+# Union at typechecking time, but it will still be bound to a specific
+# stringlike class if that is possible at typecheck time. (AnyString,
+# on the other hand, *must* be determined by the typechecker to be str or
+# bytes, it can't be a Union[] at the call site.)
+#
+# We can't use a typevar with bound=Union[str, bytes] here, either,
+# since even if the caller passes in some subclass of str or bytes,
+# our return value will be a plain old str or bytes.
+_WhateverString = TypeVar("_WhateverString", str, bytes, Union[str, bytes])
+
+
+def _matchingString(
+    constantString: Union[bytes, str], inputString: _WhateverString
+) -> _WhateverString:
     """
     Some functions, such as C{os.path.join}, operate on string arguments which
     may be bytes or text, and wish to return a value of the same type.  In
@@ -380,14 +398,16 @@ def _matchingString(constantString: Union[bytes, str], inputString: AnyStr) -> A
     @return: C{constantString} converted into the same type as C{inputString}
     @rtype: the type of C{inputString}
     """
-    if isinstance(inputString, bytes):
-        if isinstance(constantString, bytes):
+    if isinstance(constantString, bytes):
+        uniString = constantString.decode("ascii")
+        if isinstance(inputString, bytes):
             return constantString
         else:
-            return constantString.encode("ascii")
+            return uniString
     else:
-        if isinstance(constantString, bytes):
-            return constantString.decode("ascii")
+        byteString = constantString.encode("ascii")
+        if isinstance(inputString, bytes):
+            return byteString
         else:
             return constantString
 
@@ -436,7 +456,7 @@ def intToBytes(i: int) -> bytes:
 
 
 def lazyByteSlice(
-    object: Any, offset: int = 0, size: Optional[int] = None
+    object: "ReadableBuffer", offset: int = 0, size: Optional[int] = None
 ) -> memoryview:
     """
     Return a copy of the given bytes-like object.

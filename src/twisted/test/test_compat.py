@@ -22,6 +22,7 @@ from twisted.python.compat import (
     cmp,
     nativeString,
     networkString,
+    _matchingString,
     lazyByteSlice,
     reraise,
     iterbytes,
@@ -405,6 +406,40 @@ class StringTests(SynchronousTestCase):
         string of some sort.
         """
         self.assertRaises(TypeError, nativeString, 1)
+
+    def test_matchingString(self) -> None:
+        """
+        C{_matchingString} converts its first argument to match the type of its second.
+        """
+
+        r1 = _matchingString(b"foo", b"bar")
+        self.assertEqual(r1, b"foo")
+        self.assertIsInstance(r1, bytes)
+
+        r2 = _matchingString("foo", b"bar")
+        self.assertEqual(r2, b"foo")
+        self.assertIsInstance(r2, bytes)
+
+        r3 = _matchingString(b"foo", "bar")
+        self.assertEqual(r3, "foo")
+        self.assertIsInstance(r3, str)
+
+        r4 = _matchingString("foo", "bar")
+        self.assertEqual(r4, "foo")
+        self.assertIsInstance(r4, str)
+
+    def test_matchingStringEncodes(self) -> None:
+        """
+        Even if C{_matchingString} does not have to convert its first
+        argument, it will raise an exception if the first argument is
+        not convertible.
+        """
+
+        self.assertRaises(ValueError, _matchingString, b"s\xAAd", b"saad")
+        self.assertRaises(
+            ValueError, _matchingString, b"s\xC2\xA0d", b"saad"
+        )  # valid utf8, invalid ASCII
+        self.assertRaises(ValueError, _matchingString, "\u2639", "frowny face")
 
 
 class NetworkStringTests(SynchronousTestCase):
