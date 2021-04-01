@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
+      # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
       TRIAL_ARGS: "-j 4"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
@@ -32,10 +34,8 @@ jobs:
         # Run on latest minor release of each major python version.
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
         tox-env: ['alldeps-withcov-posix']
+        # By default, tests are executed without disabling IPv6.
         noipv6: ['']
-        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-        # Trial distributed jobs enabled to speed up the CI jobs.
-        trial-args: ['-j 4']
         # Tests are executed with the default target which is the full test suite.
         trial-target: ['']
 
