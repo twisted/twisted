@@ -31,4 +31,4 @@ jobs:
     - name: Lint
       run: |
         python --version
-        tox -q
+        tox --quiet --skip-pkg-install

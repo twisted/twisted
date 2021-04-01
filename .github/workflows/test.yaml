@@ -105,7 +105,7 @@ jobs:
     - name: Test
       run: |
         python --version
-        tox -q
+        tox --quiet --skip-pkg-install
 
     - name: Prepare coverage
       if: always()

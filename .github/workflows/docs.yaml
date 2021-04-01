@@ -47,4 +47,4 @@ jobs:
 
     - name: Check the API documentation
       run: |
-        tox -q -e apidocs
+        tox --quiet --skip-pkg-install -e apidocs

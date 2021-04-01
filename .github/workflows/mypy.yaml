@@ -44,4 +44,4 @@ jobs:
 
     - name: Test with mypy
       run: |
-        tox -q -e mypy
+        tox --quiet --skip-pkg-install -e mypy
