@@ -38,7 +38,7 @@ from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
 from types import FrameType, MethodType as _MethodType
-from typing import Any, AnyStr, cast
+from typing import Any, AnyStr, cast, Dict, Iterator, Mapping, Union, Optional
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
@@ -205,7 +205,11 @@ def currentframe(n: int = 0) -> FrameType:
     return f
 
 
-def execfile(filename, globals, locals=None):
+def execfile(
+    filename: Union[str, bytes, os.PathLike],
+    globals: Dict[str, Any],
+    locals: Optional[Mapping[str, Any]] = None,
+) -> None:
     """
     Execute a Python script in the given namespaces.
 
@@ -337,7 +341,7 @@ def ioType(fileIshObject, default=str):
     return default
 
 
-def nativeString(s: AnyStr) -> str:
+def nativeString(s: Union[str, bytes]) -> str:
     """
     Convert C{bytes} or C{str} to C{str} type, using ASCII encoding if
     conversion is necessary.
@@ -355,7 +359,7 @@ def nativeString(s: AnyStr) -> str:
     return s
 
 
-def _matchingString(constantString, inputString):
+def _matchingString(constantString: Union[bytes, str], inputString: AnyStr) -> AnyStr:
     """
     Some functions, such as C{os.path.join}, operate on string arguments which
     may be bytes or text, and wish to return a value of the same type.  In
@@ -376,14 +380,16 @@ def _matchingString(constantString, inputString):
     @return: C{constantString} converted into the same type as C{inputString}
     @rtype: the type of C{inputString}
     """
-    if isinstance(constantString, bytes):
-        otherType = constantString.decode("ascii")
+    if isinstance(inputString, bytes):
+        if isinstance(constantString, bytes):
+            return constantString
+        else:
+            return constantString.encode("ascii")
     else:
-        otherType = constantString.encode("ascii")
-    if type(constantString) == type(inputString):
-        return constantString
-    else:
-        return otherType
+        if isinstance(constantString, bytes):
+            return constantString.decode("ascii")
+        else:
+            return constantString
 
 
 @deprecated(
@@ -404,7 +410,7 @@ def reraise(exception, traceback):
     raise exception.with_traceback(traceback)
 
 
-def iterbytes(originalBytes):
+def iterbytes(originalBytes: bytes) -> Iterator[bytes]:
     """
     Return an iterable wrapper for a C{bytes} object that provides the behavior
     of iterating over C{bytes} on Python 2.
@@ -429,7 +435,9 @@ def intToBytes(i: int) -> bytes:
     return b"%d" % (i,)
 
 
-def lazyByteSlice(object, offset=0, size=None):
+def lazyByteSlice(
+    object: Any, offset: int = 0, size: Optional[int] = None
+) -> memoryview:
     """
     Return a copy of the given bytes-like object.
 
@@ -487,7 +495,7 @@ def bytesEnviron():
     return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
 
-def _constructMethod(cls, name, self):
+def _constructMethod(cls: type, name: str, self: object) -> _MethodType:
     """
     Construct a bound method.
 
@@ -507,7 +515,7 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self)
 
 
-def _get_async_param(isAsync=None, **kwargs):
+def _get_async_param(isAsync: Optional[bool] = None, **kwargs: Any) -> bool:
     """
     Provide a backwards-compatible way to get async param value that does not
     cause a syntax error under Python 3.7.
@@ -536,7 +544,7 @@ def _get_async_param(isAsync=None, **kwargs):
     return bool(isAsync)
 
 
-def _pypy3BlockingHack():
+def _pypy3BlockingHack() -> None:
     """
     Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
     by replacing C{socket.fromfd} with a more conservative version.

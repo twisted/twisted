@@ -8,7 +8,7 @@ if available, otherwise the stdlib implementation.
 """
 
 
-def _idnaBytes(text):
+def _idnaBytes(text: str) -> bytes:
     """
     Convert some text typed by a human into some ASCII bytes.
 
@@ -28,10 +28,10 @@ def _idnaBytes(text):
     except ImportError:
         return text.encode("idna")
     else:
-        return idna.encode(text)
+        return idna.encode(text)  # type: ignore[no-any-return]
 
 
-def _idnaText(octets):
+def _idnaText(octets: bytes) -> str:
     """
     Convert some IDNA-encoded octets into some human-readable text.
 
@@ -48,4 +48,4 @@ def _idnaText(octets):
     except ImportError:
         return octets.decode("idna")
     else:
-        return idna.decode(octets)
+        return idna.decode(octets)  # type: ignore[no-any-return]

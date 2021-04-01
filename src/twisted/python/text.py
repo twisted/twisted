@@ -7,8 +7,11 @@
 Miscellany of text-munging functions.
 """
 
+import typing
+from typing import Any, List, Optional
 
-def stringyString(object, indentation=""):
+
+def stringyString(object: Any, indentation: str = "") -> str:
     """
     Expansive string formatting for sequence types.
 
@@ -46,7 +49,7 @@ def stringyString(object, indentation=""):
             element = stringyString(element, indentation + " ")
             sl.append(element.rstrip() + ",")
     else:
-        sl[:] = map(lambda s, i=indentation: i + s, str(object).split("\n"))
+        sl[:] = (indentation + s for s in str(object).split("\n"))
 
     if not sl:
         sl.append(indentation)
@@ -63,21 +66,21 @@ def stringyString(object, indentation=""):
     return s
 
 
-def isMultiline(s):
+def isMultiline(s: str) -> bool:
     """
     Returns C{True} if this string has a newline in it.
     """
     return s.find("\n") != -1
 
 
-def endsInNewline(s):
+def endsInNewline(s: str) -> bool:
     """
     Returns C{True} if this string ends in a newline.
     """
     return s[-len("\n") :] == "\n"
 
 
-def greedyWrap(inString, width=80):
+def greedyWrap(inString: str, width: int = 80) -> List[str]:
     """
     Given a string and a column width, return a list of lines.
 
@@ -130,15 +133,15 @@ def greedyWrap(inString, width=80):
 wordWrap = greedyWrap
 
 
-def removeLeadingBlanks(lines):
-    ret = []
+def removeLeadingBlanks(lines: List[str]) -> List[str]:
+    ret: List[str] = []
     for line in lines:
         if ret or line.strip():
             ret.append(line)
     return ret
 
 
-def removeLeadingTrailingBlanks(s):
+def removeLeadingTrailingBlanks(s: str) -> str:
     lines = removeLeadingBlanks(s.split("\n"))
     lines.reverse()
     lines = removeLeadingBlanks(lines)
@@ -146,7 +149,7 @@ def removeLeadingTrailingBlanks(s):
     return "\n".join(lines) + "\n"
 
 
-def splitQuoted(s):
+def splitQuoted(s: str) -> List[str]:
     """
     Like a string split, but don't break substrings inside quotes.
 
@@ -158,8 +161,8 @@ def splitQuoted(s):
     quickly.
     """
     out = []
-    quot = None
-    phrase = None
+    quot: Optional[str] = None
+    phrase: Optional[List[str]] = None
     for word in s.split():
         if phrase is None:
             if word and (word[0] in ('"', "'")):
@@ -181,7 +184,7 @@ def splitQuoted(s):
     return out
 
 
-def strFile(p, f, caseSensitive=True):
+def strFile(p: str, f: typing.IO[str], caseSensitive: bool = True) -> bool:
     """
     Find whether string C{p} occurs in a read()able object C{f}.
 
