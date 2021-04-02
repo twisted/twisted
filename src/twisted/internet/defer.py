@@ -1079,7 +1079,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
             react(main)
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
 
         @param coro: The coroutine object to schedule.
 

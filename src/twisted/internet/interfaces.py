@@ -2026,7 +2026,7 @@ class IProtocolFactory(Interface):
     Interface for protocol factories.
     """
 
-    def buildProtocol(addr: Tuple[str, int]) -> Optional[IProtocol]:
+    def buildProtocol(addr: IAddress) -> Optional[IProtocol]:
         """
         Called when a connection has been established to addr.
 

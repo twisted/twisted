@@ -59,7 +59,7 @@ else:
 
 FileType = IOBase
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for io.IOBase",
     __name__,
     "FileType",
@@ -67,7 +67,7 @@ deprecatedModuleAttribute(
 
 frozenset = frozenset
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for frozenset builtin type",
     __name__,
     "frozenset",
@@ -75,7 +75,7 @@ deprecatedModuleAttribute(
 
 InstanceType = object
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Old-style classes don't exist in Python 3",
     __name__,
     "InstanceType",
@@ -83,7 +83,7 @@ deprecatedModuleAttribute(
 
 izip = zip
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for zip() builtin",
     __name__,
     "izip",
@@ -91,7 +91,7 @@ deprecatedModuleAttribute(
 
 long = int
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for int builtin type",
     __name__,
     "long",
@@ -99,7 +99,7 @@ deprecatedModuleAttribute(
 
 range = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "range",
@@ -107,7 +107,7 @@ deprecatedModuleAttribute(
 
 raw_input = input
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for input() builtin",
     __name__,
     "raw_input",
@@ -115,7 +115,7 @@ deprecatedModuleAttribute(
 
 set = set
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for set builtin type",
     __name__,
     "set",
@@ -123,7 +123,7 @@ deprecatedModuleAttribute(
 
 StringType = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "StringType",
@@ -131,7 +131,7 @@ deprecatedModuleAttribute(
 
 unichr = chr
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for chr() builtin",
     __name__,
     "unichr",
@@ -139,7 +139,7 @@ deprecatedModuleAttribute(
 
 unicode = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "unicode",
@@ -147,14 +147,14 @@ deprecatedModuleAttribute(
 
 xrange = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "xrange",
 )
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.items()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -165,7 +165,7 @@ def iteritems(d):
     return d.items()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.values()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -176,7 +176,7 @@ def itervalues(d):
     return d.values()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="list(d.items())")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -387,7 +387,7 @@ def _matchingString(constantString, inputString):
 
 
 @deprecated(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     replacement="raise exception.with_traceback(traceback)",
 )
 def reraise(exception, traceback):
@@ -418,7 +418,7 @@ def iterbytes(originalBytes):
         yield originalBytes[i : i + 1]
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="b'%d'")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="b'%d'")
 def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
@@ -472,7 +472,7 @@ def networkString(s: str) -> bytes:
     return s.encode("ascii")
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.environb")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -566,57 +566,57 @@ _pypy3BlockingHack()
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use functools.reduce() directly",
     __name__,
     "reduce",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use io.StringIO directly",
     __name__,
     "NativeStringIO",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Import urllib.parse directly",
     __name__,
     "urllib_parse",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use html.escape directly", __name__, "escape"
+    Version("Twisted", 21, 2, 0), "Use html.escape directly", __name__, "escape"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.quote() directly",
     __name__,
     "urlquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.unquote() directly",
     __name__,
     "urlunquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use http.cookiejar directly",
     __name__,
     "cookielib",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use sys.intern() directly", __name__, "intern"
+    Version("Twisted", 21, 2, 0), "Use sys.intern() directly", __name__, "intern"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use collections.abc.Sequence directly",
     __name__,
     "Sequence",

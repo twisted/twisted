@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
-      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
       TRIAL_ARGS: "${{ matrix.trial-args }}"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
@@ -48,13 +47,14 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
             tox-env: nodeps-withcov-posix
-            trial-args: ''
+            trial-args: '-j 4'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
             tox-env: alldeps-withcov-posix
             noipv6: -noipv6
+            trial-args: '-j 4'
           # On PYPY concurrent test jobs result in random failures so for now
           # run non-distributed tests.
           - python-version: pypy-3.6
@@ -98,7 +98,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade pip tox coveralls
         tox --notest
 
     - name: Runner info
@@ -114,10 +114,33 @@ jobs:
         python --version
         tox -q
 
-    - name: Publish coverage
-      # We want to publish coverage even on failure.
-      if: contains(matrix['tox-env'], 'withcov') || failure()
-      run: tox -e coverage-prepare,codecov-push,coveralls-push
+    - name: Prepare coverage
+      if: always()
+      continue-on-error: true
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report
+
+    - uses: codecov/codecov-action@v1
+      if: always()
+      continue-on-error: true
+      with:
+        files: coverage.xml
+        name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        fail_ci_if_error: true
+        functionalities: gcov,search
+
+    - name: Publish to Coveralls
+      if: always()
+      continue-on-error: true
+      run: |
+        python -m coveralls -v
+      env:
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 
 
   pypi-publish:
