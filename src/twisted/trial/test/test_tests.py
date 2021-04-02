@@ -1166,6 +1166,7 @@ class TestDecoratorMixin:
         """
         getrefcount = getattr(sys, "getrefcount", None)
         if getrefcount is None:
+            # For example non CPython like _PYPY.
             raise unittest.SkipTest("getrefcount not supported on this platform")
         test = self.TestCase()
         suite = unittest.TestSuite([test])

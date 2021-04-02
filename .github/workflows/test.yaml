@@ -66,7 +66,7 @@ jobs:
           # We still run some tests with coverage
           - python-version: pypy-3.7
             tox-env: alldeps-withcov-posix
-            trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket
+            trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
 
 
     steps:
