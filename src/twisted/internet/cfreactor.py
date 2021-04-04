@@ -10,10 +10,7 @@ This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
 """
 
-__all__ = [
-    'install',
-    'CFReactor'
-]
+__all__ = ["install", "CFReactor"]
 
 import sys
 
@@ -26,23 +23,37 @@ from twisted.internet.posixbase import _NO_FILEDESC
 from twisted.python import log
 
 from CoreFoundation import (
-    CFRunLoopAddSource, CFRunLoopRemoveSource, CFRunLoopGetMain, CFRunLoopRun,
-    CFRunLoopStop, CFRunLoopTimerCreate, CFRunLoopAddTimer,
-    CFRunLoopTimerInvalidate, kCFAllocatorDefault, kCFRunLoopCommonModes,
-    CFAbsoluteTimeGetCurrent)
+    CFRunLoopAddSource,
+    CFRunLoopRemoveSource,
+    CFRunLoopGetMain,
+    CFRunLoopRun,
+    CFRunLoopStop,
+    CFRunLoopTimerCreate,
+    CFRunLoopAddTimer,
+    CFRunLoopTimerInvalidate,
+    kCFAllocatorDefault,
+    kCFRunLoopCommonModes,
+    CFAbsoluteTimeGetCurrent,
+)
 
 from CFNetwork import (
-    CFSocketCreateWithNative, CFSocketSetSocketFlags, CFSocketEnableCallBacks,
-    CFSocketCreateRunLoopSource, CFSocketDisableCallBacks, CFSocketInvalidate,
-    kCFSocketWriteCallBack, kCFSocketReadCallBack, kCFSocketConnectCallBack,
+    CFSocketCreateWithNative,
+    CFSocketSetSocketFlags,
+    CFSocketEnableCallBacks,
+    CFSocketCreateRunLoopSource,
+    CFSocketDisableCallBacks,
+    CFSocketInvalidate,
+    kCFSocketWriteCallBack,
+    kCFSocketReadCallBack,
+    kCFSocketConnectCallBack,
     kCFSocketAutomaticallyReenableReadCallBack,
-    kCFSocketAutomaticallyReenableWriteCallBack)
+    kCFSocketAutomaticallyReenableWriteCallBack,
+)
 
 
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
-
 
 
 class _WakerPlus(_Waker):
@@ -70,7 +81,6 @@ class _WakerPlus(_Waker):
         result = _Waker.doRead(self)
         self.reactor._scheduleSimulate(True)
         return result
-
 
 
 @implementer(IReactorFDSet)
@@ -112,6 +122,7 @@ class CFReactor(PosixReactorBase):
         run loop to run Twisted callLater calls, this is a reference to it.
         Otherwise, it is L{None}
     """
+
     def __init__(self, runLoop=None, runner=None):
         self._fdmap = {}
         self._idmap = {}
@@ -124,7 +135,6 @@ class CFReactor(PosixReactorBase):
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
 
-
     def installWaker(self):
         """
         Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
@@ -135,9 +145,9 @@ class CFReactor(PosixReactorBase):
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
-
-    def _socketCallback(self, cfSocket, callbackType,
-                        ignoredAddress, ignoredData, context):
+    def _socketCallback(
+        self, cfSocket, callbackType, ignoredAddress, ignoredData, context
+    ):
         """
         The socket callback issued by CFRunLoop.  This will issue C{doRead} or
         C{doWrite} calls to the L{IReadDescriptor} and L{IWriteDescriptor}
@@ -163,9 +173,7 @@ class CFReactor(PosixReactorBase):
             # Spurious notifications seem to be generated sometimes if you
             # CFSocketDisableCallBacks in the middle of an event.  I don't know
             # about this FD, any more, so let's get rid of it.
-            CFRunLoopRemoveSource(
-                self._cfrunloop, smugglesrc, kCFRunLoopCommonModes
-            )
+            CFRunLoopRemoveSource(self._cfrunloop, smugglesrc, kCFRunLoopCommonModes)
             return
 
         src, skt, readWriteDescriptor, rw = self._fdmap[fd]
@@ -195,14 +203,13 @@ class CFReactor(PosixReactorBase):
                     else:
                         if rw[_WRITE]:
                             why = readWriteDescriptor.doWrite()
-            except:
+            except BaseException:
                 why = sys.exc_info()[1]
                 log.err()
             if why:
                 self._disconnectSelectable(readWriteDescriptor, why, isRead)
 
         log.callWithLogger(readWriteDescriptor, _drdw)
-
 
     def _watchFD(self, fd, descr, flag):
         """
@@ -228,37 +235,40 @@ class CFReactor(PosixReactorBase):
             ctx = []
             ctx.append(fd)
             cfs = CFSocketCreateWithNative(
-                kCFAllocatorDefault, fd,
-                kCFSocketReadCallBack | kCFSocketWriteCallBack |
-                kCFSocketConnectCallBack,
-                self._socketCallback, ctx
+                kCFAllocatorDefault,
+                fd,
+                kCFSocketReadCallBack
+                | kCFSocketWriteCallBack
+                | kCFSocketConnectCallBack,
+                self._socketCallback,
+                ctx,
             )
             CFSocketSetSocketFlags(
                 cfs,
-                kCFSocketAutomaticallyReenableReadCallBack |
-                kCFSocketAutomaticallyReenableWriteCallBack |
-
+                kCFSocketAutomaticallyReenableReadCallBack
+                | kCFSocketAutomaticallyReenableWriteCallBack
+                |
                 # This extra flag is to ensure that CF doesn't (destructively,
                 # because destructively is the only way to do it) retrieve
                 # SO_ERROR and thereby break twisted.internet.tcp.BaseClient,
                 # which needs SO_ERROR to tell it whether or not it needs to
                 # call connect_ex a second time.
-                _preserveSOError
+                _preserveSOError,
             )
             src = CFSocketCreateRunLoopSource(kCFAllocatorDefault, cfs, 0)
             ctx.append(src)
             CFRunLoopAddSource(self._cfrunloop, src, kCFRunLoopCommonModes)
             CFSocketDisableCallBacks(
                 cfs,
-                kCFSocketReadCallBack | kCFSocketWriteCallBack |
-                kCFSocketConnectCallBack
+                kCFSocketReadCallBack
+                | kCFSocketWriteCallBack
+                | kCFSocketConnectCallBack,
             )
             rw = [False, False]
             self._idmap[id(descr)] = fd
             self._fdmap[fd] = src, cfs, descr, rw
         rw[self._flag2idx(flag)] = True
         CFSocketEnableCallBacks(cfs, flag)
-
 
     def _flag2idx(self, flag):
         """
@@ -270,9 +280,7 @@ class CFReactor(PosixReactorBase):
 
         @return: C{_READ} or C{_WRITE}
         """
-        return {kCFSocketReadCallBack: _READ,
-                kCFSocketWriteCallBack: _WRITE}[flag]
-
+        return {kCFSocketReadCallBack: _READ, kCFSocketWriteCallBack: _WRITE}[flag]
 
     def _unwatchFD(self, fd, descr, flag):
         """
@@ -304,13 +312,11 @@ class CFReactor(PosixReactorBase):
             CFRunLoopRemoveSource(self._cfrunloop, src, kCFRunLoopCommonModes)
             CFSocketInvalidate(cfs)
 
-
     def addReader(self, reader):
         """
         Implement L{IReactorFDSet.addReader}.
         """
         self._watchFD(reader.fileno(), reader, kCFSocketReadCallBack)
-
 
     def addWriter(self, writer):
         """
@@ -318,13 +324,11 @@ class CFReactor(PosixReactorBase):
         """
         self._watchFD(writer.fileno(), writer, kCFSocketWriteCallBack)
 
-
     def removeReader(self, reader):
         """
         Implement L{IReactorFDSet.removeReader}.
         """
         self._unwatchFD(reader.fileno(), reader, kCFSocketReadCallBack)
-
 
     def removeWriter(self, writer):
         """
@@ -332,34 +336,28 @@ class CFReactor(PosixReactorBase):
         """
         self._unwatchFD(writer.fileno(), writer, kCFSocketWriteCallBack)
 
-
     def removeAll(self):
         """
         Implement L{IReactorFDSet.removeAll}.
         """
-        allDesc = set([descr for src, cfs, descr, rw in self._fdmap.values()])
+        allDesc = {descr for src, cfs, descr, rw in self._fdmap.values()}
         allDesc -= set(self._internalReaders)
         for desc in allDesc:
             self.removeReader(desc)
             self.removeWriter(desc)
         return list(allDesc)
 
-
     def getReaders(self):
         """
         Implement L{IReactorFDSet.getReaders}.
         """
-        return [descr for src, cfs, descr, rw in self._fdmap.values()
-                if rw[_READ]]
-
+        return [descr for src, cfs, descr, rw in self._fdmap.values() if rw[_READ]]
 
     def getWriters(self):
         """
         Implement L{IReactorFDSet.getWriters}.
         """
-        return [descr for src, cfs, descr, rw in self._fdmap.values()
-                if rw[_WRITE]]
-
+        return [descr for src, cfs, descr, rw in self._fdmap.values() if rw[_WRITE]]
 
     def _moveCallLaterSooner(self, tple):
         """
@@ -373,7 +371,6 @@ class CFReactor(PosixReactorBase):
         self._scheduleSimulate()
         return result
 
-
     _inCFLoop = False
 
     def mainLoop(self):
@@ -386,7 +383,6 @@ class CFReactor(PosixReactorBase):
             self._runner()
         finally:
             self._inCFLoop = False
-
 
     _currentSimulator = None
 
@@ -411,28 +407,25 @@ class CFReactor(PosixReactorBase):
         if force:
             timeout = 0.0
         if timeout is not None:
-            fireDate = (CFAbsoluteTimeGetCurrent() + timeout)
+            fireDate = CFAbsoluteTimeGetCurrent() + timeout
+
             def simulate(cftimer, extra):
                 self._currentSimulator = None
                 self.runUntilCurrent()
                 self._scheduleSimulate()
+
             c = self._currentSimulator = CFRunLoopTimerCreate(
-                kCFAllocatorDefault, fireDate,
-                0, 0, 0, simulate, None
+                kCFAllocatorDefault, fireDate, 0, 0, 0, simulate, None
             )
             CFRunLoopAddTimer(self._cfrunloop, c, kCFRunLoopCommonModes)
-
 
     def callLater(self, _seconds, _f, *args, **kw):
         """
         Implement L{IReactorTime.callLater}.
         """
-        delayedCall = PosixReactorBase.callLater(
-            self, _seconds, _f, *args, **kw
-        )
+        delayedCall = PosixReactorBase.callLater(self, _seconds, _f, *args, **kw)
         self._scheduleSimulate()
         return delayedCall
-
 
     def stop(self):
         """
@@ -440,7 +433,6 @@ class CFReactor(PosixReactorBase):
         """
         PosixReactorBase.stop(self)
         self._scheduleSimulate(True)
-
 
     def crash(self):
         """
@@ -454,13 +446,11 @@ class CFReactor(PosixReactorBase):
             if wasStarted:
                 self.callLater(0, self._stopNow)
 
-
     def _stopNow(self):
         """
         Immediately stop the CFRunLoop (which must be running!).
         """
         CFRunLoopStop(self._cfrunloop)
-
 
     def iterate(self, delay=0):
         """
@@ -470,7 +460,6 @@ class CFReactor(PosixReactorBase):
         """
         self.callLater(delay, self._stopNow)
         self.mainLoop()
-
 
 
 def install(runLoop=None, runner=None):
@@ -499,5 +488,6 @@ def install(runLoop=None, runner=None):
 
     reactor = CFReactor(runLoop=runLoop, runner=runner)
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor

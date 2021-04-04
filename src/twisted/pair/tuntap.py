@@ -13,6 +13,7 @@ import fcntl
 import errno
 import struct
 import warnings
+from typing import Tuple
 
 from collections import namedtuple
 from constantly import Flags, FlagConstant
@@ -27,13 +28,15 @@ from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
 __all__ = [
-    "TunnelFlags", "TunnelAddress", "TuntapPort",
-    ]
+    "TunnelFlags",
+    "TunnelAddress",
+    "TuntapPort",
+]
 
 
 _IFNAMSIZ = 16
-_TUNSETIFF = 0x400454ca
-_TUNGETIFF = 0x800454d2
+_TUNSETIFF = 0x400454CA
+_TUNGETIFF = 0x800454D2
 _TUN_KO_PATH = b"/dev/net/tun"
 
 
@@ -53,6 +56,7 @@ class TunnelFlags(Flags):
 
     @see: U{https://www.kernel.org/doc/Documentation/networking/tuntap.txt}
     """
+
     IFF_TUN = FlagConstant(0x0001)
     IFF_TAP = FlagConstant(0x0002)
 
@@ -69,12 +73,12 @@ class TunnelFlags(Flags):
     IFF_TUN_EXCL = FlagConstant(0x8000)
 
 
-
 @implementer(interfaces.IAddress)
-class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
+class TunnelAddress(FancyStrMixin, FancyEqMixin):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
+
     compareAttributes = ("_typeValue", "name")
     showAttributes = (("type", lambda flag: flag.name), "name")
 
@@ -87,7 +91,6 @@ class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
         # Work-around for https://twistedmatrix.com/trac/ticket/6878
         return self.type.value
 
-
     def __init__(self, type, name):
         """
         @param type: Either L{TunnelFlags.IFF_TUN} or L{TunnelFlags.IFF_TAP},
@@ -99,17 +102,17 @@ class TunnelAddress(FancyStrMixin, FancyEqMixin, object):
         self.type = type
         self.name = name
 
-
     def __getitem__(self, index):
         """
         Deprecated accessor for the tunnel name.  Use attributes instead.
         """
         warnings.warn(
             "TunnelAddress.__getitem__ is deprecated since Twisted 14.0.0  "
-            "Use attributes instead.", category=DeprecationWarning,
-            stacklevel=2)
-        return ('TUNTAP', self.name)[index]
-
+            "Use attributes instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return ("TUNTAP", self.name)[index]
 
 
 class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
@@ -124,12 +127,12 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
     """
 
 
-
 class _IInputOutputSystem(Interface):
     """
     An interface for performing some basic kinds of I/O (particularly that I/O
     which might be useful for L{twisted.pair.tuntap}-using code).
     """
+
     O_RDWR = Attribute("@see: L{os.O_RDWR}")
     O_NONBLOCK = Attribute("@see: L{os.O_NONBLOCK}")
     O_CLOEXEC = Attribute("@see: L{os.O_CLOEXEC}")
@@ -139,30 +142,25 @@ class _IInputOutputSystem(Interface):
         @see: L{os.open}
         """
 
-
     def ioctl(fd, opt, arg=None, mutate_flag=None):
         """
         @see: L{fcntl.ioctl}
         """
-
 
     def read(fd, limit):
         """
         @see: L{os.read}
         """
 
-
     def write(fd, data):
         """
         @see: L{os.write}
         """
 
-
     def close(fd):
         """
         @see: L{os.close}
         """
-
 
     def sendUDP(datagram, address):
         """
@@ -177,7 +175,6 @@ class _IInputOutputSystem(Interface):
         @return: The local address from which the datagram was sent.
         @rtype: L{tuple} of (L{bytes}, L{int})
         """
-
 
     def receiveUDP(fileno, host, port):
         """
@@ -200,12 +197,12 @@ class _IInputOutputSystem(Interface):
         """
 
 
-
-class _RealSystem(object):
+class _RealSystem:
     """
     An interface to the parts of the operating system which L{TuntapPort}
     relies on.  This is most of an implementation of L{_IInputOutputSystem}.
     """
+
     open = staticmethod(os.open)
     read = staticmethod(os.read)
     write = staticmethod(os.write)
@@ -219,16 +216,15 @@ class _RealSystem(object):
     O_CLOEXEC = getattr(os, "O_CLOEXEC", 0o2000000)
 
 
-
 @implementer(interfaces.IListeningPort)
 class TuntapPort(abstract.FileDescriptor):
     """
     A Port that reads and writes packets from/to a TUN/TAP-device.
     """
+
     maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
-    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None,
-                 system=None):
+    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None, system=None):
         if ethernet.IEthernetProtocol.providedBy(proto):
             self.ethernet = 1
             self._mode = TunnelFlags.IFF_TAP
@@ -247,18 +243,16 @@ class TuntapPort(abstract.FileDescriptor):
         self.maxPacketSize = maxPacketSize
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s (%s)" % (logPrefix, self._mode.name)
+        self.logstr = f"{logPrefix} ({self._mode.name})"
 
-
-    def __repr__(self):
-        args = (fullyQualifiedName(self.protocol.__class__),)
+    def __repr__(self) -> str:
+        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:
             args = args + ("not ",)
         args = args + (self._mode.name, self.interface)
         return "<%s %slistening on %s/%s>" % args
-
 
     def startListening(self):
         """
@@ -270,7 +264,6 @@ class TuntapPort(abstract.FileDescriptor):
         self._bindSocket()
         self.protocol.makeConnection(self)
         self.startReading()
-
 
     def _openTunnel(self, name, mode):
         """
@@ -284,14 +277,11 @@ class TuntapPort(abstract.FileDescriptor):
 
         @return: A L{_TunnelDescription} representing the newly opened tunnel.
         """
-        flags = (
-            self._system.O_RDWR | self._system.O_CLOEXEC |
-            self._system.O_NONBLOCK)
+        flags = self._system.O_RDWR | self._system.O_CLOEXEC | self._system.O_NONBLOCK
         config = struct.pack("%dsH" % (_IFNAMSIZ,), name, mode.value)
         fileno = self._system.open(_TUN_KO_PATH, flags)
         result = self._system.ioctl(fileno, _TUNSETIFF, config)
-        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip(b'\x00'))
-
+        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip(b"\x00"))
 
     def _bindSocket(self):
         """
@@ -300,11 +290,13 @@ class TuntapPort(abstract.FileDescriptor):
         log.msg(
             format="%(protocol)s starting on %(interface)s",
             protocol=self.protocol.__class__,
-            interface=self.interface)
+            interface=self.interface,
+        )
         try:
             fileno, interface = self._openTunnel(
-                self.interface, self._mode | TunnelFlags.IFF_NO_PI)
-        except (IOError, OSError) as e:
+                self.interface, self._mode | TunnelFlags.IFF_NO_PI
+            )
+        except OSError as e:
             raise error.CannotListenError(None, self.interface, e)
 
         self.interface = interface
@@ -312,10 +304,8 @@ class TuntapPort(abstract.FileDescriptor):
 
         self.connected = 1
 
-
     def fileno(self):
         return self._fileno
-
 
     def doRead(self):
         """
@@ -325,23 +315,20 @@ class TuntapPort(abstract.FileDescriptor):
         while read < self.maxThroughput:
             try:
                 data = self._system.read(self._fileno, self.maxPacketSize)
-            except EnvironmentError as e:
+            except OSError as e:
                 if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EINTR):
                     return
                 else:
                     raise
-            except:
+            except BaseException:
                 raise
             read += len(data)
             # TODO pkt.isPartial()?
             try:
                 self.protocol.datagramReceived(data, partial=0)
-            except:
+            except BaseException:
                 cls = fullyQualifiedName(self.protocol.__class__)
-                log.err(
-                    None,
-                    "Unhandled exception from %s.datagramReceived" % (cls,))
-
+                log.err(None, f"Unhandled exception from {cls}.datagramReceived")
 
     def write(self, datagram):
         """
@@ -353,22 +340,20 @@ class TuntapPort(abstract.FileDescriptor):
         """
         try:
             return self._system.write(self._fileno, datagram)
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
             raise
-
 
     def writeSequence(self, seq):
         """
         Write a datagram constructed from a L{list} of L{bytes}.
 
-        @param datagram: The data that will make up the complete datagram to be
+        @param seq: The data that will make up the complete datagram to be
             written.
         @type seq: L{list} of L{bytes}
         """
         self.write(b"".join(seq))
-
 
     def stopListening(self):
         """
@@ -383,12 +368,12 @@ class TuntapPort(abstract.FileDescriptor):
             return self._stoppedDeferred
         elif self.connected:
             self._stoppedDeferred = task.deferLater(
-                self.reactor, 0, self.connectionLost)
+                self.reactor, 0, self.connectionLost
+            )
             self.disconnecting = True
             return self._stoppedDeferred
         else:
             return defer.succeed(None)
-
 
     @deprecated(Version("Twisted", 14, 0, 0), stopListening)
     def loseConnection(self):
@@ -397,27 +382,24 @@ class TuntapPort(abstract.FileDescriptor):
         """
         self.stopListening().addErrback(log.err)
 
-
     def connectionLost(self, reason=None):
         """
         Cleans up my socket.
 
         @param reason: Ignored.  Do not use this.
         """
-        log.msg('(Tuntap %s Closed)' % self.interface)
+        log.msg("(Tuntap %s Closed)" % self.interface)
         abstract.FileDescriptor.connectionLost(self, reason)
         self.protocol.doStop()
         self.connected = 0
         self._system.close(self._fileno)
         self._fileno = -1
 
-
     def logPrefix(self):
         """
         Returns the name of my class, to prefix log entries with.
         """
         return self.logstr
-
 
     def getHost(self):
         """

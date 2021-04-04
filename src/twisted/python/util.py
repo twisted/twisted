@@ -7,6 +7,7 @@ import errno
 import os
 import sys
 import warnings
+
 try:
     import grp as _grp
     import pwd as _pwd
@@ -26,9 +27,17 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import Callable, Sequence, Union, Tuple
+from typing import (
+    Callable,
+    ClassVar,
+    Mapping,
+    MutableMapping,
+    Sequence,
+    Union,
+    Tuple,
+    cast,
+)
 
-from twisted.python.compat import unicode
 from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -39,11 +48,11 @@ deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
     "Use collections.OrderedDict instead.",
     "twisted.python.util",
-    "OrderedDict")
+    "OrderedDict",
+)
 
 
-
-class InsensitiveDict:
+class InsensitiveDict(MutableMapping):
     """
     Dictionary, that has case-insensitive keys.
 
@@ -51,9 +60,9 @@ class InsensitiveDict:
     .keys() or .items().  If initialized with preserveCase=0, keys are both
     looked up in lowercase and returned in lowercase by .keys() and .items().
     """
+
     """
-    Modified recipe at
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315 originally
+    Modified recipe at http://code.activestate.com/recipes/66315/ originally
     contributed by Sami Hangaslammi.
     """
 
@@ -61,23 +70,21 @@ class InsensitiveDict:
         """
         Create an empty dictionary, or update from 'dict'.
         """
+        super().__init__()
         self.data = {}
-        self.preserve=preserve
+        self.preserve = preserve
         if dict:
             self.update(dict)
 
-
     def __delitem__(self, key):
-        k=self._lowerOrReturn(key)
+        k = self._lowerOrReturn(key)
         del self.data[k]
 
-
     def _lowerOrReturn(self, key):
-        if isinstance(key, bytes) or isinstance(key, unicode):
+        if isinstance(key, bytes) or isinstance(key, str):
             return key.lower()
         else:
             return key
-
 
     def __getitem__(self, key):
         """
@@ -86,7 +93,6 @@ class InsensitiveDict:
         k = self._lowerOrReturn(key)
         return self.data[k][1]
 
-
     def __setitem__(self, key, value):
         """
         Associate 'value' with 'key'. If 'key' already exists, but
@@ -94,7 +100,6 @@ class InsensitiveDict:
         """
         k = self._lowerOrReturn(key)
         self.data[k] = (key, value)
-
 
     def has_key(self, key):
         """
@@ -105,14 +110,11 @@ class InsensitiveDict:
 
     __contains__ = has_key
 
-
     def _doPreserve(self, key):
-        if not self.preserve and (isinstance(key, bytes)
-                                  or isinstance(key, unicode)):
+        if not self.preserve and (isinstance(key, bytes) or isinstance(key, str)):
             return key.lower()
         else:
             return key
-
 
     def keys(self):
         """
@@ -120,20 +122,17 @@ class InsensitiveDict:
         """
         return list(self.iterkeys())
 
-
     def values(self):
         """
         List of values.
         """
         return list(self.itervalues())
 
-
     def items(self):
         """
         List of (key,value) pairs.
         """
         return list(self.iteritems())
-
 
     def get(self, key, default=None):
         """
@@ -145,7 +144,6 @@ class InsensitiveDict:
         except KeyError:
             return default
 
-
     def setdefault(self, key, default):
         """
         If 'key' doesn't exist, associate it with the 'default' value.
@@ -155,63 +153,71 @@ class InsensitiveDict:
             self[key] = default
         return self[key]
 
-
     def update(self, dict):
         """
         Copy (key,value) pairs from 'dict'.
         """
-        for k,v in dict.items():
+        for k, v in dict.items():
             self[k] = v
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of the dictionary.
         """
-        items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
+        items = ", ".join([(f"{k!r}: {v!r}") for k, v in self.items()])
         return "InsensitiveDict({%s})" % items
-
 
     def iterkeys(self):
         for v in self.data.values():
             yield self._doPreserve(v[0])
 
+    __iter__ = iterkeys
 
     def itervalues(self):
         for v in self.data.values():
             yield v[1]
 
-
     def iteritems(self):
         for (k, v) in self.data.values():
             yield self._doPreserve(k), v
 
+    _notFound = object()
+
+    def pop(self, key, default=_notFound):
+        """
+        @see: L{dict.pop}
+        @since: Twisted 21.2.0
+        """
+        try:
+            return self.data.pop(self._lowerOrReturn(key))[1]
+        except KeyError:
+            if default is self._notFound:
+                raise
+            return default
 
     def popitem(self):
-        i=self.items()[0]
+        i = self.items()[0]
         del self[i[0]]
         return i
-
 
     def clear(self):
         for k in self.keys():
             del self[k]
 
-
     def copy(self):
         return InsensitiveDict(self, self.preserve)
-
 
     def __len__(self):
         return len(self.data)
 
-
-    def __eq__(self, other):
-        for k,v in self.items():
-            if not (k in other) or not (other[k]==v):
-                return 0
-        return len(self)==len(other)
-
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Mapping):
+            for k, v in self.items():
+                if k not in other or other[k] != v:
+                    return False
+            return len(self) == len(other)
+        else:
+            return NotImplemented
 
 
 def uniquify(lst):
@@ -219,14 +225,13 @@ def uniquify(lst):
     Make the elements of a list unique by inserting them into a dictionary.
     This must not change the order of the input lst.
     """
-    dct = {}
+    seen = set()
     result = []
     for k in lst:
-        if k not in dct:
+        if k not in seen:
             result.append(k)
-        dct[k] = 1
+        seen.add(k)
     return result
-
 
 
 def padTo(n, seq, default=None):
@@ -247,32 +252,35 @@ def padTo(n, seq, default=None):
 
     blank = [default] * n
 
-    blank[:len(seq)] = list(seq)
+    blank[: len(seq)] = list(seq)
 
     return blank
-
 
 
 def getPluginDirs():
     warnings.warn(
         "twisted.python.util.getPluginDirs is deprecated since Twisted 12.2.",
-        DeprecationWarning, stacklevel=2)
+        DeprecationWarning,
+        stacklevel=2,
+    )
     import twisted
-    systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
-                            os.path.abspath(twisted.__file__))), 'plugins')
+
+    systemPlugins = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(twisted.__file__))), "plugins"
+    )
     userPlugins = os.path.expanduser("~/TwistedPlugins")
     confPlugins = os.path.expanduser("~/.twisted")
     allPlugins = filter(os.path.isdir, [systemPlugins, userPlugins, confPlugins])
     return allPlugins
 
 
-
 def addPluginDir():
     warnings.warn(
         "twisted.python.util.addPluginDir is deprecated since Twisted 12.2.",
-        DeprecationWarning, stacklevel=2)
+        DeprecationWarning,
+        stacklevel=2,
+    )
     sys.path.extend(getPluginDirs())
-
 
 
 def sibpath(path, sibling):
@@ -286,15 +294,15 @@ def sibpath(path, sibling):
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
 
 
-
 def _getpass(prompt):
     """
     Helper to turn IOErrors into KeyboardInterrupts.
     """
     import getpass
+
     try:
         return getpass.getpass(prompt)
-    except IOError as e:
+    except OSError as e:
         if e.errno == errno.EINTR:
             raise KeyboardInterrupt
         raise
@@ -302,10 +310,13 @@ def _getpass(prompt):
         raise KeyboardInterrupt
 
 
-
-def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
-                confirmPrompt = 'Confirm password: ',
-                mismatchMessage = "Passwords don't match."):
+def getPassword(
+    prompt="Password: ",
+    confirm=0,
+    forceTTY=0,
+    confirmPrompt="Confirm password: ",
+    mismatchMessage="Passwords don't match.",
+):
     """
     Obtain a password by prompting or from stdin.
 
@@ -320,7 +331,7 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
 
     @returns: C{str}
     """
-    isaTTY = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
+    isaTTY = hasattr(sys.stdin, "isatty") and sys.stdin.isatty()
 
     old = None
     try:
@@ -328,12 +339,12 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             if forceTTY:
                 try:
                     old = sys.stdin, sys.stdout
-                    sys.stdin = sys.stdout = open('/dev/tty', 'r+')
-                except:
+                    sys.stdin = sys.stdout = open("/dev/tty", "r+")
+                except BaseException:
                     raise RuntimeError("Cannot obtain a TTY")
             else:
                 password = sys.stdin.readline()
-                if password[-1] == '\n':
+                if password[-1] == "\n":
                     password = password[:-1]
                 return password
 
@@ -352,36 +363,35 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
             sys.stdin, sys.stdout = old
 
 
-
 def println(*a):
-    sys.stdout.write(' '.join(map(str, a))+'\n')
+    sys.stdout.write(" ".join(map(str, a)) + "\n")
+
 
 # XXX
 # This does not belong here
 # But where does it belong?
 
 
-
 def str_xor(s, b):
-    return ''.join([chr(ord(c) ^ b) for c in s])
+    return "".join([chr(ord(c) ^ b) for c in s])
 
 
-
-def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
+def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">"):
     """
     Creates a function that will return a string representing a progress bar.
     """
     aValue = width / float(maxPosition)
-    def statBar(position, force = 0, last = ['']):
+
+    def statBar(position, force=0, last=[""]):
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[%s%s%s]" % (doneChar * done, currentChar, undoneChar * toDo)
+        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
         if force:
             last[0] = result
             return result
         if result == last[0]:
-            return ''
+            return ""
         last[0] = result
         return result
 
@@ -391,9 +401,15 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
     The 'position' argument is where the '%s' will be drawn.  If force is false,
     '' will be returned instead if the resulting progress bar is identical to the
     previously returned progress bar.
-""" % (doneChar * 3, currentChar, undoneChar * 3, width, maxPosition, currentChar)
+""" % (
+        doneChar * 3,
+        currentChar,
+        undoneChar * 3,
+        width,
+        maxPosition,
+        currentChar,
+    )
     return statBar
-
 
 
 def spewer(frame, s, ignored):
@@ -401,20 +417,19 @@ def spewer(frame, s, ignored):
     A trace function for sys.settrace that prints every function or method call.
     """
     from twisted.python import reflect
-    if 'self' in frame.f_locals:
-        se = frame.f_locals['self']
-        if hasattr(se, '__class__'):
+
+    if "self" in frame.f_locals:
+        se = frame.f_locals["self"]
+        if hasattr(se, "__class__"):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print('method %s of %s at %s' % (
-                frame.f_code.co_name, k, id(se)))
+        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
     else:
-        print('function %s in %s, line %s' % (
-                frame.f_code.co_name,
-                frame.f_code.co_filename,
-                frame.f_lineno))
-
+        print(
+            "function %s in %s, line %s"
+            % (frame.f_code.co_name, frame.f_code.co_filename, frame.f_lineno)
+        )
 
 
 def searchupwards(start, files=[], dirs=[]):
@@ -425,25 +440,27 @@ def searchupwards(start, files=[], dirs=[]):
 
     If not found, return None
     """
-    start=os.path.abspath(start)
-    parents=start.split(os.sep)
-    exists=os.path.exists; join=os.sep.join; isdir=os.path.isdir
+    start = os.path.abspath(start)
+    parents = start.split(os.sep)
+    exists = os.path.exists
+    join = os.sep.join
+    isdir = os.path.isdir
     while len(parents):
-        candidate=join(parents)+os.sep
-        allpresent=1
+        candidate = join(parents) + os.sep
+        allpresent = 1
         for f in files:
-            if not exists("%s%s" % (candidate, f)):
-                allpresent=0
+            if not exists(f"{candidate}{f}"):
+                allpresent = 0
                 break
         if allpresent:
             for d in dirs:
-                if not isdir("%s%s" % (candidate, d)):
-                    allpresent=0
+                if not isdir(f"{candidate}{d}"):
+                    allpresent = 0
                     break
-        if allpresent: return candidate
+        if allpresent:
+            return candidate
         parents.pop(-1)
     return None
-
 
 
 class LineLog:
@@ -453,6 +470,7 @@ class LineLog:
 
     When the log fills up, old entries drop off the end.
     """
+
     def __init__(self, size=10):
         """
         Create a new log, with size lines of storage (default 10).
@@ -463,33 +481,27 @@ class LineLog:
         self.log = [None] * size
         self.size = size
 
-
-    def append(self,line):
+    def append(self, line):
         if self.size:
             self.log[:-1] = self.log[1:]
             self.log[-1] = line
         else:
             self.log.append(line)
 
-
     def str(self):
         return bytes(self)
 
-
     def __bytes__(self):
-        return b'\n'.join(filter(None, self.log))
-
+        return b"\n".join(filter(None, self.log))
 
     def __getitem__(self, item):
         return filter(None, self.log)[item]
-
 
     def clear(self):
         """
         Empty the log.
         """
         self.log = [None] * self.size
-
 
 
 def raises(exception, f, *args, **kwargs):
@@ -503,8 +515,7 @@ def raises(exception, f, *args, **kwargs):
     return 0
 
 
-
-class IntervalDifferential(object):
+class IntervalDifferential:
     """
     Given a list of intervals, generate the amount of time to sleep between
     "instants".
@@ -535,19 +546,16 @@ class IntervalDifferential(object):
         self.intervals = intervals[:]
         self.default = default
 
-
     def __iter__(self):
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
 
-
-class _IntervalDifferentialIterator(object):
+class _IntervalDifferentialIterator:
     def __init__(self, i, d):
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
-
 
     def __next__(self):
         if not self.intervals:
@@ -562,7 +570,6 @@ class _IntervalDifferentialIterator(object):
     # Iterators on Python 2 use next(), not __next__()
     next = __next__
 
-
     def addInterval(self, i):
         if self.intervals:
             delay = self.intervals[0][0] - self.intervals[0][1]
@@ -570,7 +577,6 @@ class _IntervalDifferentialIterator(object):
             self.intervals.sort()
         else:
             self.intervals.append([i, i, 0])
-
 
     def removeInterval(self, interval):
         for i in range(len(self.intervals)):
@@ -582,7 +588,6 @@ class _IntervalDifferentialIterator(object):
                         i[2] -= 1
                 return
         raise ValueError("Specified interval not in IntervalDifferential")
-
 
 
 class FancyStrMixin:
@@ -602,25 +607,30 @@ class FancyStrMixin:
     renders the value of the attribute using C{formatCharacter}, e.g. C{"%.3f"}
     might be used for a float.
     """
+
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]  # noqa
+    showAttributes: Sequence[
+        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+    ] = ()
 
-
-    def __str__(self):
-        r = ['<', (hasattr(self, 'fancybasename') and self.fancybasename)
-             or self.__class__.__name__]
+    def __str__(self) -> str:
+        r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
+        # The casts help mypy understand which type from the Union applies
+        # in each 'if' case.
+        #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(' %s=%r' % (attr, getattr(self, attr)))
+                r.append(" {}={!r}".format(attr, getattr(self, attr)))
             elif len(attr) == 2:
-                r.append((' %s=' % (attr[0],)) + attr[1](getattr(self, attr[0])))
+                attr = cast(Tuple[str, Callable], attr)
+                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
             else:
-                r.append((' %s=' + attr[2]) % (attr[1], getattr(self, attr[0])))
-        r.append('>')
-        return ''.join(r)
+                attr = cast(Tuple[str, str, str], attr)
+                r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
+        r.append(">")
+        return "".join(r)
 
     __repr__ = __str__
-
 
 
 class FancyEqMixin:
@@ -630,24 +640,24 @@ class FancyEqMixin:
     Comparison is done using the list of attributes defined in
     C{compareAttributes}.
     """
-    compareAttributes = ()  # type: Sequence[Union[str, Sequence[str], Tuple[str, Callable]]]  # noqa
 
-    def __eq__(self, other):
+    compareAttributes: ClassVar[Sequence[str]] = ()
+
+    def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
             return self is other
         if isinstance(self, other.__class__):
-            return (
-                [getattr(self, name) for name in self.compareAttributes] ==
-                [getattr(other, name) for name in self.compareAttributes])
+            return all(
+                getattr(self, name) == getattr(other, name)
+                for name in self.compareAttributes
+            )
         return NotImplemented
 
-
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         if result is NotImplemented:
             return result
         return not result
-
 
 
 try:
@@ -659,15 +669,18 @@ else:
     _initgroups = __initgroups
 
 
-
 if _initgroups is None:
+
     def initgroups(uid, primaryGid):
         """
         Do nothing.
 
         Underlying platform support require to manipulate groups is missing.
         """
+
+
 else:
+
     def initgroups(uid, primaryGid):
         """
         Initializes the group access list.
@@ -685,7 +698,6 @@ else:
         @param primaryGid: The GID to include when setting the groups.
         """
         return _initgroups(pwd.getpwuid(uid).pw_name, primaryGid)
-
 
 
 def switchUID(uid, gid, euid=False):
@@ -722,16 +734,17 @@ def switchUID(uid, gid, euid=False):
         setgid(gid)
     if uid is not None:
         if uid == getuid():
-            uidText = (euid and "euid" or "uid")
-            actionText = "tried to drop privileges and set{} {}".format(
-                uidText, uid)
-            problemText = "{} is already {}".format(uidText, getuid())
-            warnings.warn("{} but {}; should we be root? Continuing.".format(
-                          actionText, problemText))
+            uidText = euid and "euid" or "uid"
+            actionText = f"tried to drop privileges and set{uidText} {uid}"
+            problemText = f"{uidText} is already {getuid()}"
+            warnings.warn(
+                "{} but {}; should we be root? Continuing.".format(
+                    actionText, problemText
+                )
+            )
         else:
             initgroups(uid, gid)
             setuid(uid)
-
 
 
 def untilConcludes(f, *a, **kw):
@@ -740,23 +753,22 @@ def untilConcludes(f, *a, **kw):
 
     @param f: A function to call.
 
-    @param *a: Positional arguments to pass to C{f}.
+    @param a: Positional arguments to pass to C{f}.
 
-    @param **kw: Keyword arguments to pass to C{f}.
+    @param kw: Keyword arguments to pass to C{f}.
 
     @return: Whatever C{f} returns.
 
-    @raise: Whatever C{f} raises, except for C{IOError} or C{OSError} with
+    @raise Exception: Whatever C{f} raises, except for C{OSError} with
         C{errno} set to C{EINTR}.
     """
     while True:
         try:
             return f(*a, **kw)
-        except (IOError, OSError) as e:
+        except OSError as e:
             if e.args[0] == errno.EINTR:
                 continue
             raise
-
 
 
 def mergeFunctionMetadata(f, g):
@@ -786,7 +798,6 @@ def mergeFunctionMetadata(f, g):
     return g
 
 
-
 def nameToLabel(mname):
     """
     Convert a string like a variable name into a slightly more human-friendly
@@ -800,7 +811,7 @@ def nameToLabel(mname):
     @rtype: C{str}
     """
     labelList = []
-    word = ''
+    word = ""
     lastWasUpper = False
     for letter in mname:
         if letter.isupper() == lastWasUpper:
@@ -830,17 +841,16 @@ def nameToLabel(mname):
     else:
         return mname.capitalize()
     labelList.append(word)
-    return ' '.join(labelList)
-
+    return " ".join(labelList)
 
 
 def uidFromString(uidString):
     """
     Convert a user identifier, as a string, into an integer UID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a UID or the
-        name of a user which can be converted to a UID via L{pwd.getpwnam}.
+    @type uidString: C{str}
+    @param uidString: A string giving the base-ten representation of a UID or
+        the name of a user which can be converted to a UID via L{pwd.getpwnam}.
 
     @rtype: C{int}
     @return: The integer UID corresponding to the given string.
@@ -856,14 +866,13 @@ def uidFromString(uidString):
         return pwd.getpwnam(uidString)[2]
 
 
-
 def gidFromString(gidString):
     """
     Convert a group identifier, as a string, into an integer GID.
 
-    @type uid: C{str}
-    @param uid: A string giving the base-ten representation of a GID or the
-        name of a group which can be converted to a GID via L{grp.getgrnam}.
+    @type gidString: C{str}
+    @param gidString: A string giving the base-ten representation of a GID or
+        the name of a group which can be converted to a GID via L{grp.getgrnam}.
 
     @rtype: C{int}
     @return: The integer GID corresponding to the given string.
@@ -877,7 +886,6 @@ def gidFromString(gidString):
         if grp is None:
             raise
         return grp.getgrnam(gidString)[2]
-
 
 
 def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
@@ -896,8 +904,8 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
     @param function: the function run with the specific permission.
     @type function: any callable
 
-    @param *args: arguments passed to C{function}
-    @param **kwargs: keyword arguments passed to C{function}
+    @param args: arguments passed to C{function}
+    @param kwargs: keyword arguments passed to C{function}
     """
     uid, gid = os.geteuid(), os.getegid()
     if uid == euid and gid == egid:
@@ -918,7 +926,6 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
                 os.setegid(gid)
             if uid != 0 and (uid != euid or gid != egid):
                 os.seteuid(uid)
-
 
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
@@ -945,13 +952,30 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
         return f(*args, **kwargs)
 
 
-
 __all__ = [
-    "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
-    "getPassword", "println", "makeStatBar", "OrderedDict",
-    "InsensitiveDict", "spewer", "searchupwards", "LineLog",
-    "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
-    "switchUID", "mergeFunctionMetadata",
-    "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
-    "untilConcludes", "runWithWarningsSuppressed",
+    "uniquify",
+    "padTo",
+    "getPluginDirs",
+    "addPluginDir",
+    "sibpath",
+    "getPassword",
+    "println",
+    "makeStatBar",
+    "OrderedDict",
+    "InsensitiveDict",
+    "spewer",
+    "searchupwards",
+    "LineLog",
+    "raises",
+    "IntervalDifferential",
+    "FancyStrMixin",
+    "FancyEqMixin",
+    "switchUID",
+    "mergeFunctionMetadata",
+    "nameToLabel",
+    "uidFromString",
+    "gidFromString",
+    "runAsEffectiveUser",
+    "untilConcludes",
+    "runWithWarningsSuppressed",
 ]

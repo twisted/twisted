@@ -13,9 +13,7 @@ available reactor implementations.
 """
 
 
-__metaclass__ = type
-
-__all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
+__all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os
 import signal
@@ -43,14 +41,11 @@ else:
     process = _process
 
 
-
-
 class TestTimeoutError(Exception):
     """
     The reactor was still running after the timeout period elapsed in
     L{ReactorBuilder.runReactor}.
     """
-
 
 
 def needsRunningReactor(reactor, thunk):
@@ -77,7 +72,6 @@ def needsRunningReactor(reactor, thunk):
     reactor.callWhenRunning(thunk)
 
 
-
 def stopOnError(case, reactor, publisher=None):
     """
     Stop the reactor as soon as any error is logged on the given publisher.
@@ -99,13 +93,14 @@ def stopOnError(case, reactor, publisher=None):
     if publisher is None:
         from twisted.python import log as publisher
     running = [None]
+
     def stopIfError(event):
-        if running and event.get('isError'):
+        if running and event.get("isError"):
             running.pop()
             reactor.stop()
+
     publisher.addObserver(stopIfError)
     case.addCleanup(publisher.removeObserver, stopIfError)
-
 
 
 class ReactorBuilder:
@@ -132,7 +127,7 @@ class ReactorBuilder:
     _reactors = [
         # Select works everywhere
         "twisted.internet.selectreactor.SelectReactor",
-        ]
+    ]
 
     if platform.isWindows():
         # PortableGtkReactor is only really interesting on Windows,
@@ -141,40 +136,50 @@ class ReactorBuilder:
         # it on other platforms.  It's not there in general because
         # it's not _really_ worth it to support on other platforms,
         # since no one really wants to use it on other platforms.
-        _reactors.extend([
+        _reactors.extend(
+            [
                 "twisted.internet.gtk2reactor.PortableGtkReactor",
                 "twisted.internet.gireactor.PortableGIReactor",
                 "twisted.internet.gtk3reactor.PortableGtk3Reactor",
                 "twisted.internet.win32eventreactor.Win32Reactor",
-                "twisted.internet.iocpreactor.reactor.IOCPReactor"])
+                "twisted.internet.iocpreactor.reactor.IOCPReactor",
+            ]
+        )
     else:
-        _reactors.extend([
+        _reactors.extend(
+            [
                 "twisted.internet.glib2reactor.Glib2Reactor",
                 "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
-                "twisted.internet.gtk3reactor.Gtk3Reactor"])
+                "twisted.internet.gtk3reactor.Gtk3Reactor",
+            ]
+        )
 
-        _reactors.append(
-                "twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
         else:
-            _reactors.extend([
+            _reactors.extend(
+                [
                     "twisted.internet.pollreactor.PollReactor",
-                    "twisted.internet.epollreactor.EPollReactor"])
+                    "twisted.internet.epollreactor.EPollReactor",
+                ]
+            )
             if not platform.isLinux():
                 # Presumably Linux is not going to start supporting kqueue, so
                 # skip even trying this configuration.
-                _reactors.extend([
+                _reactors.extend(
+                    [
                         # Support KQueue on non-OS-X POSIX platforms for now.
                         "twisted.internet.kqreactor.KQueueReactor",
-                        ])
+                    ]
+                )
 
     reactorFactory = None
     originalHandler = None
-    requiredInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
-    skippedReactors = {}  # type: Dict[str, str]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
+    skippedReactors: Dict[str, str] = {}
 
     def setUp(self):
         """
@@ -183,7 +188,6 @@ class ReactorBuilder:
         """
         if not platform.isWindows():
             self.originalHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-
 
     def tearDown(self):
         """
@@ -196,8 +200,9 @@ class ReactorBuilder:
             begin = time.time()
             while process.reapProcessHandlers:
                 log.msg(
-                    "ReactorBuilder.tearDown reaping some processes %r" % (
-                        process.reapProcessHandlers,))
+                    "ReactorBuilder.tearDown reaping some processes %r"
+                    % (process.reapProcessHandlers,)
+                )
                 process.reapAllProcesses()
 
                 # The process should exit on its own.  However, if it
@@ -209,9 +214,9 @@ class ReactorBuilder:
                     for pid in process.reapProcessHandlers:
                         os.kill(pid, signal.SIGKILL)
                     raise Exception(
-                        "Timeout waiting for child processes to exit: %r" % (
-                            process.reapProcessHandlers,))
-
+                        "Timeout waiting for child processes to exit: %r"
+                        % (process.reapProcessHandlers,)
+                    )
 
     def unbuildReactor(self, reactor):
         """
@@ -228,7 +233,7 @@ class ReactorBuilder:
         #
         # -exarkun
         reactor._uninstallHandler()
-        if getattr(reactor, '_internalReaders', None) is not None:
+        if getattr(reactor, "_internalReaders", None) is not None:
             for reader in reactor._internalReaders:
                 reactor.removeReader(reader)
                 reader.connectionLost(None)
@@ -244,7 +249,6 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
-
     def buildReactor(self):
         """
         Create and return a reactor using C{self.reactorFactory}.
@@ -255,15 +259,18 @@ class ReactorBuilder:
         except ImportError:
             pass
         else:
-            if (isinstance(globalReactor, CFReactor)
-                and self.reactorFactory is CFReactor):
+            if (
+                isinstance(globalReactor, CFReactor)
+                and self.reactorFactory is CFReactor
+            ):
                 raise SkipTest(
                     "CFReactor uses APIs which manipulate global state, "
                     "so it's not safe to run its own reactor-builder tests "
-                    "under itself")
+                    "under itself"
+                )
         try:
             reactor = self.reactorFactory()
-        except:
+        except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
             # instantiating the reactor.  So we catch some more here
@@ -276,16 +283,21 @@ class ReactorBuilder:
         else:
             if self.requiredInterfaces is not None:
                 missing = [
-                    required for required in self.requiredInterfaces
-                    if not required.providedBy(reactor)]
+                    required
+                    for required in self.requiredInterfaces
+                    if not required.providedBy(reactor)
+                ]
                 if missing:
                     self.unbuildReactor(reactor)
-                    raise SkipTest("%s does not provide %s" % (
-                        fullyQualifiedName(reactor.__class__),
-                        ",".join([fullyQualifiedName(x) for x in missing])))
+                    raise SkipTest(
+                        "%s does not provide %s"
+                        % (
+                            fullyQualifiedName(reactor.__class__),
+                            ",".join([fullyQualifiedName(x) for x in missing]),
+                        )
+                    )
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
-
 
     def getTimeout(self):
         """
@@ -293,8 +305,7 @@ class ReactorBuilder:
 
         @return: A C{int} or C{float} giving a number of seconds.
         """
-        return acquireAttribute(self._parents, 'timeout', DEFAULT_TIMEOUT_DURATION)
-
+        return acquireAttribute(self._parents, "timeout", DEFAULT_TIMEOUT_DURATION)
 
     def runReactor(self, reactor, timeout=None):
         """
@@ -317,6 +328,7 @@ class ReactorBuilder:
             timeout = self.getTimeout()
 
         timedOut = []
+
         def stop():
             timedOut.append(None)
             reactor.stop()
@@ -324,27 +336,26 @@ class ReactorBuilder:
         timedOutCall = reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
-            raise TestTimeoutError(
-                "reactor still running after %s seconds" % (timeout,))
+            raise TestTimeoutError(f"reactor still running after {timeout} seconds")
         else:
             timedOutCall.cancel()
 
-
     @classmethod
     def makeTestCaseClasses(
-        cls: Type['ReactorBuilder']
-    ) -> Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]:
+        cls: Type["ReactorBuilder"],
+    ) -> Dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]]:
         """
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes = {}  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]   # noqa
+        classes: Dict[
+            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
+        ] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
-            name = (cls.__name__ + "." + shortReactorName +
-                    "Tests").replace(".", "_")
+            name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
 
-            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]   # noqa
+            class testcase(cls, SynchronousTestCase):  # type: ignore[valid-type,misc]
                 __module__ = cls.__module__
                 if reactor in cls.skippedReactors:
                     skip = cls.skippedReactors[reactor]
@@ -352,8 +363,8 @@ class ReactorBuilder:
                     reactorFactory = namedAny(reactor)
                 except BaseException:
                     skip = Failure().getErrorMessage()
+
             testcase.__name__ = name
-            testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] +
-                                             [name])
+            testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
             classes[testcase.__name__] = testcase
         return classes

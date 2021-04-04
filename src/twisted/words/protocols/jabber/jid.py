@@ -14,15 +14,16 @@ L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 
 from typing import Dict
 from twisted.words.protocols.jabber.xmpp_stringprep import (
-    nodeprep, resourceprep, nameprep)
-
+    nodeprep,
+    resourceprep,
+    nameprep,
+)
 
 
 class InvalidFormat(Exception):
     """
     The given string could not be parsed into a valid Jabber Identifier (JID).
     """
-
 
 
 def parse(jidstring):
@@ -43,7 +44,7 @@ def parse(jidstring):
 
     # Search for delimiters
     user_sep = jidstring.find("@")
-    res_sep  = jidstring.find("/")
+    res_sep = jidstring.find("/")
 
     if user_sep == -1:
         if res_sep == -1:
@@ -52,24 +53,25 @@ def parse(jidstring):
         else:
             # host/resource
             host = jidstring[0:res_sep]
-            resource = jidstring[res_sep + 1:] or None
+            resource = jidstring[res_sep + 1 :] or None
     else:
         if res_sep == -1:
             # user@host
             user = jidstring[0:user_sep] or None
-            host = jidstring[user_sep + 1:]
+            host = jidstring[user_sep + 1 :]
         else:
             if user_sep < res_sep:
                 # user@host/resource
                 user = jidstring[0:user_sep] or None
-                host = jidstring[user_sep + 1:user_sep + (res_sep - user_sep)]
-                resource = jidstring[res_sep + 1:] or None
+                host = jidstring[user_sep + 1 : user_sep + (res_sep - user_sep)]
+                resource = jidstring[res_sep + 1 :] or None
             else:
                 # host/resource (with an @ in resource)
                 host = jidstring[0:res_sep]
-                resource = jidstring[res_sep + 1:] or None
+                resource = jidstring[res_sep + 1 :] or None
 
     return prep(user, host, resource)
+
 
 def prep(user, host, resource):
     """
@@ -112,9 +114,7 @@ def prep(user, host, resource):
     return (user, host, resource)
 
 
-
-__internJIDs = {}  # type: Dict[str, 'JID']
-
+__internJIDs: Dict[str, "JID"] = {}
 
 
 def internJID(jidstring):
@@ -132,8 +132,7 @@ def internJID(jidstring):
         return j
 
 
-
-class JID(object):
+class JID:
     """
     Represents a stringprep'd Jabber ID.
 
@@ -143,8 +142,9 @@ class JID(object):
 
     def __init__(self, str=None, tuple=None):
         if not (str or tuple):
-            raise RuntimeError("You must provide a value for either 'str' or "
-                               "'tuple' arguments.")
+            raise RuntimeError(
+                "You must provide a value for either 'str' or " "'tuple' arguments."
+            )
 
         if str:
             user, host, res = parse(str)
@@ -165,7 +165,7 @@ class JID(object):
         @rtype: L{str}
         """
         if self.user:
-            return u"%s@%s" % (self.user, self.host)
+            return f"{self.user}@{self.host}"
         else:
             return self.host
 
@@ -195,16 +195,16 @@ class JID(object):
         """
         if self.user:
             if self.resource:
-                return u"%s@%s/%s" % (self.user, self.host, self.resource)
+                return f"{self.user}@{self.host}/{self.resource}"
             else:
-                return u"%s@%s" % (self.user, self.host)
+                return f"{self.user}@{self.host}"
         else:
             if self.resource:
-                return u"%s/%s" % (self.host, self.resource)
+                return f"{self.host}/{self.resource}"
             else:
                 return self.host
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Equality comparison.
 
@@ -213,25 +213,13 @@ class JID(object):
         uses the default comparison.
         """
         if isinstance(other, JID):
-            return (self.user == other.user and
-                    self.host == other.host and
-                    self.resource == other.resource)
+            return (
+                self.user == other.user
+                and self.host == other.host
+                and self.resource == other.resource
+            )
         else:
             return NotImplemented
-
-    def __ne__(self, other):
-        """
-        Inequality comparison.
-
-        This negates L{__eq__} for comparison with JIDs and uses the default
-        comparison for other types.
-        """
-        result = self.__eq__(other)
-        if result is NotImplemented:
-            return result
-        else:
-            return not result
-
 
     def __hash__(self):
         """
@@ -242,7 +230,6 @@ class JID(object):
         this allows for using L{JID}s in sets and as dictionary keys.
         """
         return hash((self.user, self.host, self.resource))
-
 
     def __unicode__(self):
         """
@@ -256,12 +243,11 @@ class JID(object):
 
     __str__ = __unicode__
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get object representation.
 
         Returns a string that would create a new JID object that compares equal
         to this one.
         """
-        return 'JID(%r)' % self.full()
+        return "JID(%r)" % self.full()

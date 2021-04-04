@@ -15,12 +15,12 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet import stdio, protocol
 from twisted.python import reflect, log
 
+
 class LoseConnChild(protocol.Protocol):
     exitCode = 0
 
     def connectionMade(self):
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         """
@@ -32,17 +32,18 @@ class LoseConnChild(protocol.Protocol):
         try:
             try:
                 reason.trap(ConnectionDone)
-            except:
+            except BaseException:
                 log.err(None, "Problem with reason passed to connectionLost")
                 self.exitCode = 1
         finally:
             reactor.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     reflect.namedAny(sys.argv[1]).install()
-    log.startLogging(open(sys.argv[2], 'wb'))
+    log.startLogging(open(sys.argv[2], "wb"))
     from twisted.internet import reactor
+
     protocolLoseConnChild = LoseConnChild()
     stdio.StandardIO(protocolLoseConnChild)
     reactor.run()  # type: ignore[attr-defined]

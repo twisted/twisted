@@ -29,35 +29,30 @@ from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
-from twisted.python.compat import unicode
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 
 
-
-pyasn1 = requireModule('pyasn1')
-cryptography = requireModule('cryptography')
-unix = requireModule('twisted.conch.unix')
+pyasn1 = requireModule("pyasn1")
+cryptography = requireModule("cryptography")
+unix = requireModule("twisted.conch.unix")
 
 if cryptography and pyasn1:
     try:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import (
-            FileTransferForTestAvatar)
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
         from twisted.conch.test import test_ssh, test_conch
         from twisted.conch.test.test_conch import FakeStdio
     except ImportError:
         pass
 
 skipTests = False
-if None in (unix, cryptography, pyasn1,
-            interfaces.IReactorProcess(reactor, None)):
+if None in (unix, cryptography, pyasn1, interfaces.IReactorProcess(reactor, None)):
     skipTests = True
-
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
@@ -65,6 +60,7 @@ class SSHSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
     """
+
     def test_eofReceived(self):
         """
         L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
@@ -77,15 +73,14 @@ class SSHSessionTests(TestCase):
         self.assertTrue(stdio.writeConnLost)
 
 
-
 class ListingTests(TestCase):
     """
     Tests for L{lsLine}, the function which generates an entry for a file or
     directory in an SFTP I{ls} command's output.
     """
-    if getattr(time, 'tzset', None) is None:
-        skip = "Cannot test timestamp formatting code without time.tzset"
 
+    if getattr(time, "tzset", None) is None:
+        skip = "Cannot test timestamp formatting code without time.tzset"
 
     def setUp(self):
         """
@@ -93,25 +88,28 @@ class ListingTests(TestCase):
         deterministic.
         """
         self.now = 123456789
+
         def fakeTime():
             return self.now
-        self.patch(ls, 'time', fakeTime)
+
+        self.patch(ls, "time", fakeTime)
 
         # Make sure that the timezone ends up the same after these tests as
         # it was before.
-        if 'TZ' in os.environ:
-            self.addCleanup(operator.setitem, os.environ, 'TZ', os.environ['TZ'])
+        if "TZ" in os.environ:
+            self.addCleanup(operator.setitem, os.environ, "TZ", os.environ["TZ"])
             self.addCleanup(time.tzset)
         else:
+
             def cleanup():
                 # os.environ.pop is broken!  Don't use it!  Ever!  Or die!
                 try:
-                    del os.environ['TZ']
+                    del os.environ["TZ"]
                 except KeyError:
                     pass
                 time.tzset()
-            self.addCleanup(cleanup)
 
+            self.addCleanup(cleanup)
 
     def _lsInTimezone(self, timezone, stat):
         """
@@ -120,10 +118,9 @@ class ListingTests(TestCase):
         """
         # Set the timezone to a well-known value so the timestamps are
         # predictable.
-        os.environ['TZ'] = timezone
+        os.environ["TZ"] = timezone
         time.tzset()
-        return ls.lsLine('foo', stat)
-
+        return ls.lsLine("foo", stat)
 
     def test_oldFile(self):
         """
@@ -135,12 +132,13 @@ class ListingTests(TestCase):
         stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
         self.assertEqual(
-            self._lsInTimezone('America/New_York', stat),
-            '!---------    0 0        0               0 Apr 26  1973 foo')
+            self._lsInTimezone("America/New_York", stat),
+            "!---------    0 0        0               0 Apr 26  1973 foo",
+        )
         self.assertEqual(
-            self._lsInTimezone('Pacific/Auckland', stat),
-            '!---------    0 0        0               0 Apr 27  1973 foo')
-
+            self._lsInTimezone("Pacific/Auckland", stat),
+            "!---------    0 0        0               0 Apr 27  1973 foo",
+        )
 
     def test_oldSingleDigitDayOfMonth(self):
         """
@@ -154,12 +152,13 @@ class ListingTests(TestCase):
         stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
         self.assertEqual(
-            self._lsInTimezone('America/New_York', stat),
-            '!---------    0 0        0               0 May 01  1973 foo')
+            self._lsInTimezone("America/New_York", stat),
+            "!---------    0 0        0               0 May 01  1973 foo",
+        )
         self.assertEqual(
-            self._lsInTimezone('Pacific/Auckland', stat),
-            '!---------    0 0        0               0 May 02  1973 foo')
-
+            self._lsInTimezone("Pacific/Auckland", stat),
+            "!---------    0 0        0               0 May 02  1973 foo",
+        )
 
     def test_newFile(self):
         """
@@ -171,12 +170,13 @@ class ListingTests(TestCase):
         stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
         self.assertEqual(
-            self._lsInTimezone('America/New_York', stat),
-            '!---------    0 0        0               0 Aug 28 17:33 foo')
+            self._lsInTimezone("America/New_York", stat),
+            "!---------    0 0        0               0 Aug 28 17:33 foo",
+        )
         self.assertEqual(
-            self._lsInTimezone('Pacific/Auckland', stat),
-            '!---------    0 0        0               0 Aug 29 09:33 foo')
-
+            self._lsInTimezone("Pacific/Auckland", stat),
+            "!---------    0 0        0               0 Aug 29 09:33 foo",
+        )
 
     # If alternate locale is not available, the next test will be
     # skipped, please install this locale for it to run
@@ -190,7 +190,6 @@ class ListingTests(TestCase):
             localeSkip = False
     finally:
         locale.setlocale(locale.LC_ALL, currentLocale)
-
 
     @skipIf(localeSkip, "The es_AR.UTF8 locale is not installed.")
     def test_localeIndependent(self):
@@ -207,12 +206,13 @@ class ListingTests(TestCase):
         self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
 
         self.assertEqual(
-            self._lsInTimezone('America/New_York', stat),
-            '!---------    0 0        0               0 Aug 28 17:33 foo')
+            self._lsInTimezone("America/New_York", stat),
+            "!---------    0 0        0               0 Aug 28 17:33 foo",
+        )
         self.assertEqual(
-            self._lsInTimezone('Pacific/Auckland', stat),
-            '!---------    0 0        0               0 Aug 29 09:33 foo')
-
+            self._lsInTimezone("Pacific/Auckland", stat),
+            "!---------    0 0        0               0 Aug 29 09:33 foo",
+        )
 
     def test_newSingleDigitDayOfMonth(self):
         """
@@ -226,15 +226,16 @@ class ListingTests(TestCase):
         stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
         self.assertEqual(
-            self._lsInTimezone('America/New_York', stat),
-            '!---------    0 0        0               0 Sep 01 17:33 foo')
+            self._lsInTimezone("America/New_York", stat),
+            "!---------    0 0        0               0 Sep 01 17:33 foo",
+        )
         self.assertEqual(
-            self._lsInTimezone('Pacific/Auckland', stat),
-            '!---------    0 0        0               0 Sep 02 09:33 foo')
+            self._lsInTimezone("Pacific/Auckland", stat),
+            "!---------    0 0        0               0 Sep 02 09:33 foo",
+        )
 
 
-
-class InMemorySSHChannel(StringTransport, object):
+class InMemorySSHChannel(StringTransport):
     """
     Minimal implementation of a L{SSHChannel} like class which only reads and
     writes data from memory.
@@ -247,18 +248,16 @@ class InMemorySSHChannel(StringTransport, object):
         """
         self.conn = conn
         self.localClosed = 0
-        super(InMemorySSHChannel, self).__init__()
+        super().__init__()
 
 
-
-class FilesystemAccessExpectations(object):
+class FilesystemAccessExpectations:
     """
     A test helper used to support expected filesystem access.
     """
 
     def __init__(self):
         self._cache = {}
-
 
     def put(self, path, flags, stream):
         """
@@ -273,7 +272,6 @@ class FilesystemAccessExpectations(object):
         @type stream: C{File}
         """
         self._cache[(path, flags)] = stream
-
 
     def pop(self, path, flags):
         """
@@ -291,8 +289,7 @@ class FilesystemAccessExpectations(object):
         return self._cache.pop((path, flags))
 
 
-
-class InMemorySFTPClient(object):
+class InMemorySFTPClient:
     """
     A L{filetransfer.FileTransferClient} which does filesystem operations in
     memory, without touching the local disc or the network interface.
@@ -305,11 +302,10 @@ class InMemorySFTPClient(object):
     def __init__(self, availableFiles):
         self.transport = InMemorySSHChannel(self)
         self.options = {
-            'requests': 1,
-            'buffersize': 10,
-            }
+            "requests": 1,
+            "buffersize": 10,
+        }
         self._availableFiles = availableFiles
-
 
     def openFile(self, filename, flags, attrs):
         """
@@ -318,7 +314,6 @@ class InMemorySFTPClient(object):
         Retrieve and remove cached file based on flags.
         """
         return self._availableFiles.pop(filename, flags)
-
 
 
 @implementer(ISFTPFile)
@@ -335,7 +330,6 @@ class InMemoryRemoteFile(BytesIO):
         self.name = name
         BytesIO.__init__(self)
 
-
     def writeChunk(self, start, data):
         """
         @see: L{ISFTPFile.writeChunk}
@@ -343,7 +337,6 @@ class InMemoryRemoteFile(BytesIO):
         self.seek(start)
         self.write(data)
         return defer.succeed(self)
-
 
     def close(self):
         """
@@ -353,21 +346,17 @@ class InMemoryRemoteFile(BytesIO):
         """
         self._closed = True
 
-
     def getAttrs(self):
         # ISFTPFile.getAttrs
         pass
-
 
     def readChunk(self, offset, length):
         # ISFTPFile.readChunk
         pass
 
-
     def setAttrs(self, attrs):
         # ISFTPFile.getAttrs
         pass
-
 
     def getvalue(self):
         """
@@ -378,21 +367,21 @@ class InMemoryRemoteFile(BytesIO):
         return BytesIO.getvalue(self)
 
 
-
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
     """
+
     def setUp(self):
         """
         Create a L{cftp.StdioClient} hooked up to dummy transport and a fake
         user database.
         """
         self.fakeFilesystem = FilesystemAccessExpectations()
-        sftpClient = InMemorySFTPClient(self.fakeFilesystem )
+        sftpClient = InMemorySFTPClient(self.fakeFilesystem)
         self.client = cftp.StdioClient(sftpClient)
-        self.client.currentDirectory = '/'
+        self.client.currentDirectory = "/"
         self.database = self.client._pwd = UserDatabase()
         # Use a fixed width for all tests so that we get the same results when
         # running these tests from different terminals.
@@ -403,20 +392,18 @@ class StdioClientTests(TestCase):
         # which uses features not provided by our dumb Connection fake.
         self.client.transport = self.client.client.transport
 
-
     def test_exec(self):
         """
         The I{exec} command runs its arguments locally in a child process
         using the user's shell.
         """
         self.database.addUser(
-            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar',
-            sys.executable)
+            getpass.getuser(), "secret", os.getuid(), 1234, "foo", "bar", sys.executable
+        )
 
         d = self.client._dispatchCommand("exec print(1 + 2)")
         d.addCallback(self.assertEqual, b"3\n")
         return d
-
 
     def test_execWithoutShell(self):
         """
@@ -424,25 +411,24 @@ class StdioClientTests(TestCase):
         using I{/bin/sh}.
         """
         self.database.addUser(
-            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar', '')
+            getpass.getuser(), "secret", os.getuid(), 1234, "foo", "bar", ""
+        )
 
         d = self.client._dispatchCommand("exec echo hello")
         d.addCallback(self.assertEqual, b"hello\n")
         return d
-
 
     def test_bang(self):
         """
         The I{exec} command is run for lines which start with C{"!"}.
         """
         self.database.addUser(
-            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar',
-            '/bin/sh')
+            getpass.getuser(), "secret", os.getuid(), 1234, "foo", "bar", "/bin/sh"
+        )
 
         d = self.client._dispatchCommand("!echo hello")
         d.addCallback(self.assertEqual, b"hello\n")
         return d
-
 
     def setKnownConsoleSize(self, width, height):
         """
@@ -456,13 +442,14 @@ class StdioClientTests(TestCase):
         """
         # Local import to avoid win32 issues.
         import tty
-        class FakeFcntl(object):
+
+        class FakeFcntl:
             def ioctl(self, fd, opt, mutate):
                 if opt != tty.TIOCGWINSZ:
                     self.fail("Only window-size queries supported.")
                 return struct.pack("4H", height, width, 0, 0)
-        self.patch(cftp, "fcntl", FakeFcntl())
 
+        self.patch(cftp, "fcntl", FakeFcntl())
 
     def test_printProgressBarReporting(self):
         """
@@ -488,7 +475,6 @@ class StdioClientTests(TestCase):
         result = b"\rb'sample' 40% 4.0kB 2.0kBps 00:03 "
         self.assertEqual(self.client.transport.value(), result)
 
-
     def test_printProgressBarNoProgress(self):
         """
         L{StdioClient._printProgressBar} prints a progress description that
@@ -507,14 +493,13 @@ class StdioClientTests(TestCase):
         result = b"\rb'sample'  0% 0.0B 0.0Bps 00:00 "
         self.assertEqual(self.client.transport.value(), result)
 
-
     def test_printProgressBarEmptyFile(self):
         """
         Print the progress for empty files.
         """
         self.setKnownConsoleSize(10, 34)
         wrapped = BytesIO()
-        wrapped.name = b'empty-file'
+        wrapped.name = b"empty-file"
         wrapper = cftp.FileWrapper(wrapped)
 
         self.client._printProgressBar(wrapper, 0)
@@ -522,35 +507,31 @@ class StdioClientTests(TestCase):
         result = b"\rb'empty-file'100% 0.0B 0.0Bps 00:00 "
         self.assertEqual(result, self.client.transport.value())
 
-
     def test_getFilenameEmpty(self):
         """
         Returns empty value for both filename and remaining data.
         """
-        result = self.client._getFilename('  ')
+        result = self.client._getFilename("  ")
 
-        self.assertEqual(('', ''), result)
-
+        self.assertEqual(("", ""), result)
 
     def test_getFilenameOnlyLocal(self):
         """
         Returns empty value for remaining data when line contains
         only a filename.
         """
-        result = self.client._getFilename('only-local')
+        result = self.client._getFilename("only-local")
 
-        self.assertEqual(('only-local', ''), result)
-
+        self.assertEqual(("only-local", ""), result)
 
     def test_getFilenameNotQuoted(self):
         """
         Returns filename and remaining data striped of leading and trailing
         spaces.
         """
-        result = self.client._getFilename(' local  remote file  ')
+        result = self.client._getFilename(" local  remote file  ")
 
-        self.assertEqual(('local', 'remote file'), result)
-
+        self.assertEqual(("local", "remote file"), result)
 
     def test_getFilenameQuoted(self):
         """
@@ -559,10 +540,9 @@ class StdioClientTests(TestCase):
         """
         result = self.client._getFilename(' " local file "  " remote  file " ')
 
-        self.assertEqual((' local file ', '" remote  file "'), result)
+        self.assertEqual((" local file ", '" remote  file "'), result)
 
-
-    def makeFile(self, path=None, content=b''):
+    def makeFile(self, path=None, content=b""):
         """
         Create a local file and return its path.
 
@@ -578,10 +558,9 @@ class StdioClientTests(TestCase):
         """
         if path is None:
             path = self.mktemp()
-        with open(path, 'wb') as file:
+        with open(path, "wb") as file:
             file.write(content)
         return path
-
 
     def checkPutMessage(self, transfers, randomOrder=False):
         """
@@ -595,7 +574,7 @@ class StdioClientTests(TestCase):
         """
         output = self.client.transport.value()
         output = output.decode("utf-8")
-        output = output.split('\n\r')
+        output = output.split("\n\r")
 
         expectedOutput = []
         actualOutput = []
@@ -605,14 +584,14 @@ class StdioClientTests(TestCase):
             # ends with the final message informing that file was transferred.
             expectedTransfer = []
             for line in expected:
-                expectedTransfer.append('%s %s' % (local, line))
-            expectedTransfer.append('Transferred %s to %s' % (local, remote))
+                expectedTransfer.append(f"{local} {line}")
+            expectedTransfer.append(f"Transferred {local} to {remote}")
             expectedOutput.append(expectedTransfer)
 
-            progressParts = output.pop(0).strip('\r').split('\r')
+            progressParts = output.pop(0).strip("\r").split("\r")
             actual = progressParts[:-1]
 
-            last = progressParts[-1].strip('\n').split('\n')
+            last = progressParts[-1].strip("\n").split("\n")
             actual.extend(last)
 
             actualTransfer = []
@@ -625,11 +604,11 @@ class StdioClientTests(TestCase):
                 # PROGRESS_PERCENTAGE and PROGRESS values.
 
                 # Ignore SPPED and ETA.
-                line = line.strip().rsplit(' ', 2)[0]
+                line = line.strip().rsplit(" ", 2)[0]
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
-                line = line.strip().split(' ', 1)
-                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
+                line = line.strip().split(" ", 1)
+                actualTransfer.append("{} {}".format(line[0], line[1].strip()))
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
@@ -639,10 +618,10 @@ class StdioClientTests(TestCase):
             self.assertEqual(expectedOutput, actualOutput)
 
         self.assertEqual(
-            0, len(output),
-            'There are still put responses which were not checked.',
-            )
-
+            0,
+            len(output),
+            "There are still put responses which were not checked.",
+        )
 
     def test_cmd_PUTSingleNoRemotePath(self):
         """
@@ -651,17 +630,13 @@ class StdioClientTests(TestCase):
 
         The progress is updated while chunks are transferred.
         """
-        content = b'Test\r\nContent'
+        content = b"Test\r\nContent"
         localPath = self.makeFile(content=content)
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
-        remoteName = os.path.join('/', os.path.basename(localPath))
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
+        remoteName = os.path.join("/", os.path.basename(localPath))
         remoteFile = InMemoryRemoteFile(remoteName)
         self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
-        self.client.client.options['buffersize'] = 10
+        self.client.client.options["buffersize"] = 10
 
         deferred = self.client.cmd_PUT(localPath)
         self.successResultOf(deferred)
@@ -669,9 +644,8 @@ class StdioClientTests(TestCase):
         self.assertEqual(content, remoteFile.getvalue())
         self.assertTrue(remoteFile._closed)
         self.checkPutMessage(
-            [(localPath, remoteName,
-                ['76% 10.0B', '100% 13.0B', '100% 13.0B'])])
-
+            [(localPath, remoteName, ["76% 10.0B", "100% 13.0B", "100% 13.0B"])]
+        )
 
     def test_cmd_PUTSingleRemotePath(self):
         """
@@ -680,23 +654,17 @@ class StdioClientTests(TestCase):
         Any other data in the line is ignored.
         """
         localPath = self.makeFile()
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
-        remoteName = '/remote-path'
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
+        remoteName = "/remote-path"
         remoteFile = InMemoryRemoteFile(remoteName)
         self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
 
-        deferred = self.client.cmd_PUT(
-            '%s %s ignored' % (localPath, remoteName))
+        deferred = self.client.cmd_PUT(f"{localPath} {remoteName} ignored")
         self.successResultOf(deferred)
 
-        self.checkPutMessage([(localPath, remoteName, ['100% 0.0B'])])
+        self.checkPutMessage([(localPath, remoteName, ["100% 0.0B"])])
         self.assertTrue(remoteFile._closed)
-        self.assertEqual(b'', remoteFile.getvalue())
-
+        self.assertEqual(b"", remoteFile.getvalue())
 
     def test_cmd_PUTMultipleNoRemotePath(self):
         """
@@ -705,37 +673,33 @@ class StdioClientTests(TestCase):
         """
         first = self.makeFile()
         firstName = os.path.basename(first)
-        secondName = 'second-name'
+        secondName = "second-name"
         parent = os.path.dirname(first)
         second = self.makeFile(path=os.path.join(parent, secondName))
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
-        firstRemotePath = '/%s' % (firstName,)
-        secondRemotePath = '/%s' % (secondName,)
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
+        firstRemotePath = f"/{firstName}"
+        secondRemotePath = f"/{secondName}"
         firstRemoteFile = InMemoryRemoteFile(firstRemotePath)
         secondRemoteFile = InMemoryRemoteFile(secondRemotePath)
+        self.fakeFilesystem.put(firstRemotePath, flags, defer.succeed(firstRemoteFile))
         self.fakeFilesystem.put(
-            firstRemotePath, flags, defer.succeed(firstRemoteFile))
-        self.fakeFilesystem.put(
-            secondRemotePath, flags, defer.succeed(secondRemoteFile))
+            secondRemotePath, flags, defer.succeed(secondRemoteFile)
+        )
 
-        deferred = self.client.cmd_PUT(os.path.join(parent, '*'))
+        deferred = self.client.cmd_PUT(os.path.join(parent, "*"))
         self.successResultOf(deferred)
 
         self.assertTrue(firstRemoteFile._closed)
-        self.assertEqual(b'', firstRemoteFile.getvalue())
+        self.assertEqual(b"", firstRemoteFile.getvalue())
         self.assertTrue(secondRemoteFile._closed)
-        self.assertEqual(b'', secondRemoteFile.getvalue())
-        self.checkPutMessage([
-            (first, firstRemotePath, ['100% 0.0B']),
-            (second, secondRemotePath, ['100% 0.0B']),
+        self.assertEqual(b"", secondRemoteFile.getvalue())
+        self.checkPutMessage(
+            [
+                (first, firstRemotePath, ["100% 0.0B"]),
+                (second, secondRemotePath, ["100% 0.0B"]),
             ],
             randomOrder=True,
-            )
-
+        )
 
     def test_cmd_PUTMultipleWithRemotePath(self):
         """
@@ -746,49 +710,42 @@ class StdioClientTests(TestCase):
         """
         first = self.makeFile()
         firstName = os.path.basename(first)
-        secondName = 'second-name'
+        secondName = "second-name"
         parent = os.path.dirname(first)
         second = self.makeFile(path=os.path.join(parent, secondName))
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
         firstRemoteFile = InMemoryRemoteFile(firstName)
         secondRemoteFile = InMemoryRemoteFile(secondName)
-        firstRemotePath = '/remote/%s' % (firstName,)
-        secondRemotePath = '/remote/%s' % (secondName,)
+        firstRemotePath = f"/remote/{firstName}"
+        secondRemotePath = f"/remote/{secondName}"
+        self.fakeFilesystem.put(firstRemotePath, flags, defer.succeed(firstRemoteFile))
         self.fakeFilesystem.put(
-            firstRemotePath, flags, defer.succeed(firstRemoteFile))
-        self.fakeFilesystem.put(
-            secondRemotePath, flags, defer.succeed(secondRemoteFile))
+            secondRemotePath, flags, defer.succeed(secondRemoteFile)
+        )
 
-        deferred = self.client.cmd_PUT(
-            '%s remote' % (os.path.join(parent, '*'),))
+        deferred = self.client.cmd_PUT("{} remote".format(os.path.join(parent, "*")))
         self.successResultOf(deferred)
 
         self.assertTrue(firstRemoteFile._closed)
-        self.assertEqual(b'', firstRemoteFile.getvalue())
+        self.assertEqual(b"", firstRemoteFile.getvalue())
         self.assertTrue(secondRemoteFile._closed)
-        self.assertEqual(b'', secondRemoteFile.getvalue())
-        self.checkPutMessage([
-            (first, firstName, ['100% 0.0B']),
-            (second, secondName, ['100% 0.0B']),
+        self.assertEqual(b"", secondRemoteFile.getvalue())
+        self.checkPutMessage(
+            [
+                (first, firstName, ["100% 0.0B"]),
+                (second, secondName, ["100% 0.0B"]),
             ],
             randomOrder=True,
-            )
-
+        )
 
 
 class FileTransferTestRealm:
     def __init__(self, testDir):
         self.testDir = testDir
 
-
     def requestAvatar(self, avatarID, mind, *interfaces):
         a = FileTransferTestAvatar(self.testDir)
         return interfaces[0], a, lambda: None
-
 
 
 class SFTPTestProcess(protocol.ProcessProtocol):
@@ -809,22 +766,20 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self._expectingCommand = None
         self._processEnded = False
 
-
     def clearBuffer(self):
         """
         Clear any buffered data received from stdout. Should be private.
         """
-        self.buffer = b''
+        self.buffer = b""
         self._linesReceived = []
-        self._lineBuffer = b''
-
+        self._lineBuffer = b""
 
     def outReceived(self, data):
         """
         Called by Twisted when the cftp client prints data to stdout.
         """
-        log.msg('got %r' % data)
-        lines = (self._lineBuffer + data).split(b'\n')
+        log.msg("got %r" % data)
+        lines = (self._lineBuffer + data).split(b"\n")
         self._lineBuffer = lines.pop(-1)
         self._linesReceived.extend(lines)
         # XXX - not strictly correct.
@@ -836,31 +791,27 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self.buffer += data
         self._checkForCommand()
 
-
     def _checkForCommand(self):
-        prompt = b'cftp> '
+        prompt = b"cftp> "
         if self._expectingCommand and self._lineBuffer == prompt:
-            buf = b'\n'.join(self._linesReceived)
+            buf = b"\n".join(self._linesReceived)
             if buf.startswith(prompt):
-                buf = buf[len(prompt):]
+                buf = buf[len(prompt) :]
             self.clearBuffer()
             d, self._expectingCommand = self._expectingCommand, None
             d.callback(buf)
-
 
     def errReceived(self, data):
         """
         Called by Twisted when the cftp client prints data to stderr.
         """
-        log.msg('err: %s' % data)
-
+        log.msg("err: %s" % data)
 
     def getBuffer(self):
         """
         Return the contents of the buffer of data received from stdout.
         """
         return self.buffer
-
 
     def runCommand(self, command):
         """
@@ -875,11 +826,10 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         """
         self._expectingCommand = defer.Deferred()
         self.clearBuffer()
-        if isinstance(command, unicode):
+        if isinstance(command, str):
             command = command.encode("utf-8")
-        self.transport.write(command + b'\n')
+        self.transport.write(command + b"\n")
         return self._expectingCommand
-
 
     def runScript(self, commands):
         """
@@ -896,7 +846,6 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         dl = [sem.run(self.runCommand, command) for command in commands]
         return defer.gatherResults(dl)
 
-
     def killProcess(self):
         """
         Kill the process if it is still running.
@@ -909,9 +858,8 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         if self._processEnded:
             return defer.succeed(None)
         self.onProcessEnd = defer.Deferred()
-        self.transport.signalProcess('KILL')
+        self.transport.signalProcess("KILL")
         return self.onProcessEnd
-
 
     def processEnded(self, reason):
         """
@@ -923,18 +871,16 @@ class SFTPTestProcess(protocol.ProcessProtocol):
             d.callback(None)
 
 
-
 class CFTPClientTestBase(SFTPTestBase):
     def setUp(self):
-        with open('dsa_test.pub', 'wb') as f:
+        with open("dsa_test.pub", "wb") as f:
             f.write(test_ssh.publicDSA_openssh)
-        with open('dsa_test', 'wb') as f:
+        with open("dsa_test", "wb") as f:
             f.write(test_ssh.privateDSA_openssh)
-        os.chmod('dsa_test', 33152)
-        with open('kh_test', 'wb') as f:
-            f.write(b'127.0.0.1 ' + test_ssh.publicRSA_openssh)
+        os.chmod("dsa_test", 33152)
+        with open("kh_test", "wb") as f:
+            f.write(b"127.0.0.1 " + test_ssh.publicRSA_openssh)
         return SFTPTestBase.setUp(self)
-
 
     def startServer(self):
         realm = FileTransferTestRealm(self.testDir)
@@ -944,29 +890,24 @@ class CFTPClientTestBase(SFTPTestBase):
         fac.portal = p
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
 
-
     def stopServer(self):
-        if not hasattr(self.server.factory, 'proto'):
+        if not hasattr(self.server.factory, "proto"):
             return self._cbStopServer(None)
         self.server.factory.proto.expectedLoseConnection = 1
-        d = defer.maybeDeferred(
-            self.server.factory.proto.transport.loseConnection)
+        d = defer.maybeDeferred(self.server.factory.proto.transport.loseConnection)
         d.addCallback(self._cbStopServer)
         return d
-
 
     def _cbStopServer(self, ignored):
         return defer.maybeDeferred(self.server.stopListening)
 
-
     def tearDown(self):
-        for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
+        for f in ["dsa_test.pub", "dsa_test", "kh_test"]:
             try:
                 os.remove(f)
-            except:
+            except BaseException:
                 pass
         return SFTPTestBase.tearDown(self)
-
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
@@ -983,54 +924,54 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         CFTPClientTestBase.setUp(self)
 
         self.startServer()
-        cmds = ('-p %i -l testuser '
-               '--known-hosts kh_test '
-               '--user-authentications publickey '
-               '--host-key-algorithms ssh-rsa '
-               '-i dsa_test '
-               '-a '
-               '-v '
-               '127.0.0.1')
+        cmds = (
+            "-p %i -l testuser "
+            "--known-hosts kh_test "
+            "--user-authentications publickey "
+            "--host-key-algorithms ssh-rsa "
+            "-i dsa_test "
+            "-a "
+            "-v "
+            "127.0.0.1"
+        )
         port = self.server.getHost().port
-        cmds = test_conch._makeArgs((cmds % port).split(), mod='cftp')
-        log.msg('running %s %s' % (sys.executable, cmds))
+        cmds = test_conch._makeArgs((cmds % port).split(), mod="cftp")
+        log.msg(f"running {sys.executable} {cmds}")
         d = defer.Deferred()
         self.processProtocol = SFTPTestProcess(d)
         d.addCallback(lambda _: self.processProtocol.clearBuffer())
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
         encodedCmds = []
         encodedEnv = {}
         for cmd in cmds:
-            if isinstance(cmd, unicode):
+            if isinstance(cmd, str):
                 cmd = cmd.encode("utf-8")
             encodedCmds.append(cmd)
         for var in env:
             val = env[var]
-            if isinstance(var, unicode):
+            if isinstance(var, str):
                 var = var.encode("utf-8")
-            if isinstance(val, unicode):
+            if isinstance(val, str):
                 val = val.encode("utf-8")
             encodedEnv[var] = val
         log.msg(encodedCmds)
         log.msg(encodedEnv)
-        reactor.spawnProcess(self.processProtocol, sys.executable, encodedCmds,
-                             env=encodedEnv)
+        reactor.spawnProcess(
+            self.processProtocol, sys.executable, encodedCmds, env=encodedEnv
+        )
         return d
-
 
     def tearDown(self):
         d = self.stopServer()
         d.addCallback(lambda _: self.processProtocol.killProcess())
         return d
 
-
     def _killProcess(self, ignored):
         try:
-            self.processProtocol.transport.signalProcess('KILL')
+            self.processProtocol.transport.signalProcess("KILL")
         except error.ProcessExitedAlready:
             pass
-
 
     def runCommand(self, command):
         """
@@ -1040,7 +981,6 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         return self.processProtocol.runCommand(command)
 
-
     def runScript(self, *commands):
         """
         Run the given commands with the cftp client. Returns a C{Deferred}
@@ -1048,7 +988,6 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         payload is a list of output for each command.
         """
         return self.processProtocol.runScript(commands)
-
 
     def testCdPwd(self):
         """
@@ -1059,7 +998,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         # XXX - not actually a unit test, see docstring.
         homeDir = self.testDir
-        d = self.runScript('pwd', 'lpwd', 'cd testDirectory', 'cd ..', 'pwd')
+        d = self.runScript("pwd", "lpwd", "cd testDirectory", "cd ..", "pwd")
 
         def cmdOutput(output):
             """
@@ -1073,61 +1012,73 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             return cmds[:3] + cmds[4:]
 
         d.addCallback(cmdOutput)
-        d.addCallback(self.assertEqual,
-                      [homeDir.path, os.getcwd(), '', homeDir.path])
+        d.addCallback(self.assertEqual, [homeDir.path, os.getcwd(), "", homeDir.path])
         return d
-
 
     def testChAttrs(self):
         """
         Check that 'ls -l' output includes the access permissions and that
         this output changes appropriately with 'chmod'.
         """
+
         def _check(results):
             self.flushLoggedErrors()
-            self.assertTrue(results[0].startswith(b'-rw-r--r--'))
-            self.assertEqual(results[1], b'')
-            self.assertTrue(results[2].startswith(b'----------'), results[2])
-            self.assertEqual(results[3], b'')
+            self.assertTrue(results[0].startswith(b"-rw-r--r--"))
+            self.assertEqual(results[1], b"")
+            self.assertTrue(results[2].startswith(b"----------"), results[2])
+            self.assertEqual(results[3], b"")
 
-        d = self.runScript('ls -l testfile1', 'chmod 0 testfile1',
-                           'ls -l testfile1', 'chmod 644 testfile1')
+        d = self.runScript(
+            "ls -l testfile1",
+            "chmod 0 testfile1",
+            "ls -l testfile1",
+            "chmod 644 testfile1",
+        )
         return d.addCallback(_check)
         # XXX test chgrp/own
-
 
     def testList(self):
         """
         Check 'ls' works as expected. Checks for wildcards, hidden files,
         listing directories and listing empty directories.
         """
-        def _check(results):
-            self.assertEqual(results[0], [b'testDirectory', b'testRemoveFile',
-                                          b'testRenameFile', b'testfile1'])
-            self.assertEqual(results[1], [b'testDirectory', b'testRemoveFile',
-                                          b'testRenameFile', b'testfile1'])
-            self.assertEqual(results[2], [b'testRemoveFile', b'testRenameFile'])
-            self.assertEqual(results[3], [b'.testHiddenFile', b'testRemoveFile',
-                                          b'testRenameFile'])
-            self.assertEqual(results[4], [b''])
-        d = self.runScript('ls', 'ls ../' + self.testDir.basename(),
-                           'ls *File', 'ls -a *File', 'ls -l testDirectory')
-        d.addCallback(lambda xs: [x.split(b'\n') for x in xs])
-        return d.addCallback(_check)
 
+        def _check(results):
+            self.assertEqual(
+                results[0],
+                [b"testDirectory", b"testRemoveFile", b"testRenameFile", b"testfile1"],
+            )
+            self.assertEqual(
+                results[1],
+                [b"testDirectory", b"testRemoveFile", b"testRenameFile", b"testfile1"],
+            )
+            self.assertEqual(results[2], [b"testRemoveFile", b"testRenameFile"])
+            self.assertEqual(
+                results[3], [b".testHiddenFile", b"testRemoveFile", b"testRenameFile"]
+            )
+            self.assertEqual(results[4], [b""])
+
+        d = self.runScript(
+            "ls",
+            "ls ../" + self.testDir.basename(),
+            "ls *File",
+            "ls -a *File",
+            "ls -l testDirectory",
+        )
+        d.addCallback(lambda xs: [x.split(b"\n") for x in xs])
+        return d.addCallback(_check)
 
     def testHelp(self):
         """
         Check that running the '?' command returns help.
         """
-        d = self.runCommand('?')
+        d = self.runCommand("?")
 
-        helpText = cftp.StdioClient(None).cmd_HELP('').strip()
-        if isinstance(helpText, unicode):
+        helpText = cftp.StdioClient(None).cmd_HELP("").strip()
+        if isinstance(helpText, str):
             helpText = helpText.encode("utf-8")
         d.addCallback(self.assertEqual, helpText)
         return d
-
 
     def assertFilesEqual(self, name1, name2, msg=None):
         """
@@ -1136,7 +1087,6 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         """
         self.assertEqual(name1.getContent(), name2.getContent(), msg)
 
-
     def testGet(self):
         """
         Test that 'get' saves the remote file to the correct local location,
@@ -1144,39 +1094,48 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         the file.
         """
         # XXX - not actually a unit test
-        expectedOutput = ("Transferred %s/testfile1 to %s/test file2"
-                          % (self.testDir.path, self.testDir.path))
-        if isinstance(expectedOutput, unicode):
+        expectedOutput = "Transferred {}/testfile1 to {}/test file2".format(
+            self.testDir.path,
+            self.testDir.path,
+        )
+        if isinstance(expectedOutput, str):
             expectedOutput = expectedOutput.encode("utf-8")
+
         def _checkGet(result):
             self.assertTrue(result.endswith(expectedOutput))
-            self.assertFilesEqual(self.testDir.child('testfile1'),
-                                  self.testDir.child('test file2'),
-                                  "get failed")
+            self.assertFilesEqual(
+                self.testDir.child("testfile1"),
+                self.testDir.child("test file2"),
+                "get failed",
+            )
             return self.runCommand('rm "test file2"')
 
-        d = self.runCommand('get testfile1 "%s/test file2"' % (self.testDir.path,))
+        d = self.runCommand(f'get testfile1 "{self.testDir.path}/test file2"')
         d.addCallback(_checkGet)
-        d.addCallback(lambda _: self.assertFalse(
-            self.testDir.child('test file2').exists()))
+        d.addCallback(
+            lambda _: self.assertFalse(self.testDir.child("test file2").exists())
+        )
         return d
-
 
     def testWildcardGet(self):
         """
         Test that 'get' works correctly when given wildcard parameters.
         """
+
         def _check(ignored):
-            self.assertFilesEqual(self.testDir.child('testRemoveFile'),
-                                  FilePath('testRemoveFile'),
-                                  'testRemoveFile get failed')
-            self.assertFilesEqual(self.testDir.child('testRenameFile'),
-                                  FilePath('testRenameFile'),
-                                  'testRenameFile get failed')
+            self.assertFilesEqual(
+                self.testDir.child("testRemoveFile"),
+                FilePath("testRemoveFile"),
+                "testRemoveFile get failed",
+            )
+            self.assertFilesEqual(
+                self.testDir.child("testRenameFile"),
+                FilePath("testRenameFile"),
+                "testRenameFile get failed",
+            )
 
-        d = self.runCommand('get testR*')
+        d = self.runCommand("get testR*")
         return d.addCallback(_check)
-
 
     def testPut(self):
         """
@@ -1184,22 +1143,27 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         successfully removed. Also check the output of the put command.
         """
         # XXX - not actually a unit test
-        expectedOutput = (b'Transferred ' + self.testDir.asBytesMode().path +
-                          b'/testfile1 to ' + self.testDir.asBytesMode().path +
-                          b'/test"file2')
+        expectedOutput = (
+            b"Transferred "
+            + self.testDir.asBytesMode().path
+            + b"/testfile1 to "
+            + self.testDir.asBytesMode().path
+            + b'/test"file2'
+        )
+
         def _checkPut(result):
-            self.assertFilesEqual(self.testDir.child('testfile1'),
-                                  self.testDir.child('test"file2'))
+            self.assertFilesEqual(
+                self.testDir.child("testfile1"), self.testDir.child('test"file2')
+            )
             self.assertTrue(result.endswith(expectedOutput))
             return self.runCommand('rm "test\\"file2"')
 
-        d = self.runCommand('put %s/testfile1 "test\\"file2"'
-                            % (self.testDir.path,))
+        d = self.runCommand(f'put {self.testDir.path}/testfile1 "test\\"file2"')
         d.addCallback(_checkPut)
-        d.addCallback(lambda _: self.assertFalse(
-            self.testDir.child('test"file2').exists()))
+        d.addCallback(
+            lambda _: self.assertFalse(self.testDir.child('test"file2').exists())
+        )
         return d
-
 
     def test_putOverLongerFile(self):
         """
@@ -1207,19 +1171,19 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         file.
         """
         # XXX - not actually a unit test
-        with self.testDir.child('shorterFile').open(mode='w') as f:
+        with self.testDir.child("shorterFile").open(mode="w") as f:
             f.write(b"a")
-        with self.testDir.child('longerFile').open(mode='w') as f:
+        with self.testDir.child("longerFile").open(mode="w") as f:
             f.write(b"bb")
-        def _checkPut(result):
-            self.assertFilesEqual(self.testDir.child('shorterFile'),
-                                  self.testDir.child('longerFile'))
 
-        d = self.runCommand('put %s/shorterFile longerFile'
-                            % (self.testDir.path,))
+        def _checkPut(result):
+            self.assertFilesEqual(
+                self.testDir.child("shorterFile"), self.testDir.child("longerFile")
+            )
+
+        d = self.runCommand(f"put {self.testDir.path}/shorterFile longerFile")
         d.addCallback(_checkPut)
         return d
-
 
     def test_putMultipleOverLongerFile(self):
         """
@@ -1227,21 +1191,19 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         file and you use a wildcard to specify the files to upload.
         """
         # XXX - not actually a unit test
-        someDir = self.testDir.child('dir')
+        someDir = self.testDir.child("dir")
         someDir.createDirectory()
-        with someDir.child('file').open(mode='w') as f:
+        with someDir.child("file").open(mode="w") as f:
             f.write(b"a")
-        with self.testDir.child('file').open(mode='w') as f:
+        with self.testDir.child("file").open(mode="w") as f:
             f.write(b"bb")
-        def _checkPut(result):
-            self.assertFilesEqual(someDir.child('file'),
-                                  self.testDir.child('file'))
 
-        d = self.runCommand('put %s/dir/*'
-                            % (self.testDir.path,))
+        def _checkPut(result):
+            self.assertFilesEqual(someDir.child("file"), self.testDir.child("file"))
+
+        d = self.runCommand(f"put {self.testDir.path}/dir/*")
         d.addCallback(_checkPut)
         return d
-
 
     def testWildcardPut(self):
         """
@@ -1249,72 +1211,75 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         '*') in parameter? Check that all files matching the wildcard are
         uploaded to the correct directory.
         """
+
         def check(results):
-            self.assertEqual(results[0], b'')
-            self.assertEqual(results[2], b'')
+            self.assertEqual(results[0], b"")
+            self.assertEqual(results[2], b"")
 
-            self.assertFilesEqual(self.testDir.child('testRemoveFile'),
-                                  self.testDir.parent().child('testRemoveFile'),
-                                  'testRemoveFile get failed')
-            self.assertFilesEqual(self.testDir.child('testRenameFile'),
-                                  self.testDir.parent().child('testRenameFile'),
-                                  'testRenameFile get failed')
+            self.assertFilesEqual(
+                self.testDir.child("testRemoveFile"),
+                self.testDir.parent().child("testRemoveFile"),
+                "testRemoveFile get failed",
+            )
+            self.assertFilesEqual(
+                self.testDir.child("testRenameFile"),
+                self.testDir.parent().child("testRenameFile"),
+                "testRenameFile get failed",
+            )
 
-        d = self.runScript('cd ..',
-                           'put %s/testR*' % (self.testDir.path,),
-                           'cd %s' % self.testDir.basename())
+        d = self.runScript(
+            "cd ..",
+            f"put {self.testDir.path}/testR*",
+            "cd %s" % self.testDir.basename(),
+        )
         d.addCallback(check)
         return d
-
 
     def testLink(self):
         """
         Test that 'ln' creates a file which appears as a link in the output of
         'ls'. Check that removing the new file succeeds without output.
         """
+
         def _check(results):
             self.flushLoggedErrors()
-            self.assertEqual(results[0], b'')
-            self.assertTrue(results[1].startswith(b'l'), 'link failed')
-            return self.runCommand('rm testLink')
+            self.assertEqual(results[0], b"")
+            self.assertTrue(results[1].startswith(b"l"), "link failed")
+            return self.runCommand("rm testLink")
 
-        d = self.runScript('ln testLink testfile1', 'ls -l testLink')
+        d = self.runScript("ln testLink testfile1", "ls -l testLink")
         d.addCallback(_check)
-        d.addCallback(self.assertEqual, b'')
+        d.addCallback(self.assertEqual, b"")
         return d
-
 
     def testRemoteDirectory(self):
         """
         Test that we can create and remove directories with the cftp client.
         """
+
         def _check(results):
-            self.assertEqual(results[0], b'')
-            self.assertTrue(results[1].startswith(b'd'))
-            return self.runCommand('rmdir testMakeDirectory')
+            self.assertEqual(results[0], b"")
+            self.assertTrue(results[1].startswith(b"d"))
+            return self.runCommand("rmdir testMakeDirectory")
 
-        d = self.runScript('mkdir testMakeDirectory',
-                           'ls -l testMakeDirector?')
+        d = self.runScript("mkdir testMakeDirectory", "ls -l testMakeDirector?")
         d.addCallback(_check)
-        d.addCallback(self.assertEqual, b'')
+        d.addCallback(self.assertEqual, b"")
         return d
-
 
     def test_existingRemoteDirectory(self):
         """
         Test that a C{mkdir} on an existing directory fails with the
         appropriate error, and doesn't log an useless error server side.
         """
-        def _check(results):
-            self.assertEqual(results[0], b'')
-            self.assertEqual(results[1],
-                              b'remote error 11: mkdir failed')
 
-        d = self.runScript('mkdir testMakeDirectory',
-                           'mkdir testMakeDirectory')
+        def _check(results):
+            self.assertEqual(results[0], b"")
+            self.assertEqual(results[1], b"remote error 11: mkdir failed")
+
+        d = self.runScript("mkdir testMakeDirectory", "mkdir testMakeDirectory")
         d.addCallback(_check)
         return d
-
 
     def testLocalDirectory(self):
         """
@@ -1322,27 +1287,26 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         cftp client. This test works because the 'remote' server is running
         out of a local directory.
         """
-        d = self.runCommand('lmkdir %s/testLocalDirectory' % (self.testDir.path,))
-        d.addCallback(self.assertEqual, b'')
-        d.addCallback(lambda _: self.runCommand('rmdir testLocalDirectory'))
-        d.addCallback(self.assertEqual, b'')
+        d = self.runCommand(f"lmkdir {self.testDir.path}/testLocalDirectory")
+        d.addCallback(self.assertEqual, b"")
+        d.addCallback(lambda _: self.runCommand("rmdir testLocalDirectory"))
+        d.addCallback(self.assertEqual, b"")
         return d
-
 
     def testRename(self):
         """
         Test that we can rename a file.
         """
+
         def _check(results):
-            self.assertEqual(results[0], b'')
-            self.assertEqual(results[1], b'testfile2')
-            return self.runCommand('rename testfile2 testfile1')
+            self.assertEqual(results[0], b"")
+            self.assertEqual(results[1], b"testfile2")
+            return self.runCommand("rename testfile2 testfile1")
 
-        d = self.runScript('rename testfile1 testfile2', 'ls testfile?')
+        d = self.runScript("rename testfile1 testfile2", "ls testfile?")
         d.addCallback(_check)
-        d.addCallback(self.assertEqual, b'')
+        d.addCallback(self.assertEqual, b"")
         return d
-
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
@@ -1356,28 +1320,28 @@ class OurServerBatchFileTests(CFTPClientTestBase):
         CFTPClientTestBase.setUp(self)
         self.startServer()
 
-
     def tearDown(self):
         CFTPClientTestBase.tearDown(self)
         return self.stopServer()
 
-
     def _getBatchOutput(self, f):
         fn = self.mktemp()
-        with open(fn, 'w') as fp:
+        with open(fn, "w") as fp:
             fp.write(f)
         port = self.server.getHost().port
-        cmds = ('-p %i -l testuser '
-                    '--known-hosts kh_test '
-                    '--user-authentications publickey '
-                    '--host-key-algorithms ssh-rsa '
-                    '-i dsa_test '
-                    '-a '
-                    '-v -b %s 127.0.0.1') % (port, fn)
-        cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
-        log.msg('running %s %s' % (sys.executable, cmds))
+        cmds = (
+            "-p %i -l testuser "
+            "--known-hosts kh_test "
+            "--user-authentications publickey "
+            "--host-key-algorithms ssh-rsa "
+            "-i dsa_test "
+            "-a "
+            "-v -b %s 127.0.0.1"
+        ) % (port, fn)
+        cmds = test_conch._makeArgs(cmds.split(), mod="cftp")[1:]
+        log.msg(f"running {sys.executable} {cmds}")
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         self.server.factory.expectedLoseConnection = 1
 
@@ -1392,7 +1356,6 @@ class OurServerBatchFileTests(CFTPClientTestBase):
 
         return d
 
-
     def testBatchFile(self):
         """
         Test whether batch file function of cftp ('cftp -b batchfile').
@@ -1404,16 +1367,17 @@ exit
 """
 
         def _cbCheckResult(res):
-            res = res.split(b'\n')
-            log.msg('RES %s' % repr(res))
+            res = res.split(b"\n")
+            log.msg("RES %s" % repr(res))
             self.assertIn(self.testDir.asBytesMode().path, res[1])
-            self.assertEqual(res[3:-2], [b'testDirectory', b'testRemoveFile',
-                                             b'testRenameFile', b'testfile1'])
+            self.assertEqual(
+                res[3:-2],
+                [b"testDirectory", b"testRemoveFile", b"testRenameFile", b"testfile1"],
+            )
 
         d = self._getBatchOutput(cmds)
         d.addCallback(_cbCheckResult)
         return d
-
 
     def testError(self):
         """
@@ -1431,7 +1395,6 @@ exit
         d.addCallback(_cbCheckResult)
         return d
 
-
     def testIgnoredError(self):
         """
         Test that a minus sign '-' at the front of a line ignores
@@ -1441,6 +1404,7 @@ exit
 pwd
 exit
 """
+
         def _cbCheckResult(res):
             self.assertIn(self.testDir.asBytesMode().path, res)
 
@@ -1449,9 +1413,8 @@ exit
         return d
 
 
-
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
-@skipIf(not which('sftp'), "no sftp command-line client available")
+@skipIf(not which("sftp"), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
@@ -1461,10 +1424,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         CFTPClientTestBase.setUp(self)
         return self.startServer()
 
-
     def tearDown(self):
         return self.stopServer()
-
 
     def test_extendedAttributes(self):
         """
@@ -1475,11 +1436,12 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
         fn = self.mktemp()
-        with open(fn, 'w') as f:
+        with open(fn, "w") as f:
             f.write("ls .\nexit")
         port = self.server.getHost().port
 
         oldGetAttr = FileTransferForTestAvatar._getAttrs
+
         def _getAttrs(self, s):
             attrs = oldGetAttr(self, s)
             attrs["ext_foo"] = "bar"
@@ -1492,28 +1454,43 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         # first need to check if we can set it. If we can, -V will just print
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
-        d = getProcessValue(
-            'ssh', ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss', '-V'))
+        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"))
+
         def hasPAKT(status):
             if status == 0:
-                args = ('-o', 'PubkeyAcceptedKeyTypes=ssh-dss')
+                args = ("-o", "PubkeyAcceptedKeyTypes=ssh-dss")
             else:
                 args = ()
             # Pass -F /dev/null to avoid the user's configuration file from
             # being loaded, as it may contain settings that cause our tests to
             # fail or hang.
-            args += ('-F', '/dev/null',
-                     '-o', 'IdentityFile=dsa_test',
-                     '-o', 'UserKnownHostsFile=kh_test',
-                     '-o', 'HostKeyAlgorithms=ssh-rsa',
-                     '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
+            args += (
+                "-F",
+                "/dev/null",
+                "-o",
+                "IdentityFile=dsa_test",
+                "-o",
+                "UserKnownHostsFile=kh_test",
+                "-o",
+                "HostKeyAlgorithms=ssh-rsa",
+                "-o",
+                "Port=%i" % (port,),
+                "-b",
+                fn,
+                "testuser@127.0.0.1",
+            )
             return args
 
         def check(result):
             self.assertEqual(result[2], 0)
-            for i in [b'testDirectory', b'testRemoveFile',
-                      b'testRenameFile', b'testfile1']:
+            for i in [
+                b"testDirectory",
+                b"testRemoveFile",
+                b"testRenameFile",
+                b"testfile1",
+            ]:
                 self.assertIn(i, result[0])
+
         d.addCallback(hasPAKT)
-        d.addCallback(lambda args: getProcessOutputAndValue('sftp', args))
+        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args))
         return d.addCallback(check)

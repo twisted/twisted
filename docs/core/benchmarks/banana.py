@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
 
 from timer import timeit
 from twisted.spread.banana import b1282int

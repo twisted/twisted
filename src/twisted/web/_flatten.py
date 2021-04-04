@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_flatten -*-
+# -*- test-case-name: twisted.web.test.test_flatten,twisted.web.test.test_template -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,12 +15,11 @@ from types import GeneratorType
 from traceback import extract_tb
 from inspect import iscoroutine
 
-from twisted.python.compat import unicode, nativeString, iteritems
+from twisted.python.compat import nativeString
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
 from twisted.web.iweb import IRenderable
-
 
 
 def escapeForContent(data):
@@ -38,13 +37,10 @@ def escapeForContent(data):
     @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
-    data = data.replace(b'&', b'&amp;'
-        ).replace(b'<', b'&lt;'
-        ).replace(b'>', b'&gt;')
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    data = data.replace(b"&", b"&amp;").replace(b"<", b"&lt;").replace(b">", b"&gt;")
     return data
-
 
 
 def attributeEscapingDoneOutside(data):
@@ -63,10 +59,9 @@ def attributeEscapingDoneOutside(data):
     @return: The string, unchanged, except for encoding.
     @rtype: C{bytes}
     """
-    if isinstance(data, unicode):
+    if isinstance(data, str):
         return data.encode("utf-8")
     return data
-
 
 
 def writeWithAttributeEscaping(write):
@@ -107,10 +102,11 @@ def writeWithAttributeEscaping(write):
 
     @return: A callable that writes data with escaping.
     """
-    def _write(data):
-        write(escapeForContent(data).replace(b'"', b'&quot;'))
-    return _write
 
+    def _write(data):
+        write(escapeForContent(data).replace(b'"', b"&quot;"))
+
+    return _write
 
 
 def escapedCDATA(data):
@@ -124,10 +120,9 @@ def escapedCDATA(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
-    return data.replace(b']]>', b']]]]><![CDATA[>')
-
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
 def escapedComment(data):
@@ -141,13 +136,12 @@ def escapedComment(data):
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
-    if isinstance(data, unicode):
-        data = data.encode('utf-8')
-    data = data.replace(b'--', b'- - ').replace(b'>', b'&gt;')
-    if data and data[-1:] == b'-':
-        data += b' '
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
+    if data and data[-1:] == b"-":
+        data += b" "
     return data
-
 
 
 def _getSlotValue(name, slotData, default=None):
@@ -163,9 +157,26 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
+def _fork(d):
+    """
+    Create a new L{Deferred} based on C{d} that will fire and fail with C{d}'s
+    result or error, but will not modify C{d}'s callback type.
+    """
+    d2 = Deferred(d.cancel)
 
-def _flattenElement(request, root, write, slotData, renderFactory,
-                    dataEscaper):
+    def callback(result):
+        d2.callback(result)
+        return result
+
+    def errback(failure):
+        d2.errback(failure)
+        return failure
+
+    d.addCallbacks(callback, errback)
+    return d2
+
+
+def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -204,23 +215,30 @@ def _flattenElement(request, root, write, slotData, renderFactory,
     @rtype: An iterator which yields L{bytes}, L{Deferred}, and more iterators
         of the same type.
     """
-    def keepGoing(newRoot, dataEscaper=dataEscaper,
-                  renderFactory=renderFactory, write=write):
-        return _flattenElement(request, newRoot, write, slotData,
-                               renderFactory, dataEscaper)
-    if isinstance(root, (bytes, unicode)):
+
+    def keepGoing(
+        newRoot, dataEscaper=dataEscaper, renderFactory=renderFactory, write=write
+    ):
+        return _flattenElement(
+            request, newRoot, write, slotData, renderFactory, dataEscaper
+        )
+
+    def keepGoingAsync(result):
+        return result.addCallback(keepGoing)
+
+    if isinstance(root, (bytes, str)):
         write(dataEscaper(root))
     elif isinstance(root, slot):
         slotValue = _getSlotValue(root.name, slotData, root.default)
         yield keepGoing(slotValue)
     elif isinstance(root, CDATA):
-        write(b'<![CDATA[')
+        write(b"<![CDATA[")
         write(escapedCDATA(root.data))
-        write(b']]>')
+        write(b"]]>")
     elif isinstance(root, Comment):
-        write(b'<!--')
+        write(b"<!--")
         write(escapedComment(root.data))
-        write(b'-->')
+        write(b"-->")
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
         if root.render is not None:
@@ -237,25 +255,24 @@ def _flattenElement(request, root, write, slotData, renderFactory,
             yield keepGoing(root.children)
             return
 
-        write(b'<')
-        if isinstance(root.tagName, unicode):
-            tagName = root.tagName.encode('ascii')
+        write(b"<")
+        if isinstance(root.tagName, str):
+            tagName = root.tagName.encode("ascii")
         else:
             tagName = root.tagName
         write(tagName)
-        for k, v in iteritems(root.attributes):
-            if isinstance(k, unicode):
-                k = k.encode('ascii')
-            write(b' ' + k + b'="')
+        for k, v in root.attributes.items():
+            if isinstance(k, str):
+                k = k.encode("ascii")
+            write(b" " + k + b'="')
             # Serialize the contents of the attribute, wrapping the results of
             # that serialization so that _everything_ is quoted.
             yield keepGoing(
-                v,
-                attributeEscapingDoneOutside,
-                write=writeWithAttributeEscaping(write))
+                v, attributeEscapingDoneOutside, write=writeWithAttributeEscaping(write)
+            )
             write(b'"')
         if root.children or nativeString(tagName) not in voidElements:
-            write(b'>')
+            write(b">")
             # Regardless of whether we're in an attribute or not, switch back
             # to the escapeForContent dataEscaper.  The contents of a tag must
             # be quoted no matter what; in the top-level document, just so
@@ -264,21 +281,20 @@ def _flattenElement(request, root, write, slotData, renderFactory,
             # parse the tag within the attribute, all the quoting is still
             # correct.
             yield keepGoing(root.children, escapeForContent)
-            write(b'</' + tagName + b'>')
+            write(b"</" + tagName + b">")
         else:
-            write(b' />')
+            write(b" />")
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:
             yield keepGoing(element)
     elif isinstance(root, CharRef):
-        escaped = '&#%d;' % (root.ordinal,)
-        write(escaped.encode('ascii'))
+        escaped = "&#%d;" % (root.ordinal,)
+        write(escaped.encode("ascii"))
     elif isinstance(root, Deferred):
-        yield root.addCallback(lambda result: (result, keepGoing(result)))
+        yield keepGoingAsync(_fork(root))
     elif iscoroutine(root):
-        d = ensureDeferred(root)
-        yield d.addCallback(lambda result: (result, keepGoing(result)))
+        yield keepGoingAsync(Deferred.fromCoroutine(root))
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield keepGoing(result, renderFactory=root)
@@ -286,8 +302,7 @@ def _flattenElement(request, root, write, slotData, renderFactory,
         raise UnsupportedType(root)
 
 
-
-def _flattenTree(request, root, write):
+async def _flattenTree(request, root, write):
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -303,68 +318,26 @@ def _flattenTree(request, root, write):
     @param write: A callable which will be invoked with each L{bytes} produced
         by flattening C{root}.
 
-    @return: An iterator which yields objects of type L{bytes} and L{Deferred}.
-        A L{Deferred} is only yielded when one is encountered in the process of
-        flattening C{root}.  The returned iterator must not be iterated again
-        until the L{Deferred} is called back.
+    @return: A C{Deferred}-returning coroutine that resolves to C{None}.
     """
     stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
     while stack:
         try:
             frame = stack[-1].gi_frame
             element = next(stack[-1])
+            if isinstance(element, Deferred):
+                element = await element
         except StopIteration:
             stack.pop()
         except Exception as e:
             stack.pop()
             roots = []
             for generator in stack:
-                roots.append(generator.gi_frame.f_locals['root'])
-            roots.append(frame.f_locals['root'])
+                roots.append(generator.gi_frame.f_locals["root"])
+            roots.append(frame.f_locals["root"])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
-            if isinstance(element, Deferred):
-                def cbx(originalAndToFlatten):
-                    original, toFlatten = originalAndToFlatten
-                    stack.append(toFlatten)
-                    return original
-                yield element.addCallback(cbx)
-            else:
-                stack.append(element)
-
-
-def _writeFlattenedData(state, write, result):
-    """
-    Take strings from an iterator and pass them to a writer function.
-
-    @param state: An iterator of L{str} and L{Deferred}.  L{str} instances will
-        be passed to C{write}.  L{Deferred} instances will be waited on before
-        resuming iteration of C{state}.
-
-    @param write: A callable which will be invoked with each L{str}
-        produced by iterating C{state}.
-
-    @param result: A L{Deferred} which will be called back when C{state} has
-        been completely flattened into C{write} or which will be errbacked if
-        an exception in a generator passed to C{state} or an errback from a
-        L{Deferred} from state occurs.
-
-    @return: L{None}
-    """
-    while True:
-        try:
-            element = next(state)
-        except StopIteration:
-            result.callback(None)
-        except:
-            result.errback()
-        else:
-            def cby(original):
-                _writeFlattenedData(state, write, result)
-                return original
-            element.addCallbacks(cby, result.errback)
-        break
-
+            stack.append(element)
 
 
 def flatten(request, root, write):
@@ -380,21 +353,17 @@ def flatten(request, root, write):
 
     @param root: An object to be made flatter.  This may be of type L{unicode},
         L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
-        L{list}, L{types.GeneratorType}, L{Deferred}, or something that provides
-        L{IRenderable}.
+        L{list}, L{types.GeneratorType}, L{Deferred}, or something that
+        provides L{IRenderable}.
 
     @param write: A callable which will be invoked with each L{bytes} produced
         by flattening C{root}.
 
-    @return: A L{Deferred} which will be called back when C{root} has been
-        completely flattened into C{write} or which will be errbacked if an
-        unexpected exception occurs.
+    @return: A L{Deferred} which will be called back with C{None} when C{root}
+        has been completely flattened into C{write} or which will be errbacked
+        if an unexpected exception occurs.
     """
-    result = Deferred()
-    state = _flattenTree(request, root, write)
-    _writeFlattenedData(state, write, result)
-    return result
-
+    return ensureDeferred(_flattenTree(request, root, write))
 
 
 def flattenString(request, root):

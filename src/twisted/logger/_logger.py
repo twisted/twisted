@@ -7,58 +7,53 @@ Logger class.
 """
 
 from time import time
+from typing import Any, Optional, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
+
+from ._interfaces import ILogObserver, LogTrace
 from ._levels import InvalidLogLevelError, LogLevel
 
 
-
-class Logger(object):
+class Logger:
     """
     A L{Logger} emits log messages to an observer.  You should instantiate it
     as a class or module attribute, as documented in L{this module's
     documentation <twisted.logger>}.
 
-    @type namespace: L{str}
     @ivar namespace: the namespace for this logger
-
-    @type source: L{object}
     @ivar source: The object which is emitting events via this logger
-
-    @type observer: L{ILogObserver}
     @ivar observer: The observer that this logger will send events to.
     """
 
     @staticmethod
-    def _namespaceFromCallingContext():
+    def _namespaceFromCallingContext() -> str:
         """
         Derive a namespace from the module containing the caller's caller.
 
         @return: the fully qualified python name of a module.
-        @rtype: L{str} (native string)
         """
         try:
-            return currentframe(2).f_globals["__name__"]
+            return cast(str, currentframe(2).f_globals["__name__"])
         except KeyError:
             return "<unknown>"
 
-
-    def __init__(self, namespace=None, source=None, observer=None):
+    def __init__(
+        self,
+        namespace: Optional[str] = None,
+        source: Optional[object] = None,
+        observer: Optional["ILogObserver"] = None,
+    ) -> None:
         """
         @param namespace: The namespace for this logger.  Uses a dotted
             notation, as used by python modules.  If not L{None}, then the name
             of the module of the caller is used.
-        @type namespace: L{str} (native string)
-
         @param source: The object which is emitting events via this
             logger; this is automatically set on instances of a class
             if this L{Logger} is an attribute of that class.
-        @type source: L{object}
-
         @param observer: The observer that this logger will send events to.
             If L{None}, use the L{global log publisher <globalLogPublisher>}.
-        @type observer: L{ILogObserver}
         """
         if namespace is None:
             namespace = self._namespaceFromCallingContext()
@@ -68,17 +63,17 @@ class Logger(object):
 
         if observer is None:
             from ._global import globalLogPublisher
-            self.observer = globalLogPublisher
+
+            self.observer: ILogObserver = globalLogPublisher
         else:
             self.observer = observer
 
-
-    def __get__(self, oself, type=None):
+    def __get__(self, instance: object, owner: Optional[type] = None) -> "Logger":
         """
         When used as a descriptor, i.e.::
 
             # File: athing.py
-            class Something(object):
+            class Something:
                 log = Logger()
                 def hello(self):
                     self.log.info("Hello")
@@ -92,32 +87,32 @@ class Logger(object):
         C{Something}, and C{Something().log.source} would be an instance of
         C{Something}.
         """
-        if oself is None:
-            source = type
+        assert owner is not None
+
+        if instance is None:
+            source: Any = owner
         else:
-            source = oself
+            source = instance
 
         return self.__class__(
-            ".".join([type.__module__, type.__name__]),
+            ".".join([owner.__module__, owner.__name__]),
             source,
             observer=self.observer,
         )
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} {self.namespace!r}>"
 
-    def __repr__(self):
-        return "<%s %r>" % (self.__class__.__name__, self.namespace)
-
-
-    def emit(self, level, format=None, **kwargs):
+    def emit(
+        self, level: LogLevel, format: Optional[str] = None, **kwargs: object
+    ) -> None:
         """
         Emit a log event to all log observers at the given level.
 
         @param level: a L{LogLevel}
-
         @param format: a message format using new-style (PEP 3101)
             formatting.  The logging event (which is a L{dict}) is
             used to render this format string.
-
         @param kwargs: additional key/value pairs to include in the event.
             Note that values which are later mutated may result in
             non-deterministic behavior from observers that schedule work for
@@ -134,17 +129,26 @@ class Logger(object):
 
         event = kwargs
         event.update(
-            log_logger=self, log_level=level, log_namespace=self.namespace,
-            log_source=self.source, log_format=format, log_time=time(),
+            log_logger=self,
+            log_level=level,
+            log_namespace=self.namespace,
+            log_source=self.source,
+            log_format=format,
+            log_time=time(),
         )
 
         if "log_trace" in event:
-            event["log_trace"].append((self, self.observer))
+            cast(LogTrace, event["log_trace"]).append((self, self.observer))
 
         self.observer(event)
 
-
-    def failure(self, format, failure=None, level=LogLevel.critical, **kwargs):
+    def failure(
+        self,
+        format: str,
+        failure: Optional[Failure] = None,
+        level: LogLevel = LogLevel.critical,
+        **kwargs: object,
+    ) -> None:
         """
         Log a failure and emit a traceback.
 
@@ -173,12 +177,9 @@ class Logger(object):
         @param format: a message format using new-style (PEP 3101) formatting.
             The logging event (which is a L{dict}) is used to render this
             format string.
-
         @param failure: a L{Failure} to log.  If L{None}, a L{Failure} is
             created from the exception in flight.
-
         @param level: a L{LogLevel} to use.
-
         @param kwargs: additional key/value pairs to include in the event.
             Note that values which are later mutated may result in
             non-deterministic behavior from observers that schedule work for
@@ -189,8 +190,7 @@ class Logger(object):
 
         self.emit(level, format, log_failure=failure, **kwargs)
 
-
-    def debug(self, format=None, **kwargs):
+    def debug(self, format: Optional[str] = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.debug}.
 
@@ -205,8 +205,7 @@ class Logger(object):
         """
         self.emit(LogLevel.debug, format, **kwargs)
 
-
-    def info(self, format=None, **kwargs):
+    def info(self, format: Optional[str] = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.info}.
 
@@ -221,8 +220,7 @@ class Logger(object):
         """
         self.emit(LogLevel.info, format, **kwargs)
 
-
-    def warn(self, format=None, **kwargs):
+    def warn(self, format: Optional[str] = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.warn}.
 
@@ -237,8 +235,7 @@ class Logger(object):
         """
         self.emit(LogLevel.warn, format, **kwargs)
 
-
-    def error(self, format=None, **kwargs):
+    def error(self, format: Optional[str] = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.error}.
 
@@ -253,8 +250,7 @@ class Logger(object):
         """
         self.emit(LogLevel.error, format, **kwargs)
 
-
-    def critical(self, format=None, **kwargs):
+    def critical(self, format: Optional[str] = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.critical}.
 
@@ -270,6 +266,5 @@ class Logger(object):
         self.emit(LogLevel.critical, format, **kwargs)
 
 
-
 _log = Logger()
-_loggerFor = lambda obj:_log.__get__(obj, obj.__class__)
+_loggerFor = lambda obj: _log.__get__(obj, obj.__class__)

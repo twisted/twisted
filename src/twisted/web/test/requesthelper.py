@@ -6,14 +6,13 @@ Helpers related to HTTP requests, used by tests.
 """
 
 
-__all__ = ['DummyChannel', 'DummyRequest']
+__all__ = ["DummyChannel", "DummyRequest"]
 
 from io import BytesIO
 
 from typing import Optional
 from zope.interface import implementer, verify
 
-from twisted.python.compat import intToBytes
 from twisted.python.deprecate import deprecated
 from incremental import Version
 from twisted.internet.defer import Deferred
@@ -28,27 +27,20 @@ from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
 
 
-
-textLinearWhitespaceComponents = [
-    u"Foo%sbar" % (lw,) for lw in
-    [u'\r', u'\n', u'\r\n']
-]
+textLinearWhitespaceComponents = [f"Foo{lw}bar" for lw in ["\r", "\n", "\r\n"]]
 
 sanitizedText = "Foo bar"
 bytesLinearWhitespaceComponents = [
-    component.encode('ascii') for component in
-    textLinearWhitespaceComponents
+    component.encode("ascii") for component in textLinearWhitespaceComponents
 ]
-sanitizedBytes = sanitizedText.encode('ascii')
-
+sanitizedBytes = sanitizedText.encode("ascii")
 
 
 @implementer(IAddress)
-class NullAddress(object):
+class NullAddress:
     """
     A null implementation of L{IAddress}.
     """
-
 
 
 class DummyChannel:
@@ -58,7 +50,7 @@ class DummyChannel:
 
         def __init__(self, peer=None):
             if peer is None:
-                peer = IPv4Address("TCP", '192.168.1.1', 12344)
+                peer = IPv4Address("TCP", "192.168.1.1", 12344)
             self._peer = peer
             self.written = BytesIO()
             self.producers = []
@@ -68,7 +60,7 @@ class DummyChannel:
 
         def write(self, data):
             if not isinstance(data, bytes):
-                raise TypeError("Can only write bytes to a transport, not %r" % (data,))
+                raise TypeError(f"Can only write bytes to a transport, not {data!r}")
             self.written.write(data)
 
         def writeSequence(self, iovec):
@@ -76,7 +68,7 @@ class DummyChannel:
                 self.write(data)
 
         def getHost(self):
-            return IPv4Address("TCP", '10.0.0.1', self.port)
+            return IPv4Address("TCP", "10.0.0.1", self.port)
 
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
@@ -87,137 +79,108 @@ class DummyChannel:
         def loseConnection(self):
             self.disconnected = True
 
-
     @implementer(ISSLTransport)
     class SSL(TCP):
         def abortConnection(self):
             # ITCPTransport.abortConnection
             pass
 
-
         def getTcpKeepAlive(self):
             # ITCPTransport.getTcpKeepAlive
             pass
-
 
         def getTcpNoDelay(self):
             # ITCPTransport.getTcpNoDelay
             pass
 
-
         def loseWriteConnection(self):
             # ITCPTransport.loseWriteConnection
             pass
-
 
         def setTcpKeepAlive(self, enabled):
             # ITCPTransport.setTcpKeepAlive
             pass
 
-
         def setTcpNoDelay(self, enabled):
             # ITCPTransport.setTcpNoDelay
             pass
 
-
         def getPeerCertificate(self):
             # ISSLTransport.getPeerCertificate
             pass
-
 
     site = Site(Resource())
 
     def __init__(self, peer=None):
         self.transport = self.TCP(peer)
 
-
     def requestDone(self, request):
         pass
-
 
     def writeHeaders(self, version, code, reason, headers):
         response_line = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [response_line]
-        headerSequence.extend(
-            name + b': ' + value + b"\r\n" for name, value in headers
-        )
+        headerSequence.extend(name + b": " + value + b"\r\n" for name, value in headers)
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
-
 
     def getPeer(self):
         return self.transport.getPeer()
 
-
     def getHost(self):
         return self.transport.getHost()
-
 
     def registerProducer(self, producer, streaming):
         self.transport.registerProducer(producer, streaming)
 
-
     def unregisterProducer(self):
         self.transport.unregisterProducer()
-
 
     def write(self, data):
         self.transport.write(data)
 
-
     def writeSequence(self, iovec):
         self.transport.writeSequence(iovec)
-
 
     def loseConnection(self):
         self.transport.loseConnection()
 
-
     def endRequest(self):
         pass
 
-
     def isSecure(self):
         return isinstance(self.transport, self.SSL)
-
 
     def abortConnection(self):
         # ITCPTransport.abortConnection
         pass
 
-
     def getTcpKeepAlive(self):
         # ITCPTransport.getTcpKeepAlive
         pass
-
 
     def getTcpNoDelay(self):
         # ITCPTransport.getTcpNoDelay
         pass
 
-
     def loseWriteConnection(self):
         # ITCPTransport.loseWriteConnection
         pass
-
 
     def setTcpKeepAlive(self):
         # ITCPTransport.setTcpKeepAlive
         pass
 
-
     def setTcpNoDelay(self):
         # ITCPTransport.setTcpNoDelay
         pass
-
 
     def getPeerCertificate(self):
         # ISSLTransport.getPeerCertificate
         pass
 
 
-
-class DummyRequest(object):
+class DummyRequest:
     """
     Represents a dummy or fake request. See L{twisted.web.server.Request}.
 
@@ -240,10 +203,10 @@ class DummyRequest(object):
     @type written: C{list} of C{bytes}
     @ivar written: The bytes which have been written to the request.
     """
-    uri = b'http://dummy/'
-    method = b'GET'
-    client = None  # type: Optional[IAddress]
 
+    uri = b"http://dummy/"
+    method = b"GET"
+    client: Optional[IAddress] = None
 
     def registerProducer(self, prod, s):
         """
@@ -260,10 +223,8 @@ class DummyRequest(object):
         while self.go:
             prod.resumeProducing()
 
-
     def unregisterProducer(self):
         self.go = 0
-
 
     def __init__(self, postpath, session=None, client=None):
         self.sitepath = []
@@ -281,7 +242,6 @@ class DummyRequest(object):
         self._serverName = b"dummy"
         self.clientproto = b"HTTP/1.0"
 
-
     def getAllHeaders(self):
         """
         Return dictionary mapping the names of all received headers to the last
@@ -298,7 +258,6 @@ class DummyRequest(object):
             headers[k.lower()] = v[-1]
         return headers
 
-
     def getHeader(self, name):
         """
         Retrieve the value of a request header.
@@ -312,20 +271,18 @@ class DummyRequest(object):
         """
         return self.requestHeaders.getRawHeaders(name.lower(), [None])[0]
 
-
     def setHeader(self, name, value):
-        """TODO: make this assert on write() if the header is content-length
-        """
+        """TODO: make this assert on write() if the header is content-length"""
         self.responseHeaders.addRawHeader(name, value)
-
 
     def getSession(self):
         if self.session:
             return self.session
-        assert not self.written, "Session cannot be requested after data has been written."
+        assert (
+            not self.written
+        ), "Session cannot be requested after data has been written."
         self.session = self.protoSession
         return self.session
-
 
     def render(self, resource):
         """
@@ -346,12 +303,10 @@ class DummyRequest(object):
         self.write(result)
         self.finish()
 
-
     def write(self, data):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
-
 
     def notifyFinish(self):
         """
@@ -362,7 +317,6 @@ class DummyRequest(object):
         finished = Deferred()
         self._finishedDeferreds.append(finished)
         return finished
-
 
     def finish(self):
         """
@@ -376,7 +330,6 @@ class DummyRequest(object):
             for obs in observers:
                 obs.callback(None)
 
-
     def processingFailed(self, reason):
         """
         Errback and L{Deferreds} waiting for finish notification.
@@ -387,36 +340,37 @@ class DummyRequest(object):
             for obs in observers:
                 obs.errback(reason)
 
-
     def addArg(self, name, value):
         self.args[name] = [value]
-
 
     def setResponseCode(self, code, message=None):
         """
         Set the HTTP status response code, but takes care that this is called
         before any data is written.
         """
-        assert not self.written, (
-            "Response code cannot be set after data has"
-            "been written: {}.".format("@@@@".join(self.written)))
+        assert (
+            not self.written
+        ), "Response code cannot be set after data has" "been written: {}.".format(
+            "@@@@".join(self.written)
+        )
         self.responseCode = code
         self.responseMessage = message
 
-
     def setLastModified(self, when):
-        assert not self.written, (
-            "Last-Modified cannot be set after data has "
-            "been written: {}.".format("@@@@".join(self.written)))
-
+        assert (
+            not self.written
+        ), "Last-Modified cannot be set after data has " "been written: {}.".format(
+            "@@@@".join(self.written)
+        )
 
     def setETag(self, tag):
-        assert not self.written, (
-            "ETag cannot be set after data has been "
-            "written: {}.".format("@@@@".join(self.written)))
+        assert (
+            not self.written
+        ), "ETag cannot be set after data has been " "written: {}.".format(
+            "@@@@".join(self.written)
+        )
 
-
-    @deprecated(Version('Twisted', 18, 4, 0), replacement="getClientAddress")
+    @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IPv4 address of the client which made this request, if there
@@ -425,7 +379,6 @@ class DummyRequest(object):
         if isinstance(self.client, (IPv4Address, IPv6Address)):
             return self.client.host
         return None
-
 
     def getClientAddress(self):
         """
@@ -438,7 +391,6 @@ class DummyRequest(object):
             return NullAddress()
         return self.client
 
-
     def getRequestHostname(self):
         """
         Get a dummy hostname associated to the HTTP request.
@@ -448,7 +400,6 @@ class DummyRequest(object):
         """
         return self._serverName
 
-
     def getHost(self):
         """
         Get a dummy transport's host.
@@ -456,8 +407,7 @@ class DummyRequest(object):
         @rtype: C{IPv4Address}
         @returns: a dummy transport's host
         """
-        return IPv4Address('TCP', '127.0.0.1', 80)
-
+        return IPv4Address("TCP", "127.0.0.1", 80)
 
     def setHost(self, host, port, ssl=0):
         """
@@ -470,7 +420,7 @@ class DummyRequest(object):
         @param ssl: A flag which, if C{True}, indicates that the request is
             considered secure (if C{True}, L{isSecure} will return C{True}).
         """
-        self._forceSSL = ssl # set first so isSecure will work
+        self._forceSSL = ssl  # set first so isSecure will work
         if self.isSecure():
             default = 443
         else:
@@ -478,9 +428,8 @@ class DummyRequest(object):
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = b"%b:%d" % (host, port)
         self.requestHeaders.addRawHeader(b"host", hostHeader)
-
 
     def redirect(self, url):
         """
@@ -490,7 +439,6 @@ class DummyRequest(object):
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
-
 
 
 class DummyRequestTests(unittest.SynchronousTestCase):
@@ -508,18 +456,20 @@ class DummyRequestTests(unittest.SynchronousTestCase):
         request.getClientIP()
 
         warnings = self.flushWarnings(
-            offendingFunctions=[self.test_getClientIPDeprecated])
+            offendingFunctions=[self.test_getClientIPDeprecated]
+        )
 
         self.assertEqual(1, len(warnings))
         [warning] = warnings
         self.assertEqual(warning.get("category"), DeprecationWarning)
         self.assertEqual(
             warning.get("message"),
-            ("twisted.web.test.requesthelper.DummyRequest.getClientIP "
-             "was deprecated in Twisted 18.4.0; "
-             "please use getClientAddress instead"),
+            (
+                "twisted.web.test.requesthelper.DummyRequest.getClientIP "
+                "was deprecated in Twisted 18.4.0; "
+                "please use getClientAddress instead"
+            ),
         )
-
 
     def test_getClientIPSupportsIPv6(self):
         """
@@ -532,7 +482,6 @@ class DummyRequestTests(unittest.SynchronousTestCase):
 
         self.assertEqual("::1", request.getClientIP())
 
-
     def test_getClientAddressWithoutClient(self):
         """
         L{DummyRequest.getClientAddress} returns an L{IAddress}
@@ -541,7 +490,6 @@ class DummyRequestTests(unittest.SynchronousTestCase):
         request = DummyRequest([])
         null = request.getClientAddress()
         verify.verifyObject(IAddress, null)
-
 
     def test_getClientAddress(self):
         """

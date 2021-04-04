@@ -10,31 +10,32 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
+from typing import cast
 
 from zope.interface import implementer, Interface, Attribute
 
-from twisted.python.compat import (StringType, _coercedUnicode,
-                                   iteritems, itervalues)
 from twisted.web import sux
 
 
-
 def _splitPrefix(name):
-    """ Internal method for splitting a prefixed Element name into its
-        respective parts """
+    """Internal method for splitting a prefixed Element name into its
+    respective parts"""
     ntok = name.split(":", 1)
     if len(ntok) == 2:
         return ntok
     else:
         return (None, ntok[0])
 
+
 # Global map of prefixes that always get injected
 # into the serializers prefix map (note, that doesn't
 # mean they're always _USED_)
-G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }
+G_PREFIXES = {"http://www.w3.org/XML/1998/namespace": "xml"}
+
 
 class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
+
     def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
         self.prefixes = {}
@@ -45,7 +46,7 @@ class _ListSerializer:
         self.prefixCounter = 0
 
     def getValue(self):
-        return u"".join(self.writelist)
+        return "".join(self.writelist)
 
     def getPrefix(self, uri):
         if uri not in self.prefixes:
@@ -55,12 +56,12 @@ class _ListSerializer:
 
     def prefixInScope(self, prefix):
         stack = self.prefixStack
-        for i in range(-1, (len(self.prefixStack)+1) * -1, -1):
+        for i in range(-1, (len(self.prefixStack) + 1) * -1, -1):
             if prefix in stack[i]:
                 return True
         return False
 
-    def serialize(self, elem, closeElement=1, defaultUri=''):
+    def serialize(self, elem, closeElement=1, defaultUri=""):
         # Optimization shortcuts
         write = self.writelist.append
 
@@ -70,7 +71,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, StringType):
+        if isinstance(elem, str):
             write(escapeToXml(elem))
             return
 
@@ -79,7 +80,7 @@ class _ListSerializer:
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
 
-        for p, u in iteritems(elem.localPrefixes):
+        for p, u in elem.localPrefixes.items():
             self.prefixes[u] = p
         self.prefixStack.append(list(elem.localPrefixes.keys()))
 
@@ -100,35 +101,35 @@ class _ListSerializer:
         if not prefix:
             write("<%s" % (name))
         else:
-            write("<%s:%s" % (prefix, name))
+            write(f"<{prefix}:{name}")
 
             if not inScope:
-                write(" xmlns:%s='%s'" % (prefix, uri))
+                write(f" xmlns:{prefix}='{uri}'")
                 self.prefixStack[-1].append(prefix)
                 inScope = True
 
-        if defaultUri != currentDefaultUri and \
-           (uri != defaultUri or not prefix or not inScope):
+        if defaultUri != currentDefaultUri and (
+            uri != defaultUri or not prefix or not inScope
+        ):
             write(" xmlns='%s'" % (defaultUri))
 
-        for p, u in iteritems(elem.localPrefixes):
-            write(" xmlns:%s='%s'" % (p, u))
+        for p, u in elem.localPrefixes.items():
+            write(f" xmlns:{p}='{u}'")
 
         # Serialize attributes
-        for k,v in elem.attributes.items():
+        for k, v in elem.attributes.items():
             # If the attribute name is a tuple, it's a qualified attribute
             if isinstance(k, tuple):
                 attr_uri, attr_name = k
                 attr_prefix = self.getPrefix(attr_uri)
 
                 if not self.prefixInScope(attr_prefix):
-                    write(" xmlns:%s='%s'" % (attr_prefix, attr_uri))
+                    write(f" xmlns:{attr_prefix}='{attr_uri}'")
                     self.prefixStack[-1].append(attr_prefix)
 
-                write(" %s:%s='%s'" % (attr_prefix, attr_name,
-                                       escapeToXml(v, 1)))
+                write(" {}:{}='{}'".format(attr_prefix, attr_name, escapeToXml(v, 1)))
             else:
-                write((" %s='%s'" % ( k, escapeToXml(v, 1))))
+                write(" {}='{}'".format(k, escapeToXml(v, 1)))
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
@@ -145,7 +146,7 @@ class _ListSerializer:
             if not prefix:
                 write("</%s>" % (name))
             else:
-                write("</%s:%s>" % (prefix, name))
+                write(f"</{prefix}:{name}>")
         else:
             write("/>")
 
@@ -154,8 +155,9 @@ class _ListSerializer:
 
 SerializerClass = _ListSerializer
 
-def escapeToXml(text, isattrib = 0):
-    """ Escape text to proper XML form, per section 2.3 in the XML specification.
+
+def escapeToXml(text, isattrib=0):
+    """Escape text to proper XML form, per section 2.3 in the XML specification.
 
     @type text: C{str}
     @param text: Text to escape
@@ -169,23 +171,25 @@ def escapeToXml(text, isattrib = 0):
     text = text.replace(">", "&gt;")
     if isattrib == 1:
         text = text.replace("'", "&apos;")
-        text = text.replace("\"", "&quot;")
+        text = text.replace('"', "&quot;")
     return text
+
 
 def unescapeFromXml(text):
     text = text.replace("&lt;", "<")
     text = text.replace("&gt;", ">")
     text = text.replace("&apos;", "'")
-    text = text.replace("&quot;", "\"")
+    text = text.replace("&quot;", '"')
     text = text.replace("&amp;", "&")
     return text
 
+
 def generateOnlyInterface(list, int):
-    """ Filters items in a list by class
-    """
+    """Filters items in a list by class"""
     for n in list:
         if int.providedBy(n):
             yield n
+
 
 def generateElementsQNamed(list, name, uri):
     """ Filters Element items in a list with matching name and URI. """
@@ -193,28 +197,32 @@ def generateElementsQNamed(list, name, uri):
         if IElement.providedBy(n) and n.name == name and n.uri == uri:
             yield n
 
+
 def generateElementsNamed(list, name):
-    """ Filters Element items in a list with matching name, regardless of URI.
-    """
+    """Filters Element items in a list with matching name, regardless of URI."""
     for n in list:
         if IElement.providedBy(n) and n.name == name:
             yield n
 
 
-
 class SerializedXML(str):
     """ Marker class for pre-serialized XML in the DOM. """
+
     pass
 
 
 class Namespace:
     """ Convenience object for tracking namespace declarations. """
+
     def __init__(self, uri):
         self._uri = uri
+
     def __getattr__(self, n):
         return (self._uri, n)
+
     def __getitem__(self, n):
         return (self._uri, n)
+
 
 class IElement(Interface):
     """
@@ -233,9 +241,8 @@ class IElement(Interface):
     parent = Attribute(""" Reference to element's parent element """)
     localPrefixes = Attribute(""" Dictionary of local prefixes """)
 
-    def toXml(prefixes=None, closeElement=1, defaultUri='',
-              prefixesInScope=None):
-        """ Serializes object to a (partial) XML document
+    def toXml(prefixes=None, closeElement=1, defaultUri="", prefixesInScope=None):
+        """Serializes object to a (partial) XML document
 
         @param prefixes: dictionary that maps namespace URIs to suggested
                          prefix names.
@@ -313,8 +320,8 @@ class IElement(Interface):
 
 
 @implementer(IElement)
-class Element(object):
-    """ Represents an XML element node.
+class Element:
+    """Represents an XML element node.
 
     An Element contains a series of attributes (name/value pairs), content
     (character data), and other child Element objects. When building a document
@@ -414,8 +421,7 @@ class Element(object):
 
     _idCounter = 0
 
-    def __init__(self, qname, defaultUri=None, attribs=None,
-                       localPrefixes=None):
+    def __init__(self, qname, defaultUri=None, attribs=None, localPrefixes=None):
         """
         @param qname: Tuple of (uri, name)
         @param defaultUri: The default URI of the element; defaults to the URI
@@ -427,8 +433,7 @@ class Element(object):
         """
         self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
-        if defaultUri is None and \
-           self.uri not in itervalues(self.localPrefixes):
+        if defaultUri is None and self.uri not in self.localPrefixes.values():
             self.defaultUri = self.uri
         else:
             self.defaultUri = defaultUri
@@ -444,7 +449,7 @@ class Element(object):
 
         # Tweak the behaviour so that it's more friendly about not
         # finding elements -- we need to document this somewhere :)
-        if key.startswith('_'):
+        if key.startswith("_"):
             raise AttributeError(key)
         else:
             return None
@@ -453,7 +458,7 @@ class Element(object):
         return self.attributes[self._dqa(key)]
 
     def __delitem__(self, key):
-        del self.attributes[self._dqa(key)];
+        del self.attributes[self._dqa(key)]
 
     def __setitem__(self, key, value):
         self.attributes[self._dqa(key)] = value
@@ -463,7 +468,7 @@ class Element(object):
         Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, StringType):
+            if isinstance(n, str):
                 return n
         return ""
 
@@ -471,7 +476,7 @@ class Element(object):
         """
         Retrieve the first character data node as UTF-8 bytes.
         """
-        return str(self).encode('utf-8')
+        return str(self).encode("utf-8")
 
     __str__ = __unicode__
 
@@ -482,7 +487,7 @@ class Element(object):
         else:
             return attr
 
-    def getAttribute(self, attribname, default = None):
+    def getAttribute(self, attribname, default=None):
         """ Retrieve the value of attribname, if it exists """
         return self.attributes.get(attribname, default)
 
@@ -491,7 +496,7 @@ class Element(object):
         return self._dqa(attrib) in self.attributes
 
     def compareAttribute(self, attrib, value):
-        """ Safely compare the value of an attribute against a provided value.
+        """Safely compare the value of an attribute against a provided value.
 
         L{None}-safe.
         """
@@ -511,17 +516,20 @@ class Element(object):
         self.children.append(node)
         return node
 
-    def addContent(self, text):
+    def addContent(self, text: str) -> str:
         """ Add some text data to this Element. """
-        text = _coercedUnicode(text)
+        if not isinstance(text, str):
+            raise TypeError(
+                "Expected str not {!r} ({})".format(text, type(text).__name__)
+            )
         c = self.children
         if len(c) > 0 and isinstance(c[-1], str):
             c[-1] = c[-1] + text
         else:
             c.append(text)
-        return c[-1]
+        return cast(str, c[-1])
 
-    def addElement(self, name, defaultUri = None, content = None):
+    def addElement(self, name, defaultUri=None, content=None):
         if isinstance(name, tuple):
             if defaultUri is None:
                 defaultUri = name[0]
@@ -543,12 +551,11 @@ class Element(object):
         self.children.append(SerializedXML(rawxmlstring))
 
     def addUniqueId(self):
-        """ Add a unique (across a given Python session) id attribute to this
-            Element.
+        """Add a unique (across a given Python session) id attribute to this
+        Element.
         """
         self.attributes["id"] = "H_%d" % Element._idCounter
         Element._idCounter = Element._idCounter + 1
-
 
     def elements(self, uri=None, name=None):
         """
@@ -569,9 +576,7 @@ class Element(object):
         else:
             return generateElementsQNamed(self.children, name, uri)
 
-
-    def toXml(self, prefixes=None, closeElement=1, defaultUri='',
-                    prefixesInScope=None):
+    def toXml(self, prefixes=None, closeElement=1, defaultUri="", prefixesInScope=None):
         """ Serialize this Element and all children to a string. """
         s = SerializerClass(prefixes=prefixes, prefixesInScope=prefixesInScope)
         s.serialize(self, closeElement=closeElement, defaultUri=defaultUri)
@@ -584,15 +589,14 @@ class Element(object):
         return None
 
 
-
 class ParserError(Exception):
     """ Exception thrown when a parsing error occurs """
+
     pass
 
 
-
 def elementStream():
-    """ Preferred method to construct an ElementStream
+    """Preferred method to construct an ElementStream
 
     Uses Expat-based stream if available, and falls back to Sux if necessary.
     """
@@ -604,7 +608,6 @@ def elementStream():
             raise Exception("No parsers available :(")
         es = SuxElementStream()
         return es
-
 
 
 class SuxElementStream(sux.XMLParser):
@@ -625,12 +628,11 @@ class SuxElementStream(sux.XMLParser):
         except sux.ParseError as e:
             raise ParserError(str(e))
 
-
     def findUri(self, prefix):
         # Walk prefix stack backwards, looking for the uri
         # matching the specified prefix
         stack = self.prefixStack
-        for i in range(-1, (len(self.prefixStack)+1) * -1, -1):
+        for i in range(-1, (len(self.prefixStack) + 1) * -1, -1):
             if prefix in stack[i]:
                 return stack[i][prefix]
         return None
@@ -645,7 +647,7 @@ class SuxElementStream(sux.XMLParser):
         for k, v in list(attributes.items()):
             if k.startswith("xmlns"):
                 x, p = _splitPrefix(k)
-                if (x is None):  # I.e.  default declaration
+                if x is None:  # I.e.  default declaration
                     defaultUri = v
                 else:
                     localPrefixes[p] = v
@@ -660,7 +662,7 @@ class SuxElementStream(sux.XMLParser):
             if len(self.defaultNsStack) > 0:
                 defaultUri = self.defaultNsStack[-1]
             else:
-                defaultUri = ''
+                defaultUri = ""
 
         # Fix up name
         prefix, name = _splitPrefix(name)
@@ -701,13 +703,13 @@ class SuxElementStream(sux.XMLParser):
     def gotText(self, data):
         if self.currElem is not None:
             if isinstance(data, bytes):
-                data = data.decode('ascii')
+                data = data.decode("ascii")
             self.currElem.addContent(data)
 
     def gotCData(self, data):
         if self.currElem is not None:
             if isinstance(data, bytes):
-                data = data.decode('ascii')
+                data = data.decode("ascii")
             self.currElem.addContent(data)
 
     def gotComment(self, data):
@@ -715,12 +717,12 @@ class SuxElementStream(sux.XMLParser):
         pass
 
     entities = {
-               "amp": "&",
-               "lt": "<",
-               "gt": ">",
-               "apos": "'",
-               "quot": "\"",
-               }
+        "amp": "&",
+        "lt": "<",
+        "gt": ">",
+        "apos": "'",
+        "quot": '"',
+    }
 
     def gotEntityReference(self, entityRef):
         # If this is an entity we know about, add it as content
@@ -728,7 +730,7 @@ class SuxElementStream(sux.XMLParser):
         if entityRef in SuxElementStream.entities:
             data = SuxElementStream.entities[entityRef]
             if isinstance(data, bytes):
-                data = data.decode('ascii')
+                data = data.decode("ascii")
             self.currElem.addContent(data)
 
     def gotTagEnd(self, name):
@@ -776,10 +778,10 @@ class SuxElementStream(sux.XMLParser):
                 self.currElem = self.currElem.parent
 
 
-
 class ExpatElementStream:
     def __init__(self):
         import pyexpat
+
         self.DocumentStartEvent = None
         self.ElementEvent = None
         self.DocumentEndEvent = None
@@ -791,7 +793,7 @@ class ExpatElementStream:
         self.parser.StartNamespaceDeclHandler = self._onStartNamespace
         self.parser.EndNamespaceDeclHandler = self._onEndNamespace
         self.currElem = None
-        self.defaultNsStack = ['']
+        self.defaultNsStack = [""]
         self.documentStarted = 0
         self.localPrefixes = {}
 
@@ -807,7 +809,7 @@ class ExpatElementStream:
         # for an explanation of the formatting of name.
         qname = name.rsplit(" ", 1)
         if len(qname) == 1:
-            qname = ('', name)
+            qname = ("", name)
 
         # Process attributes
         newAttrs = {}
@@ -872,6 +874,7 @@ class ExpatElementStream:
         if prefix is None:
             self.defaultNsStack.pop()
 
+
 ## class FileParser(ElementStream):
 ##     def __init__(self):
 ##         ElementStream.__init__(self)
@@ -898,5 +901,3 @@ class ExpatElementStream:
 
 ## def parseFile(filename):
 ##     return FileParser().parse(filename)
-
-

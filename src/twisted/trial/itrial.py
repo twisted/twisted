@@ -11,34 +11,30 @@ Maintainer: Jonathan Lange
 import zope.interface as zi
 
 
-
 class ITestCase(zi.Interface):
     """
     The interface that a test case must implement in order to be used in Trial.
     """
 
     failureException = zi.Attribute(
-        "The exception class that is raised by failed assertions")
-
+        "The exception class that is raised by failed assertions"
+    )
 
     def __call__(result):
         """
         Run the test. Should always do exactly the same thing as run().
         """
 
-
     def countTestCases():
         """
         Return the number of tests in this test case. Usually 1.
         """
-
 
     def id():
         """
         Return a unique identifier for the test, usually the fully-qualified
         Python name.
         """
-
 
     def run(result):
         """
@@ -47,12 +43,10 @@ class ITestCase(zi.Interface):
         @param result: A L{TestResult}.
         """
 
-
     def shortDescription():
         """
         Return a short description of the test.
         """
-
 
 
 class IReporter(zi.Interface):
@@ -61,15 +55,14 @@ class IReporter(zi.Interface):
     """
 
     shouldStop = zi.Attribute(
-        "A boolean indicating that this reporter would like the "
-        "test run to stop."
-        )
+        "A boolean indicating that this reporter would like the " "test run to stop."
+    )
     testsRun = zi.Attribute(
         """
         The number of tests that seem to have been run according to this
         reporter.
-        """)
-
+        """
+    )
 
     def startTest(method):
         """
@@ -78,7 +71,6 @@ class IReporter(zi.Interface):
         @param method: an object that is adaptable to ITestMethod
         """
 
-
     def stopTest(method):
         """
         Report the status of a single test method
@@ -86,12 +78,10 @@ class IReporter(zi.Interface):
         @param method: an object that is adaptable to ITestMethod
         """
 
-
     def addSuccess(test):
         """
         Record that test passed.
         """
-
 
     def addError(test, error):
         """
@@ -103,7 +93,6 @@ class IReporter(zi.Interface):
             L{Failure<twisted.python.failure.Failure>} object.
         """
 
-
     def addFailure(test, failure):
         """
         Record that a test has failed with the given failure.
@@ -114,7 +103,6 @@ class IReporter(zi.Interface):
             or a L{Failure<twisted.python.failure.Failure>} object.
         """
 
-
     def addExpectedFailure(test, failure, todo=None):
         """
         Record that the given test failed, and was expected to do so.
@@ -123,13 +111,12 @@ class IReporter(zi.Interface):
 
         @type test: L{unittest.TestCase}
         @param test: The test which this is about.
-        @type error: L{failure.Failure}
-        @param error: The error which this test failed with.
+        @type failure: L{failure.Failure}
+        @param failure: The error which this test failed with.
         @type todo: L{unittest.Todo}
         @param todo: The reason for the test's TODO status. If L{None}, a
             generic reason is used.
         """
-
 
     def addUnexpectedSuccess(test, todo=None):
         """
@@ -144,7 +131,6 @@ class IReporter(zi.Interface):
             generic reason is used.
         """
 
-
     def addSkip(test, reason):
         """
         Record that a test has been skipped for the given reason.
@@ -154,13 +140,11 @@ class IReporter(zi.Interface):
             for skipping the test.
         """
 
-
     def wasSuccessful():
         """
         Return a boolean indicating whether all test results that were reported
         to this reporter were successful or not.
         """
-
 
     def done():
         """

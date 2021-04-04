@@ -14,10 +14,10 @@ socket the server side of this example is already listening on.  For example:
 
 See sendfd.py for the server side of this example.
 """
-from __future__ import print_function
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import recvfd
+
     raise SystemExit(recvfd.main())
 
 import os, sys
@@ -33,6 +33,7 @@ from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.internet import reactor
 
+
 @implementer(IFileDescriptorReceiver)
 class ReceiveFDProtocol(LineOnlyReceiver):
 
@@ -41,29 +42,25 @@ class ReceiveFDProtocol(LineOnlyReceiver):
     def __init__(self):
         self.whenDisconnected = Deferred()
 
-
     def fileDescriptorReceived(self, descriptor):
         # Record the descriptor sent to us
         self.descriptor = descriptor
 
-
     def lineReceived(self, line):
         if self.descriptor is None:
-            print("Received {} without receiving descriptor!".format(line))
+            print(f"Received {line} without receiving descriptor!")
         else:
             # Use the previously received descriptor, along with the newly
             # provided information about which file it is, to present some
             # information to the user.
             data = os.read(self.descriptor, 80)
-            print("Received {} from the server.".format(line))
-            print("First 80 bytes are:\n{}\n".format(data))
+            print(f"Received {line} from the server.")
+            print(f"First 80 bytes are:\n{data}\n")
         os.close(self.descriptor)
         self.transport.loseConnection()
 
-
     def connectionLost(self, reason):
         self.whenDisconnected.callback(None)
-
 
 
 def main():
@@ -80,8 +77,10 @@ def main():
 
     def succeeded(client):
         return client.whenDisconnected
+
     def failed(reason):
         print("Could not connect:", reason.getErrorMessage())
+
     def disconnected(ignored):
         reactor.stop()
 

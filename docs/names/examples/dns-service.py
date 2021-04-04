@@ -24,15 +24,13 @@ from twisted.internet.task import react
 from twisted.python import usage
 
 
-
 class Options(usage.Options):
-    synopsis = 'Usage: dns-service.py SERVICE PROTO DOMAINNAME'
+    synopsis = "Usage: dns-service.py SERVICE PROTO DOMAINNAME"
 
     def parseArgs(self, service, proto, domainname):
-        self['service'] = service
-        self['proto'] = proto
-        self['domainname'] = domainname
-
+        self["service"] = service
+        self["proto"] = proto
+        self["domainname"] = domainname
 
 
 def printResult(records, domainname):
@@ -43,13 +41,10 @@ def printResult(records, domainname):
     answers, authority, additional = records
     if answers:
         sys.stdout.write(
-            domainname + ' IN \n ' +
-            '\n '.join(str(x.payload) for x in answers) +
-            '\n')
+            domainname + " IN \n " + "\n ".join(str(x.payload) for x in answers) + "\n"
+        )
     else:
-        sys.stderr.write(
-            'ERROR: No SRV records found for name %r\n' % (domainname,))
-
+        sys.stderr.write(f"ERROR: No SRV records found for name {domainname!r}\n")
 
 
 def printError(failure, domainname):
@@ -58,8 +53,7 @@ def printError(failure, domainname):
     resolved.
     """
     failure.trap(error.DNSNameError)
-    sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
-
+    sys.stderr.write(f"ERROR: domain name not found {domainname!r}\n")
 
 
 def main(reactor, *argv):
@@ -67,18 +61,17 @@ def main(reactor, *argv):
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(str(options) + '\n')
-        sys.stderr.write('ERROR: %s\n' % (errortext,))
+        sys.stderr.write(str(options) + "\n")
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
-    resolver = client.Resolver('/etc/resolv.conf')
-    domainname = '_%(service)s._%(proto)s.%(domainname)s' % options
+    resolver = client.Resolver("/etc/resolv.conf")
+    domainname = "_%(service)s._%(proto)s.%(domainname)s" % options
     d = resolver.lookupService(domainname)
     d.addCallback(printResult, domainname)
     d.addErrback(printError, domainname)
     return d
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     react(main, sys.argv[1:])

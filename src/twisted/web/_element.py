@@ -11,7 +11,7 @@ from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
 
 
-class Expose(object):
+class Expose:
     """
     Helper for exposing methods for various uses using a simple decorator-style
     callable.
@@ -23,9 +23,9 @@ class Expose(object):
     @ivar attributeName: The attribute with which exposed methods will be
     tracked.
     """
+
     def __init__(self, doc=None):
         self.doc = doc
-
 
     def __call__(self, *funcObjs):
         """
@@ -58,12 +58,12 @@ class Expose(object):
         if not funcObjs:
             raise TypeError("expose() takes at least 1 argument (0 given)")
         for fObj in funcObjs:
-            fObj.exposedThrough = getattr(fObj, 'exposedThrough', [])
+            fObj.exposedThrough = getattr(fObj, "exposedThrough", [])
             fObj.exposedThrough.append(self)
         return funcObjs[0]
 
-
     _nodefault = object()
+
     def get(self, instance, methodName, default=_nodefault):
         """
         Retrieve an exposed method with the given name from the given instance.
@@ -75,13 +75,12 @@ class Expose(object):
         instance.
         """
         method = getattr(instance, methodName, None)
-        exposedThrough = getattr(method, 'exposedThrough', [])
+        exposedThrough = getattr(method, "exposedThrough", [])
         if self not in exposedThrough:
             if default is self._nodefault:
                 raise UnexposedMethodError(self, methodName)
             return default
         return method
-
 
     @classmethod
     def _withDocumentation(cls, thunk):
@@ -97,6 +96,7 @@ class Expose(object):
 # Avoid exposing the ugly, private classmethod name in the docs.  Luckily this
 # namespace is private already so this doesn't leak further.
 exposer = Expose._withDocumentation
+
 
 @exposer
 def renderer():
@@ -122,9 +122,8 @@ def renderer():
     """
 
 
-
 @implementer(IRenderable)
-class Element(object):
+class Element:
     """
     Base for classes which can render part of a page.
 
@@ -151,12 +150,12 @@ class Element(object):
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
-    loader = None  # type: Optional[ITemplateLoader]
+
+    loader: Optional[ITemplateLoader] = None
 
     def __init__(self, loader=None):
         if loader is not None:
             self.loader = loader
-
 
     def lookupRenderMethod(self, name):
         """
@@ -166,7 +165,6 @@ class Element(object):
         if method is None:
             raise MissingRenderMethod(self, name)
         return method
-
 
     def render(self, request):
         """

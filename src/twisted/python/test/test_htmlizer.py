@@ -15,6 +15,7 @@ class FilterTests(TestCase):
     """
     Tests for L{twisted.python.htmlizer.filter}.
     """
+
     def test_empty(self):
         """
         If passed an empty input file, L{filter} writes a I{pre} tag containing
@@ -24,9 +25,8 @@ class FilterTests(TestCase):
         output = BytesIO()
         filter(input, output)
         self.assertEqual(
-            output.getvalue(),
-            b'<pre><span class="py-src-endmarker"></span></pre>\n')
-
+            output.getvalue(), b'<pre><span class="py-src-endmarker"></span></pre>\n'
+        )
 
     def test_variable(self):
         """
@@ -41,4 +41,5 @@ class FilterTests(TestCase):
             output.getvalue(),
             b'<pre><span class="py-src-variable">foo</span>'
             b'<span class="py-src-newline">\n'
-            b'</span><span class="py-src-endmarker"></span></pre>\n')
+            b'</span><span class="py-src-endmarker"></span></pre>\n',
+        )

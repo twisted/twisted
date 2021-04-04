@@ -16,8 +16,6 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer
-from twisted.python.compat import StringType
-
 
 
 def verifyCryptedPassword(crypted, pw):
@@ -39,16 +37,21 @@ def verifyCryptedPassword(crypted, pw):
 
     if crypt is None:
         raise NotImplementedError("cred_unix not supported on this platform")
-    if not isinstance(pw, StringType):
-        pw = pw.decode('utf-8')
-    if not isinstance(crypted, StringType):
-        crypted = crypted.decode('utf-8')
-    return crypt.crypt(pw, crypted) == crypted
-
+    if isinstance(pw, bytes):
+        pw = pw.decode("utf-8")
+    if isinstance(crypted, bytes):
+        crypted = crypted.decode("utf-8")
+    try:
+        crypted_check = crypt.crypt(pw, crypted)
+        if isinstance(crypted_check, bytes):
+            crypted_check = crypted_check.decode("utf-8")
+        return crypted_check == crypted
+    except OSError:
+        return False
 
 
 @implementer(ICredentialsChecker)
-class UNIXChecker(object):
+class UNIXChecker:
     """
     A credentials checker for a UNIX server. This will check that
     an authenticating username/password is a valid user on the system.
@@ -58,8 +61,8 @@ class UNIXChecker(object):
     Right now this supports Python's pwd and spwd modules, if they are
     installed. It does not support PAM.
     """
-    credentialInterfaces = (IUsernamePassword,)
 
+    credentialInterfaces = (IUsernamePassword,)
 
     def checkPwd(self, pwd, username, password):
         """
@@ -76,18 +79,17 @@ class UNIXChecker(object):
         @type username: L{unicode}/L{str} or L{bytes}
         """
         try:
-            if not isinstance(username, StringType):
-                username = username.decode('utf-8')
+            if isinstance(username, bytes):
+                username = username.decode("utf-8")
             cryptedPass = pwd.getpwnam(username).pw_passwd
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
-            if cryptedPass in ('*', 'x'):
+            if cryptedPass in ("*", "x"):
                 # Allow checkSpwd to take over
                 return None
             elif verifyCryptedPassword(cryptedPass, password):
                 return defer.succeed(username)
-
 
     def checkSpwd(self, spwd, username, password):
         """
@@ -96,16 +98,16 @@ class UNIXChecker(object):
         and see if it it matches it matches C{password}.
 
         @param spwd: Module which provides functions which
-                    access to the Unix shadow password database.
-        @type pwd: C{module}
+                     access to the Unix shadow password database.
+        @type spwd: C{module}
         @param username: The user to look up in the Unix password database.
         @type username: L{unicode}/L{str} or L{bytes}
         @param password: The password to compare.
         @type username: L{unicode}/L{str} or L{bytes}
         """
         try:
-            if not isinstance(username, StringType):
-                username = username.decode('utf-8')
+            if isinstance(username, bytes):
+                username = username.decode("utf-8")
             if getattr(spwd.struct_spwd, "sp_pwdp", None):
                 # Python 3
                 cryptedPass = spwd.getspnam(username).sp_pwdp
@@ -117,7 +119,6 @@ class UNIXChecker(object):
         else:
             if verifyCryptedPassword(cryptedPass, password):
                 return defer.succeed(username)
-
 
     def requestAvatarId(self, credentials):
         username, password = credentials.username, credentials.password
@@ -146,7 +147,6 @@ class UNIXChecker(object):
         return defer.fail(UnauthorizedLogin())
 
 
-
 unixCheckerFactoryHelp = """
 This checker will attempt to use every resource available to
 authenticate against the list of users on the local UNIX system.
@@ -162,13 +162,14 @@ Future versions may include support for PAM authentication.
 
 
 @implementer(ICheckerFactory, plugin.IPlugin)
-class UNIXCheckerFactory(object):
+class UNIXCheckerFactory:
     """
     A factory for L{UNIXChecker}.
     """
-    authType = 'unix'
+
+    authType = "unix"
     authHelp = unixCheckerFactoryHelp
-    argStringFormat = 'No argstring required.'
+    argStringFormat = "No argstring required."
     credentialInterfaces = UNIXChecker.credentialInterfaces
 
     def generateChecker(self, argstring):
@@ -178,7 +179,6 @@ class UNIXCheckerFactory(object):
         UNIX environment.
         """
         return UNIXChecker()
-
 
 
 theUnixCheckerFactory = UNIXCheckerFactory()

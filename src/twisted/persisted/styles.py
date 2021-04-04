@@ -17,20 +17,18 @@ from twisted.python import log, reflect
 from io import StringIO as _cStringIO
 
 
-
-oldModules = {}  # type: Dict[str, types.ModuleType]
+oldModules: Dict[str, types.ModuleType] = {}
 
 
 _UniversalPicklingError = pickle.PicklingError
 
 
-
 def pickleMethod(method):
-    'support function for copy_reg to pickle method refs'
-    return (unpickleMethod, (method.__name__,
-                             method.__self__,
-                             method.__self__.__class__))
-
+    "support function for copy_reg to pickle method refs"
+    return (
+        unpickleMethod,
+        (method.__name__, method.__self__, method.__self__.__class__),
+    )
 
 
 def _methodFunction(classObject, methodName):
@@ -39,7 +37,7 @@ def _methodFunction(classObject, methodName):
     it's on and a method name.
 
     @param classObject: A class to retrieve the method's function from.
-    @type classObject: L{type} or L{types.ClassType}
+    @type classObject: L{type}
 
     @param methodName: The name of the method whose function to retrieve.
     @type methodName: native L{str}
@@ -49,7 +47,6 @@ def _methodFunction(classObject, methodName):
     """
     methodObject = getattr(classObject, methodName)
     return methodObject
-
 
 
 def unpickleMethod(im_name, im_self, im_class):
@@ -63,7 +60,7 @@ def unpickleMethod(im_name, im_self, im_class):
     @type im_self: L{object}
 
     @param im_class: The class where the method was declared.
-    @type im_class: L{types.ClassType} or L{type} or L{None}
+    @type im_class: L{type} or L{None}
     """
     if im_self is None:
         return getattr(im_class, im_name)
@@ -84,9 +81,7 @@ def unpickleMethod(im_name, im_self, im_class):
         return bound
 
 
-
 copy_reg.pickle(types.MethodType, pickleMethod)
-
 
 
 def _pickleFunction(f):
@@ -101,12 +96,9 @@ def _pickleFunction(f):
         its arguments, a 1-tuple of the function's fully qualified name.
     @rtype: 2-tuple of C{callable, native string}
     """
-    if f.__name__ == '<lambda>':
-        raise _UniversalPicklingError(
-            "Cannot pickle lambda function: {}".format(f))
-    return (_unpickleFunction,
-            tuple([".".join([f.__module__, f.__qualname__])]))
-
+    if f.__name__ == "<lambda>":
+        raise _UniversalPicklingError(f"Cannot pickle lambda function: {f}")
+    return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
 
 
 def _unpickleFunction(fullyQualifiedName):
@@ -124,32 +116,28 @@ def _unpickleFunction(fullyQualifiedName):
     @rtype: L{types.FunctionType}
     """
     from twisted.python.reflect import namedAny
-    return namedAny(fullyQualifiedName)
 
+    return namedAny(fullyQualifiedName)
 
 
 copy_reg.pickle(types.FunctionType, _pickleFunction)
 
 
-
 def pickleModule(module):
-    'support function for copy_reg to pickle module refs'
+    "support function for copy_reg to pickle module refs"
     return unpickleModule, (module.__name__,)
 
 
-
 def unpickleModule(name):
-    'support function for copy_reg to unpickle module refs'
+    "support function for copy_reg to unpickle module refs"
     if name in oldModules:
         log.msg("Module has moved: %s" % name)
         name = oldModules[name]
         log.msg(name)
-    return __import__(name, {}, {}, 'x')
-
+    return __import__(name, {}, {}, "x")
 
 
 copy_reg.pickle(types.ModuleType, pickleModule)
-
 
 
 def pickleStringO(stringo):
@@ -160,11 +148,10 @@ def pickleStringO(stringo):
     on Python 2.
 
     @param stringo: The string output to pickle.
-    @type stringo: L{cStringIO.OutputType}
+    @type stringo: C{cStringIO.OutputType}
     """
-    'support function for copy_reg to pickle StringIO.OutputTypes'
+    "support function for copy_reg to pickle StringIO.OutputTypes"
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
-
 
 
 def unpickleStringO(val, sek):
@@ -180,13 +167,12 @@ def unpickleStringO(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can write bytes to.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO()
     x.write(val)
     x.seek(sek)
     return x
-
 
 
 def pickleStringI(stringi):
@@ -197,13 +183,12 @@ def pickleStringI(stringi):
     on Python 2.
 
     @param stringi: The string input to pickle.
-    @type stringi: L{cStringIO.InputType}
+    @type stringi: C{cStringIO.InputType}
 
     @return: a 2-tuple of (C{unpickleStringI}, (bytes, pointer))
     @rtype: 2-tuple of (function, (bytes, int))
     """
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
-
 
 
 def unpickleStringI(val, sek):
@@ -221,15 +206,11 @@ def unpickleStringI(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can read bytes from.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO(val)
     x.seek(sek)
     return x
-
-
-
-
 
 
 class Ephemeral:
@@ -246,23 +227,22 @@ class Ephemeral:
         return (Ephemeral, ())
 
     def __getstate__(self):
-        log.msg( "WARNING: serializing ephemeral %s" % self )
+        log.msg("WARNING: serializing ephemeral %s" % self)
         if not _PYPY:
             import gc
-            if getattr(gc, 'get_referrers', None):
+
+            if getattr(gc, "get_referrers", None):
                 for r in gc.get_referrers(self):
-                    log.msg( " referred to by %s" % (r,))
+                    log.msg(f" referred to by {r}")
         return None
 
     def __setstate__(self, state):
-        log.msg( "WARNING: unserializing ephemeral %s" % self.__class__ )
+        log.msg("WARNING: unserializing ephemeral %s" % self.__class__)
         self.__class__ = Ephemeral
 
 
-
-versionedsToUpgrade = {}  # type: Dict[int, 'Versioned']
+versionedsToUpgrade: Dict[int, "Versioned"] = {}
 upgraded = {}
-
 
 
 def doUpgrade():
@@ -273,16 +253,13 @@ def doUpgrade():
     upgraded = {}
 
 
-
 def requireUpgrade(obj):
-    """Require that a Versioned instance be upgraded completely first.
-    """
+    """Require that a Versioned instance be upgraded completely first."""
     objID = id(obj)
     if objID in versionedsToUpgrade and objID not in upgraded:
         upgraded[objID] = 1
         obj.versionUpgrade()
         return obj
-
 
 
 def _aybabtu(c):
@@ -301,7 +278,6 @@ def _aybabtu(c):
             l.append(b)
     # return all except the unwanted classes
     return l[2:]
-
 
 
 class Versioned:
@@ -324,6 +300,7 @@ class Versioned:
     will be made.  If any of these methods are undefined, a warning message
     will be printed.
     """
+
     persistenceVersion = 0
     persistenceForgets = ()
 
@@ -331,33 +308,30 @@ class Versioned:
         versionedsToUpgrade[id(self)] = self
         self.__dict__ = state
 
-
     def __getstate__(self, dict=None):
-        """Get state, adding a version number to it on its way out.
-        """
+        """Get state, adding a version number to it on its way out."""
         dct = copy.copy(dict or self.__dict__)
         bases = _aybabtu(self.__class__)
         bases.reverse()
-        bases.append(self.__class__) # don't forget me!!
+        bases.append(self.__class__)  # don't forget me!!
         for base in bases:
-            if 'persistenceForgets' in base.__dict__:
+            if "persistenceForgets" in base.__dict__:
                 for slot in base.persistenceForgets:
                     if slot in dct:
                         del dct[slot]
-            if 'persistenceVersion' in base.__dict__:
-                dct['{}.persistenceVersion'.format(
-                    reflect.qual(base))] = base.persistenceVersion
+            if "persistenceVersion" in base.__dict__:
+                dct[
+                    "{}.persistenceVersion".format(reflect.qual(base))
+                ] = base.persistenceVersion
         return dct
 
-
     def versionUpgrade(self):
-        """(internal) Do a version upgrade.
-        """
+        """(internal) Do a version upgrade."""
         bases = _aybabtu(self.__class__)
         # put the bases in order so superclasses' persistenceVersion methods
         # will be called first.
         bases.reverse()
-        bases.append(self.__class__) # don't forget me!!
+        bases.append(self.__class__)  # don't forget me!!
         # first let's look for old-skool versioned's
         if "persistenceVersion" in self.__dict__:
 
@@ -369,34 +343,50 @@ class Versioned:
             # persistenceVersion stuff won't make it that far into multiple
             # classes inheriting from Versioned.
 
-            pver = self.__dict__['persistenceVersion']
-            del self.__dict__['persistenceVersion']
+            pver = self.__dict__["persistenceVersion"]
+            del self.__dict__["persistenceVersion"]
             highestVersion = 0
             highestBase = None
             for base in bases:
-                if 'persistenceVersion' not in base.__dict__:
+                if "persistenceVersion" not in base.__dict__:
                     continue
                 if base.persistenceVersion > highestVersion:
                     highestBase = base
                     highestVersion = base.persistenceVersion
             if highestBase:
-                self.__dict__['%s.persistenceVersion' % reflect.qual(highestBase)] = pver
+                self.__dict__[
+                    "%s.persistenceVersion" % reflect.qual(highestBase)
+                ] = pver
         for base in bases:
             # ugly hack, but it's what the user expects, really
-            if (Versioned not in base.__bases__ and
-                'persistenceVersion' not in base.__dict__):
+            if (
+                Versioned not in base.__bases__
+                and "persistenceVersion" not in base.__dict__
+            ):
                 continue
             currentVers = base.persistenceVersion
-            pverName = '%s.persistenceVersion' % reflect.qual(base)
-            persistVers = (self.__dict__.get(pverName) or 0)
+            pverName = "%s.persistenceVersion" % reflect.qual(base)
+            persistVers = self.__dict__.get(pverName) or 0
             if persistVers:
                 del self.__dict__[pverName]
-            assert persistVers <=  currentVers, "Sorry, can't go backwards in time."
+            assert persistVers <= currentVers, "Sorry, can't go backwards in time."
             while persistVers < currentVers:
                 persistVers = persistVers + 1
-                method = base.__dict__.get('upgradeToVersion%s' % persistVers, None)
+                method = base.__dict__.get("upgradeToVersion%s" % persistVers, None)
                 if method:
-                    log.msg( "Upgrading %s (of %s @ %s) to version %s" % (reflect.qual(base), reflect.qual(self.__class__), id(self), persistVers) )
+                    log.msg(
+                        "Upgrading %s (of %s @ %s) to version %s"
+                        % (
+                            reflect.qual(base),
+                            reflect.qual(self.__class__),
+                            id(self),
+                            persistVers,
+                        )
+                    )
                     method(self)
                 else:
-                    log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
+                    log.msg(
+                        "Warning: cannot upgrade {} to version {}".format(
+                            base, persistVers
+                        )
+                    )

@@ -12,11 +12,10 @@ from twisted.cred.error import UnauthorizedLogin
 
 
 class ConchError(Exception):
-    def __init__(self, value, data = None):
+    def __init__(self, value, data=None):
         Exception.__init__(self, value, data)
         self.value = value
         self.data = data
-
 
 
 class NotEnoughAuthentication(Exception):
@@ -25,7 +24,6 @@ class NotEnoughAuthentication(Exception):
     successfully verify the user.  i.e. don't retry this type of
     authentication, try another one.
     """
-
 
 
 class ValidPublicKey(UnauthorizedLogin):
@@ -46,13 +44,11 @@ class ValidPublicKey(UnauthorizedLogin):
     """
 
 
-
 class IgnoreAuthentication(Exception):
     """
     This is thrown to let the UserAuthServer know it doesn't need to handle the
     authentication anymore.
     """
-
 
 
 class MissingKeyStoreError(Exception):
@@ -62,19 +58,16 @@ class MissingKeyStoreError(Exception):
     """
 
 
-
 class UserRejectedKey(Exception):
     """
     The user interactively rejected a key.
     """
 
 
-
 class InvalidEntry(Exception):
     """
     An entry in a known_hosts file could not be interpreted as a valid entry.
     """
-
 
 
 class HostKeyChanged(Exception):
@@ -95,6 +88,7 @@ class HostKeyChanged(Exception):
 
     @type lineno: L{int}
     """
+
     def __init__(self, offendingEntry, path, lineno):
         Exception.__init__(self)
         self.offendingEntry = offendingEntry

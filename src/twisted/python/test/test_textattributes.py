@@ -9,20 +9,22 @@ import functools
 import operator
 
 from twisted.trial import unittest
-from twisted.python._textattributes import (_Attribute,
-                                            _BackgroundColorAttr,
-                                            CharacterAttributesMixin,
-                                            _ColorAttr,
-                                            _ColorAttribute,
-                                            DefaultFormattingState,
-                                            flatten,
-                                            _ForegroundColorAttr,
-                                            _FormattingStateMixin,
-                                            _OtherAttr,
-                                            _NormalAttr)
+from twisted.python._textattributes import (
+    _Attribute,
+    _BackgroundColorAttr,
+    CharacterAttributesMixin,
+    _ColorAttr,
+    _ColorAttribute,
+    DefaultFormattingState,
+    flatten,
+    _ForegroundColorAttr,
+    _FormattingStateMixin,
+    _OtherAttr,
+    _NormalAttr,
+)
 
 
-class RecordsFakeAttribute(object):
+class RecordsFakeAttribute:
     """
     Records calls to a L{FakeAttributes} instance.
 
@@ -34,7 +36,6 @@ class RecordsFakeAttribute(object):
 
     def __init__(self):
         self.serializeCalls = []
-
 
 
 class FakeAttribute(_Attribute):
@@ -49,13 +50,11 @@ class FakeAttribute(_Attribute):
     def __init__(self, recorder):
         self._recorder = recorder
 
-
     def serialize(self, write, attrs, attributeRenderer):
         self._recorder.serializeCalls.append((write, attrs, attributeRenderer))
 
 
-
-class RecordsFakeFormattingState(object):
+class RecordsFakeFormattingState:
     """
     Records calls to a L{FakeFormattingState} instance.
 
@@ -84,15 +83,13 @@ class RecordsFakeFormattingState(object):
         self.withAttributeReturns = "<_withAttribute>"
 
 
-
-class FakeFormattingState(object):
+class FakeFormattingState:
     """
     A L{DefaultFormattingState} subclass that records all calls to its
     C{recorder}
     """
 
     _initCallCount = 0
-
 
     @classmethod
     def newInstance(cls, recorder):
@@ -107,31 +104,25 @@ class FakeFormattingState(object):
         instance._recorder = recorder
         return instance
 
-
     def __init__(self):
         self._initCallCount += 1
-
 
     def __getattr__(self, name):
         if name == self._recorder.renderMethodName:
             return self.renderer
         raise AttributeError(name)
 
-
     def copy(self):
         self._recorder.copyCallCount += 1
         return self._recorder.copyReturns
-
 
     def renderer(self):
         self._recorder.renderMethodCallCount += 1
         return self._recorder.renderMethodReturns
 
-
     def _withAttribute(self, name, value):
         self._recorder.withAttributeCalls.append((name, value))
         return self._recorder.withAttributeReturns
-
 
 
 class _AttributeTestsMixin(unittest.TestCase):
@@ -150,7 +141,6 @@ class _AttributeTestsMixin(unittest.TestCase):
     attributeFactory = None
     renderMethodName = "toVT102"
 
-
     def setUp(self):
         self.attribute = self.attributeFactory()
 
@@ -160,10 +150,11 @@ class _AttributeTestsMixin(unittest.TestCase):
         self.fakeWriteCalls = []
 
         self.formattingStateRecorder = RecordsFakeFormattingState(
-            renderMethodName="toVT102")
+            renderMethodName="toVT102"
+        )
         self.fakeFormattingState = FakeFormattingState.newInstance(
-            self.formattingStateRecorder)
-
+            self.formattingStateRecorder
+        )
 
     def fakeWrite(self, argument):
         """
@@ -175,7 +166,6 @@ class _AttributeTestsMixin(unittest.TestCase):
         """
         self.fakeWriteCalls.append(argument)
 
-
     def assertIsAttribute(self, value):
         """
         Assert that C{value} is C{self.attribute}.
@@ -186,14 +176,12 @@ class _AttributeTestsMixin(unittest.TestCase):
         self.assertIs(self.attribute, value)
 
 
-
 class AttributeTests(_AttributeTestsMixin):
     """
     Tests for L{twisted.python._textattributes._Attribute}
     """
 
     attributeFactory = _Attribute
-
 
     def test_reprSanity(self):
         """
@@ -202,15 +190,12 @@ class AttributeTests(_AttributeTestsMixin):
         """
         self.assertIsInstance(repr(self.attribute), str)
 
-
     def test_getitemAssertsTypes(self):
         """
         L{_Attribute.__getitem__} asserts that its argument is one of
         a small set of types.
         """
-        self.assertRaises(AssertionError,
-                          operator.itemgetter(object), self.attribute)
-
+        self.assertRaises(AssertionError, operator.itemgetter(object), self.attribute)
 
     def test_getitemBytestring(self):
         """
@@ -219,7 +204,6 @@ class AttributeTests(_AttributeTestsMixin):
         """
         self.assertIsAttribute(self.attribute[b"some bytes"])
         self.assertEqual(self.attribute.children, [b"some bytes"])
-
 
     def test_getitemAttribute(self):
         """
@@ -230,7 +214,6 @@ class AttributeTests(_AttributeTestsMixin):
         self.assertIsAttribute(self.attribute[childAttribute])
         self.assertEqual(self.attribute.children, [childAttribute])
 
-
     def test_getitemList(self):
         """
         L{_Attribute.__getitem__} adds all elements of a L{list} to
@@ -240,7 +223,6 @@ class AttributeTests(_AttributeTestsMixin):
         self.assertIsAttribute(self.attribute[listOfBytes])
         self.assertEqual(self.attribute.children, listOfBytes)
 
-
     def test_getitemTuple(self):
         """
         L{_Attribute.__getitem__} adds all elements of a L{tuple} to
@@ -249,7 +231,6 @@ class AttributeTests(_AttributeTestsMixin):
         tupleOfBytes = (b"a", b"b", b"c")
         self.assertIsAttribute(self.attribute[tupleOfBytes])
         self.assertEqual(self.attribute.children, list(tupleOfBytes))
-
 
     def test_serializeRecurs(self):
         """
@@ -264,7 +245,6 @@ class AttributeTests(_AttributeTestsMixin):
         [(write, _, _)] = self.attributeRecorder.serializeCalls
         self.assertIs(write, fakeWriter)
 
-
     def test_serializeDefaultFormattingState(self):
         """
         L{_Attribute.serialize} creates an instance of
@@ -276,7 +256,6 @@ class AttributeTests(_AttributeTestsMixin):
         self.assertEqual(len(self.attributeRecorder.serializeCalls), 1)
         [(_, attrs, _)] = self.attributeRecorder.serializeCalls
         self.assertIsInstance(attrs, DefaultFormattingState)
-
 
     def test_serializeSpecifiedFormattingState(self):
         """
@@ -290,7 +269,6 @@ class AttributeTests(_AttributeTestsMixin):
         [(_, attrs, _)] = self.attributeRecorder.serializeCalls
         self.assertIs(attrs, self.formattingStateRecorder.copyReturns)
 
-
     def test_serializePassesDefaultRenderMethod(self):
         """
         L{_Attribute.serialize} passes on to any L{_Attribute}
@@ -301,9 +279,7 @@ class AttributeTests(_AttributeTestsMixin):
 
         self.assertEqual(len(self.attributeRecorder.serializeCalls), 1)
         [(_, _, renderMethodName)] = self.attributeRecorder.serializeCalls
-        self.assertIs(renderMethodName,
-                      self.formattingStateRecorder.renderMethodName)
-
+        self.assertIs(renderMethodName, self.formattingStateRecorder.renderMethodName)
 
     def test_serializePassesSpecifiedRenderMethod(self):
         """
@@ -311,13 +287,13 @@ class AttributeTests(_AttributeTestsMixin):
         children the specified render method.
         """
         self.assertIsAttribute(self.attribute[self.fakeAttribute])
-        self.attribute.serialize(self.fakeWrite, self.fakeFormattingState,
-                                 attributeRenderer="foo")
+        self.attribute.serialize(
+            self.fakeWrite, self.fakeFormattingState, attributeRenderer="foo"
+        )
 
         self.assertEqual(len(self.attributeRecorder.serializeCalls), 1)
         [(_, _, renderMethodName)] = self.attributeRecorder.serializeCalls
         self.assertEqual(renderMethodName, "foo")
-
 
     def test_renderMethodCalled(self):
         """
@@ -327,30 +303,32 @@ class AttributeTests(_AttributeTestsMixin):
         self.formattingStateRecorder.renderMethodName = "foo"
 
         self.assertIsAttribute(self.attribute[b"bytes"])
-        self.attribute.serialize(self.fakeWrite, self.fakeFormattingState,
-                                 attributeRenderer="foo")
+        self.attribute.serialize(
+            self.fakeWrite, self.fakeFormattingState, attributeRenderer="foo"
+        )
 
         self.assertNot(len(self.attributeRecorder.serializeCalls))
 
-        self.assertEqual(self.fakeWriteCalls,
-                         [self.formattingStateRecorder.renderMethodReturns,
-                          b"bytes"])
-
+        self.assertEqual(
+            self.fakeWriteCalls,
+            [self.formattingStateRecorder.renderMethodReturns, b"bytes"],
+        )
 
     def test_unicodeDeprecation(self):
         """
         L{_Attribute.__geitem__} emits a deprecation warning when
         given a L{unicode}/L{str} object instead of a L{bytes} object.
         """
-        self.attribute[u"unicode"]
-        message = ("Calling _Attribute.__getitem__ with a unicode/str"
-                   " object instead of a bytes object is deprecated"
-                   " since Twisted 16.5.0")
+        self.attribute["unicode"]
+        message = (
+            "Calling _Attribute.__getitem__ with a unicode/str"
+            " object instead of a bytes object is deprecated"
+            " since Twisted NEXT"
+        )
         warnings = self.flushWarnings([self.test_unicodeDeprecation])
         self.assertEqual(1, len(warnings))
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(message, warnings[0]['message'])
-
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
+        self.assertEqual(message, warnings[0]["message"])
 
 
 class NormalAttrTests(_AttributeTestsMixin):
@@ -361,18 +339,16 @@ class NormalAttrTests(_AttributeTestsMixin):
     attributeFactory = _NormalAttr
     renderMethodName = "ignored renderer"
 
-
     def test_serializeReInitsFormattingState(self):
         """
         L{_NormalAttr.serialize} calls the provided formatting state's
         C{__init__} method to reset the formatting state prior to
         serialization.
         """
-        self.attribute.serialize("ignored write",
-                                 self.fakeFormattingState,
-                                 "ignored renderer")
+        self.attribute.serialize(
+            "ignored write", self.fakeFormattingState, "ignored renderer"
+        )
         self.assertEqual(self.fakeFormattingState._initCallCount, 2)
-
 
 
 class _ModifyingAttrTestsMixin(_AttributeTestsMixin):
@@ -400,19 +376,17 @@ class _ModifyingAttrTestsMixin(_AttributeTestsMixin):
         fsr = self.formattingStateRecorder
         fsr.withAttributeReturns = self.fakeFormattingState
 
-        self.attribute.serialize(self.fakeWrite,
-                                 self.fakeFormattingState,
-                                 self.renderMethodName)
+        self.attribute.serialize(
+            self.fakeWrite, self.fakeFormattingState, self.renderMethodName
+        )
 
-        self.assertEqual(len(self.formattingStateRecorder.withAttributeCalls),
-                         1)
+        self.assertEqual(len(self.formattingStateRecorder.withAttributeCalls), 1)
         [(_name, _value)] = self.formattingStateRecorder.withAttributeCalls
         self.assertEqual(name, _name)
         self.assertEqual(value, _value)
 
         # _Attribute.serialize calls attrs.copy
         self.assertEqual(self.formattingStateRecorder.copyCallCount, 1)
-
 
 
 class OtherAttrTests(_ModifyingAttrTestsMixin):
@@ -425,7 +399,6 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
     attrname = "attrname"
     attrvalue = True
 
-
     def attributeFactory(self):
         """
         Make an L{_OtherAttr} instance.
@@ -436,7 +409,6 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
         """
         return _OtherAttr(self.attrname, self.attrvalue)
 
-
     def test_neg(self):
         """
         Apply a unary minus operator to an L{_OtherAttr} instance
@@ -445,7 +417,6 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
         """
         negated = -self.attribute
         self.assertEqual(negated.attrvalue, not self.attrvalue)
-
 
     def test_negWithChildren(self):
         """
@@ -463,7 +434,6 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
         for originalChild, negatedChild in zip(children, negated.children):
             self.assertIs(originalChild, negatedChild)
 
-
     def test_serialize(self):
         """
         L{_OtherAttr.serialize} applies its C{attrname} and
@@ -473,7 +443,6 @@ class OtherAttrTests(_ModifyingAttrTestsMixin):
         self.assertWithAttributeCalled(self.attrname, self.attrvalue)
 
 
-
 class ColorAttrTests(_ModifyingAttrTestsMixin):
     """
     Tests for L{_ColorAttr}.
@@ -481,7 +450,6 @@ class ColorAttrTests(_ModifyingAttrTestsMixin):
 
     color = "purple"
     ground = "middleground"
-
 
     def attributeFactory(self):
         """
@@ -493,14 +461,12 @@ class ColorAttrTests(_ModifyingAttrTestsMixin):
         """
         return _ColorAttr(self.color, self.ground)
 
-
     def test_serialize(self):
         """
         L{_ColorAttr.serialize} applies its C{ground} and C{color} to
         the formatting state instance before serializing.
         """
         self.assertWithAttributeCalled(self.ground, self.color)
-
 
 
 class ForegroundColorAttrTests(ColorAttrTests):
@@ -510,13 +476,11 @@ class ForegroundColorAttrTests(ColorAttrTests):
 
     ground = "foreground"
 
-
     def attributeFactory(self):
         """
         Make a L{_ForegroundColorAttr} instance.
         """
         return _ForegroundColorAttr(self.color)
-
 
 
 class BackgroundColorAttrTests(ColorAttrTests):
@@ -533,7 +497,6 @@ class BackgroundColorAttrTests(ColorAttrTests):
         return _BackgroundColorAttr(self.color)
 
 
-
 class ColorAttributeTests(unittest.TestCase):
     """
     Tests for L{_ColorAttribute}
@@ -545,7 +508,6 @@ class ColorAttributeTests(unittest.TestCase):
         self.ground = functools.partial(_ColorAttr, ground=self.groundName)
         self.colorAttribute = _ColorAttribute(self.ground, self.attrs)
 
-
     def test_getattr(self):
         """
         Accessing a known color as an attribute returns an instance of
@@ -556,16 +518,15 @@ class ColorAttributeTests(unittest.TestCase):
         self.assertEqual(colorAttr.ground, self.groundName)
         self.assertEqual(colorAttr.color, self.attrs["blue"])
 
-
     def test_getattrUnknownColor(self):
         """
         Accessing an unknown color -- i.e., one not in
         L{_ColorAttribute.attrs} -- as an attribute raises an
         L{AttributeError}.
         """
-        self.assertRaises(AttributeError,
-                          operator.attrgetter("black"), self.colorAttribute)
-
+        self.assertRaises(
+            AttributeError, operator.attrgetter("black"), self.colorAttribute
+        )
 
 
 class CharacterAttributesMixinTest(unittest.TestCase):
@@ -580,10 +541,10 @@ class CharacterAttributesMixinTest(unittest.TestCase):
             """
             A testable implementer of L{CharacterAttributesMixin}
             """
+
             attrs = self.attrs
 
         self.characterAttrs = TestableCharacterAttributes()
-
 
     def test_getattrNormal(self):
         """
@@ -592,7 +553,6 @@ class CharacterAttributesMixinTest(unittest.TestCase):
         instance.
         """
         self.assertIsInstance(self.characterAttrs.normal, _NormalAttr)
-
 
     def test_getattrKnownAttr(self):
         """
@@ -604,16 +564,15 @@ class CharacterAttributesMixinTest(unittest.TestCase):
         self.assertEqual(attr.attrname, "something")
         self.assertTrue(attr.attrvalue)
 
-
     def test_getattrUnknownAttr(self):
         """
         Accessing a value that's not in the class' C{attrs} dict as an
         attribute of a L{CharacterAttributesMixin} instance raises an
         L{AttributeError}
         """
-        self.assertRaises(AttributeError,
-                          operator.attrgetter("foo"), self.characterAttrs)
-
+        self.assertRaises(
+            AttributeError, operator.attrgetter("foo"), self.characterAttrs
+        )
 
 
 class DefaultFormattingStateTests(unittest.TestCase):
@@ -624,28 +583,20 @@ class DefaultFormattingStateTests(unittest.TestCase):
     def setUp(self):
         self.formattingState = DefaultFormattingState()
 
-
     def test_equality(self):
         """
         L{DefaultFormattingState}s are always equal to other
         L{DefaultFormattingState}s.
         """
-        self.assertEqual(
-            self.formattingState,
-            DefaultFormattingState())
-        self.assertNotEqual(
-            DefaultFormattingState(),
-            b'hello')
-
+        self.assertEqual(self.formattingState, DefaultFormattingState())
+        self.assertNotEqual(DefaultFormattingState(), b"hello")
 
     def test_copy(self):
         """
         L{DefaultFormattingState.copy} returns an instance of
         L{DefaultFormattingState}
         """
-        self.assertIsInstance(self.formattingState.copy(),
-                              DefaultFormattingState)
-
+        self.assertIsInstance(self.formattingState.copy(), DefaultFormattingState)
 
     def test_withAttribute(self):
         """
@@ -654,8 +605,8 @@ class DefaultFormattingStateTests(unittest.TestCase):
         """
         self.assertIsInstance(
             self.formattingState._withAttribute("ignored", "also ignored"),
-            DefaultFormattingState)
-
+            DefaultFormattingState,
+        )
 
     def test_toVT102(self):
         """
@@ -664,7 +615,6 @@ class DefaultFormattingStateTests(unittest.TestCase):
         empty = self.formattingState.toVT102()
         self.assertFalse(empty)
         self.assertIsInstance(empty, bytes)
-
 
 
 class FormattingStateMixinTests(unittest.TestCase):
@@ -680,7 +630,6 @@ class FormattingStateMixinTests(unittest.TestCase):
 
         self.formattingState = TestableFormattingState()
 
-
     def test_copy(self):
         """
         L{_FormattingStateMixin.copy} returns a new instance that
@@ -695,7 +644,6 @@ class FormattingStateMixinTests(unittest.TestCase):
         self.assertEqual(copied.foo, 1)
         self.assertEqual(copied.bar, "string")
 
-
     def test_withAttributeNewAttribute(self):
         """
         Given a new attribute-value pair,
@@ -708,7 +656,6 @@ class FormattingStateMixinTests(unittest.TestCase):
         self.assertIsInstance(copied, _FormattingStateMixin)
         self.assertIsNot(copied, self.formattingState)
         self.assertEqual(copied.foo, 2)
-
 
     def test_withAttributeNoChange(self):
         """
@@ -723,17 +670,15 @@ class FormattingStateMixinTests(unittest.TestCase):
         self.assertIsNot(copied, self.formattingState)
         self.assertEqual(copied.foo, 1)
 
-
     def test_withAttributeUnknownAttribute(self):
         """
         L{_FormattingStateMixin._withAttribute} raises an
         L{AttributeError} when given an attribute that does not exist
         on the instance.
         """
-        self.assertRaises(AttributeError,
-                          operator.attrgetter("missing"),
-                          self.formattingState)
-
+        self.assertRaises(
+            AttributeError, operator.attrgetter("missing"), self.formattingState
+        )
 
 
 class _FlattenableAttributes(CharacterAttributesMixin):
@@ -741,6 +686,7 @@ class _FlattenableAttributes(CharacterAttributesMixin):
     An implementation of L{CharacterAttributesMixin} for use in
     L{FlattenTests}
     """
+
     _FOREGROUND = {"red": b"<red>"}
     _BACKGROUND = {"blue": b"<blue>"}
 
@@ -748,10 +694,9 @@ class _FlattenableAttributes(CharacterAttributesMixin):
     bg = _ColorAttribute(_BackgroundColorAttr, _BACKGROUND)
 
     attrs = {
-        'bold': b'<bold control sequence>',
-        'reverseVideo': b'<reversed video control sequence>',
+        "bold": b"<bold control sequence>",
+        "reverseVideo": b"<reversed video control sequence>",
     }
-
 
 
 class _FlattenableFormattingState(_FormattingStateMixin):
@@ -759,14 +704,14 @@ class _FlattenableFormattingState(_FormattingStateMixin):
     An implementation of L{_FormattingStateMixin} for use in
     L{FlattenTests}
     """
+
     bold = False
     reverseVideo = False
 
     foreground = b"<default foreground>"
-    background = b'<default background>'
+    background = b"<default background>"
 
     _subtracting = False
-
 
     def toVT102(self):
         """
@@ -781,8 +726,7 @@ class _FlattenableFormattingState(_FormattingStateMixin):
         if self._subtracting:
             attrs.append[b"<subtracting>"]
 
-        return b''.join(attrs)
-
+        return b"".join(attrs)
 
 
 class FlattenTests(unittest.TestCase):
@@ -792,7 +736,6 @@ class FlattenTests(unittest.TestCase):
 
     def setUp(self):
         self.A = _FlattenableAttributes()
-
 
     def test_flatten(self):
         """
@@ -813,21 +756,22 @@ class FlattenTests(unittest.TestCase):
                 self.A.reverseVideo[
                     # default foreground, default background
                     self.A.normal[b"reversed"]
-                ]],
-            _FlattenableFormattingState())
+                ],
+            ],
+            _FlattenableFormattingState(),
+        )
 
-        redBytes = (b'<bold control sequence>'
-                    b'<red>'
-                    b'<default background>'
-                    b'red bytes')
-        blueBytes = (b'<bold control sequence>'
-                     b'<default foreground>'
-                     b'<blue>'
-                     b'blue bytes')
-        reversedBytes = (b'<reversed video control sequence>'
-                         b'<default foreground>'
-                         b'<default background>'
-                         b'reversed')
+        redBytes = (
+            b"<bold control sequence>" b"<red>" b"<default background>" b"red bytes"
+        )
+        blueBytes = (
+            b"<bold control sequence>" b"<default foreground>" b"<blue>" b"blue bytes"
+        )
+        reversedBytes = (
+            b"<reversed video control sequence>"
+            b"<default foreground>"
+            b"<default background>"
+            b"reversed"
+        )
 
-        self.assertEqual(serialized,
-                         b''.join([redBytes, blueBytes, reversedBytes]))
+        self.assertEqual(serialized, b"".join([redBytes, blueBytes, reversedBytes]))

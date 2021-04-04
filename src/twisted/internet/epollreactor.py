@@ -11,16 +11,27 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-
-from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
 import errno
+import select
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-
-from twisted.python import log
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.python import log
+
+try:
+    # This is to keep mypy from complaining
+    # We don't use type: ignore[attr-defined] on import, because mypy only complains
+    # on on some platforms, and then the unused ignore is an issue if the undefined
+    # attribute isn't.
+    epoll = getattr(select, "epoll")
+    EPOLLHUP = getattr(select, "EPOLLHUP")
+    EPOLLERR = getattr(select, "EPOLLERR")
+    EPOLLIN = getattr(select, "EPOLLIN")
+    EPOLLOUT = getattr(select, "EPOLLOUT")
+except AttributeError as e:
+    raise ImportError(e)
 
 
 @implementer(IReactorFDSet)
@@ -53,7 +64,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
 
     # Attributes for _PollLikeMixin
-    _POLL_DISCONNECTED = (EPOLLHUP | EPOLLERR)
+    _POLL_DISCONNECTED = EPOLLHUP | EPOLLERR
     _POLL_IN = EPOLLIN
     _POLL_OUT = EPOLLOUT
 
@@ -71,7 +82,6 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._selectables = {}
         self._continuousPolling = posixbase._ContinuousPolling(self)
         posixbase.PosixReactorBase.__init__(self)
-
 
     def _add(self, xer, primary, other, selectables, event, antievent):
         """
@@ -99,15 +109,15 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             primary.add(fd)
             selectables[fd] = xer
 
-
     def addReader(self, reader):
         """
         Add a FileDescriptor for notification of data available to read.
         """
         try:
-            self._add(reader, self._reads, self._writes, self._selectables,
-                      EPOLLIN, EPOLLOUT)
-        except IOError as e:
+            self._add(
+                reader, self._reads, self._writes, self._selectables, EPOLLIN, EPOLLOUT
+            )
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -116,15 +126,15 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             else:
                 raise
 
-
     def addWriter(self, writer):
         """
         Add a FileDescriptor for notification of data available to write.
         """
         try:
-            self._add(writer, self._writes, self._reads, self._selectables,
-                      EPOLLOUT, EPOLLIN)
-        except IOError as e:
+            self._add(
+                writer, self._writes, self._reads, self._selectables, EPOLLOUT, EPOLLIN
+            )
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -132,7 +142,6 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 self._continuousPolling.addWriter(writer)
             else:
                 raise
-
 
     def _remove(self, xer, primary, other, selectables, event, antievent):
         """
@@ -159,7 +168,6 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 self._poller.unregister(fd)
             primary.remove(fd)
 
-
     def removeReader(self, reader):
         """
         Remove a Selectable for notification of data available to read.
@@ -167,9 +175,9 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         if self._continuousPolling.isReading(reader):
             self._continuousPolling.removeReader(reader)
             return
-        self._remove(reader, self._reads, self._writes, self._selectables,
-                     EPOLLIN, EPOLLOUT)
-
+        self._remove(
+            reader, self._reads, self._writes, self._selectables, EPOLLIN, EPOLLOUT
+        )
 
     def removeWriter(self, writer):
         """
@@ -178,29 +186,31 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         if self._continuousPolling.isWriting(writer):
             self._continuousPolling.removeWriter(writer)
             return
-        self._remove(writer, self._writes, self._reads, self._selectables,
-                     EPOLLOUT, EPOLLIN)
-
+        self._remove(
+            writer, self._writes, self._reads, self._selectables, EPOLLOUT, EPOLLIN
+        )
 
     def removeAll(self):
         """
         Remove all selectables, and return a list of them.
         """
-        return (self._removeAll(
+        return (
+            self._removeAll(
                 [self._selectables[fd] for fd in self._reads],
-                [self._selectables[fd] for fd in self._writes]) +
-                self._continuousPolling.removeAll())
-
+                [self._selectables[fd] for fd in self._writes],
+            )
+            + self._continuousPolling.removeAll()
+        )
 
     def getReaders(self):
-        return ([self._selectables[fd] for fd in self._reads] +
-                self._continuousPolling.getReaders())
-
+        return [
+            self._selectables[fd] for fd in self._reads
+        ] + self._continuousPolling.getReaders()
 
     def getWriters(self):
-        return ([self._selectables[fd] for fd in self._writes] +
-                self._continuousPolling.getWriters())
-
+        return [
+            self._selectables[fd] for fd in self._writes
+        ] + self._continuousPolling.getWriters()
 
     def doPoll(self, timeout):
         """
@@ -215,7 +225,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # the amount of time we block to the value specified by our
             # caller.
             l = self._poller.poll(timeout, len(self._selectables))
-        except IOError as err:
+        except OSError as err:
             if err.errno == errno.EINTR:
                 return
             # See epoll_wait(2) for documentation on the other conditions
@@ -242,6 +252,7 @@ def install():
     """
     p = EPollReactor()
     from twisted.internet.main import installReactor
+
     installReactor(p)
 
 

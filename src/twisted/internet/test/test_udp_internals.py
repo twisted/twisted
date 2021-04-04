@@ -13,14 +13,13 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp
 from twisted.python.runtime import platformType
 
-if platformType == 'win32':
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]  # noqa
+if platformType == "win32":
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
 else:
     from errno import EWOULDBLOCK
 
 
-
-class StringUDPSocket(object):
+class StringUDPSocket:
     """
     A fake UDP socket object, which returns a fixed sequence of strings and/or
     socket errors.  Useful for testing.
@@ -34,10 +33,8 @@ class StringUDPSocket(object):
         self.retvals = retvals
         self.connectedAddr = None
 
-
     def connect(self, addr):
         self.connectedAddr = addr
-
 
     def recvfrom(self, size):
         """
@@ -49,7 +46,6 @@ class StringUDPSocket(object):
         return ret, None
 
 
-
 class KeepReads(DatagramProtocol):
     """
     Accumulate reads in a list.
@@ -58,10 +54,8 @@ class KeepReads(DatagramProtocol):
     def __init__(self):
         self.reads = []
 
-
     def datagramReceived(self, data, addr):
         self.reads.append(data)
-
 
 
 class ErrorsTests(unittest.SynchronousTestCase):
@@ -83,14 +77,13 @@ class ErrorsTests(unittest.SynchronousTestCase):
 
         # Normal result, no errors
         port.socket = StringUDPSocket(
-            [b"result", b"123", socket.error(-7000), b"456",
-             socket.error(-7000)])
+            [b"result", b"123", socket.error(-7000), b"456", socket.error(-7000)]
+        )
         port.doRead()
         # Read stops on error:
         self.assertEqual(protocol.reads, [b"result", b"123"])
         port.doRead()
         self.assertEqual(protocol.reads, [b"result", b"123", b"456"])
-
 
     def test_readImmediateError(self):
         """
@@ -105,20 +98,20 @@ class ErrorsTests(unittest.SynchronousTestCase):
 
         protocol = KeepReads()
         # Fail if connectionRefused is called:
-        protocol.connectionRefused = lambda: 1/0
+        protocol.connectionRefused = lambda: 1 / 0
 
         port = udp.Port(None, protocol)
 
         # Try an immediate "connection refused"
-        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
-                                       socket.error(EWOULDBLOCK)])
+        port.socket = StringUDPSocket(
+            [b"a", socket.error(-6000), b"b", socket.error(EWOULDBLOCK)]
+        )
         port.doRead()
         # Read stops on error:
         self.assertEqual(protocol.reads, [b"a"])
         # Read again:
         port.doRead()
         self.assertEqual(protocol.reads, [b"a", b"b"])
-
 
     def test_connectedReadImmediateError(self):
         """
@@ -136,8 +129,9 @@ class ErrorsTests(unittest.SynchronousTestCase):
         protocol.connectionRefused = lambda: refused.append(True)
 
         port = udp.Port(None, protocol)
-        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
-                                       socket.error(EWOULDBLOCK)])
+        port.socket = StringUDPSocket(
+            [b"a", socket.error(-6000), b"b", socket.error(EWOULDBLOCK)]
+        )
         port.connect("127.0.0.1", 9999)
 
         # Read stops on error:
@@ -149,7 +143,6 @@ class ErrorsTests(unittest.SynchronousTestCase):
         port.doRead()
         self.assertEqual(protocol.reads, [b"a", b"b"])
         self.assertEqual(refused, [True])
-
 
     def test_readUnknownError(self):
         """

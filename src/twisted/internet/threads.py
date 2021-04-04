@@ -29,8 +29,8 @@ def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
         method of C{twisted.python.threadpool.ThreadPool}.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f, or an
         errback with a L{twisted.python.failure.Failure} if f throws an
@@ -54,16 +54,16 @@ def deferToThread(f, *args, **kwargs):
     Run a function in a thread and return the result as a Deferred.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f,
     or an errback with a L{twisted.python.failure.Failure} if f throws
     an exception.
     """
     from twisted.internet import reactor
-    return deferToThreadPool(reactor, reactor.getThreadPool(),
-                             f, *args, **kwargs)
+
+    return deferToThreadPool(reactor, reactor.getThreadPool(), f, *args, **kwargs)
 
 
 def _runMultiple(tupleList):
@@ -81,6 +81,7 @@ def callMultipleInThread(tupleList):
     tupleList should be a list of (function, argsList, kwargsDict) tuples.
     """
     from twisted.internet import reactor
+
     reactor.callInThread(_runMultiple, tupleList)
 
 
@@ -100,16 +101,18 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     @return: the result of the L{Deferred} returned by C{f}, or the result
         of C{f} if it returns anything other than a L{Deferred}.
 
-    @raise: If C{f} raises a synchronous exception,
+    @raise Exception: If C{f} raises a synchronous exception,
         C{blockingCallFromThread} will raise that exception.  If C{f}
         returns a L{Deferred} which fires with a L{Failure},
         C{blockingCallFromThread} will raise that failure's exception (see
         L{Failure.raiseException}).
     """
     queue = Queue.Queue()
+
     def _callFromThread():
         result = defer.maybeDeferred(f, *a, **kw)
         result.addBoth(queue.put)
+
     reactor.callFromThread(_callFromThread)
     result = queue.get()
     if isinstance(result, failure.Failure):
@@ -117,5 +120,9 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     return result
 
 
-__all__ = ["deferToThread", "deferToThreadPool", "callMultipleInThread",
-           "blockingCallFromThread"]
+__all__ = [
+    "deferToThread",
+    "deferToThreadPool",
+    "callMultipleInThread",
+    "blockingCallFromThread",
+]

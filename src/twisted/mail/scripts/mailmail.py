@@ -12,16 +12,16 @@ import os
 import sys
 import getpass
 from configparser import ConfigParser
+from io import StringIO
 
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.logger import Logger, textFileLogObserver
 from twisted.mail import smtp
-from twisted.python.compat import NativeStringIO
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
-SMARTHOST = '127.0.0.1'
+SMARTHOST = "127.0.0.1"
 
 ERROR_FMT = """\
 Subject: Failed Message Delivery
@@ -35,7 +35,6 @@ The Twisted sendmail application.
 
 _logObserver = textFileLogObserver(sys.stderr)
 _log = Logger(observer=_logObserver)
-
 
 
 class Options:
@@ -54,21 +53,19 @@ class Options:
     """
 
 
-
 def getlogin():
     try:
         return os.getlogin()
-    except:
+    except BaseException:
         return getpass.getuser()
 
 
 _unsupportedOption = SystemExit("Unsupported option.")
 
 
-
 def parseOptions(argv):
     o = Options()
-    o.to = [e for e in argv if not e.startswith('-')]
+    o.to = [e for e in argv if not e.startswith("-")]
     o.sender = getlogin()
 
     # Just be very stupid
@@ -76,35 +73,35 @@ def parseOptions(argv):
     # Skip -bm -- it is the default
 
     # Add a non-standard option for querying the version of this tool.
-    if '--version' in argv:
-        print('mailmail version:', version)
+    if "--version" in argv:
+        print("mailmail version:", version)
         raise SystemExit()
 
     # -bp lists queue information.  Screw that.
-    if '-bp' in argv:
+    if "-bp" in argv:
         raise _unsupportedOption
 
     # -bs makes sendmail use stdin/stdout as its transport.  Screw that.
-    if '-bs' in argv:
+    if "-bs" in argv:
         raise _unsupportedOption
 
     # -F sets who the mail is from, but is overridable by the From header
-    if '-F' in argv:
-        o.sender = argv[argv.index('-F') + 1]
+    if "-F" in argv:
+        o.sender = argv[argv.index("-F") + 1]
         o.to.remove(o.sender)
 
     # -i and -oi makes us ignore lone "."
-    if ('-i' in argv) or ('-oi' in argv):
+    if ("-i" in argv) or ("-oi" in argv):
         raise _unsupportedOption
 
     # -odb is background delivery
-    if '-odb' in argv:
+    if "-odb" in argv:
         o.background = True
     else:
         o.background = False
 
     # -odf is foreground delivery
-    if '-odf' in argv:
+    if "-odf" in argv:
         o.background = False
     else:
         o.background = True
@@ -113,20 +110,20 @@ def parseOptions(argv):
     # It is also the default.
 
     # -oep and -ep cause errors to be printed to stderr
-    if ('-oep' in argv) or ('-ep' in argv):
+    if ("-oep" in argv) or ("-ep" in argv):
         o.printErrors = True
     else:
         o.printErrors = False
 
     # -om causes a copy of the message to be sent to the sender if the sender
     # appears in an alias expansion.  We do not support aliases.
-    if '-om' in argv:
+    if "-om" in argv:
         raise _unsupportedOption
 
     # -t causes us to pick the recipients of the message from
     # the To, Cc, and Bcc headers, and to remove the Bcc header
     # if present.
-    if '-t' in argv:
+    if "-t" in argv:
         o.recipientsFromHeaders = True
         o.excludeAddresses = o.to
         o.to = []
@@ -135,30 +132,28 @@ def parseOptions(argv):
         o.exludeAddresses = []
 
     requiredHeaders = {
-        'from': [],
-        'to': [],
-        'cc': [],
-        'bcc': [],
-        'date': [],
+        "from": [],
+        "to": [],
+        "cc": [],
+        "bcc": [],
+        "date": [],
     }
 
-    buffer = NativeStringIO()
+    buffer = StringIO()
     while 1:
         write = 1
         line = sys.stdin.readline()
         if not line.strip():
             break
 
-        hdrs = line.split(': ', 1)
+        hdrs = line.split(": ", 1)
 
         hdr = hdrs[0].lower()
-        if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
-            o.to.extend([
-                email.utils.parseaddr(hdrs[1])[1]
-            ])
-            if hdr == 'bcc':
+        if o.recipientsFromHeaders and hdr in ("to", "cc", "bcc"):
+            o.to.extend([email.utils.parseaddr(hdrs[1])[1]])
+            if hdr == "bcc":
                 write = 0
-        elif hdr == 'from':
+        elif hdr == "from":
             o.sender = email.utils.parseaddr(hdrs[1])[1]
 
         if hdr in requiredHeaders:
@@ -167,14 +162,14 @@ def parseOptions(argv):
         if write:
             buffer.write(line)
 
-    if not requiredHeaders['from']:
-        buffer.write('From: {}\r\n'.format(o.sender))
-    if not requiredHeaders['to']:
+    if not requiredHeaders["from"]:
+        buffer.write(f"From: {o.sender}\r\n")
+    if not requiredHeaders["to"]:
         if not o.to:
             raise SystemExit("No recipients specified.")
-        buffer.write('To: {}\r\n'.format(', '.join(o.to)))
-    if not requiredHeaders['date']:
-        buffer.write('Date: {}\r\n'.format(smtp.rfc822date()))
+        buffer.write("To: {}\r\n".format(", ".join(o.to)))
+    if not requiredHeaders["date"]:
+        buffer.write(f"Date: {smtp.rfc822date()}\r\n")
 
     buffer.write(line)
 
@@ -182,13 +177,12 @@ def parseOptions(argv):
         for a in o.excludeAddresses:
             try:
                 o.to.remove(a)
-            except:
+            except BaseException:
                 pass
 
     buffer.seek(0, 0)
-    o.body = NativeStringIO(buffer.getvalue() + sys.stdin.read())
+    o.body = StringIO(buffer.getvalue() + sys.stdin.read())
     return o
-
 
 
 class Configuration:
@@ -218,20 +212,20 @@ class Configuration:
     @ivar domain: L{None} or the hostname with which to identify ourselves when
     connecting to an MTA.
     """
+
     def __init__(self):
         self.allowUIDs = []
         self.denyUIDs = []
         self.allowGIDs = []
         self.denyGIDs = []
-        self.useraccess = 'deny'
-        self.groupaccess = 'deny'
+        self.useraccess = "deny"
+        self.groupaccess = "deny"
 
         self.identities = {}
         self.smarthost = None
         self.domain = None
 
         self.defaultAccess = True
-
 
 
 def loadConfig(path):
@@ -262,11 +256,11 @@ def loadConfig(path):
     du = c.denyUIDs
     ag = c.allowGIDs
     dg = c.denyGIDs
-    for (section, a, d) in (('useraccess', au, du), ('groupaccess', ag, dg)):
+    for (section, a, d) in (("useraccess", au, du), ("groupaccess", ag, dg)):
         if p.has_section(section):
-            for (mode, L) in (('allow', a), ('deny', d)):
+            for (mode, L) in (("allow", a), ("deny", d)):
                 if p.has_option(section, mode) and p.get(section, mode):
-                    for sectionID in p.get(section, mode).split(','):
+                    for sectionID in p.get(section, mode).split(","):
                         try:
                             sectionID = int(sectionID)
                         except ValueError:
@@ -274,48 +268,46 @@ def loadConfig(path):
                                 "Illegal {prefix}ID in "
                                 "[{section}] section: {sectionID}",
                                 prefix=section[0].upper(),
-                                section=section, sectionID=sectionID)
+                                section=section,
+                                sectionID=sectionID,
+                            )
                         else:
                             L.append(sectionID)
-            order = p.get(section, 'order')
-            order = [s.split()
-                     for s in [s.lower()
-                               for s in order.split(',')]]
-            if order[0] == 'allow':
-                setattr(c, section, 'allow')
+            order = p.get(section, "order")
+            order = [s.split() for s in [s.lower() for s in order.split(",")]]
+            if order[0] == "allow":
+                setattr(c, section, "allow")
             else:
-                setattr(c, section, 'deny')
+                setattr(c, section, "deny")
 
-    if p.has_section('identity'):
-        for (host, up) in p.items('identity'):
-            parts = up.split(':', 1)
+    if p.has_section("identity"):
+        for (host, up) in p.items("identity"):
+            parts = up.split(":", 1)
             if len(parts) != 2:
-                _log.error("Illegal entry in [identity] section: {section}",
-                           section=up)
+                _log.error("Illegal entry in [identity] section: {section}", section=up)
                 continue
             c.identities[host] = parts
 
-    if p.has_section('addresses'):
-        if p.has_option('addresses', 'smarthost'):
-            c.smarthost = p.get('addresses', 'smarthost')
-        if p.has_option('addresses', 'default_domain'):
-            c.domain = p.get('addresses', 'default_domain')
+    if p.has_section("addresses"):
+        if p.has_option("addresses", "smarthost"):
+            c.smarthost = p.get("addresses", "smarthost")
+        if p.has_option("addresses", "default_domain"):
+            c.domain = p.get("addresses", "default_domain")
 
     return c
-
 
 
 def success(result):
     reactor.stop()
 
 
-
 failed = None
+
+
 def failure(f):
     global failed
     reactor.stop()
     failed = f
-
 
 
 def sendmail(host, options, ident):
@@ -324,24 +316,23 @@ def sendmail(host, options, ident):
     reactor.run()
 
 
-
 def senderror(failure, options):
     recipient = [options.sender]
     sender = '"Internally Generated Message ({})"<postmaster@{}>'.format(
-             sys.argv[0], smtp.DNSNAME.decode("ascii"))
-    error = NativeStringIO()
+        sys.argv[0], smtp.DNSNAME.decode("ascii")
+    )
+    error = StringIO()
     failure.printTraceback(file=error)
-    body = NativeStringIO(ERROR_FMT % error.getvalue())
-    d = smtp.sendmail('localhost', sender, recipient, body)
+    body = StringIO(ERROR_FMT % error.getvalue())
+    d = smtp.sendmail("localhost", sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
-
 
 
 def deny(conf):
     uid = os.getuid()
     gid = os.getgid()
 
-    if conf.useraccess == 'deny':
+    if conf.useraccess == "deny":
         if uid in conf.denyUIDs:
             return True
         if uid in conf.allowUIDs:
@@ -352,7 +343,7 @@ def deny(conf):
         if uid in conf.denyUIDs:
             return True
 
-    if conf.groupaccess == 'deny':
+    if conf.groupaccess == "deny":
         if gid in conf.denyGIDs:
             return True
         if gid in conf.allowGIDs:
@@ -364,7 +355,6 @@ def deny(conf):
             return True
 
     return not conf.defaultAccess
-
 
 
 def run():

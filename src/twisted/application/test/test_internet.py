@@ -20,11 +20,17 @@ from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.application import internet
 from twisted.application.internet import (
-    StreamServerEndpointService, TimerService, ClientService)
+    StreamServerEndpointService,
+    TimerService,
+    ClientService,
+)
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet.interfaces import (
-    IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort,
-    IHalfCloseableProtocol, IFileDescriptorReceiver
+    IStreamServerEndpoint,
+    IStreamClientEndpoint,
+    IListeningPort,
+    IHalfCloseableProtocol,
+    IFileDescriptorReceiver,
 )
 from twisted.internet import task
 from twisted.python.failure import Failure
@@ -39,9 +45,8 @@ def fakeTargetFunction():
     pass
 
 
-
 @implementer(IStreamServerEndpoint)
-class FakeServer(object):
+class FakeServer:
     """
     In-memory implementation of L{IStreamServerEndpoint}.
 
@@ -61,6 +66,7 @@ class FakeServer(object):
     @ivar failImmediately: If set, the exception to fail the L{Deferred}
         returned from C{listen} before it is returned.
     """
+
     result = None
     factory = None
     failImmediately = None
@@ -69,7 +75,6 @@ class FakeServer(object):
 
     def __init__(self):
         self.port = FakePort()
-
 
     def listen(self, factory):
         """
@@ -82,12 +87,10 @@ class FakeServer(object):
         """
         self.listenAttempts += 1
         self.factory = factory
-        self.result = Deferred(
-            canceller=lambda d: d.errback(self.cancelException))
+        self.result = Deferred(canceller=lambda d: d.errback(self.cancelException))
         if self.failImmediately is not None:
             self.result.errback(self.failImmediately)
         return self.result
-
 
     def startedListening(self):
         """
@@ -96,7 +99,6 @@ class FakeServer(object):
         C{listen}.
         """
         self.result.callback(self.port)
-
 
     def stoppedListening(self):
         """
@@ -107,17 +109,18 @@ class FakeServer(object):
         """
         self.port.deferred.callback(None)
 
+
 verifyClass(IStreamServerEndpoint, FakeServer)
 
 
-
 @implementer(IListeningPort)
-class FakePort(object):
+class FakePort:
     """
     Fake L{IListeningPort} implementation.
 
     @ivar deferred: The L{Deferred} returned by C{stopListening}.
     """
+
     deferred = None
 
     def stopListening(self):
@@ -129,20 +132,16 @@ class FakePort(object):
         self.deferred = Deferred()
         return self.deferred
 
-
     def getHost(self):
         # IListeningPort.getHost
         pass
-
 
     def startListening(self):
         # IListeningPort.startListening
         pass
 
 
-
 verifyClass(IStreamServerEndpoint, FakeServer)
-
 
 
 class EndpointServiceTests(TestCase):
@@ -159,7 +158,6 @@ class EndpointServiceTests(TestCase):
         self.factory = Factory()
         self.svc = StreamServerEndpointService(self.fakeServer, self.factory)
 
-
     def test_privilegedStartService(self):
         """
         L{StreamServerEndpointService.privilegedStartService} calls its
@@ -167,7 +165,6 @@ class EndpointServiceTests(TestCase):
         """
         self.svc.privilegedStartService()
         self.assertIdentical(self.factory, self.fakeServer.factory)
-
 
     def test_synchronousRaiseRaisesSynchronously(self, thunk=None):
         """
@@ -189,16 +186,13 @@ class EndpointServiceTests(TestCase):
         self.svc._raiseSynchronously = True
         self.assertRaises(ZeroDivisionError, thunk or self.svc.startService)
 
-
     def test_synchronousRaisePrivileged(self):
         """
         L{StreamServerEndpointService.privilegedStartService} should behave the
         same as C{startService} with respect to
         L{EndpointServiceTests.test_synchronousRaiseRaisesSynchronously}.
         """
-        self.test_synchronousRaiseRaisesSynchronously(
-            self.svc.privilegedStartService)
-
+        self.test_synchronousRaiseRaisesSynchronously(self.svc.privilegedStartService)
 
     def test_failReportsError(self):
         """
@@ -211,7 +205,6 @@ class EndpointServiceTests(TestCase):
         self.fakeServer.result.errback(ZeroDivisionError())
         logged = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(logged), 1)
-
 
     def test_asynchronousFailReportsError(self):
         """
@@ -227,7 +220,6 @@ class EndpointServiceTests(TestCase):
         logged = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(logged), 1)
 
-
     def test_synchronousFailReportsError(self):
         """
         Without the C{_raiseSynchronously} compatibility flag, failing
@@ -237,7 +229,6 @@ class EndpointServiceTests(TestCase):
         self.svc.startService()
         logged = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(logged), 1)
-
 
     def test_startServiceUnstarted(self):
         """
@@ -249,7 +240,6 @@ class EndpointServiceTests(TestCase):
         self.assertIdentical(self.factory, self.fakeServer.factory)
         self.assertEqual(self.svc.running, True)
 
-
     def test_startServiceStarted(self):
         """
         L{StreamServerEndpointService.startService} sets the C{running} flag,
@@ -259,7 +249,6 @@ class EndpointServiceTests(TestCase):
         self.svc.startService()
         self.assertEqual(self.fakeServer.listenAttempts, 1)
         self.assertEqual(self.svc.running, True)
-
 
     def test_stopService(self):
         """
@@ -279,7 +268,6 @@ class EndpointServiceTests(TestCase):
         self.assertEqual(len(l), 1)
         self.assertFalse(self.svc.running)
 
-
     def test_stopServiceBeforeStartFinished(self):
         """
         L{StreamServerEndpointService.stopService} cancels the L{Deferred}
@@ -292,7 +280,6 @@ class EndpointServiceTests(TestCase):
         result.addBoth(l.append)
         self.assertEqual(l, [None])
         self.assertEqual(self.flushLoggedErrors(CancelledError), [])
-
 
     def test_stopServiceCancelStartError(self):
         """
@@ -308,7 +295,6 @@ class EndpointServiceTests(TestCase):
         self.assertEqual(l, [None])
         stoppingErrors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(stoppingErrors), 1)
-
 
 
 class TimerServiceTests(TestCase):
@@ -333,7 +319,6 @@ class TimerServiceTests(TestCase):
         self.clock = self.timer.clock = task.Clock()
         self.deferred = Deferred()
 
-
     def call(self):
         """
         Function called by L{TimerService} being tested.
@@ -342,7 +327,6 @@ class TimerServiceTests(TestCase):
         @rtype: L{Deferred}
         """
         return self.deferred
-
 
     def test_startService(self):
         """
@@ -355,7 +339,6 @@ class TimerServiceTests(TestCase):
         self.assertIdentical(self.clock, self.timer._loop.clock)
         self.assertTrue(self.timer._loop.running, "LoopingCall is started")
 
-
     def test_startServiceRunsCallImmediately(self):
         """
         When L{TimerService.startService} is called, it calls the function
@@ -366,7 +349,6 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         self.assertEqual([None], result)
 
-
     def test_startServiceUsesGlobalReactor(self):
         """
         L{TimerService.startService} uses L{internet._maybeGlobalReactor} to
@@ -374,12 +356,13 @@ class TimerServiceTests(TestCase):
         uses the global reactor.
         """
         otherClock = task.Clock()
+
         def getOtherClock(maybeReactor):
             return otherClock
+
         self.patch(internet, "_maybeGlobalReactor", getOtherClock)
         self.timer.startService()
         self.assertIdentical(otherClock, self.timer._loop.clock)
-
 
     def test_stopServiceWaits(self):
         """
@@ -393,7 +376,6 @@ class TimerServiceTests(TestCase):
         self.deferred.callback(object())
         self.assertIdentical(self.successResultOf(d), None)
 
-
     def test_stopServiceImmediately(self):
         """
         When L{TimerService.stopService} is called while a call isn't in progress.
@@ -403,7 +385,6 @@ class TimerServiceTests(TestCase):
         self.deferred.callback(object())
         d = self.timer.stopService()
         self.assertIdentical(self.successResultOf(d), None)
-
 
     def test_failedCallLogsError(self):
         """
@@ -416,7 +397,6 @@ class TimerServiceTests(TestCase):
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
         self.assertIdentical(self.successResultOf(d), None)
-
 
     def test_pickleTimerServiceNotPickleLoop(self):
         """
@@ -433,7 +413,6 @@ class TimerServiceTests(TestCase):
         nothing = object()
         value = getattr(loadedTimer, "_loop", nothing)
         self.assertIdentical(nothing, value)
-
 
     def test_pickleTimerServiceNotPickleLoopFinished(self):
         """
@@ -452,8 +431,7 @@ class TimerServiceTests(TestCase):
         self.assertIdentical(nothing, value)
 
 
-
-class ConnectInformation(object):
+class ConnectInformation:
     """
     Information about C{endpointForTesting}
 
@@ -466,11 +444,11 @@ class ConnectInformation(object):
     @ivar passedFactories: a L{list} of L{IProtocolFactory}; the ones actually
         passed to the underlying endpoint / i.e. the reactor.
     """
+
     def __init__(self):
         self.connectQueue = []
         self.constructedProtocols = []
         self.passedFactories = []
-
 
 
 def endpointForTesting(fireImmediately=False):
@@ -484,11 +462,13 @@ def endpointForTesting(fireImmediately=False):
         L{ConnectInformation} describing the operations in progress on
         C{endpoint}.
     """
+
     @implementer(IStreamClientEndpoint)
-    class ClientTestEndpoint(object):
+    class ClientTestEndpoint:
         def connect(self, factory):
             result = Deferred()
             info.passedFactories.append(factory)
+
             @result.addCallback
             def createProtocol(ignored):
                 protocol = factory.buildProtocol(None)
@@ -496,13 +476,14 @@ def endpointForTesting(fireImmediately=False):
                 transport = StringTransport()
                 protocol.makeConnection(transport)
                 return protocol
+
             info.connectQueue.append(result)
             if fireImmediately:
                 result.callback(None)
             return result
+
     info = ConnectInformation()
     return info, ClientTestEndpoint()
-
 
 
 def catchLogs(testCase, logPublisher=globalLogPublisher):
@@ -523,16 +504,17 @@ def catchLogs(testCase, logPublisher=globalLogPublisher):
     return lambda: [formatEvent(event) for event in logs]
 
 
+AT_LEAST_ONE_ATTEMPT = 100.0
 
-AT_LEAST_ONE_ATTEMPT = 100.
 
 class ClientServiceTests(SynchronousTestCase):
     """
     Tests for L{ClientService}.
     """
 
-    def makeReconnector(self, fireImmediately=True, startService=True,
-                        protocolType=Protocol, **kw):
+    def makeReconnector(
+        self, fireImmediately=True, startService=True, protocolType=Protocol, **kw
+    ):
         """
         Create a L{ClientService} along with a L{ConnectInformation} indicating
         the connections in progress on its endpoint.
@@ -561,7 +543,7 @@ class ClientServiceTests(SynchronousTestCase):
         nkw = {}
         nkw.update(clock=Clock())
         nkw.update(kw)
-        clock = nkw['clock']
+        clock = nkw["clock"]
         cq, endpoint = endpointForTesting(fireImmediately=fireImmediately)
 
         # `endpointForTesting` is totally generic to any LLPI client that uses
@@ -572,16 +554,18 @@ class ClientServiceTests(SynchronousTestCase):
 
         applicationProtocols = cq.applicationProtocols = []
 
-        class RememberingFactory(Factory, object):
+        class RememberingFactory(Factory):
             protocol = protocolType
+
             def buildProtocol(self, addr):
-                result = super(RememberingFactory, self).buildProtocol(addr)
+                result = super().buildProtocol(addr)
                 applicationProtocols.append(result)
                 return result
 
         cq.applicationFactory = factory = RememberingFactory()
 
         service = ClientService(endpoint, factory, **nkw)
+
         def stop():
             service._protocol = None
             if service.running:
@@ -589,11 +573,11 @@ class ClientServiceTests(SynchronousTestCase):
             # Ensure that we don't leave any state in the reactor after
             # stopService.
             self.assertEqual(clock.getDelayedCalls(), [])
+
         self.addCleanup(stop)
         if startService:
             service.startService()
         return cq, service
-
 
     def test_startService(self):
         """
@@ -601,7 +585,6 @@ class ClientServiceTests(SynchronousTestCase):
         """
         cq, service = self.makeReconnector(fireImmediately=False)
         self.assertEqual(len(cq.connectQueue), 1)
-
 
     def test_startStopFactory(self):
         """
@@ -617,7 +600,6 @@ class ClientServiceTests(SynchronousTestCase):
         firstPassedFactory.doStart()
         self.assertEqual(firstAppFactory.numPorts, 1)
 
-
     def test_stopServiceWhileConnected(self):
         """
         When the service is stopped, no further connect attempts are made.  The
@@ -631,7 +613,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertEqual(protocol.transport.disconnecting, True)
         protocol.connectionLost(Failure(Exception()))
         self.successResultOf(d)
-
 
     def test_startServiceWaitsForDisconnect(self):
         """
@@ -648,7 +629,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertEqual(len(cq.constructedProtocols), 1)
         protocol.connectionLost(Failure(Exception()))
         self.assertEqual(len(cq.constructedProtocols), 2)
-
 
     def test_startServiceWhileStopping(self):
         """
@@ -672,11 +652,11 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(stopped)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
-        self.assertIdentical(self.successResultOf(nextProtocol),
-                             cq.applicationProtocols[1])
+        self.assertIdentical(
+            self.successResultOf(nextProtocol), cq.applicationProtocols[1]
+        )
         secondStopped = service.stopService()
         self.assertNoResult(secondStopped)
-
 
     def test_startServiceWhileStopped(self):
         """
@@ -691,9 +671,9 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(service.whenConnected(), CancelledError)
         service.startService()
         cq.connectQueue[-1].callback(None)
-        self.assertIdentical(cq.applicationProtocols[-1],
-                             self.successResultOf(service.whenConnected()))
-
+        self.assertIdentical(
+            cq.applicationProtocols[-1], self.successResultOf(service.whenConnected())
+        )
 
     def test_interfacesForTransport(self):
         """
@@ -703,16 +683,17 @@ class ClientServiceTests(SynchronousTestCase):
         those interfaces will be provided by the protocol objects passed on to
         the reactor.
         """
+
         @implementer(IHalfCloseableProtocol, IFileDescriptorReceiver)
-        class FancyProtocol(Protocol, object):
+        class FancyProtocol(Protocol):
             """
             Provider of various interfaces.
             """
+
         cq, service = self.makeReconnector(protocolType=FancyProtocol)
         reactorFacing = cq.constructedProtocols[0]
         self.assertTrue(IFileDescriptorReceiver.providedBy(reactorFacing))
         self.assertTrue(IHalfCloseableProtocol.providedBy(reactorFacing))
-
 
     def test_stopServiceWhileRetrying(self):
         """
@@ -727,7 +708,6 @@ class ClientServiceTests(SynchronousTestCase):
         cq.connectQueue[1].errback(Exception())
         self.successResultOf(d)
 
-
     def test_stopServiceWhileConnecting(self):
         """
         When the service is stopped while initially connecting, the connection
@@ -740,7 +720,6 @@ class ClientServiceTests(SynchronousTestCase):
         d = service.stopService()
         self.successResultOf(d)
 
-
     def test_clientConnected(self):
         """
         When a client connects, the service keeps a reference to the new
@@ -750,9 +729,9 @@ class ClientServiceTests(SynchronousTestCase):
         cq, service = self.makeReconnector(clock=clock)
         awaitingProtocol = service.whenConnected()
         self.assertEqual(clock.getDelayedCalls(), [])
-        self.assertIdentical(self.successResultOf(awaitingProtocol),
-                             cq.applicationProtocols[0])
-
+        self.assertIdentical(
+            self.successResultOf(awaitingProtocol), cq.applicationProtocols[0]
+        )
 
     def test_clientConnectionFailed(self):
         """
@@ -760,8 +739,7 @@ class ClientServiceTests(SynchronousTestCase):
         to the protocol and tries again after a timeout.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False,
-                                           clock=clock)
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].errback(Failure(Exception()))
         whenConnected = service.whenConnected()
@@ -771,7 +749,6 @@ class ClientServiceTests(SynchronousTestCase):
         whenConnected.addErrback(lambda ignored: ignored.trap(CancelledError))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
-
 
     def test_clientConnectionLost(self):
         """
@@ -783,15 +760,16 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertEqual(len(cq.connectQueue), 1)
         cq.connectQueue[0].callback(None)
         self.assertEqual(len(cq.connectQueue), 1)
-        self.assertIdentical(self.successResultOf(service.whenConnected()),
-                             cq.applicationProtocols[0])
+        self.assertIdentical(
+            self.successResultOf(service.whenConnected()), cq.applicationProtocols[0]
+        )
         cq.constructedProtocols[0].connectionLost(Failure(Exception()))
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         self.assertEqual(len(cq.connectQueue), 2)
         cq.connectQueue[1].callback(None)
-        self.assertIdentical(self.successResultOf(service.whenConnected()),
-                             cq.applicationProtocols[1])
-
+        self.assertIdentical(
+            self.successResultOf(service.whenConnected()), cq.applicationProtocols[1]
+        )
 
     def test_clientConnectionLostWhileStopping(self):
         """
@@ -806,15 +784,13 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(service.whenConnected(), CancelledError)
         self.assertTrue(d.called)
 
-
     def test_startTwice(self):
         """
         If L{ClientService} is started when it's already started, it will log a
         complaint and do nothing else (in particular it will not make
         additional connections).
         """
-        cq, service = self.makeReconnector(fireImmediately=False,
-                                           startService=False)
+        cq, service = self.makeReconnector(fireImmediately=False, startService=False)
         self.assertEqual(len(cq.connectQueue), 0)
         service.startService()
         self.assertEqual(len(cq.connectQueue), 1)
@@ -822,7 +798,6 @@ class ClientServiceTests(SynchronousTestCase):
         service.startService()
         self.assertEqual(len(cq.connectQueue), 1)
         self.assertIn("Duplicate ClientService.startService", messages()[0])
-
 
     def test_whenConnectedLater(self):
         """
@@ -844,7 +819,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(resultA, resultB)
         self.assertIdentical(resultA, resultC)
         self.assertIdentical(resultA, cq.applicationProtocols[0])
-
 
     def test_whenConnectedFails(self):
         """
@@ -884,7 +858,7 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(self.failureResultOf(a2, Exception), f2)
         self.assertNoResult(a3)
 
-        AT_LEAST_TWO_ATTEMPTS = AT_LEAST_ONE_ATTEMPT # close enough
+        AT_LEAST_TWO_ATTEMPTS = AT_LEAST_ONE_ATTEMPT  # close enough
         clock.advance(AT_LEAST_TWO_ATTEMPTS)
         self.assertEqual(len(cq.connectQueue), 3)
 
@@ -903,7 +877,6 @@ class ClientServiceTests(SynchronousTestCase):
         a4 = service.whenConnected(failAfterFailures=1)
         resultA4 = self.successResultOf(a4)
         self.assertIdentical(resultA0, resultA4)
-
 
     def test_whenConnectedStopService(self):
         """
@@ -924,7 +897,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.failureResultOf(b, CancelledError)
         self.failureResultOf(c, CancelledError)
 
-
     def test_retryCancelled(self):
         """
         When L{ClientService.stopService} is called while waiting between
@@ -938,7 +910,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertEqual(clock.getDelayedCalls(), [])
         self.successResultOf(d)
 
-
     def test_stopServiceBeforeStartService(self):
         """
         Calling L{ClientService.stopService} before
@@ -946,12 +917,11 @@ class ClientServiceTests(SynchronousTestCase):
         already fired with L{None}.
         """
         clock = Clock()
-        _, service = self.makeReconnector(fireImmediately=False,
-                                          startService=False,
-                                          clock=clock)
+        _, service = self.makeReconnector(
+            fireImmediately=False, startService=False, clock=clock
+        )
         d = service.stopService()
         self.assertIsNone(self.successResultOf(d))
-
 
     def test_whenConnectedErrbacksOnStopService(self):
         """
@@ -961,8 +931,7 @@ class ClientServiceTests(SynchronousTestCase):
         attempts.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False,
-                                           clock=clock)
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         beforeErrbackAndStop = service.whenConnected()
 
         # The protocol fails to connect, and the service is waiting to
@@ -972,11 +941,12 @@ class ClientServiceTests(SynchronousTestCase):
         service.stopService()
         afterErrbackAndStop = service.whenConnected()
 
-        self.assertIsInstance(self.failureResultOf(beforeErrbackAndStop).value,
-                              CancelledError)
-        self.assertIsInstance(self.failureResultOf(afterErrbackAndStop).value,
-                              CancelledError)
-
+        self.assertIsInstance(
+            self.failureResultOf(beforeErrbackAndStop).value, CancelledError
+        )
+        self.assertIsInstance(
+            self.failureResultOf(afterErrbackAndStop).value, CancelledError
+        )
 
     def test_stopServiceWhileDisconnecting(self):
         """
@@ -986,8 +956,7 @@ class ClientServiceTests(SynchronousTestCase):
         disconnection has completed.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False,
-                                           clock=clock)
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         # The protocol connects
         cq.connectQueue[0].callback(None)
 
@@ -1002,7 +971,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(firstStopDeferred)
         self.successResultOf(secondStopDeferred)
 
-
     def test_stopServiceWhileRestarting(self):
         """
         Calling L{ClientService.stopService} after calling a
@@ -1010,8 +978,7 @@ class ClientServiceTests(SynchronousTestCase):
         disconnection has completed.
         """
         clock = Clock()
-        cq, service = self.makeReconnector(fireImmediately=False,
-                                           clock=clock)
+        cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
         # The protocol connects
         cq.connectQueue[0].callback(None)
 
@@ -1028,21 +995,18 @@ class ClientServiceTests(SynchronousTestCase):
         self.successResultOf(firstStopDeferred)
         self.successResultOf(secondStopDeferred)
 
-
     def test_stopServiceOnStoppedService(self):
         """
         Calling L{ClientService.stopService} on a stopped service
         returns a L{Deferred} that has already fired with L{None}.
         """
         clock = Clock()
-        _, service = self.makeReconnector(fireImmediately=False,
-                                          clock=clock)
+        _, service = self.makeReconnector(fireImmediately=False, clock=clock)
         firstStopDeferred = service.stopService()
         secondStopDeferred = service.stopService()
 
         self.assertIsNone(self.successResultOf(firstStopDeferred))
         self.assertIsNone(self.successResultOf(secondStopDeferred))
-
 
     def test_prepareConnectionCalledWhenServiceStarts(self):
         """
@@ -1054,10 +1018,10 @@ class ClientServiceTests(SynchronousTestCase):
         def prepareConnection(_proto):
             prepares[0] += 1
 
-        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
-                                           startService=True)
+        cq, service = self.makeReconnector(
+            prepareConnection=prepareConnection, startService=True
+        )
         self.assertEqual(1, prepares[0])
-
 
     def test_prepareConnectionCalledWithProtocol(self):
         """
@@ -1074,7 +1038,6 @@ class ClientServiceTests(SynchronousTestCase):
         )
         self.assertIdentical(cq.constructedProtocols[0], newProtocols[0])
 
-
     def test_prepareConnectionCalledAfterConnectionMade(self):
         """
         The C{prepareConnection} callback is invoked only once a connection is
@@ -1086,18 +1049,17 @@ class ClientServiceTests(SynchronousTestCase):
             prepares[0] += 1
 
         clock = Clock()
-        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
-                                           fireImmediately=False,
-                                           clock=clock)
+        cq, service = self.makeReconnector(
+            prepareConnection=prepareConnection, fireImmediately=False, clock=clock
+        )
 
-        cq.connectQueue[0].errback(Exception('connection attempt failed'))
+        cq.connectQueue[0].errback(Exception("connection attempt failed"))
         self.assertEqual(0, prepares[0])  # Not called yet.
 
         clock.advance(AT_LEAST_ONE_ATTEMPT)
         cq.connectQueue[1].callback(None)
 
         self.assertEqual(1, prepares[0])  # Was called.
-
 
     def test_prepareConnectionCalledOnReconnect(self):
         """
@@ -1110,8 +1072,9 @@ class ClientServiceTests(SynchronousTestCase):
             prepares[0] += 1
 
         clock = Clock()
-        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
-                                           clock=clock)
+        cq, service = self.makeReconnector(
+            prepareConnection=prepareConnection, clock=clock
+        )
 
         self.assertEqual(1, prepares[0])  # Called once.
 
@@ -1120,7 +1083,6 @@ class ClientServiceTests(SynchronousTestCase):
         clock.advance(AT_LEAST_ONE_ATTEMPT)
 
         self.assertEqual(2, prepares[0])  # Called again.
-
 
     def test_prepareConnectionReturnValueIgnored(self):
         """
@@ -1141,7 +1103,6 @@ class ClientServiceTests(SynchronousTestCase):
         result = self.successResultOf(service.whenConnected())
         self.assertNotIdentical(sentinel, result)
 
-
     def test_prepareConnectionReturningADeferred(self):
         """
         The C{prepareConnection} callable returns a deferred and calls to
@@ -1161,9 +1122,9 @@ class ClientServiceTests(SynchronousTestCase):
 
         newProtocolDeferred.callback(None)
 
-        self.assertIdentical(cq.applicationProtocols[0],
-                             self.successResultOf(whenConnectedDeferred))
-
+        self.assertIdentical(
+            cq.applicationProtocols[0], self.successResultOf(whenConnectedDeferred)
+        )
 
     def test_prepareConnectionThrows(self):
         """
@@ -1175,8 +1136,9 @@ class ClientServiceTests(SynchronousTestCase):
         def prepareConnection(_proto):
             raise IndentationError()
 
-        cq, service = self.makeReconnector(prepareConnection=prepareConnection,
-                                           clock=clock)
+        cq, service = self.makeReconnector(
+            prepareConnection=prepareConnection, clock=clock
+        )
 
         whenConnectedDeferred = service.whenConnected(failAfterFailures=2)
         self.assertNoResult(whenConnectedDeferred)
@@ -1185,5 +1147,6 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertNoResult(whenConnectedDeferred)
 
         clock.advance(AT_LEAST_ONE_ATTEMPT)
-        self.assertIdentical(IndentationError,
-                             self.failureResultOf(whenConnectedDeferred).type)
+        self.assertIdentical(
+            IndentationError, self.failureResultOf(whenConnectedDeferred).type
+        )

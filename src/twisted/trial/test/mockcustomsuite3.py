@@ -11,6 +11,7 @@ See {twisted.trial.test.test_loader.LoaderTest.test_loadModuleWithBothCustom}.
 
 from twisted.trial import unittest, runner
 
+
 class Foo(unittest.SynchronousTestCase):
     def test_foo(self):
         pass

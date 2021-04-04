@@ -7,9 +7,8 @@ test_file_match = "process_test.log.*"
 test_file = "process_test.log.%d" % os.getpid()
 
 
-
 def main():
-    f = open(test_file, 'wb')
+    f = open(test_file, "wb")
 
     stdin = sys.stdin.buffer
     stderr = sys.stderr.buffer
@@ -41,5 +40,5 @@ def main():
     sys.exit(23)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

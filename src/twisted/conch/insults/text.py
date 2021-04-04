@@ -63,25 +63,25 @@ from twisted.python import _textattributes
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 
-
 flatten = _textattributes.flatten
 
 deprecatedModuleAttribute(
-    Version('Twisted', 13, 1, 0),
-    'Use twisted.conch.insults.text.assembleFormattedText instead.',
-    'twisted.conch.insults.text',
-    'flatten')
+    Version("Twisted", 13, 1, 0),
+    "Use twisted.conch.insults.text.assembleFormattedText instead.",
+    "twisted.conch.insults.text",
+    "flatten",
+)
 
 _TEXT_COLORS = {
-    'black': helper.BLACK,
-    'red': helper.RED,
-    'green': helper.GREEN,
-    'yellow': helper.YELLOW,
-    'blue': helper.BLUE,
-    'magenta': helper.MAGENTA,
-    'cyan': helper.CYAN,
-    'white': helper.WHITE}
-
+    "black": helper.BLACK,
+    "red": helper.RED,
+    "green": helper.GREEN,
+    "yellow": helper.YELLOW,
+    "blue": helper.BLUE,
+    "magenta": helper.MAGENTA,
+    "cyan": helper.CYAN,
+    "white": helper.WHITE,
+}
 
 
 class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
@@ -128,17 +128,20 @@ class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
     @ivar bg: Background colors accessed by attribute name, see above
         for possible names.
     """
+
     fg = _textattributes._ColorAttribute(
-        _textattributes._ForegroundColorAttr, _TEXT_COLORS)
+        _textattributes._ForegroundColorAttr, _TEXT_COLORS
+    )
     bg = _textattributes._ColorAttribute(
-        _textattributes._BackgroundColorAttr, _TEXT_COLORS)
+        _textattributes._BackgroundColorAttr, _TEXT_COLORS
+    )
 
     attrs = {
-        'bold': insults.BOLD,
-        'blink': insults.BLINK,
-        'underline': insults.UNDERLINE,
-        'reverseVideo': insults.REVERSE_VIDEO}
-
+        "bold": insults.BOLD,
+        "blink": insults.BLINK,
+        "underline": insults.UNDERLINE,
+        "reverseVideo": insults.REVERSE_VIDEO,
+    }
 
 
 def assembleFormattedText(formatted):
@@ -166,11 +169,9 @@ def assembleFormattedText(formatted):
     @see: L{twisted.conch.insults.text._CharacterAttributes}
     @since: 13.1
     """
-    return _textattributes.flatten(
-        formatted, helper._FormattingState(), 'toVT102')
-
+    return _textattributes.flatten(formatted, helper._FormattingState(), "toVT102")
 
 
 attributes = _CharacterAttributes()
 
-__all__ = ['attributes', 'flatten']
+__all__ = ["attributes", "flatten"]

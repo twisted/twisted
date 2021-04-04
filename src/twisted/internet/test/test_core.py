@@ -6,8 +6,6 @@ Tests for implementations of L{IReactorCore}.
 """
 
 
-__metaclass__ = type
-
 import signal
 import time
 import inspect
@@ -18,10 +16,11 @@ from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 
-class ObjectModelIntegrationMixin(object):
+class ObjectModelIntegrationMixin:
     """
     Helpers for tests about the object model of reactor-related objects.
     """
+
     def assertFullyNewStyle(self, instance):
         """
         Assert that the given object is an instance of a new-style class and
@@ -35,9 +34,8 @@ class ObjectModelIntegrationMixin(object):
         mro = inspect.getmro(type(instance))
         for subclass in mro:
             self.assertTrue(
-                issubclass(subclass, object),
-                "%r is not new-style" % (subclass,))
-
+                issubclass(subclass, object), f"{subclass!r} is not new-style"
+            )
 
 
 class ObjectModelIntegrationTests(ReactorBuilder, ObjectModelIntegrationMixin):
@@ -54,12 +52,12 @@ class ObjectModelIntegrationTests(ReactorBuilder, ObjectModelIntegrationMixin):
         self.assertFullyNewStyle(reactor)
 
 
-
 class SystemEventTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{IReactorCore.addSystemEventTrigger}
     and L{IReactorCore.fireSystemEvent}.
     """
+
     def test_stopWhenNotStarted(self):
         """
         C{reactor.stop()} raises L{RuntimeError} when called when the reactor
@@ -67,7 +65,6 @@ class SystemEventTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         self.assertRaises(RuntimeError, reactor.stop)
-
 
     def test_stopWhenAlreadyStopped(self):
         """
@@ -78,7 +75,6 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         self.assertRaises(RuntimeError, reactor.stop)
-
 
     def test_callWhenRunningOrder(self):
         """
@@ -93,7 +89,6 @@ class SystemEventTestsBuilder(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(events, ["first", "second"])
 
-
     def test_runningForStartupEvents(self):
         """
         The reactor is not running when C{"before"} C{"startup"} triggers are
@@ -102,24 +97,23 @@ class SystemEventTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         state = {}
+
         def beforeStartup():
-            state['before'] = reactor.running
+            state["before"] = reactor.running
+
         def duringStartup():
-            state['during'] = reactor.running
+            state["during"] = reactor.running
+
         def afterStartup():
-            state['after'] = reactor.running
+            state["after"] = reactor.running
+
         reactor.addSystemEventTrigger("before", "startup", beforeStartup)
         reactor.addSystemEventTrigger("during", "startup", duringStartup)
         reactor.addSystemEventTrigger("after", "startup", afterStartup)
         reactor.callWhenRunning(reactor.stop)
         self.assertEqual(state, {})
         self.runReactor(reactor)
-        self.assertEqual(
-            state,
-            {"before": False,
-             "during": True,
-             "after": True})
-
+        self.assertEqual(state, {"before": False, "during": True, "after": True})
 
     def test_signalHandlersInstalledDuringStartup(self):
         """
@@ -128,24 +122,28 @@ class SystemEventTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         phase = [None]
+
         def beforeStartup():
             phase[0] = "before"
+
         def afterStartup():
             phase[0] = "after"
+
         reactor.addSystemEventTrigger("before", "startup", beforeStartup)
         reactor.addSystemEventTrigger("after", "startup", afterStartup)
 
         sawPhase = []
+
         def fakeSignal(signum, action):
             sawPhase.append(phase[0])
-        self.patch(signal, 'signal', fakeSignal)
+
+        self.patch(signal, "signal", fakeSignal)
         reactor.callWhenRunning(reactor.stop)
         self.assertIsNone(phase[0])
         self.assertEqual(sawPhase, [])
         self.runReactor(reactor)
         self.assertIn("before", sawPhase)
         self.assertEqual(phase[0], "after")
-
 
     def test_stopShutDownEvents(self):
         """
@@ -155,20 +153,20 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         events = []
         reactor.addSystemEventTrigger(
-            "before", "shutdown",
-            lambda: events.append(("before", "shutdown")))
+            "before", "shutdown", lambda: events.append(("before", "shutdown"))
+        )
         reactor.addSystemEventTrigger(
-            "during", "shutdown",
-            lambda: events.append(("during", "shutdown")))
+            "during", "shutdown", lambda: events.append(("during", "shutdown"))
+        )
         reactor.addSystemEventTrigger(
-            "after", "shutdown",
-            lambda: events.append(("after", "shutdown")))
+            "after", "shutdown", lambda: events.append(("after", "shutdown"))
+        )
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
-        self.assertEqual(events, [("before", "shutdown"),
-                                   ("during", "shutdown"),
-                                   ("after", "shutdown")])
-
+        self.assertEqual(
+            events,
+            [("before", "shutdown"), ("during", "shutdown"), ("after", "shutdown")],
+        )
 
     def test_shutdownFiresTriggersAsynchronously(self):
         """
@@ -178,15 +176,17 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         events = []
         reactor.addSystemEventTrigger(
-            "before", "shutdown", events.append, "before shutdown")
+            "before", "shutdown", events.append, "before shutdown"
+        )
+
         def stopIt():
             reactor.stop()
             events.append("stopped")
+
         reactor.callWhenRunning(stopIt)
         self.assertEqual(events, [])
         self.runReactor(reactor)
         self.assertEqual(events, ["stopped", "before shutdown"])
-
 
     def test_shutdownDisconnectsCleanly(self):
         """
@@ -219,22 +219,22 @@ class SystemEventTestsBuilder(ReactorBuilder):
         self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
         self.assertTrue(lostOK[0])
 
-
     def test_multipleRun(self):
         """
         C{reactor.run()} raises L{ReactorAlreadyRunning} when called when
         the reactor is already running.
         """
         events = []
+
         def reentrantRun():
             self.assertRaises(ReactorAlreadyRunning, reactor.run)
             events.append("tested")
+
         reactor = self.buildReactor()
         reactor.callWhenRunning(reentrantRun)
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
         self.assertEqual(events, ["tested"])
-
 
     def test_runWithAsynchronousBeforeStartupTrigger(self):
         """
@@ -243,20 +243,22 @@ class SystemEventTestsBuilder(ReactorBuilder):
         return until after C{reactor.stop()} is called
         """
         events = []
+
         def trigger():
-            events.append('trigger')
+            events.append("trigger")
             d = Deferred()
             d.addCallback(callback)
             reactor.callLater(0, d.callback, None)
             return d
-        def callback(ignored):
-            events.append('callback')
-            reactor.stop()
-        reactor = self.buildReactor()
-        reactor.addSystemEventTrigger('before', 'startup', trigger)
-        self.runReactor(reactor)
-        self.assertEqual(events, ['trigger', 'callback'])
 
+        def callback(ignored):
+            events.append("callback")
+            reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.addSystemEventTrigger("before", "startup", trigger)
+        self.runReactor(reactor)
+        self.assertEqual(events, ["trigger", "callback"])
 
     def test_iterate(self):
         """
@@ -266,12 +268,11 @@ class SystemEventTestsBuilder(ReactorBuilder):
         t = reactor.callLater(5, reactor.crash)
 
         start = time.time()
-        reactor.iterate(0) # Shouldn't block
+        reactor.iterate(0)  # Shouldn't block
         elapsed = time.time() - start
 
         self.assertTrue(elapsed < 2)
         t.cancel()
-
 
     def test_crash(self):
         """
@@ -281,15 +282,14 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         events = []
         reactor.addSystemEventTrigger(
-            "before", "shutdown",
-            lambda: events.append(("before", "shutdown")))
+            "before", "shutdown", lambda: events.append(("before", "shutdown"))
+        )
         reactor.callWhenRunning(reactor.callLater, 0, reactor.crash)
         self.runReactor(reactor)
         self.assertFalse(reactor.running)
         self.assertFalse(
-            events,
-            "Shutdown triggers invoked but they should not have been.")
-
+            events, "Shutdown triggers invoked but they should not have been."
+        )
 
     def test_runAfterCrash(self):
         """
@@ -297,19 +297,22 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.crash()}.
         """
         events = []
+
         def crash():
-            events.append('crash')
+            events.append("crash")
             reactor.crash()
+
         reactor = self.buildReactor()
         reactor.callWhenRunning(crash)
         self.runReactor(reactor)
+
         def stop():
-            events.append(('stop', reactor.running))
+            events.append(("stop", reactor.running))
             reactor.stop()
+
         reactor.callWhenRunning(stop)
         self.runReactor(reactor)
-        self.assertEqual(events, ['crash', ('stop', True)])
-
+        self.assertEqual(events, ["crash", ("stop", True)])
 
     def test_runAfterStop(self):
         """
@@ -317,15 +320,16 @@ class SystemEventTestsBuilder(ReactorBuilder):
         the reactor is being run after getting stopped priorly.
         """
         events = []
+
         def restart():
             self.assertRaises(ReactorNotRestartable, reactor.run)
-            events.append('tested')
+            events.append("tested")
+
         reactor = self.buildReactor()
         reactor.callWhenRunning(reactor.stop)
-        reactor.addSystemEventTrigger('after', 'shutdown', restart)
+        reactor.addSystemEventTrigger("after", "shutdown", restart)
         self.runReactor(reactor)
-        self.assertEqual(events, ['tested'])
-
+        self.assertEqual(events, ["tested"])
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())

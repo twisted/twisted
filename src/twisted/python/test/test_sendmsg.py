@@ -26,7 +26,6 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
-from twisted.python.compat import intToBytes
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
@@ -34,6 +33,7 @@ from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
     from socket import MSG_DONTWAIT
+
     dontWaitSkip = False
 else:
     # It would be nice to be able to test flags on more platforms, but finding
@@ -52,11 +52,11 @@ else:
     importSkipReason = ""
 
 
-
-class _FDHolder(object):
+class _FDHolder:
     """
     A wrapper around a FD that will remember if it has been closed or not.
     """
+
     def __init__(self, fd):
         self._fd = fd
 
@@ -79,8 +79,7 @@ class _FDHolder(object):
         If C{self._fd} is unclosed, raise a warning.
         """
         if self._fd:
-            warnings.warn("FD %s was not closed!" % (self._fd,),
-                          ResourceWarning)
+            warnings.warn(f"FD {self._fd} was not closed!", ResourceWarning)
             self.close()
 
     def __enter__(self):
@@ -98,19 +97,17 @@ def _makePipe():
     return (_FDHolder(r), _FDHolder(w))
 
 
-
 class ExitedWithStderr(Exception):
     """
     A process exited with some stderr.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Dump the errors in a pretty way in the event of a subprocess traceback.
         """
-        result = b'\n'.join([b''] + list(self.args))
+        result = b"\n".join([b""] + list(self.args))
         return repr(result)
-
 
 
 class StartStopProcessProtocol(ProcessProtocol):
@@ -128,32 +125,27 @@ class StartStopProcessProtocol(ProcessProtocol):
 
     @ivar errors: A C{str} used to accumulate standard error.
     """
+
     def __init__(self):
         self.started = Deferred()
         self.stopped = Deferred()
-        self.output = b''
-        self.errors = b''
-
+        self.output = b""
+        self.errors = b""
 
     def connectionMade(self):
         self.started.callback(self.transport)
 
-
     def outReceived(self, data):
         self.output += data
 
-
     def errReceived(self, data):
         self.errors += data
-
 
     def processEnded(self, reason):
         if reason.check(ProcessDone):
             self.stopped.callback(self.output)
         else:
-            self.stopped.errback(ExitedWithStderr(
-                    self.errors, self.output))
-
+            self.stopped.errback(ExitedWithStderr(self.errors, self.output))
 
 
 def _spawn(script, outputFD):
@@ -168,20 +160,20 @@ def _spawn(script, outputFD):
     """
     pyExe = FilePath(sys.executable).asTextMode().path
     env = dict(os.environ)
-    env["PYTHONPATH"] = FilePath(
-        pathsep.join(sys.path)).asTextMode().path
+    env["PYTHONPATH"] = FilePath(pathsep.join(sys.path)).asTextMode().path
     sspp = StartStopProcessProtocol()
     reactor.spawnProcess(
-        sspp, pyExe, [
+        sspp,
+        pyExe,
+        [
             pyExe,
             FilePath(__file__).sibling(script + ".py").asTextMode().path,
-            intToBytes(outputFD),
+            b"%d" % (outputFD,),
         ],
         env=env,
-        childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD}
+        childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD},
     )
     return sspp
-
 
 
 @skipIf(doImportSkip, importSkipReason)
@@ -189,12 +181,12 @@ class SendmsgTests(TestCase):
     """
     Tests for the Python2/3 compatible L{sendmsg} interface.
     """
+
     def setUp(self):
         """
         Create a pair of UNIX sockets.
         """
         self.input, self.output = socketpair(AF_UNIX)
-
 
     def tearDown(self):
         """
@@ -202,7 +194,6 @@ class SendmsgTests(TestCase):
         """
         self.input.close()
         self.output.close()
-
 
     def test_syscallError(self):
         """
@@ -213,7 +204,6 @@ class SendmsgTests(TestCase):
         exc = self.assertRaises(error, sendmsg, self.input, b"hello, world")
         self.assertEqual(exc.args[0], errno.EBADF)
 
-
     def test_syscallErrorWithControlMessage(self):
         """
         The behavior when the underlying C{sendmsg} call fails is the same
@@ -221,24 +211,21 @@ class SendmsgTests(TestCase):
         """
         self.input.close()
         exc = self.assertRaises(
-            error, sendmsg, self.input, b"hello, world", [(0, 0, b"0123")], 0)
+            error, sendmsg, self.input, b"hello, world", [(0, 0, b"0123")], 0
+        )
         self.assertEqual(exc.args[0], errno.EBADF)
-
 
     def test_roundtrip(self):
         """
         L{recvmsg} will retrieve a message sent via L{sendmsg}.
         """
         message = b"hello, world!"
-        self.assertEqual(
-            len(message),
-            sendmsg(self.input, message))
+        self.assertEqual(len(message), sendmsg(self.input, message))
 
         result = recvmsg(self.output)
         self.assertEqual(result.data, b"hello, world!")
         self.assertEqual(result.flags, 0)
         self.assertEqual(result.ancillary, [])
-
 
     def test_shortsend(self):
         """
@@ -255,7 +242,6 @@ class SendmsgTests(TestCase):
         received = recvmsg(self.output, len(message))
         self.assertEqual(len(received[0]), sent)
 
-
     def test_roundtripEmptyAncillary(self):
         """
         L{sendmsg} treats an empty ancillary data list the same way it treats
@@ -266,9 +252,7 @@ class SendmsgTests(TestCase):
         result = recvmsg(self.output)
         self.assertEqual(result, (b"hello, world!", [], 0))
 
-
-    @skipIf(dontWaitSkip,
-            "MSG_DONTWAIT is only known to work as intended on Linux")
+    @skipIf(dontWaitSkip, "MSG_DONTWAIT is only known to work as intended on Linux")
     def test_flags(self):
         """
         The C{flags} argument to L{sendmsg} is passed on to the underlying
@@ -281,14 +265,14 @@ class SendmsgTests(TestCase):
         for i in range(8 * 1024):
             try:
                 sendmsg(self.input, b"x" * 1024, flags=MSG_DONTWAIT)
-            except error as e:
+            except OSError as e:
                 self.assertEqual(e.args[0], errno.EAGAIN)
                 break
         else:
             self.fail(
                 "Failed to fill up the send buffer, "
-                "or maybe send1msg blocked for a while")
-
+                "or maybe send1msg blocked for a while"
+            )
 
     @inlineCallbacks
     def test_sendSubProcessFD(self):
@@ -305,15 +289,15 @@ class SendmsgTests(TestCase):
 
         with pipeIn:
             sendmsg(
-                self.input, b"blonk",
-                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))])
+                self.input,
+                b"blonk",
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
+            )
 
         yield sspp.stopped
-        self.assertEqual(read(pipeOut.fileno(), 1024),
-                         b"Test fixture data: blonk.\n")
+        self.assertEqual(read(pipeOut.fileno(), 1024), b"Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), b"")
-
 
 
 @skipIf(doImportSkip, importSkipReason)
@@ -321,6 +305,7 @@ class GetSocketFamilyTests(TestCase):
     """
     Tests for L{getSocketFamily}.
     """
+
     def _socket(self, addressFamily):
         """
         Create a new socket using the given address family and return that
@@ -331,7 +316,6 @@ class GetSocketFamilyTests(TestCase):
         self.addCleanup(s.close)
         return s
 
-
     def test_inet(self):
         """
         When passed the file descriptor of a socket created with the C{AF_INET}
@@ -339,14 +323,12 @@ class GetSocketFamilyTests(TestCase):
         """
         self.assertEqual(AF_INET, getSocketFamily(self._socket(AF_INET)))
 
-
     def test_inet6(self):
         """
         When passed the file descriptor of a socket created with the
         C{AF_INET6} address family, L{getSocketFamily} returns C{AF_INET6}.
         """
         self.assertEqual(AF_INET6, getSocketFamily(self._socket(AF_INET6)))
-
 
     @skipIf(nonUNIXSkip, "Platform does not support AF_UNIX sockets")
     def test_unix(self):

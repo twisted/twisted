@@ -6,7 +6,8 @@
 Time zone utilities.
 """
 
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime as DateTime, timedelta as TimeDelta, tzinfo as TZInfo
+from typing import Optional
 
 __all__ = [
     "FixedOffsetTimeZone",
@@ -14,34 +15,31 @@ __all__ = [
 ]
 
 
-
-class FixedOffsetTimeZone(tzinfo):
+class FixedOffsetTimeZone(TZInfo):
     """
     Represents a fixed timezone offset (without daylight saving time).
 
     @ivar name: A L{str} giving the name of this timezone; the name just
         includes how much time this offset represents.
 
-    @ivar offset: A L{timedelta} giving the amount of time this timezone is
+    @ivar offset: A L{TimeDelta} giving the amount of time this timezone is
         offset.
     """
 
-    def __init__(self, offset, name=None):
+    def __init__(self, offset: TimeDelta, name: Optional[str] = None) -> None:
         """
         Construct a L{FixedOffsetTimeZone} with a fixed offset.
 
         @param offset: a delta representing the offset from UTC.
-        @type offset: L{timedelta}
-
         @param name: A name to be given for this timezone.
-        @type name: L{str} or L{None}
         """
         self.offset = offset
         self.name = name
 
-
     @classmethod
-    def fromSignHoursMinutes(cls, sign, hours, minutes):
+    def fromSignHoursMinutes(
+        cls, sign: str, hours: int, minutes: int
+    ) -> "FixedOffsetTimeZone":
         """
         Construct a L{FixedOffsetTimeZone} from an offset described by sign
         ('+' or '-'), hours, and minutes.
@@ -50,70 +48,53 @@ class FixedOffsetTimeZone(tzinfo):
 
         @param sign: A string describing the positive or negative-ness of the
             offset.
-
         @param hours: The number of hours in the offset.
-        @type hours: L{int}
-
         @param minutes: The number of minutes in the offset
-        @type minutes: L{int}
 
         @return: A time zone with the given offset, and a name describing the
             offset.
-        @rtype: L{FixedOffsetTimeZone}
         """
         name = "%s%02i:%02i" % (sign, hours, minutes)
         if sign == "-":
             hours = -hours
             minutes = -minutes
         elif sign != "+":
-            raise ValueError("Invalid sign for timezone %r" % (sign,))
-        return cls(timedelta(hours=hours, minutes=minutes), name)
-
+            raise ValueError(f"Invalid sign for timezone {sign!r}")
+        return cls(TimeDelta(hours=hours, minutes=minutes), name)
 
     @classmethod
-    def fromLocalTimeStamp(cls, timeStamp):
+    def fromLocalTimeStamp(cls, timeStamp: float) -> "FixedOffsetTimeZone":
         """
         Create a time zone with a fixed offset corresponding to a time stamp in
         the system's locally configured time zone.
-
-        @param timeStamp: a time stamp
-        @type timeStamp: L{int}
-
-        @return: a time zone
-        @rtype: L{FixedOffsetTimeZone}
         """
-        offset = (
-            datetime.fromtimestamp(timeStamp) -
-            datetime.utcfromtimestamp(timeStamp)
+        offset = DateTime.fromtimestamp(timeStamp) - DateTime.utcfromtimestamp(
+            timeStamp
         )
         return cls(offset)
 
-
-    def utcoffset(self, dt):
+    def utcoffset(self, dt: Optional[DateTime]) -> TimeDelta:
         """
-        Return this timezone's offset from UTC.
+        Return the given timezone's offset from UTC.
         """
         return self.offset
 
-
-    def dst(self, dt):
+    def dst(self, dt: Optional[DateTime]) -> TimeDelta:
         """
-        Return a zero C{datetime.timedelta} for the daylight saving time
+        Return a zero L{TimeDelta} for the daylight saving time
         offset, since there is never one.
         """
-        return timedelta(0)
+        return TimeDelta(0)
 
-
-    def tzname(self, dt):
+    def tzname(self, dt: Optional[DateTime]) -> str:
         """
         Return a string describing this timezone.
         """
         if self.name is not None:
             return self.name
         # XXX this is wrong; the tests are
-        dt = datetime.fromtimestamp(0, self)
+        dt = DateTime.fromtimestamp(0, self)
         return dt.strftime("UTC%z")
-
 
 
 UTC = FixedOffsetTimeZone.fromSignHoursMinutes("+", 0, 0)

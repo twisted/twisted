@@ -10,6 +10,8 @@ from twisted.python.deprecate import deprecatedModuleAttribute
 
 
 deprecatedModuleAttribute(
-    Version('Twisted', 17, 9, 0),
+    Version("Twisted", 17, 9, 0),
     "There is no replacement for this module.",
-    "twisted.protocols", "dict")
+    "twisted.protocols",
+    "dict",
+)

@@ -16,25 +16,19 @@ import unittest as pyunit
 
 
 class PyUnitTestTests(SynchronousTestCase):
-
     class PyUnitTest(pyunit.TestCase):
-
         def test_pass(self):
             pass
 
-
     def setUp(self):
-        self.original = self.PyUnitTest('test_pass')
+        self.original = self.PyUnitTest("test_pass")
         self.test = ITestCase(self.original)
-
 
     def test_callable(self):
         """
         Tests must be callable in order to be used with Python's unittest.py.
         """
-        self.assertTrue(callable(self.test),
-                        "%r is not callable." % (self.test,))
-
+        self.assertTrue(callable(self.test), f"{self.test!r} is not callable.")
 
 
 class PyUnitResultTests(SynchronousTestCase):
@@ -52,6 +46,7 @@ class PyUnitResultTests(SynchronousTestCase):
 
         @ivar ran: boolean indicating whether L{test_foo} has been run.
         """
+
         ran = False
 
         def test_foo(self):
@@ -59,16 +54,16 @@ class PyUnitResultTests(SynchronousTestCase):
             Set C{self.ran} to True and raise a C{ZeroDivisionError}
             """
             self.ran = True
-            1/0
-
+            1 / 0
 
     def test_dontUseAdapterWhenReporterProvidesIReporter(self):
         """
         The L{PyUnitResultAdapter} is only used when the result passed to
         C{run} does *not* provide L{IReporter}.
         """
+
         @implementer(IReporter)
-        class StubReporter(object):
+        class StubReporter:
             """
             A reporter which records data about calls made to it.
 
@@ -101,13 +96,14 @@ class PyUnitResultTests(SynchronousTestCase):
         test.run(result)
         self.assertIsInstance(result.errors[0], Failure)
 
-
     def test_success(self):
         class SuccessTest(SynchronousTestCase):
             ran = False
+
             def test_foo(s):
                 s.ran = True
-        test = SuccessTest('test_foo')
+
+        test = SuccessTest("test_foo")
         result = pyunit.TestResult()
         test.run(result)
 
@@ -118,10 +114,12 @@ class PyUnitResultTests(SynchronousTestCase):
     def test_failure(self):
         class FailureTest(SynchronousTestCase):
             ran = False
+
             def test_foo(s):
                 s.ran = True
-                s.fail('boom!')
-        test = FailureTest('test_foo')
+                s.fail("boom!")
+
+        test = FailureTest("test_foo")
         result = pyunit.TestResult()
         test.run(result)
 
@@ -131,7 +129,7 @@ class PyUnitResultTests(SynchronousTestCase):
         self.assertFalse(result.wasSuccessful())
 
     def test_error(self):
-        test = self.ErrorTest('test_foo')
+        test = self.ErrorTest("test_foo")
         result = pyunit.TestResult()
         test.run(result)
 
@@ -143,11 +141,14 @@ class PyUnitResultTests(SynchronousTestCase):
     def test_setUpError(self):
         class ErrorTest(SynchronousTestCase):
             ran = False
+
             def setUp(self):
-                1/0
+                1 / 0
+
             def test_foo(s):
                 s.ran = True
-        test = ErrorTest('test_foo')
+
+        test = ErrorTest("test_foo")
         result = pyunit.TestResult()
         test.run(result)
 
@@ -162,30 +163,33 @@ class PyUnitResultTests(SynchronousTestCase):
         information as if there were no adapter at all.
         """
         try:
-            1/0
+            1 / 0
         except ZeroDivisionError:
             exc_info = sys.exc_info()
             f = Failure()
         pyresult = pyunit.TestResult()
         result = PyUnitResultAdapter(pyresult)
         result.addError(self, f)
-        self.assertEqual(pyresult.errors[0][1],
-                         ''.join(traceback.format_exception(*exc_info)))
-
+        self.assertEqual(
+            pyresult.errors[0][1], "".join(traceback.format_exception(*exc_info))
+        )
 
     def test_traceback(self):
         """
         As test_tracebackFromFailure, but covering more code.
         """
+
         class ErrorTest(SynchronousTestCase):
             exc_info = None
+
             def test_foo(self):
                 try:
-                    1/0
+                    1 / 0
                 except ZeroDivisionError:
                     self.exc_info = sys.exc_info()
                     raise
-        test = ErrorTest('test_foo')
+
+        test = ErrorTest("test_foo")
         result = pyunit.TestResult()
         test.run(result)
 
@@ -196,12 +200,12 @@ class PyUnitResultTests(SynchronousTestCase):
         # So, we just test that the result's stack ends with the
         # exception's stack.
 
-        expected_stack = ''.join(traceback.format_tb(test.exc_info[2]))
-        observed_stack = '\n'.join(result.errors[0][1].splitlines()[:-1])
+        expected_stack = "".join(traceback.format_tb(test.exc_info[2]))
+        observed_stack = "\n".join(result.errors[0][1].splitlines()[:-1])
 
-        self.assertEqual(expected_stack.strip(),
-                         observed_stack[-len(expected_stack):].strip())
-
+        self.assertEqual(
+            expected_stack.strip(), observed_stack[-len(expected_stack) :].strip()
+        )
 
     def test_tracebackFromCleanFailure(self):
         """
@@ -210,7 +214,7 @@ class PyUnitResultTests(SynchronousTestCase):
         if the Failure that held the information has been cleaned.
         """
         try:
-            1/0
+            1 / 0
         except ZeroDivisionError:
             exc_info = sys.exc_info()
             f = Failure()
@@ -218,37 +222,38 @@ class PyUnitResultTests(SynchronousTestCase):
         pyresult = pyunit.TestResult()
         result = PyUnitResultAdapter(pyresult)
         result.addError(self, f)
-        self.assertEqual(pyresult.errors[0][1],
-                         ''.join(traceback.format_exception(*exc_info)))
-
+        self.assertEqual(
+            pyresult.errors[0][1], "".join(traceback.format_exception(*exc_info))
+        )
 
     def test_trialSkip(self):
         """
         Skips using trial's skipping functionality are reported as skips in
         the L{pyunit.TestResult}.
         """
+
         class SkipTest(SynchronousTestCase):
             @skipIf(True, "Let's skip!")
             def test_skip(self):
-                1/0
+                1 / 0
 
-        test = SkipTest('test_skip')
+        test = SkipTest("test_skip")
         result = pyunit.TestResult()
         test.run(result)
         self.assertEqual(result.skipped, [(test, "Let's skip!")])
-
 
     def test_pyunitSkip(self):
         """
         Skips using pyunit's skipping functionality are reported as skips in
         the L{pyunit.TestResult}.
         """
+
         class SkipTest(SynchronousTestCase):
             @pyunit.skip("skippy")
             def test_skip(self):
-                1/0
+                1 / 0
 
-        test = SkipTest('test_skip')
+        test = SkipTest("test_skip")
         result = pyunit.TestResult()
         test.run(result)
         self.assertEqual(result.skipped, [(test, "skippy")])

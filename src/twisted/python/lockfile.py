@@ -16,9 +16,9 @@ from time import time as _uniquefloat
 from twisted.python.runtime import platform
 
 
-
 def unique():
     return str(int(_uniquefloat() * 1000))
+
 
 from os import rename
 
@@ -27,6 +27,7 @@ if not platform.isWindows():
     from os import symlink
     from os import readlink
     from os import remove as rmlink
+
     _windows = False
 else:
     _windows = True
@@ -67,7 +68,6 @@ else:
     # For monkeypatching in tests
     _open = open
 
-
     # typing ignored due to:
     # https://github.com/python/typeshed/issues/4249
     def symlink(value, filename):  # type: ignore[misc]
@@ -76,13 +76,13 @@ else:
         above comment block as to why this is needed.
         """
         # XXX Implement an atomic thingamajig for win32
-        newlinkname = filename + "." + unique() + '.newlink'
+        newlinkname = filename + "." + unique() + ".newlink"
         newvalname = os.path.join(newlinkname, "symlink")
         os.mkdir(newlinkname)
 
         # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
         # (http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
-        mode = 'w'
+        mode = "w"
 
         with _open(newvalname, mode) as f:
             f.write(value)
@@ -90,11 +90,10 @@ else:
 
         try:
             rename(newlinkname, filename)
-        except:
+        except BaseException:
             os.remove(newvalname)
             os.rmdir(newlinkname)
             raise
-
 
     # typing ignored due to:
     # https://github.com/python/typeshed/issues/4249
@@ -104,8 +103,8 @@ else:
         this is needed.
         """
         try:
-            fObj = _open(os.path.join(filename, 'symlink'), 'r')
-        except IOError as e:
+            fObj = _open(os.path.join(filename, "symlink"), "r")
+        except OSError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
             raise
@@ -114,16 +113,14 @@ else:
                 result = fObj.read()
             return result
 
-
     # typing ignored due to:
     # https://github.com/python/typeshed/issues/4249
     def rmlink(filename):  # type: ignore[misc]
-        os.remove(os.path.join(filename, 'symlink'))
+        os.remove(os.path.join(filename, "symlink"))
         os.rmdir(filename)
 
 
-
-class FilesystemLock(object):
+class FilesystemLock:
     """
     A mutex.
 
@@ -148,7 +145,6 @@ class FilesystemLock(object):
     def __init__(self, name):
         self.name = name
 
-
     def lock(self):
         """
         Acquire this lock.
@@ -156,8 +152,8 @@ class FilesystemLock(object):
         @rtype: C{bool}
         @return: True if the lock is acquired, false otherwise.
 
-        @raise: Any exception os.symlink() may raise, other than
-        EEXIST.
+        @raise OSError: Any exception L{os.symlink()} may raise,
+            other than L{errno.EEXIST}.
         """
         clean = True
         while True:
@@ -172,7 +168,7 @@ class FilesystemLock(object):
                 if e.errno == errno.EEXIST:
                     try:
                         pid = readlink(self.name)
-                    except (IOError, OSError) as e:
+                    except OSError as e:
                         if e.errno == errno.ENOENT:
                             # The lock has vanished, try to claim it in the
                             # next iteration through the loop.
@@ -210,23 +206,20 @@ class FilesystemLock(object):
             self.clean = clean
             return True
 
-
     def unlock(self):
         """
         Release this lock.
 
         This deletes the directory with the given name.
 
-        @raise: Any exception os.readlink() may raise, or
-        ValueError if the lock is not owned by this process.
+        @raise OSError: Any exception L{os.readlink()} may raise.
+        @raise ValueError: If the lock is not owned by this process.
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError(
-                "Lock %r not owned by this process" % (self.name,))
+            raise ValueError(f"Lock {self.name!r} not owned by this process")
         rmlink(self.name)
         self.locked = False
-
 
 
 def isLocked(name):
@@ -249,5 +242,4 @@ def isLocked(name):
     return not result
 
 
-
-__all__ = ['FilesystemLock', 'isLocked']
+__all__ = ["FilesystemLock", "isLocked"]

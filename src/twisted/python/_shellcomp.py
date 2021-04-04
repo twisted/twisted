@@ -25,11 +25,15 @@ The main public documentation exists in the L{twisted.python.usage.Options}
 docstring, the L{twisted.python.usage.Completions} docstring, and the
 Options howto.
 """
-import itertools, getopt, inspect
+
+import getopt
+import inspect
+import itertools
+from types import MethodType
+from typing import Dict, List, Set
 
 from twisted.python import reflect, util, usage
-from twisted.python.compat import ioType, unicode
-
+from twisted.python.compat import ioType
 
 
 def shellComplete(config, cmdName, words, shellCompFile):
@@ -63,7 +67,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
 
     # If given a file with unicode semantics, such as sys.stdout on Python 3,
     # we must get at the the underlying buffer which has bytes semantics.
-    if shellCompFile and ioType(shellCompFile) == unicode:
+    if shellCompFile and ioType(shellCompFile) == str:
         shellCompFile = shellCompFile.buffer
 
     # shellName is provided for forward-compatibility. It is not used,
@@ -91,7 +95,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
             break
     words = words[:position]
 
-    subCommands = getattr(config, 'subCommands', None)
+    subCommands = getattr(config, "subCommands", None)
     if subCommands:
         # OK, this command supports sub-commands, so lets see if we have been
         # given one.
@@ -101,8 +105,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
         # sub-command was found.
         args = None
         try:
-            opts, args = getopt.getopt(words,
-                                       config.shortOpt, config.longOpt)
+            opts, args = getopt.getopt(words, config.shortOpt, config.longOpt)
         except getopt.error:
             pass
 
@@ -113,8 +116,9 @@ def shellComplete(config, cmdName, words, shellCompFile):
                     subOptions = parser()
                     subOptions.parent = config
 
-                    gen = ZshSubcommandBuilder(subOptions, config, cmdName,
-                                               shellCompFile)
+                    gen: ZshBuilder = ZshSubcommandBuilder(
+                        subOptions, config, cmdName, shellCompFile
+                    )
                     gen.write()
                     return
 
@@ -132,16 +136,14 @@ def shellComplete(config, cmdName, words, shellCompFile):
         gen.write()
 
 
-
 class SubcommandAction(usage.Completer):
     def _shellCode(self, optName, shellType):
         if shellType == usage._ZSH:
-            return '*::subcmd:->subcmd'
-        raise NotImplementedError("Unknown shellType %r" % (shellType,))
+            return "*::subcmd:->subcmd"
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
-
-class ZshBuilder(object):
+class ZshBuilder:
     """
     Constructs zsh code that will complete options for a given usage.Options
     instance, possibly including a list of subcommand names.
@@ -161,11 +163,11 @@ class ZshBuilder(object):
     @ivar file: The C{file} to write the completion function to.  The C{file}
         must have L{bytes} I/O semantics.
     """
+
     def __init__(self, options, cmdName, file):
         self.options = options
         self.cmdName = cmdName
         self.file = file
-
 
     def write(self, genSubs=True):
         """
@@ -178,20 +180,20 @@ class ZshBuilder(object):
             if the C{subCommands} attribute has been defined on the
             L{twisted.python.usage.Options} instance.
         """
-        if genSubs and getattr(self.options, 'subCommands', None) is not None:
+        if genSubs and getattr(self.options, "subCommands", None) is not None:
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.extraActions.insert(0, SubcommandAction())
             gen.write()
-            self.file.write(b'local _zsh_subcmds_array\n_zsh_subcmds_array=(\n')
+            self.file.write(b"local _zsh_subcmds_array\n_zsh_subcmds_array=(\n")
             for (cmd, short, parser, desc) in self.options.subCommands:
                 self.file.write(
-                    b'\"' + cmd.encode('utf-8') + b':' + desc.encode('utf-8') +b'\"\n')
+                    b'"' + cmd.encode("utf-8") + b":" + desc.encode("utf-8") + b'"\n'
+                )
             self.file.write(b")\n\n")
             self.file.write(b'_describe "sub-command" _zsh_subcmds_array\n')
         else:
             gen = ZshArgumentsGenerator(self.options, self.cmdName, self.file)
             gen.write()
-
 
 
 class ZshSubcommandBuilder(ZshBuilder):
@@ -204,10 +206,10 @@ class ZshSubcommandBuilder(ZshBuilder):
     @ivar subOptions: The L{twisted.python.usage.Options} instance defined for
         the sub command.
     """
+
     def __init__(self, subOptions, *args):
         self.subOptions = subOptions
         ZshBuilder.__init__(self, *args)
-
 
     def write(self):
         """
@@ -222,8 +224,7 @@ class ZshSubcommandBuilder(ZshBuilder):
         gen.write()
 
 
-
-class ZshArgumentsGenerator(object):
+class ZshArgumentsGenerator:
     """
     Generate a call to the zsh _arguments completion function
     based on data in a usage.Options instance
@@ -275,6 +276,7 @@ class ZshArgumentsGenerator(object):
         with any particular named option. That is, the arguments that are
         given to the parseArgs() method of your usage.Options subclass.
     """
+
     def __init__(self, options, cmdName, file):
         self.options = options
         self.cmdName = cmdName
@@ -287,7 +289,7 @@ class ZshArgumentsGenerator(object):
         self.extraActions = []
 
         for cls in reversed(inspect.getmro(options.__class__)):
-            data = getattr(cls, 'compData', None)
+            data = getattr(cls, "compData", None)
             if data:
                 self.descriptions.update(data.descriptions)
                 self.optActions.update(data.optActions)
@@ -303,11 +305,11 @@ class ZshArgumentsGenerator(object):
 
         aCL = reflect.accumulateClassList
 
-        optFlags = []
-        optParams = []
+        optFlags: List[List[object]] = []
+        optParams: List[List[object]] = []
 
-        aCL(options.__class__, 'optFlags', optFlags)
-        aCL(options.__class__, 'optParameters', optParams)
+        aCL(options.__class__, "optFlags", optFlags)
+        aCL(options.__class__, "optParameters", optParams)
 
         for i, optList in enumerate(optFlags):
             if len(optList) != 3:
@@ -316,7 +318,6 @@ class ZshArgumentsGenerator(object):
         for i, optList in enumerate(optParams):
             if len(optList) != 5:
                 optParams[i] = util.padTo(5, optList)
-
 
         self.optFlags = optFlags
         self.optParams = optParams
@@ -344,7 +345,6 @@ class ZshArgumentsGenerator(object):
 
         self.excludes = self.makeExcludesDict()
 
-
     def write(self):
         """
         Write the zsh completion code to the file given to __init__
@@ -355,16 +355,15 @@ class ZshArgumentsGenerator(object):
         self.writeOptions()
         self.writeFooter()
 
-
     def writeHeader(self):
         """
         This is the start of the code that calls _arguments
         @return: L{None}
         """
-        self.file.write(b'#compdef ' + self.cmdName.encode('utf-8') +
-                        b'\n\n'
-                        b'_arguments -s -A "-*" \\\n')
-
+        self.file.write(
+            b"#compdef " + self.cmdName.encode("utf-8") + b"\n\n"
+            b'_arguments -s -A "-*" \\\n'
+        )
 
     def writeOptions(self):
         """
@@ -376,7 +375,6 @@ class ZshArgumentsGenerator(object):
         for longname in optNames:
             self.writeOpt(longname)
 
-
     def writeExtras(self):
         """
         Write out completion information for extra arguments appearing on the
@@ -386,40 +384,40 @@ class ZshArgumentsGenerator(object):
 
         @return: L{None}
 
-        @raises: ValueError: if C{Completer} with C{repeat=True} is found and
+        @raise ValueError: If C{Completer} with C{repeat=True} is found and
             is not the last item in the C{extraActions} list.
         """
         for i, action in enumerate(self.extraActions):
             # a repeatable action must be the last action in the list
             if action._repeat and i != len(self.extraActions) - 1:
-                raise ValueError("Completer with repeat=True must be "
-                                 "last item in Options.extraActions")
-            self.file.write(
-                escape(action._shellCode('', usage._ZSH)).encode('utf-8'))
-            self.file.write(b' \\\n')
-
+                raise ValueError(
+                    "Completer with repeat=True must be "
+                    "last item in Options.extraActions"
+                )
+            self.file.write(escape(action._shellCode("", usage._ZSH)).encode("utf-8"))
+            self.file.write(b" \\\n")
 
     def writeFooter(self):
         """
         Write the last bit of code that finishes the call to _arguments
         @return: L{None}
         """
-        self.file.write(b'&& return 0\n')
-
+        self.file.write(b"&& return 0\n")
 
     def verifyZshNames(self):
         """
         Ensure that none of the option names given in the metadata are typoed
         @return: L{None}
-        @raise ValueError: Raised if unknown option names have been found.
+        @raise ValueError: If unknown option names have been found.
         """
-        def err(name):
-            raise ValueError("Unknown option name \"%s\" found while\n"
-                "examining Completions instances on %s" % (
-                    name, self.options))
 
-        for name in itertools.chain(self.descriptions, self.optActions,
-                                    self.multiUse):
+        def err(name):
+            raise ValueError(
+                'Unknown option name "%s" found while\n'
+                "examining Completions instances on %s" % (name, self.options)
+            )
+
+        for name in itertools.chain(self.descriptions, self.optActions, self.multiUse):
             if name not in self.allOptionsNameToDefinition:
                 err(name)
 
@@ -427,7 +425,6 @@ class ZshArgumentsGenerator(object):
             for name in seq:
                 if name not in self.allOptionsNameToDefinition:
                     err(name)
-
 
     def excludeStr(self, longname, buildShort=False):
         """
@@ -459,7 +456,7 @@ class ZshArgumentsGenerator(object):
                 exclusions.add(longname)
 
         if not exclusions:
-            return ''
+            return ""
 
         strings = []
         for optName in exclusions:
@@ -468,27 +465,26 @@ class ZshArgumentsGenerator(object):
                 strings.append("-" + optName)
             else:
                 strings.append("--" + optName)
-        strings.sort() # need deterministic order for reliable unit-tests
+        strings.sort()  # need deterministic order for reliable unit-tests
         return "(%s)" % " ".join(strings)
 
-
-    def makeExcludesDict(self):
+    def makeExcludesDict(self) -> Dict[str, Set[str]]:
         """
         @return: A C{dict} that maps each option name appearing in
-            self.mutuallyExclusive to a list of those option names that is it
+            self.mutuallyExclusive to a set of those option names that is it
             mutually exclusive with (can't appear on the cmd line with).
         """
 
-        #create a mapping of long option name -> single character name
+        # create a mapping of long option name -> single character name
         longToShort = {}
         for optList in itertools.chain(self.optParams, self.optFlags):
             if optList[1] != None:
                 longToShort[optList[0]] = optList[1]
 
-        excludes = {}
+        excludes: Dict[str, Set[str]] = {}
         for lst in self.mutuallyExclusive:
             for i, longname in enumerate(lst):
-                tmp = set(lst[:i] + lst[i+1:])
+                tmp = set(lst[:i] + lst[i + 1 :])
                 for name in tmp.copy():
                     if name in longToShort:
                         tmp.add(longToShort[name])
@@ -498,7 +494,6 @@ class ZshArgumentsGenerator(object):
                 else:
                     excludes[longname] = tmp
         return excludes
-
 
     def writeOpt(self, longname):
         """
@@ -520,32 +515,51 @@ class ZshArgumentsGenerator(object):
         if short != None:
             shortField = "-" + short
         else:
-            shortField = ''
+            shortField = ""
 
         descr = self.getDescription(longname)
-        descriptionField = descr.replace("[", "\[")
-        descriptionField = descriptionField.replace("]", "\]")
-        descriptionField = '[%s]' % descriptionField
+        descriptionField = descr.replace("[", r"\[")
+        descriptionField = descriptionField.replace("]", r"\]")
+        descriptionField = "[%s]" % descriptionField
 
         actionField = self.getAction(longname)
         if longname in self.multiUse:
-            multiField = '*'
+            multiField = "*"
         else:
-            multiField = ''
+            multiField = ""
 
         longExclusionsField = self.excludeStr(longname)
 
         if short:
-            #we have to write an extra line for the short option if we have one
+            # we have to write an extra line for the short option if we have one
             shortExclusionsField = self.excludeStr(longname, buildShort=True)
-            self.file.write(escape('%s%s%s%s%s' % (shortExclusionsField,
-                multiField, shortField, descriptionField, actionField)).encode('utf-8'))
-            self.file.write(b' \\\n')
+            self.file.write(
+                escape(
+                    "%s%s%s%s%s"
+                    % (
+                        shortExclusionsField,
+                        multiField,
+                        shortField,
+                        descriptionField,
+                        actionField,
+                    )
+                ).encode("utf-8")
+            )
+            self.file.write(b" \\\n")
 
-        self.file.write(escape('%s%s%s%s%s' % (longExclusionsField,
-            multiField, longField, descriptionField, actionField)).encode('utf-8'))
-        self.file.write(b' \\\n')
-
+        self.file.write(
+            escape(
+                "%s%s%s%s%s"
+                % (
+                    longExclusionsField,
+                    multiField,
+                    longField,
+                    descriptionField,
+                    actionField,
+                )
+            ).encode("utf-8")
+        )
+        self.file.write(b" \\\n")
 
     def getAction(self, longname):
         """
@@ -560,20 +574,19 @@ class ZshArgumentsGenerator(object):
             return action._shellCode(longname, usage._ZSH)
 
         if longname in self.paramNameToDefinition:
-            return ':%s:_files' % (longname,)
-        return ''
-
+            return f":{longname}:_files"
+        return ""
 
     def getDescription(self, longname):
         """
         Return the description to be used for this argument
         @return: C{str}
         """
-        #check if we have an alternate descr for this arg, and if so use it
+        # check if we have an alternate descr for this arg, and if so use it
         if longname in self.descriptions:
             return self.descriptions[longname]
 
-        #otherwise we have to get it from the optFlags or optParams
+        # otherwise we have to get it from the optFlags or optParams
         try:
             descr = self.flagNameToDefinition[longname][1]
         except KeyError:
@@ -586,15 +599,14 @@ class ZshArgumentsGenerator(object):
             return descr
 
         # let's try to get it from the opt_foo method doc string if there is one
-        longMangled = longname.replace('-', '_') # this is what t.p.usage does
-        obj = getattr(self.options, 'opt_%s' % longMangled, None)
+        longMangled = longname.replace("-", "_")  # this is what t.p.usage does
+        obj = getattr(self.options, "opt_%s" % longMangled, None)
         if obj is not None:
             descr = descrFromDoc(obj)
             if descr is not None:
                 return descr
 
-        return longname # we really ought to have a good description to use
-
+        return longname  # we really ought to have a good description to use
 
     def getShortOption(self, longname):
         """
@@ -604,15 +616,14 @@ class ZshArgumentsGenerator(object):
         optList = self.allOptionsNameToDefinition[longname]
         return optList[0] or None
 
-
-    def addAdditionalOptions(self):
+    def addAdditionalOptions(self) -> None:
         """
         Add additional options to the optFlags and optParams lists.
         These will be defined by 'opt_foo' methods of the Options subclass
         @return: L{None}
         """
-        methodsDict = {}
-        reflect.accumulateMethods(self.options, methodsDict, 'opt_')
+        methodsDict: Dict[str, MethodType] = {}
+        reflect.accumulateMethods(self.options, methodsDict, "opt_")
         methodToShort = {}
         for name in methodsDict.copy():
             if len(name) == 1:
@@ -620,7 +631,7 @@ class ZshArgumentsGenerator(object):
                 del methodsDict[name]
 
         for methodName, methodObj in methodsDict.items():
-            longname = methodName.replace('_', '-') # t.p.usage does this
+            longname = methodName.replace("_", "-")  # t.p.usage does this
             # if this option is already defined by the optFlags or
             # optParameters then we don't want to override that data
             if longname in self.allOptionsNameToDefinition:
@@ -645,7 +656,6 @@ class ZshArgumentsGenerator(object):
                 self.allOptionsNameToDefinition[longname] = [short, None, descr]
 
 
-
 def descrFromDoc(obj):
     """
     Generate an appropriate description from docstring of the given object
@@ -653,10 +663,8 @@ def descrFromDoc(obj):
     if obj.__doc__ is None or obj.__doc__.isspace():
         return None
 
-    lines = [x.strip() for x in obj.__doc__.split("\n")
-                             if x and not x.isspace()]
+    lines = [x.strip() for x in obj.__doc__.split("\n") if x and not x.isspace()]
     return " ".join(lines)
-
 
 
 def escape(x):
@@ -665,13 +673,12 @@ def escape(x):
 
     Implementation borrowed from now-deprecated commands.mkarg() in the stdlib
     """
-    if '\'' not in x:
-        return '\'' + x + '\''
+    if "'" not in x:
+        return "'" + x + "'"
     s = '"'
     for c in x:
         if c in '\\$"`':
-            s = s + '\\'
+            s = s + "\\"
         s = s + c
     s = s + '"'
     return s
-

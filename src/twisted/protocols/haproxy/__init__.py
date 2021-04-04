@@ -9,5 +9,5 @@ HAProxy PROXY protocol implementations.
 from ._wrapper import proxyEndpoint
 
 __all__ = [
-    'proxyEndpoint',
+    "proxyEndpoint",
 ]

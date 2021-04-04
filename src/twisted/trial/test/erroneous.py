@@ -20,8 +20,7 @@ class FoolishError(Exception):
     pass
 
 
-
-class FailureInSetUpMixin(object):
+class FailureInSetUpMixin:
     def setUp(self):
         raise FoolishError("I am a broken setUp method")
 
@@ -29,20 +28,15 @@ class FailureInSetUpMixin(object):
         pass
 
 
-
-class SynchronousTestFailureInSetUp(
-    FailureInSetUpMixin, unittest.SynchronousTestCase):
+class SynchronousTestFailureInSetUp(FailureInSetUpMixin, unittest.SynchronousTestCase):
     pass
 
 
-
-class AsynchronousTestFailureInSetUp(
-    FailureInSetUpMixin, unittest.TestCase):
+class AsynchronousTestFailureInSetUp(FailureInSetUpMixin, unittest.TestCase):
     pass
 
 
-
-class FailureInTearDownMixin(object):
+class FailureInTearDownMixin:
     def tearDown(self):
         raise FoolishError("I am a broken tearDown method")
 
@@ -50,28 +44,25 @@ class FailureInTearDownMixin(object):
         pass
 
 
-
 class SynchronousTestFailureInTearDown(
-    FailureInTearDownMixin, unittest.SynchronousTestCase):
+    FailureInTearDownMixin, unittest.SynchronousTestCase
+):
     pass
 
 
-
-class AsynchronousTestFailureInTearDown(
-    FailureInTearDownMixin, unittest.TestCase):
+class AsynchronousTestFailureInTearDown(FailureInTearDownMixin, unittest.TestCase):
     pass
 
 
-
-class FailureButTearDownRunsMixin(object):
+class FailureButTearDownRunsMixin:
     """
     A test fails, but its L{tearDown} still runs.
     """
+
     tornDown = False
 
     def tearDown(self):
         self.tornDown = True
-
 
     def test_fails(self):
         """
@@ -80,32 +71,27 @@ class FailureButTearDownRunsMixin(object):
         raise FoolishError("I am a broken test")
 
 
-
 class SynchronousTestFailureButTearDownRuns(
-        FailureButTearDownRunsMixin, unittest.SynchronousTestCase):
+    FailureButTearDownRunsMixin, unittest.SynchronousTestCase
+):
     pass
-
 
 
 class AsynchronousTestFailureButTearDownRuns(
-        FailureButTearDownRunsMixin, unittest.TestCase):
+    FailureButTearDownRunsMixin, unittest.TestCase
+):
     pass
 
 
-
 class TestRegularFail(unittest.SynchronousTestCase):
-
     def test_fail(self):
         self.fail("I fail")
-
 
     def test_subfail(self):
         self.subroutine()
 
-
     def subroutine(self):
         self.fail("I fail inside")
-
 
 
 class TestAsynchronousFail(unittest.TestCase):
@@ -122,10 +108,8 @@ class TestAsynchronousFail(unittest.TestCase):
         reactor.callLater(0, d.callback, None)
         return d
 
-
     def _later(self, res):
         self.fail("I fail later")
-
 
     def test_exception(self):
         """
@@ -134,13 +118,13 @@ class TestAsynchronousFail(unittest.TestCase):
         raise Exception("I fail")
 
 
-
 class ErrorTest(unittest.SynchronousTestCase):
     """
     A test case which has a L{test_foo} which will raise an error.
 
     @ivar ran: boolean indicating whether L{test_foo} has been run.
     """
+
     ran = False
 
     def test_foo(self):
@@ -148,14 +132,12 @@ class ErrorTest(unittest.SynchronousTestCase):
         Set C{self.ran} to True and raise a C{ZeroDivisionError}
         """
         self.ran = True
-        1/0
-
+        1 / 0
 
 
 @skipIf(True, "skipping this test")
 class TestSkipTestCase(unittest.SynchronousTestCase):
     pass
-
 
 
 class DelayedCall(unittest.TestCase):
@@ -179,22 +161,28 @@ class DelayedCall(unittest.TestCase):
         reactor.callLater(0, self.go)
         reactor.iterate(0.01)
         self.fail("Deliberate failure to mask the hidden exception")
-    testHiddenException.suppress = [util.suppress(  # type: ignore[attr-defined]  # noqa
-        message=r'reactor\.iterate cannot be used.*',
-        category=DeprecationWarning)]
+
+    testHiddenException.suppress = [  # type: ignore[attr-defined]
+        util.suppress(
+            message=r"reactor\.iterate cannot be used.*", category=DeprecationWarning
+        )
+    ]
 
 
 class ReactorCleanupTests(unittest.TestCase):
     def test_leftoverPendingCalls(self):
         def _():
-            print('foo!')
+            print("foo!")
+
         reactor.callLater(10000.0, _)
+
 
 class SocketOpenTest(unittest.TestCase):
     def test_socketsLeftOpen(self):
         f = protocol.Factory()
         f.protocol = protocol.Protocol
         reactor.listenTCP(0, f)
+
 
 class TimingOutDeferred(unittest.TestCase):
     def test_alpha(self):
@@ -215,4 +203,3 @@ def unexpectedException(self):
 
     >>> 1/0
     """
-

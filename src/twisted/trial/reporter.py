@@ -23,14 +23,12 @@ from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
-from twisted.python.compat import items
 from twisted.trial import itrial, util
 
 try:
     from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
-
 
 
 def _makeTodo(value):
@@ -46,8 +44,8 @@ def _makeTodo(value):
     @return: A L{Todo} object.
     """
     from twisted.trial.unittest import makeTodo
-    return makeTodo(value)
 
+    return makeTodo(value)
 
 
 class BrokenTestCaseWarning(Warning):
@@ -56,8 +54,7 @@ class BrokenTestCaseWarning(Warning):
     """
 
 
-
-class SafeStream(object):
+class SafeStream:
     """
     Wraps a stream object so that all C{write} calls are wrapped in
     L{untilConcludes<twisted.python.util.untilConcludes>}.
@@ -66,18 +63,15 @@ class SafeStream(object):
     def __init__(self, original):
         self.original = original
 
-
     def __getattr__(self, name):
         return getattr(self.original, name)
-
 
     def write(self, *a, **kw):
         return untilConcludes(self.original.write, *a, **kw)
 
 
-
 @implementer(itrial.IReporter)
-class TestResult(pyunit.TestResult, object):
+class TestResult(pyunit.TestResult):
     """
     Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
 
@@ -86,28 +80,29 @@ class TestResult(pyunit.TestResult, object):
     """
 
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
-    _DEFAULT_TODO = 'Test expected to fail'
+    _DEFAULT_TODO = "Test expected to fail"
 
     def __init__(self):
-        super(TestResult, self).__init__()
+        super().__init__()
         self.skips = []
         self.expectedFailures = []
         self.unexpectedSuccesses = []
         self.successes = 0
         self._timings = []
 
-
-    def __repr__(self):
-        return ('<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>'
-                % (reflect.qual(self.__class__), self.testsRun,
-                   len(self.errors), len(self.failures),
-                   len(self.expectedFailures), len(self.skips),
-                   len(self.unexpectedSuccesses)))
-
+    def __repr__(self) -> str:
+        return "<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>" % (
+            reflect.qual(self.__class__),
+            self.testsRun,
+            len(self.errors),
+            len(self.failures),
+            len(self.expectedFailures),
+            len(self.skips),
+            len(self.unexpectedSuccesses),
+        )
 
     def _getTime(self):
         return time.time()
-
 
     def _getFailure(self, error):
         """
@@ -117,16 +112,14 @@ class TestResult(pyunit.TestResult, object):
             return Failure(error[1], error[0], error[2])
         return error
 
-
     def startTest(self, test):
         """
         This must be called before the given test is commenced.
 
         @type test: L{pyunit.TestCase}
         """
-        super(TestResult, self).startTest(test)
+        super().startTest(test)
         self._testStarted = self._getTime()
-
 
     def stopTest(self, test):
         """
@@ -134,9 +127,8 @@ class TestResult(pyunit.TestResult, object):
 
         @type test: L{pyunit.TestCase}
         """
-        super(TestResult, self).stopTest(test)
+        super().stopTest(test)
         self._lastTime = self._getTime() - self._testStarted
-
 
     def addFailure(self, test, fail):
         """
@@ -147,7 +139,6 @@ class TestResult(pyunit.TestResult, object):
         """
         self.failures.append((test, self._getFailure(fail)))
 
-
     def addError(self, test, error):
         """
         Report an error that occurred while running the given test.
@@ -156,7 +147,6 @@ class TestResult(pyunit.TestResult, object):
         @type error: L{Failure} or L{tuple}
         """
         self.errors.append((test, self._getFailure(error)))
-
 
     def addSkip(self, test, reason):
         """
@@ -170,7 +160,6 @@ class TestResult(pyunit.TestResult, object):
         @type reason: L{str}
         """
         self.skips.append((test, reason))
-
 
     def addUnexpectedSuccess(self, test, todo=None):
         """
@@ -188,7 +177,6 @@ class TestResult(pyunit.TestResult, object):
             todo = _makeTodo(self._DEFAULT_TODO)
         self.unexpectedSuccesses.append((test, todo))
 
-
     def addExpectedFailure(self, test, error, todo=None):
         """
         Report that the given test failed, and was expected to do so.
@@ -205,7 +193,6 @@ class TestResult(pyunit.TestResult, object):
             todo = _makeTodo(self._DEFAULT_TODO)
         self.expectedFailures.append((test, error, todo))
 
-
     def addSuccess(self, test):
         """
         Report that the given test succeeded.
@@ -213,7 +200,6 @@ class TestResult(pyunit.TestResult, object):
         @type test: L{pyunit.TestCase}
         """
         self.successes += 1
-
 
     def wasSuccessful(self):
         """
@@ -229,24 +215,22 @@ class TestResult(pyunit.TestResult, object):
         """
         return len(self.failures) == len(self.errors) == 0
 
-
     def done(self):
         """
         The test suite has finished running.
         """
 
 
-
 @implementer(itrial.IReporter)
-class TestResultDecorator(proxyForInterface(itrial.IReporter,  # type: ignore[misc]  # noqa
-                                            "_originalReporter")):
+class TestResultDecorator(
+    proxyForInterface(itrial.IReporter, "_originalReporter")  # type: ignore[misc]
+):
     """
     Base class for TestResult decorators.
 
     @ivar _originalReporter: The wrapped instance of reporter.
     @type _originalReporter: A provider of L{itrial.IReporter}
     """
-
 
 
 @implementer(itrial.IReporter)
@@ -262,12 +246,10 @@ class UncleanWarningsReporterWrapper(TestResultDecorator):
         reporting it as a normal error, throw a warning.
         """
 
-        if (isinstance(error, Failure)
-            and error.check(util.DirtyReactorAggregateError)):
+        if isinstance(error, Failure) and error.check(util.DirtyReactorAggregateError):
             warnings.warn(error.getErrorMessage())
         else:
             self._originalReporter.addError(test, error)
-
 
 
 @implementer(itrial.IReporter)
@@ -281,11 +263,9 @@ class _ExitWrapper(TestResultDecorator):
         self.shouldStop = True
         return self._originalReporter.addError(*args, **kwargs)
 
-
     def addFailure(self, *args, **kwargs):
         self.shouldStop = True
         return self._originalReporter.addFailure(*args, **kwargs)
-
 
 
 class _AdaptedReporter(TestResultDecorator):
@@ -304,7 +284,6 @@ class _AdaptedReporter(TestResultDecorator):
         TestResultDecorator.__init__(self, original)
         self.testAdapter = testAdapter
 
-
     def addError(self, test, error):
         """
         See L{itrial.IReporter}.
@@ -312,13 +291,12 @@ class _AdaptedReporter(TestResultDecorator):
         test = self.testAdapter(test)
         return self._originalReporter.addError(test, error)
 
-
     def addExpectedFailure(self, test, failure, todo=None):
         """
         See L{itrial.IReporter}.
 
         @type test: A L{pyunit.TestCase}.
-        @type failure: A L{failure.Failure} or L{exceptions.AssertionError}
+        @type failure: A L{failure.Failure} or L{AssertionError}
         @type todo: A L{unittest.Todo} or None
 
         When C{todo} is L{None} a generic C{unittest.Todo} is built.
@@ -327,8 +305,8 @@ class _AdaptedReporter(TestResultDecorator):
         (without C{todo}).
         """
         return self._originalReporter.addExpectedFailure(
-            self.testAdapter(test), failure, todo)
-
+            self.testAdapter(test), failure, todo
+        )
 
     def addFailure(self, test, failure):
         """
@@ -337,14 +315,12 @@ class _AdaptedReporter(TestResultDecorator):
         test = self.testAdapter(test)
         return self._originalReporter.addFailure(test, failure)
 
-
     def addSkip(self, test, skip):
         """
         See L{itrial.IReporter}.
         """
         test = self.testAdapter(test)
         return self._originalReporter.addSkip(test, skip)
-
 
     def addUnexpectedSuccess(self, test, todo=None):
         """
@@ -361,20 +337,17 @@ class _AdaptedReporter(TestResultDecorator):
         test = self.testAdapter(test)
         return self._originalReporter.addUnexpectedSuccess(test, todo)
 
-
     def startTest(self, test):
         """
         See L{itrial.IReporter}.
         """
         return self._originalReporter.startTest(self.testAdapter(test))
 
-
     def stopTest(self, test):
         """
         See L{itrial.IReporter}.
         """
         return self._originalReporter.stopTest(self.testAdapter(test))
-
 
 
 @implementer(itrial.IReporter)
@@ -397,12 +370,13 @@ class Reporter(TestResult):
     @type _publisher: L{twisted.python.log.LogPublisher}
     """
 
-    _separator = '-' * 79
-    _doubleSeparator = '=' * 79
+    _separator = "-" * 79
+    _doubleSeparator = "=" * 79
 
-    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False,
-                 publisher=None):
-        super(Reporter, self).__init__()
+    def __init__(
+        self, stream=sys.stdout, tbformat="default", realtime=False, publisher=None
+    ):
+        super().__init__()
         self._stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
@@ -413,7 +387,6 @@ class Reporter(TestResult):
         self._publisher = publisher
         if publisher is not None:
             publisher.addObserver(self._observeWarnings)
-
 
     def _observeWarnings(self, event):
         """
@@ -426,14 +399,16 @@ class Reporter(TestResult):
             C{'warning'} key, a logged warning will be extracted from it and
             possibly written to C{self.stream}.
         """
-        if 'warning' in event:
-            key = (event['filename'], event['lineno'],
-                   event['category'].split('.')[-1],
-                   str(event['warning']))
+        if "warning" in event:
+            key = (
+                event["filename"],
+                event["lineno"],
+                event["category"].split(".")[-1],
+                str(event["warning"]),
+            )
             if key not in self._warningCache:
                 self._warningCache.add(key)
-                self._stream.write('%s:%s: %s: %s\n' % key)
-
+                self._stream.write("%s:%s: %s: %s\n" % key)
 
     def startTest(self, test):
         """
@@ -442,11 +417,10 @@ class Reporter(TestResult):
 
         @param test: L{ITestCase}
         """
-        super(Reporter, self).startTest(test)
+        super().startTest(test)
         if self._startTime is None:
             self._startTime = self._getTime()
         self._warningCache = set()
-
 
     def addFailure(self, test, fail):
         """
@@ -456,11 +430,10 @@ class Reporter(TestResult):
         @param test: L{ITestCase} that failed.
         @param fail: L{failure.Failure} containing the error.
         """
-        super(Reporter, self).addFailure(test, fail)
+        super().addFailure(test, fail)
         if self.realtime:
-            fail = self.failures[-1][1] # guarantee it's a Failure
+            fail = self.failures[-1][1]  # guarantee it's a Failure
             self._write(self._formatFailureTraceback(fail))
-
 
     def addError(self, test, error):
         """
@@ -471,27 +444,25 @@ class Reporter(TestResult):
         @param error: L{failure.Failure} containing the error.
         """
         error = self._getFailure(error)
-        super(Reporter, self).addError(test, error)
+        super().addError(test, error)
         if self.realtime:
-            error = self.errors[-1][1] # guarantee it's a Failure
+            error = self.errors[-1][1]  # guarantee it's a Failure
             self._write(self._formatFailureTraceback(error))
-
 
     def _write(self, format, *args):
         """
         Safely write to the reporter's stream.
 
         @param format: A format string to write.
-        @param *args: The arguments for the format string.
+        @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(''))
+        assert isinstance(s, type(""))
         if args:
             self._stream.write(s % args)
         else:
             self._stream.write(s)
         untilConcludes(self._stream.flush)
-
 
     def _writeln(self, format, *args):
         """
@@ -499,28 +470,32 @@ class Reporter(TestResult):
         the format string.
 
         @param format: A format string to write.
-        @param *args: The arguments for the format string.
+        @param args: The arguments for the format string.
         """
         self._write(format, *args)
-        self._write('\n')
-
+        self._write("\n")
 
     def upDownError(self, method, error, warn=True, printStatus=True):
-        super(Reporter, self).upDownError(method, error, warn, printStatus)
+        super().upDownError(method, error, warn, printStatus)
         if warn:
             tbStr = self._formatFailureTraceback(error)
             log.msg(tbStr)
-            msg = ("caught exception in %s, your TestCase is broken\n\n%s"
-                   % (method, tbStr))
+            msg = "caught exception in {}, your TestCase is broken\n\n{}".format(
+                method,
+                tbStr,
+            )
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
-
     def cleanupErrors(self, errs):
-        super(Reporter, self).cleanupErrors(errs)
-        warnings.warn("%s\n%s" % ("REACTOR UNCLEAN! traceback(s) follow: ",
-                                  self._formatFailureTraceback(errs)),
-                      BrokenTestCaseWarning)
-
+        super().cleanupErrors(errs)
+        warnings.warn(
+            "%s\n%s"
+            % (
+                "REACTOR UNCLEAN! traceback(s) follow: ",
+                self._formatFailureTraceback(errs),
+            ),
+            BrokenTestCaseWarning,
+        )
 
     def _trimFrames(self, frames):
         """
@@ -573,10 +548,8 @@ class Reporter(TestResult):
         secondMethod = newFrames[1][0]
         secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
 
-        syncCase = (("_run", "_synctest"),
-                    ("runWithWarningsSuppressed", "util"))
-        asyncCase = (("maybeDeferred", "defer"),
-                     ("runWithWarningsSuppressed", "utils"))
+        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
+        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
 
         twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
 
@@ -600,22 +573,21 @@ class Reporter(TestResult):
             return newFrames
 
         last = newFrames[-1]
-        if (last[0].startswith('fail')
-            and os.path.splitext(os.path.basename(last[1]))[0] == '_synctest'):
+        if (
+            last[0].startswith("fail")
+            and os.path.splitext(os.path.basename(last[1]))[0] == "_synctest"
+        ):
             newFrames = newFrames[:-1]
 
         return newFrames
 
-
     def _formatFailureTraceback(self, fail):
         if isinstance(fail, str):
-            return fail.rstrip() + '\n'
+            return fail.rstrip() + "\n"
         fail.frames, frames = self._trimFrames(fail.frames), fail.frames
-        result = fail.getTraceback(detail=self.tbformat,
-                                   elideFrameworkCode=True)
+        result = fail.getTraceback(detail=self.tbformat, elideFrameworkCode=True)
         fail.frames = frames
         return result
-
 
     def _groupResults(self, results, formatter):
         """
@@ -641,8 +613,7 @@ class Reporter(TestResult):
             outcome = content[1:]
             key = formatter(*outcome)
             groups.setdefault(key, []).append(case)
-        return items(groups)
-
+        return list(groups.items())
 
     def _printResults(self, flavor, errors, formatter):
         """
@@ -657,54 +628,53 @@ class Reporter(TestResult):
             self._writeln(self._doubleSeparator)
             self._writeln(flavor)
             self._write(reason)
-            self._writeln('')
+            self._writeln("")
             for case in cases:
                 self._writeln(case.id())
 
-
     def _printExpectedFailure(self, error, todo):
-        return 'Reason: %r\n%s' % (todo.reason,
-                                   self._formatFailureTraceback(error))
-
+        return "Reason: {!r}\n{}".format(
+            todo.reason, self._formatFailureTraceback(error)
+        )
 
     def _printUnexpectedSuccess(self, todo):
-        ret = 'Reason: %r\n' % (todo.reason,)
+        ret = f"Reason: {todo.reason!r}\n"
         if todo.errors:
-            ret += 'Expected errors: %s\n' % (', '.join(todo.errors),)
+            ret += "Expected errors: {}\n".format(", ".join(todo.errors))
         return ret
-
 
     def _printErrors(self):
         """
         Print all of the non-success results to the stream in full.
         """
-        self._write('\n')
-        self._printResults('[SKIPPED]', self.skips, lambda x: '%s\n' % x)
-        self._printResults('[TODO]', self.expectedFailures,
-                           self._printExpectedFailure)
-        self._printResults('[FAIL]', self.failures,
-                           self._formatFailureTraceback)
-        self._printResults('[ERROR]', self.errors,
-                           self._formatFailureTraceback)
-        self._printResults('[SUCCESS!?!]', self.unexpectedSuccesses,
-                           self._printUnexpectedSuccess)
-
+        self._write("\n")
+        self._printResults("[SKIPPED]", self.skips, lambda x: "%s\n" % x)
+        self._printResults("[TODO]", self.expectedFailures, self._printExpectedFailure)
+        self._printResults("[FAIL]", self.failures, self._formatFailureTraceback)
+        self._printResults("[ERROR]", self.errors, self._formatFailureTraceback)
+        self._printResults(
+            "[SUCCESS!?!]", self.unexpectedSuccesses, self._printUnexpectedSuccess
+        )
 
     def _getSummary(self):
         """
         Return a formatted count of tests status results.
         """
         summaries = []
-        for stat in ("skips", "expectedFailures", "failures", "errors",
-                     "unexpectedSuccesses"):
+        for stat in (
+            "skips",
+            "expectedFailures",
+            "failures",
+            "errors",
+            "unexpectedSuccesses",
+        ):
             num = len(getattr(self, stat))
             if num:
-                summaries.append('%s=%d' % (stat, num))
+                summaries.append("%s=%d" % (stat, num))
         if self.successes:
-            summaries.append('successes=%d' % (self.successes,))
-        summary = (summaries and ' (' + ', '.join(summaries) + ')') or ''
+            summaries.append("successes=%d" % (self.successes,))
+        summary = (summaries and " (" + ", ".join(summaries) + ")") or ""
         return summary
-
 
     def _printSummary(self):
         """
@@ -716,7 +686,6 @@ class Reporter(TestResult):
         else:
             status = "FAILED"
         self._write("%s%s\n", status, summary)
-
 
     def done(self):
         """
@@ -735,11 +704,11 @@ class Reporter(TestResult):
         self._printErrors()
         self._writeln(self._separator)
         if self._startTime is not None:
-            self._writeln('Ran %d tests in %.3fs', self.testsRun,
-                          time.time() - self._startTime)
-        self._write('\n')
+            self._writeln(
+                "Ran %d tests in %.3fs", self.testsRun, time.time() - self._startTime
+            )
+        self._write("\n")
         self._printSummary()
-
 
 
 class MinimalReporter(Reporter):
@@ -754,7 +723,6 @@ class MinimalReporter(Reporter):
         counts.
         """
 
-
     def _printSummary(self):
         """
         Print out a one-line summary of the form:
@@ -766,10 +734,15 @@ class MinimalReporter(Reporter):
             timing = self._getTime() - self._startTime
         else:
             timing = 0
-        t = (timing, numTests, numTests,
-             len(self.errors), len(self.failures), len(self.skips))
-        self._writeln(' '.join(map(str, t)))
-
+        t = (
+            timing,
+            numTests,
+            numTests,
+            len(self.errors),
+            len(self.failures),
+            len(self.skips),
+        )
+        self._writeln(" ".join(map(str, t)))
 
 
 class TextReporter(Reporter):
@@ -779,34 +752,28 @@ class TextReporter(Reporter):
     """
 
     def addSuccess(self, test):
-        super(TextReporter, self).addSuccess(test)
-        self._write('.')
-
+        super().addSuccess(test)
+        self._write(".")
 
     def addError(self, *args):
-        super(TextReporter, self).addError(*args)
-        self._write('E')
-
+        super().addError(*args)
+        self._write("E")
 
     def addFailure(self, *args):
-        super(TextReporter, self).addFailure(*args)
-        self._write('F')
-
+        super().addFailure(*args)
+        self._write("F")
 
     def addSkip(self, *args):
-        super(TextReporter, self).addSkip(*args)
-        self._write('S')
-
+        super().addSkip(*args)
+        self._write("S")
 
     def addExpectedFailure(self, *args):
-        super(TextReporter, self).addExpectedFailure(*args)
-        self._write('T')
-
+        super().addExpectedFailure(*args)
+        self._write("T")
 
     def addUnexpectedSuccess(self, *args):
-        super(TextReporter, self).addUnexpectedSuccess(*args)
-        self._write('!')
-
+        super().addUnexpectedSuccess(*args)
+        self._write("!")
 
 
 class VerboseTextReporter(Reporter):
@@ -820,44 +787,36 @@ class VerboseTextReporter(Reporter):
     # This is actually the bwverbose option
 
     def startTest(self, tm):
-        self._write('%s ... ', tm.id())
-        super(VerboseTextReporter, self).startTest(tm)
-
+        self._write("%s ... ", tm.id())
+        super().startTest(tm)
 
     def addSuccess(self, test):
-        super(VerboseTextReporter, self).addSuccess(test)
-        self._write('[OK]')
-
+        super().addSuccess(test)
+        self._write("[OK]")
 
     def addError(self, *args):
-        super(VerboseTextReporter, self).addError(*args)
-        self._write('[ERROR]')
-
+        super().addError(*args)
+        self._write("[ERROR]")
 
     def addFailure(self, *args):
-        super(VerboseTextReporter, self).addFailure(*args)
-        self._write('[FAILURE]')
-
+        super().addFailure(*args)
+        self._write("[FAILURE]")
 
     def addSkip(self, *args):
-        super(VerboseTextReporter, self).addSkip(*args)
-        self._write('[SKIPPED]')
-
+        super().addSkip(*args)
+        self._write("[SKIPPED]")
 
     def addExpectedFailure(self, *args):
-        super(VerboseTextReporter, self).addExpectedFailure(*args)
-        self._write('[TODO]')
-
+        super().addExpectedFailure(*args)
+        self._write("[TODO]")
 
     def addUnexpectedSuccess(self, *args):
-        super(VerboseTextReporter, self).addUnexpectedSuccess(*args)
-        self._write('[SUCCESS!?!]')
-
+        super().addUnexpectedSuccess(*args)
+        self._write("[SUCCESS!?!]")
 
     def stopTest(self, test):
-        super(VerboseTextReporter, self).stopTest(test)
-        self._write('\n')
-
+        super().stopTest(test)
+        self._write("\n")
 
 
 class TimingTextReporter(VerboseTextReporter):
@@ -871,24 +830,24 @@ class TimingTextReporter(VerboseTextReporter):
         Mark the test as stopped, and write the time it took to run the test
         to the stream.
         """
-        super(TimingTextReporter, self).stopTest(method)
+        super().stopTest(method)
         self._write("(%.03f secs)\n" % self._lastTime)
 
 
-
-class _AnsiColorizer(object):
+class _AnsiColorizer:
     """
     A colorizer is an object that loosely wraps around a stream, allowing
     callers to write text to the stream in a particular color.
 
     Colorizer classes must implement C{supported()} and C{write(text, color)}.
     """
-    _colors = dict(black=30, red=31, green=32, yellow=33,
-                   blue=34, magenta=35, cyan=36, white=37)
+
+    _colors = dict(
+        black=30, red=31, green=32, yellow=33, blue=34, magenta=35, cyan=36, white=37
+    )
 
     def __init__(self, stream):
         self.stream = stream
-
 
     @classmethod
     def supported(cls, stream=sys.stdout):
@@ -897,7 +856,7 @@ class _AnsiColorizer(object):
         coloring terminal output using this method. Returns False otherwise.
         """
         if not stream.isatty():
-            return False # auto color only on TTYs
+            return False  # auto color only on TTYs
         try:
             import curses
         except ImportError:
@@ -913,7 +872,6 @@ class _AnsiColorizer(object):
                 # guess false in case of error
                 return False
 
-
     def write(self, text, color):
         """
         Write the given text to the stream in the given color.
@@ -923,82 +881,89 @@ class _AnsiColorizer(object):
         @param color: A string label for a color. e.g. 'red', 'white'.
         """
         color = self._colors[color]
-        self.stream.write('\x1b[%s;1m%s\x1b[0m' % (color, text))
+        self.stream.write(f"\x1b[{color};1m{text}\x1b[0m")
 
 
-
-class _Win32Colorizer(object):
+class _Win32Colorizer:
     """
     See _AnsiColorizer docstring.
     """
+
     def __init__(self, stream):
-        from win32console import GetStdHandle, STD_OUTPUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
-        red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
-                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
+        from win32console import (
+            GetStdHandle,
+            STD_OUTPUT_HANDLE,
+            FOREGROUND_RED,
+            FOREGROUND_BLUE,
+            FOREGROUND_GREEN,
+            FOREGROUND_INTENSITY,
+        )
+
+        red, green, blue, bold = (
+            FOREGROUND_RED,
+            FOREGROUND_GREEN,
+            FOREGROUND_BLUE,
+            FOREGROUND_INTENSITY,
+        )
         self.stream = stream
         self.screenBuffer = GetStdHandle(STD_OUTPUT_HANDLE)
         self._colors = {
-            'normal': red | green | blue,
-            'red': red | bold,
-            'green': green | bold,
-            'blue': blue | bold,
-            'yellow': red | green | bold,
-            'magenta': red | blue | bold,
-            'cyan': green | blue | bold,
-            'white': red | green | blue | bold
-            }
-
+            "normal": red | green | blue,
+            "red": red | bold,
+            "green": green | bold,
+            "blue": blue | bold,
+            "yellow": red | green | bold,
+            "magenta": red | blue | bold,
+            "cyan": green | blue | bold,
+            "white": red | green | blue | bold,
+        }
 
     @classmethod
     def supported(cls, stream=sys.stdout):
         try:
             import win32console
-            screenBuffer = win32console.GetStdHandle(
-                win32console.STD_OUTPUT_HANDLE)
+
+            screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
         import pywintypes
+
         try:
             screenBuffer.SetConsoleTextAttribute(
-                win32console.FOREGROUND_RED |
-                win32console.FOREGROUND_GREEN |
-                win32console.FOREGROUND_BLUE)
+                win32console.FOREGROUND_RED
+                | win32console.FOREGROUND_GREEN
+                | win32console.FOREGROUND_BLUE
+            )
         except pywintypes.error:
             return False
         else:
             return True
 
-
     def write(self, text, color):
         color = self._colors[color]
         self.screenBuffer.SetConsoleTextAttribute(color)
         self.stream.write(text)
-        self.screenBuffer.SetConsoleTextAttribute(self._colors['normal'])
+        self.screenBuffer.SetConsoleTextAttribute(self._colors["normal"])
 
 
-
-class _NullColorizer(object):
+class _NullColorizer:
     """
     See _AnsiColorizer docstring.
     """
+
     def __init__(self, stream):
         self.stream = stream
-
 
     @classmethod
     def supported(cls, stream=sys.stdout):
         return True
 
-
     def write(self, text, color):
         self.stream.write(text)
 
 
-
 @implementer(itrial.IReporter)
-class SubunitReporter(object):
+class SubunitReporter:
     """
     Reports test output via Subunit.
 
@@ -1012,9 +977,9 @@ class SubunitReporter(object):
 
     testsRun = None
 
-
-    def __init__(self, stream=sys.stdout, tbformat='default',
-                 realtime=False, publisher=None):
+    def __init__(
+        self, stream=sys.stdout, tbformat="default", realtime=False, publisher=None
+    ):
         """
         Construct a L{SubunitReporter}.
 
@@ -1032,7 +997,6 @@ class SubunitReporter(object):
         self._subunit = TestProtocolClient(stream)
         self._successful = True
 
-
     def done(self):
         """
         Record that the entire test suite run is finished.
@@ -1042,7 +1006,6 @@ class SubunitReporter(object):
         """
         pass
 
-
     @property
     def shouldStop(self):
         """
@@ -1050,13 +1013,11 @@ class SubunitReporter(object):
         """
         return self._subunit.shouldStop
 
-
     def stop(self):
         """
         Signal that the test runner should stop running tests.
         """
         return self._subunit.stop()
-
 
     def wasSuccessful(self):
         """
@@ -1070,13 +1031,11 @@ class SubunitReporter(object):
         # simply forward it on.
         return self._successful
 
-
     def startTest(self, test):
         """
         Record that C{test} has started.
         """
         return self._subunit.startTest(test)
-
 
     def stopTest(self, test):
         """
@@ -1084,13 +1043,11 @@ class SubunitReporter(object):
         """
         return self._subunit.stopTest(test)
 
-
     def addSuccess(self, test):
         """
         Record that C{test} was successful.
         """
         return self._subunit.addSuccess(test)
-
 
     def addSkip(self, test, reason):
         """
@@ -1103,12 +1060,11 @@ class SubunitReporter(object):
         @param reason: The reason for it being skipped. The C{str()} of this
             object will be included in the subunit output stream.
         """
-        addSkip = getattr(self._subunit, 'addSkip', None)
+        addSkip = getattr(self._subunit, "addSkip", None)
         if addSkip is None:
             self.addSuccess(test)
         else:
             self._subunit.addSkip(test, reason)
-
 
     def addError(self, test, err):
         """
@@ -1118,9 +1074,7 @@ class SubunitReporter(object):
         L{SubunitReporter.wasSuccessful} to return C{False}.
         """
         self._successful = False
-        return self._subunit.addError(
-            test, util.excInfoOrFailureToExcInfo(err))
-
+        return self._subunit.addError(test, util.excInfoOrFailureToExcInfo(err))
 
     def addFailure(self, test, err):
         """
@@ -1130,9 +1084,7 @@ class SubunitReporter(object):
         L{SubunitReporter.wasSuccessful} to return C{False}.
         """
         self._successful = False
-        return self._subunit.addFailure(
-            test, util.excInfoOrFailureToExcInfo(err))
-
+        return self._subunit.addFailure(test, util.excInfoOrFailureToExcInfo(err))
 
     def addExpectedFailure(self, test, failure, todo=None):
         """
@@ -1142,12 +1094,11 @@ class SubunitReporter(object):
         record a success.
         """
         failure = util.excInfoOrFailureToExcInfo(failure)
-        addExpectedFailure = getattr(self._subunit, 'addExpectedFailure', None)
+        addExpectedFailure = getattr(self._subunit, "addExpectedFailure", None)
         if addExpectedFailure is None:
             self.addSuccess(test)
         else:
             addExpectedFailure(test, failure)
-
 
     def addUnexpectedSuccess(self, test, todo=None):
         """
@@ -1160,7 +1111,6 @@ class SubunitReporter(object):
         self.addSuccess(test)
 
 
-
 class TreeReporter(Reporter):
     """
     Print out the tests in the form a tree.
@@ -1169,25 +1119,24 @@ class TreeReporter(Reporter):
     Results are printed in ANSI color.
     """
 
-    currentLine = ''
-    indent = '  '
+    currentLine = ""
+    indent = "  "
     columns = 79
 
-    FAILURE = 'red'
-    ERROR = 'red'
-    TODO = 'blue'
-    SKIP = 'blue'
-    TODONE = 'red'
-    SUCCESS = 'green'
+    FAILURE = "red"
+    ERROR = "red"
+    TODO = "blue"
+    SKIP = "blue"
+    TODONE = "red"
+    SUCCESS = "green"
 
     def __init__(self, stream=sys.stdout, *args, **kwargs):
-        super(TreeReporter, self).__init__(stream, *args, **kwargs)
+        super().__init__(stream, *args, **kwargs)
         self._lastTest = []
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
             if colorizer.supported(stream):
                 self._colorizer = colorizer(stream)
                 break
-
 
     def getDescription(self, test):
         """
@@ -1196,45 +1145,37 @@ class TreeReporter(Reporter):
 
         e.g. getDescription(TestCase('test_foo')) ==> test_foo
         """
-        return test.id().split('.')[-1]
-
+        return test.id().split(".")[-1]
 
     def addSuccess(self, test):
-        super(TreeReporter, self).addSuccess(test)
-        self.endLine('[OK]', self.SUCCESS)
-
+        super().addSuccess(test)
+        self.endLine("[OK]", self.SUCCESS)
 
     def addError(self, *args):
-        super(TreeReporter, self).addError(*args)
-        self.endLine('[ERROR]', self.ERROR)
-
+        super().addError(*args)
+        self.endLine("[ERROR]", self.ERROR)
 
     def addFailure(self, *args):
-        super(TreeReporter, self).addFailure(*args)
-        self.endLine('[FAIL]', self.FAILURE)
-
+        super().addFailure(*args)
+        self.endLine("[FAIL]", self.FAILURE)
 
     def addSkip(self, *args):
-        super(TreeReporter, self).addSkip(*args)
-        self.endLine('[SKIPPED]', self.SKIP)
-
+        super().addSkip(*args)
+        self.endLine("[SKIPPED]", self.SKIP)
 
     def addExpectedFailure(self, *args):
-        super(TreeReporter, self).addExpectedFailure(*args)
-        self.endLine('[TODO]', self.TODO)
-
+        super().addExpectedFailure(*args)
+        self.endLine("[TODO]", self.TODO)
 
     def addUnexpectedSuccess(self, *args):
-        super(TreeReporter, self).addUnexpectedSuccess(*args)
-        self.endLine('[SUCCESS!?!]', self.TODONE)
-
+        super().addUnexpectedSuccess(*args)
+        self.endLine("[SUCCESS!?!]", self.TODONE)
 
     def _write(self, format, *args):
         if args:
             format = format % args
         self.currentLine = format
-        super(TreeReporter, self)._write(self.currentLine)
-
+        super()._write(self.currentLine)
 
     def _getPreludeSegments(self, testID):
         """
@@ -1242,14 +1183,13 @@ class TreeReporter(Reporter):
 
         Normally this is the module and class name.
         """
-        segments = testID.split('.')[:-1]
+        segments = testID.split(".")[:-1]
         if len(segments) == 0:
             return segments
         segments = [
-            seg for seg in ('.'.join(segments[:-1]), segments[-1])
-            if len(seg) > 0]
+            seg for seg in (".".join(segments[:-1]), segments[-1]) if len(seg) > 0
+        ]
         return segments
-
 
     def _testPrelude(self, testID):
         """
@@ -1263,25 +1203,22 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write('%s%s\n' % (self.indent * indentLevel, seg))
+                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
             else:
-                self._write('%s%s\n' % (self.indent * indentLevel, seg))
+                self._write("{}{}\n".format(self.indent * indentLevel, seg))
             indentLevel += 1
         self._lastTest = segments
 
-
     def cleanupErrors(self, errs):
-        self._colorizer.write('    cleanup errors', self.ERROR)
-        self.endLine('[ERROR]', self.ERROR)
-        super(TreeReporter, self).cleanupErrors(errs)
-
+        self._colorizer.write("    cleanup errors", self.ERROR)
+        self.endLine("[ERROR]", self.ERROR)
+        super().cleanupErrors(errs)
 
     def upDownError(self, method, error, warn, printStatus):
         self._colorizer.write("  %s" % method, self.ERROR)
         if printStatus:
-            self.endLine('[ERROR]', self.ERROR)
-        super(TreeReporter, self).upDownError(method, error, warn, printStatus)
-
+            self.endLine("[ERROR]", self.ERROR)
+        super().upDownError(method, error, warn, printStatus)
 
     def startTest(self, test):
         """
@@ -1289,10 +1226,11 @@ class TreeReporter(Reporter):
         a tree format.
         """
         self._testPrelude(test.id())
-        self._write('%s%s ... ' % (self.indent * (len(self._lastTest)),
-                                   self.getDescription(test)))
-        super(TreeReporter, self).startTest(test)
-
+        self._write(
+            "%s%s ... "
+            % (self.indent * (len(self._lastTest)), self.getDescription(test))
+        )
+        super().startTest(test)
 
     def endLine(self, message, color):
         """
@@ -1301,11 +1239,10 @@ class TreeReporter(Reporter):
         @param message: A string message, usually '[OK]' or something similar.
         @param color: A string color, 'red', 'green' and so forth.
         """
-        spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
-        super(TreeReporter, self)._write(spaces)
+        spaces = " " * (self.columns - len(self.currentLine) - len(message))
+        super()._write(spaces)
         self._colorizer.write(message, color)
-        super(TreeReporter, self)._write("\n")
-
+        super()._write("\n")
 
     def _printSummary(self):
         """

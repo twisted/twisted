@@ -20,6 +20,7 @@ class IRealm(Interface):
     The realm connects application-specific objects to the
     authentication system.
     """
+
     def requestAvatar(avatarId, mind, *interfaces):
         """
         Return avatar which provides one of the given interfaces.
@@ -42,7 +43,7 @@ class IRealm(Interface):
         """
 
 
-class Portal(object):
+class Portal:
     """
     A mediator between clients and a realm.
 
@@ -54,6 +55,7 @@ class Portal(object):
     This class is not intended to be subclassed.  Customization should be done
     in the realm object and in the credentials checker objects.
     """
+
     def __init__(self, realm, checkers=()):
         """
         Create a Portal to a L{IRealm}.
@@ -63,20 +65,17 @@ class Portal(object):
         for checker in checkers:
             self.registerChecker(checker)
 
-
     def listCredentialsInterfaces(self):
         """
         Return list of credentials interfaces that can be used to login.
         """
         return list(self.checkers.keys())
 
-
     def registerChecker(self, checker, *credentialInterfaces):
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
-
 
     def login(self, credentials, mind, *interfaces):
         """
@@ -115,9 +114,14 @@ class Portal(object):
         """
         for i in self.checkers:
             if i.providedBy(credentials):
-                return maybeDeferred(self.checkers[i].requestAvatarId, credentials
-                    ).addCallback(self.realm.requestAvatar, mind, *interfaces
-                    )
+                return maybeDeferred(
+                    self.checkers[i].requestAvatarId, credentials
+                ).addCallback(self.realm.requestAvatar, mind, *interfaces)
         ifac = providedBy(credentials)
-        return defer.fail(failure.Failure(error.UnhandledCredentials(
-            "No checker for %s" % ', '.join(map(reflect.qual, ifac)))))
+        return defer.fail(
+            failure.Failure(
+                error.UnhandledCredentials(
+                    "No checker for %s" % ", ".join(map(reflect.qual, ifac))
+                )
+            )
+        )

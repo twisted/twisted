@@ -7,13 +7,14 @@ This module contains interfaces defined for the L{twisted.conch} package.
 
 from zope.interface import Interface, Attribute
 
+
 class IConchUser(Interface):
     """
     A user who has been authenticated to Cred through Conch.  This is
     the interface between the SSH connection and the user.
     """
 
-    conn = Attribute('The SSHConnection object for this user.')
+    conn = Attribute("The SSHConnection object for this user.")
 
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
@@ -71,9 +72,7 @@ class IConchUser(Interface):
         """
 
 
-
 class ISession(Interface):
-
     def getPty(term, windowSize, modes):
         """
         Get a pseudo-terminal for use by a shell or command.
@@ -112,10 +111,8 @@ class ISession(Interface):
         """
 
 
-
 class EnvironmentVariableNotPermitted(ValueError):
     """Setting this environment variable in this session is not permitted."""
-
 
 
 class ISessionSetEnv(Interface):
@@ -146,7 +143,6 @@ class ISessionSetEnv(Interface):
         """
 
 
-
 class ISFTPServer(Interface):
     """
     SFTP subsystem for server-side communication.
@@ -159,8 +155,8 @@ class ISFTPServer(Interface):
         """
         The avatar returned by the Realm that we are authenticated with,
         and represents the logged-in user.
-        """)
-
+        """
+    )
 
     def gotVersion(otherVersion, extData):
         """
@@ -176,7 +172,6 @@ class ISFTPServer(Interface):
         by the server.
         """
         return {}
-
 
     def openFile(filename, flags, attrs):
         """
@@ -209,7 +204,6 @@ class ISFTPServer(Interface):
         with the object.
         """
 
-
     def removeFile(filename):
         """
         Remove the given file.
@@ -219,7 +213,6 @@ class ISFTPServer(Interface):
 
         @param filename: the name of the file as a string.
         """
-
 
     def renameFile(oldpath, newpath):
         """
@@ -233,7 +226,6 @@ class ISFTPServer(Interface):
         @param newpath: the new file name.
         """
 
-
     def makeDirectory(path, attrs):
         """
         Make a directory.
@@ -245,7 +237,6 @@ class ISFTPServer(Interface):
         @param attrs: a dictionary of attributes to create the directory with.
         Its meaning is the same as the attrs in the L{openFile} method.
         """
-
 
     def removeDirectory(path):
         """
@@ -259,7 +250,6 @@ class ISFTPServer(Interface):
 
         @param path: the directory to remove.
         """
-
 
     def openDirectory(path):
         """
@@ -292,7 +282,6 @@ class ISFTPServer(Interface):
         @param path: the directory to open.
         """
 
-
     def getAttrs(path, followLinks):
         """
         Return the attributes for the given path.
@@ -306,7 +295,6 @@ class ISFTPServer(Interface):
         return attributes for the specified path.
         """
 
-
     def setAttrs(path, attrs):
         """
         Set the attributes for the path.
@@ -319,7 +307,6 @@ class ISFTPServer(Interface):
         L{openFile}.
         """
 
-
     def readLink(path):
         """
         Find the root of a set of symbolic links.
@@ -329,7 +316,6 @@ class ISFTPServer(Interface):
 
         @param path: the path of the symlink to read.
         """
-
 
     def makeLink(linkPath, targetPath):
         """
@@ -342,7 +328,6 @@ class ISFTPServer(Interface):
         @param targetPath: the path of the target of the link as a string.
         """
 
-
     def realPath(path):
         """
         Convert any path to an absolute path.
@@ -352,7 +337,6 @@ class ISFTPServer(Interface):
 
         @param path: the path to convert as a string.
         """
-
 
     def extendedRequest(extendedName, extendedData):
         """
@@ -369,7 +353,6 @@ class ISFTPServer(Interface):
         @param extendedData: the data the other side sent with the request,
         as a string.
         """
-
 
 
 class IKnownHostEntry(Interface):
@@ -389,7 +372,6 @@ class IKnownHostEntry(Interface):
         @type key: L{twisted.conch.ssh.keys.Key}
         """
 
-
     def matchesHost(hostname):
         """
         Return True if this entry matches the given hostname, False otherwise.
@@ -402,7 +384,6 @@ class IKnownHostEntry(Interface):
         @type hostname: L{str}
         """
 
-
     def toString():
         """
 
@@ -411,7 +392,6 @@ class IKnownHostEntry(Interface):
 
         @rtype: L{str}
         """
-
 
 
 class ISFTPFile(Interface):
@@ -428,7 +408,6 @@ class ISFTPFile(Interface):
         Deferred that is called back when the close succeeds.
         """
 
-
     def readChunk(offset, length):
         """
         Read from the file.
@@ -444,7 +423,6 @@ class ISFTPFile(Interface):
         this should read the requested number (up to the end of the file).
         """
 
-
     def writeChunk(offset, data):
         """
         Write to the file.
@@ -456,7 +434,6 @@ class ISFTPFile(Interface):
         @param data: a string that is the data to write.
         """
 
-
     def getAttrs():
         """
         Return the attributes for the file.
@@ -464,7 +441,6 @@ class ISFTPFile(Interface):
         This method returns a dictionary in the same format as the attrs
         argument to L{openFile} or a L{Deferred} that is called back with same.
         """
-
 
     def setAttrs(attrs):
         """

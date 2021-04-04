@@ -16,7 +16,7 @@ from twisted.internet.interfaces import (
     IReactorUNIX,
     IAddress,
     IListeningPort,
-    IConnector
+    IConnector,
 )
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
@@ -24,20 +24,19 @@ from twisted.internet.testing import (
     StringTransport,
     MemoryReactor,
     RaisingMemoryReactor,
-    NonStreamingProducer
+    NonStreamingProducer,
 )
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.python.reflect import namedAny
-
 
 
 class StringTransportTests(TestCase):
     """
     Tests for L{twisted.internet.testing.StringTransport}.
     """
+
     def setUp(self):
         self.transport = StringTransport()
-
 
     def test_interfaces(self):
         """
@@ -47,7 +46,6 @@ class StringTransportTests(TestCase):
         self.assertTrue(verifyObject(ITransport, self.transport))
         self.assertTrue(verifyObject(IPushProducer, self.transport))
         self.assertTrue(verifyObject(IConsumer, self.transport))
-
 
     def test_registerProducer(self):
         """
@@ -60,7 +58,6 @@ class StringTransportTests(TestCase):
         self.assertIs(self.transport.producer, producer)
         self.assertIs(self.transport.streaming, streaming)
 
-
     def test_disallowedRegisterProducer(self):
         """
         L{StringTransport.registerProducer} raises L{RuntimeError} if a
@@ -69,10 +66,10 @@ class StringTransportTests(TestCase):
         producer = object()
         self.transport.registerProducer(producer, True)
         self.assertRaises(
-            RuntimeError, self.transport.registerProducer, object(), False)
+            RuntimeError, self.transport.registerProducer, object(), False
+        )
         self.assertIs(self.transport.producer, producer)
         self.assertTrue(self.transport.streaming)
-
 
     def test_unregisterProducer(self):
         """
@@ -89,7 +86,6 @@ class StringTransportTests(TestCase):
         self.assertIs(self.transport.producer, newProducer)
         self.assertTrue(self.transport.streaming)
 
-
     def test_invalidUnregisterProducer(self):
         """
         L{StringTransport.unregisterProducer} raises L{RuntimeError} if called
@@ -97,13 +93,11 @@ class StringTransportTests(TestCase):
         """
         self.assertRaises(RuntimeError, self.transport.unregisterProducer)
 
-
     def test_initialProducerState(self):
         """
         L{StringTransport.producerState} is initially C{'producing'}.
         """
-        self.assertEqual(self.transport.producerState, 'producing')
-
+        self.assertEqual(self.transport.producerState, "producing")
 
     def test_pauseProducing(self):
         """
@@ -111,8 +105,7 @@ class StringTransportTests(TestCase):
         transport to C{'paused'}.
         """
         self.transport.pauseProducing()
-        self.assertEqual(self.transport.producerState, 'paused')
-
+        self.assertEqual(self.transport.producerState, "paused")
 
     def test_resumeProducing(self):
         """
@@ -121,8 +114,7 @@ class StringTransportTests(TestCase):
         """
         self.transport.pauseProducing()
         self.transport.resumeProducing()
-        self.assertEqual(self.transport.producerState, 'producing')
-
+        self.assertEqual(self.transport.producerState, "producing")
 
     def test_stopProducing(self):
         """
@@ -130,8 +122,7 @@ class StringTransportTests(TestCase):
         transport to C{'stopped'}.
         """
         self.transport.stopProducing()
-        self.assertEqual(self.transport.producerState, 'stopped')
-
+        self.assertEqual(self.transport.producerState, "stopped")
 
     def test_stoppedTransportCannotPause(self):
         """
@@ -141,7 +132,6 @@ class StringTransportTests(TestCase):
         self.transport.stopProducing()
         self.assertRaises(RuntimeError, self.transport.pauseProducing)
 
-
     def test_stoppedTransportCannotResume(self):
         """
         L{StringTransport.resumeProducing} raises L{RuntimeError} if the
@@ -149,7 +139,6 @@ class StringTransportTests(TestCase):
         """
         self.transport.stopProducing()
         self.assertRaises(RuntimeError, self.transport.resumeProducing)
-
 
     def test_disconnectingTransportCannotPause(self):
         """
@@ -159,7 +148,6 @@ class StringTransportTests(TestCase):
         self.transport.loseConnection()
         self.assertRaises(RuntimeError, self.transport.pauseProducing)
 
-
     def test_disconnectingTransportCannotResume(self):
         """
         L{StringTransport.resumeProducing} raises L{RuntimeError} if the
@@ -167,7 +155,6 @@ class StringTransportTests(TestCase):
         """
         self.transport.loseConnection()
         self.assertRaises(RuntimeError, self.transport.resumeProducing)
-
 
     def test_loseConnectionSetsDisconnecting(self):
         """
@@ -178,7 +165,6 @@ class StringTransportTests(TestCase):
         self.transport.loseConnection()
         self.assertTrue(self.transport.disconnecting)
 
-
     def test_specifiedHostAddress(self):
         """
         If a host address is passed to L{StringTransport.__init__}, that
@@ -187,16 +173,13 @@ class StringTransportTests(TestCase):
         address = object()
         self.assertIs(StringTransport(address).getHost(), address)
 
-
     def test_specifiedPeerAddress(self):
         """
         If a peer address is passed to L{StringTransport.__init__}, that
         value is returned from L{StringTransport.getPeer}.
         """
         address = object()
-        self.assertIs(
-            StringTransport(peerAddress=address).getPeer(), address)
-
+        self.assertIs(StringTransport(peerAddress=address).getPeer(), address)
 
     def test_defaultHostAddress(self):
         """
@@ -206,7 +189,6 @@ class StringTransportTests(TestCase):
         address = StringTransport().getHost()
         self.assertIsInstance(address, IPv4Address)
 
-
     def test_defaultPeerAddress(self):
         """
         If no peer address is passed to L{StringTransport.__init__}, an
@@ -214,7 +196,6 @@ class StringTransportTests(TestCase):
         """
         address = StringTransport().getPeer()
         self.assertIsInstance(address, IPv4Address)
-
 
 
 class ReactorTests(TestCase):
@@ -232,7 +213,6 @@ class ReactorTests(TestCase):
         verifyObject(IReactorSSL, memoryReactor)
         verifyObject(IReactorUNIX, memoryReactor)
 
-
     def test_raisingReactorProvides(self):
         """
         L{RaisingMemoryReactor} provides all of the attributes described by the
@@ -243,7 +223,6 @@ class ReactorTests(TestCase):
         verifyObject(IReactorSSL, raisingReactor)
         verifyObject(IReactorUNIX, raisingReactor)
 
-
     def test_connectDestination(self):
         """
         L{MemoryReactor.connectTCP}, L{MemoryReactor.connectSSL}, and
@@ -252,11 +231,10 @@ class ReactorTests(TestCase):
         reflect the values passed.
         """
         memoryReactor = MemoryReactor()
-        for connector in [memoryReactor.connectTCP(
-                              "test.example.com", 8321, ClientFactory()),
-                          memoryReactor.connectSSL(
-                              "test.example.com", 8321, ClientFactory(),
-                              None)]:
+        for connector in [
+            memoryReactor.connectTCP("test.example.com", 8321, ClientFactory()),
+            memoryReactor.connectSSL("test.example.com", 8321, ClientFactory(), None),
+        ]:
             verifyObject(IConnector, connector)
             address = connector.getDestination()
             verifyObject(IAddress, address)
@@ -268,7 +246,6 @@ class ReactorTests(TestCase):
         verifyObject(IAddress, address)
         self.assertEqual(address.name, b"/fake/path")
 
-
     def test_listenDefaultHost(self):
         """
         L{MemoryReactor.listenTCP}, L{MemoryReactor.listenSSL} and
@@ -279,19 +256,20 @@ class ReactorTests(TestCase):
         passed.
         """
         memoryReactor = MemoryReactor()
-        for port in [memoryReactor.listenTCP(8242, Factory()),
-                     memoryReactor.listenSSL(8242, Factory(), None)]:
+        for port in [
+            memoryReactor.listenTCP(8242, Factory()),
+            memoryReactor.listenSSL(8242, Factory(), None),
+        ]:
             verifyObject(IListeningPort, port)
             address = port.getHost()
             verifyObject(IAddress, address)
-            self.assertEqual(address.host, '0.0.0.0')
+            self.assertEqual(address.host, "0.0.0.0")
             self.assertEqual(address.port, 8242)
         port = memoryReactor.listenUNIX(b"/path/to/socket", Factory())
         verifyObject(IListeningPort, port)
         address = port.getHost()
         verifyObject(IAddress, address)
         self.assertEqual(address.name, b"/path/to/socket")
-
 
     def test_readers(self):
         """
@@ -308,7 +286,6 @@ class ReactorTests(TestCase):
         reactor.removeReader(reader)
 
         self.assertEqual(reactor.getReaders(), [])
-
 
     def test_writers(self):
         """
@@ -327,16 +304,15 @@ class ReactorTests(TestCase):
         self.assertEqual(reactor.getWriters(), [])
 
 
-
-class TestConsumer(object):
+class TestConsumer:
     """
     A very basic test consumer for use with the NonStreamingProducerTests.
     """
+
     def __init__(self):
         self.writes = []
         self.producer = None
         self.producerStreaming = None
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -348,14 +324,12 @@ class TestConsumer(object):
         self.producer = producer
         self.producerStreaming = streaming
 
-
     def unregisterProducer(self):
         """
         Forget the producer we had previously registered.
         """
         self.producer = None
         self.producerStreaming = None
-
 
     def write(self, data):
         """
@@ -366,11 +340,11 @@ class TestConsumer(object):
         self.writes.append(data)
 
 
-
 class NonStreamingProducerTests(TestCase):
     """
     Tests for the L{NonStreamingProducer} to validate behaviour.
     """
+
     def test_producesOnly10Times(self):
         """
         When the L{NonStreamingProducer} has resumeProducing called 10 times,
@@ -388,9 +362,7 @@ class NonStreamingProducerTests(TestCase):
             producer.resumeProducing()
 
         # We should have unregistered the producer and printed the 10 results.
-        expectedWrites = [
-            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'
-        ]
+        expectedWrites = [b"0", b"1", b"2", b"3", b"4", b"5", b"6", b"7", b"8", b"9"]
         self.assertIsNone(consumer.producer)
         self.assertIsNone(consumer.producerStreaming)
         self.assertIsNone(producer.consumer)
@@ -398,7 +370,6 @@ class NonStreamingProducerTests(TestCase):
 
         # Another attempt to produce fails.
         self.assertRaises(RuntimeError, producer.resumeProducing)
-
 
     def test_cannotPauseProduction(self):
         """
@@ -415,101 +386,87 @@ class NonStreamingProducerTests(TestCase):
         self.assertRaises(RuntimeError, producer.pauseProducing)
 
 
-
 class DeprecationTests(TestCase):
     """
     Deprecations in L{twisted.test.proto_helpers}.
     """
+
     def helper(self, test, obj):
-        new_path = 'twisted.internet.testing.{}'.format(obj.__name__)
-        warnings = self.flushWarnings(
-            [test])
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        new_path = f"twisted.internet.testing.{obj.__name__}"
+        warnings = self.flushWarnings([test])
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(1, len(warnings))
-        self.assertIn(new_path, warnings[0]['message'])
+        self.assertIn(new_path, warnings[0]["message"])
         self.assertIs(obj, namedAny(new_path))
 
     def test_accumulatingProtocol(self):
         from twisted.test.proto_helpers import AccumulatingProtocol
-        self.helper(self.test_accumulatingProtocol,
-                    AccumulatingProtocol)
 
+        self.helper(self.test_accumulatingProtocol, AccumulatingProtocol)
 
     def test_lineSendingProtocol(self):
         from twisted.test.proto_helpers import LineSendingProtocol
-        self.helper(self.test_lineSendingProtocol,
-                    LineSendingProtocol)
 
+        self.helper(self.test_lineSendingProtocol, LineSendingProtocol)
 
     def test_fakeDatagramTransport(self):
         from twisted.test.proto_helpers import FakeDatagramTransport
-        self.helper(self.test_fakeDatagramTransport,
-                    FakeDatagramTransport)
 
+        self.helper(self.test_fakeDatagramTransport, FakeDatagramTransport)
 
     def test_stringTransport(self):
         from twisted.test.proto_helpers import StringTransport
-        self.helper(self.test_stringTransport,
-                    StringTransport)
 
+        self.helper(self.test_stringTransport, StringTransport)
 
     def test_stringTransportWithDisconnection(self):
-        from twisted.test.proto_helpers import (
-            StringTransportWithDisconnection)
-        self.helper(self.test_stringTransportWithDisconnection,
-                    StringTransportWithDisconnection)
+        from twisted.test.proto_helpers import StringTransportWithDisconnection
 
+        self.helper(
+            self.test_stringTransportWithDisconnection, StringTransportWithDisconnection
+        )
 
     def test_stringIOWithoutClosing(self):
         from twisted.test.proto_helpers import StringIOWithoutClosing
-        self.helper(self.test_stringIOWithoutClosing,
-                    StringIOWithoutClosing)
 
+        self.helper(self.test_stringIOWithoutClosing, StringIOWithoutClosing)
 
     def test__fakeConnector(self):
         from twisted.test.proto_helpers import _FakeConnector
-        self.helper(self.test__fakeConnector,
-                    _FakeConnector)
 
+        self.helper(self.test__fakeConnector, _FakeConnector)
 
     def test__fakePort(self):
         from twisted.test.proto_helpers import _FakePort
-        self.helper(self.test__fakePort,
-                    _FakePort)
 
+        self.helper(self.test__fakePort, _FakePort)
 
     def test_memoryReactor(self):
         from twisted.test.proto_helpers import MemoryReactor
-        self.helper(self.test_memoryReactor,
-                    MemoryReactor)
 
+        self.helper(self.test_memoryReactor, MemoryReactor)
 
     def test_memoryReactorClock(self):
         from twisted.test.proto_helpers import MemoryReactorClock
-        self.helper(self.test_memoryReactorClock,
-                    MemoryReactorClock)
 
+        self.helper(self.test_memoryReactorClock, MemoryReactorClock)
 
     def test_raisingMemoryReactor(self):
         from twisted.test.proto_helpers import RaisingMemoryReactor
-        self.helper(self.test_raisingMemoryReactor,
-                    RaisingMemoryReactor)
 
+        self.helper(self.test_raisingMemoryReactor, RaisingMemoryReactor)
 
     def test_nonStreamingProducer(self):
         from twisted.test.proto_helpers import NonStreamingProducer
-        self.helper(self.test_nonStreamingProducer,
-                    NonStreamingProducer)
 
+        self.helper(self.test_nonStreamingProducer, NonStreamingProducer)
 
     def test_waitUntilAllDisconnected(self):
-        from twisted.test.proto_helpers import (
-            waitUntilAllDisconnected)
-        self.helper(self.test_waitUntilAllDisconnected,
-                    waitUntilAllDisconnected)
+        from twisted.test.proto_helpers import waitUntilAllDisconnected
 
+        self.helper(self.test_waitUntilAllDisconnected, waitUntilAllDisconnected)
 
     def test_eventLoggingObserver(self):
         from twisted.test.proto_helpers import EventLoggingObserver
-        self.helper(self.test_eventLoggingObserver,
-                    EventLoggingObserver)
+
+        self.helper(self.test_eventLoggingObserver, EventLoggingObserver)

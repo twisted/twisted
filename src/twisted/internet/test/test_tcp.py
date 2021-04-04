@@ -7,8 +7,6 @@ L{IReactorSocket}.
 """
 
 
-__metaclass__ = type
-
 import errno
 import gc
 import io
@@ -16,7 +14,7 @@ import os
 import socket
 
 from functools import wraps
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, List, Callable, ClassVar
 from unittest import skipIf
 
 import attr
@@ -25,33 +23,63 @@ from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.logger import Logger
-from twisted.python.compat import long
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 from twisted.internet.error import (
-    ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol,
-    ConnectBindError, ConnectionClosed,
+    ConnectionLost,
+    UserError,
+    ConnectionRefusedError,
+    ConnectionDone,
+    ConnectionAborted,
+    DNSLookupError,
+    NoProtocol,
+    ConnectBindError,
+    ConnectionClosed,
 )
 from twisted.internet.test.connectionmixins import (
-    LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
-    findFreePort, ConnectableProtocol, EndpointCreator,
-    runProtocolsWithReactor, Stop, BrokenContextFactory)
+    LogObserverMixin,
+    ConnectionTestsMixin,
+    StreamClientTestsMixin,
+    findFreePort,
+    ConnectableProtocol,
+    EndpointCreator,
+    runProtocolsWithReactor,
+    Stop,
+    BrokenContextFactory,
+)
 from twisted.internet.test.reactormixins import (
-    ReactorBuilder, needsRunningReactor, stopOnError)
+    ReactorBuilder,
+    needsRunningReactor,
+    stopOnError,
+)
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
-    IResolverSimple, ITLSTransport)
+    ILoggingContext,
+    IConnector,
+    IReactorFDSet,
+    IReactorSocket,
+    IReactorTCP,
+    IResolverSimple,
+    ITLSTransport,
+)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
-    Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
+    Deferred,
+    DeferredList,
+    maybeDeferred,
+    gatherResults,
+    succeed,
+    fail,
+)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
-    IPushProducer, IPullProducer, IHalfCloseableProtocol)
+    IPushProducer,
+    IPullProducer,
+    IHalfCloseableProtocol,
+)
 from twisted.internet.tcp import (
     _BuffersLogs,
     Connection,
@@ -72,15 +100,16 @@ except ImportError:
     useSSL = False
 else:
     from twisted.internet.ssl import ClientContextFactory
+
     useSSL = True
 
 s = None
 try:
     s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-    s.bind(('::1', 0))
-except socket.error as e:
+    s.bind(("::1", 0))
+except OSError as e:
     ipv6Skip = True
-    ipv6SkipReason = str(e)
+    ipv6SkipReason = f"IPv6 not available. {e}"
 else:
     ipv6Skip = False
     ipv6SkipReason = ""
@@ -88,9 +117,9 @@ if s is not None:
     s.close()
 
 
-
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
+
     getLinkLocalIPv6Addresses = _win32ifaces.win32GetLinkLocalIPv6Addresses
 
     SKIP_EMFILE = True
@@ -103,7 +132,6 @@ else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
 
     SKIP_EMFILE = False
-
 
 
 def getLinkLocalIPv6Address():
@@ -123,7 +151,6 @@ def getLinkLocalIPv6Address():
     raise SkipTest("Link local IPv6 address unavailable")
 
 
-
 def connect(client, destination):
     """
     Connect a socket to the given destination.
@@ -135,15 +162,14 @@ def connect(client, destination):
         using C{getaddrinfo} and the first version found is used.
     """
     (host, port) = destination
-    if '%' in host or ':' in host:
+    if "%" in host or ":" in host:
         address = socket.getaddrinfo(host, port)[0][4]
     else:
         address = (host, port)
     client.connect(address)
 
 
-
-class FakeSocket(object):
+class FakeSocket:
     """
     A fake for L{socket.socket} objects.
 
@@ -152,6 +178,7 @@ class FakeSocket(object):
 
     @ivar sendBuffer: A C{list} of the objects passed to L{FakeSocket.send}.
     """
+
     def __init__(self, data):
         self.data = data
         self.sendBuffer = []
@@ -172,14 +199,12 @@ class FakeSocket(object):
         self.sendBuffer.append(bytes)
         return len(bytes)
 
-
     def shutdown(self, how):
         """
         Shutdown is not implemented.  The method is provided since real sockets
         have it and some code expects it.  No behavior of L{FakeSocket} is
         affected by a call to it.
         """
-
 
     def close(self):
         """
@@ -188,14 +213,12 @@ class FakeSocket(object):
         affected by a call to it.
         """
 
-
     def setsockopt(self, *args):
         """
         Setsockopt is not implemented.  The method is provided since
         real sockets have it and some code expects it.  No behavior of
         L{FakeSocket} is affected by a call to it.
         """
-
 
     def fileno(self):
         """
@@ -204,7 +227,6 @@ class FakeSocket(object):
         results.
         """
         return 1
-
 
 
 class FakeSocketTests(TestCase):
@@ -217,11 +239,9 @@ class FakeSocketTests(TestCase):
         skt.setblocking(0)
         self.assertEqual(skt.blocking, 0)
 
-
     def test_recv(self):
         skt = FakeSocket(b"someData")
         self.assertEqual(skt.recv(10), b"someData")
-
 
     def test_send(self):
         """
@@ -234,11 +254,11 @@ class FakeSocketTests(TestCase):
         self.assertEqual(skt.sendBuffer, [b"foo"])
 
 
-
 class FakeProtocol(Protocol):
     """
     An L{IProtocol} that returns a value from its dataReceived method.
     """
+
     def dataReceived(self, data):
         """
         Return something other than L{None} to trigger a deprecation warning for
@@ -247,9 +267,8 @@ class FakeProtocol(Protocol):
         return ()
 
 
-
 @implementer(IReactorFDSet)
-class _FakeFDSetReactor(object):
+class _FakeFDSetReactor:
     """
     An in-memory implementation of L{IReactorFDSet}, which records the current
     sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
@@ -267,66 +286,60 @@ class _FakeFDSetReactor(object):
         self._readers = set()
         self._writers = set()
 
-
     def addReader(self, reader):
         self._readers.add(reader)
-
 
     def removeReader(self, reader):
         if reader in self._readers:
             self._readers.remove(reader)
 
-
     def addWriter(self, writer):
         self._writers.add(writer)
-
 
     def removeWriter(self, writer):
         if writer in self._writers:
             self._writers.remove(writer)
-
 
     def removeAll(self):
         result = self.getReaders() + self.getWriters()
         self.__init__()
         return result
 
-
     def getReaders(self):
         return list(self._readers)
-
 
     def getWriters(self):
         return list(self._writers)
 
-verifyClass(IReactorFDSet, _FakeFDSetReactor)
 
+verifyClass(IReactorFDSet, _FakeFDSetReactor)
 
 
 class TCPServerTests(TestCase):
     """
     Whitebox tests for L{twisted.internet.tcp.Server}.
     """
+
     def setUp(self):
         self.reactor = _FakeFDSetReactor()
-        class FakePort(object):
+
+        class FakePort:
             _realPortNumber = 3
+
         self.skt = FakeSocket(b"")
         self.protocol = Protocol()
         self.server = Server(
-            self.skt, self.protocol, ("", 0), FakePort(), None, self.reactor)
-
+            self.skt, self.protocol, ("", 0), FakePort(), None, self.reactor
+        )
 
     def test_writeAfterDisconnect(self):
         """
         L{Server.write} discards bytes passed to it if called after it has lost
         its connection.
         """
-        self.server.connectionLost(
-            Failure(Exception("Simulated lost connection")))
+        self.server.connectionLost(Failure(Exception("Simulated lost connection")))
         self.server.write(b"hello world")
         self.assertEqual(self.skt.sendBuffer, [])
-
 
     def test_writeAfterDisconnectAfterTLS(self):
         """
@@ -336,17 +349,14 @@ class TCPServerTests(TestCase):
         self.server.TLS = True
         self.test_writeAfterDisconnect()
 
-
     def test_writeSequenceAfterDisconnect(self):
         """
         L{Server.writeSequence} discards bytes passed to it if called after it
         has lost its connection.
         """
-        self.server.connectionLost(
-            Failure(Exception("Simulated lost connection")))
+        self.server.connectionLost(Failure(Exception("Simulated lost connection")))
         self.server.writeSequence([b"hello world"])
         self.assertEqual(self.skt.sendBuffer, [])
-
 
     def test_writeSequenceAfterDisconnectAfterTLS(self):
         """
@@ -357,11 +367,11 @@ class TCPServerTests(TestCase):
         self.test_writeSequenceAfterDisconnect()
 
 
-
 class TCPConnectionTests(TestCase):
     """
     Whitebox tests for L{twisted.internet.tcp.Connection}.
     """
+
     def test_doReadWarningIsRaised(self):
         """
         When an L{IProtocol} implementation that returns a value from its
@@ -372,14 +382,14 @@ class TCPConnectionTests(TestCase):
         conn = Connection(skt, protocol)
         conn.doRead()
         warnings = self.flushWarnings([FakeProtocol.dataReceived])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(
             warnings[0]["message"],
             "Returning a value other than None from "
             "twisted.internet.test.test_tcp.FakeProtocol.dataReceived "
-            "is deprecated since Twisted 11.0.0.")
+            "is deprecated since Twisted 11.0.0.",
+        )
         self.assertEqual(len(warnings), 1)
-
 
     def test_noTLSBeforeStartTLS(self):
         """
@@ -390,7 +400,6 @@ class TCPConnectionTests(TestCase):
         protocol = FakeProtocol()
         conn = Connection(skt, protocol)
         self.assertFalse(conn.TLS)
-
 
     @skipIf(not useSSL, "No SSL support available")
     def test_tlsAfterStartTLS(self):
@@ -406,7 +415,6 @@ class TCPConnectionTests(TestCase):
         self.assertTrue(conn.TLS)
 
 
-
 class TCPCreator(EndpointCreator):
     """
     Create IPv4 TCP endpoints for L{runProtocolsWithReactor}-based tests.
@@ -420,7 +428,6 @@ class TCPCreator(EndpointCreator):
         """
         return TCP4ServerEndpoint(reactor, 0, interface=self.interface)
 
-
     def client(self, reactor, serverAddress):
         """
         Create a client end point that will connect to the given address.
@@ -428,7 +435,6 @@ class TCPCreator(EndpointCreator):
         @type serverAddress: L{IPv4Address}
         """
         return TCP4ClientEndpoint(reactor, self.interface, serverAddress.port)
-
 
 
 class TCP6Creator(TCPCreator):
@@ -444,20 +450,19 @@ class TCP6Creator(TCPCreator):
     slightly misleading, but presumably if you're passing an IPv6 literal, you
     know what you're asking for.
     """
+
     def __init__(self):
         self.interface = getLinkLocalIPv6Address()
 
 
-
 @implementer(IResolverSimple)
-class FakeResolver(object):
+class FakeResolver:
     """
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
 
     def __init__(self, names):
         self.names = names
-
 
     def getHostByName(self, name, timeout):
         """
@@ -474,9 +479,7 @@ class FakeResolver(object):
             return fail(DNSLookupError("FakeResolver couldn't find " + name))
 
 
-
-class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
-                         StreamClientTestsMixin):
+class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTestsMixin):
     """
     Base class for builders defining tests related to
     L{IReactorTCP.connectTCP}.  Classes which uses this in must provide all of
@@ -514,6 +517,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         necessary.
     @type fakeDomainName: C{str}
     """
+
     requiredInterfaces = (IReactorTCP,)
 
     _port = None
@@ -531,14 +535,12 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             return self._port.getHost().port
         return findFreePort(self.interface, self.family)[1]
 
-
     @property
     def interface(self):
         """
         Return the interface attribute from the endpoints object.
         """
         return self.endpoints.interface
-
 
     def listen(self, reactor, factory):
         """
@@ -553,7 +555,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self._port = reactor.listenTCP(0, factory, interface=self.interface)
         return self._port
 
-
     def connect(self, reactor, factory):
         """
         Start a TCP client with the given C{factory}.
@@ -565,7 +566,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         @return: A TCP connector instance.
         """
         return reactor.connectTCP(self.interface, self.port, factory)
-
 
     def test_buildProtocolReturnsNone(self):
         """
@@ -590,14 +590,18 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             clientFactory = NoneFactory()
             endpoint = self.endpoints.client(reactor, port.getHost())
             return endpoint.connect(clientFactory)
+
         connecting = listening.addCallback(listened)
 
         def connectSucceeded(protocol):
             self.fail(
                 "Stream client endpoint connect succeeded with %r, "
-                "should have failed with NoProtocol." % (protocol,))
+                "should have failed with NoProtocol." % (protocol,)
+            )
+
         def connectFailed(reason):
             reason.trap(NoProtocol)
+
         connecting.addCallbacks(connectSucceeded, connectFailed)
 
         def connected(ignored):
@@ -605,6 +609,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # the server-side connection to be lost.  This is the behavior this
             # test is primarily concerned with.
             return connectionLost
+
         disconnecting = connecting.addCallback(connected)
 
         # Make sure any errors that happen in that process get logged quickly.
@@ -616,10 +621,10 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # Stop the reactor now so the test can complete one way or the
             # other now.
             reactor.stop()
+
         disconnecting.addCallback(disconnected)
 
         self.runReactor(reactor)
-
 
     def test_addresses(self):
         """
@@ -637,16 +642,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
 
         server = reactor.listenTCP(
-            0, ServerFactory.forProtocol(Protocol), interface=host)
+            0, ServerFactory.forProtocol(Protocol), interface=host
+        )
         serverAddress = server.getHost()
 
-        transportData = {'host': None, 'peer': None, 'instance': None}
+        transportData = {"host": None, "peer": None, "instance": None}
 
         class CheckAddress(Protocol):
             def makeConnection(self, transport):
-                transportData['host'] = transport.getHost()
-                transportData['peer'] = transport.getPeer()
-                transportData['instance'] = transport
+                transportData["host"] = transport.getHost()
+                transportData["peer"] = transport.getPeer()
+                transportData["instance"] = transport
                 reactor.stop()
 
         clientFactory = Stop(reactor)
@@ -656,9 +662,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             while True:
                 port = findFreePort(self.interface, self.family)
                 bindAddress = (self.interface, port[1])
-                log.msg("Connect attempt with bindAddress {}".format(
-                    bindAddress
-                ))
+                log.msg(f"Connect attempt with bindAddress {bindAddress}")
                 try:
                     reactor.connectTCP(
                         fakeDomain,
@@ -679,25 +683,22 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         if clientFactory.failReason:
             self.fail(clientFactory.failReason.getTraceback())
 
-        transportRepr = "<%s to %s at %x>" % (
-            transportData['instance'].__class__,
-            transportData['instance'].addr,
-            id(transportData['instance']))
+        transportRepr = "<{} to {} at {:x}>".format(
+            transportData["instance"].__class__,
+            transportData["instance"].addr,
+            id(transportData["instance"]),
+        )
 
-        boundPort = [host] + list(socket.getaddrinfo(
-            self.interface, clientFactory.boundPort)[0][-1][1:])
-        serverPort = [host] + list(socket.getaddrinfo(
-            self.interface, serverAddress.port)[0][-1][1:])
+        boundPort = [host] + list(
+            socket.getaddrinfo(self.interface, clientFactory.boundPort)[0][-1][1:]
+        )
+        serverPort = [host] + list(
+            socket.getaddrinfo(self.interface, serverAddress.port)[0][-1][1:]
+        )
 
-        self.assertEqual(
-            transportData['host'],
-            self.addressClass('TCP', *boundPort))
-        self.assertEqual(
-            transportData['peer'],
-            self.addressClass('TCP', *serverPort))
-        self.assertEqual(
-            repr(transportData['instance']), transportRepr)
-
+        self.assertEqual(transportData["host"], self.addressClass("TCP", *boundPort))
+        self.assertEqual(transportData["peer"], self.addressClass("TCP", *serverPort))
+        self.assertEqual(repr(transportData["instance"]), transportRepr)
 
     def test_badContext(self):
         """
@@ -722,9 +723,11 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             if not ITLSTransport.providedBy(protocol.transport):
                 results.append("skip")
             else:
-                results.append(self.assertRaises(ValueError,
-                                                 protocol.transport.startTLS,
-                                                 brokenFactory))
+                results.append(
+                    self.assertRaises(
+                        ValueError, protocol.transport.startTLS, brokenFactory
+                    )
+                )
 
         def connectFailed(failure):
             results.append(failure)
@@ -733,12 +736,12 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             connectDeferred.addCallback(connected)
             connectDeferred.addErrback(connectFailed)
             connectDeferred.addBoth(lambda ign: reactor.stop())
+
         needsRunningReactor(reactor, whenRun)
 
         self.runReactor(reactor)
 
-        self.assertEqual(len(results), 1,
-                         "more than one callback result: %s" % (results,))
+        self.assertEqual(len(results), 1, f"more than one callback result: {results}")
 
         if isinstance(results[0], Failure):
             # self.fail(Failure)
@@ -748,18 +751,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.assertEqual(BrokenContextFactory.message, str(results[0]))
 
 
-
 class TCP4ClientTestsBuilder(TCPClientTestsBase):
     """
     Builder configured with IPv4 parameters for tests related to
     L{IReactorTCP.connectTCP}.
     """
-    fakeDomainName = 'some-fake.domain.example.com'
+
+    fakeDomainName = "some-fake.domain.example.com"
     family = socket.AF_INET
     addressClass = IPv4Address
 
     endpoints = TCPCreator()
-
 
 
 @skipIf(ipv6Skip, ipv6SkipReason)
@@ -768,6 +770,7 @@ class TCP6ClientTestsBuilder(TCPClientTestsBase):
     Builder configured with IPv6 parameters for tests related to
     L{IReactorTCP.connectTCP}.
     """
+
     family = socket.AF_INET6
     addressClass = IPv6Address
 
@@ -784,11 +787,11 @@ class TCP6ClientTestsBuilder(TCPClientTestsBase):
         self.fakeDomainName = self.endpoints.interface
 
 
-
 class TCPConnectorTestsBuilder(ReactorBuilder):
     """
     Tests for the L{IConnector} provider returned by L{IReactorTCP.connectTCP}.
     """
+
     requiredInterfaces = (IReactorTCP,)
 
     def test_connectorIdentity(self):
@@ -809,13 +812,13 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
         seenFailures = []
 
         clientFactory = ClientStartStopFactory()
-        clientFactory.clientConnectionLost = (
-            lambda connector, reason: (seenConnectors.append(connector),
-                                       seenFailures.append(reason)))
+        clientFactory.clientConnectionLost = lambda connector, reason: (
+            seenConnectors.append(connector),
+            seenFailures.append(reason),
+        )
         clientFactory.startedConnecting = seenConnectors.append
 
-        connector = reactor.connectTCP(self.interface, portNumber,
-                                       clientFactory)
+        connector = reactor.connectTCP(self.interface, portNumber, clientFactory)
         self.assertTrue(IConnector.providedBy(connector))
         dest = connector.getDestination()
         self.assertEqual(dest.type, "TCP")
@@ -828,7 +831,6 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
         seenFailures[0].trap(ConnectionDone)
         self.assertEqual(seenConnectors, [connector, connector])
-
 
     def test_userFail(self):
         """
@@ -855,9 +857,9 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
         clientFactory.whenStopped.addBoth(lambda _: reactor.stop())
 
-        reactor.callWhenRunning(lambda: reactor.connectTCP(self.interface,
-                                                           portNumber,
-                                                           clientFactory))
+        reactor.callWhenRunning(
+            lambda: reactor.connectTCP(self.interface, portNumber, clientFactory)
+        )
 
         self.runReactor(reactor)
 
@@ -865,7 +867,6 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
             self.fail(fatalErrors[0].getTraceback())
         clientFactory.reason.trap(UserError)
         self.assertEqual(clientFactory.failed, 1)
-
 
     def test_reconnect(self):
         """
@@ -882,10 +883,12 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
         def clientConnectionLost(connector, reason):
             connector.connect()
+
         clientFactory.clientConnectionLost = clientConnectionLost
         reactor.connectTCP(self.interface, portNumber, clientFactory)
 
         protocolMadeAndClosed = []
+
         def reconnectFailed(ignored):
             p = clientFactory.protocol
             protocolMadeAndClosed.append((p.made, p.closed))
@@ -899,12 +902,10 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
         self.assertEqual(protocolMadeAndClosed, [(1, 1)])
 
 
-
 class TCP4ConnectorTestsBuilder(TCPConnectorTestsBuilder):
-    interface = '127.0.0.1'
+    interface = "127.0.0.1"
     family = socket.AF_INET
     addressClass = IPv4Address
-
 
 
 @skipIf(ipv6Skip, ipv6SkipReason)
@@ -914,7 +915,6 @@ class TCP6ConnectorTestsBuilder(TCPConnectorTestsBuilder):
 
     def setUp(self):
         self.interface = getLinkLocalIPv6Address()
-
 
 
 def createTestSocket(test, addressFamily, socketType):
@@ -934,7 +934,6 @@ def createTestSocket(test, addressFamily, socketType):
     return skt
 
 
-
 class _IExhaustsFileDescriptors(Interface):
     """
     A way to trigger C{EMFILE}.
@@ -949,12 +948,10 @@ class _IExhaustsFileDescriptors(Interface):
         implies L{release}.
         """
 
-
     def release():
         """
         Release all file descriptors opened by L{exhaust}.
         """
-
 
     def count():
         """
@@ -966,10 +963,9 @@ class _IExhaustsFileDescriptors(Interface):
         """
 
 
-
 @implementer(_IExhaustsFileDescriptors)
-@attr.s
-class _ExhaustsFileDescriptors(object):
+@attr.s(auto_attribs=True)
+class _ExhaustsFileDescriptors:
     """
     A class that triggers C{EMFILE} by creating as many file
     descriptors as necessary.
@@ -980,11 +976,15 @@ class _ExhaustsFileDescriptors(object):
         arguments and returns an integral file descriptor, suitable
         for passing to L{os.close}.
     """
-    _log = Logger()
-    _fileDescriptorFactory = attr.ib(default=lambda: os.dup(0), repr=False)
-    _close = attr.ib(default=os.close, repr=False)
-    _fileDescriptors = attr.ib(
-        default=attr.Factory(list), init=False, repr=False)
+
+    _log: ClassVar[Logger] = Logger()
+    _fileDescriptorFactory: Callable[[], int] = attr.ib(
+        default=lambda: os.dup(0), repr=False
+    )
+    _close: Callable[[int], None] = attr.ib(default=os.close, repr=False)
+    _fileDescriptors: List[int] = attr.ib(
+        default=attr.Factory(list), init=False, repr=False
+    )
 
     def exhaust(self):
         """
@@ -996,7 +996,7 @@ class _ExhaustsFileDescriptors(object):
             while True:
                 try:
                     fd = self._fileDescriptorFactory()
-                except (IOError, OSError) as e:
+                except OSError as e:
                     if e.errno == errno.EMFILE:
                         break
                     raise
@@ -1012,7 +1012,6 @@ class _ExhaustsFileDescriptors(object):
                 openedFileDescriptors=self.count(),
             )
 
-
     def release(self):
         """
         Release all file descriptors opened by L{exhaust}.
@@ -1026,7 +1025,6 @@ class _ExhaustsFileDescriptors(object):
                     continue
                 raise
 
-
     def count(self):
         """
         Return the number of opened file descriptors.
@@ -1038,19 +1036,17 @@ class _ExhaustsFileDescriptors(object):
         return len(self._fileDescriptors)
 
 
-
-@skipIf(SKIP_EMFILE,
-        "Reserved EMFILE file descriptor not supported on Windows.")
+@skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
 class ExhaustsFileDescriptorsTests(SynchronousTestCase):
     """
     Tests for L{_ExhaustsFileDescriptors}.
     """
+
     def setUp(self):
         self.exhauster = _ExhaustsFileDescriptors()
         # This assumes release succeeds when there are no file
         # descriptors to close.
         self.addCleanup(self.exhauster.release)
-
 
     def openAFile(self):
         """
@@ -1059,14 +1055,12 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         """
         open(os.devnull).close()
 
-
     def test_providesInterface(self):
         """
         L{_ExhaustsFileDescriptors} instances provide
         L{_IExhaustsFileDescriptors}.
         """
         verifyObject(_IExhaustsFileDescriptors, self.exhauster)
-
 
     def test_count(self):
         """
@@ -1079,7 +1073,6 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         self.exhauster.release()
         self.assertEqual(self.exhauster.count(), 0)
 
-
     def test_exhaustTriggersEMFILE(self):
         """
         L{_ExhaustsFileDescriptors.exhaust} causes the process to
@@ -1090,19 +1083,18 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         exception = self.assertRaises(IOError, self.openAFile)
         self.assertEqual(exception.errno, errno.EMFILE)
 
-
     def test_exhaustRaisesOSError(self):
         """
         An L{OSError} raised within
         L{_ExhaustsFileDescriptors.exhaust} with an C{errno} other
         than C{EMFILE} is reraised to the caller.
         """
+
         def raiseOSError():
             raise OSError(errno.EMFILE + 1, "Not EMFILE")
 
         exhauster = _ExhaustsFileDescriptors(raiseOSError)
         self.assertRaises(OSError, exhauster.exhaust)
-
 
     def test_release(self):
         """
@@ -1114,7 +1106,6 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         # Does not fail with EMFILE
         self.openAFile()
 
-
     def test_fileDescriptorsReleasedOnFailure(self):
         """
         L{_ExhaustsFileDescriptors.exhaust} closes any opened file
@@ -1125,8 +1116,8 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         def failsAfterThree():
             if len(fileDescriptors) == 3:
                 raise ValueError(
-                    "test_fileDescriptorsReleasedOnFailure"
-                    " fake open exception")
+                    "test_fileDescriptorsReleasedOnFailure" " fake open exception"
+                )
             else:
                 fd = os.dup(0)
                 fileDescriptors.append(fd)
@@ -1142,7 +1133,6 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         for fd in fileDescriptors:
             exception = self.assertRaises(OSError, os.fstat, fd)
             self.assertEqual(exception.errno, errno.EBADF)
-
 
     def test_releaseIgnoresEBADF(self):
         """
@@ -1167,7 +1157,6 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         exhauster.release()
         self.assertEqual(exhauster.count(), 0)
 
-
     def test_releaseRaisesOSError(self):
         """
         An L{OSError} raised within
@@ -1185,8 +1174,7 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         def failingClose(fd):
             raise OSError(11, "test_releaseRaisesOSError fake OSError")
 
-        exhauster = _ExhaustsFileDescriptors(opensThree,
-                                             close=failingClose)
+        exhauster = _ExhaustsFileDescriptors(opensThree, close=failingClose)
 
         self.assertEqual(exhauster.count(), 0)
         exhauster.exhaust()
@@ -1194,14 +1182,13 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
         self.assertRaises(OSError, exhauster.release)
 
 
-
 def assertPeerClosedOnEMFILE(
-        testCase,
-        exhauster,
-        reactor,
-        runReactor,
-        listen,
-        connect,
+    testCase,
+    exhauster,
+    reactor,
+    runReactor,
+    listen,
+    connect,
 ):
     """
     Assert that an L{IListeningPort} immediately closes an accepted
@@ -1242,8 +1229,7 @@ def assertPeerClosedOnEMFILE(
         reactor.stop()
         serverConnectionCompleted[0] = True
 
-    serverConnectionMade.addCallback(
-        stopReactorIfServerAccepted)
+    serverConnectionMade.addCallback(stopReactorIfServerAccepted)
 
     port = listen(reactor, serverFactory)
     listeningHost = port.getHost()
@@ -1264,8 +1250,7 @@ def assertPeerClosedOnEMFILE(
 
     noResult = []
     serverConnectionMade.addBoth(noResult.append)
-    testCase.assertFalse(
-        noResult, "Server accepted connection; EMFILE not triggered.")
+    testCase.assertFalse(noResult, "Server accepted connection; EMFILE not triggered.")
     testCase.assertNoResult(clientFactory.failDeferred)
     testCase.successResultOf(clientFactory.deferred)
     testCase.assertRaises(
@@ -1274,15 +1259,14 @@ def assertPeerClosedOnEMFILE(
     )
 
 
-
-@skipIf(SKIP_EMFILE,
-        "Reserved EMFILE file descriptor not supported on Windows.")
+@skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
 class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
     """
     Tests for L{assertPeerClosedOnEMFILE}.
     """
+
     @implementer(_IExhaustsFileDescriptors)
-    class NullExhauster(object):
+    class NullExhauster:
         """
         An exhauster that does nothing.
         """
@@ -1292,12 +1276,10 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
             See L{_IExhaustsFileDescriptors.exhaust}
             """
 
-
         def release(self):
             """
             See L{_IExhaustsFileDescriptors.release}
             """
-
 
         def count(self):
             """
@@ -1308,14 +1290,12 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
         self.reactor = MemoryReactor()
         self.testCase = SynchronousTestCase()
 
-
     def test_nullExhausterProvidesInterface(self):
         """
         L{NullExhauster} instances provide
         L{_IExhaustsFileDescriptors}.
         """
         verifyObject(_IExhaustsFileDescriptors, self.NullExhauster())
-
 
     def test_reactorStoppedOnSuccessfulConnection(self):
         """
@@ -1328,17 +1308,18 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
         def runReactor(reactor):
             reactor.run()
             proto = serverFactory[0].buildProtocol(
-                IPv4Address('TCP', '127.0.0.1', 4321))
+                IPv4Address("TCP", "127.0.0.1", 4321)
+            )
             proto.makeConnection(StringTransport())
 
         def listen(reactor, factory):
-            port = reactor.listenTCP('127.0.0.1', 1234, factory)
+            port = reactor.listenTCP("127.0.0.1", 1234, factory)
             factory.doStart()
             serverFactory[0] = factory
             return port
 
         def connect(reactor, address, factory):
-            reactor.connectTCP('127.0.0.1', 0, factory)
+            reactor.connectTCP("127.0.0.1", 0, factory)
 
         exception = self.assertRaises(
             self.testCase.failureException,
@@ -1353,7 +1334,6 @@ class AssertPeerClosedOnEMFILETests(SynchronousTestCase):
 
         self.assertIn("EMFILE", str(exception))
         self.assertFalse(self.reactor.running)
-
 
 
 class StreamTransportTestsMixin(LogObserverMixin):
@@ -1376,10 +1356,8 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
         factory = SomeFactory()
         p = self.getListeningPort(reactor, factory)
-        expectedMessage = self.getExpectedStartListeningLogMessage(
-            p, "Crazy Factory")
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
+        expectedMessage = self.getExpectedStartListeningLogMessage(p, "Crazy Factory")
+        self.assertEqual((expectedMessage,), loggedMessages[0]["message"])
 
     def test_connectionLostLogMsg(self):
         """
@@ -1389,6 +1367,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         """
 
         loggedMessages = []
+
         def logConnectionLostMsg(eventDict):
             loggedMessages.append(log.textFromEventDict(eventDict))
 
@@ -1410,7 +1389,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
         self.assertIn(expectedMessage, loggedMessages)
 
-
     def test_allNewStyle(self):
         """
         The L{IListeningPort} object is an instance of a class with no
@@ -1420,9 +1398,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         port = self.getListeningPort(reactor, ServerFactory())
         self.assertFullyNewStyle(port)
 
-
-    @skipIf(SKIP_EMFILE,
-            "Reserved EMFILE file descriptor not supported on Windows.")
+    @skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
     def test_closePeerOnEMFILE(self):
         """
         See L{assertPeerClosedOnEMFILE}.
@@ -1437,8 +1413,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         )
 
 
-
-class ConnectToTCPListenerMixin(object):
+class ConnectToTCPListenerMixin:
     """
     Provides L{connectToListener} for TCP transports.
 
@@ -1449,8 +1424,8 @@ class ConnectToTCPListenerMixin(object):
 
     @see: U{http://twistedmatrix.com/trac/ticket/1472}
     """
-    LISTENER_HOST = '127.0.0.1'
 
+    LISTENER_HOST = "127.0.0.1"
 
     def connectToListener(self, reactor, address, factory):
         """
@@ -1471,17 +1446,16 @@ class ConnectToTCPListenerMixin(object):
         return reactor.connectTCP(self.LISTENER_HOST, address.port, factory)
 
 
-
 class ListenTCPMixin(ConnectToTCPListenerMixin):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.
     """
-    def getListeningPort(self, reactor, factory, port=0, interface=''):
+
+    def getListeningPort(self, reactor, factory, port=0, interface=""):
         """
         Get a TCP port from a reactor.
         """
         return reactor.listenTCP(port, factory, interface=interface)
-
 
 
 class SocketTCPMixin(ConnectToTCPListenerMixin):
@@ -1489,13 +1463,14 @@ class SocketTCPMixin(ConnectToTCPListenerMixin):
     Mixin which uses L{IReactorSocket.adoptStreamPort} to hand out
     listening TCP ports.
     """
-    def getListeningPort(self, reactor, factory, port=0, interface=''):
+
+    def getListeningPort(self, reactor, factory, port=0, interface=""):
         """
         Get a TCP port from a reactor, wrapping an already-initialized file
         descriptor.
         """
         if IReactorSocket.providedBy(reactor):
-            if ':' in interface:
+            if ":" in interface:
                 domain = socket.AF_INET6
                 address = socket.getaddrinfo(interface, port)[0][4]
             else:
@@ -1507,7 +1482,8 @@ class SocketTCPMixin(ConnectToTCPListenerMixin):
             portSock.setblocking(False)
             try:
                 return reactor.adoptStreamPort(
-                    portSock.fileno(), portSock.family, factory)
+                    portSock.fileno(), portSock.family, factory
+                )
             finally:
                 # The socket should still be open; fileno will raise if it is
                 # not.
@@ -1519,27 +1495,24 @@ class SocketTCPMixin(ConnectToTCPListenerMixin):
             raise SkipTest("Reactor does not provide IReactorSocket")
 
 
-
-class TCPPortTestsMixin(object):
+class TCPPortTestsMixin:
     """
     Tests for L{IReactorTCP.listenTCP}
     """
-    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
+
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a TCP port starts listening.
         """
-        return "%s starting on %d" % (
-            factory, port.getHost().port)
-
+        return "%s starting on %d" % (factory, port.getHost().port)
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a TCP port.
         """
-        return "(TCP Port %s Closed)" % (port.getHost().port,)
-
+        return f"(TCP Port {port.getHost().port} Closed)"
 
     def test_portGetHostOnIPv4(self):
         """
@@ -1551,7 +1524,6 @@ class TCPPortTestsMixin(object):
         address = port.getHost()
         self.assertIsInstance(address, IPv4Address)
 
-
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_portGetHostOnIPv6(self):
         """
@@ -1560,15 +1532,12 @@ class TCPPortTestsMixin(object):
         address the port is bound to.
         """
         reactor = self.buildReactor()
-        host, portNumber = findFreePort(
-            family=socket.AF_INET6, interface='::1')[:2]
-        port = self.getListeningPort(
-            reactor, ServerFactory(), portNumber, host)
+        host, portNumber = findFreePort(family=socket.AF_INET6, interface="::1")[:2]
+        port = self.getListeningPort(reactor, ServerFactory(), portNumber, host)
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
-        self.assertEqual('::1', address.host)
+        self.assertEqual("::1", address.host)
         self.assertEqual(portNumber, address.port)
-
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_portGetHostOnIPv6ScopeID(self):
@@ -1584,7 +1553,6 @@ class TCPPortTestsMixin(object):
         address = port.getHost()
         self.assertIsInstance(address, IPv6Address)
         self.assertEqual(linkLocal, address.host)
-
 
     def _buildProtocolAddressTest(self, client, interface):
         """
@@ -1604,6 +1572,7 @@ class TCPPortTestsMixin(object):
             a server factory's C{buildProtocol} method when C{client}
             establishes a connection.
         """
+
         class ObserveAddress(ServerFactory):
             def buildProtocol(self, address):
                 reactor.stop()
@@ -1616,25 +1585,22 @@ class TCPPortTestsMixin(object):
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
 
         self.runReactor(reactor)
 
         return factory.observedAddress
 
-
     def test_buildProtocolIPv4Address(self):
         """
         When a connection is accepted over IPv4, an L{IPv4Address} is passed
         to the factory's C{buildProtocol} method giving the peer's address.
         """
-        interface = '127.0.0.1'
+        interface = "127.0.0.1"
         client = createTestSocket(self, socket.AF_INET, socket.SOCK_STREAM)
         observedAddress = self._buildProtocolAddressTest(client, interface)
-        self.assertEqual(
-            IPv4Address('TCP', *client.getsockname()), observedAddress)
-
+        self.assertEqual(IPv4Address("TCP", *client.getsockname()), observedAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_buildProtocolIPv6Address(self):
@@ -1643,16 +1609,14 @@ class TCPPortTestsMixin(object):
         passed to the factory's C{buildProtocol} method giving the peer's
         address.
         """
-        interface = '::1'
+        interface = "::1"
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
         observedAddress = self._buildProtocolAddressTest(client, interface)
 
         peer = client.getsockname()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, peer[1]), observedAddress)
-
+        self.assertEqual(IPv6Address("TCP", hostname, peer[1]), observedAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_buildProtocolIPv6AddressScopeID(self):
@@ -1668,9 +1632,7 @@ class TCPPortTestsMixin(object):
         peer = client.getsockname()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, *peer[1:]), observedAddress)
-
+        self.assertEqual(IPv6Address("TCP", hostname, *peer[1:]), observedAddress)
 
     def _serverGetConnectionAddressTest(self, client, interface, which):
         """
@@ -1692,6 +1654,7 @@ class TCPPortTestsMixin(object):
         @return: Whatever object, probably an L{IAddress} provider, is returned
             from the method indicated by C{which}.
         """
+
         class ObserveAddress(Protocol):
             def makeConnection(self, transport):
                 reactor.stop()
@@ -1704,11 +1667,10 @@ class TCPPortTestsMixin(object):
         client.setblocking(False)
         try:
             connect(client, (port.getHost().host, port.getHost().port))
-        except socket.error as e:
+        except OSError as e:
             self.assertIn(e.errno, (errno.EINPROGRESS, errno.EWOULDBLOCK))
         self.runReactor(reactor)
         return factory.address
-
 
     def test_serverGetHostOnIPv4(self):
         """
@@ -1716,13 +1678,10 @@ class TCPPortTestsMixin(object):
         L{ITransport.getHost} method returns an L{IPv4Address} giving the
         address on which the server accepted the connection.
         """
-        interface = '127.0.0.1'
+        interface = "127.0.0.1"
         client = createTestSocket(self, socket.AF_INET, socket.SOCK_STREAM)
-        hostAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getHost')
-        self.assertEqual(
-            IPv4Address('TCP', *client.getpeername()), hostAddress)
-
+        hostAddress = self._serverGetConnectionAddressTest(client, interface, "getHost")
+        self.assertEqual(IPv4Address("TCP", *client.getpeername()), hostAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_serverGetHostOnIPv6(self):
@@ -1731,17 +1690,14 @@ class TCPPortTestsMixin(object):
         L{ITransport.getHost} method returns an L{IPv6Address} giving the
         address on which the server accepted the connection.
         """
-        interface = '::1'
+        interface = "::1"
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
-        hostAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getHost')
+        hostAddress = self._serverGetConnectionAddressTest(client, interface, "getHost")
 
         peer = client.getpeername()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, *peer[1:]), hostAddress)
-
+        self.assertEqual(IPv6Address("TCP", hostname, *peer[1:]), hostAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_serverGetHostOnIPv6ScopeID(self):
@@ -1753,15 +1709,12 @@ class TCPPortTestsMixin(object):
         """
         interface = getLinkLocalIPv6Address()
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
-        hostAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getHost')
+        hostAddress = self._serverGetConnectionAddressTest(client, interface, "getHost")
 
         peer = client.getpeername()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, *peer[1:]), hostAddress)
-
+        self.assertEqual(IPv6Address("TCP", hostname, *peer[1:]), hostAddress)
 
     def test_serverGetPeerOnIPv4(self):
         """
@@ -1769,13 +1722,10 @@ class TCPPortTestsMixin(object):
         L{ITransport.getPeer} method returns an L{IPv4Address} giving the
         address of the remote end of the connection.
         """
-        interface = '127.0.0.1'
+        interface = "127.0.0.1"
         client = createTestSocket(self, socket.AF_INET, socket.SOCK_STREAM)
-        peerAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getPeer')
-        self.assertEqual(
-            IPv4Address('TCP', *client.getsockname()), peerAddress)
-
+        peerAddress = self._serverGetConnectionAddressTest(client, interface, "getPeer")
+        self.assertEqual(IPv4Address("TCP", *client.getsockname()), peerAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_serverGetPeerOnIPv6(self):
@@ -1784,17 +1734,14 @@ class TCPPortTestsMixin(object):
         L{ITransport.getPeer} method returns an L{IPv6Address} giving the
         address on the remote end of the connection.
         """
-        interface = '::1'
+        interface = "::1"
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
-        peerAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getPeer')
+        peerAddress = self._serverGetConnectionAddressTest(client, interface, "getPeer")
 
         peer = client.getsockname()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, *peer[1:]), peerAddress)
-
+        self.assertEqual(IPv6Address("TCP", hostname, *peer[1:]), peerAddress)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_serverGetPeerOnIPv6ScopeID(self):
@@ -1806,29 +1753,32 @@ class TCPPortTestsMixin(object):
         """
         interface = getLinkLocalIPv6Address()
         client = createTestSocket(self, socket.AF_INET6, socket.SOCK_STREAM)
-        peerAddress = self._serverGetConnectionAddressTest(
-            client, interface, 'getPeer')
+        peerAddress = self._serverGetConnectionAddressTest(client, interface, "getPeer")
 
         peer = client.getsockname()
         hostname = socket.getnameinfo(peer, socket.NI_NUMERICHOST)[0]
 
-        self.assertEqual(
-            IPv6Address('TCP', hostname, *peer[1:]), peerAddress)
+        self.assertEqual(IPv6Address("TCP", hostname, *peer[1:]), peerAddress)
 
 
-
-class TCPPortTestsBuilder(ReactorBuilder, ListenTCPMixin, TCPPortTestsMixin,
-                          ObjectModelIntegrationMixin,
-                          StreamTransportTestsMixin):
+class TCPPortTestsBuilder(
+    ReactorBuilder,
+    ListenTCPMixin,
+    TCPPortTestsMixin,
+    ObjectModelIntegrationMixin,
+    StreamTransportTestsMixin,
+):
     pass
 
 
-
-class TCPFDPortTestsBuilder(ReactorBuilder, SocketTCPMixin, TCPPortTestsMixin,
-                            ObjectModelIntegrationMixin,
-                            StreamTransportTestsMixin):
+class TCPFDPortTestsBuilder(
+    ReactorBuilder,
+    SocketTCPMixin,
+    TCPPortTestsMixin,
+    ObjectModelIntegrationMixin,
+    StreamTransportTestsMixin,
+):
     pass
-
 
 
 class StopStartReadingProtocol(Protocol):
@@ -1837,9 +1787,8 @@ class StopStartReadingProtocol(Protocol):
     """
 
     def connectionMade(self):
-        self.data = b''
+        self.data = b""
         self.pauseResumeProducing(3)
-
 
     def pauseResumeProducing(self, counter):
         """
@@ -1848,19 +1797,15 @@ class StopStartReadingProtocol(Protocol):
         self.transport.pauseProducing()
         self.transport.resumeProducing()
         if counter:
-            self.factory.reactor.callLater(0,
-                    self.pauseResumeProducing, counter - 1)
+            self.factory.reactor.callLater(0, self.pauseResumeProducing, counter - 1)
         else:
-            self.factory.reactor.callLater(0,
-                    self.factory.ready.callback, self)
-
+            self.factory.reactor.callLater(0, self.factory.ready.callback, self)
 
     def dataReceived(self, data):
-        log.msg('got data', len(data))
+        log.msg("got data", len(data))
         self.data += data
-        if len(self.data) == 4*4096:
+        if len(self.data) == 4 * 4096:
             self.factory.stop.callback(self.data)
-
 
 
 def oneTransportTest(testMethod):
@@ -1878,9 +1823,11 @@ def oneTransportTest(testMethod):
     @return: a no-argument test method.
     @rtype: 1-argument C{function}
     """
+
     @wraps(testMethod)
     def actualTestMethod(builder):
         other = ConnectableProtocol()
+
         class ServerProtocol(ConnectableProtocol):
             def connectionMade(self):
                 try:
@@ -1890,10 +1837,11 @@ def oneTransportTest(testMethod):
                         self.transport.loseConnection()
                     if other.transport is not None:
                         other.transport.loseConnection()
+
         serverProtocol = ServerProtocol()
         runProtocolsWithReactor(builder, serverProtocol, other, TCPCreator())
-    return actualTestMethod
 
+    return actualTestMethod
 
 
 def assertReading(testCase, reactor, transport):
@@ -1922,7 +1870,6 @@ def assertReading(testCase, reactor, transport):
         testCase.assertTrue(transport.reading)
 
 
-
 def assertNotReading(testCase, reactor, transport):
     """
     Use the given test to assert that the given transport is I{not} actively
@@ -1948,11 +1895,11 @@ def assertNotReading(testCase, reactor, transport):
         testCase.assertFalse(transport.reading)
 
 
-
 class TCPConnectionTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{twisted.internet.tcp.Connection}.
     """
+
     requiredInterfaces = (IReactorTCP,)
 
     def test_stopStartReading(self):
@@ -1966,14 +1913,14 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         skippedReactors = ["Glib2Reactor", "Gtk2Reactor"]
         reactorClassName = reactor.__class__.__name__
         if reactorClassName in skippedReactors and platform.isWindows():
-            raise SkipTest(
-                "This test is broken on gtk/glib under Windows.")
+            raise SkipTest("This test is broken on gtk/glib under Windows.")
 
         sf.protocol = StopStartReadingProtocol
         sf.ready = Deferred()
         sf.stop = Deferred()
         p = reactor.listenTCP(0, sf)
         port = p.getHost().port
+
         def proceed(protos, port):
             """
             Send several IOCPReactor's buffers' worth of data.
@@ -1981,29 +1928,35 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
             self.assertTrue(protos[0])
             self.assertTrue(protos[1])
             protos = protos[0][1], protos[1][1]
-            protos[0].transport.write(b'x' * (2 * 4096) + b'y' * (2 * 4096))
-            return (sf.stop.addCallback(cleanup, protos, port)
-                           .addCallback(lambda ign: reactor.stop()))
+            protos[0].transport.write(b"x" * (2 * 4096) + b"y" * (2 * 4096))
+            return sf.stop.addCallback(cleanup, protos, port).addCallback(
+                lambda ign: reactor.stop()
+            )
 
         def cleanup(data, protos, port):
             """
             Make sure IOCPReactor didn't start several WSARecv operations
             that clobbered each other's results.
             """
-            self.assertEqual(data, b'x'*(2*4096) + b'y'*(2*4096),
-                                 'did not get the right data')
-            return DeferredList([
+            self.assertEqual(
+                data,
+                b"x" * (2 * 4096) + b"y" * (2 * 4096),
+                "did not get the right data",
+            )
+            return DeferredList(
+                [
                     maybeDeferred(protos[0].transport.loseConnection),
                     maybeDeferred(protos[1].transport.loseConnection),
-                    maybeDeferred(port.stopListening)])
+                    maybeDeferred(port.stopListening),
+                ]
+            )
 
-        cc = TCP4ClientEndpoint(reactor, '127.0.0.1', port)
+        cc = TCP4ClientEndpoint(reactor, "127.0.0.1", port)
         cf = ClientFactory()
         cf.protocol = Protocol
         d = DeferredList([cc.connect(cf), sf.ready]).addCallback(proceed, p)
         d.addErrback(log.err)
         self.runReactor(reactor)
-
 
     @oneTransportTest
     def test_resumeProducing(self, reactor, server):
@@ -2016,7 +1969,6 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         server.resumeProducing()
         assertReading(self, reactor, server)
 
-
     @oneTransportTest
     def test_resumeProducingWhileDisconnecting(self, reactor, server):
         """
@@ -2028,7 +1980,6 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         server.resumeProducing()
         assertNotReading(self, reactor, server)
 
-
     @oneTransportTest
     def test_resumeProducingWhileDisconnected(self, reactor, server):
         """
@@ -2039,7 +1990,6 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         assertNotReading(self, reactor, server)
         server.resumeProducing()
         assertNotReading(self, reactor, server)
-
 
     def test_connectionLostAfterPausedTransport(self):
         """
@@ -2056,6 +2006,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         The reactor needs to remember that notification until Bob resumes the
         transport.
         """
+
         class Pauser(ConnectableProtocol):
             def __init__(self):
                 self.events = []
@@ -2083,7 +2034,6 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         runProtocolsWithReactor(self, pauser, Client(), TCPCreator())
         self.assertEqual(pauser.events, ["paused", "resumed", "lost"])
 
-
     def test_doubleHalfClose(self):
         """
         If one side half-closes its connection, and then the other side of the
@@ -2092,9 +2042,9 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
 
         This rather obscure case used to fail (see ticket #3037).
         """
+
         @implementer(IHalfCloseableProtocol)
         class ListenerProtocol(ConnectableProtocol):
-
             def readConnectionLost(self):
                 self.transport.loseWriteConnection()
 
@@ -2106,16 +2056,15 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
                 self.transport.loseConnection()
 
         # If test fails, reactor won't stop and we'll hit timeout:
-        runProtocolsWithReactor(
-            self, ListenerProtocol(), Client(), TCPCreator())
+        runProtocolsWithReactor(self, ListenerProtocol(), Client(), TCPCreator())
 
 
-
-class WriteSequenceTestsMixin(object):
+class WriteSequenceTestsMixin:
     """
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
-    requiredInterfaces = (IReactorTCP,)  # type: Optional[Sequence[Type[Interface]]]  # noqa
+
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
 
     def setWriteBufferSize(self, transport, value):
         """
@@ -2126,7 +2075,6 @@ class WriteSequenceTestsMixin(object):
             transport.writeBufferSize = value
         else:
             transport.bufferSize = value
-
 
     def test_writeSequeceWithoutWrite(self):
         """
@@ -2146,12 +2094,10 @@ class WriteSequenceTestsMixin(object):
             client.transport.writeSequence([b"Some ", b"sequence ", b"splitted"])
 
         reactor = self.buildReactor()
-        d = self.getConnectedClientAndServer(reactor, "127.0.0.1",
-                                             socket.AF_INET)
+        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
-
 
     def test_writeSequenceWithUnicodeRaisesException(self):
         """
@@ -2163,28 +2109,27 @@ class WriteSequenceTestsMixin(object):
             client, server, port = protocols
 
             exc = self.assertRaises(
-                TypeError,
-                server.transport.writeSequence, [u"Unicode is not kosher"])
+                TypeError, server.transport.writeSequence, ["Unicode is not kosher"]
+            )
 
-            self.assertEqual(str(exc), "Data must not be unicode")
+            self.assertEqual(str(exc), "Data must be bytes")
 
             server.transport.loseConnection()
 
         reactor = self.buildReactor()
-        d = self.getConnectedClientAndServer(reactor, "127.0.0.1",
-                                             socket.AF_INET)
+        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
-
 
     def test_streamingProducer(self):
         """
         C{writeSequence} pauses its streaming producer if too much data is
         buffered, and then resumes it.
         """
+
         @implementer(IPushProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
             server = None
 
@@ -2222,15 +2167,13 @@ class WriteSequenceTestsMixin(object):
             self.assertEqual(producer.actions, ["pause"])
 
         reactor = self.buildReactor()
-        d = self.getConnectedClientAndServer(reactor, "127.0.0.1",
-                                             socket.AF_INET)
+        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
         # After the send buffer gets a chance to empty out a bit, the producer
         # should be resumed.
         self.assertEqual(producer.actions, ["pause", "resume"])
-
 
     def test_nonStreamingProducer(self):
         """
@@ -2240,7 +2183,7 @@ class WriteSequenceTestsMixin(object):
         test = self
 
         @implementer(IPullProducer)
-        class SaveActionProducer(object):
+        class SaveActionProducer:
             client = None
 
             def __init__(self):
@@ -2257,7 +2200,6 @@ class WriteSequenceTestsMixin(object):
             def stopProducing(self):
                 self.actions.append("stop")
 
-
         producer = SaveActionProducer()
 
         def connected(protocols):
@@ -2269,8 +2211,7 @@ class WriteSequenceTestsMixin(object):
             self.assertEqual(producer.actions, ["resume"])
 
         reactor = self.buildReactor()
-        d = self.getConnectedClientAndServer(reactor, "127.0.0.1",
-                                             socket.AF_INET)
+        d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)
         d.addCallback(connected)
         d.addErrback(log.err)
         self.runReactor(reactor)
@@ -2279,8 +2220,7 @@ class WriteSequenceTestsMixin(object):
         self.assertEqual(producer.actions, ["resume", "resume"])
 
 
-
-class TCPTransportServerAddressTestMixin(object):
+class TCPTransportServerAddressTestMixin:
     """
     Test mixing for TCP server address building and log prefix.
     """
@@ -2292,7 +2232,6 @@ class TCPTransportServerAddressTestMixin(object):
         """
         raise NotImplementedError()
 
-
     def _testServerAddress(self, interface, addressFamily, adressClass):
         """
         Helper method to test TCP server addresses on either IPv4 or IPv6.
@@ -2302,18 +2241,20 @@ class TCPTransportServerAddressTestMixin(object):
             client, server, port = protocols
             try:
                 self.assertEqual(
-                    "<AccumulatingProtocol #%s on %s>" %
-                        (server.transport.sessionno, port.getHost().port),
-                    str(server.transport))
+                    "<AccumulatingProtocol #%s on %s>"
+                    % (server.transport.sessionno, port.getHost().port),
+                    str(server.transport),
+                )
 
                 self.assertEqual(
-                    "AccumulatingProtocol,%s,%s" %
-                        (server.transport.sessionno, interface),
-                    server.transport.logstr)
+                    "AccumulatingProtocol,%s,%s"
+                    % (server.transport.sessionno, interface),
+                    server.transport.logstr,
+                )
 
                 [peerAddress] = server.factory.peerAddresses
                 self.assertIsInstance(peerAddress, adressClass)
-                self.assertEqual('TCP', peerAddress.type)
+                self.assertEqual("TCP", peerAddress.type)
                 self.assertEqual(interface, peerAddress.host)
             finally:
                 # Be certain to drop the connection so the test completes.
@@ -2325,16 +2266,13 @@ class TCPTransportServerAddressTestMixin(object):
         d.addErrback(log.err)
         self.runReactor(reactor)
 
-
     def test_serverAddressTCP4(self):
         """
         L{Server} instances have a string representation indicating on which
         port they're running, and the connected address is stored on the
         C{peerAddresses} attribute of the factory.
         """
-        return self._testServerAddress("127.0.0.1", socket.AF_INET,
-                                       IPv4Address)
-
+        return self._testServerAddress("127.0.0.1", socket.AF_INET, IPv4Address)
 
     @skipIf(ipv6Skip, ipv6SkipReason)
     def test_serverAddressTCP6(self):
@@ -2343,13 +2281,14 @@ class TCPTransportServerAddressTestMixin(object):
         which port they're running, and the connected address is stored on the
         C{peerAddresses} attribute of the factory.
         """
-        return self._testServerAddress(getLinkLocalIPv6Address(),
-                                       socket.AF_INET6, IPv6Address)
+        return self._testServerAddress(
+            getLinkLocalIPv6Address(), socket.AF_INET6, IPv6Address
+        )
 
 
-
-class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
-                               WriteSequenceTestsMixin, ReactorBuilder):
+class TCPTransportTestsBuilder(
+    TCPTransportServerAddressTestMixin, WriteSequenceTestsMixin, ReactorBuilder
+):
     """
     Test standard L{ITCPTransport}s built with C{listenTCP} and C{connectTCP}.
     """
@@ -2369,16 +2308,19 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
 
         port = reactor.listenTCP(0, server, interface=interface)
 
-        lostDeferred = gatherResults([client.protocolConnectionLost,
-                                      server.protocolConnectionLost])
+        lostDeferred = gatherResults(
+            [client.protocolConnectionLost, server.protocolConnectionLost]
+        )
+
         def stop(result):
             reactor.stop()
             return result
 
         lostDeferred.addBoth(stop)
 
-        startDeferred = gatherResults([client.protocolConnectionMade,
-                                       server.protocolConnectionMade])
+        startDeferred = gatherResults(
+            [client.protocolConnectionMade, server.protocolConnectionMade]
+        )
 
         deferred = Deferred()
 
@@ -2395,13 +2337,13 @@ class TCPTransportTestsBuilder(TCPTransportServerAddressTestMixin,
         return deferred
 
 
-
-class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
-                                        WriteSequenceTestsMixin,
-                                        ReactorBuilder):
+class AdoptStreamConnectionTestsBuilder(
+    TCPTransportServerAddressTestMixin, WriteSequenceTestsMixin, ReactorBuilder
+):
     """
     Test server transports built using C{adoptStreamConnection}.
     """
+
     requiredInterfaces = (IReactorFDSet, IReactorSocket)
 
     def getConnectedClientAndServer(self, reactor, interface, addressFamily):
@@ -2428,12 +2370,15 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
             reactor.removeReader(proto.transport)
             reactor.removeWriter(proto.transport)
             reactor.adoptStreamConnection(
-                proto.transport.fileno(), addressFamily, server)
+                proto.transport.fileno(), addressFamily, server
+            )
 
         firstServer.protocolConnectionMade.addCallback(firtServerConnected)
 
-        lostDeferred = gatherResults([client.protocolConnectionLost,
-                                      server.protocolConnectionLost])
+        lostDeferred = gatherResults(
+            [client.protocolConnectionLost, server.protocolConnectionLost]
+        )
+
         def stop(result):
             if reactor.running:
                 reactor.stop()
@@ -2444,8 +2389,10 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
         deferred = Deferred()
         deferred.addErrback(stop)
 
-        startDeferred = gatherResults([client.protocolConnectionMade,
-                                       server.protocolConnectionMade])
+        startDeferred = gatherResults(
+            [client.protocolConnectionMade, server.protocolConnectionMade]
+        )
+
         def start(protocols):
             client, server = protocols
             log.msg("client connected %s" % client)
@@ -2456,7 +2403,6 @@ class AdoptStreamConnectionTestsBuilder(TCPTransportServerAddressTestMixin,
 
         reactor.connectTCP(interface, port.getHost().port, client)
         return deferred
-
 
 
 globals().update(TCP4ClientTestsBuilder.makeTestCaseClasses())
@@ -2470,7 +2416,6 @@ globals().update(TCPTransportTestsBuilder.makeTestCaseClasses())
 globals().update(AdoptStreamConnectionTestsBuilder.makeTestCaseClasses())
 
 
-
 class ServerAbortsTwice(ConnectableProtocol):
     """
     Call abortConnection() twice.
@@ -2481,7 +2426,6 @@ class ServerAbortsTwice(ConnectableProtocol):
         self.transport.abortConnection()
 
 
-
 class ServerAbortsThenLoses(ConnectableProtocol):
     """
     Call abortConnection() followed by loseConnection().
@@ -2490,7 +2434,6 @@ class ServerAbortsThenLoses(ConnectableProtocol):
     def dataReceived(self, data):
         self.transport.abortConnection()
         self.transport.loseConnection()
-
 
 
 class AbortServerWritingProtocol(ConnectableProtocol):
@@ -2505,7 +2448,6 @@ class AbortServerWritingProtocol(ConnectableProtocol):
         self.transport.write(b"ready")
 
 
-
 class ReadAbortServerProtocol(AbortServerWritingProtocol):
     """
     Server that should never receive any data, except 'X's which are written
@@ -2514,9 +2456,8 @@ class ReadAbortServerProtocol(AbortServerWritingProtocol):
     """
 
     def dataReceived(self, data):
-        if data.replace(b'X', b''):
+        if data.replace(b"X", b""):
             raise Exception("Unexpectedly received data.")
-
 
 
 class NoReadServer(ConnectableProtocol):
@@ -2531,7 +2472,6 @@ class NoReadServer(ConnectableProtocol):
         self.transport.stopReading()
 
 
-
 class EventualNoReadServer(ConnectableProtocol):
     """
     Like NoReadServer, except we Wait until some bytes have been delivered
@@ -2542,13 +2482,11 @@ class EventualNoReadServer(ConnectableProtocol):
     gotData = False
     stoppedReading = False
 
-
     def dataReceived(self, data):
         if not self.gotData:
             self.gotData = True
             self.transport.registerProducer(self, False)
             self.transport.write(b"hello")
-
 
     def resumeProducing(self):
         if self.stoppedReading:
@@ -2557,27 +2495,24 @@ class EventualNoReadServer(ConnectableProtocol):
         # We've written out the data:
         self.transport.stopReading()
 
-
     def pauseProducing(self):
         pass
 
-
     def stopProducing(self):
         pass
-
 
 
 class BaseAbortingClient(ConnectableProtocol):
     """
     Base class for abort-testing clients.
     """
+
     inReactorMethod = False
 
     def connectionLost(self, reason):
         if self.inReactorMethod:
             raise RuntimeError("BUG: connectionLost was called re-entrantly!")
         ConnectableProtocol.connectionLost(self, reason)
-
 
 
 class WritingButNotAbortingClient(BaseAbortingClient):
@@ -2587,7 +2522,6 @@ class WritingButNotAbortingClient(BaseAbortingClient):
 
     def connectionMade(self):
         self.transport.write(b"hello")
-
 
 
 class AbortingClient(BaseAbortingClient):
@@ -2603,7 +2537,6 @@ class AbortingClient(BaseAbortingClient):
         self.writeAndAbort()
         self.inReactorMethod = False
 
-
     def writeAndAbort(self):
         # X is written before abortConnection, and so there is a chance it
         # might arrive. Y is written after, and so no Ys should ever be
@@ -2611,7 +2544,6 @@ class AbortingClient(BaseAbortingClient):
         self.transport.write(b"X" * 10000)
         self.transport.abortConnection()
         self.transport.write(b"Y" * 10000)
-
 
 
 class AbortingTwiceClient(AbortingClient):
@@ -2624,7 +2556,6 @@ class AbortingTwiceClient(AbortingClient):
         self.transport.abortConnection()
 
 
-
 class AbortingThenLosingClient(AbortingClient):
     """
     Call abortConnection() and then loseConnection().
@@ -2633,7 +2564,6 @@ class AbortingThenLosingClient(AbortingClient):
     def writeAndAbort(self):
         AbortingClient.writeAndAbort(self)
         self.transport.loseConnection()
-
 
 
 class ProducerAbortingClient(ConnectableProtocol):
@@ -2650,10 +2580,8 @@ class ProducerAbortingClient(ConnectableProtocol):
         self.transport.registerProducer(self, False)
         self.inRegisterProducer = False
 
-
     def connectionMade(self):
         self.write()
-
 
     def resumeProducing(self):
         self.inReactorMethod = True
@@ -2661,10 +2589,8 @@ class ProducerAbortingClient(ConnectableProtocol):
             self.transport.abortConnection()
         self.inReactorMethod = False
 
-
     def stopProducing(self):
         self.producerStopped = True
-
 
     def connectionLost(self, reason):
         if not self.producerStopped:
@@ -2672,7 +2598,6 @@ class ProducerAbortingClient(ConnectableProtocol):
         if self.inReactorMethod:
             raise RuntimeError("BUG: connectionLost called re-entrantly!")
         ConnectableProtocol.connectionLost(self, reason)
-
 
 
 class StreamingProducerClient(ConnectableProtocol):
@@ -2687,13 +2612,13 @@ class StreamingProducerClient(ConnectableProtocol):
     Since it's very difficult to know when this actually happens, we just
     write a lot of data, and assume at that point no more writes will happen.
     """
+
     paused = False
     extraWrites = 0
     inReactorMethod = False
 
     def connectionMade(self):
         self.write()
-
 
     def write(self):
         """
@@ -2704,14 +2629,11 @@ class StreamingProducerClient(ConnectableProtocol):
         for i in range(100):
             self.transport.write(b"1234567890" * 32000)
 
-
     def resumeProducing(self):
         self.paused = False
 
-
     def stopProducing(self):
         pass
-
 
     def pauseProducing(self):
         """
@@ -2734,7 +2656,6 @@ class StreamingProducerClient(ConnectableProtocol):
         # http://twistedmatrix.com/trac/ticket/5303 for details:
         self.reactor.callLater(0.01, self.doAbort)
 
-
     def doAbort(self):
         if not self.paused:
             log.err(RuntimeError("BUG: We should be paused a this point."))
@@ -2742,12 +2663,10 @@ class StreamingProducerClient(ConnectableProtocol):
         self.transport.abortConnection()
         self.inReactorMethod = False
 
-
     def connectionLost(self, reason):
         # Tell server to start reading again so it knows to go away:
         self.otherProtocol.transport.startReading()
         ConnectableProtocol.connectionLost(self, reason)
-
 
 
 class StreamingProducerClientLater(StreamingProducerClient):
@@ -2759,7 +2678,6 @@ class StreamingProducerClientLater(StreamingProducerClient):
     def connectionMade(self):
         self.transport.write(b"hello")
         self.gotData = False
-
 
     def dataReceived(self, data):
         if not self.gotData:
@@ -2779,10 +2697,8 @@ class ProducerAbortingClientLater(ProducerAbortingClient):
         # Override base class connectionMade().
         pass
 
-
     def dataReceived(self, data):
         self.write()
-
 
 
 class DataReceivedRaisingClient(AbortingClient):
@@ -2795,7 +2711,6 @@ class DataReceivedRaisingClient(AbortingClient):
         raise ZeroDivisionError("ONO")
 
 
-
 class ResumeThrowsClient(ProducerAbortingClient):
     """
     Call abortConnection() and throw exception from resumeProducing().
@@ -2806,7 +2721,6 @@ class ResumeThrowsClient(ProducerAbortingClient):
             self.transport.abortConnection()
             raise ZeroDivisionError("ono!")
 
-
     def connectionLost(self, reason):
         # Base class assertion about stopProducing being called isn't valid;
         # if the we blew up in resumeProducing, consumers are justified in
@@ -2814,16 +2728,15 @@ class ResumeThrowsClient(ProducerAbortingClient):
         ConnectableProtocol.connectionLost(self, reason)
 
 
-
-class AbortConnectionMixin(object):
+class AbortConnectionMixin:
     """
     Unit tests for L{ITransport.abortConnection}.
     """
-    # Override in subclasses, should be an EndpointCreator instance:
-    endpoints = None  # type: Optional[EndpointCreator]
 
-    def runAbortTest(self, clientClass, serverClass,
-                     clientConnectionLostReason=None):
+    # Override in subclasses, should be an EndpointCreator instance:
+    endpoints: Optional[EndpointCreator] = None
+
+    def runAbortTest(self, clientClass, serverClass, clientConnectionLostReason=None):
         """
         A test runner utility function, which hooks up a matched pair of client
         and server protocols.
@@ -2852,12 +2765,13 @@ class AbortConnectionMixin(object):
         if clientConnectionLostReason is not None:
             self.assertIsInstance(
                 client.disconnectReason.value,
-                (clientConnectionLostReason,) + clientExpectedExceptions)
+                (clientConnectionLostReason,) + clientExpectedExceptions,
+            )
         else:
-            self.assertIsInstance(client.disconnectReason.value,
-                                  clientExpectedExceptions)
+            self.assertIsInstance(
+                client.disconnectReason.value, clientExpectedExceptions
+            )
         self.assertIsInstance(server.disconnectReason.value, serverExpectedExceptions)
-
 
     def test_dataReceivedAbort(self):
         """
@@ -2865,7 +2779,6 @@ class AbortConnectionMixin(object):
         disconnected, but connectionLost should not be called re-entrantly.
         """
         return self.runAbortTest(AbortingClient, ReadAbortServerProtocol)
-
 
     def test_clientAbortsConnectionTwice(self):
         """
@@ -2875,16 +2788,13 @@ class AbortConnectionMixin(object):
         """
         return self.runAbortTest(AbortingTwiceClient, ReadAbortServerProtocol)
 
-
     def test_clientAbortsConnectionThenLosesConnection(self):
         """
         Client calls abortConnection(), followed by loseConnection().
 
         No exception should be thrown, and the connection will be closed.
         """
-        return self.runAbortTest(AbortingThenLosingClient,
-                                 ReadAbortServerProtocol)
-
+        return self.runAbortTest(AbortingThenLosingClient, ReadAbortServerProtocol)
 
     def test_serverAbortsConnectionTwice(self):
         """
@@ -2892,9 +2802,11 @@ class AbortConnectionMixin(object):
 
         No exception should be thrown, and the connection will be closed.
         """
-        return self.runAbortTest(WritingButNotAbortingClient, ServerAbortsTwice,
-                                 clientConnectionLostReason=ConnectionLost)
-
+        return self.runAbortTest(
+            WritingButNotAbortingClient,
+            ServerAbortsTwice,
+            clientConnectionLostReason=ConnectionLost,
+        )
 
     def test_serverAbortsConnectionThenLosesConnection(self):
         """
@@ -2902,10 +2814,11 @@ class AbortConnectionMixin(object):
 
         No exception should be thrown, and the connection will be closed.
         """
-        return self.runAbortTest(WritingButNotAbortingClient,
-                                 ServerAbortsThenLoses,
-                                 clientConnectionLostReason=ConnectionLost)
-
+        return self.runAbortTest(
+            WritingButNotAbortingClient,
+            ServerAbortsThenLoses,
+            clientConnectionLostReason=ConnectionLost,
+        )
 
     def test_resumeProducingAbort(self):
         """
@@ -2913,18 +2826,16 @@ class AbortConnectionMixin(object):
         been exchanged. The protocol should be disconnected, but
         connectionLost should not be called re-entrantly.
         """
-        self.runAbortTest(ProducerAbortingClient,
-                          ConnectableProtocol)
-
+        self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
         bytes have been exchanged. The protocol should be disconnected.
         """
-        return self.runAbortTest(ProducerAbortingClientLater,
-                                 AbortServerWritingProtocol)
-
+        return self.runAbortTest(
+            ProducerAbortingClientLater, AbortServerWritingProtocol
+        )
 
     def test_fullWriteBuffer(self):
         """
@@ -2937,9 +2848,7 @@ class AbortConnectionMixin(object):
         The protocol should be disconnected, but connectionLost should not be
         called re-entrantly.
         """
-        self.runAbortTest(StreamingProducerClient,
-                          NoReadServer)
-
+        self.runAbortTest(StreamingProducerClient, NoReadServer)
 
     def test_fullWriteBufferAfterByteExchange(self):
         """
@@ -2949,9 +2858,7 @@ class AbortConnectionMixin(object):
         allowing a TLS handshake if we're testing TLS. The connection will
         then be lost.
         """
-        return self.runAbortTest(StreamingProducerClientLater,
-                                 EventualNoReadServer)
-
+        return self.runAbortTest(StreamingProducerClientLater, EventualNoReadServer)
 
     def test_dataReceivedThrows(self):
         """
@@ -2962,12 +2869,13 @@ class AbortConnectionMixin(object):
         that bugs should not be masked by abortConnection, in particular
         unexpected exceptions.
         """
-        self.runAbortTest(DataReceivedRaisingClient,
-                          AbortServerWritingProtocol,
-                          clientConnectionLostReason=ZeroDivisionError)
+        self.runAbortTest(
+            DataReceivedRaisingClient,
+            AbortServerWritingProtocol,
+            clientConnectionLostReason=ZeroDivisionError,
+        )
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(errors), 1)
-
 
     def test_resumeProducingThrows(self):
         """
@@ -2978,24 +2886,26 @@ class AbortConnectionMixin(object):
         that bugs should not be masked by abortConnection, in particular
         unexpected exceptions.
         """
-        self.runAbortTest(ResumeThrowsClient,
-                          ConnectableProtocol,
-                          clientConnectionLostReason=ZeroDivisionError)
+        self.runAbortTest(
+            ResumeThrowsClient,
+            ConnectableProtocol,
+            clientConnectionLostReason=ZeroDivisionError,
+        )
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(errors), 1)
-
 
 
 class AbortConnectionTests(ReactorBuilder, AbortConnectionMixin):
     """
     TCP-specific L{AbortConnectionMixin} tests.
     """
+
     requiredInterfaces = (IReactorTCP,)
 
     endpoints = TCPCreator()
 
-globals().update(AbortConnectionTests.makeTestCaseClasses())
 
+globals().update(AbortConnectionTests.makeTestCaseClasses())
 
 
 @skipIf(ipv6Skip, ipv6SkipReason)
@@ -3003,6 +2913,7 @@ class SimpleUtilityTests(TestCase):
     """
     Simple, direct tests for helpers within L{twisted.internet.tcp}.
     """
+
     def test_resolveNumericHost(self):
         """
         L{_resolveIPv6} raises a L{socket.gaierror} (L{socket.EAI_NONAME}) when
@@ -3013,9 +2924,10 @@ class SimpleUtilityTests(TestCase):
         err = self.assertRaises(socket.gaierror, _resolveIPv6, "localhost", 1)
         self.assertEqual(err.args[0], socket.EAI_NONAME)
 
-
-    @skipIf(platform.isWindows(),
-            "The AI_NUMERICSERV flag is not supported by Microsoft providers.")
+    @skipIf(
+        platform.isWindows(),
+        "The AI_NUMERICSERV flag is not supported by Microsoft providers.",
+    )
     # http://msdn.microsoft.com/en-us/library/windows/desktop/ms738520.aspx
     def test_resolveNumericService(self):
         """
@@ -3027,7 +2939,6 @@ class SimpleUtilityTests(TestCase):
         err = self.assertRaises(socket.gaierror, _resolveIPv6, "::1", "http")
         self.assertEqual(err.args[0], socket.EAI_NONAME)
 
-
     def test_resolveIPv6(self):
         """
         L{_resolveIPv6} discovers the flow info and scope ID of an IPv6
@@ -3036,15 +2947,14 @@ class SimpleUtilityTests(TestCase):
         result = _resolveIPv6("::1", 2)
         self.assertEqual(len(result), 4)
         # We can't say anything more useful about these than that they're
-        # integers, because the whole point of getaddrinfo is that you can never
-        # know a-priori know _anything_ about the network interfaces of the
-        # computer that you're on and you have to ask it.
-        self.assertIsInstance(result[2], (int, long)) # flow info
-        self.assertIsInstance(result[3], (int, long)) # scope id
+        # integers, because the whole point of getaddrinfo is that you can
+        # never know a-priori know _anything_ about the network interfaces
+        # of the computer that you're on and you have to ask it.
+        self.assertIsInstance(result[2], int)  # flow info
+        self.assertIsInstance(result[3], int)  # scope id
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
-
 
 
 class BuffersLogsTests(SynchronousTestCase):
@@ -3057,7 +2967,6 @@ class BuffersLogsTests(SynchronousTestCase):
         self.events = []
         self.logBuffer = _BuffersLogs(self.namespace, self.events.append)
 
-
     def test_buffersInBlock(self):
         """
         The context manager's logger does not log to provided observer
@@ -3066,7 +2975,6 @@ class BuffersLogsTests(SynchronousTestCase):
         with self.logBuffer as logger:
             logger.info("An event")
             self.assertFalse(self.events)
-
 
     def test_flushesOnExit(self):
         """
@@ -3078,15 +2986,15 @@ class BuffersLogsTests(SynchronousTestCase):
             self.assertFalse(self.events)
         self.assertEqual(1, len(self.events))
         [event] = self.events
-        self.assertEqual(event['log_format'], "An event")
-        self.assertEqual(event['log_namespace'], self.namespace)
-
+        self.assertEqual(event["log_format"], "An event")
+        self.assertEqual(event["log_namespace"], self.namespace)
 
     def test_flushesOnExitWithException(self):
         """
         The context manager flushes its buffered logs when the block
         terminates because of an exception.
         """
+
         class TestException(Exception):
             """
             An exception only raised by this test.
@@ -3098,29 +3006,27 @@ class BuffersLogsTests(SynchronousTestCase):
                 self.assertFalse(self.events)
                 raise TestException()
 
-        self.assertEqual(1, len(self.events))
+        self.assertEqual(1, len(self.events))  # type: ignore[unreachable]
         [event] = self.events
-        self.assertEqual(event['log_format'], "An event")
-        self.assertEqual(event['log_namespace'], self.namespace)
+        self.assertEqual(event["log_format"], "An event")
+        self.assertEqual(event["log_namespace"], self.namespace)
 
 
-
-@skipIf(SKIP_EMFILE,
-        "Reserved EMFILE file descriptor not supported on Windows.")
+@skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
 class FileDescriptorReservationTests(SynchronousTestCase):
     """
     Tests for L{_FileDescriptorReservation}.
     """
+
     def setUp(self):
         self.reservedFileObjects = []
         self.tempfile = self.mktemp()
 
         def fakeFileFactory():
-            self.reservedFileObjects.append(open(self.tempfile, 'w'))
+            self.reservedFileObjects.append(open(self.tempfile, "w"))
             return self.reservedFileObjects[-1]
 
         self.reservedFD = _FileDescriptorReservation(fakeFileFactory)
-
 
     def test_providesInterface(self):
         """
@@ -3128,7 +3034,6 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         L{_IFileDescriptorReservation}.
         """
         verifyObject(_IFileDescriptorReservation, self.reservedFD)
-
 
     def test_reserveOpensFileOnce(self):
         """
@@ -3141,7 +3046,6 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             self.reservedFD.reserve()
             self.assertEqual(len(self.reservedFileObjects), 1)
             self.assertFalse(self.reservedFileObjects[0].closed)
-
 
     def test_reserveEMFILELogged(self):
         """
@@ -3161,7 +3065,6 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].value.errno, errno.EMFILE)
 
-
     def test_reserveRaisesNonEMFILEExceptions(self):
         """
         Any exception raised while opening the reserve file that is
@@ -3177,7 +3080,6 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             reserveFD = _FileDescriptorReservation(failsWith)
             self.assertRaises(errorClass, reserveFD.reserve)
 
-
     def test_available(self):
         """
         The reservation is available after the file descriptor is
@@ -3186,7 +3088,6 @@ class FileDescriptorReservationTests(SynchronousTestCase):
         self.assertFalse(self.reservedFD.available())
         self.reservedFD.reserve()
         self.assertTrue(self.reservedFD.available())
-
 
     def test_enterFailsWithoutFile(self):
         """
@@ -3208,12 +3109,12 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             self.assertFalse(self.reservedFD.available())
         self.assertTrue(self.reservedFD.available())
 
-
     def test_exitOpensFileOnException(self):
         """
         An exception raised within a reservation context manager's
         block does not prevent the file from being reopened.
         """
+
         class TestException(Exception):
             """
             An exception only used by this test.
@@ -3224,13 +3125,13 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with self.reservedFD:
                 raise TestException()
 
-
     def test_exitSuppressesReservationException(self):
         """
         An exception raised while re-opening the reserve file exiting
         a reservation's context manager block is suppressed but
         logged, allowing an exception raised within the block through.
         """
+
         class AllowedException(Exception):
             """
             The exception allowed out of the block.
@@ -3251,7 +3152,8 @@ class FileDescriptorReservationTests(SynchronousTestCase):
                 return io.BytesIO()
 
         reservedFD = _FileDescriptorReservation(
-            failsWithSuppressedExceptionAfterSecondOpen)
+            failsWithSuppressedExceptionAfterSecondOpen
+        )
 
         reservedFD.reserve()
         self.assertTrue(reservedFD.available())
@@ -3260,9 +3162,8 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with reservedFD:
                 raise AllowedException()
 
-        errors = self.flushLoggedErrors(SuppressedException)
+        errors = self.flushLoggedErrors(SuppressedException)  # type: ignore[unreachable]
         self.assertEqual(len(errors), 1)
-
 
 
 class NullFileDescriptorReservationTests(SynchronousTestCase):
@@ -3273,7 +3174,6 @@ class NullFileDescriptorReservationTests(SynchronousTestCase):
     def setUp(self):
         self.nullReservedFD = _NullFileDescriptorReservation()
 
-
     def test_providesInterface(self):
         """
         L{_NullFileDescriptorReservation} provides
@@ -3281,13 +3181,11 @@ class NullFileDescriptorReservationTests(SynchronousTestCase):
         """
         verifyObject(_IFileDescriptorReservation, self.nullReservedFD)
 
-
     def test_available(self):
         """
         The null reserved file descriptor is never available.
         """
         self.assertFalse(self.nullReservedFD.available())
-
 
     def test_contextManager(self):
         """

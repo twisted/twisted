@@ -16,11 +16,11 @@ from twisted.cred.credentials import CramMD5Credentials
 from twisted.cred.credentials import IUsernameHashedPassword
 
 
-
 class CramMD5CredentialsTests(TestCase):
     """
     Tests for L{CramMD5Credentials}.
     """
+
     def test_idempotentChallenge(self):
         """
         The same L{CramMD5Credentials} will always provide the same challenge,
@@ -29,7 +29,6 @@ class CramMD5CredentialsTests(TestCase):
         c = CramMD5Credentials()
         chal = c.getChallenge()
         self.assertEqual(chal, c.getChallenge())
-
 
     def test_checkPassword(self):
         """
@@ -40,10 +39,8 @@ class CramMD5CredentialsTests(TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hexlify(HMAC(b'secret', chal,
-                             digestmod=hashlib.md5).digest())
-        self.assertTrue(c.checkPassword(b'secret'))
-
+        c.response = hexlify(HMAC(b"secret", chal, digestmod=hashlib.md5).digest())
+        self.assertTrue(c.checkPassword(b"secret"))
 
     def test_noResponse(self):
         """
@@ -51,8 +48,7 @@ class CramMD5CredentialsTests(TestCase):
         L{False}.
         """
         c = CramMD5Credentials()
-        self.assertFalse(c.checkPassword(b'secret'))
-
+        self.assertFalse(c.checkPassword(b"secret"))
 
     def test_wrongPassword(self):
         """
@@ -63,10 +59,10 @@ class CramMD5CredentialsTests(TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hexlify(HMAC(b'thewrongsecret', chal,
-                             digestmod=hashlib.md5).digest())
-        self.assertFalse(c.checkPassword(b'secret'))
-
+        c.response = hexlify(
+            HMAC(b"thewrongsecret", chal, digestmod=hashlib.md5).digest()
+        )
+        self.assertFalse(c.checkPassword(b"secret"))
 
     def test_setResponse(self):
         """
@@ -76,18 +72,20 @@ class CramMD5CredentialsTests(TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.setResponse(b" ".join(
-            (b"squirrel",
-             hexlify(HMAC(b'supersecret', chal,
-                     digestmod=hashlib.md5).digest()))))
-        self.assertTrue(c.checkPassword(b'supersecret'))
+        c.setResponse(
+            b" ".join(
+                (
+                    b"squirrel",
+                    hexlify(HMAC(b"supersecret", chal, digestmod=hashlib.md5).digest()),
+                )
+            )
+        )
+        self.assertTrue(c.checkPassword(b"supersecret"))
         self.assertEqual(c.username, b"squirrel")
-
 
     def test_interface(self):
         """
         L{CramMD5Credentials} implements the L{IUsernameHashedPassword}
         interface.
         """
-        self.assertTrue(
-            IUsernameHashedPassword.implementedBy(CramMD5Credentials))
+        self.assertTrue(IUsernameHashedPassword.implementedBy(CramMD5Credentials))

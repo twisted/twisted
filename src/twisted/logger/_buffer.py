@@ -7,18 +7,18 @@ Log observer that maintains a buffer.
 """
 
 from collections import deque
+from typing import Deque, Optional
 
 from zope.interface import implementer
 
-from ._observer import ILogObserver
+from ._interfaces import ILogObserver, LogEvent
 
 
 _DEFAULT_BUFFER_MAXIMUM = 64 * 1024
 
 
-
 @implementer(ILogObserver)
-class LimitedHistoryLogObserver(object):
+class LimitedHistoryLogObserver:
     """
     L{ILogObserver} that stores events in a buffer of a fixed size::
 
@@ -35,25 +35,21 @@ class LimitedHistoryLogObserver(object):
         >>>
     """
 
-    def __init__(self, size=_DEFAULT_BUFFER_MAXIMUM):
+    def __init__(self, size: Optional[int] = _DEFAULT_BUFFER_MAXIMUM) -> None:
         """
         @param size: The maximum number of events to buffer.  If L{None}, the
             buffer is unbounded.
-        @type size: L{int}
         """
-        self._buffer = deque(maxlen=size)
+        self._buffer: Deque[LogEvent] = deque(maxlen=size)
 
-
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         self._buffer.append(event)
 
-
-    def replayTo(self, otherObserver):
+    def replayTo(self, otherObserver: ILogObserver) -> None:
         """
         Re-play the buffered events to another log observer.
 
         @param otherObserver: An observer to replay events to.
-        @type otherObserver: L{ILogObserver}
         """
         for event in self._buffer:
             otherObserver(event)

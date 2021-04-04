@@ -9,8 +9,14 @@ from twisted.trial.unittest import TestCase
 
 from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import (
-    NOT_FOUND, FORBIDDEN, Resource, ErrorPage, NoResource, ForbiddenResource,
-    getChildForRequest)
+    NOT_FOUND,
+    FORBIDDEN,
+    Resource,
+    ErrorPage,
+    NoResource,
+    ForbiddenResource,
+    getChildForRequest,
+)
 from twisted.web.http_headers import Headers
 from twisted.web.test.requesthelper import DummyRequest
 
@@ -32,26 +38,25 @@ class ErrorPageTests(TestCase):
         page = self.errorPage(321, "foo", "bar")
         self.assertIdentical(page.getChild(b"name", object()), page)
 
-
     def _pageRenderingTest(self, page, code, brief, detail):
-        request = DummyRequest([b''])
+        request = DummyRequest([b""])
         template = (
-            u"\n"
-            u"<html>\n"
-            u"  <head><title>%s - %s</title></head>\n"
-            u"  <body>\n"
-            u"    <h1>%s</h1>\n"
-            u"    <p>%s</p>\n"
-            u"  </body>\n"
-            u"</html>\n")
+            "\n"
+            "<html>\n"
+            "  <head><title>%s - %s</title></head>\n"
+            "  <body>\n"
+            "    <h1>%s</h1>\n"
+            "    <p>%s</p>\n"
+            "  </body>\n"
+            "</html>\n"
+        )
         expected = template % (code, brief, brief, detail)
-        self.assertEqual(
-            page.render(request), expected.encode('utf-8'))
+        self.assertEqual(page.render(request), expected.encode("utf-8"))
         self.assertEqual(request.responseCode, code)
         self.assertEqual(
             request.responseHeaders,
-            Headers({b'content-type': [b'text/html; charset=utf-8']}))
-
+            Headers({b"content-type": [b"text/html; charset=utf-8"]}),
+        )
 
     def test_errorPageRendering(self):
         """
@@ -66,7 +71,6 @@ class ErrorPageTests(TestCase):
         page = self.errorPage(code, brief, detail)
         self._pageRenderingTest(page, code, brief, detail)
 
-
     def test_noResourceRendering(self):
         """
         L{NoResource} sets the HTTP I{NOT FOUND} code.
@@ -74,7 +78,6 @@ class ErrorPageTests(TestCase):
         detail = "long message"
         page = self.noResource(detail)
         self._pageRenderingTest(page, NOT_FOUND, "No Such Resource", detail)
-
 
     def test_forbiddenResourceRendering(self):
         """
@@ -85,31 +88,31 @@ class ErrorPageTests(TestCase):
         self._pageRenderingTest(page, FORBIDDEN, "Forbidden Resource", detail)
 
 
-
 class DynamicChild(Resource):
     """
     A L{Resource} to be created on the fly by L{DynamicChildren}.
     """
+
     def __init__(self, path, request):
         Resource.__init__(self)
         self.path = path
         self.request = request
 
 
-
 class DynamicChildren(Resource):
     """
     A L{Resource} with dynamic children.
     """
+
     def getChild(self, path, request):
         return DynamicChild(path, request)
-
 
 
 class BytesReturnedRenderable(Resource):
     """
     A L{Resource} with minimal capabilities to render a response.
     """
+
     def __init__(self, response):
         """
         @param response: A C{bytes} object giving the value to return from
@@ -117,7 +120,6 @@ class BytesReturnedRenderable(Resource):
         """
         Resource.__init__(self)
         self._response = response
-
 
     def render_GET(self, request):
         """
@@ -127,25 +129,24 @@ class BytesReturnedRenderable(Resource):
         return self._response
 
 
-
 class ImplicitAllowedMethods(Resource):
     """
     A L{Resource} which implicitly defines its allowed methods by defining
     renderers to handle them.
     """
+
     def render_GET(self, request):
         pass
 
-
     def render_PUT(self, request):
         pass
-
 
 
 class ResourceTests(TestCase):
     """
     Tests for L{Resource}.
     """
+
     def test_staticChildren(self):
         """
         L{Resource.putChild} adds a I{static} child to the resource.  That child
@@ -158,8 +159,8 @@ class ResourceTests(TestCase):
         resource.putChild(b"foo", child)
         resource.putChild(b"bar", sibling)
         self.assertIdentical(
-            child, resource.getChildWithDefault(b"foo", DummyRequest([])))
-
+            child, resource.getChildWithDefault(b"foo", DummyRequest([]))
+        )
 
     def test_dynamicChildren(self):
         """
@@ -174,7 +175,6 @@ class ResourceTests(TestCase):
         self.assertEqual(child.path, path)
         self.assertIdentical(child.request, request)
 
-
     def test_staticChildPathType(self):
         """
         Test that passing the wrong type to putChild results in a warning,
@@ -183,22 +183,19 @@ class ResourceTests(TestCase):
         resource = Resource()
         child = Resource()
         sibling = Resource()
-        resource.putChild(u"foo", child)
+        resource.putChild("foo", child)
         warnings = self.flushWarnings([self.test_staticChildPathType])
         self.assertEqual(len(warnings), 1)
-        self.assertIn("Path segment must be bytes",
-                      warnings[0]['message'])
+        self.assertIn("Path segment must be bytes", warnings[0]["message"])
         # We expect an error here because "foo" != b"foo" on Python 3+
         self.assertIsInstance(
-            resource.getChildWithDefault(b"foo", DummyRequest([])),
-            ErrorPage)
+            resource.getChildWithDefault(b"foo", DummyRequest([])), ErrorPage
+        )
 
         resource.putChild(None, sibling)
         warnings = self.flushWarnings([self.test_staticChildPathType])
         self.assertEqual(len(warnings), 1)
-        self.assertIn("Path segment must be bytes",
-                      warnings[0]['message'])
-
+        self.assertIn("Path segment must be bytes", warnings[0]["message"])
 
     def test_defaultHEAD(self):
         """
@@ -207,10 +204,9 @@ class ResourceTests(TestCase):
         """
         expected = b"insert response here"
         request = DummyRequest([])
-        request.method = b'HEAD'
+        request.method = b"HEAD"
         resource = BytesReturnedRenderable(expected)
         self.assertEqual(expected, resource.render(request))
-
 
     def test_explicitAllowedMethods(self):
         """
@@ -218,14 +214,13 @@ class ResourceTests(TestCase):
         request method has a C{allowedMethods} attribute set to the value of the
         C{allowedMethods} attribute of the L{Resource}, if it has one.
         """
-        expected = [b'GET', b'HEAD', b'PUT']
+        expected = [b"GET", b"HEAD", b"PUT"]
         resource = Resource()
         resource.allowedMethods = expected
         request = DummyRequest([])
-        request.method = b'FICTIONAL'
+        request.method = b"FICTIONAL"
         exc = self.assertRaises(UnsupportedMethod, resource.render, request)
         self.assertEqual(set(expected), set(exc.allowedMethods))
-
 
     def test_implicitAllowedMethods(self):
         """
@@ -235,20 +230,19 @@ class ResourceTests(TestCase):
         I{render_}-prefixed methods which it defines, if C{allowedMethods} is
         not explicitly defined by the L{Resource}.
         """
-        expected = set([b'GET', b'HEAD', b'PUT'])
+        expected = {b"GET", b"HEAD", b"PUT"}
         resource = ImplicitAllowedMethods()
         request = DummyRequest([])
-        request.method = b'FICTIONAL'
+        request.method = b"FICTIONAL"
         exc = self.assertRaises(UnsupportedMethod, resource.render, request)
         self.assertEqual(expected, set(exc.allowedMethods))
-
-
 
 
 class GetChildForRequestTests(TestCase):
     """
     Tests for L{getChildForRequest}.
     """
+
     def test_exhaustedPostPath(self):
         """
         L{getChildForRequest} returns whatever resource has been reached by the
@@ -258,7 +252,6 @@ class GetChildForRequestTests(TestCase):
         resource = Resource()
         result = getChildForRequest(resource, request)
         self.assertIdentical(resource, result)
-
 
     def test_leafResource(self):
         """
@@ -270,7 +263,6 @@ class GetChildForRequestTests(TestCase):
         resource.isLeaf = True
         result = getChildForRequest(resource, request)
         self.assertIdentical(resource, result)
-
 
     def test_postPathToPrePath(self):
         """

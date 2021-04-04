@@ -12,7 +12,11 @@ well.
 
 from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
-    Deferred, returnValue, inlineCallbacks, CancelledError)
+    Deferred,
+    returnValue,
+    inlineCallbacks,
+    CancelledError,
+)
 
 
 class StopIterationReturnTests(TestCase):
@@ -30,17 +34,19 @@ class StopIterationReturnTests(TestCase):
         L{Deferred} that the C{inlineCallbacks} function returned.
         """
         environ = {"inlineCallbacks": inlineCallbacks}
-        exec("""
+        exec(
+            """
 @inlineCallbacks
 def f(d):
     yield d
     return 14
-        """, environ)
+        """,
+            environ,
+        )
         d1 = Deferred()
         d2 = environ["f"](d1)
         d1.callback(None)
         self.assertEqual(self.successResultOf(d2), 14)
-
 
 
 class NonLocalExitTests(TestCase):
@@ -61,7 +67,6 @@ class NonLocalExitTests(TestCase):
         """
         returnValue(1)
 
-
     def assertMistakenMethodWarning(self, resultList):
         """
         Flush the current warnings and assert that we have been told that
@@ -73,29 +78,30 @@ class NonLocalExitTests(TestCase):
         self.assertEqual(resultList, [1])
         warnings = self.flushWarnings(offendingFunctions=[self.mistakenMethod])
         self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "returnValue() in 'mistakenMethod' causing 'inline' to exit: "
             "returnValue should only be invoked by functions decorated with "
-            "inlineCallbacks")
-
+            "inlineCallbacks",
+        )
 
     def test_returnValueNonLocalWarning(self):
         """
         L{returnValue} will emit a non-local exit warning in the simplest case,
         where the offending function is invoked immediately.
         """
+
         @inlineCallbacks
         def inline():
             self.mistakenMethod()
             returnValue(2)
             yield 0
+
         d = inline()
         results = []
         d.addCallback(results.append)
         self.assertMistakenMethodWarning(results)
-
 
     def test_returnValueNonLocalDeferred(self):
         """
@@ -104,11 +110,13 @@ class NonLocalExitTests(TestCase):
         and therefore moved its generator function along.
         """
         cause = Deferred()
+
         @inlineCallbacks
         def inline():
             yield cause
             self.mistakenMethod()
             returnValue(2)
+
         effect = inline()
         results = []
         effect.addCallback(results.append)
@@ -117,9 +125,7 @@ class NonLocalExitTests(TestCase):
         self.assertMistakenMethodWarning(results)
 
 
-
 class ForwardTraceBackTests(SynchronousTestCase):
-
     def test_forwardTracebacks(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
@@ -131,7 +137,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         @inlineCallbacks
         def erroring():
             yield "forcing generator"
-            raise Exception('Error Marker')
+            raise Exception("Error Marker")
 
         @inlineCallbacks
         def calling():
@@ -143,7 +149,6 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in erroring", tb)
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
-
 
     def test_forwardLotsOfTracebacks(self):
         """
@@ -167,7 +172,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         @inlineCallbacks
         def erroring():
             yield "forcing generator"
-            raise Exception('Error Marker')
+            raise Exception("Error Marker")
 
         @inlineCallbacks
         def calling3():
@@ -193,19 +198,16 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in erroring", f.getTraceback())
 
 
-
 class UntranslatedError(Exception):
     """
     Untranslated exception type when testing an exception translation.
     """
 
 
-
 class TranslatedError(Exception):
     """
     Translated exception type when testing an exception translation.
     """
-
 
 
 class DontFail(Exception):
@@ -216,7 +218,6 @@ class DontFail(Exception):
     def __init__(self, actual):
         Exception.__init__(self)
         self.actualValue = actual
-
 
 
 class CancellationTests(SynchronousTestCase):
@@ -234,14 +235,12 @@ class CancellationTests(SynchronousTestCase):
         """
         self.deferredsOutstanding = []
 
-
     def tearDown(self):
         """
         If any L{Deferred}s are still outstanding, fire them.
         """
         while self.deferredsOutstanding:
             self.deferredGotten()
-
 
     @inlineCallbacks
     def sampleInlineCB(self, getChildDeferred=None):
@@ -261,7 +260,6 @@ class CancellationTests(SynchronousTestCase):
             x = df.actualValue - 2
         returnValue(x + 1)
 
-
     def getDeferred(self):
         """
         A sample function that returns a L{Deferred} that can be fired on
@@ -272,7 +270,6 @@ class CancellationTests(SynchronousTestCase):
         self.deferredsOutstanding.append(Deferred())
         return self.deferredsOutstanding[-1]
 
-
     def deferredGotten(self, result=None):
         """
         Fire the L{Deferred} returned from the least-recent call to
@@ -282,19 +279,22 @@ class CancellationTests(SynchronousTestCase):
         """
         self.deferredsOutstanding.pop(0).callback(result)
 
-
     def test_cascadeCancellingOnCancel(self):
         """
         When C{D} cancelled, C{C} will be immediately cancelled too.
         """
-        childResultHolder = ['FAILURE']
+        childResultHolder = ["FAILURE"]
+
         def getChildDeferred():
             d = Deferred()
+
             def _eb(result):
                 childResultHolder[0] = result.check(CancelledError)
                 return result
+
             d.addErrback(_eb)
             return d
+
         d = self.sampleInlineCB(getChildDeferred=getChildDeferred)
         d.addErrback(lambda result: None)
         d.cancel()
@@ -303,7 +303,6 @@ class CancellationTests(SynchronousTestCase):
             CancelledError,
             "no cascade cancelling occurs",
         )
-
 
     def test_errbackCancelledErrorOnCancel(self):
         """
@@ -317,15 +316,16 @@ class CancellationTests(SynchronousTestCase):
             self.failureResultOf(d).raiseException,
         )
 
-
     def test_errorToErrorTranslation(self):
         """
         When C{D} is cancelled, and C raises a particular type of error, C{G}
         may catch that error at the point of yielding and translate it into
         a different error which may be received by application code.
         """
+
         def cancel(it):
             it.errback(UntranslatedError())
+
         a = Deferred(cancel)
         d = self.sampleInlineCB(lambda: a)
         d.cancel()
@@ -334,22 +334,22 @@ class CancellationTests(SynchronousTestCase):
             self.failureResultOf(d).raiseException,
         )
 
-
     def test_errorToSuccessTranslation(self):
         """
         When C{D} is cancelled, and C{C} raises a particular type of error,
         C{G} may catch that error at the point of yielding and translate it
         into a result value which may be received by application code.
         """
+
         def cancel(it):
             it.errback(DontFail(4321))
+
         a = Deferred(cancel)
         d = self.sampleInlineCB(lambda: a)
         results = []
         d.addCallback(results.append)
         d.cancel()
         self.assertEquals(results, [4320])
-
 
     def test_asynchronousCancellation(self):
         """

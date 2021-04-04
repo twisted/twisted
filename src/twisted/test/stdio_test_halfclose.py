@@ -26,6 +26,7 @@ class HalfCloseProtocol(protocol.Protocol):
     half-closed.  If all goes as expected, C{exitCode} will be set to C{0};
     otherwise it will be set to C{1} to indicate failure.
     """
+
     exitCode = None
 
     def connectionMade(self):
@@ -34,7 +35,6 @@ class HalfCloseProtocol(protocol.Protocol):
         """
         self.transport.write(b"x")
 
-
     def readConnectionLost(self):
         """
         This is the desired event.  Once it has happened, stop the reactor so
@@ -42,7 +42,6 @@ class HalfCloseProtocol(protocol.Protocol):
         """
         self.exitCode = 0
         reactor.stop()
-
 
     def connectionLost(self, reason):
         """
@@ -54,17 +53,16 @@ class HalfCloseProtocol(protocol.Protocol):
             log.err(reason, "Unexpected call to connectionLost")
         reactor.stop()
 
-
     def writeConnectionLost(self):
         # IHalfCloseableProtocol.writeConnectionLost
         pass
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     reflect.namedAny(sys.argv[1]).install()
-    log.startLogging(open(sys.argv[2], 'wb'))
+    log.startLogging(open(sys.argv[2], "wb"))
     from twisted.internet import reactor
+
     halfCloseProtocol = HalfCloseProtocol()
     stdio.StandardIO(halfCloseProtocol)
     reactor.run()  # type: ignore[attr-defined]

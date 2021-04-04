@@ -19,15 +19,16 @@ from zope.interface import implementer
 
 from twisted.internet import interfaces, protocol
 from twisted.logger import Logger
-from twisted.python.compat import _bytesChr as chr, networkString
+from twisted.python.compat import networkString
 from twisted.conch.interfaces import (
-    EnvironmentVariableNotPermitted, ISession, ISessionSetEnv)
+    EnvironmentVariableNotPermitted,
+    ISession,
+    ISessionSetEnv,
+)
 from twisted.conch.ssh import common, channel, connection
 
 
-
 log = Logger()
-
 
 
 class SSHSession(channel.SSHChannel):
@@ -49,19 +50,15 @@ class SSHSession(channel.SSHChannel):
     @ivar session: an object providing concrete implementations of session
         operations.
     @type session: L{ISession}
-    @ivar _sessionSetEnv: an object providing a concrete implementation of
-        the C{setEnv} session operation.
-    @type _sessionSetEnv: L{ISessionSetEnv}
     """
 
-    name = b'session'
+    name = b"session"
 
     def __init__(self, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
-        self.buf = b''
+        self.buf = b""
         self.client = None
         self.session = None
-        self._sessionSetEnv = None
 
     def request_subsystem(self, data):
         subsystem, ignored = common.getNS(data)
@@ -75,18 +72,18 @@ class SSHSession(channel.SSHChannel):
             self.client = pp
             return 1
         else:
-            log.error('Failed to get subsystem')
+            log.error("Failed to get subsystem")
             return 0
 
     def request_shell(self, data):
-        log.info('Getting shell')
+        log.info("Getting shell")
         if not self.session:
             self.session = ISession(self.avatar)
         try:
             pp = SSHSessionProcessProtocol(self)
             self.session.openShell(pp)
         except Exception:
-            log.failure('Error getting shell')
+            log.failure("Error getting shell")
             return 0
         else:
             self.client = pp
@@ -112,12 +109,14 @@ class SSHSession(channel.SSHChannel):
             self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
         log.info(
-            'Handling pty request: {term!r} {windowSize!r}',
-            term=term, windowSize=windowSize)
+            "Handling pty request: {term!r} {windowSize!r}",
+            term=term,
+            windowSize=windowSize,
+        )
         try:
             self.session.getPty(term, windowSize, modes)
         except Exception:
-            log.failure('Error handling pty request')
+            log.failure("Error handling pty request")
             return 0
         else:
             return 1
@@ -132,20 +131,25 @@ class SSHSession(channel.SSHChannel):
         @return: A true value if the request to pass this environment
             variable was accepted, otherwise a false value.
         """
-        if not self._sessionSetEnv:
-            self._sessionSetEnv = ISessionSetEnv(self.avatar, None)
-            if self._sessionSetEnv is None:
-                log.info(
-                    "Can't handle setting environment variables for "
-                    "SSH avatar {avatar}", avatar=self.avatar)
-                return 0
+        if not self.session:
+            self.session = ISession(self.avatar)
+        if not ISessionSetEnv.providedBy(self.session):
+            log.warn(
+                "Can't handle environment variables for SSH avatar {avatar}: "
+                "{session} does not provide ISessionSetEnv interface. "
+                "It should be decorated with @implementer(ISession, "
+                "ISessionSetEnv) to support env variables.",
+                avatar=self.avatar,
+                session=self.session,
+            )
+            return 0
         name, value, data = common.getNS(data, 2)
         try:
-            self._sessionSetEnv.setEnv(name, value)
+            self.session.setEnv(name, value)
         except EnvironmentVariableNotPermitted:
             return 0
         except Exception:
-            log.failure('Error setting environment variable {name}', name=name)
+            log.failure("Error setting environment variable {name}", name=name)
             return 0
         else:
             return 1
@@ -157,24 +161,24 @@ class SSHSession(channel.SSHChannel):
         try:
             self.session.windowChanged(winSize)
         except Exception:
-            log.failure('Error changing window size')
+            log.failure("Error changing window size")
             return 0
         else:
             return 1
 
     def dataReceived(self, data):
         if not self.client:
-            #self.conn.sendClose(self)
+            # self.conn.sendClose(self)
             self.buf += data
             return
         self.client.transport.write(data)
 
     def extReceived(self, dataType, data):
         if dataType == connection.EXTENDED_DATA_STDERR:
-            if self.client and hasattr(self.client.transport, 'writeErr'):
+            if self.client and hasattr(self.client.transport, "writeErr"):
                 self.client.transport.writeErr(data)
         else:
-            log.warn('Weird extended data: {dataType}', dataType=dataType)
+            log.warn("Weird extended data: {dataType}", dataType=dataType)
 
     def eofReceived(self):
         if self.session:
@@ -188,7 +192,7 @@ class SSHSession(channel.SSHChannel):
         elif self.client:
             self.client.transport.loseConnection()
 
-    #def closeReceived(self):
+    # def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
 
     def loseConnection(self):
@@ -196,21 +200,26 @@ class SSHSession(channel.SSHChannel):
             self.client.transport.loseConnection()
         channel.SSHChannel.loseConnection(self)
 
+
 class _ProtocolWrapper(protocol.ProcessProtocol):
     """
     This class wraps a L{Protocol} instance in a L{ProcessProtocol} instance.
     """
+
     def __init__(self, proto):
         self.proto = proto
 
-    def connectionMade(self): self.proto.connectionMade()
+    def connectionMade(self):
+        self.proto.connectionMade()
 
-    def outReceived(self, data): self.proto.dataReceived(data)
+    def outReceived(self, data):
+        self.proto.dataReceived(data)
 
-    def processEnded(self, reason): self.proto.connectionLost(reason)
+    def processEnded(self, reason):
+        self.proto.connectionLost(reason)
+
 
 class _DummyTransport:
-
     def __init__(self, proto):
         self.proto = proto
 
@@ -221,10 +230,11 @@ class _DummyTransport:
         self.proto.dataReceived(data)
 
     def writeSequence(self, seq):
-        self.write(b''.join(seq))
+        self.write(b"".join(seq))
 
     def loseConnection(self):
         self.proto.connectionLost(protocol.connectionDone)
+
 
 def wrapProcessProtocol(inst):
     if isinstance(inst, protocol.Protocol):
@@ -232,16 +242,28 @@ def wrapProcessProtocol(inst):
     else:
         return inst
 
+
 def wrapProtocol(proto):
     return _DummyTransport(proto)
 
 
-
 # SUPPORTED_SIGNALS is a list of signals that every session channel is supposed
 # to accept.  See RFC 4254
-SUPPORTED_SIGNALS = ["ABRT", "ALRM", "FPE", "HUP", "ILL", "INT", "KILL",
-                     "PIPE", "QUIT", "SEGV", "TERM", "USR1", "USR2"]
-
+SUPPORTED_SIGNALS = [
+    "ABRT",
+    "ALRM",
+    "FPE",
+    "HUP",
+    "ILL",
+    "INT",
+    "KILL",
+    "PIPE",
+    "QUIT",
+    "SEGV",
+    "TERM",
+    "USR1",
+    "USR2",
+]
 
 
 @implementer(interfaces.ITransport)
@@ -286,9 +308,8 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         """
         self.outConnectionLost()
 
-    def connectionLost(self, reason = None):
+    def connectionLost(self, reason=None):
         self.session.loseConnection()
-
 
     def _getSignalName(self, signum):
         """
@@ -298,18 +319,17 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
             self._signalValuesToNames = {}
             # make sure that the POSIX ones are the defaults
             for signame in SUPPORTED_SIGNALS:
-                signame = 'SIG' + signame
+                signame = "SIG" + signame
                 sigvalue = getattr(signal, signame, None)
                 if sigvalue is not None:
                     self._signalValuesToNames[sigvalue] = signame
             for k, v in signal.__dict__.items():
                 # Check for platform specific signals, ignoring Python specific
                 # SIG_DFL and SIG_IGN
-                if k.startswith('SIG') and not k.startswith('SIG_'):
+                if k.startswith("SIG") and not k.startswith("SIG_"):
                     if v not in self._signalValuesToNames:
-                        self._signalValuesToNames[v] = k + '@' + sys.platform
+                        self._signalValuesToNames[v] = k + "@" + sys.platform
         return self._signalValuesToNames[signum]
-
 
     def processEnded(self, reason=None):
         """
@@ -321,25 +341,28 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
             err = reason.value
             if err.signal is not None:
                 signame = self._getSignalName(err.signal)
-                if (getattr(os, 'WCOREDUMP', None) is not None and
-                        os.WCOREDUMP(err.status)):
-                    log.info(
-                        'exitSignal: {signame} (core dumped)', signame=signame)
-                    coreDumped = 1
+                if getattr(os, "WCOREDUMP", None) is not None and os.WCOREDUMP(
+                    err.status
+                ):
+                    log.info("exitSignal: {signame} (core dumped)", signame=signame)
+                    coreDumped = True
                 else:
-                    log.info('exitSignal: {}', signame=signame)
-                    coreDumped = 0
+                    log.info("exitSignal: {}", signame=signame)
+                    coreDumped = False
                 self.session.conn.sendRequest(
-                    self.session, b'exit-signal',
-                    common.NS(networkString(signame[3:])) + chr(coreDumped) +
-                    common.NS(b'') + common.NS(b''))
+                    self.session,
+                    b"exit-signal",
+                    common.NS(networkString(signame[3:]))
+                    + (b"\1" if coreDumped else b"\0")
+                    + common.NS(b"")
+                    + common.NS(b""),
+                )
             elif err.exitCode is not None:
-                log.info('exitCode: {exitCode!r}', exitCode=err.exitCode)
+                log.info("exitCode: {exitCode!r}", exitCode=err.exitCode)
                 self.session.conn.sendRequest(
-                    self.session, b'exit-status',
-                    struct.pack('>L', err.exitCode))
+                    self.session, b"exit-status", struct.pack(">L", err.exitCode)
+                )
         self.session.loseConnection()
-
 
     def getHost(self):
         """
@@ -347,32 +370,27 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         """
         return self.session.conn.transport.getHost()
 
-
     def getPeer(self):
         """
         Return the peer from my session's transport.
         """
         return self.session.conn.transport.getPeer()
 
-
     def write(self, data):
         self.session.write(data)
 
-
     def writeSequence(self, seq):
-        self.session.write(b''.join(seq))
-
+        self.session.write(b"".join(seq))
 
     def loseConnection(self):
         self.session.loseConnection()
 
 
-
 class SSHSessionClient(protocol.Protocol):
-
     def dataReceived(self, data):
         if self.transport:
             self.transport.write(data)
+
 
 # methods factored out to make live easier on server writers
 def parseRequest_pty_req(data):
@@ -381,12 +399,15 @@ def parseRequest_pty_req(data):
     @returns: a tuple of (terminal type, (rows, cols, xpixel, ypixel), modes)
     """
     term, rest = common.getNS(data)
-    cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[: 16])
-    modes, ignored= common.getNS(rest[16:])
+    cols, rows, xpixel, ypixel = struct.unpack(">4L", rest[:16])
+    modes, ignored = common.getNS(rest[16:])
     winSize = (rows, cols, xpixel, ypixel)
-    modes = [(ord(modes[i:i+1]), struct.unpack('>L', modes[i+1: i+5])[0])
-             for i in range(0, len(modes)-1, 5)]
+    modes = [
+        (ord(modes[i : i + 1]), struct.unpack(">L", modes[i + 1 : i + 5])[0])
+        for i in range(0, len(modes) - 1, 5)
+    ]
     return term, winSize, modes
+
 
 def packRequest_pty_req(term, geometry, modes):
     """
@@ -399,17 +420,19 @@ def packRequest_pty_req(term, geometry, modes):
     """
     (rows, cols, xpixel, ypixel) = geometry
     termPacked = common.NS(term)
-    winSizePacked = struct.pack('>4L', cols, rows, xpixel, ypixel)
-    modesPacked = common.NS(modes) # depend on the client packing modes
+    winSizePacked = struct.pack(">4L", cols, rows, xpixel, ypixel)
+    modesPacked = common.NS(modes)  # depend on the client packing modes
     return termPacked + winSizePacked + modesPacked
+
 
 def parseRequest_window_change(data):
     """Parse the data from a window-change request into usuable data.
 
     @returns: a tuple of (rows, cols, xpixel, ypixel)
     """
-    cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
+    cols, rows, xpixel, ypixel = struct.unpack(">4L", data)
     return rows, cols, xpixel, ypixel
+
 
 def packRequest_window_change(geometry):
     """
@@ -419,4 +442,4 @@ def packRequest_window_change(geometry):
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
     (rows, cols, xpixel, ypixel) = geometry
-    return struct.pack('>4L', cols, rows, xpixel, ypixel)
+    return struct.pack(">4L", cols, rows, xpixel, ypixel)

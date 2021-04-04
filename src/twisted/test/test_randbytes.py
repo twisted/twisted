@@ -10,8 +10,7 @@ from twisted.trial import unittest
 from twisted.python import randbytes
 
 
-
-class SecureRandomTestCaseBase(object):
+class SecureRandomTestCaseBase:
     """
     Base class for secureRandom test cases.
     """
@@ -33,7 +32,6 @@ class SecureRandomTestCaseBase(object):
             self.assertNotEqual(s2, s)
 
 
-
 class SecureRandomTests(SecureRandomTestCaseBase, unittest.TestCase):
     """
     Test secureRandom under normal conditions.
@@ -47,9 +45,9 @@ class SecureRandomTests(SecureRandomTestCaseBase, unittest.TestCase):
         self._check(randbytes.secureRandom)
 
 
-
-class ConditionalSecureRandomTests(SecureRandomTestCaseBase,
-                                   unittest.SynchronousTestCase):
+class ConditionalSecureRandomTests(
+    SecureRandomTestCaseBase, unittest.SynchronousTestCase
+):
     """
     Test random sources one by one, then remove it to.
     """
@@ -60,13 +58,11 @@ class ConditionalSecureRandomTests(SecureRandomTestCaseBase,
         """
         self.factory = randbytes.RandomFactory()
 
-
     def errorFactory(self, nbytes):
         """
         A factory raising an error when a source is not available.
         """
         raise randbytes.SourceNotAvailable()
-
 
     def test_osUrandom(self):
         """
@@ -75,25 +71,27 @@ class ConditionalSecureRandomTests(SecureRandomTestCaseBase,
         """
         self._check(self.factory._osUrandom)
 
-
     def test_withoutAnything(self):
         """
         Remove all secure sources and assert it raises a failure. Then try the
         fallback parameter.
         """
         self.factory._osUrandom = self.errorFactory
-        self.assertRaises(randbytes.SecureRandomNotAvailable,
-                          self.factory.secureRandom, 18)
+        self.assertRaises(
+            randbytes.SecureRandomNotAvailable, self.factory.secureRandom, 18
+        )
+
         def wrapper():
             return self.factory.secureRandom(18, fallback=True)
+
         s = self.assertWarns(
             RuntimeWarning,
             "urandom unavailable - "
             "proceeding with non-cryptographically secure random source",
             __file__,
-            wrapper)
+            wrapper,
+        )
         self.assertEqual(len(s), 18)
-
 
 
 class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
@@ -107,7 +105,6 @@ class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
         """
         self._check(randbytes.insecureRandom)
 
-
     def test_withoutGetrandbits(self):
         """
         Test C{insecureRandom} without C{random.getrandbits}.
@@ -115,4 +112,3 @@ class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
         factory = randbytes.RandomFactory()
         factory.getrandbits = None
         self._check(factory.insecureRandom)
-

@@ -14,7 +14,6 @@ if not platform.isWindows():
     from twisted.internet.stdio import StandardIO
 
 
-
 class StdioFilesTests(ReactorBuilder):
     """
     L{StandardIO} supports reading and writing to filesystem files.
@@ -26,7 +25,6 @@ class StdioFilesTests(ReactorBuilder):
         self.extraFile = open(path, "rb+")
         self.addCleanup(self.extraFile.close)
 
-
     def test_addReader(self):
         """
         Adding a filesystem file reader to a reactor will make sure it is
@@ -36,6 +34,7 @@ class StdioFilesTests(ReactorBuilder):
 
         class DataProtocol(Protocol):
             data = b""
+
             def dataReceived(self, data):
                 self.data += data
                 # It'd be better to stop reactor on connectionLost, but that
@@ -52,13 +51,15 @@ class StdioFilesTests(ReactorBuilder):
         with open(path, "rb") as f:
             # Read bytes from a file, deliver them to a protocol instance:
             protocol = DataProtocol()
-            StandardIO(protocol, stdin=f.fileno(),
-                       stdout=self.extraFile.fileno(),
-                       reactor=reactor)
+            StandardIO(
+                protocol,
+                stdin=f.fileno(),
+                stdout=self.extraFile.fileno(),
+                reactor=reactor,
+            )
             self.runReactor(reactor)
 
         self.assertEqual(protocol.data, b"hello!")
-
 
     def test_addWriter(self):
         """
@@ -77,8 +78,12 @@ class StdioFilesTests(ReactorBuilder):
             # Write bytes to a transport, hopefully have them written to a
             # file:
             protocol = DisconnectProtocol()
-            StandardIO(protocol, stdout=f.fileno(),
-                       stdin=self.extraFile.fileno(), reactor=reactor)
+            StandardIO(
+                protocol,
+                stdout=f.fileno(),
+                stdin=self.extraFile.fileno(),
+                reactor=reactor,
+            )
             protocol.transport.write(b"hello")
             protocol.transport.write(b", world")
             protocol.transport.loseConnection()
@@ -87,7 +92,6 @@ class StdioFilesTests(ReactorBuilder):
 
         with open(path, "rb") as f:
             self.assertEqual(f.read(), b"hello, world")
-
 
     def test_removeReader(self):
         """
@@ -102,13 +106,15 @@ class StdioFilesTests(ReactorBuilder):
 
         with open(path, "rb") as f:
             # Have the reader added:
-            stdio = StandardIO(Protocol(), stdin=f.fileno(),
-                               stdout=self.extraFile.fileno(),
-                               reactor=reactor)
+            stdio = StandardIO(
+                Protocol(),
+                stdin=f.fileno(),
+                stdout=self.extraFile.fileno(),
+                reactor=reactor,
+            )
             self.assertIn(stdio._reader, reactor.getReaders())
             stdio._reader.stopReading()
             self.assertNotIn(stdio._reader, reactor.getReaders())
-
 
     def test_removeWriter(self):
         """
@@ -123,14 +129,13 @@ class StdioFilesTests(ReactorBuilder):
 
         # Have the reader added:
         protocol = Protocol()
-        stdio = StandardIO(protocol, stdout=f.fileno(),
-                           stdin=self.extraFile.fileno(),
-                           reactor=reactor)
+        stdio = StandardIO(
+            protocol, stdout=f.fileno(), stdin=self.extraFile.fileno(), reactor=reactor
+        )
         protocol.transport.write(b"hello")
         self.assertIn(stdio._writer, reactor.getWriters())
         stdio._writer.stopWriting()
         self.assertNotIn(stdio._writer, reactor.getWriters())
-
 
     def test_removeAll(self):
         """
@@ -147,13 +152,16 @@ class StdioFilesTests(ReactorBuilder):
         self.f = f = open(path, "rb")
 
         # Have the reader added:
-        stdio = StandardIO(Protocol(), stdin=f.fileno(),
-                           stdout=self.extraFile.fileno(), reactor=reactor)
+        stdio = StandardIO(
+            Protocol(),
+            stdin=f.fileno(),
+            stdout=self.extraFile.fileno(),
+            reactor=reactor,
+        )
         # And then removed:
         removed = reactor.removeAll()
         self.assertIn(stdio._reader, removed)
         self.assertNotIn(stdio._reader, reactor.getReaders())
-
 
     def test_getReaders(self):
         """
@@ -168,10 +176,13 @@ class StdioFilesTests(ReactorBuilder):
         # Cleanup might fail if file is GCed too soon:
         with open(path, "rb") as f:
             # Have the reader added:
-            stdio = StandardIO(Protocol(), stdin=f.fileno(),
-                               stdout=self.extraFile.fileno(), reactor=reactor)
+            stdio = StandardIO(
+                Protocol(),
+                stdin=f.fileno(),
+                stdout=self.extraFile.fileno(),
+                reactor=reactor,
+            )
             self.assertIn(stdio._reader, reactor.getReaders())
-
 
     def test_getWriters(self):
         """
@@ -184,15 +195,21 @@ class StdioFilesTests(ReactorBuilder):
         self.f = f = open(self.mktemp(), "wb")
 
         # Have the reader added:
-        stdio = StandardIO(Protocol(), stdout=f.fileno(),
-                           stdin=self.extraFile.fileno(), reactor=reactor)
+        stdio = StandardIO(
+            Protocol(),
+            stdout=f.fileno(),
+            stdin=self.extraFile.fileno(),
+            reactor=reactor,
+        )
         self.assertNotIn(stdio._writer, reactor.getWriters())
         stdio._writer.startWriting()
         self.assertIn(stdio._writer, reactor.getWriters())
 
     if platform.isWindows():
-        skip = ("StandardIO does not accept stdout as an argument to Windows. "
-                "Testing redirection to a file is therefore harder.")
+        skip = (
+            "StandardIO does not accept stdout as an argument to Windows. "
+            "Testing redirection to a file is therefore harder."
+        )
 
 
 globals().update(StdioFilesTests.makeTestCaseClasses())

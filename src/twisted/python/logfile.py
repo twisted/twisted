@@ -9,14 +9,13 @@ A rotating, browsable log file.
 
 
 # System Imports
-import os
 import glob
-import time
+import os
 import stat
+import time
+from typing import BinaryIO, Optional, cast
 
 from twisted.python import threadable
-from twisted.python.compat import unicode
-
 
 
 class BaseLogFile:
@@ -26,7 +25,9 @@ class BaseLogFile:
 
     synchronized = ["write", "rotate"]
 
-    def __init__(self, name, directory, defaultMode=None):
+    def __init__(
+        self, name: str, directory: str, defaultMode: Optional[int] = None
+    ) -> None:
         """
         Create a log file.
 
@@ -39,11 +40,12 @@ class BaseLogFile:
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):
-            self.defaultMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
+            self.defaultMode: Optional[int] = stat.S_IMODE(
+                os.stat(self.path)[stat.ST_MODE]
+            )
         else:
             self.defaultMode = defaultMode
         self._openFile()
-
 
     @classmethod
     def fromFullPath(cls, filename, *args, **kwargs):
@@ -51,9 +53,7 @@ class BaseLogFile:
         Construct a log file from a full file path.
         """
         logPath = os.path.abspath(filename)
-        return cls(os.path.basename(logPath),
-                   os.path.dirname(logPath), *args, **kwargs)
-
+        return cls(os.path.basename(logPath), os.path.dirname(logPath), *args, **kwargs)
 
     def shouldRotate(self):
         """
@@ -61,7 +61,6 @@ class BaseLogFile:
         should be rotated.
         """
         raise NotImplementedError
-
 
     def _openFile(self):
         """
@@ -71,25 +70,24 @@ class BaseLogFile:
         """
         self.closed = False
         if os.path.exists(self.path):
-            self._file = open(self.path, "rb+", 0)
+            self._file = cast(BinaryIO, open(self.path, "rb+", 0))
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
                 oldUmask = os.umask(0o777)
                 try:
-                    self._file = open(self.path, "wb+", 0)
+                    self._file = cast(BinaryIO, open(self.path, "wb+", 0))
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = open(self.path, "wb+", 0)
+                self._file = cast(BinaryIO, open(self.path, "wb+", 0))
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
             except OSError:
                 # Probably /dev/null or something?
                 pass
-
 
     def write(self, data):
         """
@@ -101,17 +99,15 @@ class BaseLogFile:
         if self.shouldRotate():
             self.flush()
             self.rotate()
-        if isinstance(data, unicode):
-            data = data.encode('utf8')
+        if isinstance(data, str):
+            data = data.encode("utf8")
         self._file.write(data)
-
 
     def flush(self):
         """
         Flush the file.
         """
         self._file.flush()
-
 
     def close(self):
         """
@@ -121,8 +117,7 @@ class BaseLogFile:
         """
         self.closed = True
         self._file.close()
-        self._file = None
-
+        del self._file
 
     def reopen(self):
         """
@@ -134,7 +129,6 @@ class BaseLogFile:
         """
         self.close()
         self._openFile()
-
 
     def getCurrentLog(self):
         """
@@ -149,8 +143,15 @@ class LogFile(BaseLogFile):
 
     A rotateLength of None disables automatic log rotation.
     """
-    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None,
-                 maxRotatedFiles=None):
+
+    def __init__(
+        self,
+        name,
+        directory,
+        rotateLength=1000000,
+        defaultMode=None,
+        maxRotatedFiles=None,
+    ):
         """
         Create a log file rotating on length.
 
@@ -224,7 +225,7 @@ class LogFile(BaseLogFile):
         result = []
         for name in glob.glob("%s.*" % self.path):
             try:
-                counter = int(name.split('.')[-1])
+                counter = int(name.split(".")[-1])
                 if counter:
                     result.append(counter)
             except ValueError:
@@ -237,13 +238,13 @@ class LogFile(BaseLogFile):
         del state["size"]
         return state
 
+
 threadable.synchronize(LogFile)
 
 
-
 class DailyLogFile(BaseLogFile):
-    """A log file that is rotated daily (at or after midnight localtime)
-    """
+    """A log file that is rotated daily (at or after midnight localtime)"""
+
     def _openFile(self):
         BaseLogFile._openFile(self)
         self.lastDate = self.toDate(os.stat(self.path)[8])
@@ -265,16 +266,16 @@ class DailyLogFile(BaseLogFile):
     def suffix(self, tupledate):
         """Return the suffix given a (year, month, day) tuple or unixtime"""
         try:
-            return '_'.join(map(str, tupledate))
-        except:
+            return "_".join(map(str, tupledate))
+        except BaseException:
             # try taking a float unixtime
-            return '_'.join(map(str, self.toDate(tupledate)))
+            return "_".join(map(str, self.toDate(tupledate)))
 
     def getLog(self, identifier):
         """Given a unix time, return a LogReader for an old log file."""
         if self.toDate(identifier) == self.lastDate:
             return self.getCurrentLog()
-        filename = "%s.%s" % (self.path, self.suffix(identifier))
+        filename = "{}.{}".format(self.path, self.suffix(identifier))
         if not os.path.exists(filename):
             raise ValueError("no such logfile exists")
         return LogReader(filename)
@@ -295,7 +296,7 @@ class DailyLogFile(BaseLogFile):
         """
         if not (os.access(self.directory, os.W_OK) and os.access(self.path, os.W_OK)):
             return
-        newpath = "%s.%s" % (self.path, self.suffix(self.lastDate))
+        newpath = "{}.{}".format(self.path, self.suffix(self.lastDate))
         if os.path.exists(newpath):
             return
         self._file.close()
@@ -307,8 +308,8 @@ class DailyLogFile(BaseLogFile):
         del state["lastDate"]
         return state
 
-threadable.synchronize(DailyLogFile)
 
+threadable.synchronize(DailyLogFile)
 
 
 class LogReader:
@@ -321,7 +322,7 @@ class LogReader:
         The comments about binary-mode for L{BaseLogFile._openFile} also apply
         here.
         """
-        self._file = open(name, "r")
+        self._file = open(name)  # Optional[BinaryIO]
 
     def readLines(self, lines=10):
         """Read a list of lines from the log file.

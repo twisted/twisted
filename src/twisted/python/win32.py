@@ -15,14 +15,19 @@ See also twisted.python.shortcut.
 import re
 import os
 
+from incremental import Version
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+
+# https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
 ERROR_DIRECTORY = 267
 
 O_BINARY = getattr(os, "O_BINARY", 0)
+
 
 class FakeWindowsError(OSError):
     """
@@ -31,15 +36,31 @@ class FakeWindowsError(OSError):
     """
 
 
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "FakeWindowsError",
+)
+
 
 try:
-    WindowsError = WindowsError  # type: OSError
+    WindowsError: OSError = WindowsError
 except NameError:
     WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "WindowsError",
+)
+
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
-_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+_cmdLineQuoteRe2 = re.compile(r"(\\+)\Z")
+
+
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
@@ -52,8 +73,13 @@ def cmdLineQuote(s):
     @return: a quoted string.
     @rtype: C{str}
     """
-    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == '') and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == "") and '"' or ""
+    return (
+        quote
+        + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s))
+        + quote
+    )
+
 
 def quoteArguments(arguments):
     """
@@ -61,19 +87,19 @@ def quoteArguments(arguments):
     a similar API.  This allows the list passed to C{reactor.spawnProcess} to
     match the child process's C{sys.argv} properly.
 
-    @param arglist: an iterable of C{str}, each unquoted.
+    @param arguments: an iterable of C{str}, each unquoted.
 
     @return: a single string, with the given sequence quoted as necessary.
     """
-    return ' '.join([cmdLineQuote(a) for a in arguments])
+    return " ".join([cmdLineQuote(a) for a in arguments])
 
 
-class _ErrorFormatter(object):
+class _ErrorFormatter:
     """
     Formatter for Windows error messages.
 
     @ivar winError: A callable which takes one integer error number argument
-        and returns an L{exceptions.WindowsError} instance for that error (like
+        and returns a L{WindowsError} instance for that error (like
         L{ctypes.WinError}).
 
     @ivar formatMessage: A callable which takes one integer error number
@@ -84,11 +110,11 @@ class _ErrorFormatter(object):
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).
     """
+
     def __init__(self, WinError, FormatMessage, errorTab):
         self.winError = WinError
         self.formatMessage = FormatMessage
         self.errorTab = errorTab
-
 
     @classmethod
     def fromEnvironment(cls):
@@ -109,7 +135,6 @@ class _ErrorFormatter(object):
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-
 
     def formatError(self, errorcode):
         """
@@ -135,5 +160,6 @@ class _ErrorFormatter(object):
             if result is not None:
                 return result
         return os.strerror(errorcode)
+
 
 formatError = _ErrorFormatter.fromEnvironment().formatError

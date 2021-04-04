@@ -9,23 +9,25 @@ Tests for Trial's interaction with the Python warning system.
 import warnings
 import sys
 
+from io import StringIO
 from unittest import TestResult
 
-from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
 
 
-class Mask(object):
+class Mask:
     """
     Hide a test case definition from trial's automatic discovery mechanism.
     """
+
     class MockTests(SynchronousTestCase):
         """
         A test case which is used by L{FlushWarningsTests} to verify behavior
         which cannot be verified by code inside a single test method.
         """
+
         message = "some warning text"
         category = UserWarning
 
@@ -35,14 +37,12 @@ class Mask(object):
             """
             warnings.warn(self.message, self.category)
 
-
         def test_flushed(self):
             """
             Generate a warning and flush it.
             """
             warnings.warn(self.message, self.category)
             self.assertEqual(len(self.flushWarnings()), 1)
-
 
 
 class FlushWarningsTests(SynchronousTestCase):
@@ -59,7 +59,6 @@ class FlushWarningsTests(SynchronousTestCase):
         for k, v in subset.items():
             self.assertEqual(set[k], v)
 
-
     def assertDictSubsets(self, sets, subsets):
         """
         For each pair of corresponding elements in C{sets} and C{subsets},
@@ -70,14 +69,12 @@ class FlushWarningsTests(SynchronousTestCase):
         for a, b in zip(sets, subsets):
             self.assertDictSubset(a, b)
 
-
     def test_none(self):
         """
         If no warnings are emitted by a test, C{flushWarnings} returns an empty
         list.
         """
         self.assertEqual(self.flushWarnings(), [])
-
 
     def test_several(self):
         """
@@ -94,9 +91,11 @@ class FlushWarningsTests(SynchronousTestCase):
 
         self.assertDictSubsets(
             self.flushWarnings(),
-            [{'category': firstCategory, 'message': firstMessage},
-             {'category': secondCategory, 'message': secondMessage}])
-
+            [
+                {"category": firstCategory, "message": firstMessage},
+                {"category": secondCategory, "message": secondMessage},
+            ],
+        )
 
     def test_repeated(self):
         """
@@ -109,9 +108,8 @@ class FlushWarningsTests(SynchronousTestCase):
             warnings.warn(message=message, category=category)
 
         self.assertDictSubsets(
-            self.flushWarnings(),
-            [{'category': category, 'message': message}] * 2)
-
+            self.flushWarnings(), [{"category": category, "message": message}] * 2
+        )
 
     def test_cleared(self):
         """
@@ -122,10 +120,9 @@ class FlushWarningsTests(SynchronousTestCase):
         category = RuntimeWarning
         warnings.warn(message=message, category=category)
         self.assertDictSubsets(
-            self.flushWarnings(),
-            [{'category': category, 'message': message}])
+            self.flushWarnings(), [{"category": category, "message": message}]
+        )
         self.assertEqual(self.flushWarnings(), [])
-
 
     def test_unflushed(self):
         """
@@ -133,11 +130,11 @@ class FlushWarningsTests(SynchronousTestCase):
         Python warning system.
         """
         result = TestResult()
-        case = Mask.MockTests('test_unflushed')
+        case = Mask.MockTests("test_unflushed")
         case.run(result)
         warningsShown = self.flushWarnings([Mask.MockTests.test_unflushed])
-        self.assertEqual(warningsShown[0]['message'], 'some warning text')
-        self.assertIdentical(warningsShown[0]['category'], UserWarning)
+        self.assertEqual(warningsShown[0]["message"], "some warning text")
+        self.assertIdentical(warningsShown[0]["category"], UserWarning)
 
         where = type(case).test_unflushed.__code__
         filename = where.co_filename
@@ -145,11 +142,10 @@ class FlushWarningsTests(SynchronousTestCase):
         # firstlineno might need to change.
         lineno = where.co_firstlineno + 4
 
-        self.assertEqual(warningsShown[0]['filename'], filename)
-        self.assertEqual(warningsShown[0]['lineno'], lineno)
+        self.assertEqual(warningsShown[0]["filename"], filename)
+        self.assertEqual(warningsShown[0]["lineno"], lineno)
 
         self.assertEqual(len(warningsShown), 1)
-
 
     def test_flushed(self):
         """
@@ -157,13 +153,12 @@ class FlushWarningsTests(SynchronousTestCase):
         Python warning system.
         """
         result = TestResult()
-        case = Mask.MockTests('test_flushed')
+        case = Mask.MockTests("test_flushed")
         output = StringIO()
-        monkey = self.patch(sys, 'stdout', output)
+        monkey = self.patch(sys, "stdout", output)
         case.run(result)
         monkey.restore()
         self.assertEqual(output.getvalue(), "")
-
 
     def test_warningsConfiguredAsErrors(self):
         """
@@ -171,27 +166,29 @@ class FlushWarningsTests(SynchronousTestCase):
         exceptions, tests have an error added to the reporter for them for each
         unflushed warning.
         """
+
         class CustomWarning(Warning):
             pass
 
         result = TestResult()
-        case = Mask.MockTests('test_unflushed')
+        case = Mask.MockTests("test_unflushed")
         case.category = CustomWarning
 
         originalWarnings = warnings.filters[:]
         try:
-            warnings.simplefilter('error')
+            warnings.simplefilter("error")
             case.run(result)
             self.assertEqual(len(result.errors), 1)
             self.assertIdentical(result.errors[0][0], case)
             self.assertTrue(
                 # Different python versions differ in whether they report the
                 # fully qualified class name or just the class name.
-                result.errors[0][1].splitlines()[-1].endswith(
-                    "CustomWarning: some warning text"))
+                result.errors[0][1]
+                .splitlines()[-1]
+                .endswith("CustomWarning: some warning text")
+            )
         finally:
             warnings.filters[:] = originalWarnings
-
 
     def test_flushedWarningsConfiguredAsErrors(self):
         """
@@ -199,21 +196,21 @@ class FlushWarningsTests(SynchronousTestCase):
         exceptions, tests which emit those warnings but flush them do not have
         an error added to the reporter.
         """
+
         class CustomWarning(Warning):
             pass
 
         result = TestResult()
-        case = Mask.MockTests('test_flushed')
+        case = Mask.MockTests("test_flushed")
         case.category = CustomWarning
 
         originalWarnings = warnings.filters[:]
         try:
-            warnings.simplefilter('error')
+            warnings.simplefilter("error")
             case.run(result)
             self.assertEqual(result.errors, [])
         finally:
             warnings.filters[:] = originalWarnings
-
 
     def test_multipleFlushes(self):
         """
@@ -225,7 +222,6 @@ class FlushWarningsTests(SynchronousTestCase):
         warnings.warn("second message")
         self.assertEqual(len(self.flushWarnings()), 1)
 
-
     def test_filterOnOffendingFunction(self):
         """
         The list returned by C{flushWarnings} includes only those
@@ -234,11 +230,13 @@ class FlushWarningsTests(SynchronousTestCase):
         """
         firstMessage = "first warning text"
         firstCategory = UserWarning
+
         def one():
             warnings.warn(firstMessage, firstCategory, stacklevel=1)
 
         secondMessage = "some text"
         secondCategory = RuntimeWarning
+
         def two():
             warnings.warn(secondMessage, secondCategory, stacklevel=1)
 
@@ -247,26 +245,26 @@ class FlushWarningsTests(SynchronousTestCase):
 
         self.assertDictSubsets(
             self.flushWarnings(offendingFunctions=[one]),
-            [{'category': firstCategory, 'message': firstMessage}])
+            [{"category": firstCategory, "message": firstMessage}],
+        )
         self.assertDictSubsets(
             self.flushWarnings(offendingFunctions=[two]),
-            [{'category': secondCategory, 'message': secondMessage}])
-
+            [{"category": secondCategory, "message": secondMessage}],
+        )
 
     def test_functionBoundaries(self):
         """
         Verify that warnings emitted at the very edges of a function are still
         determined to be emitted from that function.
         """
+
         def warner():
             warnings.warn("first line warning")
             warnings.warn("internal line warning")
             warnings.warn("last line warning")
 
         warner()
-        self.assertEqual(
-            len(self.flushWarnings(offendingFunctions=[warner])), 3)
-
+        self.assertEqual(len(self.flushWarnings(offendingFunctions=[warner])), 3)
 
     def test_invalidFilter(self):
         """
@@ -278,31 +276,34 @@ class FlushWarningsTests(SynchronousTestCase):
         self.assertRaises(ValueError, self.flushWarnings, [None])
         self.assertEqual(len(self.flushWarnings()), 1)
 
-
     def test_missingSource(self):
         """
         Warnings emitted by a function the source code of which is not
         available can still be flushed.
         """
-        package = FilePath(self.mktemp().encode('utf-8')).child(b'twisted_private_helper')
+        package = FilePath(self.mktemp().encode("utf-8")).child(
+            b"twisted_private_helper"
+        )
         package.makedirs()
-        package.child(b'__init__.py').setContent(b'')
-        package.child(b'missingsourcefile.py').setContent(b'''
+        package.child(b"__init__.py").setContent(b"")
+        package.child(b"missingsourcefile.py").setContent(
+            b"""
 import warnings
 def foo():
     warnings.warn("oh no")
-''')
-        pathEntry = package.parent().path.decode('utf-8')
+"""
+        )
+        pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
         from twisted_private_helper import missingsourcefile
-        self.addCleanup(sys.modules.pop, 'twisted_private_helper')
+
+        self.addCleanup(sys.modules.pop, "twisted_private_helper")
         self.addCleanup(sys.modules.pop, missingsourcefile.__name__)
-        package.child(b'missingsourcefile.py').remove()
+        package.child(b"missingsourcefile.py").remove()
 
         missingsourcefile.foo()
         self.assertEqual(len(self.flushWarnings([missingsourcefile.foo])), 1)
-
 
     def test_renamedSource(self):
         """
@@ -315,15 +316,19 @@ def foo():
         various places.  If source files are renamed, .pyc files may not be
         regenerated, but they will contain incorrect filenames.
         """
-        package = FilePath(self.mktemp().encode('utf-8')).child(b'twisted_private_helper')
+        package = FilePath(self.mktemp().encode("utf-8")).child(
+            b"twisted_private_helper"
+        )
         package.makedirs()
-        package.child(b'__init__.py').setContent(b'')
-        package.child(b'module.py').setContent(b'''
+        package.child(b"__init__.py").setContent(b"")
+        package.child(b"module.py").setContent(
+            b"""
 import warnings
 def foo():
     warnings.warn("oh no")
-''')
-        pathEntry = package.parent().path.decode('utf-8')
+"""
+        )
+        pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
 
@@ -332,7 +337,7 @@ def foo():
 
         # Clean up the state resulting from that import; we're not going to use
         # this module, so it should go away.
-        del sys.modules['twisted_private_helper']
+        del sys.modules["twisted_private_helper"]
         del sys.modules[module.__name__]
 
         # Some Python versions have extra state related to the just
@@ -346,11 +351,12 @@ def foo():
             invalidate_caches()
 
         # Rename the source directory
-        package.moveTo(package.sibling(b'twisted_renamed_helper'))
+        package.moveTo(package.sibling(b"twisted_renamed_helper"))
 
         # Import the newly renamed version
         from twisted_renamed_helper import module
-        self.addCleanup(sys.modules.pop, 'twisted_renamed_helper')
+
+        self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
 
         # Generate the warning
@@ -359,17 +365,39 @@ def foo():
         # Flush it
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
+    def test_offendingFunctions_deep_branch(self):
+        """
+        In Python 3.6 the dis.findlinestarts documented behaviour
+        was changed such that the reported lines might not be sorted ascending.
+        In Python 3.10 PEP 626 introduced byte-code change such that the last
+        line of a function wasn't always associated with the last byte-code.
+        In the past flushWarning was not detecting that such a function was
+        associated with any warnings.
+        """
+
+        def foo(a=1, b=1):
+            if a:
+                if b:
+                    warnings.warn("oh no")
+                else:
+                    pass
+
+        # Generate the warning
+        foo()
+
+        # Flush it
+        self.assertEqual(len(self.flushWarnings([foo])), 1)
 
 
 class FakeWarning(Warning):
     pass
 
 
-
 class CollectWarningsTests(SynchronousTestCase):
     """
     Tests for L{_collectWarnings}.
     """
+
     def test_callsObserver(self):
         """
         L{_collectWarnings} calls the observer with each emitted warning.
@@ -378,22 +406,22 @@ class CollectWarningsTests(SynchronousTestCase):
         secondMessage = firstMessage[::-1]
         thirdMessage = Warning(1, 2, 3)
         events = []
+
         def f():
-            events.append('call')
+            events.append("call")
             warnings.warn(firstMessage)
             warnings.warn(secondMessage)
             warnings.warn(thirdMessage)
-            events.append('returning')
+            events.append("returning")
 
         _collectWarnings(events.append, f)
 
-        self.assertEqual(events[0], 'call')
+        self.assertEqual(events[0], "call")
         self.assertEqual(events[1].message, firstMessage)
         self.assertEqual(events[2].message, secondMessage)
         self.assertEqual(events[3].message, str(thirdMessage))
-        self.assertEqual(events[4], 'returning')
+        self.assertEqual(events[4], "returning")
         self.assertEqual(len(events), 5)
-
 
     def test_suppresses(self):
         """
@@ -401,10 +429,9 @@ class CollectWarningsTests(SynchronousTestCase):
         L{_collectWarnings} are not actually emitted to the warning system.
         """
         output = StringIO()
-        self.patch(sys, 'stdout', output)
+        self.patch(sys, "stdout", output)
         _collectWarnings(lambda x: None, warnings.warn, "text")
         self.assertEqual(output.getvalue(), "")
-
 
     def test_callsFunction(self):
         """
@@ -418,10 +445,9 @@ class CollectWarningsTests(SynchronousTestCase):
             arguments.append((args, kwargs))
             return value
 
-        result = _collectWarnings(lambda x: None, f, 1, 'a', b=2, c='d')
-        self.assertEqual(arguments, [((1, 'a'), {'b': 2, 'c': 'd'})])
+        result = _collectWarnings(lambda x: None, f, 1, "a", b=2, c="d")
+        self.assertEqual(arguments, [((1, "a"), {"b": 2, "c": "d"})])
         self.assertIdentical(result, value)
-
 
     def test_duplicateWarningCollected(self):
         """
@@ -439,14 +465,14 @@ class CollectWarningsTests(SynchronousTestCase):
 
         def f():
             warnings.warn("foo")
-        warnings.simplefilter('default')
+
+        warnings.simplefilter("default")
         f()
         events = []
         _collectWarnings(events.append, f)
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].message, "foo")
         self.assertEqual(len(self.flushWarnings()), 1)
-
 
     def test_immutableObject(self):
         """
@@ -458,7 +484,6 @@ class CollectWarningsTests(SynchronousTestCase):
         sys.modules[key] = key
         self.addCleanup(sys.modules.pop, key)
         self.test_duplicateWarningCollected()
-
 
     def test_setWarningRegistryChangeWhileIterating(self):
         """
@@ -473,9 +498,9 @@ class CollectWarningsTests(SynchronousTestCase):
         """
         d = {}
 
-        class A(object):
+        class A:
             def __init__(self, key):
-                self.__dict__['_key'] = key
+                self.__dict__["_key"] = key
 
             def __setattr__(self, value, item):
                 d[self._key] = None
@@ -492,4 +517,4 @@ class CollectWarningsTests(SynchronousTestCase):
 
         # If both key2 and key4 were added, then both A instanced were
         # processed.
-        self.assertEqual(set([key1, key2, key3, key4]), set(d.keys()))
+        self.assertEqual({key1, key2, key3, key4}, set(d.keys()))

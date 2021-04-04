@@ -21,7 +21,7 @@ Serializing a formatting structure is done with L{flatten}.
 """
 
 
-from typing import Sequence
+from typing import ClassVar, List, Sequence
 from twisted.python.util import FancyEqMixin
 from twisted.python.compat import unicode
 
@@ -29,8 +29,7 @@ import sys
 import warnings
 
 
-
-class _Attribute(FancyEqMixin, object):
+class _Attribute(FancyEqMixin):
     """
     A text attribute.
 
@@ -41,24 +40,24 @@ class _Attribute(FancyEqMixin, object):
     @type children: C{list}
     @ivar children: Child attributes.
     """
-    compareAttributes = ('children',)  # type: Sequence[str]
 
+    compareAttributes: ClassVar[Sequence[str]] = ("children",)
 
     def __init__(self):
         self.children = []
 
-
-    def __repr__(self):
-        return '<%s %r>' % (type(self).__name__, vars(self))
-
+    def __repr__(self) -> str:
+        return "<{} {!r}>".format(type(self).__name__, vars(self))
 
     def __getitem__(self, item):
         if isinstance(item, unicode):
-            warnings.warn("Calling _Attribute.__getitem__ with a unicode/str"
-                          " object instead of a bytes object is deprecated"
-                          " since Twisted NEXT",
-                          category=DeprecationWarning,
-                          stacklevel=2)
+            warnings.warn(
+                "Calling _Attribute.__getitem__ with a unicode/str"
+                " object instead of a bytes object is deprecated"
+                " since Twisted NEXT",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             item = item.encode(sys.getdefaultencoding())
         assert isinstance(item, (list, tuple, _Attribute, bytes))
         if isinstance(item, (list, tuple)):
@@ -67,8 +66,7 @@ class _Attribute(FancyEqMixin, object):
             self.children.append(item)
         return self
 
-
-    def serialize(self, write, attrs=None, attributeRenderer='toVT102'):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         """
         Serialize the text attribute and its children.
 
@@ -94,15 +92,14 @@ class _Attribute(FancyEqMixin, object):
                 write(ch)
 
 
-
 class _NormalAttr(_Attribute):
     """
     A text attribute for normal text.
     """
+
     def serialize(self, write, attrs, attributeRenderer):
         attrs.__init__()
         _Attribute.serialize(self, write, attrs, attributeRenderer)
-
 
 
 class _OtherAttr(_Attribute):
@@ -117,25 +114,22 @@ class _OtherAttr(_Attribute):
 
     @ivar attrvalue: Text attribute value.
     """
-    compareAttributes = ('attrname', 'attrvalue', 'children')
 
+    compareAttributes = ("attrname", "attrvalue", "children")
 
     def __init__(self, attrname, attrvalue):
         _Attribute.__init__(self)
         self.attrname = attrname
         self.attrvalue = attrvalue
 
-
     def __neg__(self):
         result = _OtherAttr(self.attrname, not self.attrvalue)
         result.children.extend(self.children)
         return result
 
-
     def serialize(self, write, attrs, attributeRenderer):
         attrs = attrs._withAttribute(self.attrname, self.attrvalue)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
-
 
 
 class _ColorAttr(_Attribute):
@@ -146,40 +140,38 @@ class _ColorAttr(_Attribute):
 
     @param ground: Foreground or background attribute name.
     """
-    compareAttributes = ('color', 'ground', 'children')
 
+    compareAttributes = ("color", "ground", "children")
 
     def __init__(self, color, ground):
         _Attribute.__init__(self)
         self.color = color
         self.ground = ground
 
-
     def serialize(self, write, attrs, attributeRenderer):
         attrs = attrs._withAttribute(self.ground, self.color)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
-
 
 
 class _ForegroundColorAttr(_ColorAttr):
     """
     Foreground color attribute.
     """
-    def __init__(self, color):
-        _ColorAttr.__init__(self, color, 'foreground')
 
+    def __init__(self, color):
+        _ColorAttr.__init__(self, color, "foreground")
 
 
 class _BackgroundColorAttr(_ColorAttr):
     """
     Background color attribute.
     """
+
     def __init__(self, color):
-        _ColorAttr.__init__(self, color, 'background')
+        _ColorAttr.__init__(self, color, "background")
 
 
-
-class _ColorAttribute(object):
+class _ColorAttribute:
     """
     A color text attribute.
 
@@ -193,10 +185,10 @@ class _ColorAttribute(object):
     @param attrs: Mapping of color names to color values.
     @type attrs: Dict like object.
     """
+
     def __init__(self, ground, attrs):
         self.ground = ground
         self.attrs = attrs
-
 
     def __getattr__(self, name):
         try:
@@ -205,32 +197,31 @@ class _ColorAttribute(object):
             raise AttributeError(name)
 
 
-
-class CharacterAttributesMixin(object):
+class CharacterAttributesMixin:
     """
     Mixin for character attributes that implements a C{__getattr__} method
     returning a new C{_NormalAttr} instance when attempting to access
     a C{'normal'} attribute; otherwise a new C{_OtherAttr} instance is returned
     for names that appears in the C{'attrs'} attribute.
     """
+
     def __getattr__(self, name):
-        if name == 'normal':
+        if name == "normal":
             return _NormalAttr()
         if name in self.attrs:
             return _OtherAttr(name, True)
         raise AttributeError(name)
 
 
-
-class DefaultFormattingState(FancyEqMixin, object):
+class DefaultFormattingState(FancyEqMixin):
     """
     A character attribute that does nothing, thus applying no attributes to
     text.
     """
-    compareAttributes = ('_dummy',)  # type: Sequence[str]
+
+    compareAttributes: ClassVar[Sequence[str]] = ("_dummy",)
 
     _dummy = 0
-
 
     def copy(self):
         """
@@ -239,7 +230,6 @@ class DefaultFormattingState(FancyEqMixin, object):
         @return: A formatting state instance.
         """
         return type(self)()
-
 
     def _withAttribute(self, name, value):
         """
@@ -253,7 +243,6 @@ class DefaultFormattingState(FancyEqMixin, object):
         """
         return self.copy()
 
-
     def toVT102(self):
         """
         Emit a VT102 control sequence that will set up all the attributes this
@@ -262,8 +251,7 @@ class DefaultFormattingState(FancyEqMixin, object):
         @return: A string containing VT102 control sequences that mimic this
             formatting state.
         """
-        return b''
-
+        return b""
 
 
 class _FormattingStateMixin(DefaultFormattingState):
@@ -273,11 +261,11 @@ class _FormattingStateMixin(DefaultFormattingState):
     Implementers must ensure their C{__init__} method can be called
     with no arguments.
     """
+
     def copy(self):
         c = DefaultFormattingState.copy(self)
         c.__dict__.update(vars(self))
         return c
-
 
     def _withAttribute(self, name, value):
         if getattr(self, name) != value:
@@ -289,8 +277,7 @@ class _FormattingStateMixin(DefaultFormattingState):
             return self.copy()
 
 
-
-def flatten(output, attrs, attributeRenderer='toVT102'):
+def flatten(output, attrs, attributeRenderer="toVT102"):
     """
     Serialize a sequence of characters with attribute information
 
@@ -324,11 +311,9 @@ def flatten(output, attrs, attributeRenderer='toVT102'):
     @return: A string expressing the text and display attributes specified by
         L{output}.
     """
-    flattened = []
+    flattened: List[str] = []
     output.serialize(flattened.append, attrs, attributeRenderer)
-    return b''.join(flattened)
+    return b"".join(flattened)
 
 
-
-__all__ = [
-    'flatten', 'DefaultFormattingState', 'CharacterAttributesMixin']
+__all__ = ["flatten", "DefaultFormattingState", "CharacterAttributesMixin"]

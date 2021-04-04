@@ -17,6 +17,7 @@ class MyInt32StringReceiver(StatefulProtocol):
     """
     A stateful Int32StringReceiver.
     """
+
     MAX_LENGTH = 99999
     structFormat = "!I"
     prefixLength = calcsize(structFormat)
@@ -24,30 +25,25 @@ class MyInt32StringReceiver(StatefulProtocol):
     def getInitialState(self):
         return self._getHeader, 4
 
-
     def lengthLimitExceeded(self, length):
         self.transport.loseConnection()
 
-
     def _getHeader(self, msg):
-        length, = unpack("!i", msg)
+        (length,) = unpack("!i", msg)
         if length > self.MAX_LENGTH:
             self.lengthLimitExceeded(length)
             return
         return self._getString, length
 
-
     def _getString(self, msg):
         self.stringReceived(msg)
         return self._getHeader, 4
-
 
     def stringReceived(self, msg):
         """
         Override this.
         """
         raise NotImplementedError
-
 
     def sendString(self, data):
         """
@@ -56,11 +52,9 @@ class MyInt32StringReceiver(StatefulProtocol):
         self.transport.write(pack(self.structFormat, len(data)) + data)
 
 
-
 class TestInt32(MyInt32StringReceiver):
     def connectionMade(self):
         self.received = []
-
 
     def stringReceived(self, s):
         self.received.append(s)
@@ -68,10 +62,8 @@ class TestInt32(MyInt32StringReceiver):
     MAX_LENGTH = 50
     closed = 0
 
-
     def connectionLost(self, reason):
         self.closed = 1
-
 
 
 class Int32Tests(TestCase, test_basic.IntNTestCaseMixin):
@@ -87,4 +79,3 @@ class Int32Tests(TestCase, test_basic.IntNTestCaseMixin):
             big += pack("!i", len(s)) + s
         r.dataReceived(big)
         self.assertEqual(r.received, self.strings * 4)
-

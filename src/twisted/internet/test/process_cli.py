@@ -6,7 +6,10 @@ try:
     # so newline characters are munged on writing, interfering with
     # the tests.
     import msvcrt
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)  # type:ignore[attr-defined]  # noqa
+
+    msvcrt.setmode(  # type:ignore[attr-defined]
+        sys.stdout.fileno(), os.O_BINARY
+    )
 except ImportError:
     pass
 
@@ -15,7 +18,5 @@ except ImportError:
 for arg in sys.argv[1:]:
     res = arg + chr(0)
 
-    sys.stdout.buffer.write(
-        res.encode(sys.getfilesystemencoding(), "surrogateescape")
-    )
+    sys.stdout.buffer.write(res.encode(sys.getfilesystemencoding(), "surrogateescape"))
     sys.stdout.flush()

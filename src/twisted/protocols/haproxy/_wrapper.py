@@ -16,8 +16,7 @@ from ._v1parser import V1Parser
 from ._v2parser import V2Parser
 
 
-
-class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
+class HAProxyProtocolWrapper(policies.ProtocolWrapper):
     """
     A Protocol wrapper that provides HAProxy support.
 
@@ -31,16 +30,15 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
         self._proxyInfo = None
         self._parser = None
 
-
     def dataReceived(self, data):
         if self._proxyInfo is not None:
             return self.wrappedProtocol.dataReceived(data)
 
         if self._parser is None:
             if (
-                    len(data) >= 16 and
-                    data[:12] == V2Parser.PREFIX and
-                    ord(data[12:13]) & 0b11110000 == 0x20
+                len(data) >= 16
+                and data[:12] == V2Parser.PREFIX
+                and ord(data[12:13]) & 0b11110000 == 0x20
             ):
                 self._parser = V2Parser()
             elif len(data) >= 8 and data[:5] == V1Parser.PROXYSTR:
@@ -56,12 +54,10 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
         except InvalidProxyHeader:
             self.loseConnection()
 
-
     def getPeer(self):
         if self._proxyInfo and self._proxyInfo.source:
             return self._proxyInfo.source
         return self.transport.getPeer()
-
 
     def getHost(self):
         if self._proxyInfo and self._proxyInfo.destination:
@@ -69,11 +65,11 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper, object):
         return self.transport.getHost()
 
 
-
 class HAProxyWrappingFactory(policies.WrappingFactory):
     """
     A Factory wrapper that adds PROXY protocol support to connections.
     """
+
     protocol = HAProxyProtocolWrapper
 
     def logPrefix(self):
@@ -87,8 +83,7 @@ class HAProxyWrappingFactory(policies.WrappingFactory):
             logPrefix = self.wrappedFactory.logPrefix()
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
-        return "%s (PROXY)" % (logPrefix,)
-
+        return f"{logPrefix} (PROXY)"
 
 
 def proxyEndpoint(wrappedEndpoint):

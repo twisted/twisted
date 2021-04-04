@@ -6,13 +6,12 @@ Testing helpers related to the module system.
 """
 
 
-__all__ = ['NoReactor', 'AlternateReactor']
+__all__ = ["NoReactor", "AlternateReactor"]
 
 import sys
 
 import twisted.internet
 from twisted.test.test_twisted import SetAsideModule
-
 
 
 class NoReactor(SetAsideModule):
@@ -24,12 +23,10 @@ class NoReactor(SetAsideModule):
     def __init__(self):
         SetAsideModule.__init__(self, "twisted.internet.reactor")
 
-
     def __enter__(self):
         SetAsideModule.__enter__(self)
         if "twisted.internet.reactor" in self.modules:
             del twisted.internet.reactor
-
 
     def __exit__(self, excType, excValue, traceback):
         SetAsideModule.__exit__(self, excType, excValue, traceback)
@@ -45,7 +42,6 @@ class NoReactor(SetAsideModule):
                 pass
 
 
-
 class AlternateReactor(NoReactor):
     """
     A context manager which temporarily installs a different object as the
@@ -59,8 +55,7 @@ class AlternateReactor(NoReactor):
         NoReactor.__init__(self)
         self.alternate = reactor
 
-
     def __enter__(self):
         NoReactor.__enter__(self)
         twisted.internet.reactor = self.alternate
-        sys.modules['twisted.internet.reactor'] = self.alternate
+        sys.modules["twisted.internet.reactor"] = self.alternate

@@ -22,8 +22,9 @@ from twisted.trial.unittest import SynchronousTestCase, FailTest
 
 from twisted.python import threadable
 
+
 class TestObject:
-    synchronized = ['aMethod']
+    synchronized = ["aMethod"]
 
     x = -1
     y = 1
@@ -35,9 +36,7 @@ class TestObject:
             assert self.z == 0, "z == %d, not 0 as expected" % (self.z,)
 
 
-
 threadable.synchronize(TestObject)
-
 
 
 class SynchronizationTests(SynchronousTestCase):
@@ -50,14 +49,12 @@ class SynchronizationTests(SynchronousTestCase):
         self.addCleanup(sys.setswitchinterval, sys.getswitchinterval())
         sys.setswitchinterval(0.0000001)
 
-
     def test_synchronizedName(self):
         """
         The name of a synchronized method is inaffected by the synchronization
         decorator.
         """
         self.assertEqual("aMethod", TestObject.aMethod.__name__)
-
 
     @skipIf(threadingSkip, "Platform does not support threads")
     def test_isInIOThread(self):
@@ -68,14 +65,14 @@ class SynchronizationTests(SynchronousTestCase):
         threadable.registerAsIOThread()
         foreignResult = []
         t = threading.Thread(
-            target=lambda: foreignResult.append(threadable.isInIOThread()))
+            target=lambda: foreignResult.append(threadable.isInIOThread())
+        )
         t.start()
         t.join()
-        self.assertFalse(
-            foreignResult[0], "Non-IO thread reported as IO thread")
+        self.assertFalse(foreignResult[0], "Non-IO thread reported as IO thread")
         self.assertTrue(
-            threadable.isInIOThread(), "IO thread reported as not IO thread")
-
+            threadable.isInIOThread(), "IO thread reported as not IO thread"
+        )
 
     @skipIf(threadingSkip, "Platform does not support threads")
     def testThreadedSynchronization(self):
@@ -102,12 +99,10 @@ class SynchronizationTests(SynchronousTestCase):
         if errors:
             raise FailTest(errors)
 
-
     def testUnthreadedSynchronization(self):
         o = TestObject()
         for i in range(1000):
             o.aMethod()
-
 
 
 class SerializationTests(SynchronousTestCase):
@@ -119,10 +114,8 @@ class SerializationTests(SynchronousTestCase):
         newLock = pickle.loads(lockPickle)
         self.assertIsInstance(newLock, lockType)
 
-
     def testUnpickling(self):
-        lockPickle = (
-            b'ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n.')
+        lockPickle = b"ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n."
         lock = pickle.loads(lockPickle)
         newPickle = pickle.dumps(lock, 2)
         pickle.loads(newPickle)

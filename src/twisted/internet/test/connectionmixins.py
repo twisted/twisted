@@ -27,9 +27,7 @@ from twisted.internet.test.reactormixins import needsRunningReactor
 from twisted.test.test_tcp import ClosingProtocol
 
 
-
-def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
-                 type=socket.SOCK_STREAM):
+def findFreePort(interface="127.0.0.1", family=socket.AF_INET, type=socket.SOCK_STREAM):
     """
     Ask the platform to allocate a free port on the specified interface, then
     release the socket and return the address which was allocated.
@@ -49,13 +47,13 @@ def findFreePort(interface='127.0.0.1', family=socket.AF_INET,
         if family == socket.AF_INET6:
             sockname = probe.getsockname()
             hostname = socket.getnameinfo(
-                sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)[0]
+                sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
+            )[0]
             return (hostname, sockname[1])
         else:
             return probe.getsockname()
     finally:
         probe.close()
-
 
 
 class ConnectableProtocol(Protocol):
@@ -88,15 +86,13 @@ class ConnectableProtocol(Protocol):
         self.reactor = reactor
         self._done = done
 
-
     def connectionLost(self, reason):
         self.disconnectReason = reason
         self._done.callback(None)
         del self._done
 
 
-
-class EndpointCreator(object):
+class EndpointCreator:
     """
     Create client and server endpoints that know how to connect to each other.
     """
@@ -108,14 +104,12 @@ class EndpointCreator(object):
         """
         raise NotImplementedError()
 
-
     def client(self, reactor, serverAddress):
         """
         Return an object providing C{IStreamClientEndpoint} for use in creating
         a client to use to establish the connection type to be tested.
         """
         raise NotImplementedError()
-
 
 
 class _SingleProtocolFactory(ClientFactory):
@@ -129,14 +123,13 @@ class _SingleProtocolFactory(ClientFactory):
     def __init__(self, protocol):
         self._protocol = protocol
 
-
     def buildProtocol(self, addr):
         return self._protocol
 
 
-
-def runProtocolsWithReactor(reactorBuilder, serverProtocol, clientProtocol,
-                            endpointCreator):
+def runProtocolsWithReactor(
+    reactorBuilder, serverProtocol, clientProtocol, endpointCreator
+):
     """
     Connect two protocols using endpoints and a new reactor instance.
 
@@ -168,14 +161,15 @@ def runProtocolsWithReactor(reactorBuilder, serverProtocol, clientProtocol,
 
     # Connect to the port:
     def gotPort(p):
-        clientEndpoint = endpointCreator.client(
-            reactor, p.getHost())
+        clientEndpoint = endpointCreator.client(reactor, p.getHost())
         return clientEndpoint.connect(clientFactory)
+
     d.addCallback(gotPort)
 
     # Stop reactor when both connections are lost:
     def failed(result):
         log.err(result, "Connection setup failed.")
+
     disconnected = gatherResults([serverProtocol._done, clientProtocol._done])
     d.addCallback(lambda _: disconnected)
     d.addErrback(failed)
@@ -185,7 +179,6 @@ def runProtocolsWithReactor(reactorBuilder, serverProtocol, clientProtocol,
     return reactor
 
 
-
 def _getWriters(reactor):
     """
     Like L{IReactorFDSet.getWriters}, but with support for IOCP reactor as
@@ -193,12 +186,11 @@ def _getWriters(reactor):
     """
     if IReactorFDSet.providedBy(reactor):
         return reactor.getWriters()
-    elif 'IOCP' in reactor.__class__.__name__:
+    elif "IOCP" in reactor.__class__.__name__:
         return reactor.handles
     else:
         # Cannot tell what is going on.
-        raise Exception("Cannot find writers on %r" % (reactor,))
-
+        raise Exception(f"Cannot find writers on {reactor!r}")
 
 
 class _AcceptOneClient(ServerFactory):
@@ -211,10 +203,10 @@ class _AcceptOneClient(ServerFactory):
 
     @ivar result: A L{Deferred} which will be fired with the protocol instance.
     """
+
     def __init__(self, reactor, result):
         self.reactor = reactor
         self.result = result
-
 
     def buildProtocol(self, addr):
         protocol = ServerFactory.buildProtocol(self, addr)
@@ -222,41 +214,37 @@ class _AcceptOneClient(ServerFactory):
         return protocol
 
 
-
-class _SimplePullProducer(object):
+class _SimplePullProducer:
     """
     A pull producer which writes one byte whenever it is resumed.  For use by
     C{test_unregisterProducerAfterDisconnect}.
     """
+
     def __init__(self, consumer):
         self.consumer = consumer
-
 
     def stopProducing(self):
         pass
 
-
     def resumeProducing(self):
         log.msg("Producer.resumeProducing")
-        self.consumer.write(b'x')
-
+        self.consumer.write(b"x")
 
 
 class Stop(ClientFactory):
     """
     A client factory which stops a reactor when a connection attempt fails.
     """
+
     failReason = None
 
     def __init__(self, reactor):
         self.reactor = reactor
 
-
     def clientConnectionFailed(self, connector, reason):
         self.failReason = reason
-        msg("Stop(CF) cCFailed: %s" % (reason.getErrorMessage(),))
+        msg(f"Stop(CF) cCFailed: {reason.getErrorMessage()}")
         self.reactor.stop()
-
 
 
 class ClosingLaterProtocol(ConnectableProtocol):
@@ -265,19 +253,17 @@ class ClosingLaterProtocol(ConnectableProtocol):
     itself.  This is mostly a work-around for the fact that connectionMade is
     called before the SSL handshake has completed.
     """
+
     def __init__(self, onConnectionLost):
         self.lostConnectionReason = None
         self.onConnectionLost = onConnectionLost
 
-
     def connectionMade(self):
         msg("ClosingLaterProtocol.connectionMade")
 
-
     def dataReceived(self, bytes):
-        msg("ClosingLaterProtocol.dataReceived %r" % (bytes,))
+        msg(f"ClosingLaterProtocol.dataReceived {bytes!r}")
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         msg("ClosingLaterProtocol.connectionLost")
@@ -285,21 +271,20 @@ class ClosingLaterProtocol(ConnectableProtocol):
         self.onConnectionLost.callback(self)
 
 
-
-class ConnectionTestsMixin(object):
+class ConnectionTestsMixin:
     """
     This mixin defines test methods which should apply to most L{ITransport}
     implementations.
     """
 
-    endpoints = None  # type: Optional[EndpointCreator]
-
+    endpoints: Optional[EndpointCreator] = None
 
     def test_logPrefix(self):
         """
         Client and server transports implement L{ILoggingContext.logPrefix} to
         return a message reflecting the protocol they are running.
         """
+
         class CustomLogPrefixProtocol(ConnectableProtocol):
             def __init__(self, prefix):
                 self._prefix = prefix
@@ -325,7 +310,6 @@ class ConnectionTestsMixin(object):
         self.assertIn("Custom Client", client.system)
         self.assertIn("Custom Server", server.system)
 
-
     def test_writeAfterDisconnect(self):
         """
         After a connection is disconnected, L{ITransport.write} and
@@ -338,39 +322,42 @@ class ConnectionTestsMixin(object):
         serverConnectionLostDeferred = Deferred()
         protocol = lambda: ClosingLaterProtocol(serverConnectionLostDeferred)
         portDeferred = self.endpoints.server(reactor).listen(
-            ServerFactory.forProtocol(protocol))
+            ServerFactory.forProtocol(protocol)
+        )
+
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            msg(f"Listening on {port.getHost()!r}")
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
             protocol = lambda: ClosingLaterProtocol(lostConnectionDeferred)
             client = endpoint.connect(ClientFactory.forProtocol(protocol))
+
             def write(proto):
-                msg("About to write to %r" % (proto,))
-                proto.transport.write(b'x')
+                msg(f"About to write to {proto!r}")
+                proto.transport.write(b"x")
+
             client.addCallbacks(write, lostConnectionDeferred.errback)
 
             def disconnected(proto):
-                msg("%r disconnected" % (proto,))
+                msg(f"{proto!r} disconnected")
                 proto.transport.write(b"some bytes to get lost")
                 proto.transport.writeSequence([b"some", b"more"])
                 finished.append(True)
 
             lostConnectionDeferred.addCallback(disconnected)
             serverConnectionLostDeferred.addCallback(disconnected)
-            return gatherResults([lostConnectionDeferred,
-                                  serverConnectionLostDeferred])
+            return gatherResults([lostConnectionDeferred, serverConnectionLostDeferred])
 
         def onListen():
             portDeferred.addCallback(listening)
             portDeferred.addErrback(err)
             portDeferred.addCallback(lambda ignored: reactor.stop())
+
         needsRunningReactor(reactor, onListen)
 
         self.runReactor(reactor)
         self.assertEqual(finished, [True, True])
-
 
     def test_protocolGarbageAfterLostConnection(self):
         """
@@ -383,16 +370,19 @@ class ConnectionTestsMixin(object):
 
         reactor = self.buildReactor()
         portDeferred = self.endpoints.server(reactor).listen(
-            ServerFactory.forProtocol(Protocol))
+            ServerFactory.forProtocol(Protocol)
+        )
+
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            msg(f"Listening on {port.getHost()!r}")
             endpoint = self.endpoints.client(reactor, port.getHost())
 
-            client = endpoint.connect(
-                ClientFactory.forProtocol(lambda: clientProtocol))
+            client = endpoint.connect(ClientFactory.forProtocol(lambda: clientProtocol))
+
             def disconnect(proto):
-                msg("About to disconnect %r" % (proto,))
+                msg(f"About to disconnect {proto!r}")
                 proto.transport.loseConnection()
+
             client.addCallback(disconnect)
             client.addErrback(lostConnectionDeferred.errback)
             return lostConnectionDeferred
@@ -401,6 +391,7 @@ class ConnectionTestsMixin(object):
             portDeferred.addCallback(listening)
             portDeferred.addErrback(err)
             portDeferred.addBoth(lambda ignored: reactor.stop())
+
         needsRunningReactor(reactor, onListening)
 
         self.runReactor(reactor)
@@ -412,11 +403,11 @@ class ConnectionTestsMixin(object):
         self.assertIsNone(clientRef())
 
 
-
-class LogObserverMixin(object):
+class LogObserverMixin:
     """
     Mixin for L{TestCase} subclasses which want to observe log events.
     """
+
     def observe(self):
         loggedMessages = []
         log.addObserver(loggedMessages.append)
@@ -424,20 +415,19 @@ class LogObserverMixin(object):
         return loggedMessages
 
 
-
-class BrokenContextFactory(object):
+class BrokenContextFactory:
     """
     A context factory with a broken C{getContext} method, for exercising the
     error handling for such a case.
     """
+
     message = "Some path was wrong maybe"
 
     def getContext(self):
         raise ValueError(self.message)
 
 
-
-class StreamClientTestsMixin(object):
+class StreamClientTestsMixin:
     """
     This mixin defines tests applicable to SOCK_STREAM client implementations.
 
@@ -457,17 +447,14 @@ class StreamClientTestsMixin(object):
         connector = self.connect(reactor, ClientFactory())
         self.assertTrue(verifyObject(IConnector, connector))
 
-
     def test_clientConnectionFailedStopsReactor(self):
         """
         The reactor can be stopped by a client factory's
         C{clientConnectionFailed} method.
         """
         reactor = self.buildReactor()
-        needsRunningReactor(
-            reactor, lambda: self.connect(reactor, Stop(reactor)))
+        needsRunningReactor(reactor, lambda: self.connect(reactor, Stop(reactor)))
         self.runReactor(reactor)
-
 
     def test_connectEvent(self):
         """
@@ -481,7 +468,6 @@ class StreamClientTestsMixin(object):
         connected = []
 
         class CheckConnection(Protocol):
-
             def connectionMade(self):
                 connected.append(self)
                 reactor.stop()
@@ -489,13 +475,11 @@ class StreamClientTestsMixin(object):
         clientFactory = Stop(reactor)
         clientFactory.protocol = CheckConnection
 
-        needsRunningReactor(
-            reactor, lambda: self.connect(reactor, clientFactory))
+        needsRunningReactor(reactor, lambda: self.connect(reactor, clientFactory))
 
         reactor.run()
 
         self.assertTrue(connected)
-
 
     def test_unregisterProducerAfterDisconnect(self):
         """
@@ -523,7 +507,8 @@ class StreamClientTestsMixin(object):
             def connectionMade(self):
                 log.msg("ClientProtocol.connectionMade")
                 self.transport.registerProducer(
-                    _SimplePullProducer(self.transport), False)
+                    _SimplePullProducer(self.transport), False
+                )
                 self.transport.loseConnection()
 
             def connectionLost(self, reason):
@@ -540,9 +525,7 @@ class StreamClientTestsMixin(object):
         clientFactory.protocol = ClientProtocol
         self.connect(reactor, clientFactory)
         self.runReactor(reactor)
-        self.assertFalse(writing[0],
-                         "Transport was writing after unregisterProducer.")
-
+        self.assertFalse(writing[0], "Transport was writing after unregisterProducer.")
 
     def test_disconnectWhileProducing(self):
         """
@@ -560,8 +543,8 @@ class StreamClientTestsMixin(object):
         reactorClassName = reactor.__class__.__name__
         if reactorClassName in skippedReactors and platform.isWindows():
             raise SkipTest(
-                "A pygobject/pygtk bug disables this functionality "
-                "on Windows.")
+                "A pygobject/pygtk bug disables this functionality " "on Windows."
+            )
 
         class Producer:
             def resumeProducing(self):
@@ -579,6 +562,7 @@ class StreamClientTestsMixin(object):
             connection, unregister the producer, and wait for the connection to
             actually be lost.
             """
+
             def connectionMade(self):
                 log.msg("ClientProtocol.connectionMade")
                 self.transport.registerProducer(Producer(), False)
@@ -596,8 +580,8 @@ class StreamClientTestsMixin(object):
                 # if we don't get a connectionLost event really
                 # soon.
                 reactor.callLater(
-                    1.0, finished.errback,
-                    Failure(Exception("Connection was not lost")))
+                    1.0, finished.errback, Failure(Exception("Connection was not lost"))
+                )
 
             def connectionLost(self, reason):
                 log.msg("ClientProtocol.connectionLost")

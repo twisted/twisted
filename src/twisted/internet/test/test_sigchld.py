@@ -14,6 +14,7 @@ import signal
 from twisted.python.runtime import platformType
 from twisted.python.log import msg
 from twisted.trial.unittest import SynchronousTestCase
+
 if platformType == "posix":
     from twisted.internet.fdesc import setNonBlocking
     from twisted.internet._signals import installHandler, isDefaultHandler
@@ -39,7 +40,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         setNonBlocking(write)
         return read, write
 
-
     def setUp(self):
         """
         Save the current SIGCHLD handler as reported by L{signal.signal} and
@@ -55,9 +55,10 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         self.oldFD = installHandler(-1)
 
         if self.signalModuleHandler is not None and self.oldFD != -1:
-            msg("Previous test didn't clean up after its SIGCHLD setup: %r %r"
-                % (self.signalModuleHandler, self.oldFD))
-
+            msg(
+                "Previous test didn't clean up after its SIGCHLD setup: %r %r"
+                % (self.signalModuleHandler, self.oldFD)
+            )
 
     def tearDown(self):
         """
@@ -73,7 +74,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         elif self.oldFD != -1:
             installHandler(self.oldFD)
 
-
     def test_isDefaultHandler(self):
         """
         L{isDefaultHandler} returns true if the SIGCHLD handler is SIG_DFL,
@@ -87,7 +87,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         signal.signal(signal.SIGCHLD, lambda *args: None)
         self.assertFalse(isDefaultHandler())
 
-
     def test_returnOldFD(self):
         """
         L{installHandler} returns the previously registered file descriptor.
@@ -95,7 +94,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         read, write = self.pipe()
         oldFD = installHandler(write)
         self.assertEqual(installHandler(oldFD), write)
-
 
     def test_uninstallHandler(self):
         """
@@ -107,7 +105,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         self.assertFalse(isDefaultHandler())
         installHandler(-1)
         self.assertTrue(isDefaultHandler())
-
 
     def test_installHandler(self):
         """
@@ -123,4 +120,3 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         os.kill(os.getpid(), signal.SIGCHLD)
 
         self.assertEqual(len(os.read(read, 5)), 1)
-

@@ -34,6 +34,7 @@ class Example(soap.SOAPPublisher):
 
     def soap_add(self, a=0, b=0):
         return a + b
+
     soap_add.useKeywords = 1
 
     def soap_deferred(self):

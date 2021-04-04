@@ -29,11 +29,11 @@ if ssl and not ssl.supported:  # type: ignore[attr-defined]
     ssl = None
 
 
-
 class ThreePhaseEventTests(TestCase):
     """
     Tests for the private implementation helpers for system event triggers.
     """
+
     def setUp(self):
         """
         Create a trigger, an argument, and an event to be used by tests.
@@ -42,16 +42,14 @@ class ThreePhaseEventTests(TestCase):
         self.arg = object()
         self.event = base._ThreePhaseEvent()
 
-
     def test_addInvalidPhase(self):
         """
         L{_ThreePhaseEvent.addTrigger} should raise L{KeyError} when called
         with an invalid phase.
         """
         self.assertRaises(
-            KeyError,
-            self.event.addTrigger, 'xxx', self.trigger, self.arg)
-
+            KeyError, self.event.addTrigger, "xxx", self.trigger, self.arg
+        )
 
     def test_addBeforeTrigger(self):
         """
@@ -59,11 +57,8 @@ class ThreePhaseEventTests(TestCase):
         callable, and some arguments and add the callable with the arguments to
         the before list.
         """
-        self.event.addTrigger('before', self.trigger, self.arg)
-        self.assertEqual(
-            self.event.before,
-            [(self.trigger, (self.arg,), {})])
-
+        self.event.addTrigger("before", self.trigger, self.arg)
+        self.assertEqual(self.event.before, [(self.trigger, (self.arg,), {})])
 
     def test_addDuringTrigger(self):
         """
@@ -71,11 +66,8 @@ class ThreePhaseEventTests(TestCase):
         callable, and some arguments and add the callable with the arguments to
         the during list.
         """
-        self.event.addTrigger('during', self.trigger, self.arg)
-        self.assertEqual(
-            self.event.during,
-            [(self.trigger, (self.arg,), {})])
-
+        self.event.addTrigger("during", self.trigger, self.arg)
+        self.assertEqual(self.event.during, [(self.trigger, (self.arg,), {})])
 
     def test_addAfterTrigger(self):
         """
@@ -83,11 +75,8 @@ class ThreePhaseEventTests(TestCase):
         callable, and some arguments and add the callable with the arguments to
         the after list.
         """
-        self.event.addTrigger('after', self.trigger, self.arg)
-        self.assertEqual(
-            self.event.after,
-            [(self.trigger, (self.arg,), {})])
-
+        self.event.addTrigger("after", self.trigger, self.arg)
+        self.assertEqual(self.event.after, [(self.trigger, (self.arg,), {})])
 
     def test_removeTrigger(self):
         """
@@ -95,10 +84,9 @@ class ThreePhaseEventTests(TestCase):
         previously returned by L{_ThreePhaseEvent.addTrigger} and remove the
         associated trigger.
         """
-        handle = self.event.addTrigger('before', self.trigger, self.arg)
+        handle = self.event.addTrigger("before", self.trigger, self.arg)
         self.event.removeTrigger(handle)
         self.assertEqual(self.event.before, [])
-
 
     def test_removeNonexistentTrigger(self):
         """
@@ -107,17 +95,15 @@ class ThreePhaseEventTests(TestCase):
         """
         self.assertRaises(ValueError, self.event.removeTrigger, object())
 
-
     def test_removeRemovedTrigger(self):
         """
         L{_ThreePhaseEvent.removeTrigger} should raise L{ValueError} the second
         time it is called with an object returned by
         L{_ThreePhaseEvent.addTrigger}.
         """
-        handle = self.event.addTrigger('before', self.trigger, self.arg)
+        handle = self.event.addTrigger("before", self.trigger, self.arg)
         self.event.removeTrigger(handle)
         self.assertRaises(ValueError, self.event.removeTrigger, handle)
-
 
     def test_removeAlmostValidTrigger(self):
         """
@@ -126,9 +112,8 @@ class ThreePhaseEventTests(TestCase):
         from its phase being incorrect.
         """
         self.assertRaises(
-            KeyError,
-            self.event.removeTrigger, ('xxx', self.trigger, (self.arg,), {}))
-
+            KeyError, self.event.removeTrigger, ("xxx", self.trigger, (self.arg,), {})
+        )
 
     def test_fireEvent(self):
         """
@@ -136,20 +121,26 @@ class ThreePhaseEventTests(TestCase):
         I{after} phase triggers in that order.
         """
         events = []
-        self.event.addTrigger('after', events.append, ('first', 'after'))
-        self.event.addTrigger('during', events.append, ('first', 'during'))
-        self.event.addTrigger('before', events.append, ('first', 'before'))
-        self.event.addTrigger('before', events.append, ('second', 'before'))
-        self.event.addTrigger('during', events.append, ('second', 'during'))
-        self.event.addTrigger('after', events.append, ('second', 'after'))
+        self.event.addTrigger("after", events.append, ("first", "after"))
+        self.event.addTrigger("during", events.append, ("first", "during"))
+        self.event.addTrigger("before", events.append, ("first", "before"))
+        self.event.addTrigger("before", events.append, ("second", "before"))
+        self.event.addTrigger("during", events.append, ("second", "during"))
+        self.event.addTrigger("after", events.append, ("second", "after"))
 
         self.assertEqual(events, [])
         self.event.fireEvent()
-        self.assertEqual(events,
-                         [('first', 'before'), ('second', 'before'),
-                          ('first', 'during'), ('second', 'during'),
-                          ('first', 'after'), ('second', 'after')])
-
+        self.assertEqual(
+            events,
+            [
+                ("first", "before"),
+                ("second", "before"),
+                ("first", "during"),
+                ("second", "during"),
+                ("first", "after"),
+                ("second", "after"),
+            ],
+        )
 
     def test_asynchronousBefore(self):
         """
@@ -158,16 +149,15 @@ class ThreePhaseEventTests(TestCase):
         """
         events = []
         beforeResult = Deferred()
-        self.event.addTrigger('before', lambda: beforeResult)
-        self.event.addTrigger('during', events.append, 'during')
-        self.event.addTrigger('after', events.append, 'after')
+        self.event.addTrigger("before", lambda: beforeResult)
+        self.event.addTrigger("during", events.append, "during")
+        self.event.addTrigger("after", events.append, "after")
 
         self.assertEqual(events, [])
         self.event.fireEvent()
         self.assertEqual(events, [])
         beforeResult.callback(None)
-        self.assertEqual(events, ['during', 'after'])
-
+        self.assertEqual(events, ["during", "after"])
 
     def test_beforeTriggerException(self):
         """
@@ -182,14 +172,13 @@ class ThreePhaseEventTests(TestCase):
         def raisingTrigger():
             raise DummyException()
 
-        self.event.addTrigger('before', raisingTrigger)
-        self.event.addTrigger('before', events.append, 'before')
-        self.event.addTrigger('during', events.append, 'during')
+        self.event.addTrigger("before", raisingTrigger)
+        self.event.addTrigger("before", events.append, "before")
+        self.event.addTrigger("during", events.append, "during")
         self.event.fireEvent()
-        self.assertEqual(events, ['before', 'during'])
+        self.assertEqual(events, ["before", "during"])
         errors = self.flushLoggedErrors(DummyException)
         self.assertEqual(len(errors), 1)
-
 
     def test_duringTriggerException(self):
         """
@@ -204,14 +193,13 @@ class ThreePhaseEventTests(TestCase):
         def raisingTrigger():
             raise DummyException()
 
-        self.event.addTrigger('during', raisingTrigger)
-        self.event.addTrigger('during', events.append, 'during')
-        self.event.addTrigger('after', events.append, 'after')
+        self.event.addTrigger("during", raisingTrigger)
+        self.event.addTrigger("during", events.append, "during")
+        self.event.addTrigger("after", events.append, "after")
         self.event.fireEvent()
-        self.assertEqual(events, ['during', 'after'])
+        self.assertEqual(events, ["during", "after"])
         errors = self.flushLoggedErrors(DummyException)
         self.assertEqual(len(errors), 1)
-
 
     def test_synchronousRemoveAlreadyExecutedBefore(self):
         """
@@ -223,17 +211,19 @@ class ThreePhaseEventTests(TestCase):
         def removeTrigger():
             self.event.removeTrigger(beforeHandle)
 
-        beforeHandle = self.event.addTrigger('before', events.append, ('first', 'before'))
-        self.event.addTrigger('before', removeTrigger)
-        self.event.addTrigger('before', events.append, ('second', 'before'))
+        beforeHandle = self.event.addTrigger(
+            "before", events.append, ("first", "before")
+        )
+        self.event.addTrigger("before", removeTrigger)
+        self.event.addTrigger("before", events.append, ("second", "before"))
         self.assertWarns(
             DeprecationWarning,
             "Removing already-fired system event triggers will raise an "
             "exception in a future version of Twisted.",
             __file__,
-            self.event.fireEvent)
-        self.assertEqual(events, [('first', 'before'), ('second', 'before')])
-
+            self.event.fireEvent,
+        )
+        self.assertEqual(events, [("first", "before"), ("second", "before")])
 
     def test_synchronousRemovePendingBefore(self):
         """
@@ -241,14 +231,13 @@ class ThreePhaseEventTests(TestCase):
         has not yet run, the removed trigger should not be run.
         """
         events = []
-        self.event.addTrigger(
-            'before', lambda: self.event.removeTrigger(beforeHandle))
+        self.event.addTrigger("before", lambda: self.event.removeTrigger(beforeHandle))
         beforeHandle = self.event.addTrigger(
-            'before', events.append, ('first', 'before'))
-        self.event.addTrigger('before', events.append, ('second', 'before'))
+            "before", events.append, ("first", "before")
+        )
+        self.event.addTrigger("before", events.append, ("second", "before"))
         self.event.fireEvent()
-        self.assertEqual(events, [('second', 'before')])
-
+        self.assertEqual(events, [("second", "before")])
 
     def test_synchronousBeforeRemovesDuring(self):
         """
@@ -256,13 +245,11 @@ class ThreePhaseEventTests(TestCase):
         during-phase trigger should not be run.
         """
         events = []
-        self.event.addTrigger(
-            'before', lambda: self.event.removeTrigger(duringHandle))
-        duringHandle = self.event.addTrigger('during', events.append, 'during')
-        self.event.addTrigger('after', events.append, 'after')
+        self.event.addTrigger("before", lambda: self.event.removeTrigger(duringHandle))
+        duringHandle = self.event.addTrigger("during", events.append, "during")
+        self.event.addTrigger("after", events.append, "after")
         self.event.fireEvent()
-        self.assertEqual(events, ['after'])
-
+        self.assertEqual(events, ["after"])
 
     def test_asynchronousBeforeRemovesDuring(self):
         """
@@ -272,14 +259,13 @@ class ThreePhaseEventTests(TestCase):
         """
         events = []
         beforeResult = Deferred()
-        self.event.addTrigger('before', lambda: beforeResult)
-        duringHandle = self.event.addTrigger('during', events.append, 'during')
-        self.event.addTrigger('after', events.append, 'after')
+        self.event.addTrigger("before", lambda: beforeResult)
+        duringHandle = self.event.addTrigger("during", events.append, "during")
+        self.event.addTrigger("after", events.append, "after")
         self.event.fireEvent()
         self.event.removeTrigger(duringHandle)
         beforeResult.callback(None)
-        self.assertEqual(events, ['after'])
-
+        self.assertEqual(events, ["after"])
 
     def test_synchronousBeforeRemovesConspicuouslySimilarDuring(self):
         """
@@ -289,15 +275,15 @@ class ThreePhaseEventTests(TestCase):
         should not be run.
         """
         events = []
-        def trigger():
-            events.append('trigger')
-        self.event.addTrigger('before', trigger)
-        self.event.addTrigger(
-            'before', lambda: self.event.removeTrigger(duringTrigger))
-        duringTrigger = self.event.addTrigger('during', trigger)
-        self.event.fireEvent()
-        self.assertEqual(events, ['trigger'])
 
+        def trigger():
+            events.append("trigger")
+
+        self.event.addTrigger("before", trigger)
+        self.event.addTrigger("before", lambda: self.event.removeTrigger(duringTrigger))
+        duringTrigger = self.event.addTrigger("during", trigger)
+        self.event.fireEvent()
+        self.assertEqual(events, ["trigger"])
 
     def test_synchronousRemovePendingDuring(self):
         """
@@ -305,15 +291,13 @@ class ThreePhaseEventTests(TestCase):
         has not yet run, the removed trigger should not be run.
         """
         events = []
-        self.event.addTrigger(
-            'during', lambda: self.event.removeTrigger(duringHandle))
+        self.event.addTrigger("during", lambda: self.event.removeTrigger(duringHandle))
         duringHandle = self.event.addTrigger(
-            'during', events.append, ('first', 'during'))
-        self.event.addTrigger(
-            'during', events.append, ('second', 'during'))
+            "during", events.append, ("first", "during")
+        )
+        self.event.addTrigger("during", events.append, ("second", "during"))
         self.event.fireEvent()
-        self.assertEqual(events, [('second', 'during')])
-
+        self.assertEqual(events, [("second", "during")])
 
     def test_triggersRunOnce(self):
         """
@@ -321,13 +305,12 @@ class ThreePhaseEventTests(TestCase):
         L{_ThreePhaseEvent.fireEvent}.
         """
         events = []
-        self.event.addTrigger('before', events.append, 'before')
-        self.event.addTrigger('during', events.append, 'during')
-        self.event.addTrigger('after', events.append, 'after')
+        self.event.addTrigger("before", events.append, "before")
+        self.event.addTrigger("during", events.append, "during")
+        self.event.addTrigger("after", events.append, "after")
         self.event.fireEvent()
         self.event.fireEvent()
-        self.assertEqual(events, ['before', 'during', 'after'])
-
+        self.assertEqual(events, ["before", "during", "after"])
 
     def test_finishedBeforeTriggersCleared(self):
         """
@@ -336,15 +319,16 @@ class ThreePhaseEventTests(TestCase):
         executes.
         """
         events = []
-        def duringTrigger():
-            events.append('during')
-            self.assertEqual(self.event.finishedBefore, [])
-            self.assertEqual(self.event.state, 'BASE')
-        self.event.addTrigger('before', events.append, 'before')
-        self.event.addTrigger('during', duringTrigger)
-        self.event.fireEvent()
-        self.assertEqual(events, ['before', 'during'])
 
+        def duringTrigger():
+            events.append("during")
+            self.assertEqual(self.event.finishedBefore, [])
+            self.assertEqual(self.event.state, "BASE")
+
+        self.event.addTrigger("before", events.append, "before")
+        self.event.addTrigger("during", duringTrigger)
+        self.event.fireEvent()
+        self.assertEqual(events, ["before", "during"])
 
 
 class SystemEventTests(TestCase):
@@ -356,12 +340,12 @@ class SystemEventTests(TestCase):
     @ivar triggers: A list of the handles to triggers which have been added to
         the reactor.
     """
+
     def setUp(self):
         """
         Create an empty list in which to store trigger handles.
         """
         self.triggers = []
-
 
     def tearDown(self):
         """
@@ -374,7 +358,6 @@ class SystemEventTests(TestCase):
             except (ValueError, KeyError):
                 pass
 
-
     def addTrigger(self, event, phase, func):
         """
         Add a trigger to the reactor and remember it in C{self.triggers}.
@@ -382,7 +365,6 @@ class SystemEventTests(TestCase):
         t = reactor.addSystemEventTrigger(event, phase, func)
         self.triggers.append(t)
         return t
-
 
     def removeTrigger(self, trigger):
         """
@@ -392,51 +374,46 @@ class SystemEventTests(TestCase):
         reactor.removeSystemEventTrigger(trigger)
         self.triggers.remove(trigger)
 
-
     def _addSystemEventTriggerTest(self, phase):
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def trigger():
             events.append(None)
+
         self.addTrigger(phase, eventType, trigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
         self.assertEqual(events, [None])
-
 
     def test_beforePhase(self):
         """
         L{IReactorCore.addSystemEventTrigger} should accept the C{'before'}
         phase and not call the given object until the right event is fired.
         """
-        self._addSystemEventTriggerTest('before')
-
+        self._addSystemEventTriggerTest("before")
 
     def test_duringPhase(self):
         """
         L{IReactorCore.addSystemEventTrigger} should accept the C{'during'}
         phase and not call the given object until the right event is fired.
         """
-        self._addSystemEventTriggerTest('during')
-
+        self._addSystemEventTriggerTest("during")
 
     def test_afterPhase(self):
         """
         L{IReactorCore.addSystemEventTrigger} should accept the C{'after'}
         phase and not call the given object until the right event is fired.
         """
-        self._addSystemEventTriggerTest('after')
-
+        self._addSystemEventTriggerTest("after")
 
     def test_unknownPhase(self):
         """
         L{IReactorCore.addSystemEventTrigger} should reject phases other than
         C{'before'}, C{'during'}, or C{'after'}.
         """
-        eventType = 'test'
-        self.assertRaises(
-            KeyError, self.addTrigger, 'xxx', eventType, lambda: None)
-
+        eventType = "test"
+        self.assertRaises(KeyError, self.addTrigger, "xxx", eventType, lambda: None)
 
     def test_beforePreceedsDuring(self):
         """
@@ -444,18 +421,20 @@ class SystemEventTests(TestCase):
         C{'before'} phase before it calls triggers added to the C{'during'}
         phase.
         """
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def beforeTrigger():
-            events.append('before')
+            events.append("before")
+
         def duringTrigger():
-            events.append('during')
-        self.addTrigger('before', eventType, beforeTrigger)
-        self.addTrigger('during', eventType, duringTrigger)
+            events.append("during")
+
+        self.addTrigger("before", eventType, beforeTrigger)
+        self.addTrigger("during", eventType, duringTrigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
-        self.assertEqual(events, ['before', 'during'])
-
+        self.assertEqual(events, ["before", "during"])
 
     def test_duringPreceedsAfter(self):
         """
@@ -463,18 +442,20 @@ class SystemEventTests(TestCase):
         C{'during'} phase before it calls triggers added to the C{'after'}
         phase.
         """
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def duringTrigger():
-            events.append('during')
+            events.append("during")
+
         def afterTrigger():
-            events.append('after')
-        self.addTrigger('during', eventType, duringTrigger)
-        self.addTrigger('after', eventType, afterTrigger)
+            events.append("after")
+
+        self.addTrigger("during", eventType, duringTrigger)
+        self.addTrigger("after", eventType, afterTrigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
-        self.assertEqual(events, ['during', 'after'])
-
+        self.assertEqual(events, ["during", "after"])
 
     def test_beforeReturnsDeferred(self):
         """
@@ -483,20 +464,22 @@ class SystemEventTests(TestCase):
         back.
         """
         triggerDeferred = Deferred()
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def beforeTrigger():
             return triggerDeferred
+
         def duringTrigger():
-            events.append('during')
-        self.addTrigger('before', eventType, beforeTrigger)
-        self.addTrigger('during', eventType, duringTrigger)
+            events.append("during")
+
+        self.addTrigger("before", eventType, beforeTrigger)
+        self.addTrigger("during", eventType, duringTrigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
         self.assertEqual(events, [])
         triggerDeferred.callback(None)
-        self.assertEqual(events, ['during'])
-
+        self.assertEqual(events, ["during"])
 
     def test_multipleBeforeReturnDeferred(self):
         """
@@ -506,25 +489,28 @@ class SystemEventTests(TestCase):
         """
         firstDeferred = Deferred()
         secondDeferred = Deferred()
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def firstBeforeTrigger():
             return firstDeferred
+
         def secondBeforeTrigger():
             return secondDeferred
+
         def duringTrigger():
-            events.append('during')
-        self.addTrigger('before', eventType, firstBeforeTrigger)
-        self.addTrigger('before', eventType, secondBeforeTrigger)
-        self.addTrigger('during', eventType, duringTrigger)
+            events.append("during")
+
+        self.addTrigger("before", eventType, firstBeforeTrigger)
+        self.addTrigger("before", eventType, secondBeforeTrigger)
+        self.addTrigger("during", eventType, duringTrigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
         self.assertEqual(events, [])
         firstDeferred.callback(None)
         self.assertEqual(events, [])
         secondDeferred.callback(None)
-        self.assertEqual(events, ['during'])
-
+        self.assertEqual(events, ["during"])
 
     def test_subsequentBeforeTriggerFiresPriorBeforeDeferred(self):
         """
@@ -534,48 +520,53 @@ class SystemEventTests(TestCase):
         should be run and any further L{Deferred}s waited on before proceeding
         to the C{'during'} events.
         """
-        eventType = 'test'
+        eventType = "test"
         events = []
         firstDeferred = Deferred()
         secondDeferred = Deferred()
+
         def firstBeforeTrigger():
             return firstDeferred
+
         def secondBeforeTrigger():
             firstDeferred.callback(None)
+
         def thirdBeforeTrigger():
-            events.append('before')
+            events.append("before")
             return secondDeferred
+
         def duringTrigger():
-            events.append('during')
-        self.addTrigger('before', eventType, firstBeforeTrigger)
-        self.addTrigger('before', eventType, secondBeforeTrigger)
-        self.addTrigger('before', eventType, thirdBeforeTrigger)
-        self.addTrigger('during', eventType, duringTrigger)
+            events.append("during")
+
+        self.addTrigger("before", eventType, firstBeforeTrigger)
+        self.addTrigger("before", eventType, secondBeforeTrigger)
+        self.addTrigger("before", eventType, thirdBeforeTrigger)
+        self.addTrigger("during", eventType, duringTrigger)
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
-        self.assertEqual(events, ['before'])
+        self.assertEqual(events, ["before"])
         secondDeferred.callback(None)
-        self.assertEqual(events, ['before', 'during'])
-
+        self.assertEqual(events, ["before", "during"])
 
     def test_removeSystemEventTrigger(self):
         """
         A trigger removed with L{IReactorCore.removeSystemEventTrigger} should
         not be called when the event fires.
         """
-        eventType = 'test'
+        eventType = "test"
         events = []
+
         def firstBeforeTrigger():
-            events.append('first')
+            events.append("first")
+
         def secondBeforeTrigger():
-            events.append('second')
-        self.addTrigger('before', eventType, firstBeforeTrigger)
-        self.removeTrigger(
-            self.addTrigger('before', eventType, secondBeforeTrigger))
+            events.append("second")
+
+        self.addTrigger("before", eventType, firstBeforeTrigger)
+        self.removeTrigger(self.addTrigger("before", eventType, secondBeforeTrigger))
         self.assertEqual(events, [])
         reactor.fireSystemEvent(eventType)
-        self.assertEqual(events, ['first'])
-
+        self.assertEqual(events, ["first"])
 
     def test_removeNonExistentSystemEventTrigger(self):
         """
@@ -585,17 +576,13 @@ class SystemEventTests(TestCase):
         to C{removeSystemEventTrigger} should result in L{TypeError},
         L{KeyError}, or L{ValueError} being raised.
         """
-        b = self.addTrigger('during', 'test', lambda: None)
+        b = self.addTrigger("during", "test", lambda: None)
         self.removeTrigger(b)
+        self.assertRaises(TypeError, reactor.removeSystemEventTrigger, None)
+        self.assertRaises(ValueError, reactor.removeSystemEventTrigger, b)
         self.assertRaises(
-            TypeError, reactor.removeSystemEventTrigger, None)
-        self.assertRaises(
-            ValueError, reactor.removeSystemEventTrigger, b)
-        self.assertRaises(
-            KeyError,
-            reactor.removeSystemEventTrigger,
-            (b[0], ('xxx',) + b[1][1:]))
-
+            KeyError, reactor.removeSystemEventTrigger, (b[0], ("xxx",) + b[1][1:])
+        )
 
     def test_interactionBetweenDifferentEvents(self):
         """
@@ -605,57 +592,67 @@ class SystemEventTests(TestCase):
         """
         events = []
 
-        firstEvent = 'first-event'
+        firstEvent = "first-event"
         firstDeferred = Deferred()
+
         def beforeFirstEvent():
-            events.append(('before', 'first'))
+            events.append(("before", "first"))
             return firstDeferred
+
         def afterFirstEvent():
-            events.append(('after', 'first'))
+            events.append(("after", "first"))
 
-        secondEvent = 'second-event'
+        secondEvent = "second-event"
         secondDeferred = Deferred()
-        def beforeSecondEvent():
-            events.append(('before', 'second'))
-            return secondDeferred
-        def afterSecondEvent():
-            events.append(('after', 'second'))
 
-        self.addTrigger('before', firstEvent, beforeFirstEvent)
-        self.addTrigger('after', firstEvent, afterFirstEvent)
-        self.addTrigger('before', secondEvent, beforeSecondEvent)
-        self.addTrigger('after', secondEvent, afterSecondEvent)
+        def beforeSecondEvent():
+            events.append(("before", "second"))
+            return secondDeferred
+
+        def afterSecondEvent():
+            events.append(("after", "second"))
+
+        self.addTrigger("before", firstEvent, beforeFirstEvent)
+        self.addTrigger("after", firstEvent, afterFirstEvent)
+        self.addTrigger("before", secondEvent, beforeSecondEvent)
+        self.addTrigger("after", secondEvent, afterSecondEvent)
 
         self.assertEqual(events, [])
 
         # After this, firstEvent should be stuck before 'during' waiting for
         # firstDeferred.
         reactor.fireSystemEvent(firstEvent)
-        self.assertEqual(events, [('before', 'first')])
+        self.assertEqual(events, [("before", "first")])
 
         # After this, secondEvent should be stuck before 'during' waiting for
         # secondDeferred.
         reactor.fireSystemEvent(secondEvent)
-        self.assertEqual(events, [('before', 'first'), ('before', 'second')])
+        self.assertEqual(events, [("before", "first"), ("before", "second")])
 
         # After this, firstEvent should have finished completely, but
         # secondEvent should be at the same place.
         firstDeferred.callback(None)
-        self.assertEqual(events, [('before', 'first'), ('before', 'second'),
-                                  ('after', 'first')])
+        self.assertEqual(
+            events, [("before", "first"), ("before", "second"), ("after", "first")]
+        )
 
         # After this, secondEvent should have finished completely.
         secondDeferred.callback(None)
-        self.assertEqual(events, [('before', 'first'), ('before', 'second'),
-                                  ('after', 'first'), ('after', 'second')])
-
+        self.assertEqual(
+            events,
+            [
+                ("before", "first"),
+                ("before", "second"),
+                ("after", "first"),
+                ("after", "second"),
+            ],
+        )
 
 
 class TimeTests(TestCase):
     """
     Tests for the IReactorTime part of the reactor.
     """
-
 
     def test_seconds(self):
         """
@@ -672,8 +669,7 @@ class TimeTests(TestCase):
            floats: For example, datetime-datetime == timedelta(0).
         """
         now = reactor.seconds()
-        self.assertEqual(now-now+now, now)
-
+        self.assertEqual(now - now + now, now)
 
     def test_callLaterUsesReactorSecondsInDelayedCall(self):
         """
@@ -690,7 +686,6 @@ class TimeTests(TestCase):
             reactor.seconds = oseconds
         call.cancel()
 
-
     def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
         """
         L{reactor.callLater<twisted.internet.interfaces.IReactorTime.callLater>}
@@ -706,7 +701,6 @@ class TimeTests(TestCase):
             reactor.seconds = oseconds
         call.cancel()
 
-
     def test_callLater(self):
         """
         Test that a DelayedCall really calls the function it is
@@ -716,7 +710,6 @@ class TimeTests(TestCase):
         reactor.callLater(0, d.callback, None)
         d.addCallback(self.assertEqual, None)
         return d
-
 
     def test_callLaterReset(self):
         """
@@ -728,30 +721,32 @@ class TimeTests(TestCase):
         call.reset(1)
         self.assertNotEqual(call.time, origTime)
 
-
     def test_cancelDelayedCall(self):
         """
         Test that when a DelayedCall is cancelled it does not run.
         """
         called = []
+
         def function():
             called.append(None)
+
         call = reactor.callLater(0, function)
         call.cancel()
 
         # Schedule a call in two "iterations" to check to make sure that the
         # above call never ran.
         d = Deferred()
+
         def check():
             try:
                 self.assertEqual(called, [])
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
+
         reactor.callLater(0, reactor.callLater, 0, check)
         return d
-
 
     def test_cancelCancelledDelayedCall(self):
         """
@@ -762,7 +757,6 @@ class TimeTests(TestCase):
         call.cancel()
         self.assertRaises(error.AlreadyCancelled, call.cancel)
 
-
     def test_cancelCalledDelayedCallSynchronous(self):
         """
         Test that cancelling a DelayedCall in the DelayedCall's function as
@@ -770,16 +764,17 @@ class TimeTests(TestCase):
         appropriate exception.
         """
         d = Deferred()
+
         def later():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
+
         call = reactor.callLater(0, later)
         return d
-
 
     def test_cancelCalledDelayedCallAsynchronous(self):
         """
@@ -787,18 +782,20 @@ class TimeTests(TestCase):
         raises the appropriate exception.
         """
         d = Deferred()
+
         def check():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
+
         def later():
             reactor.callLater(0, check)
+
         call = reactor.callLater(0, later)
         return d
-
 
     def testCallLaterTime(self):
         d = reactor.callLater(10, lambda: None)
@@ -807,58 +804,64 @@ class TimeTests(TestCase):
         finally:
             d.cancel()
 
-
     def testDelayedCallStringification(self):
         # Mostly just make sure str() isn't going to raise anything for
         # DelayedCalls within reason.
-        dc = reactor.callLater(0, lambda x, y: None, 'x', y=10)
+        dc = reactor.callLater(0, lambda x, y: None, "x", y=10)
         str(dc)
         dc.reset(5)
         str(dc)
         dc.cancel()
         str(dc)
 
-        dc = reactor.callLater(0, lambda: None, x=[({'hello': u'world'}, 10j), reactor], *range(10))
+        dc = reactor.callLater(
+            0, lambda: None, x=[({"hello": "world"}, 10j), reactor], *range(10)
+        )
         str(dc)
         dc.cancel()
         str(dc)
 
         def calledBack(ignored):
             str(dc)
+
         d = Deferred().addCallback(calledBack)
         dc = reactor.callLater(0, d.callback, None)
         str(dc)
         return d
-
 
     def testDelayedCallSecondsOverride(self):
         """
         Test that the C{seconds} argument to DelayedCall gets used instead of
         the default timing function, if it is not None.
         """
+
         def seconds():
             return 10
-        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None,
-                              lambda dc: None, seconds)
+
+        dc = base.DelayedCall(
+            5, lambda: None, (), {}, lambda dc: None, lambda dc: None, seconds
+        )
         self.assertEqual(dc.getTime(), 5)
         dc.reset(3)
         self.assertEqual(dc.getTime(), 13)
 
 
-
 class CallFromThreadStopsAndWakeUpTests(TestCase):
-    @skipIf(not interfaces.IReactorThreads(reactor, None),
-            "Nothing to wake up for without thread support")
+    @skipIf(
+        not interfaces.IReactorThreads(reactor, None),
+        "Nothing to wake up for without thread support",
+    )
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
         d = Deferred()
+
         def wake():
             time.sleep(0.1)
             # callFromThread will call wakeUp for us
             reactor.callFromThread(d.callback, None)
+
         reactor.callInThread(wake)
         return d
-
 
     def _stopCallFromThreadCallback(self):
         self.stopped = True
@@ -870,7 +873,7 @@ class CallFromThreadStopsAndWakeUpTests(TestCase):
     def _callFromThreadCallback2(self, d):
         try:
             self.assertTrue(self.stopped)
-        except:
+        except BaseException:
             # Send the error to the deferred
             d.errback()
         else:
@@ -886,7 +889,6 @@ class CallFromThreadStopsAndWakeUpTests(TestCase):
         d = defer.Deferred()
         reactor.callFromThread(self._callFromThreadCallback, d)
         return d
-
 
 
 class DelayedTests(TestCase):
@@ -914,8 +916,12 @@ class DelayedTests(TestCase):
                 missing.append(dc)
         if missing:
             self.finished = 1
-        self.assertFalse(missing, "Should have been missing no calls, instead "
-                         + "was missing " + repr(missing))
+        self.assertFalse(
+            missing,
+            "Should have been missing no calls, instead "
+            + "was missing "
+            + repr(missing),
+        )
 
     def callback(self, tag):
         del self.timers[tag]
@@ -931,8 +937,9 @@ class DelayedTests(TestCase):
         self.deferred.callback(None)
 
     def addTimer(self, when, callback):
-        self.timers[self.counter] = reactor.callLater(when * 0.01, callback,
-                                                      self.counter)
+        self.timers[self.counter] = reactor.callLater(
+            when * 0.01, callback, self.counter
+        )
         self.counter += 1
         self.checkTimers()
 
@@ -955,9 +962,8 @@ class DelayedTests(TestCase):
         del self.timers[which]
         self.checkTimers()
 
-        self.deferred.addCallback(lambda x : self.checkTimers())
+        self.deferred.addCallback(lambda x: self.checkTimers())
         return self.deferred
-
 
     def test_active(self):
         """
@@ -973,7 +979,6 @@ class DelayedTests(TestCase):
         self.deferred.addCallback(checkDeferredCall)
 
         return self.deferred
-
 
 
 resolve_helper = """
@@ -998,6 +1003,7 @@ f = Foo()
 reactor.run()
 """
 
+
 class ChildResolveProtocol(protocol.ProcessProtocol):
     def __init__(self, onCompletion):
         self.onCompletion = onCompletion
@@ -1017,62 +1023,66 @@ class ChildResolveProtocol(protocol.ProcessProtocol):
         self.onCompletion = None
 
 
-
-@skipIf(not interfaces.IReactorProcess(reactor, None),
-        "cannot run test: reactor doesn't support IReactorProcess")
+@skipIf(
+    not interfaces.IReactorProcess(reactor, None),
+    "cannot run test: reactor doesn't support IReactorProcess",
+)
 class ResolveTests(TestCase):
-
     def testChildResolve(self):
         # I've seen problems with reactor.run under gtk2reactor. Spawn a
         # child which just does reactor.resolve after the reactor has
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
-        with open(helperPath, 'w') as helperFile:
+        with open(helperPath, "w") as helperFile:
 
             # Eeueuuggg
             reactorName = reactor.__module__
 
-            helperFile.write(resolve_helper % {'reactor': reactorName})
+            helperFile.write(resolve_helper % {"reactor": reactorName})
 
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         helperDeferred = Deferred()
         helperProto = ChildResolveProtocol(helperDeferred)
 
-        reactor.spawnProcess(helperProto, sys.executable, ("python", "-u", helperPath), env)
+        reactor.spawnProcess(
+            helperProto, sys.executable, ("python", "-u", helperPath), env
+        )
 
         def cbFinished(result):
             (reason, output, error) = result
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
-            output = b''.join(output)
-            expected_output = (b'done 127.0.0.1' +
-                               os.linesep.encode("ascii"))
+            output = b"".join(output)
+            expected_output = b"done 127.0.0.1" + os.linesep.encode("ascii")
             if output != expected_output:
-                self.fail((
-                    "The child process failed to produce "
-                    "the desired results:\n"
-                    "   Reason for termination was: {!r}\n"
-                    "   Output stream was: {!r}\n"
-                    "   Error stream was: {!r}\n").format(
-                    reason.getErrorMessage(), output, b''.join(error)))
+                self.fail(
+                    (
+                        "The child process failed to produce "
+                        "the desired results:\n"
+                        "   Reason for termination was: {!r}\n"
+                        "   Output stream was: {!r}\n"
+                        "   Error stream was: {!r}\n"
+                    ).format(reason.getErrorMessage(), output, b"".join(error))
+                )
 
         helperDeferred.addCallback(cbFinished)
         return helperDeferred
 
 
-
-@skipIf(not interfaces.IReactorThreads(reactor, None),
-        "Nothing to test without thread support")
+@skipIf(
+    not interfaces.IReactorThreads(reactor, None),
+    "Nothing to test without thread support",
+)
 class CallFromThreadTests(TestCase):
     """
     Task scheduling from threads tests.
     """
+
     def setUp(self):
         self.counter = 0
         self.deferred = Deferred()
-
 
     def schedule(self, *args, **kwargs):
         """
@@ -1080,12 +1090,12 @@ class CallFromThreadTests(TestCase):
         """
         reactor.callFromThread(*args, **kwargs)
 
-
     def test_lotsOfThreadsAreScheduledCorrectly(self):
         """
         L{IReactorThreads.callFromThread} can be used to schedule a large
         number of calls in the reactor thread.
         """
+
         def addAndMaybeFinish():
             self.counter += 1
             if self.counter == 100:
@@ -1095,7 +1105,6 @@ class CallFromThreadTests(TestCase):
             self.schedule(addAndMaybeFinish)
 
         return self.deferred
-
 
     def test_threadsAreRunInScheduledOrder(self):
         """
@@ -1114,14 +1123,15 @@ class CallFromThreadTests(TestCase):
 
         return self.deferred
 
-
     def test_scheduledThreadsNotRunUntilReactorRuns(self):
         """
         Scheduled tasks should not be run until the reactor starts running.
         """
+
         def incAndFinish():
             self.counter = 1
             self.deferred.callback(True)
+
         self.schedule(incAndFinish)
 
         # Callback shouldn't have fired yet.
@@ -1130,11 +1140,11 @@ class CallFromThreadTests(TestCase):
         return self.deferred
 
 
-
 class MyProtocol(protocol.Protocol):
     """
     Sample protocol.
     """
+
 
 class MyFactory(protocol.Factory):
     """
@@ -1144,9 +1154,7 @@ class MyFactory(protocol.Factory):
     protocol = MyProtocol
 
 
-
 class ProtocolTests(TestCase):
-
     def testFactory(self):
         factory = MyFactory()
         protocol = factory.buildProtocol(None)
@@ -1154,7 +1162,7 @@ class ProtocolTests(TestCase):
         self.assertIsInstance(protocol, factory.protocol)
 
 
-class DummyProducer(object):
+class DummyProducer:
     """
     Very uninteresting producer implementation used by tests to ensure the
     right methods are called by the consumer with which it is registered.
@@ -1168,18 +1176,14 @@ class DummyProducer(object):
     def __init__(self):
         self.events = []
 
-
     def resumeProducing(self):
-        self.events.append('resume')
-
+        self.events.append("resume")
 
     def stopProducing(self):
-        self.events.append('stop')
-
+        self.events.append("stop")
 
     def pauseProducing(self):
-        self.events.append('pause')
-
+        self.events.append("pause")
 
 
 class SillyDescriptor(abstract.FileDescriptor):
@@ -1190,6 +1194,7 @@ class SillyDescriptor(abstract.FileDescriptor):
     the data buffer fills as soon as at least four characters are
     written to it, and gets emptied in a single doWrite() cycle.
     """
+
     bufferSize = 3
     connected = True
 
@@ -1199,13 +1204,12 @@ class SillyDescriptor(abstract.FileDescriptor):
         """
         return len(data)
 
-
     def startWriting(self):
         """
         Do nothing: bypass the reactor.
         """
-    stopWriting = startWriting
 
+    stopWriting = startWriting
 
 
 class ReentrantProducer(DummyProducer):
@@ -1223,23 +1227,23 @@ class ReentrantProducer(DummyProducer):
     @ivar methodArgs: The arguments to pass to the consumer method invoked in
     C{resumeProducing}.
     """
+
     def __init__(self, consumer, methodName, *methodArgs):
-        super(ReentrantProducer, self).__init__()
+        super().__init__()
         self.consumer = consumer
         self.methodName = methodName
         self.methodArgs = methodArgs
 
-
     def resumeProducing(self):
-        super(ReentrantProducer, self).resumeProducing()
+        super().resumeProducing()
         getattr(self.consumer, self.methodName)(*self.methodArgs)
-
 
 
 class ProducerTests(TestCase):
     """
     Test abstract.FileDescriptor's consumer interface.
     """
+
     def test_doubleProducer(self):
         """
         Verify that registering a non-streaming producer invokes its
@@ -1250,9 +1254,8 @@ class ProducerTests(TestCase):
         fd.connected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEqual(dp.events, ['resume'])
+        self.assertEqual(dp.events, ["resume"])
         self.assertRaises(RuntimeError, fd.registerProducer, DummyProducer(), 0)
-
 
     def test_unconnectedFileDescriptor(self):
         """
@@ -1263,8 +1266,7 @@ class ProducerTests(TestCase):
         fd.disconnected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEqual(dp.events, ['stop'])
-
+        self.assertEqual(dp.events, ["stop"])
 
     def _dontPausePullConsumerTest(self, methodName):
         """
@@ -1277,18 +1279,17 @@ class ProducerTests(TestCase):
         descriptor = SillyDescriptor()
         producer = DummyProducer()
         descriptor.registerProducer(producer, streaming=False)
-        self.assertEqual(producer.events, ['resume'])
+        self.assertEqual(producer.events, ["resume"])
         del producer.events[:]
 
         # Fill up the descriptor's write buffer so we can observe whether or
         # not it pauses its producer in that case.
         if methodName == "writeSequence":
-            descriptor.writeSequence([b'1', b'2', b'3', b'4'])
+            descriptor.writeSequence([b"1", b"2", b"3", b"4"])
         else:
-            descriptor.write(b'1234')
+            descriptor.write(b"1234")
 
         self.assertEqual(producer.events, [])
-
 
     def test_dontPausePullConsumerOnWrite(self):
         """
@@ -1296,8 +1297,7 @@ class ProducerTests(TestCase):
         non-streaming pull producer in response to a L{IConsumer.write} call
         which results in a full write buffer. Issue #2286.
         """
-        return self._dontPausePullConsumerTest('write')
-
+        return self._dontPausePullConsumerTest("write")
 
     def test_dontPausePullConsumerOnWriteSequence(self):
         """
@@ -1308,13 +1308,12 @@ class ProducerTests(TestCase):
         L{abstract.FileDescriptor} has supported consumery behavior in response
         to calls to L{writeSequence} forever.
         """
-        return self._dontPausePullConsumerTest('writeSequence')
-
+        return self._dontPausePullConsumerTest("writeSequence")
 
     def _reentrantStreamingProducerTest(self, methodName):
         descriptor = SillyDescriptor()
         if methodName == "writeSequence":
-            data = [b's', b'p', b'am']
+            data = [b"s", b"p", b"am"]
         else:
             data = b"spam"
         producer = ReentrantProducer(descriptor, methodName, data)
@@ -1325,7 +1324,7 @@ class ProducerTests(TestCase):
         getattr(descriptor, methodName)(data)
 
         # Sanity check - make sure that worked.
-        self.assertEqual(producer.events, ['pause'])
+        self.assertEqual(producer.events, ["pause"])
         del producer.events[:]
 
         # After one call to doWrite, the buffer has been emptied so the
@@ -1333,7 +1332,7 @@ class ProducerTests(TestCase):
         # immediate call to FileDescriptor.write which will again fill the
         # buffer and result in the producer being paused.
         descriptor.doWrite()
-        self.assertEqual(producer.events, ['resume', 'pause'])
+        self.assertEqual(producer.events, ["resume", "pause"])
         del producer.events[:]
 
         # After a second call to doWrite, the exact same thing should have
@@ -1341,16 +1340,14 @@ class ProducerTests(TestCase):
         # FileDescriptor would have incorrectly believed its producer was
         # already resumed (it was paused) and so not resume it again.
         descriptor.doWrite()
-        self.assertEqual(producer.events, ['resume', 'pause'])
-
+        self.assertEqual(producer.events, ["resume", "pause"])
 
     def test_reentrantStreamingProducerUsingWrite(self):
         """
         Verify that FileDescriptor tracks producer's paused state correctly.
         Issue #811, fixed in revision r12857.
         """
-        return self._reentrantStreamingProducerTest('write')
-
+        return self._reentrantStreamingProducerTest("write")
 
     def test_reentrantStreamingProducerUsingWriteSequence(self):
         """
@@ -1361,49 +1358,45 @@ class ProducerTests(TestCase):
         C{abstract.FileDescriptor} has supported consumery behavior in response
         to calls to C{writeSequence} forever.
         """
-        return self._reentrantStreamingProducerTest('writeSequence')
-
+        return self._reentrantStreamingProducerTest("writeSequence")
 
 
 class PortStringificationTests(TestCase):
-    @skipIf(not interfaces.IReactorTCP(reactor, None),
-            "IReactorTCP is needed")
+    @skipIf(not interfaces.IReactorTCP(reactor, None), "IReactorTCP is needed")
     def testTCP(self):
         p = reactor.listenTCP(0, protocol.ServerFactory())
         portNo = p.getHost().port
-        self.assertNotEqual(str(p).find(str(portNo)), -1,
-                            "%d not found in %s" % (portNo, p))
+        self.assertNotEqual(
+            str(p).find(str(portNo)), -1, "%d not found in %s" % (portNo, p)
+        )
         return p.stopListening()
 
-
-    @skipIf(not interfaces.IReactorUDP(reactor, None),
-            "IReactorUDP is needed")
+    @skipIf(not interfaces.IReactorUDP(reactor, None), "IReactorUDP is needed")
     def testUDP(self):
         p = reactor.listenUDP(0, protocol.DatagramProtocol())
         portNo = p.getHost().port
-        self.assertNotEqual(str(p).find(str(portNo)), -1,
-                            "%d not found in %s" % (portNo, p))
+        self.assertNotEqual(
+            str(p).find(str(portNo)), -1, "%d not found in %s" % (portNo, p)
+        )
         return p.stopListening()
 
-
-    @skipIf(not interfaces.IReactorSSL(reactor, None),
-            "IReactorSSL is needed")
+    @skipIf(not interfaces.IReactorSSL(reactor, None), "IReactorSSL is needed")
     @skipIf(not ssl, "SSL support is missing")
     def testSSL(self, ssl=ssl):
-        pem = util.sibpath(__file__, 'server.pem')
-        p = reactor.listenSSL(0, protocol.ServerFactory(),
-                              ssl.DefaultOpenSSLContextFactory(pem, pem))
+        pem = util.sibpath(__file__, "server.pem")
+        p = reactor.listenSSL(
+            0, protocol.ServerFactory(), ssl.DefaultOpenSSLContextFactory(pem, pem)
+        )
         portNo = p.getHost().port
-        self.assertNotEqual(str(p).find(str(portNo)), -1,
-                            "%d not found in %s" % (portNo, p))
+        self.assertNotEqual(
+            str(p).find(str(portNo)), -1, "%d not found in %s" % (portNo, p)
+        )
         return p.stopListening()
-
 
 
 class ConnectorReprTests(TestCase):
     def test_tcp_repr(self):
-        c = Connector('localhost', 666, object(), 0, object())
-        expect = "<twisted.internet.tcp.Connector instance at 0x%x " \
-            "disconnected %s>"
+        c = Connector("localhost", 666, object(), 0, object())
+        expect = "<twisted.internet.tcp.Connector instance at 0x%x " "disconnected %s>"
         expect = expect % (id(c), c.getDestination())
         self.assertEqual(repr(c), expect)

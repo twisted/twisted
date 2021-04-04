@@ -1,0 +1,170 @@
+# Try to get a short workflow name and a job name that start with Python
+# version to make it easier to check the status inside GitHub UI.
+name: CI
+
+on:
+  push:
+    branches: [ trunk ]
+    tags:
+      - twisted-*
+  pull_request:
+    branches: [ trunk ]
+
+
+defaults:
+  run:
+    shell: bash
+
+
+jobs:
+  testing:
+    runs-on: ubuntu-20.04
+    env:
+      TOXENV: "${{ matrix.tox-env }}"
+      TRIAL_ARGS: "${{ matrix.trial-args }}"
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run on the minimum micro Python version that we can get on CI.
+        # When updating the minimum Python version here, also update the
+        # `python_requires` from `setup.cfg`.
+        # Run on latest minor release of each major python version.
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
+        tox-env: ['alldeps-withcov-posix']
+        noipv6: ['']
+        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+        # Trial distributed jobs enabled to speed up the CI jobs.
+        trial-args: ['-j 4']
+
+        include:
+
+          # `nodeps` is created to make sure we don't have import errors in the
+          # runtime and production code.
+          # The minimum supported Python version should be used to maximize
+          # coverage of code that otherwise depends on backports.
+          # Distributed test run is disabled here so that we also have
+          # end to end functional test usage for non-distributed trial runs.
+          - python-version: 3.6.7
+            tox-env: nodeps-withcov-posix
+            trial-args: '-j 4'
+          # `noipv6` is created to make sure all is OK on an OS which doesn't
+          # have IPv6 available.
+          # Any supported Python version is OK for this job.
+          - python-version: 3.6
+            tox-env: alldeps-withcov-posix
+            noipv6: -noipv6
+            trial-args: '-j 4'
+          # On PYPY concurrent test jobs result in random failures so for now
+          # run non-distributed tests.
+          - python-version: pypy-3.6
+            tox-env: alldeps-withcov-posix
+            trial-args:
+          - python-version: pypy-3.7
+            tox-env: alldeps-withcov-posix
+            trial-args:
+
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: pip cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - name: Disable IPv6
+      if: matrix.noipv6
+      run: |
+        sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+        ip a
+
+    - uses: twisted/python-info-action@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox coveralls
+        tox --notest
+
+    - name: Test
+      run: |
+        python --version
+        tox -q
+
+    - name: Prepare coverage
+      if: always()
+      continue-on-error: true
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report
+
+    - uses: codecov/codecov-action@v1
+      if: always()
+      continue-on-error: true
+      with:
+        files: coverage.xml
+        name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        fail_ci_if_error: true
+        functionalities: gcov,search
+
+    - name: Publish to Coveralls
+      if: always()
+      continue-on-error: true
+      run: |
+        python -m coveralls -v
+      env:
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
+
+
+  pypi-publish:
+    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    name: Check release and publish on twisted-* tag
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Test
+      run: |
+        python -m pip install --upgrade pip tox pep517
+        rm -rf dist/*
+        tox -e release-prepare
+
+    - uses: twisted/python-info-action@v1
+
+    - name: Display structure of files to be pushed
+      run: ls -R dist/
+
+    - name: Check matched tag version and branch version - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+
+    - name: Publish to PyPI - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}

@@ -22,9 +22,9 @@ class ExceptionForCodeTests(SynchronousTestCase):
     """
     Tests for L{ResolverBase.exceptionForCode}.
     """
+
     def setUp(self):
         self.exceptionForCode = ResolverBase().exceptionForCode
-
 
     def test_eformat(self):
         """
@@ -33,7 +33,6 @@ class ExceptionForCodeTests(SynchronousTestCase):
         """
         self.assertIs(self.exceptionForCode(EFORMAT), DNSFormatError)
 
-
     def test_eserver(self):
         """
         L{ResolverBase.exceptionForCode} converts L{ESERVER} to
@@ -41,13 +40,11 @@ class ExceptionForCodeTests(SynchronousTestCase):
         """
         self.assertIs(self.exceptionForCode(ESERVER), DNSServerError)
 
-
     def test_ename(self):
         """
         L{ResolverBase.exceptionForCode} converts L{ENAME} to L{DNSNameError}.
         """
         self.assertIs(self.exceptionForCode(ENAME), DNSNameError)
-
 
     def test_enotimp(self):
         """
@@ -56,7 +53,6 @@ class ExceptionForCodeTests(SynchronousTestCase):
         """
         self.assertIs(self.exceptionForCode(ENOTIMP), DNSNotImplementedError)
 
-
     def test_erefused(self):
         """
         L{ResolverBase.exceptionForCode} converts L{EREFUSED} to
@@ -64,14 +60,12 @@ class ExceptionForCodeTests(SynchronousTestCase):
         """
         self.assertIs(self.exceptionForCode(EREFUSED), DNSQueryRefusedError)
 
-
     def test_other(self):
         """
         L{ResolverBase.exceptionForCode} converts any other response code to
         L{DNSUnknownError}.
         """
         self.assertIs(self.exceptionForCode(object()), DNSUnknownError)
-
 
 
 class QueryTests(SynchronousTestCase):
@@ -85,7 +79,6 @@ class QueryTests(SynchronousTestCase):
         """
         verifyClass(IResolver, ResolverBase)
 
-
     def test_typeToMethodDispatch(self):
         """
         L{ResolverBase.query} looks up a method to invoke using the type of the
@@ -94,11 +87,11 @@ class QueryTests(SynchronousTestCase):
         results = []
         resolver = ResolverBase()
         resolver.typeToMethod = {
-            12345: lambda query, timeout: results.append((query, timeout))}
+            12345: lambda query, timeout: results.append((query, timeout))
+        }
         query = Query(name=b"example.com", type=12345)
         resolver.query(query, 123)
         self.assertEqual([(b"example.com", 123)], results)
-
 
     def test_typeToMethodResult(self):
         """
@@ -114,7 +107,6 @@ class QueryTests(SynchronousTestCase):
         result = []
         queryDeferred.addBoth(result.append)
         self.assertEqual(expected, result[0])
-
 
     def test_unknownQueryType(self):
         """

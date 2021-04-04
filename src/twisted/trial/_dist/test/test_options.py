@@ -11,7 +11,6 @@ from twisted.trial.unittest import TestCase
 from twisted.trial._dist.options import WorkerOptions
 
 
-
 class WorkerOptionsTests(TestCase):
     """
     Tests for L{WorkerOptions}.
@@ -22,7 +21,6 @@ class WorkerOptionsTests(TestCase):
         Build an L{WorkerOptions} object to be used in the tests.
         """
         self.options = WorkerOptions()
-
 
     def test_standardOptions(self):
         """
@@ -37,7 +35,6 @@ class WorkerOptionsTests(TestCase):
         self.assertEqual(2000, sys.getrecursionlimit())
         self.assertFalse(gc.isenabled())
 
-
     def test_coverage(self):
         """
         L{WorkerOptions.coverdir} returns the C{coverage} child directory of
@@ -45,4 +42,5 @@ class WorkerOptionsTests(TestCase):
         """
         self.assertEqual(
             os.path.realpath(os.path.join(os.getcwd(), "coverage")),
-            self.options.coverdir().path)
+            self.options.coverdir().path,
+        )

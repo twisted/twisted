@@ -57,13 +57,12 @@ the modules outside the standard library's python-files directory::
 """
 
 
-__metaclass__ = type
-
 # let's try to keep path imports to a minimum...
 from os.path import dirname, split as splitpath
 
 import sys
 import inspect
+from typing import cast
 import warnings
 import zipimport
 
@@ -78,12 +77,13 @@ from twisted.python.zippath import ZipArchive
 
 _nothing = object()
 
-PYTHON_EXTENSIONS = ['.py']
+PYTHON_EXTENSIONS = [".py"]
 OPTIMIZED_MODE = __doc__ is None
 if OPTIMIZED_MODE:
-    PYTHON_EXTENSIONS.append('.pyo')
+    PYTHON_EXTENSIONS.append(".pyo")
 else:
-    PYTHON_EXTENSIONS.append('.pyc')
+    PYTHON_EXTENSIONS.append(".pyc")
+
 
 def _isPythonIdentifier(string):
     """
@@ -94,10 +94,7 @@ def _isPythonIdentifier(string):
     @return: True or False
     """
     textString = nativeString(string)
-    return (' ' not in textString and
-            '.' not in textString and
-            '-' not in textString)
-
+    return " " not in textString and "." not in textString and "-" not in textString
 
 
 def _isPackagePath(fpath):
@@ -106,7 +103,6 @@ def _isPackagePath(fpath):
     extless = fpath.splitext()[0]
     basend = splitpath(extless)[1]
     return basend == "__init__"
-
 
 
 class _ModuleIteratorHelper:
@@ -141,7 +137,7 @@ class _ModuleIteratorHelper:
 
             for potentialTopLevel in children:
                 ext = potentialTopLevel.splitext()[1]
-                potentialBasename = potentialTopLevel.basename()[:-len(ext)]
+                potentialBasename = potentialTopLevel.basename()[: -len(ext)]
                 if ext in PYTHON_EXTENSIONS:
                     # TODO: this should be a little choosier about which path entry
                     # it selects first, and it should do all the .so checking and
@@ -149,7 +145,7 @@ class _ModuleIteratorHelper:
                     if not _isPythonIdentifier(potentialBasename):
                         continue
                     modname = self._subModuleName(potentialBasename)
-                    if modname.split(".")[-1] == '__init__':
+                    if modname.split(".")[-1] == "__init__":
                         # This marks the directory as a package so it can't be
                         # a module.
                         continue
@@ -159,12 +155,15 @@ class _ModuleIteratorHelper:
                         assert pm != self
                         yield pm
                 else:
-                    if (ext or not _isPythonIdentifier(potentialBasename)
-                        or not potentialTopLevel.isdir()):
+                    if (
+                        ext
+                        or not _isPythonIdentifier(potentialBasename)
+                        or not potentialTopLevel.isdir()
+                    ):
                         continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
-                        initpy = potentialTopLevel.child("__init__"+ext)
+                        initpy = potentialTopLevel.child("__init__" + ext)
                         if initpy.exists() and modname not in yielded:
                             yielded[modname] = True
                             pm = PythonModule(modname, initpy, self._getEntry())
@@ -181,8 +180,7 @@ class _ModuleIteratorHelper:
         """
         yield self
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=importPackages):
-                yield module
+            yield from package.walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
@@ -208,7 +206,6 @@ class _ModuleIteratorHelper:
         """
         raise NotImplementedError()
 
-
     def __getitem__(self, modname):
         """
         Retrieve a module from below this path or package.
@@ -222,7 +219,7 @@ class _ModuleIteratorHelper:
 
         to retrieve this module.
 
-        @raise: KeyError if the module is not found.
+        @raise KeyError: if the module is not found.
 
         @return: a PythonModule.
         """
@@ -242,6 +239,7 @@ class _ModuleIteratorHelper:
         """
         raise NotImplementedError()
 
+
 class PythonAttribute:
     """
     I represent a function, class, or other object that is present.
@@ -254,6 +252,7 @@ class PythonAttribute:
     @ivar name: the fully qualified python name of the attribute represented by
     this class.
     """
+
     def __init__(self, name, onObject, loaded, pythonValue):
         """
         Create a PythonAttribute.  This is a private constructor.  Do not construct
@@ -269,8 +268,8 @@ class PythonAttribute:
         self._loaded = loaded
         self.pythonValue = pythonValue
 
-    def __repr__(self):
-        return 'PythonAttribute<%r>'%(self.name,)
+    def __repr__(self) -> str:
+        return f"PythonAttribute<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -293,7 +292,8 @@ class PythonAttribute:
 
     def iterAttributes(self):
         for name, val in inspect.getmembers(self.load()):
-            yield PythonAttribute(self.name+'.'+name, self, True, val)
+            yield PythonAttribute(self.name + "." + name, self, True, val)
+
 
 class PythonModule(_ModuleIteratorHelper):
     """
@@ -327,12 +327,11 @@ class PythonModule(_ModuleIteratorHelper):
     def _getEntry(self):
         return self.pathEntry
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string representation including the module name.
         """
-        return 'PythonModule<%r>' % (self.name,)
-
+        return f"PythonModule<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -341,7 +340,6 @@ class PythonModule(_ModuleIteratorHelper):
         @return: a boolean: true if loaded, false if not.
         """
         return self.pathEntry.pythonPath.moduleDict.get(self.name) is not None
-
 
     def iterAttributes(self):
         """
@@ -359,9 +357,10 @@ class PythonModule(_ModuleIteratorHelper):
         """
         if not self.isLoaded():
             raise NotImplementedError(
-                "You can't load attributes from non-loaded modules yet.")
+                "You can't load attributes from non-loaded modules yet."
+            )
         for name, val in inspect.getmembers(self.load()):
-            yield PythonAttribute(self.name+'.'+name, self, True, val)
+            yield PythonAttribute(self.name + "." + name, self, True, val)
 
     def isPackage(self):
         """
@@ -378,7 +377,7 @@ class PythonModule(_ModuleIteratorHelper):
 
         @return: a genuine python module.
 
-        @raise: any type of exception.  Importing modules is a risky business;
+        @raise Exception: Importing modules is a risky business;
         the erorrs of any code run at module scope may be raised from here, as
         well as ImportError if something bizarre happened to the system path
         between the discovery of this PythonModule object and the attempt to
@@ -389,37 +388,29 @@ class PythonModule(_ModuleIteratorHelper):
         """
         try:
             return self.pathEntry.pythonPath.moduleLoader(self.name)
-        except:                 # this needs more thought...
+        except BaseException:  # this needs more thought...
             if default is not _nothing:
                 return default
             raise
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         PythonModules with the same name are equal.
         """
-        if not isinstance(other, PythonModule):
-            return False
-        return other.name == self.name
-
-    def __ne__(self, other):
-        """
-        PythonModules with different names are not equal.
-        """
-        if not isinstance(other, PythonModule):
-            return True
-        return other.name != self.name
+        if isinstance(other, PythonModule):
+            return cast(bool, other.name == self.name)
+        return NotImplemented
 
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self).walkModules(importPackages=importPackages)
+        return super().walkModules(importPackages=importPackages)
 
     def _subModuleName(self, mn):
         """
         submodules of this module are prefixed with our name.
         """
-        return self.name + '.' + mn
+        return self.name + "." + mn
 
     def _packagePaths(self):
         """
@@ -429,7 +420,7 @@ class PythonModule(_ModuleIteratorHelper):
             return
         if self.isLoaded():
             load = self.load()
-            if hasattr(load, '__path__'):
+            if hasattr(load, "__path__"):
                 for fn in load.__path__:
                     if fn == self.parentPath.path:
                         # this should _really_ exist.
@@ -452,6 +443,7 @@ class PathEntry(_ModuleIteratorHelper):
 
     @ivar pythonPath: a PythonPath instance.
     """
+
     def __init__(self, filePath, pythonPath):
         """
         Create a PathEntry.  This is a private constructor.
@@ -462,17 +454,19 @@ class PathEntry(_ModuleIteratorHelper):
     def _getEntry(self):
         return self
 
-    def __repr__(self):
-        return 'PathEntry<%r>' % (self.filePath,)
+    def __repr__(self) -> str:
+        return f"PathEntry<{self.filePath!r}>"
 
     def _packagePaths(self):
         yield self.filePath
+
 
 class IPathImportMapper(Interface):
     """
     This is an internal interface, used to map importers to factories for
     FilePath-like objects.
     """
+
     def mapPath(pathLikeString):
         """
         Return a FilePath-like object.
@@ -485,18 +479,21 @@ class IPathImportMapper(Interface):
         """
 
 
-
 @implementer(IPathImportMapper)
 class _DefaultMapImpl:
     """ Wrapper for the default importer, i.e. None.  """
+
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
+
+
 _theDefaultMapper = _DefaultMapImpl()
 
 
 @implementer(IPathImportMapper)
 class _ZipMapImpl:
     """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+
     def __init__(self, importer):
         self.importer = importer
 
@@ -523,8 +520,8 @@ class _ZipMapImpl:
             zp = zp.child(seg)
         return zp
 
-registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
 
+registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
 
 
 def _defaultSysPathFactory():
@@ -557,13 +554,15 @@ class PythonPath:
     returns a module, like L{twisted.python.reflect.namedAny}.
     """
 
-    def __init__(self,
-                 sysPath=None,
-                 moduleDict=sys.modules,
-                 sysPathHooks=sys.path_hooks,
-                 importerCache=sys.path_importer_cache,
-                 moduleLoader=namedAny,
-                 sysPathFactory=None):
+    def __init__(
+        self,
+        sysPath=None,
+        moduleDict=sys.modules,
+        sysPathHooks=sys.path_hooks,
+        importerCache=sys.path_importer_cache,
+        moduleLoader=namedAny,
+        sysPathFactory=None,
+    ):
         """
         Create a PythonPath.  You almost certainly want to use
         modules.theSystemPath, or its aliased methods, rather than creating a
@@ -603,7 +602,7 @@ class PythonPath:
         with sys.path to miss.
         """
         if sysPath is not None:
-            sysPathFactory = lambda : sysPath
+            sysPathFactory = lambda: sysPath
         elif sysPathFactory is None:
             sysPathFactory = _defaultSysPathFactory
         self._sysPathFactory = sysPathFactory
@@ -613,7 +612,6 @@ class PythonPath:
         self.importerCache = importerCache
         self.moduleLoader = moduleLoader
 
-
     @property
     def sysPath(self):
         """
@@ -621,16 +619,16 @@ class PythonPath:
         """
         return self._sysPathFactory()
 
-
     def _findEntryPathString(self, modobj):
         """
         Determine where a given Python module object came from by looking at path
         entries.
         """
         topPackageObj = modobj
-        while '.' in topPackageObj.__name__:
-            topPackageObj = self.moduleDict['.'.join(
-                    topPackageObj.__name__.split('.')[:-1])]
+        while "." in topPackageObj.__name__:
+            topPackageObj = self.moduleDict[
+                ".".join(topPackageObj.__name__.split(".")[:-1])
+            ]
         if _isPackagePath(FilePath(topPackageObj.__file__)):
             # if package 'foo' is on sys.path at /a/b/foo, package 'foo's
             # __file__ will be /a/b/foo/__init__.py, and we are looking for
@@ -648,9 +646,10 @@ class PythonPath:
         if rval not in self.importerCache:
             warnings.warn(
                 "%s (for module %s) not in path importer cache "
-                "(PEP 302 violation - check your local configuration)." % (
-                    rval, modobj.__name__),
-                stacklevel=3)
+                "(PEP 302 violation - check your local configuration)."
+                % (rval, modobj.__name__),
+                stacklevel=3,
+            )
 
         return rval
 
@@ -670,7 +669,7 @@ class PythonPath:
                     importr = hook(pathName)
                 except ImportError:
                     pass
-            if importr is _nothing: # still
+            if importr is _nothing:  # still
                 importr = None
         return IPathImportMapper(importr, _theDefaultMapper).mapPath(pathName)
 
@@ -683,7 +682,6 @@ class PythonPath:
         for pathName in self.sysPath:
             fp = self._smartPath(pathName)
             yield PathEntry(fp, self)
-
 
     def __getitem__(self, modname):
         """
@@ -705,16 +703,15 @@ class PythonPath:
         if moduleObject is not None:
             # we need 2 paths; one of the path entry and one for the module.
             pe = PathEntry(
-                self._smartPath(
-                    self._findEntryPathString(moduleObject)),
-                self)
+                self._smartPath(self._findEntryPathString(moduleObject)), self
+            )
             mp = self._smartPath(moduleObject.__file__)
             return PythonModule(modname, mp, pe)
 
         # Recurse if we're trying to get a submodule.
-        if '.' in modname:
+        if "." in modname:
             pkg = self
-            for name in modname.split('.'):
+            for name in modname.split("."):
                 pkg = pkg[name]
             return pkg
 
@@ -723,7 +720,6 @@ class PythonPath:
             if module.name == modname:
                 return module
         raise KeyError(modname)
-
 
     def __contains__(self, module):
         """
@@ -738,20 +734,18 @@ class PythonPath:
         except KeyError:
             return False
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Display my sysPath and moduleDict in a string representation.
         """
-        return "PythonPath(%r,%r)" % (self.sysPath, self.moduleDict)
+        return f"PythonPath({self.sysPath!r},{self.moduleDict!r})"
 
     def iterModules(self):
         """
         Yield all top-level modules on my sysPath.
         """
         for entry in self.iterEntries():
-            for module in entry.iterModules():
-                yield module
+            yield from entry.iterModules()
 
     def walkModules(self, importPackages=False):
         """
@@ -759,10 +753,11 @@ class PythonPath:
         submodule in each package or entry.
         """
         for package in self.iterModules():
-            for module in package.walkModules(importPackages=False):
-                yield module
+            yield from package.walkModules(importPackages=False)
+
 
 theSystemPath = PythonPath()
+
 
 def walkModules(importPackages=False):
     """
@@ -772,14 +767,14 @@ def walkModules(importPackages=False):
     """
     return theSystemPath.walkModules(importPackages=importPackages)
 
+
 def iterModules():
     """
     Iterate all modules and top-level packages on the global Python path, but
     do not descend into packages.
-
-    @param importPackages: Import packages as they are seen.
     """
     return theSystemPath.iterModules()
+
 
 def getModule(moduleName):
     """

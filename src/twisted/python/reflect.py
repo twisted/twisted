@@ -8,23 +8,22 @@ with Python's reflection capabilities.
 """
 
 
-import sys
-import types
+from collections import deque
+from io import IOBase, StringIO
 import os
 import pickle
-import weakref
 import re
+import sys
 import traceback
-from collections import deque
-from io import StringIO
-from twisted.python.compat import reraise, nativeString
-from twisted.python import compat
+import types
+from typing import Type, Union
+import weakref
+
+from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 
-
 RegexType = type(re.compile(""))
-
 
 
 def prefixedMethodNames(classObj, prefix):
@@ -45,7 +44,6 @@ def prefixedMethodNames(classObj, prefix):
     dct = {}
     addMethodNamesToDict(classObj, dct, prefix)
     return list(dct.keys())
-
 
 
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
@@ -81,15 +79,16 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
 
     if baseClass is None or baseClass in classObj.__bases__:
         for name, method in classObj.__dict__.items():
-            optName = name[len(prefix):]
-            if ((type(method) is types.FunctionType)
-                and (name[:len(prefix)] == prefix)
-                and (len(optName))):
+            optName = name[len(prefix) :]
+            if (
+                (type(method) is types.FunctionType)
+                and (name[: len(prefix)] == prefix)
+                and (len(optName))
+            ):
                 dict[optName] = 1
 
 
-
-def prefixedMethods(obj, prefix=''):
+def prefixedMethods(obj, prefix=""):
     """
     Given an object C{obj}, returns a list of method objects that match the
     string C{prefix}.
@@ -108,8 +107,7 @@ def prefixedMethods(obj, prefix=''):
     return list(dct.values())
 
 
-
-def accumulateMethods(obj, dict, prefix='', curClass=None):
+def accumulateMethods(obj, dict, prefix="", curClass=None):
     """
     Given an object C{obj}, add all methods that begin with C{prefix}.
 
@@ -143,12 +141,13 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
             accumulateMethods(obj, dict, prefix, base)
 
     for name, method in curClass.__dict__.items():
-        optName = name[len(prefix):]
-        if ((type(method) is types.FunctionType)
-            and (name[:len(prefix)] == prefix)
-            and (len(optName))):
+        optName = name[len(prefix) :]
+        if (
+            (type(method) is types.FunctionType)
+            and (name[: len(prefix)] == prefix)
+            and (len(optName))
+        ):
             dict[optName] = getattr(obj, name)
-
 
 
 def namedModule(name):
@@ -163,17 +162,16 @@ def namedModule(name):
     return m
 
 
-
 def namedObject(name):
     """
     Get a fully named module-global object.
     """
-    classSplit = name.split('.')
-    module = namedModule('.'.join(classSplit[:-1]))
+    classSplit = name.split(".")
+    module = namedModule(".".join(classSplit[:-1]))
     return getattr(module, classSplit[-1])
 
-namedClass = namedObject # backwards compat
 
+namedClass = namedObject  # backwards compat
 
 
 def requireModule(name, default=None):
@@ -195,19 +193,16 @@ def requireModule(name, default=None):
         return default
 
 
-
 class _NoModuleFound(Exception):
     """
     No module was found because none exists.
     """
 
 
-
 class InvalidName(ValueError):
     """
     The given name is not a dot-separated list of Python objects.
     """
-
 
 
 class ModuleNotFound(InvalidName):
@@ -217,13 +212,11 @@ class ModuleNotFound(InvalidName):
     """
 
 
-
 class ObjectNotFound(InvalidName):
     """
     The object associated with the given name doesn't exist and it can't be
     imported.
     """
-
 
 
 def _importAndCheckStack(importName):
@@ -248,13 +241,10 @@ def _importAndCheckStack(importName):
         excType, excValue, excTraceback = sys.exc_info()
         while excTraceback:
             execName = excTraceback.tb_frame.f_globals["__name__"]
-            # in Python 2 execName is None when an ImportError is encountered,
-            # where in Python 3 execName is equal to the importName.
-            if execName is None or execName == importName:
-                reraise(excValue, excTraceback)
+            if execName == importName:
+                raise excValue.with_traceback(excTraceback)
             excTraceback = excTraceback.tb_next
         raise _NoModuleFound()
-
 
 
 def namedAny(name):
@@ -286,39 +276,39 @@ def namedAny(name):
     @return: the Python object identified by 'name'.
     """
     if not name:
-        raise InvalidName('Empty module name')
+        raise InvalidName("Empty module name")
 
-    names = name.split('.')
+    names = name.split(".")
 
     # if the name starts or ends with a '.' or contains '..', the __import__
     # will raise an 'Empty module name' error. This will provide a better error
     # message.
-    if '' in names:
+    if "" in names:
         raise InvalidName(
             "name must be a string giving a '.'-separated list of Python "
-            "identifiers, not %r" % (name,))
+            "identifiers, not %r" % (name,)
+        )
 
     topLevelPackage = None
     moduleNames = names[:]
     while not topLevelPackage:
         if moduleNames:
-            trialname = '.'.join(moduleNames)
+            trialname = ".".join(moduleNames)
             try:
                 topLevelPackage = _importAndCheckStack(trialname)
             except _NoModuleFound:
                 moduleNames.pop()
         else:
             if len(names) == 1:
-                raise ModuleNotFound("No module named %r" % (name,))
+                raise ModuleNotFound(f"No module named {name!r}")
             else:
-                raise ObjectNotFound('%r does not name an object' % (name,))
+                raise ObjectNotFound(f"{name!r} does not name an object")
 
     obj = topLevelPackage
     for n in names[1:]:
         obj = getattr(obj, n)
 
     return obj
-
 
 
 def filenameToModuleName(fn):
@@ -350,44 +340,41 @@ def filenameToModuleName(fn):
     while 1:
         fullName = os.path.dirname(fullName)
         if os.path.exists(os.path.join(fullName, initPy)):
-            modName = "%s.%s" % (
+            modName = "{}.{}".format(
                 nativeString(os.path.basename(fullName)),
-                nativeString(modName))
+                nativeString(modName),
+            )
         else:
             break
     return modName
-
 
 
 def qual(clazz):
     """
     Return full import path of a class.
     """
-    return clazz.__module__ + '.' + clazz.__name__
-
+    return clazz.__module__ + "." + clazz.__name__
 
 
 def _determineClass(x):
     try:
         return x.__class__
-    except:
+    except BaseException:
         return type(x)
-
 
 
 def _determineClassName(x):
     c = _determineClass(x)
     try:
         return c.__name__
-    except:
+    except BaseException:
         try:
             return str(c)
-        except:
-            return '<BROKEN CLASS AT 0x%x>' % id(c)
+        except BaseException:
+            return "<BROKEN CLASS AT 0x%x>" % id(c)
 
 
-
-def _safeFormat(formatter, o):
+def _safeFormat(formatter: Union[types.FunctionType, Type[str]], o: object) -> str:
     """
     Helper function for L{safe_repr} and L{safe_str}.
 
@@ -406,9 +393,12 @@ def _safeFormat(formatter, o):
     traceback.print_exc(file=io)
     className = _determineClassName(o)
     tbValue = io.getvalue()
-    return "<%s instance at 0x%x with %s error:\n %s>" % (
-        className, id(o), formatter.__name__, tbValue)
-
+    return "<{} instance at 0x{:x} with {} error:\n {}>".format(
+        className,
+        id(o),
+        formatter.__name__,
+        tbValue,
+    )
 
 
 def safe_repr(o):
@@ -422,64 +412,55 @@ def safe_repr(o):
     """
     try:
         return repr(o)
-    except:
+    except BaseException:
         return _safeFormat(repr, o)
 
 
-
-def safe_str(o):
+def safe_str(o: object) -> str:
     """
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __str__ raised an exception.
 
     @param o: Any object.
-
-    @rtype: C{str}
     """
     if isinstance(o, bytes):
         # If o is bytes and seems to holds a utf-8 encoded string,
         # convert it to str.
         try:
-            return o.decode('utf-8')
-        except:
+            return o.decode("utf-8")
+        except BaseException:
             pass
     try:
         return str(o)
-    except:
+    except BaseException:
         return _safeFormat(str, o)
-
 
 
 class QueueMethod:
     """
     I represent a method that doesn't exist yet.
     """
+
     def __init__(self, name, calls):
         self.name = name
         self.calls = calls
+
     def __call__(self, *args):
         self.calls.append((self.name, args))
 
 
-
 def fullFuncName(func):
-    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    qualName = str(pickle.whichmodule(func, func.__name__)) + "." + func.__name__
     if namedObject(qualName) is not func:
-        raise Exception("Couldn't find %s as %s." % (func, qualName))
+        raise Exception(f"Couldn't find {func} as {qualName}.")
     return qualName
-
 
 
 def getClass(obj):
     """
     Return the class or type of object 'obj'.
-    Returns sensible result for oldstyle and newstyle instances and types.
     """
-    if hasattr(obj, '__class__'):
-        return obj.__class__
-    else:
-        return type(obj)
-
+    return type(obj)
 
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
@@ -532,30 +513,35 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
 
 
 def isSame(a, b):
-    return (a is b)
+    return a is b
 
 
 def isLike(a, b):
-    return (a == b)
+    return a == b
 
 
 def modgrep(goal):
-    return objgrep(sys.modules, goal, isLike, 'sys.modules')
+    return objgrep(sys.modules, goal, isLike, "sys.modules")
 
 
 def isOfType(start, goal):
-    return ((type(start) is goal) or
-            (isinstance(start, compat.InstanceType) and
-             start.__class__ is goal))
+    return type(start) is goal
 
 
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
 
-
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
-            showUnknowns=0, maxDepth=None):
+def objgrep(
+    start,
+    goal,
+    eq=isLike,
+    path="",
+    paths=None,
+    seen=None,
+    showUnknowns=0,
+    maxDepth=None,
+):
     """
     L{objgrep} finds paths between C{start} and C{goal}.
 
@@ -627,49 +613,75 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
     args = (paths, seen, showUnknowns, maxDepth)
     if isinstance(start, dict):
         for k, v in start.items():
-            objgrep(k, goal, eq, path+'{'+repr(v)+'}', *args)
-            objgrep(v, goal, eq, path+'['+repr(k)+']', *args)
+            objgrep(k, goal, eq, path + "{" + repr(v) + "}", *args)
+            objgrep(v, goal, eq, path + "[" + repr(k) + "]", *args)
     elif isinstance(start, (list, tuple, deque)):
         for idx, _elem in enumerate(start):
-            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', *args)
+            objgrep(start[idx], goal, eq, path + "[" + str(idx) + "]", *args)
     elif isinstance(start, types.MethodType):
-        objgrep(start.__self__, goal, eq, path+'.__self__', *args)
-        objgrep(start.__func__, goal, eq, path+'.__func__', *args)
-        objgrep(start.__self__.__class__, goal, eq,
-                path+'.__self__.__class__', *args)
-    elif hasattr(start, '__dict__'):
+        objgrep(start.__self__, goal, eq, path + ".__self__", *args)
+        objgrep(start.__func__, goal, eq, path + ".__func__", *args)
+        objgrep(start.__self__.__class__, goal, eq, path + ".__self__.__class__", *args)
+    elif hasattr(start, "__dict__"):
         for k, v in start.__dict__.items():
-            objgrep(v, goal, eq, path+'.'+k, *args)
-        if isinstance(start, compat.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', *args)
+            objgrep(v, goal, eq, path + "." + k, *args)
     elif isinstance(start, weakref.ReferenceType):
-        objgrep(start(), goal, eq, path+'()', *args)
-    elif (isinstance(start, (compat.StringType,
-                     int, types.FunctionType,
-                     types.BuiltinMethodType, RegexType, float,
-                     type(None), compat.FileType)) or
-          type(start).__name__ in ('wrapper_descriptor',
-                                   'method_descriptor', 'member_descriptor',
-                                   'getset_descriptor')):
+        objgrep(start(), goal, eq, path + "()", *args)
+    elif isinstance(
+        start,
+        (
+            str,
+            int,
+            types.FunctionType,
+            types.BuiltinMethodType,
+            RegexType,
+            float,
+            type(None),
+            IOBase,
+        ),
+    ) or type(start).__name__ in (
+        "wrapper_descriptor",
+        "method_descriptor",
+        "member_descriptor",
+        "getset_descriptor",
+    ):
         pass
     elif showUnknowns:
-        print('unknown type', type(start), start)
+        print("unknown type", type(start), start)
     return paths
 
 
-
 __all__ = [
-    'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
-
-    'QueueMethod',
-
-    'namedModule', 'namedObject', 'namedClass', 'namedAny', 'requireModule',
-    'safe_repr', 'safe_str', 'prefixedMethodNames', 'addMethodNamesToDict',
-    'prefixedMethods', 'accumulateMethods', 'fullFuncName', 'qual', 'getClass',
-    'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
-    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
-    'fullyQualifiedName']
+    "InvalidName",
+    "ModuleNotFound",
+    "ObjectNotFound",
+    "QueueMethod",
+    "namedModule",
+    "namedObject",
+    "namedClass",
+    "namedAny",
+    "requireModule",
+    "safe_repr",
+    "safe_str",
+    "prefixedMethodNames",
+    "addMethodNamesToDict",
+    "prefixedMethods",
+    "accumulateMethods",
+    "fullFuncName",
+    "qual",
+    "getClass",
+    "accumulateClassDict",
+    "accumulateClassList",
+    "isSame",
+    "isLike",
+    "modgrep",
+    "isOfType",
+    "findInstances",
+    "objgrep",
+    "filenameToModuleName",
+    "fullyQualifiedName",
+]
 
 
 # This is to be removed when fixing #6986
-__all__.remove('objgrep')
+__all__.remove("objgrep")

@@ -11,7 +11,7 @@ Scheduling tasks for the future
 
 
 Let's say we want to run a task X seconds in the future.
-The way to do that is defined in the reactor interface :api:`twisted.internet.interfaces.IReactorTime <twisted.internet.interfaces.IReactorTime>` :
+The way to do that is defined in the reactor interface :py:class:`twisted.internet.interfaces.IReactorTime` :
 
 
 
@@ -33,8 +33,8 @@ The way to do that is defined in the reactor interface :api:`twisted.internet.in
 
 
 If the result of the function is important or if it may be necessary
-to handle exceptions it raises, then the :api:`twisted.internet.task.deferLater <twisted.internet.task.deferLater>` utility conveniently
-takes care of creating a :api:`twisted.internet.defer.Deferred <Deferred>` and setting up a delayed
+to handle exceptions it raises, then the :py:func:`twisted.internet.task.deferLater` utility conveniently
+takes care of creating a :py:class:`Deferred <twisted.internet.defer.Deferred>` and setting up a delayed
 call:
 
 
@@ -56,7 +56,7 @@ call:
     # f() will only be called if the event loop is started.
     reactor.run()
 
-If we want a task to run every X seconds repeatedly, we can use :api:`twisted.internet.task.LoopingCall <twisted.internet.task.LoopingCall>`:
+If we want a task to run every X seconds repeatedly, we can use :py:class:`twisted.internet.task.LoopingCall`:
 
 .. code-block:: python
 

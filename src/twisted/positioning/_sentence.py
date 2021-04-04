@@ -6,8 +6,7 @@ Generic sentence handling tools: hopefully reusable.
 from typing import Set
 
 
-
-class _BaseSentence(object):
+class _BaseSentence:
     """
     A base sentence class for a particular protocol.
 
@@ -35,8 +34,8 @@ class _BaseSentence(object):
         sentence.
     @type ALLOWED_ATTRIBUTES: C{set} of C{str}
     """
-    ALLOWED_ATTRIBUTES = set()  # type: Set[str]
 
+    ALLOWED_ATTRIBUTES: Set[str] = set()
 
     def __init__(self, sentenceData):
         """
@@ -46,7 +45,6 @@ class _BaseSentence(object):
         @type sentenceData: C{dict} (C{str} -> C{str} or L{None})
         """
         self._sentenceData = sentenceData
-
 
     @property
     def presentAttributes(self):
@@ -59,7 +57,6 @@ class _BaseSentence(object):
         """
         return iter(self._sentenceData)
 
-
     def __getattr__(self, name):
         """
         Gets an attribute of this sentence.
@@ -68,11 +65,10 @@ class _BaseSentence(object):
             return self._sentenceData.get(name, None)
         else:
             className = self.__class__.__name__
-            msg = "%s sentences have no %s attributes" % (className, name)
+            msg = f"{className} sentences have no {name} attributes"
             raise AttributeError(msg)
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a textual representation of this sentence.
 
@@ -80,17 +76,16 @@ class _BaseSentence(object):
         @rtype: C{str}
         """
         items = self._sentenceData.items()
-        data = ["%s: %s" % (k, v) for k, v in sorted(items) if k != "type"]
+        data = [f"{k}: {v}" for k, v in sorted(items) if k != "type"]
         dataRepr = ", ".join(data)
 
         typeRepr = self._sentenceData.get("type") or "unknown type"
         className = self.__class__.__name__
 
-        return "<%s (%s) {%s}>" % (className, typeRepr, dataRepr)
+        return f"<{className} ({typeRepr}) {{{dataRepr}}}>"
 
 
-
-class _PositioningSentenceProducerMixin(object):
+class _PositioningSentenceProducerMixin:
     """
     A mixin for certain protocols that produce positioning sentences.
 
@@ -100,6 +95,7 @@ class _PositioningSentenceProducerMixin(object):
     C{getSentenceAttributes}, which iterates over all sentence types and
     collects the possible sentence attributes.
     """
+
     @classmethod
     def getSentenceAttributes(cls):
         """
@@ -112,7 +108,7 @@ class _PositioningSentenceProducerMixin(object):
         @return: The set of all possible sentence attribute names.
         @rtype: C{set} of C{str}
         """
-        attributes = set(["type"])
+        attributes = {"type"}
         for attributeList in cls._SENTENCE_CONTENTS.values():
             for attribute in attributeList:
                 if attribute is None:

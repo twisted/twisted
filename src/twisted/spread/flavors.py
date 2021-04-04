@@ -27,11 +27,17 @@ import sys
 from zope.interface import implementer, Interface
 
 from twisted.python import log, reflect
-from twisted.python.compat import unicode, comparable, cmp
+from twisted.python.compat import comparable, cmp
 from .jelly import (
-    setUnjellyableForClass, setUnjellyableForClassTree,
-    setUnjellyableFactoryForClass, unjellyableRegistry, Jellyable, Unjellyable,
-    setInstanceState, getInstanceState, _createBlank
+    setUnjellyableForClass,
+    setUnjellyableForClassTree,
+    setUnjellyableFactoryForClass,
+    unjellyableRegistry,
+    Jellyable,
+    Unjellyable,
+    setInstanceState,
+    getInstanceState,
+    _createBlank,
 )
 
 # compatibility
@@ -87,6 +93,7 @@ class Serializable(Jellyable):
 
         return id(self)
 
+
 class Referenceable(Serializable):
     perspective = None
     """I am an object sent remotely as a direct reference.
@@ -112,18 +119,18 @@ class Referenceable(Serializable):
         # which may try to send use keywords where keys are of type
         # bytes.
         if [key for key in kw.keys() if isinstance(key, bytes)]:
-            kw = dict((k.decode('utf8'), v) for k, v in kw.items())
+            kw = {k.decode("utf8"): v for k, v in kw.items()}
 
         if not isinstance(message, str):
-            message = message.decode('utf8')
+            message = message.decode("utf8")
 
         method = getattr(self, "remote_%s" % message, None)
         if method is None:
-            raise NoSuchMethod("No such method: remote_%s" % (message,))
+            raise NoSuchMethod(f"No such method: remote_{message}")
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, self.perspective)
 
@@ -198,14 +205,12 @@ class ViewPoint(Referenceable):
     """
 
     def __init__(self, perspective, object):
-        """Initialize me with a Perspective and an Object.
-        """
+        """Initialize me with a Perspective and an Object."""
         self.perspective = perspective
         self.object = object
 
     def processUniqueID(self):
-        """Return an ID unique to a proxy for this perspective+object combination.
-        """
+        """Return an ID unique to a proxy for this perspective+object combination."""
         return (id(self.perspective), id(self.object))
 
     def remoteMessageReceived(self, broker, message, args, kw):
@@ -220,13 +225,13 @@ class ViewPoint(Referenceable):
         kw = broker.unserialize(kw, self.perspective)
 
         if not isinstance(message, str):
-            message = message.decode('utf8')
+            message = message.decode("utf8")
 
         method = getattr(self.object, "view_%s" % message)
         try:
-            state = method(*(self.perspective,)+args, **kw)
+            state = method(*(self.perspective,) + args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
@@ -242,10 +247,8 @@ class Viewable(Serializable):
     """
 
     def jellyFor(self, jellier):
-        """Serialize a L{ViewPoint} for me and the perspective of the given broker.
-        """
+        """Serialize a L{ViewPoint} for me and the perspective of the given broker."""
         return ViewPoint(jellier.invoker.serializingPerspective, self).jellyFor(jellier)
-
 
 
 class Copyable(Serializable):
@@ -288,7 +291,7 @@ class Copyable(Serializable):
         you may override this to change it.
         """
 
-        return reflect.qual(self.__class__).encode('utf-8')
+        return reflect.qual(self.__class__).encode("utf-8")
 
     def getTypeToCopyFor(self, perspective):
         """Determine what type tag to send for me.
@@ -374,7 +377,6 @@ class Cacheable(Copyable):
         """
 
 
-
 class RemoteCopy(Unjellyable):
     """I am a remote copy of a Copyable object.
 
@@ -396,8 +398,9 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
-        state = {x.decode('utf8') if isinstance(x, bytes)
-                 else x: y for x, y in state.items()}
+        state = {
+            x.decode("utf8") if isinstance(x, bytes) else x: y for x, y in state.items()
+        }
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
@@ -405,7 +408,6 @@ class RemoteCopy(Unjellyable):
             return setInstanceState(self, unjellier, jellyList)
         self.setCopyableState(unjellier.unjelly(jellyList[1]))
         return self
-
 
 
 class RemoteCache(RemoteCopy, Serializable):
@@ -428,7 +430,7 @@ class RemoteCache(RemoteCopy, Serializable):
         'C{observe_messagename}' and call it on my  with the same arguments.
         """
         if not isinstance(message, str):
-            message = message.decode('utf8')
+            message = message.decode("utf8")
 
         args = broker.unserialize(args)
         kw = broker.unserialize(kw)
@@ -436,18 +438,18 @@ class RemoteCache(RemoteCopy, Serializable):
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, None, method, args, kw)
 
     def jellyFor(self, jellier):
-        """serialize me (only for the broker I'm for) as the original cached reference
-        """
+        """serialize me (only for the broker I'm for) as the original cached reference"""
         if jellier.invoker is None:
             return getInstanceState(self, jellier)
-        assert jellier.invoker is self.broker, "You cannot exchange cached proxies between brokers."
-        return b'lcache', self.luid
-
+        assert (
+            jellier.invoker is self.broker
+        ), "You cannot exchange cached proxies between brokers."
+        return b"lcache", self.luid
 
     def unjellyFor(self, unjellier, jellyList):
         if unjellier.invoker is None:
@@ -470,36 +472,32 @@ class RemoteCache(RemoteCopy, Serializable):
         self.luid = jellyList[1]
         return borgCopy
 
-##     def __really_del__(self):
-##         """Final finalization call, made after all remote references have been lost.
-##         """
+    ##     def __really_del__(self):
+    ##         """Final finalization call, made after all remote references have been lost.
+    ##         """
 
     def __cmp__(self, other):
-        """Compare me [to another RemoteCache.
-        """
+        """Compare me [to another RemoteCache."""
         if isinstance(other, self.__class__):
             return cmp(id(self.__dict__), id(other.__dict__))
         else:
             return cmp(id(self.__dict__), other)
 
     def __hash__(self):
-        """Hash me.
-        """
+        """Hash me."""
         return int(id(self.__dict__) % sys.maxsize)
 
     broker = None
     luid = None
 
     def __del__(self):
-        """Do distributed reference counting on finalize.
-        """
+        """Do distributed reference counting on finalize."""
         try:
             # log.msg( ' --- decache: %s %s' % (self, self.luid) )
             if self.broker:
                 self.broker.decCacheRef(self.luid)
-        except:
+        except BaseException:
             log.deferr()
-
 
     def _borgify(self):
         """
@@ -527,34 +525,37 @@ class RemoteCache(RemoteCopy, Serializable):
         return blank
 
 
-
 def unjellyCached(unjellier, unjellyList):
     luid = unjellyList[1]
     return unjellier.invoker.cachedLocallyAs(luid)._borgify()
 
+
 setUnjellyableForClass("cached", unjellyCached)
+
 
 def unjellyLCache(unjellier, unjellyList):
     luid = unjellyList[1]
     obj = unjellier.invoker.remotelyCachedForLUID(luid)
     return obj
 
+
 setUnjellyableForClass("lcache", unjellyLCache)
+
 
 def unjellyLocal(unjellier, unjellyList):
     obj = unjellier.invoker.localObjectForID(unjellyList[1])
     return obj
 
+
 setUnjellyableForClass("local", unjellyLocal)
+
 
 @comparable
 class RemoteCacheMethod:
-    """A method on a reference to a L{RemoteCache}.
-    """
+    """A method on a reference to a L{RemoteCache}."""
 
     def __init__(self, name, broker, cached, perspective):
-        """(internal) initialize.
-        """
+        """(internal) initialize."""
         self.name = name
         self.broker = broker
         self.perspective = perspective
@@ -567,15 +568,17 @@ class RemoteCacheMethod:
         return hash((self.name, self.broker, self.perspective, self.cached))
 
     def __call__(self, *args, **kw):
-        """(internal) action method.
-        """
+        """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
             from pb import ProtocolError
-            raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
-        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
-                                        self.name, args, kw)
 
+            raise ProtocolError(
+                "You can't call a cached method when the object hasn't been given to the peer yet."
+            )
+        return self.broker._sendMessage(
+            b"cache", self.perspective, cacheID, self.name, args, kw
+        )
 
 
 @comparable
@@ -603,38 +606,44 @@ class RemoteCacheObserver:
         self.cached = cached
         self.perspective = perspective
 
-    def __repr__(self):
-        return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
-            self.broker, self.cached, self.perspective, id(self))
+    def __repr__(self) -> str:
+        return "<RemoteCacheObserver({}, {}, {}) at {}>".format(
+            self.broker,
+            self.cached,
+            self.perspective,
+            id(self),
+        )
 
     def __hash__(self):
-        """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet
-        """
+        """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet"""
 
-        return (  (hash(self.broker) % 2**10)
-                + (hash(self.perspective) % 2**10)
-                + (hash(self.cached) % 2**10))
+        return (
+            (hash(self.broker) % 2 ** 10)
+            + (hash(self.perspective) % 2 ** 10)
+            + (hash(self.cached) % 2 ** 10)
+        )
 
     def __cmp__(self, other):
-        """Compare me to another L{RemoteCacheObserver}.
-        """
+        """Compare me to another L{RemoteCacheObserver}."""
 
         return cmp((self.broker, self.perspective, self.cached), other)
 
     def callRemote(self, _name, *args, **kw):
-        """(internal) action method.
-        """
+        """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
-        if isinstance(_name, unicode):
+        if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
             from pb import ProtocolError
-            raise ProtocolError("You can't call a cached method when the "
-                                "object hasn't been given to the peer yet.")
-        return self.broker._sendMessage(b'cache', self.perspective, cacheID,
-                                        _name, args, kw)
+
+            raise ProtocolError(
+                "You can't call a cached method when the "
+                "object hasn't been given to the peer yet."
+            )
+        return self.broker._sendMessage(
+            b"cache", self.perspective, cacheID, _name, args, kw
+        )
 
     def remoteMethod(self, key):
-        """Get a L{pb.RemoteMethod} for this key.
-        """
+        """Get a L{pb.RemoteMethod} for this key."""
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)

@@ -194,120 +194,115 @@ has several features:
 """
 
 
-__metaclass__ = type
-
-import types, warnings
-
-from io import BytesIO
-from struct import pack
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
 import datetime
 import decimal
 from functools import partial
+from io import BytesIO
 from itertools import count
+from struct import pack
+from types import MethodType
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+import warnings
 
 from zope.interface import Interface, implementer
 
-from twisted.python.reflect import accumulateClassDict
-from twisted.python.failure import Failure
-from twisted.python._tzhelper import (
-    FixedOffsetTimeZone as _FixedOffsetTZInfo, UTC as utc
-)
-
-from twisted.python import log, filepath
-
+from twisted.internet.defer import Deferred, maybeDeferred, fail
+from twisted.internet.error import ConnectionClosed
+from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.error import PeerVerifyError, ConnectionLost
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.defer import Deferred, maybeDeferred, fail
+from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python.compat import (
-    iteritems, unicode, nativeString, intToBytes, long,
+from twisted.python import log, filepath
+from twisted.python._tzhelper import (
+    FixedOffsetTimeZone as _FixedOffsetTZInfo,
+    UTC as utc,
 )
+from twisted.python.compat import nativeString
+from twisted.python.failure import Failure
+from twisted.python.reflect import accumulateClassDict
 
 try:
-    from twisted.internet import ssl
-    if ssl.supported:
-        from twisted.internet.ssl import (CertificateOptions, Certificate, DN,
-                                          KeyPair)
-    else:
-        ssl = None  # type: ignore[assignment]
-except ImportError:
-    ssl = None  # type: ignore[assignment]
+    from twisted.internet import ssl as _ssl
 
+    if _ssl.supported:
+        from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
+    else:
+        ssl = None
+except ImportError:
+    ssl = None
+else:
+    ssl = _ssl
 
 
 __all__ = [
-    'AMP',
-    'ANSWER',
-    'ASK',
-    'AmpBox',
-    'AmpError',
-    'AmpList',
-    'Argument',
-    'BadLocalReturn',
-    'BinaryBoxProtocol',
-    'Boolean',
-    'Box',
-    'BoxDispatcher',
-    'COMMAND',
-    'Command',
-    'CommandLocator',
-    'Decimal',
-    'Descriptor',
-    'ERROR',
-    'ERROR_CODE',
-    'ERROR_DESCRIPTION',
-    'Float',
-    'IArgumentType',
-    'IBoxReceiver',
-    'IBoxSender',
-    'IResponderLocator',
-    'IncompatibleVersions',
-    'Integer',
-    'InvalidSignature',
-    'ListOf',
-    'MAX_KEY_LENGTH',
-    'MAX_VALUE_LENGTH',
-    'MalformedAmpBox',
-    'NoEmptyBoxes',
-    'OnlyOneTLS',
-    'PROTOCOL_ERRORS',
-    'PYTHON_KEYWORDS',
-    'Path',
-    'ProtocolSwitchCommand',
-    'ProtocolSwitched',
-    'QuitBox',
-    'RemoteAmpError',
-    'SimpleStringLocator',
-    'StartTLS',
-    'String',
-    'TooLong',
-    'UNHANDLED_ERROR_CODE',
-    'UNKNOWN_ERROR_CODE',
-    'UnhandledCommand',
-    'utc',
-    'Unicode',
-    'UnknownRemoteError',
-    'parse',
-    'parseString',
+    "AMP",
+    "ANSWER",
+    "ASK",
+    "AmpBox",
+    "AmpError",
+    "AmpList",
+    "Argument",
+    "BadLocalReturn",
+    "BinaryBoxProtocol",
+    "Boolean",
+    "Box",
+    "BoxDispatcher",
+    "COMMAND",
+    "Command",
+    "CommandLocator",
+    "Decimal",
+    "Descriptor",
+    "ERROR",
+    "ERROR_CODE",
+    "ERROR_DESCRIPTION",
+    "Float",
+    "IArgumentType",
+    "IBoxReceiver",
+    "IBoxSender",
+    "IResponderLocator",
+    "IncompatibleVersions",
+    "Integer",
+    "InvalidSignature",
+    "ListOf",
+    "MAX_KEY_LENGTH",
+    "MAX_VALUE_LENGTH",
+    "MalformedAmpBox",
+    "NoEmptyBoxes",
+    "OnlyOneTLS",
+    "PROTOCOL_ERRORS",
+    "PYTHON_KEYWORDS",
+    "Path",
+    "ProtocolSwitchCommand",
+    "ProtocolSwitched",
+    "QuitBox",
+    "RemoteAmpError",
+    "SimpleStringLocator",
+    "StartTLS",
+    "String",
+    "TooLong",
+    "UNHANDLED_ERROR_CODE",
+    "UNKNOWN_ERROR_CODE",
+    "UnhandledCommand",
+    "utc",
+    "Unicode",
+    "UnknownRemoteError",
+    "parse",
+    "parseString",
 ]
 
 
+ASK = b"_ask"
+ANSWER = b"_answer"
+COMMAND = b"_command"
+ERROR = b"_error"
+ERROR_CODE = b"_error_code"
+ERROR_DESCRIPTION = b"_error_description"
+UNKNOWN_ERROR_CODE = b"UNKNOWN"
+UNHANDLED_ERROR_CODE = b"UNHANDLED"
 
-ASK = b'_ask'
-ANSWER = b'_answer'
-COMMAND = b'_command'
-ERROR = b'_error'
-ERROR_CODE = b'_error_code'
-ERROR_DESCRIPTION = b'_error_description'
-UNKNOWN_ERROR_CODE = b'UNKNOWN'
-UNHANDLED_ERROR_CODE = b'UNHANDLED'
-
-MAX_KEY_LENGTH = 0xff
-MAX_VALUE_LENGTH = 0xffff
-
+MAX_KEY_LENGTH = 0xFF
+MAX_VALUE_LENGTH = 0xFFFF
 
 
 class IArgumentType(Interface):
@@ -317,6 +312,7 @@ class IArgumentType(Interface):
 
     @since: 9.0
     """
+
     def fromBox(name, strings, objects, proto):
         """
         Given an argument name and an AMP box containing serialized values,
@@ -344,7 +340,6 @@ class IArgumentType(Interface):
 
         @return: L{None}
         """
-
 
     def toBox(name, strings, objects, proto):
         """
@@ -374,7 +369,6 @@ class IArgumentType(Interface):
         """
 
 
-
 class IBoxSender(Interface):
     """
     A transport which can send L{AmpBox} objects.
@@ -400,7 +394,6 @@ class IBoxSender(Interface):
         """
 
 
-
 class IBoxReceiver(Interface):
     """
     An application object which can receive L{AmpBox} objects and dispatch them
@@ -415,12 +408,10 @@ class IBoxReceiver(Interface):
         @param boxSender: an L{IBoxSender} provider.
         """
 
-
     def ampBoxReceived(box):
         """
         A box was received from the transport; dispatch it appropriately.
         """
-
 
     def stopReceivingBoxes(reason):
         """
@@ -428,7 +419,6 @@ class IBoxReceiver(Interface):
 
         @type reason: L{Failure}
         """
-
 
 
 class IResponderLocator(Interface):
@@ -452,12 +442,10 @@ class IResponderLocator(Interface):
         """
 
 
-
 class AmpError(Exception):
     """
     Base class of all Amp-related exceptions.
     """
-
 
 
 class ProtocolSwitched(Exception):
@@ -467,13 +455,11 @@ class ProtocolSwitched(Exception):
     """
 
 
-
 class OnlyOneTLS(AmpError):
     """
     This is an implementation limitation; TLS may only be started once per
     connection.
     """
-
 
 
 class NoEmptyBoxes(AmpError):
@@ -483,12 +469,10 @@ class NoEmptyBoxes(AmpError):
     """
 
 
-
 class InvalidSignature(AmpError):
     """
     You didn't pass all the required arguments.
     """
-
 
 
 class TooLong(AmpError):
@@ -515,31 +499,28 @@ class TooLong(AmpError):
         self.value = value
         self.keyName = keyName
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         hdr = self.isKey and "key" or "value"
         if not self.isKey:
-            hdr += ' ' + repr(self.keyName)
+            hdr += " " + repr(self.keyName)
         lcl = self.isLocal and "local" or "remote"
         return "%s %s too long: %d" % (lcl, hdr, len(self.value))
-
 
 
 class BadLocalReturn(AmpError):
     """
     A bad value was returned from a local command; we were unable to coerce it.
     """
-    def __init__(self, message, enclosed):
+
+    def __init__(self, message: str, enclosed: Failure) -> None:
         AmpError.__init__(self)
         self.message = message
         self.enclosed = enclosed
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.message + " " + self.enclosed.getBriefTraceback()
 
     __str__ = __repr__
-
 
 
 class RemoteAmpError(AmpError):
@@ -547,6 +528,7 @@ class RemoteAmpError(AmpError):
     This error indicates that something went wrong on the remote end of the
     connection, and the error was serialized and transmitted to you.
     """
+
     def __init__(self, errorCode, description, fatal=False, local=None):
         """Create a remote error with an error code and description.
 
@@ -562,31 +544,35 @@ class RemoteAmpError(AmpError):
         @param local: a local Failure, if one exists.
         """
         if local:
-            localwhat = ' (local)'
+            localwhat = " (local)"
             othertb = local.getBriefTraceback()
         else:
-            localwhat = ''
-            othertb = ''
+            localwhat = ""
+            othertb = ""
 
         # Backslash-escape errorCode. Python 3.5 can do this natively
         # ("backslashescape") but Python 2.7 and Python 3.4 can't.
         errorCodeForMessage = "".join(
-            "\\x%2x" % (c,) if c >= 0x80 else chr(c)
-            for c in errorCode)
+            f"\\x{c:2x}" if c >= 0x80 else chr(c) for c in errorCode
+        )
 
         if othertb:
-            message = "Code<%s>%s: %s\n%s" % (
-                errorCodeForMessage, localwhat, description, othertb)
+            message = "Code<{}>{}: {}\n{}".format(
+                errorCodeForMessage,
+                localwhat,
+                description,
+                othertb,
+            )
         else:
-            message = "Code<%s>%s: %s" % (
-                errorCodeForMessage, localwhat, description)
+            message = "Code<{}>{}: {}".format(
+                errorCodeForMessage, localwhat, description
+            )
 
-        super(RemoteAmpError, self).__init__(message)
+        super().__init__(message)
         self.local = local
         self.errorCode = errorCode
         self.description = description
         self.fatal = fatal
-
 
 
 class UnknownRemoteError(RemoteAmpError):
@@ -594,10 +580,10 @@ class UnknownRemoteError(RemoteAmpError):
     This means that an error whose type we can't identify was raised from the
     other side.
     """
+
     def __init__(self, description):
         errorCode = UNKNOWN_ERROR_CODE
         RemoteAmpError.__init__(self, errorCode, description)
-
 
 
 class MalformedAmpBox(AmpError):
@@ -606,12 +592,10 @@ class MalformedAmpBox(AmpError):
     """
 
 
-
 class UnhandledCommand(AmpError):
     """
     A command received via amp could not be dispatched.
     """
-
 
 
 class IncompatibleVersions(AmpError):
@@ -621,9 +605,7 @@ class IncompatibleVersions(AmpError):
     """
 
 
-
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
-
 
 
 class AmpBox(dict):
@@ -631,10 +613,10 @@ class AmpBox(dict):
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
     """
+
     # be like a regular dictionary don't magically
     # acquire a __dict__...
-    __slots__ = []  # type: List[str]
-
+    __slots__: List[str] = []
 
     def __init__(self, *args, **kw):
         """
@@ -661,12 +643,11 @@ class AmpBox(dict):
         @raise UnicodeEncodeError: When a native string key cannot be coerced
             to an ASCII byte string (Python 3 only).
         """
-        super(AmpBox, self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         nonByteNames = [n for n in self if not isinstance(n, bytes)]
         for nonByteName in nonByteNames:
             byteName = nonByteName.encode("ascii")
             self[byteName] = self.pop(nonByteName)
-
 
     def copy(self):
         """
@@ -676,7 +657,6 @@ class AmpBox(dict):
         newBox.update(self)
         return newBox
 
-
     def serialize(self):
         """
         Convert me into a wire-encoded string.
@@ -684,15 +664,14 @@ class AmpBox(dict):
         @return: a C{bytes} encoded according to the rules described in the
             module docstring.
         """
-        i = sorted(iteritems(self))
+        i = sorted(self.items())
         L = []
         w = L.append
         for k, v in i:
-            if type(k) == unicode:
+            if type(k) == str:
                 raise TypeError("Unicode key not allowed: %r" % k)
-            if type(v) == unicode:
-                raise TypeError(
-                    "Unicode value for key %r not allowed: %r" % (k, v))
+            if type(v) == str:
+                raise TypeError(f"Unicode value for key {k!r} not allowed: {v!r}")
             if len(k) > MAX_KEY_LENGTH:
                 raise TooLong(True, True, k, None)
             if len(v) > MAX_VALUE_LENGTH:
@@ -701,8 +680,7 @@ class AmpBox(dict):
                 w(pack("!H", len(kv)))
                 w(kv)
         w(pack("!H", 0))
-        return b''.join(L)
-
+        return b"".join(L)
 
     def _sendTo(self, proto):
         """
@@ -720,31 +698,31 @@ class AmpBox(dict):
         """
         proto.sendBox(self)
 
-    def __repr__(self):
-        return 'AmpBox(%s)' % (dict.__repr__(self),)
+    def __repr__(self) -> str:
+        return "AmpBox({})".format(dict.__repr__(self))
+
 
 # amp.Box => AmpBox
 
 Box = AmpBox
 
+
 class QuitBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, terminates the connection.
     """
-    __slots__ = []  # type: List[str]
 
+    __slots__: List[str] = []
 
-    def __repr__(self):
-        return 'QuitBox(**%s)' % (super(QuitBox, self).__repr__(),)
-
+    def __repr__(self) -> str:
+        return f"QuitBox(**{super().__repr__()})"
 
     def _sendTo(self, proto):
         """
         Immediately call loseConnection after sending.
         """
-        super(QuitBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto.transport.loseConnection()
-
 
 
 class _SwitchBox(AmpBox):
@@ -762,24 +740,23 @@ class _SwitchBox(AmpBox):
         @param innerProto: the protocol instance to switch to.
         @type innerProto: an IProtocol provider.
         """
-        super(_SwitchBox, self).__init__(**kw)
+        super().__init__(**kw)
         self.innerProto = innerProto
 
-
-    def __repr__(self):
-        return '_SwitchBox(%r, **%s)' % (self.innerProto,
-                                         dict.__repr__(self),)
-
+    def __repr__(self) -> str:
+        return "_SwitchBox({!r}, **{})".format(
+            self.innerProto,
+            dict.__repr__(self),
+        )
 
     def _sendTo(self, proto):
         """
         Send me; I am the last box on the connection.  All further traffic will be
         over the new protocol.
         """
-        super(_SwitchBox, self)._sendTo(proto)
+        super()._sendTo(proto)
         proto._lockForSwitch()
         proto._switchTo(self.innerProto)
-
 
 
 @implementer(IBoxReceiver)
@@ -810,13 +787,12 @@ class BoxDispatcher:
 
     _failAllReason = None
     _outstandingRequests = None
-    _counter = long(0)
+    _counter = 0
     boxSender = None
 
     def __init__(self, locator):
         self._outstandingRequests = {}
         self.locator = locator
-
 
     def startReceivingBoxes(self, boxSender):
         """
@@ -827,14 +803,12 @@ class BoxDispatcher:
         """
         self.boxSender = boxSender
 
-
     def stopReceivingBoxes(self, reason):
         """
         No further boxes will be received here.  Terminate all currently
         outstanding command deferreds with the given reason.
         """
         self.failAllOutgoing(reason)
-
 
     def failAllOutgoing(self, reason):
         """
@@ -844,10 +818,9 @@ class BoxDispatcher:
         """
         self._failAllReason = reason
         OR = self._outstandingRequests.items()
-        self._outstandingRequests = None # we can never send another request
+        self._outstandingRequests = None  # we can never send another request
         for key, value in OR:
             value.errback(reason)
-
 
     def _nextTag(self):
         """
@@ -856,8 +829,7 @@ class BoxDispatcher:
         @return: a string that has not yet been used on this connection.
         """
         self._counter += 1
-        return (b'%x' % (self._counter,))
-
+        return b"%x" % (self._counter,)
 
     def _sendBoxCommand(self, command, box, requiresAnswer=True):
         """
@@ -902,7 +874,6 @@ class BoxDispatcher:
             result = None
         return result
 
-
     def callRemoteString(self, command, requiresAnswer=True, **kw):
         """
         This is a low-level API, designed only for optimizing simple messages
@@ -921,7 +892,6 @@ class BoxDispatcher:
         """
         box = Box(kw)
         return self._sendBoxCommand(command, box, requiresAnswer)
-
 
     def callRemote(self, commandType, *a, **kw):
         """
@@ -966,14 +936,12 @@ class BoxDispatcher:
             return fail()
         return co._doCommand(self)
 
-
     def unhandledError(self, failure):
         """
         This is a terminal callback called after application code has had a
         chance to quash any errors.
         """
         return self.boxSender.unhandledError(failure)
-
 
     def _answerReceived(self, box):
         """
@@ -985,7 +953,6 @@ class BoxDispatcher:
         question = self._outstandingRequests.pop(box[ANSWER])
         question.addErrback(self.unhandledError)
         question.callback(box)
-
 
     def _errorReceived(self, box):
         """
@@ -1007,20 +974,21 @@ class BoxDispatcher:
             exc = RemoteAmpError(errorCode, description)
         question.errback(Failure(exc))
 
-
     def _commandReceived(self, box):
         """
         @param box: an L{AmpBox} with a value for its L{COMMAND} and L{ASK}
         keys.
         """
+
         def formatAnswer(answerBox):
             answerBox[ANSWER] = box[ASK]
             return answerBox
+
         def formatError(error):
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
-                if isinstance(desc, unicode):
+                if isinstance(desc, str):
                     desc = desc.encode("utf-8", "replace")
                 if error.value.fatal:
                     errorBox = QuitBox()
@@ -1028,20 +996,20 @@ class BoxDispatcher:
                     errorBox = AmpBox()
             else:
                 errorBox = QuitBox()
-                log.err(error) # here is where server-side logging happens
-                               # if the error isn't handled
+                log.err(error)  # here is where server-side logging happens
+                # if the error isn't handled
                 code = UNKNOWN_ERROR_CODE
                 desc = b"Unknown Error"
             errorBox[ERROR] = box[ASK]
             errorBox[ERROR_DESCRIPTION] = desc
             errorBox[ERROR_CODE] = code
             return errorBox
+
         deferred = self.dispatchCommand(box)
         if ASK in box:
             deferred.addCallbacks(formatAnswer, formatError)
             deferred.addCallback(self._safeEmit)
         deferred.addErrback(self.unhandledError)
-
 
     def ampBoxReceived(self, box):
         """
@@ -1064,7 +1032,6 @@ class BoxDispatcher:
         else:
             raise NoEmptyBoxes(box)
 
-
     def _safeEmit(self, aBox):
         """
         Emit a box, ignoring L{ProtocolSwitched} and L{ConnectionLost} errors
@@ -1075,77 +1042,79 @@ class BoxDispatcher:
         except (ProtocolSwitched, ConnectionLost):
             pass
 
-
     def dispatchCommand(self, box):
         """
         A box with a _command key was received.
 
         Dispatch it to a local handler call it.
 
-        @param proto: an AMP instance.
         @param box: an AmpBox to be dispatched.
         """
         cmd = box[COMMAND]
         responder = self.locator.locateResponder(cmd)
         if responder is None:
-            description = "Unhandled Command: %r" % (cmd,)
-            return fail(RemoteAmpError(
+            description = f"Unhandled Command: {cmd!r}"
+            return fail(
+                RemoteAmpError(
                     UNHANDLED_ERROR_CODE,
                     description,
                     False,
-                    local=Failure(UnhandledCommand())))
+                    local=Failure(UnhandledCommand()),
+                )
+            )
         return maybeDeferred(responder, box)
 
 
+class _CommandLocatorMeta(type):
+    """
+    This metaclass keeps track of all of the Command.responder-decorated
+    methods defined since the last CommandLocator subclass was defined.  It
+    assumes (usually correctly, but unfortunately not necessarily so) that
+    those commands responders were all declared as methods of the class
+    being defined.  Note that this list can be incorrect if users use the
+    Command.responder decorator outside the context of a CommandLocator
+    class declaration.
+
+    Command responders defined on subclasses are given precedence over
+    those inherited from a base class.
+
+    The Command.responder decorator explicitly cooperates with this
+    metaclass.
+    """
+
+    _currentClassCommands: "List[Tuple[Command, Callable]]" = []
+
+    def __new__(cls, name, bases, attrs):
+        commands = cls._currentClassCommands[:]
+        cls._currentClassCommands[:] = []
+        cd = attrs["_commandDispatch"] = {}
+        subcls = type.__new__(cls, name, bases, attrs)
+        ancestors = list(subcls.__mro__[1:])
+        ancestors.reverse()
+        for ancestor in ancestors:
+            cd.update(getattr(ancestor, "_commandDispatch", {}))
+        for commandClass, responderFunc in commands:
+            cd[commandClass.commandName] = (commandClass, responderFunc)
+        if bases and (subcls.lookupFunction != CommandLocator.lookupFunction):
+
+            def locateResponder(self, name):
+                warnings.warn(
+                    "Override locateResponder, not lookupFunction.",
+                    category=PendingDeprecationWarning,
+                    stacklevel=2,
+                )
+                return self.lookupFunction(name)
+
+            subcls.locateResponder = locateResponder
+        return subcls
+
 
 @implementer(IResponderLocator)
-class CommandLocator:
+class CommandLocator(metaclass=_CommandLocatorMeta):
     """
     A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
     the help of the L{Command.responder} decorator.
     """
-
-    class __metaclass__(type):
-        """
-        This metaclass keeps track of all of the Command.responder-decorated
-        methods defined since the last CommandLocator subclass was defined.  It
-        assumes (usually correctly, but unfortunately not necessarily so) that
-        those commands responders were all declared as methods of the class
-        being defined.  Note that this list can be incorrect if users use the
-        Command.responder decorator outside the context of a CommandLocator
-        class declaration.
-
-        Command responders defined on subclasses are given precedence over
-        those inherited from a base class.
-
-        The Command.responder decorator explicitly cooperates with this
-        metaclass.
-        """
-
-        _currentClassCommands = []  # type: List[Tuple[Command, Callable]]
-
-        def __new__(cls, name, bases, attrs):
-            commands = cls._currentClassCommands[:]
-            cls._currentClassCommands[:] = []
-            cd = attrs['_commandDispatch'] = {}
-            subcls = type.__new__(cls, name, bases, attrs)
-            ancestors = list(subcls.__mro__[1:])
-            ancestors.reverse()
-            for ancestor in ancestors:
-                cd.update(getattr(ancestor, '_commandDispatch', {}))
-            for commandClass, responderFunc in commands:
-                cd[commandClass.commandName] = (commandClass, responderFunc)
-            if (bases and (
-                    subcls.lookupFunction != CommandLocator.lookupFunction)):
-                def locateResponder(self, name):
-                    warnings.warn(
-                        "Override locateResponder, not lookupFunction.",
-                        category=PendingDeprecationWarning,
-                        stacklevel=2)
-                    return self.lookupFunction(name)
-                subcls.locateResponder = locateResponder
-            return subcls
-
 
     def _wrapWithSerialization(self, aCallable, command):
         """
@@ -1162,6 +1131,7 @@ class CommandLocator:
         callable's command, returning a Deferred which fires with the result or
         fails with an error.
         """
+
         def doit(box):
             kw = command.parseArguments(box, self)
 
@@ -1169,8 +1139,9 @@ class CommandLocator:
                 key = error.trap(*command.allErrors)
                 code = command.allErrors[key]
                 desc = str(error.value)
-                return Failure(RemoteAmpError(
-                        code, desc, key in command.fatalErrors, local=error))
+                return Failure(
+                    RemoteAmpError(code, desc, key in command.fatalErrors, local=error)
+                )
 
             def makeResponseFor(objects):
                 try:
@@ -1179,16 +1150,18 @@ class CommandLocator:
                     # let's helpfully log this.
                     originalFailure = Failure()
                     raise BadLocalReturn(
-                        "%r returned %r and %r could not serialize it" % (
-                            aCallable,
-                            objects,
-                            command),
-                        originalFailure)
-            return maybeDeferred(aCallable, **kw).addCallback(
-                makeResponseFor).addErrback(
-                checkKnownErrors)
-        return doit
+                        "%r returned %r and %r could not serialize it"
+                        % (aCallable, objects, command),
+                        originalFailure,
+                    )
 
+            return (
+                maybeDeferred(aCallable, **kw)
+                .addCallback(makeResponseFor)
+                .addErrback(checkKnownErrors)
+            )
+
+        return doit
 
     def lookupFunction(self, name):
         """
@@ -1197,11 +1170,12 @@ class CommandLocator:
         if self.__class__.lookupFunction != CommandLocator.lookupFunction:
             return CommandLocator.locateResponder(self, name)
         else:
-            warnings.warn("Call locateResponder, not lookupFunction.",
-                          category=PendingDeprecationWarning,
-                          stacklevel=2)
+            warnings.warn(
+                "Call locateResponder, not lookupFunction.",
+                category=PendingDeprecationWarning,
+                stacklevel=2,
+            )
         return self.locateResponder(name)
-
 
     def locateResponder(self, name):
         """
@@ -1219,29 +1193,18 @@ class CommandLocator:
         cd = self._commandDispatch
         if name in cd:
             commandClass, responderFunc = cd[name]
-            responderMethod = types.MethodType(
-                responderFunc, self)
+            responderMethod = MethodType(responderFunc, self)
             return self._wrapWithSerialization(responderMethod, commandClass)
 
 
-
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating CommandLocator using the metaclass
-# here.
-CommandLocator = CommandLocator.__metaclass__(  # type: ignore[assignment,misc]
-    "CommandLocator", (CommandLocator, ), {})
-
-
-
 @implementer(IResponderLocator)
-class SimpleStringLocator(object):
+class SimpleStringLocator:
     """
     Implement the L{AMP.locateResponder} method to do simple, string-based
     dispatch.
     """
 
-    baseDispatchPrefix = b'amp_'
+    baseDispatchPrefix = b"amp_"
 
     def locateResponder(self, name):
         """
@@ -1259,13 +1222,37 @@ class SimpleStringLocator(object):
         return getattr(self, fName, None)
 
 
-
 PYTHON_KEYWORDS = [
-    'and', 'del', 'for', 'is', 'raise', 'assert', 'elif', 'from', 'lambda',
-    'return', 'break', 'else', 'global', 'not', 'try', 'class', 'except',
-    'if', 'or', 'while', 'continue', 'exec', 'import', 'pass', 'yield',
-    'def', 'finally', 'in', 'print']
-
+    "and",
+    "del",
+    "for",
+    "is",
+    "raise",
+    "assert",
+    "elif",
+    "from",
+    "lambda",
+    "return",
+    "break",
+    "else",
+    "global",
+    "not",
+    "try",
+    "class",
+    "except",
+    "if",
+    "or",
+    "while",
+    "continue",
+    "exec",
+    "import",
+    "pass",
+    "yield",
+    "def",
+    "finally",
+    "in",
+    "print",
+]
 
 
 def _wireNameToPythonIdentifier(key):
@@ -1298,7 +1285,6 @@ def _wireNameToPythonIdentifier(key):
     return lkey
 
 
-
 @implementer(IArgumentType)
 class Argument:
     """
@@ -1313,7 +1299,6 @@ class Argument:
 
     optional = False
 
-
     def __init__(self, optional=False):
         """
         Create an Argument.
@@ -1322,7 +1307,6 @@ class Argument:
         omitted in the protocol.
         """
         self.optional = optional
-
 
     def retrieve(self, d, name, proto):
         """
@@ -1345,7 +1329,6 @@ class Argument:
         else:
             value = d.pop(name)
         return value
-
 
     def fromBox(self, name, strings, objects, proto):
         """
@@ -1371,7 +1354,6 @@ class Argument:
             objects[nk] = None
         else:
             objects[nk] = self.fromStringProto(st, proto)
-
 
     def toBox(self, name, strings, objects, proto):
         """
@@ -1400,7 +1382,6 @@ class Argument:
         else:
             strings[name] = self.toStringProto(obj, proto)
 
-
     def fromStringProto(self, inString, proto):
         """
         Convert a string to a Python value.
@@ -1415,7 +1396,6 @@ class Argument:
         """
         return self.fromString(inString)
 
-
     def toStringProto(self, inObject, proto):
         """
         Convert a Python object to a string.
@@ -1427,7 +1407,6 @@ class Argument:
         """
         return self.toString(inObject)
 
-
     def fromString(self, inString):
         """
         Convert a string to a Python object.  Subclasses must implement this.
@@ -1437,7 +1416,6 @@ class Argument:
 
         @return: the decoded value from C{inString}
         """
-
 
     def toString(self, inObject):
         """
@@ -1451,7 +1429,6 @@ class Argument:
         """
 
 
-
 class Integer(Argument):
     """
     Encode any integer values of any size on the wire as the string
@@ -1459,16 +1436,18 @@ class Integer(Argument):
 
     Example: C{123} becomes C{"123"}
     """
-    fromString = int
-    def toString(self, inObject):
-        return intToBytes(inObject)
 
+    fromString = int
+
+    def toString(self, inObject):
+        return b"%d" % (inObject,)
 
 
 class String(Argument):
     """
     Don't do any conversion at all; just pass through 'str'.
     """
+
     def toString(self, inObject):
         return inObject
 
@@ -1476,39 +1455,37 @@ class String(Argument):
         return inString
 
 
-
 class Float(Argument):
     """
     Encode floating-point values on the wire as their repr.
     """
+
     fromString = float
 
     def toString(self, inString):
         if not isinstance(inString, float):
-            raise ValueError("Bad float value %r" % (inString,))
-        return str(inString).encode('ascii')
-
+            raise ValueError(f"Bad float value {inString!r}")
+        return str(inString).encode("ascii")
 
 
 class Boolean(Argument):
     """
     Encode True or False as "True" or "False" on the wire.
     """
+
     def fromString(self, inString):
-        if inString == b'True':
+        if inString == b"True":
             return True
-        elif inString == b'False':
+        elif inString == b"False":
             return False
         else:
-            raise TypeError("Bad boolean value: %r" % (inString,))
-
+            raise TypeError(f"Bad boolean value: {inString!r}")
 
     def toString(self, inObject):
         if inObject:
-            return b'True'
+            return b"True"
         else:
-            return b'False'
-
+            return b"False"
 
 
 class Unicode(String):
@@ -1517,12 +1494,10 @@ class Unicode(String):
     """
 
     def toString(self, inObject):
-        return String.toString(self, inObject.encode('utf-8'))
-
+        return String.toString(self, inObject.encode("utf-8"))
 
     def fromString(self, inString):
-        return String.fromString(self, inString).decode('utf-8')
-
+        return String.fromString(self, inString).decode("utf-8")
 
 
 class Path(Unicode):
@@ -1534,13 +1509,12 @@ class Path(Unicode):
     meaningful, but neither is it disallowed; you can use this to communicate
     about NFS paths, for example.
     """
+
     def fromString(self, inString):
         return filepath.FilePath(Unicode.fromString(self, inString))
 
-
     def toString(self, inObject):
         return Unicode.toString(self, inObject.asTextMode().path)
-
 
 
 class ListOf(Argument):
@@ -1570,10 +1544,10 @@ class ListOf(Argument):
 
     @since: 10.0
     """
+
     def __init__(self, elementType, optional=False):
         self.elementType = elementType
         Argument.__init__(self, optional)
-
 
     def fromString(self, inString):
         """
@@ -1587,7 +1561,6 @@ class ListOf(Argument):
         elementFromString = self.elementType.fromString
         return [elementFromString(string) for string in strings]
 
-
     def toString(self, inObject):
         """
         Serialize the given list of objects to a single string.
@@ -1595,10 +1568,9 @@ class ListOf(Argument):
         strings = []
         for obj in inObject:
             serialized = self.elementType.toString(obj)
-            strings.append(pack('!H', len(serialized)))
+            strings.append(pack("!H", len(serialized)))
             strings.append(serialized)
-        return b''.join(strings)
-
+        return b"".join(strings)
 
 
 class AmpList(Argument):
@@ -1614,6 +1586,7 @@ class AmpList(Argument):
         AmpList([('a', Integer()),
                  ('b', Unicode())])
     """
+
     def __init__(self, subargs, optional=False):
         """
         Create an AmpList.
@@ -1627,23 +1600,23 @@ class AmpList(Argument):
         """
         assert all(isinstance(name, bytes) for name, _ in subargs), (
             "AmpList should be defined with a list of (name, argument) "
-            "tuples where `name' is a byte string, got: %r" % (subargs, ))
+            "tuples where `name' is a byte string, got: %r" % (subargs,)
+        )
         self.subargs = subargs
         Argument.__init__(self, optional)
 
-
     def fromStringProto(self, inString, proto):
         boxes = parseString(inString)
-        values = [_stringsToObjects(box, self.subargs, proto)
-                  for box in boxes]
+        values = [_stringsToObjects(box, self.subargs, proto) for box in boxes]
         return values
 
-
     def toStringProto(self, inObject, proto):
-        return b''.join([_objectsToStrings(
-                    objects, self.subargs, Box(), proto
-                    ).serialize() for objects in inObject])
-
+        return b"".join(
+            [
+                _objectsToStrings(objects, self.subargs, Box(), proto).serialize()
+                for objects in inObject
+            ]
+        )
 
 
 class Descriptor(Integer):
@@ -1666,6 +1639,7 @@ class Descriptor(Integer):
     The receiver uses the order in which file descriptors are received and the
     ordinal value to come up with the received copy of the descriptor.
     """
+
     def fromStringProto(self, inString, proto):
         """
         Take a unique identifier associated with a file descriptor which must
@@ -1687,7 +1661,6 @@ class Descriptor(Integer):
         """
         return proto._getDescriptor(int(inString))
 
-
     def toStringProto(self, inObject, proto):
         """
         Send C{inObject}, an integer file descriptor, over C{proto}'s connection
@@ -1704,15 +1677,69 @@ class Descriptor(Integer):
 
         @return: A byte string which can be used by the receiver to reconstruct
             the file descriptor.
-        @type: C{str}
+        @rtype: C{bytes}
         """
         identifier = proto._sendFileDescriptor(inObject)
         outString = Integer.toStringProto(self, identifier, proto)
         return outString
 
 
+class _CommandMeta(type):
+    """
+    Metaclass hack to establish reverse-mappings for 'errors' and
+    'fatalErrors' as class vars.
+    """
 
-class Command:
+    def __new__(cls, name, bases, attrs):
+        reverseErrors = attrs["reverseErrors"] = {}
+        er = attrs["allErrors"] = {}
+        if "commandName" not in attrs:
+            attrs["commandName"] = name.encode("ascii")
+        newtype = type.__new__(cls, name, bases, attrs)
+
+        if not isinstance(newtype.commandName, bytes):
+            raise TypeError(
+                "Command names must be byte strings, got: {!r}".format(
+                    newtype.commandName
+                )
+            )
+        for name, _ in newtype.arguments:
+            if not isinstance(name, bytes):
+                raise TypeError(f"Argument names must be byte strings, got: {name!r}")
+        for name, _ in newtype.response:
+            if not isinstance(name, bytes):
+                raise TypeError(f"Response names must be byte strings, got: {name!r}")
+
+        errors: Dict[Type[Exception], bytes] = {}
+        fatalErrors: Dict[Type[Exception], bytes] = {}
+        accumulateClassDict(newtype, "errors", errors)
+        accumulateClassDict(newtype, "fatalErrors", fatalErrors)
+
+        if not isinstance(newtype.errors, dict):
+            newtype.errors = dict(newtype.errors)
+        if not isinstance(newtype.fatalErrors, dict):
+            newtype.fatalErrors = dict(newtype.fatalErrors)
+
+        for v, k in errors.items():
+            reverseErrors[k] = v
+            er[v] = k
+        for v, k in fatalErrors.items():
+            reverseErrors[k] = v
+            er[v] = k
+
+        for _, name in newtype.errors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(f"Error names must be byte strings, got: {name!r}")
+        for _, name in newtype.fatalErrors.items():
+            if not isinstance(name, bytes):
+                raise TypeError(
+                    f"Fatal error names must be byte strings, got: {name!r}"
+                )
+
+        return newtype
+
+
+class Command(metaclass=_CommandMeta):
     """
     Subclass me to specify an AMP Command.
 
@@ -1755,74 +1782,16 @@ class Command:
     want one.
     """
 
-    class __metaclass__(type):
-        """
-        Metaclass hack to establish reverse-mappings for 'errors' and
-        'fatalErrors' as class vars.
-        """
-        def __new__(cls, name, bases, attrs):
-            reverseErrors = attrs['reverseErrors'] = {}
-            er = attrs['allErrors'] = {}
-            if 'commandName' not in attrs:
-                attrs['commandName'] = name.encode("ascii")
-            newtype = type.__new__(cls, name, bases, attrs)
+    arguments: List[Tuple[bytes, Argument]] = []
+    response: List[Tuple[bytes, Argument]] = []
+    extra: List[Any] = []
+    errors: Dict[Type[Exception], bytes] = {}
+    fatalErrors: Dict[Type[Exception], bytes] = {}
 
-            if not isinstance(newtype.commandName, bytes):
-                raise TypeError(
-                    "Command names must be byte strings, got: %r"
-                    % (newtype.commandName, ))
-            for name, _ in newtype.arguments:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Argument names must be byte strings, got: %r"
-                        % (name, ))
-            for name, _ in newtype.response:
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Response names must be byte strings, got: %r"
-                        % (name, ))
-
-            errors = {}  # type: Dict[Type[Exception], bytes]
-            fatalErrors = {}  # type: Dict[Type[Exception], bytes]
-            accumulateClassDict(newtype, 'errors', errors)
-            accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
-
-            if not isinstance(newtype.errors, dict):
-                newtype.errors = dict(newtype.errors)
-            if not isinstance(newtype.fatalErrors, dict):
-                newtype.fatalErrors = dict(newtype.fatalErrors)
-
-            for v, k in iteritems(errors):
-                reverseErrors[k] = v
-                er[v] = k
-            for v, k in iteritems(fatalErrors):
-                reverseErrors[k] = v
-                er[v] = k
-
-            for _, name in iteritems(newtype.errors):
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Error names must be byte strings, got: %r"
-                        % (name, ))
-            for _, name in iteritems(newtype.fatalErrors):
-                if not isinstance(name, bytes):
-                    raise TypeError(
-                        "Fatal error names must be byte strings, got: %r"
-                        % (name, ))
-
-            return newtype
-
-    arguments = []  # type: List[Tuple[bytes, Argument]]
-    response = []  # type: List[Tuple[bytes, Argument]]
-    extra = []  # type: List[Any]
-    errors = {}  # type: Dict[Type[Exception], bytes]
-    fatalErrors = {}  # type: Dict[Type[Exception], bytes]
-
-    commandType = Box  # type: Union[Type[Command], Type[Box]]
-    responseType = Box  # type: Type[AmpBox]
+    commandType: "Union[Type[Command], Type[Box]]" = Box
+    responseType: Type[AmpBox] = Box
 
     requiresAnswer = True
-
 
     def __init__(self, **kw):
         """
@@ -1850,10 +1819,10 @@ class Command:
             if pythonName not in self.structured and not arg.optional:
                 forgotten.append(pythonName)
         if forgotten:
-            raise InvalidSignature("forgot %s for %s" % (
-                ', '.join(forgotten), self.commandName))
+            raise InvalidSignature(
+                "forgot {} for {}".format(", ".join(forgotten), self.commandName)
+            )
         forgotten = []
-
 
     @classmethod
     def makeResponse(cls, objects, proto):
@@ -1875,7 +1844,6 @@ class Command:
             return fail()
         return _objectsToStrings(objects, cls.response, responseType, proto)
 
-
     @classmethod
     def makeArguments(cls, objects, proto):
         """
@@ -1896,11 +1864,8 @@ class Command:
 
         for intendedArg in objects:
             if intendedArg not in allowedNames:
-                raise InvalidSignature(
-                    "%s is not a valid argument" % (intendedArg,))
-        return _objectsToStrings(objects, cls.arguments, cls.commandType(),
-                                 proto)
-
+                raise InvalidSignature(f"{intendedArg} is not a valid argument")
+        return _objectsToStrings(objects, cls.arguments, cls.commandType(), proto)
 
     @classmethod
     def parseResponse(cls, box, protocol):
@@ -1917,7 +1882,6 @@ class Command:
         """
         return _stringsToObjects(box, cls.response, protocol)
 
-
     @classmethod
     def parseArguments(cls, box, protocol):
         """
@@ -1931,7 +1895,6 @@ class Command:
         @return: A mapping of argument names to the parsed forms.
         """
         return _stringsToObjects(box, cls.arguments, protocol)
-
 
     @classmethod
     def responder(cls, methodfunc):
@@ -1959,7 +1922,7 @@ class Command:
         the behavior is undefined.
 
         @param methodfunc: A function which will later become a method, which
-        has a keyword signature compatible with this command's L{argument} list
+        has a keyword signature compatible with this command's L{arguments} list
         and returns a dictionary with a set of keys compatible with this
         command's L{response} list.
 
@@ -1967,7 +1930,6 @@ class Command:
         """
         CommandLocator._currentClassCommands.append((cls, methodfunc))
         return methodfunc
-
 
     # Our only instance method
     def _doCommand(self, proto):
@@ -1984,27 +1946,20 @@ class Command:
         def _massageError(error):
             error.trap(RemoteAmpError)
             rje = error.value
-            errorType = self.reverseErrors.get(rje.errorCode,
-                                               UnknownRemoteError)
+            errorType = self.reverseErrors.get(rje.errorCode, UnknownRemoteError)
             return Failure(errorType(rje.description))
 
-        d = proto._sendBoxCommand(self.commandName,
-                                  self.makeArguments(self.structured, proto),
-                                  self.requiresAnswer)
+        d = proto._sendBoxCommand(
+            self.commandName,
+            self.makeArguments(self.structured, proto),
+            self.requiresAnswer,
+        )
 
         if self.requiresAnswer:
             d.addCallback(self.parseResponse, proto)
             d.addErrback(_massageError)
 
         return d
-
-
-
-# Python 3 ignores the __metaclass__ attribute and has instead new syntax
-# for setting the metaclass. Unfortunately it's not valid Python 2 syntax
-# so we work-around it by recreating Command using the metaclass here.
-Command = Command.__metaclass__("Command", (Command, ), {})  # type: ignore[assignment,misc]  # noqa
-
 
 
 class _NoCertificate:
@@ -2033,7 +1988,6 @@ class _NoCertificate:
         """
         self.client = client
 
-
     def options(self, *authorities):
         """
         Behaves like L{twisted.internet.ssl.PrivateCertificate.options}().
@@ -2045,7 +1999,7 @@ class _NoCertificate:
 
             # We have to do this because OpenSSL will not let both the server
             # and client be anonymous.
-            sharedDN = DN(CN='TEMPORARY CERTIFICATE')
+            sharedDN = DN(CN="TEMPORARY CERTIFICATE")
             key = KeyPair.generate()
             cr = key.certificateRequest(sharedDN)
             sscrd = key.signCertificateRequest(sharedDN, cr, lambda dn: True, 1)
@@ -2053,47 +2007,46 @@ class _NoCertificate:
             return cert.options(*authorities)
         options = dict()
         if authorities:
-            options.update(dict(verify=True,
-                                requireCertificate=True,
-                                caCerts=[auth.original for auth in authorities]))
+            options.update(
+                dict(
+                    verify=True,
+                    requireCertificate=True,
+                    caCerts=[auth.original for auth in authorities],
+                )
+            )
         occo = CertificateOptions(**options)
         return occo
-
 
 
 class _TLSBox(AmpBox):
     """
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
-    __slots__ = []  # type: List[str]
+
+    __slots__: List[str] = []
 
     def __init__(self):
         if ssl is None:
             raise RemoteAmpError(b"TLS_ERROR", "TLS not available")
         AmpBox.__init__(self)
 
-
     @property
     def certificate(self):
-        return self.get(b'tls_localCertificate', _NoCertificate(False))
-
+        return self.get(b"tls_localCertificate", _NoCertificate(False))
 
     @property
     def verify(self):
-        return self.get(b'tls_verifyAuthorities', None)
-
+        return self.get(b"tls_verifyAuthorities", None)
 
     def _sendTo(self, proto):
         """
         Send my encoded value to the protocol, then initiate TLS.
         """
         ab = AmpBox(self)
-        for k in [b'tls_localCertificate',
-                  b'tls_verifyAuthorities']:
+        for k in [b"tls_localCertificate", b"tls_verifyAuthorities"]:
             ab.pop(k, None)
         ab._sendTo(proto)
         proto._startTLS(self.certificate, self.verify)
-
 
 
 class _LocalArgument(String):
@@ -2105,7 +2058,6 @@ class _LocalArgument(String):
 
     def fromBox(self, name, strings, objects, proto):
         pass
-
 
 
 class StartTLS(Command):
@@ -2127,20 +2079,24 @@ class StartTLS(Command):
     response dictionary.
     """
 
-    arguments = [(b"tls_localCertificate", _LocalArgument(optional=True)),
-                 (b"tls_verifyAuthorities", _LocalArgument(optional=True))]
+    arguments = [
+        (b"tls_localCertificate", _LocalArgument(optional=True)),
+        (b"tls_verifyAuthorities", _LocalArgument(optional=True)),
+    ]
 
-    response = [(b"tls_localCertificate", _LocalArgument(optional=True)),
-                (b"tls_verifyAuthorities", _LocalArgument(optional=True))]
+    response = [
+        (b"tls_localCertificate", _LocalArgument(optional=True)),
+        (b"tls_verifyAuthorities", _LocalArgument(optional=True)),
+    ]
 
     responseType = _TLSBox
 
-    def __init__(self, **kw):
+    def __init__(self, *, tls_localCertificate=None, tls_verifyAuthorities=None, **kw):
         """
         Create a StartTLS command.  (This is private.  Use AMP.callRemote.)
 
         @param tls_localCertificate: the PrivateCertificate object to use to
-        secure the connection.  If it's None, or unspecified, an ephemeral DH
+        secure the connection.  If it's L{None}, or unspecified, an ephemeral DH
         key is used instead.
 
         @param tls_verifyAuthorities: a list of Certificate objects which
@@ -2148,10 +2104,13 @@ class StartTLS(Command):
         """
         if ssl is None:
             raise RuntimeError("TLS not available.")
-        self.certificate = kw.pop('tls_localCertificate', _NoCertificate(True))
-        self.authorities = kw.pop('tls_verifyAuthorities', None)
+        self.certificate = (
+            _NoCertificate(True)
+            if tls_localCertificate is None
+            else tls_localCertificate
+        )
+        self.authorities = tls_verifyAuthorities
         Command.__init__(self, **kw)
-
 
     def _doCommand(self, proto):
         """
@@ -2161,12 +2120,13 @@ class StartTLS(Command):
         d = Command._doCommand(self, proto)
         proto._prepareTLS(self.certificate, self.authorities)
         # XXX before we get back to user code we are going to start TLS...
+
         def actuallystart(response):
             proto._startTLS(self.certificate, self.authorities)
             return response
+
         d.addCallback(actuallystart)
         return d
-
 
 
 class ProtocolSwitchCommand(Command):
@@ -2191,13 +2151,11 @@ class ProtocolSwitchCommand(Command):
         """
 
         self.protoToSwitchToFactory = _protoToSwitchToFactory
-        super(ProtocolSwitchCommand, self).__init__(**kw)
-
+        super().__init__(**kw)
 
     @classmethod
     def makeResponse(cls, innerProto, proto):
         return _SwitchBox(innerProto)
-
 
     def _doCommand(self, proto):
         """
@@ -2205,24 +2163,28 @@ class ProtocolSwitchCommand(Command):
         switch to the new protocol unless an acknowledgement is received.  If
         an error is received, switch back.
         """
-        d = super(ProtocolSwitchCommand, self)._doCommand(proto)
+        d = super()._doCommand(proto)
         proto._lockForSwitch()
+
         def switchNow(ign):
             innerProto = self.protoToSwitchToFactory.buildProtocol(
-                proto.transport.getPeer())
+                proto.transport.getPeer()
+            )
             proto._switchTo(innerProto, self.protoToSwitchToFactory)
             return ign
+
         def handle(ign):
             proto._unlockFromSwitch()
             self.protoToSwitchToFactory.clientConnectionFailed(
-                None, Failure(CONNECTION_LOST))
+                None, Failure(CONNECTION_LOST)
+            )
             return ign
+
         return d.addCallbacks(switchNow, handle)
 
 
-
 @implementer(IFileDescriptorReceiver)
-class _DescriptorExchanger(object):
+class _DescriptorExchanger:
     """
     L{_DescriptorExchanger} is a mixin for L{BinaryBoxProtocol} which adds
     support for receiving file descriptors, a feature offered by
@@ -2251,7 +2213,6 @@ class _DescriptorExchanger(object):
         self._sendingDescriptorCounter = partial(next, count())
         self._receivingDescriptorCounter = partial(next, count())
 
-
     def _sendFileDescriptor(self, descriptor):
         """
         Assign and return the next ordinal to the given descriptor after sending
@@ -2259,7 +2220,6 @@ class _DescriptorExchanger(object):
         """
         self.transport.sendFileDescriptor(descriptor)
         return self._sendingDescriptorCounter()
-
 
     def fileDescriptorReceived(self, descriptor):
         """
@@ -2271,10 +2231,10 @@ class _DescriptorExchanger(object):
         self._descriptors[self._receivingDescriptorCounter()] = descriptor
 
 
-
 @implementer(IBoxSender)
-class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
-                        _DescriptorExchanger):
+class BinaryBoxProtocol(
+    StatefulStringProtocol, Int16StringReceiver, _DescriptorExchanger
+):
     """
     A protocol for receiving L{AmpBox}es - key/value pairs - via length-prefixed
     strings.  A box is composed of:
@@ -2316,14 +2276,13 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
     _keyLengthLimitExceeded = False
 
     hostCertificate = None
-    noPeerCertificate = False   # for tests
-    innerProtocol = None
+    noPeerCertificate = False  # for tests
+    innerProtocol: Optional[Protocol] = None
     innerProtocolClientFactory = None
 
     def __init__(self, boxReceiver):
         _DescriptorExchanger.__init__(self)
         self.boxReceiver = boxReceiver
-
 
     def _switchTo(self, newProto, clientFactory=None):
         """
@@ -2345,7 +2304,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         # Int16StringReceiver: let's make sure that the next iteration, the
         # loop will break and not attempt to look at something that isn't a
         # length prefix.
-        self.recvd = ''
+        self.recvd = ""
         # Finally, do the actual work of setting up the protocol and delivering
         # its first chunk of data, if one is available.
         self.innerProtocol = newProto
@@ -2353,7 +2312,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         newProto.makeConnection(self.transport)
         if newProtoData:
             newProto.dataReceived(newProtoData)
-
 
     def sendBox(self, box):
         """
@@ -2369,14 +2327,14 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         """
         if self._locked:
             raise ProtocolSwitched(
-                "This connection has switched: no AMP traffic allowed.")
+                "This connection has switched: no AMP traffic allowed."
+            )
         if self.transport is None:
             raise ConnectionLost()
         if self._startingTLSBuffer is not None:
             self._startingTLSBuffer.append(box)
         else:
             self.transport.write(box.serialize())
-
 
     def makeConnection(self, transport):
         """
@@ -2386,7 +2344,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         self.transport = transport
         self.boxReceiver.startReceivingBoxes(self)
         self.connectionMade()
-
 
     def dataReceived(self, data):
         """
@@ -2401,7 +2358,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
             self.innerProtocol.dataReceived(data)
             return
         return Int16StringReceiver.dataReceived(self, data)
-
 
     def connectionLost(self, reason):
         """
@@ -2419,11 +2375,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
             # have told us why - later Twisted should make 'reason' into a TLS
             # error.)
             failReason = PeerVerifyError(
-                "Peer rejected our certificate for an unknown reason.")
+                "Peer rejected our certificate for an unknown reason."
+            )
         else:
             failReason = reason
         self.boxReceiver.stopReceivingBoxes(failReason)
-
 
     # The longest key allowed
     _MAX_KEY_LENGTH = 255
@@ -2442,7 +2398,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         self._currentBox = AmpBox()
         return self.proto_key(string)
 
-
     def proto_key(self, string):
         """
         String received in the 'key' state.  If the key is empty, a complete
@@ -2451,12 +2406,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         if string:
             self._currentKey = string
             self.MAX_LENGTH = self._MAX_VALUE_LENGTH
-            return 'value'
+            return "value"
         else:
             self.boxReceiver.ampBoxReceived(self._currentBox)
             self._currentBox = None
-            return 'init'
-
+            return "init"
 
     def proto_value(self, string):
         """
@@ -2465,8 +2419,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         self._currentBox[self._currentKey] = string
         self._currentKey = None
         self.MAX_LENGTH = self._MAX_KEY_LENGTH
-        return 'key'
-
+        return "key"
 
     def lengthLimitExceeded(self, length):
         """
@@ -2476,7 +2429,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         self._keyLengthLimitExceeded = True
         self.transport.loseConnection()
 
-
     def _lockForSwitch(self):
         """
         Lock this binary protocol so that no further boxes may be sent.  This
@@ -2485,7 +2437,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         this directly.
         """
         self._locked = True
-
 
     def _unlockFromSwitch(self):
         """
@@ -2497,7 +2448,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
             raise ProtocolSwitched("Protocol already switched.  Cannot unlock.")
         self._locked = False
 
-
     def _prepareTLS(self, certificate, verifyAuthorities):
         """
         Used by StartTLSCommand to put us into the state where we don't
@@ -2508,11 +2458,13 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         if self.hostCertificate is not None:
             raise OnlyOneTLS(
                 "Previously authenticated connection between %s and %s "
-                "is trying to re-establish as %s" % (
+                "is trying to re-establish as %s"
+                % (
                     self.hostCertificate,
                     self.peerCertificate,
-                    (certificate, verifyAuthorities)))
-
+                    (certificate, verifyAuthorities),
+                )
+            )
 
     def _startTLS(self, certificate, verifyAuthorities):
         """
@@ -2535,13 +2487,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
             for box in stlsb:
                 self.sendBox(box)
 
-
     @property
     def peerCertificate(self):
         if self.noPeerCertificate:
             return None
         return Certificate.peerFromTransport(self.transport)
-
 
     def unhandledError(self, failure):
         """
@@ -2552,10 +2502,10 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
             failure,
             "Amp server or network failure unhandled by client application.  "
             "Dropping connection!  To avoid, add errbacks to ALL remote "
-            "commands!")
+            "commands!",
+        )
         if self.transport is not None:
             self.transport.loseConnection()
-
 
     def _defaultStartTLSResponder(self):
         """
@@ -2568,12 +2518,11 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver,
         You probably want to override this by providing your own StartTLS.responder.
         """
         return {}
+
     StartTLS.responder(_defaultStartTLSResponder)
 
 
-
-class AMP(BinaryBoxProtocol, BoxDispatcher,
-          CommandLocator, SimpleStringLocator):
+class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator):
     """
     This protocol is an AMP connection.  See the module docstring for protocol
     details.
@@ -2596,7 +2545,6 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         BoxDispatcher.__init__(self, locator)
         BinaryBoxProtocol.__init__(self, boxReceiver)
 
-
     def locateResponder(self, name):
         """
         Unify the implementations of L{CommandLocator} and
@@ -2611,19 +2559,16 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         secondResponder = SimpleStringLocator.locateResponder(self, name)
         return secondResponder
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         A verbose string representation which gives us information about this
         AMP connection.
         """
         if self.innerProtocol is not None:
-            innerRepr = ' inner %r' % (self.innerProtocol,)
+            innerRepr = f" inner {self.innerProtocol!r}"
         else:
-            innerRepr = ''
-        return '<%s%s at 0x%x>' % (
-            self.__class__.__name__, innerRepr, id(self))
-
+            innerRepr = ""
+        return "<{}{} at 0x{:x}>".format(self.__class__.__name__, innerRepr, id(self))
 
     def makeConnection(self, transport):
         """
@@ -2636,53 +2581,47 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         # Save these so we can emit a similar log message in L{connectionLost}.
         self._transportPeer = transport.getPeer()
         self._transportHost = transport.getHost()
-        log.msg("%s connection established (HOST:%s PEER:%s)" % (
-                self.__class__.__name__,
-                self._transportHost,
-                self._transportPeer))
+        log.msg(
+            "%s connection established (HOST:%s PEER:%s)"
+            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        )
         BinaryBoxProtocol.makeConnection(self, transport)
-
 
     def connectionLost(self, reason):
         """
         Emit a helpful log message when the connection is lost.
         """
-        log.msg("%s connection lost (HOST:%s PEER:%s)" %
-                (self.__class__.__name__,
-                 self._transportHost,
-                 self._transportPeer))
+        log.msg(
+            "%s connection lost (HOST:%s PEER:%s)"
+            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None
-
 
 
 class _ParserHelper:
     """
     A box receiver which records all boxes received.
     """
+
     def __init__(self):
         self.boxes = []
 
-
     def getPeer(self):
-        return 'string'
-
+        return "string"
 
     def getHost(self):
-        return 'string'
+        return "string"
 
     disconnecting = False
-
 
     def startReceivingBoxes(self, sender):
         """
         No initialization is required.
         """
 
-
     def ampBoxReceived(self, box):
         self.boxes.append(box)
-
 
     # Synchronous helpers
     @classmethod
@@ -2700,7 +2639,6 @@ class _ParserHelper:
         bbp.dataReceived(fileObj.read())
         return parserHelper.boxes
 
-
     @classmethod
     def parseString(cls, data):
         """
@@ -2713,9 +2651,9 @@ class _ParserHelper:
         return cls.parse(BytesIO(data))
 
 
-
 parse = _ParserHelper.parse
 parseString = _ParserHelper.parseString
+
 
 def _stringsToObjects(strings, arglist, proto):
     """
@@ -2736,7 +2674,6 @@ def _stringsToObjects(strings, arglist, proto):
     for argname, argparser in arglist:
         argparser.fromBox(argname, myStrings, objects, proto)
     return objects
-
 
 
 def _objectsToStrings(objects, arglist, strings, proto):
@@ -2761,7 +2698,6 @@ def _objectsToStrings(objects, arglist, strings, proto):
     for argname, argparser in arglist:
         argparser.toBox(argname, strings, myObjects, proto)
     return strings
-
 
 
 class Decimal(Argument):
@@ -2804,9 +2740,7 @@ class Decimal(Argument):
         if isinstance(inObject, decimal.Decimal):
             # Hopefully decimal.Decimal.__str__ actually does what we want.
             return str(inObject).encode("ascii")
-        raise ValueError(
-            "amp.Decimal can only encode instances of decimal.Decimal")
-
+        raise ValueError("amp.Decimal can only encode instances of decimal.Decimal")
 
 
 class DateTime(Argument):
@@ -2829,12 +2763,17 @@ class DateTime(Argument):
     """
 
     _positions = [
-        slice(0, 4), slice(5, 7), slice(8, 10), # year, month, day
-        slice(11, 13), slice(14, 16), slice(17, 19), # hour, minute, second
-        slice(20, 26), # microsecond
+        slice(0, 4),
+        slice(5, 7),
+        slice(8, 10),  # year, month, day
+        slice(11, 13),
+        slice(14, 16),
+        slice(17, 19),  # hour, minute, second
+        slice(20, 26),  # microsecond
         # intentionally skip timezone direction, as it is not an integer
-        slice(27, 29), slice(30, 32) # timezone hour, timezone minute
-        ]
+        slice(27, 29),
+        slice(30, 32),  # timezone hour, timezone minute
+    ]
 
     def fromString(self, s):
         """
@@ -2844,14 +2783,13 @@ class DateTime(Argument):
         s = nativeString(s)
 
         if len(s) != 32:
-            raise ValueError('invalid date format %r' % (s,))
+            raise ValueError(f"invalid date format {s!r}")
 
         values = [int(s[p]) for p in self._positions]
         sign = s[26]
         timezone = _FixedOffsetTZInfo.fromSignHoursMinutes(sign, *values[7:])
         values[7:] = [timezone]
         return datetime.datetime(*values)
-
 
     def toString(self, i):
         """
@@ -2861,22 +2799,23 @@ class DateTime(Argument):
         offset = i.utcoffset()
         if offset is None:
             raise ValueError(
-                'amp.DateTime cannot serialize naive datetime instances.  '
-                'You may find amp.utc useful.')
+                "amp.DateTime cannot serialize naive datetime instances.  "
+                "You may find amp.utc useful."
+            )
 
         minutesOffset = (offset.days * 86400 + offset.seconds) // 60
 
         if minutesOffset > 0:
-            sign = '+'
+            sign = "+"
         else:
-            sign = '-'
+            sign = "-"
 
         # strftime has no way to format the microseconds, or put a ':' in the
         # timezone. Surprise!
 
         # Python 3.4 cannot do % interpolation on byte strings so we pack into
         # an explicitly Unicode string then encode as ASCII.
-        packed = u'%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i' % (
+        packed = "%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i" % (
             i.year,
             i.month,
             i.day,
@@ -2886,6 +2825,7 @@ class DateTime(Argument):
             i.microsecond,
             sign,
             abs(minutesOffset) // 60,
-            abs(minutesOffset) % 60)
+            abs(minutesOffset) % 60,
+        )
 
         return packed.encode("ascii")

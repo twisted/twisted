@@ -4,12 +4,15 @@
 #
 from twisted.conch.client import direct
 
-connectTypes = {"direct" : direct.connect}
+connectTypes = {"direct": direct.connect}
+
 
 def connect(host, port, options, verifyHostKey, userAuthObject):
-    useConnects = ['direct']
-    return _ebConnect(None, useConnects, host, port, options, verifyHostKey,
-                      userAuthObject)
+    useConnects = ["direct"]
+    return _ebConnect(
+        None, useConnects, host, port, options, verifyHostKey, userAuthObject
+    )
+
 
 def _ebConnect(f, useConnects, host, port, options, vhk, uao):
     if not useConnects:

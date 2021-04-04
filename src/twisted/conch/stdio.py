@@ -16,9 +16,9 @@ from twisted.python import failure, reflect, log
 from twisted.conch.insults.insults import ServerProtocol
 from twisted.conch.manhole import ColoredManhole
 
+
 class UnexpectedOutputError(Exception):
     pass
-
 
 
 class TerminalProcessProtocol(protocol.ProcessProtocol):
@@ -26,12 +26,10 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         self.proto = proto
         self.onConnection = defer.Deferred()
 
-
     def connectionMade(self):
         self.proto.makeConnection(self)
         self.onConnection.callback(None)
         self.onConnection = None
-
 
     def write(self, data):
         """
@@ -42,7 +40,6 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         """
         self.transport.write(data)
 
-
     def outReceived(self, data):
         """
         Receive data from the terminal.
@@ -51,7 +48,6 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         @type data: L{bytes}
         """
         self.proto.dataReceived(data)
-
 
     def errReceived(self, data):
         """
@@ -65,11 +61,9 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
             self.proto.connectionLost(failure.Failure(UnexpectedOutputError(data)))
             self.proto = None
 
-
     def childConnectionLost(self, childFD):
         if self.proto is not None:
             self.proto.childConnectionLost(childFD)
-
 
     def processEnded(self, reason):
         if self.proto is not None:
@@ -77,18 +71,17 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
             self.proto = None
 
 
-
 class ConsoleManhole(ColoredManhole):
     """
     A manhole protocol specifically for use with L{stdio.StandardIO}.
     """
+
     def connectionLost(self, reason):
         """
         When the connection is lost, there is nothing more to do.  Stop the
         reactor so that the process can exit.
         """
         reactor.stop()
-
 
 
 def runWithProtocol(klass):
@@ -103,9 +96,8 @@ def runWithProtocol(klass):
         os.write(fd, b"\r\x1bc\r")
 
 
-
 def main(argv=None):
-    log.startLogging(open('child.log', 'w'))
+    log.startLogging(open("child.log", "w"))
 
     if argv is None:
         argv = sys.argv[1:]
@@ -116,5 +108,5 @@ def main(argv=None):
     runWithProtocol(klass)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

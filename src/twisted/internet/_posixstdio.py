@@ -18,14 +18,17 @@ from twisted.python import log, failure
 
 
 @implementer(interfaces.IAddress)
-class PipeAddress(object):
+class PipeAddress:
     pass
 
 
-
-@implementer(interfaces.ITransport, interfaces.IProducer,
-             interfaces.IConsumer, interfaces.IHalfCloseableDescriptor)
-class StandardIO(object):
+@implementer(
+    interfaces.ITransport,
+    interfaces.IProducer,
+    interfaces.IConsumer,
+    interfaces.IHalfCloseableDescriptor,
+)
+class StandardIO:
 
     _reader = None
     _writer = None
@@ -37,8 +40,8 @@ class StandardIO(object):
             from twisted.internet import reactor
         self.protocol = proto
 
-        self._writer = process.ProcessWriter(reactor, self, 'write', stdout)
-        self._reader = process.ProcessReader(reactor, self, 'read', stdin)
+        self._writer = process.ProcessWriter(reactor, self, "write", stdout)
+        self._reader = process.ProcessReader(reactor, self, "read", stdin)
         self._reader.startReading()
         self.protocol.makeConnection(self)
 
@@ -49,16 +52,13 @@ class StandardIO(object):
         if self._writer is not None:
             self._writer.loseConnection()
 
-
     def write(self, data):
         if self._writer is not None:
             self._writer.write(data)
 
-
     def writeSequence(self, data):
         if self._writer is not None:
             self._writer.writeSequence(data)
-
 
     def loseConnection(self):
         self.disconnecting = True
@@ -69,19 +69,15 @@ class StandardIO(object):
             # Don't loseConnection, because we don't want to SIGPIPE it.
             self._reader.stopReading()
 
-
     def getPeer(self):
         return PipeAddress()
-
 
     def getHost(self):
         return PipeAddress()
 
-
     # Callbacks from process.ProcessReader/ProcessWriter
     def childDataReceived(self, fd, data):
         self.protocol.dataReceived(data)
-
 
     def childConnectionLost(self, fd, reason):
         if self.disconnected:
@@ -89,13 +85,12 @@ class StandardIO(object):
 
         if reason.value.__class__ == error.ConnectionDone:
             # Normal close
-            if fd == 'read':
+            if fd == "read":
                 self._readConnectionLost(reason)
             else:
                 self._writeConnectionLost(reason)
         else:
             self.connectionLost(reason)
-
 
     def connectionLost(self, reason):
         self.disconnected = True
@@ -118,7 +113,6 @@ class StandardIO(object):
         except BaseException:
             log.err()
 
-
     def _writeConnectionLost(self, reason):
         self._writer = None
         if self.disconnecting:
@@ -129,10 +123,9 @@ class StandardIO(object):
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
-
 
     def _readConnectionLost(self, reason):
         self._reader = None
@@ -140,12 +133,11 @@ class StandardIO(object):
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
             self.connectionLost(reason)
-
 
     # IConsumer
     def registerProducer(self, producer, streaming):
@@ -154,41 +146,33 @@ class StandardIO(object):
         else:
             self._writer.registerProducer(producer, streaming)
 
-
     def unregisterProducer(self):
         if self._writer is not None:
             self._writer.unregisterProducer()
-
 
     # IProducer
     def stopProducing(self):
         self.loseConnection()
 
-
     def pauseProducing(self):
         if self._reader is not None:
             self._reader.pauseProducing()
-
 
     def resumeProducing(self):
         if self._reader is not None:
             self._reader.resumeProducing()
 
-
     def stopReading(self):
         """Compatibility only, don't use. Call pauseProducing."""
         self.pauseProducing()
-
 
     def startReading(self):
         """Compatibility only, don't use. Call resumeProducing."""
         self.resumeProducing()
 
-
     def readConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.readConnectionLost}
         raise NotImplementedError()
-
 
     def writeConnectionLost(self, reason):
         # L{IHalfCloseableDescriptor.writeConnectionLost}

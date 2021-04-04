@@ -2,15 +2,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
 import os
 import socket
 from struct import unpack
+import sys
+from typing import Tuple
 
 from twisted.python.sendmsg import recvmsg
 
 
-def recvfd(socketfd):
+def recvfd(socketfd: int) -> Tuple[int, bytes]:
     """
     Receive a file descriptor from a L{sendmsg} message on the given C{AF_UNIX}
     socket.
@@ -33,7 +34,7 @@ def recvfd(socketfd):
     return (unpackedFD, data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fd, description = recvfd(int(sys.argv[1]))
     os.write(fd, b"Test fixture data: " + description + b".\n")
     os.close(fd)

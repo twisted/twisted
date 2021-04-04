@@ -7,8 +7,6 @@ L{IReactorSocket}.
 """
 
 
-__metaclass__ = type
-
 import socket
 
 from zope.interface import implementer
@@ -19,12 +17,15 @@ from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
+    ILoggingContext,
+    IListeningPort,
+    IReactorUDP,
+    IReactorSocket,
+)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
 
-from twisted.internet.test.connectionmixins import (LogObserverMixin,
-                                                    findFreePort)
+from twisted.internet.test.connectionmixins import LogObserverMixin, findFreePort
 from twisted.internet import defer, error
 from twisted.test.test_udp import Server, GoodClient
 from twisted.trial.unittest import SkipTest
@@ -39,7 +40,7 @@ def _has_ipv6():
         sock = socket.socket(socket.AF_INET6)
         sock.bind(("::1", 0))
         has_ipv6 = True
-    except socket.error:
+    except OSError:
         pass
 
     if sock:
@@ -56,11 +57,11 @@ def skipWithoutIPv6(f):
     return f
 
 
-
 class DatagramTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/datagram based transport.
     """
+
     def test_startedListeningLogMessage(self):
         """
         When a port starts, a message including a description of the associated
@@ -73,12 +74,12 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         class SomeProtocol(DatagramProtocol):
             def logPrefix(self):
                 return "Crazy Protocol"
+
         protocol = SomeProtocol()
 
         p = self.getListeningPort(reactor, protocol)
         expectedMessage = "Crazy Protocol starting on %d" % (p.getHost().port,)
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
+        self.assertEqual((expectedMessage,), loggedMessages[0]["message"])
 
     def test_connectionLostLogMessage(self):
         """
@@ -88,7 +89,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         loggedMessages = self.observe()
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = "(UDP Port %s Closed)" % (p.getHost().port,)
+        expectedMessage = f"(UDP Port {p.getHost().port} Closed)"
 
         def stopReactor(ignored):
             reactor.stop()
@@ -100,8 +101,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         reactor.callWhenRunning(doStopListening)
         self.runReactor(reactor)
 
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
+        self.assertEqual((expectedMessage,), loggedMessages[0]["message"])
 
     def test_stopProtocolScheduling(self):
         """
@@ -109,6 +109,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         re-entrantly) when C{stopListening} is used to stop the datagram
         transport.
         """
+
         class DisconnectingProtocol(DatagramProtocol):
 
             started = False
@@ -137,12 +138,12 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         self.assertFalse(protocol.stoppedInStart)
 
 
-
-class UDPPortTestsMixin(object):
+class UDPPortTestsMixin:
     """
     Tests for L{IReactorUDP.listenUDP} and
     L{IReactorSocket.adoptDatagramPort}.
     """
+
     def test_interface(self):
         """
         L{IReactorUDP.listenUDP} returns an object providing L{IListeningPort}.
@@ -150,7 +151,6 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
-
 
     def test_getHost(self):
         """
@@ -161,10 +161,9 @@ class UDPPortTestsMixin(object):
         host, portNumber = findFreePort(type=socket.SOCK_DGRAM)
         reactor = self.buildReactor()
         port = self.getListeningPort(
-            reactor, DatagramProtocol(), port=portNumber, interface=host)
-        self.assertEqual(
-            port.getHost(), IPv4Address('UDP', host, portNumber))
-
+            reactor, DatagramProtocol(), port=portNumber, interface=host
+        )
+        self.assertEqual(port.getHost(), IPv4Address("UDP", host, portNumber))
 
     @skipWithoutIPv6
     def test_getHostIPv6(self):
@@ -173,12 +172,10 @@ class UDPPortTestsMixin(object):
         an IPv6 interface.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(
-            reactor, DatagramProtocol(), interface='::1')
+        port = self.getListeningPort(reactor, DatagramProtocol(), interface="::1")
         addr = port.getHost()
         self.assertEqual(addr.host, "::1")
         self.assertIsInstance(addr, IPv6Address)
-
 
     def test_invalidInterface(self):
         """
@@ -187,15 +184,19 @@ class UDPPortTestsMixin(object):
         """
         reactor = self.buildReactor()
         self.assertRaises(
-            error.InvalidAddressError, reactor.listenUDP, DatagramProtocol(),
-            0, interface='example.com')
-
+            error.InvalidAddressError,
+            reactor.listenUDP,
+            DatagramProtocol(),
+            0,
+            interface="example.com",
+        )
 
     def test_logPrefix(self):
         """
         Datagram transports implement L{ILoggingContext.logPrefix} to return a
         message reflecting the protocol they are running.
         """
+
         class CustomLogPrefixDatagramProtocol(DatagramProtocol):
             def __init__(self, prefix):
                 self._prefix = prefix
@@ -218,18 +219,19 @@ class UDPPortTestsMixin(object):
 
         def gotSystem(system):
             self.assertEqual("Custom Datagrams (UDP)", system)
+
         d.addCallback(gotSystem)
         d.addErrback(err)
         d.addCallback(lambda ignored: reactor.stop())
 
-        port.write(b"some bytes", ('127.0.0.1', address.port))
+        port.write(b"some bytes", ("127.0.0.1", address.port))
         self.runReactor(reactor)
-
 
     def test_writeSequence(self):
         """
         Write a sequence of L{bytes} to a L{DatagramProtocol}.
         """
+
         class SimpleDatagramProtocol(DatagramProtocol):
             def __init__(self):
                 self.defer = Deferred()
@@ -250,9 +252,8 @@ class UDPPortTestsMixin(object):
         defer.addCallback(gotData)
         defer.addErrback(err)
         defer.addCallback(lambda ignored: reactor.stop())
-        port.writeSequence(dataToWrite, ('127.0.0.1', address.port))
+        port.writeSequence(dataToWrite, ("127.0.0.1", address.port))
         self.runReactor(reactor)
-
 
     def test_str(self):
         """
@@ -262,7 +263,6 @@ class UDPPortTestsMixin(object):
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(str(port.getHost().port), str(port))
 
-
     def test_repr(self):
         """
         C{repr()} on the listening port object includes the port number.
@@ -270,7 +270,6 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
-
 
     @skipWithoutIPv6
     def test_writeToIPv6Interface(self):
@@ -295,8 +294,7 @@ class UDPPortTestsMixin(object):
             @returns: a deferred which fires when the server has received a
                 datagram.
             """
-            client.transport.write(
-                b"spam", ("::1", server.transport.getHost().port))
+            client.transport.write(b"spam", ("::1", server.transport.getHost().port))
             serverReceived = server.packetReceived = defer.Deferred()
             return serverReceived
 
@@ -316,8 +314,7 @@ class UDPPortTestsMixin(object):
         self.runReactor(reactor)
 
         packet = server.packets[0]
-        self.assertEqual(packet, (b'spam', (cAddr.host, cAddr.port)))
-
+        self.assertEqual(packet, (b"spam", (cAddr.host, cAddr.port)))
 
     @skipWithoutIPv6
     def test_connectedWriteToIPv6Interface(self):
@@ -366,8 +363,7 @@ class UDPPortTestsMixin(object):
         self.runReactor(reactor)
 
         packet = server.packets[0]
-        self.assertEqual(packet, (b'spam', (cAddr.host, cAddr.port)))
-
+        self.assertEqual(packet, (b"spam", (cAddr.host, cAddr.port)))
 
     def test_writingToHostnameRaisesInvalidAddressError(self):
         """
@@ -377,9 +373,8 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertRaises(
-            error.InvalidAddressError,
-            port.write, 'spam', ('example.invalid', 1))
-
+            error.InvalidAddressError, port.write, "spam", ("example.invalid", 1)
+        )
 
     @skipWithoutIPv6
     def test_writingToIPv6OnIPv4RaisesInvalidAddressError(self):
@@ -388,11 +383,8 @@ class UDPPortTestsMixin(object):
         L{InvalidAddressError}.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(
-            reactor, DatagramProtocol(), interface="127.0.0.1")
-        self.assertRaises(
-            error.InvalidAddressError, port.write, 'spam', ('::1', 1))
-
+        port = self.getListeningPort(reactor, DatagramProtocol(), interface="127.0.0.1")
+        self.assertRaises(error.InvalidAddressError, port.write, "spam", ("::1", 1))
 
     @skipWithoutIPv6
     def test_writingToIPv4OnIPv6RaisesInvalidAddressError(self):
@@ -401,11 +393,10 @@ class UDPPortTestsMixin(object):
         L{InvalidAddressError}.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(
-            reactor, DatagramProtocol(), interface="::1")
+        port = self.getListeningPort(reactor, DatagramProtocol(), interface="::1")
         self.assertRaises(
-            error.InvalidAddressError, port.write, 'spam', ('127.0.0.1', 1))
-
+            error.InvalidAddressError, port.write, "spam", ("127.0.0.1", 1)
+        )
 
     def test_connectingToHostnameRaisesInvalidAddressError(self):
         """
@@ -414,9 +405,7 @@ class UDPPortTestsMixin(object):
         """
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(
-            error.InvalidAddressError, port.connect, 'example.invalid', 1)
-
+        self.assertRaises(error.InvalidAddressError, port.connect, "example.invalid", 1)
 
     def test_allowBroadcast(self):
         """
@@ -429,17 +418,19 @@ class UDPPortTestsMixin(object):
         self.assertTrue(port.getBroadcastAllowed())
 
 
-
-class UDPServerTestsBuilder(ReactorBuilder,
-                            UDPPortTestsMixin, DatagramTransportTestsMixin):
+class UDPServerTestsBuilder(
+    ReactorBuilder, UDPPortTestsMixin, DatagramTransportTestsMixin
+):
     """
     Run L{UDPPortTestsMixin} tests using newly created UDP
     sockets.
     """
+
     requiredInterfaces = (IReactorUDP,)
 
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
+    def getListeningPort(
+        self, reactor, protocol, port=0, interface="", maxPacketSize=8192
+    ):
         """
         Get a UDP port from a reactor.
 
@@ -450,20 +441,23 @@ class UDPServerTestsBuilder(ReactorBuilder,
         @see: L{twisted.internet.IReactorUDP.listenUDP} for other
             argument and return types.
         """
-        return reactor.listenUDP(port, protocol, interface=interface,
-                                 maxPacketSize=maxPacketSize)
+        return reactor.listenUDP(
+            port, protocol, interface=interface, maxPacketSize=maxPacketSize
+        )
 
 
-
-class UDPFDServerTestsBuilder(ReactorBuilder,
-                              UDPPortTestsMixin, DatagramTransportTestsMixin):
+class UDPFDServerTestsBuilder(
+    ReactorBuilder, UDPPortTestsMixin, DatagramTransportTestsMixin
+):
     """
     Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
     """
+
     requiredInterfaces = (IReactorSocket,)
 
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
+    def getListeningPort(
+        self, reactor, protocol, port=0, interface="", maxPacketSize=8192
+    ):
         """
         Get a UDP port from a reactor, wrapping an already-initialized file
         descriptor.
@@ -485,7 +479,7 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
             argument and return types.
         """
         if IReactorSocket.providedBy(reactor):
-            if ':' in interface:
+            if ":" in interface:
                 domain = socket.AF_INET6
                 address = socket.getaddrinfo(interface, port)[0][4]
             else:
@@ -496,8 +490,8 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
             portSock.setblocking(False)
             try:
                 return reactor.adoptDatagramPort(
-                    portSock.fileno(), portSock.family, protocol,
-                    maxPacketSize)
+                    portSock.fileno(), portSock.family, protocol, maxPacketSize
+                )
             finally:
                 # The socket should still be open; fileno will raise if it is
                 # not.
@@ -507,7 +501,6 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
-
 
 
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())

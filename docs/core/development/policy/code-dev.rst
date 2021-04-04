@@ -35,16 +35,16 @@ Git tutorials can be found elsewhere, see in particular `Git and GitHub learning
 relevant data you need to check out a copy of the Twisted tree is available on
 the `development page <https://twistedmatrix.com/trac/wiki/TwistedDevelopment>`_ , and is as follows:
 
+.. code-block:: console
 
+    $ git clone https://github.com/twisted/twisted Twisted
 
-
+The output of ``git blame`` `will be better <https://github.com/psf/black#migrating-your-code-style-without-ruining-git-blame>`_ if you configure it to use our ignore file:
 
 .. code-block:: console
 
-    
-    $ git clone https://github.com/twisted/twisted Twisted
-
-
+    $ cd Twisted
+    $ git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 
 
@@ -275,11 +275,3 @@ Our support for building Debian packages has fallen into disrepair.  We
 would very much like to restore this functionality, but until we do so, if
 you are interested in this, you are on your own.  See `stdeb <https://github.com/astraw/stdeb>`_ for one possible approach to
 this.
-
-
-Travis CI integration
----------------------
-
-Travis CI is configured to run a subset of the official Buildbot builders for each push to a PR or to ``trunk``
-
-The tests are executed using ``tox-travis``. See the ``tox.ini`` file for the actual configuration.

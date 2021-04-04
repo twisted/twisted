@@ -10,7 +10,6 @@ from twisted.trial.unittest import TestCase
 from unittest import skipIf
 
 
-
 @skipIf(True, "Skip all tests when @skipIf is used on a class")
 class SkipDecoratorUsedOnClass(TestCase):
     """
@@ -21,10 +20,8 @@ class SkipDecoratorUsedOnClass(TestCase):
     def test_shouldNeverRun_1(self):
         raise Exception("Test should skip and never reach here")
 
-
     def test_shouldNeverRun_2(self):
         raise Exception("Test should skip and never reach here")
-
 
 
 @skipIf(True, "")
@@ -37,10 +34,8 @@ class SkipDecoratorUsedOnClassWithEmptyReason(TestCase):
     def test_shouldNeverRun_1(self):
         raise Exception("Test should skip and never reach here")
 
-
     def test_shouldNeverRun_2(self):
         raise Exception("Test should skip and never reach here")
-
 
 
 class SkipDecoratorUsedOnMethods(TestCase):
@@ -52,25 +47,20 @@ class SkipDecoratorUsedOnMethods(TestCase):
     def test_shouldNeverRun(self):
         raise Exception("Test should skip and never reach here")
 
-
     @skipIf(True, "")
     def test_shouldNeverRunWithEmptyReason(self):
         raise Exception("Test should skip and never reach here")
 
-
     def test_shouldShouldRun(self):
         self.assertTrue(True, "Test should run and not be skipped")
-
 
     @skipIf(False, "should not skip")
     def test_shouldShouldRunWithSkipIfFalse(self):
         self.assertTrue(True, "Test should run and not be skipped")
 
-
     @skipIf(False, "")
     def test_shouldShouldRunWithSkipIfFalseEmptyReason(self):
         self.assertTrue(True, "Test should run and not be skipped")
-
 
 
 class SkipAttributeOnClass(TestCase):
@@ -84,10 +74,8 @@ class SkipAttributeOnClass(TestCase):
     def test_one(self):
         raise Exception("Test should skip and never reach here")
 
-
     def test_two(self):
         raise Exception("Test should skip and never reach here")
-
 
 
 class SkipAttributeOnMethods(TestCase):
@@ -98,8 +86,7 @@ class SkipAttributeOnMethods(TestCase):
     def test_one(self):
         raise Exception("Should never reach here")
 
-    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]  # noqa
-
+    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
 
     def test_shouldNotSkip(self):
         self.assertTrue(True, "Test should run and not be skipped")

@@ -4,4 +4,3 @@
 """
 Tests for L{twisted.web}.
 """
-

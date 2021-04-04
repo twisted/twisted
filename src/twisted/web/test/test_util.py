@@ -9,7 +9,7 @@ Tests for L{twisted.web.util}.
 import gc
 
 from twisted.internet import defer
-from twisted.python.compat import intToBytes, networkString
+from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import resource, util
@@ -18,18 +18,23 @@ from twisted.web.http import FOUND
 from twisted.web.server import Request
 from twisted.web.template import TagLoader, flattenString, tags
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.util import (DeferredResource, FailureElement, ParentRedirect,
-                              _FrameElement, _SourceFragmentElement,
-                              _SourceLineElement, _StackElement, formatFailure,
-                              redirectTo)
-
+from twisted.web.util import (
+    DeferredResource,
+    FailureElement,
+    ParentRedirect,
+    _FrameElement,
+    _SourceFragmentElement,
+    _SourceLineElement,
+    _StackElement,
+    formatFailure,
+    redirectTo,
+)
 
 
 class RedirectToTests(TestCase):
     """
     Tests for L{redirectTo}.
     """
-
 
     def test_headersAndCode(self):
         """
@@ -38,32 +43,33 @@ class RedirectToTests(TestCase):
         be redirected.
         """
         request = Request(DummyChannel(), True)
-        request.method = b'GET'
+        request.method = b"GET"
         targetURL = b"http://target.example.com/4321"
         redirectTo(targetURL, request)
         self.assertEqual(request.code, FOUND)
         self.assertEqual(
-            request.responseHeaders.getRawHeaders(b'location'), [targetURL])
+            request.responseHeaders.getRawHeaders(b"location"), [targetURL]
+        )
         self.assertEqual(
-            request.responseHeaders.getRawHeaders(b'content-type'),
-            [b'text/html; charset=utf-8'])
+            request.responseHeaders.getRawHeaders(b"content-type"),
+            [b"text/html; charset=utf-8"],
+        )
 
-
-    def test_redirectToUnicodeURL(self) :
+    def test_redirectToUnicodeURL(self):
         """
         L{redirectTo} will raise TypeError if unicode object is passed in URL
         """
         request = Request(DummyChannel(), True)
-        request.method = b'GET'
-        targetURL = u'http://target.example.com/4321'
+        request.method = b"GET"
+        targetURL = "http://target.example.com/4321"
         self.assertRaises(TypeError, redirectTo, targetURL, request)
-
 
 
 class ParentRedirectTests(SynchronousTestCase):
     """
     Test L{ParentRedirect}.
     """
+
     def doLocationTest(self, requestPath: bytes):
         """
         Render a response to a request with path *requestPath*
@@ -73,48 +79,43 @@ class ParentRedirectTests(SynchronousTestCase):
         @returns: The value of the I{Location} header.
         """
         request = Request(DummyChannel(), True)
-        request.method = b'GET'
-        request.prepath = requestPath.lstrip(b'/').split(b'/')
+        request.method = b"GET"
+        request.prepath = requestPath.lstrip(b"/").split(b"/")
 
         resource = ParentRedirect()
         resource.render(request)
 
-        [location] = request.responseHeaders.getRawHeaders(b'Location')
+        [location] = request.responseHeaders.getRawHeaders(b"Location")
         return location
-
 
     def test_locationRoot(self):
         """
         At the URL root issue a redirect to the current URL, removing any query
         string.
         """
-        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/'))
-        self.assertEqual(b'http://10.0.0.1/',
-                         self.doLocationTest(b'/?biff=baff'))
-
+        self.assertEqual(b"http://10.0.0.1/", self.doLocationTest(b"/"))
+        self.assertEqual(b"http://10.0.0.1/", self.doLocationTest(b"/?biff=baff"))
 
     def test_locationToRoot(self):
         """
         A request for a resource one level down from the URL root produces
         a redirect to the root.
         """
-        self.assertEqual(b'http://10.0.0.1/', self.doLocationTest(b'/foo'))
-        self.assertEqual(b'http://10.0.0.1/',
-                         self.doLocationTest(b'/foo?bar=sproiiing'))
-
+        self.assertEqual(b"http://10.0.0.1/", self.doLocationTest(b"/foo"))
+        self.assertEqual(
+            b"http://10.0.0.1/", self.doLocationTest(b"/foo?bar=sproiiing")
+        )
 
     def test_locationUpOne(self):
         """
         Requests for resources directly under the path C{/foo/} produce
         redirects to C{/foo/}.
         """
-        self.assertEqual(b'http://10.0.0.1/foo/',
-                         self.doLocationTest(b'/foo/'))
-        self.assertEqual(b'http://10.0.0.1/foo/',
-                         self.doLocationTest(b'/foo/bar'))
-        self.assertEqual(b'http://10.0.0.1/foo/',
-                         self.doLocationTest(b'/foo/bar?biz=baz'))
-
+        self.assertEqual(b"http://10.0.0.1/foo/", self.doLocationTest(b"/foo/"))
+        self.assertEqual(b"http://10.0.0.1/foo/", self.doLocationTest(b"/foo/bar"))
+        self.assertEqual(
+            b"http://10.0.0.1/foo/", self.doLocationTest(b"/foo/bar?biz=baz")
+        )
 
 
 class FailureElementTests(TestCase):
@@ -122,40 +123,43 @@ class FailureElementTests(TestCase):
     Tests for L{FailureElement} and related helpers which can render a
     L{Failure} as an HTML string.
     """
+
     def setUp(self):
         """
         Create a L{Failure} which can be used by the rendering tests.
         """
+
         def lineNumberProbeAlsoBroken():
             message = "This is a problem"
             raise Exception(message)
+
         # Figure out the line number from which the exception will be raised.
         self.base = lineNumberProbeAlsoBroken.__code__.co_firstlineno + 1
 
         try:
             lineNumberProbeAlsoBroken()
-        except:
+        except BaseException:
             self.failure = Failure(captureVars=True)
             self.frame = self.failure.frames[-1]
-
 
     def test_sourceLineElement(self):
         """
         L{_SourceLineElement} renders a source line and line number.
         """
         element = _SourceLineElement(
-            TagLoader(tags.div(
-                    tags.span(render="lineNumber"),
-                    tags.span(render="sourceLine"))),
-            50, "    print 'hello'")
+            TagLoader(
+                tags.div(tags.span(render="lineNumber"), tags.span(render="sourceLine"))
+            ),
+            50,
+            "    print 'hello'",
+        )
         d = flattenString(None, element)
         expected = (
-            u"<div><span>50</span><span>"
-            u" \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}print 'hello'</span></div>")
-        d.addCallback(
-            self.assertEqual, expected.encode('utf-8'))
+            "<div><span>50</span><span>"
+            " \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}print 'hello'</span></div>"
+        )
+        d.addCallback(self.assertEqual, expected.encode("utf-8"))
         return d
-
 
     def test_sourceFragmentElement(self):
         """
@@ -163,33 +167,41 @@ class FailureElementTests(TestCase):
         number indicated by a frame object.
         """
         element = _SourceFragmentElement(
-            TagLoader(tags.div(
+            TagLoader(
+                tags.div(
                     tags.span(render="lineNumber"),
                     tags.span(render="sourceLine"),
-                    render="sourceLines")),
-            self.frame)
+                    render="sourceLines",
+                )
+            ),
+            self.frame,
+        )
 
         source = [
-            u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = '
-            u'"This is a problem"',
-
-            u' \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}raise Exception(message)',
-            u'# Figure out the line number from which the exception will be '
-            u'raised.',
+            " \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}message = " '"This is a problem"',
+            " \N{NO-BREAK SPACE} \N{NO-BREAK SPACE}raise Exception(message)",
+            "",
         ]
         d = flattenString(None, element)
-        stringToCheckFor = ''.join([
-            '<div class="snippet%sLine"><span>%d</span><span>%s</span>'
-            '</div>' % (
-                ["", "Highlight"][lineNumber == 1],
-                self.base + lineNumber,
-                (u" \N{NO-BREAK SPACE}" * 4 + sourceLine))
-            for (lineNumber, sourceLine)
-            in enumerate(source)]).encode("utf8")
 
-        d.addCallback(self.assertEqual, stringToCheckFor)
+        stringToCheckFor = ""
+        for (lineNumber, sourceLine) in enumerate(source):
+            template = '<div class="snippet{}Line"><span>{}</span><span>{}</span></div>'
+            if lineNumber <= 1:
+                stringToCheckFor += template.format(
+                    ["", "Highlight"][lineNumber == 1],
+                    self.base + lineNumber,
+                    (" \N{NO-BREAK SPACE}" * 4 + sourceLine),
+                )
+            else:
+                stringToCheckFor += template.format(
+                    "", self.base + lineNumber, ("" + sourceLine)
+                )
+
+        bytesToCheckFor = stringToCheckFor.encode("utf8")
+
+        d.addCallback(self.assertEqual, bytesToCheckFor)
         return d
-
 
     def test_frameElementFilename(self):
         """
@@ -197,17 +209,15 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="filename")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="filename")), self.frame)
         d = flattenString(None, element)
         d.addCallback(
             # __file__ differs depending on whether an up-to-date .pyc file
             # already existed.
             self.assertEqual,
-            b"<span>" + networkString(__file__.rstrip('c')) + b"</span>")
+            b"<span>" + networkString(__file__.rstrip("c")) + b"</span>",
+        )
         return d
-
 
     def test_frameElementLineNumber(self):
         """
@@ -215,14 +225,10 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="lineNumber")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="lineNumber")), self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>" + intToBytes(self.base + 1) + b"</span>")
+        d.addCallback(self.assertEqual, b"<span>%d</span>" % (self.base + 1,))
         return d
-
 
     def test_frameElementFunction(self):
         """
@@ -230,14 +236,10 @@ class FailureElementTests(TestCase):
         associated with the frame object used to initialize the
         L{_FrameElement}.
         """
-        element = _FrameElement(
-            TagLoader(tags.span(render="function")),
-            self.frame)
+        element = _FrameElement(TagLoader(tags.span(render="function")), self.frame)
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b"<span>lineNumberProbeAlsoBroken</span>")
+        d.addCallback(self.assertEqual, b"<span>lineNumberProbeAlsoBroken</span>")
         return d
-
 
     def test_frameElementSource(self):
         """
@@ -252,7 +254,6 @@ class FailureElementTests(TestCase):
         self.assertIsInstance(result, _SourceFragmentElement)
         self.assertIdentical(result.frame, self.frame)
         self.assertEqual([tag], result.loader.load())
-
 
     def test_stackElement(self):
         """
@@ -272,7 +273,6 @@ class FailureElementTests(TestCase):
         self.assertNotEqual(result[0].loader.load(), result[1].loader.load())
         self.assertEqual(2, len(result))
 
-
     def test_failureElementTraceback(self):
         """
         The I{traceback} renderer of L{FailureElement} renders the failure's
@@ -286,33 +286,26 @@ class FailureElementTests(TestCase):
         self.assertIdentical(result.stackFrames, self.failure.frames)
         self.assertEqual([tag], result.loader.load())
 
-
     def test_failureElementType(self):
         """
         The I{type} renderer of L{FailureElement} renders the failure's
         exception type.
         """
-        element = FailureElement(
-            self.failure, TagLoader(tags.span(render="type")))
+        element = FailureElement(self.failure, TagLoader(tags.span(render="type")))
         d = flattenString(None, element)
         exc = b"builtins.Exception"
-        d.addCallback(
-            self.assertEqual, b"<span>" + exc + b"</span>")
+        d.addCallback(self.assertEqual, b"<span>" + exc + b"</span>")
         return d
-
 
     def test_failureElementValue(self):
         """
         The I{value} renderer of L{FailureElement} renders the value's exception
         value.
         """
-        element = FailureElement(
-            self.failure, TagLoader(tags.span(render="value")))
+        element = FailureElement(self.failure, TagLoader(tags.span(render="value")))
         d = flattenString(None, element)
-        d.addCallback(
-            self.assertEqual, b'<span>This is a problem</span>')
+        d.addCallback(self.assertEqual, b"<span>This is a problem</span>")
         return d
-
 
 
 class FormatFailureTests(TestCase):
@@ -320,13 +313,13 @@ class FormatFailureTests(TestCase):
     Tests for L{twisted.web.util.formatFailure} which returns an HTML string
     representing the L{Failure} instance passed to it.
     """
+
     def test_flattenerError(self):
         """
         If there is an error flattening the L{Failure} instance,
         L{formatFailure} raises L{FlattenerError}.
         """
         self.assertRaises(FlattenerError, formatFailure, object())
-
 
     def test_returnsBytes(self):
         """
@@ -336,7 +329,7 @@ class FormatFailureTests(TestCase):
         """
         try:
             raise Exception("Fake bug")
-        except:
+        except BaseException:
             result = formatFailure(Failure())
 
         self.assertIsInstance(result, bytes)
@@ -345,17 +338,14 @@ class FormatFailureTests(TestCase):
         self.assertIn(b"&#160;", result)
 
 
-
 class SDResource(resource.Resource):
-    def __init__(self,default):
+    def __init__(self, default):
         self.default = default
-
 
     def getChildWithDefault(self, name, request):
         d = defer.succeed(self.default)
         resource = util.DeferredResource(d)
         return resource.getChildWithDefault(name, request)
-
 
 
 class DeferredResourceTests(SynchronousTestCase):
@@ -367,10 +357,9 @@ class DeferredResourceTests(SynchronousTestCase):
         r = resource.Resource()
         r.isLeaf = 1
         s = SDResource(r)
-        d = DummyRequest(['foo', 'bar', 'baz'])
+        d = DummyRequest(["foo", "bar", "baz"])
         resource.getChildForRequest(s, d)
-        self.assertEqual(d.postpath, ['bar', 'baz'])
-
+        self.assertEqual(d.postpath, ["bar", "baz"])
 
     def test_render(self):
         """
@@ -386,7 +375,6 @@ class DeferredResourceTests(SynchronousTestCase):
         deferredResource = DeferredResource(defer.succeed(result))
         deferredResource.render(request)
         self.assertEqual(rendered, [result])
-
 
     def test_renderNoFailure(self):
         """

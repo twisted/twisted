@@ -1,1 +1,0 @@
-Fixed unexpected exception by handling subclass of TaskFinished when FileBodyProducer's task stopped twice.

@@ -19,7 +19,7 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 
-class _BypassTLS(object):
+class _BypassTLS:
     """
     L{_BypassTLS} is used as the transport object for the TLS protocol object
     used to implement C{startTLS}.  Its methods skip any TLS logic which
@@ -35,10 +35,10 @@ class _BypassTLS(object):
         implementation.  This allows the TLS protocol object to have direct
         access to the transport, necessary to actually implement TLS.
     """
+
     def __init__(self, base, connection):
         self._base = base
         self._connection = connection
-
 
     def __getattr__(self, name):
         """
@@ -48,13 +48,11 @@ class _BypassTLS(object):
         """
         return getattr(self._connection, name)
 
-
     def write(self, data):
         """
         Write some bytes directly to the connection.
         """
         return self._base.write(self._connection, data)
-
 
     def writeSequence(self, iovec):
         """
@@ -62,13 +60,11 @@ class _BypassTLS(object):
         """
         return self._base.writeSequence(self._connection, iovec)
 
-
     def loseConnection(self, *args, **kwargs):
         """
         Close the underlying connection.
         """
         return self._base.loseConnection(self._connection, *args, **kwargs)
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -76,13 +72,11 @@ class _BypassTLS(object):
         """
         return self._base.registerProducer(self._connection, producer, streaming)
 
-
     def unregisterProducer(self):
         """
         Unregister a producer with the underlying connection.
         """
         return self._base.unregisterProducer(self._connection)
-
 
 
 def startTLS(transport, contextFactory, normal, bypass):
@@ -112,7 +106,7 @@ def startTLS(transport, contextFactory, normal, bypass):
         as the underlying transport goes.  That is, if the SSL client will be
         the underlying client and the SSL server will be the underlying server.
         C{True} means it is the same, C{False} means they are switched.
-    @type param: L{bool}
+    @type normal: L{bool}
 
     @param bypass: A transport base class to call methods on to bypass the new
         SSL layer (so that the SSL layer itself can send its bytes).
@@ -156,8 +150,7 @@ def startTLS(transport, contextFactory, normal, bypass):
         transport.registerProducer(producer, streaming)
 
 
-
-class ConnectionMixin(object):
+class ConnectionMixin:
     """
     A mixin for L{twisted.internet.abstract.FileDescriptor} which adds an
     L{ITLSTransport} implementation.
@@ -175,7 +168,6 @@ class ConnectionMixin(object):
         """
         startTLS(self, ctx, normal, FileDescriptor)
 
-
     def write(self, bytes):
         """
         Write some bytes to this connection, passing them through a TLS layer if
@@ -186,7 +178,6 @@ class ConnectionMixin(object):
                 self.protocol.write(bytes)
         else:
             FileDescriptor.write(self, bytes)
-
 
     def writeSequence(self, iovec):
         """
@@ -200,7 +191,6 @@ class ConnectionMixin(object):
         else:
             FileDescriptor.writeSequence(self, iovec)
 
-
     def loseConnection(self):
         """
         Close this connection after writing all pending data.
@@ -212,7 +202,6 @@ class ConnectionMixin(object):
                 self.protocol.loseConnection()
         else:
             FileDescriptor.loseConnection(self)
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -229,7 +218,6 @@ class ConnectionMixin(object):
         else:
             FileDescriptor.registerProducer(self, producer, streaming)
 
-
     def unregisterProducer(self):
         """
         Unregister a producer.
@@ -242,8 +230,7 @@ class ConnectionMixin(object):
             FileDescriptor.unregisterProducer(self)
 
 
-
-class ClientMixin(object):
+class ClientMixin:
     """
     A mixin for L{twisted.internet.tcp.Client} which just marks it as a client
     for the purposes of the default TLS handshake.
@@ -252,11 +239,11 @@ class ClientMixin(object):
         connection, and by default when TLS is negotiated this class will act as
         a TLS client.
     """
+
     _tlsClientDefault = True
 
 
-
-class ServerMixin(object):
+class ServerMixin:
     """
     A mixin for L{twisted.internet.tcp.Server} which just marks it as a server
     for the purposes of the default TLS handshake.
@@ -265,4 +252,5 @@ class ServerMixin(object):
         connection, and by default when TLS is negotiated this class will act as
         a TLS server.
     """
+
     _tlsClientDefault = False

@@ -1,4 +1,3 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,6 +9,7 @@ A simple port forwarder.
 from twisted.internet import protocol
 from twisted.python import log
 
+
 class Proxy(protocol.Protocol):
     noisy = True
 
@@ -18,18 +18,15 @@ class Proxy(protocol.Protocol):
     def setPeer(self, peer):
         self.peer = peer
 
-
     def connectionLost(self, reason):
         if self.peer is not None:
             self.peer.transport.loseConnection()
             self.peer = None
         elif self.noisy:
-            log.msg("Unable to connect to peer: %s" % (reason,))
-
+            log.msg(f"Unable to connect to peer: {reason}")
 
     def dataReceived(self, data):
         self.peer.transport.write(data)
-
 
 
 class ProxyClient(Proxy):
@@ -47,7 +44,6 @@ class ProxyClient(Proxy):
         self.peer.transport.resumeProducing()
 
 
-
 class ProxyClientFactory(protocol.ClientFactory):
 
     protocol = ProxyClient
@@ -55,16 +51,13 @@ class ProxyClientFactory(protocol.ClientFactory):
     def setServer(self, server):
         self.server = server
 
-
     def buildProtocol(self, *args, **kw):
         prot = protocol.ClientFactory.buildProtocol(self, *args, **kw)
         prot.setPeer(self.server)
         return prot
 
-
     def clientConnectionFailed(self, connector, reason):
         self.server.transport.loseConnection()
-
 
 
 class ProxyServer(Proxy):
@@ -82,9 +75,9 @@ class ProxyServer(Proxy):
 
         if self.reactor is None:
             from twisted.internet import reactor
+
             self.reactor = reactor
         self.reactor.connectTCP(self.factory.host, self.factory.port, client)
-
 
 
 class ProxyFactory(protocol.Factory):

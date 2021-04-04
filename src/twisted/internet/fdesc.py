@@ -9,6 +9,7 @@ Utility functions for dealing with POSIX file descriptors.
 
 import os
 import errno
+
 try:
     import fcntl as _fcntl
 except ImportError:
@@ -43,6 +44,7 @@ if fcntl is None:
     # inherited on Windows, so we can do nothing here.
     _setCloseOnExec = _unsetCloseOnExec = lambda fd: None
 else:
+
     def _setCloseOnExec(fd):
         """
         Make a file descriptor close-on-exec.
@@ -50,7 +52,6 @@ else:
         flags = fcntl.fcntl(fd, fcntl.F_GETFD)
         flags = flags | fcntl.FD_CLOEXEC
         fcntl.fcntl(fd, fcntl.F_SETFD, flags)
-
 
     def _unsetCloseOnExec(fd):
         """
@@ -86,7 +87,7 @@ def readFromFD(fd, callback):
     """
     try:
         output = os.read(fd, 8192)
-    except (OSError, IOError) as ioe:
+    except OSError as ioe:
         if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
             return
         else:
@@ -111,7 +112,7 @@ def writeToFD(fd, data):
     """
     try:
         return os.write(fd, data)
-    except (OSError, IOError) as io:
+    except OSError as io:
         if io.errno in (errno.EAGAIN, errno.EINTR):
             return 0
         return CONNECTION_LOST

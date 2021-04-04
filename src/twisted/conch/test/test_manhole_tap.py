@@ -20,13 +20,11 @@ from twisted.trial.unittest import TestCase
 from twisted.python.reflect import requireModule
 
 
-
-cryptography = requireModule('cryptography')
-pyasn1 = requireModule('pyasn1')
+cryptography = requireModule("cryptography")
+pyasn1 = requireModule("pyasn1")
 
 if cryptography and pyasn1:
     from twisted.conch import manhole_tap, manhole_ssh
-
 
 
 class MakeServiceTests(TestCase):
@@ -40,17 +38,16 @@ class MakeServiceTests(TestCase):
     if not pyasn1:
         skip = "Cannot run without PyASN1"
 
-    usernamePassword = (b'iamuser', b'thisispassword')
+    usernamePassword = (b"iamuser", b"thisispassword")
 
     def setUp(self):
         """
         Create a passwd-like file with a user.
         """
         self.filename = self.mktemp()
-        with open(self.filename, 'wb') as f:
-            f.write(b':'.join(self.usernamePassword))
+        with open(self.filename, "wb") as f:
+            f.write(b":".join(self.usernamePassword))
         self.options = manhole_tap.Options()
-
 
     def test_requiresPort(self):
         """
@@ -60,9 +57,10 @@ class MakeServiceTests(TestCase):
         with self.assertRaises(usage.UsageError) as e:
             manhole_tap.Options().parseOptions([])
 
-        self.assertEqual(e.exception.args[0], ("At least one of --telnetPort "
-                         "and --sshPort must be specified"))
-
+        self.assertEqual(
+            e.exception.args[0],
+            ("At least one of --telnetPort " "and --sshPort must be specified"),
+        )
 
     def test_telnetPort(self):
         """
@@ -74,10 +72,10 @@ class MakeServiceTests(TestCase):
         self.assertIsInstance(service, MultiService)
         self.assertEqual(len(service.services), 1)
         self.assertIsInstance(service.services[0], StreamServerEndpointService)
-        self.assertIsInstance(service.services[0].factory.protocol,
-                              manhole_tap.makeTelnetProtocol)
+        self.assertIsInstance(
+            service.services[0].factory.protocol, manhole_tap.makeTelnetProtocol
+        )
         self.assertEqual(service.services[0].endpoint._port, 222)
-
 
     def test_sshPort(self):
         """
@@ -87,34 +85,48 @@ class MakeServiceTests(TestCase):
         # Why the sshKeyDir and sshKeySize params? To prevent it stomping over
         # (or using!) the user's private key, we just make a super small one
         # which will never be used in a temp directory.
-        self.options.parseOptions(["--sshKeyDir", self.mktemp(),
-                                   "--sshKeySize", "512",
-                                   "--sshPort", "tcp:223"])
+        self.options.parseOptions(
+            [
+                "--sshKeyDir",
+                self.mktemp(),
+                "--sshKeySize",
+                "512",
+                "--sshPort",
+                "tcp:223",
+            ]
+        )
         service = manhole_tap.makeService(self.options)
         self.assertIsInstance(service, MultiService)
         self.assertEqual(len(service.services), 1)
         self.assertIsInstance(service.services[0], StreamServerEndpointService)
-        self.assertIsInstance(service.services[0].factory,
-                              manhole_ssh.ConchFactory)
+        self.assertIsInstance(service.services[0].factory, manhole_ssh.ConchFactory)
         self.assertEqual(service.services[0].endpoint._port, 223)
-
 
     def test_passwd(self):
         """
         The C{--passwd} command-line option will load a passwd-like file.
         """
-        self.options.parseOptions(['--telnetPort', 'tcp:22',
-                                   '--passwd', self.filename])
+        self.options.parseOptions(["--telnetPort", "tcp:22", "--passwd", self.filename])
         service = manhole_tap.makeService(self.options)
         portal = service.services[0].factory.protocol.portal
 
         self.assertEqual(len(portal.checkers.keys()), 2)
 
         # Ensure it's the passwd file we wanted by trying to authenticate
-        self.assertTrue(self.successResultOf(
-            portal.login(UsernamePassword(*self.usernamePassword),
-                         None, telnet.ITelnetProtocol)))
-        self.assertIsInstance(self.failureResultOf(
-            portal.login(UsernamePassword(b"wrong", b"user"),
-                         None, telnet.ITelnetProtocol)).value,
-                         error.UnauthorizedLogin)
+        self.assertTrue(
+            self.successResultOf(
+                portal.login(
+                    UsernamePassword(*self.usernamePassword),
+                    None,
+                    telnet.ITelnetProtocol,
+                )
+            )
+        )
+        self.assertIsInstance(
+            self.failureResultOf(
+                portal.login(
+                    UsernamePassword(b"wrong", b"user"), None, telnet.ITelnetProtocol
+                )
+            ).value,
+            error.UnauthorizedLogin,
+        )

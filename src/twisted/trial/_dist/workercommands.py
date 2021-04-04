@@ -12,19 +12,19 @@ from twisted.protocols.amp import Command, Boolean, Unicode
 NativeString = Unicode
 
 
-
 class Run(Command):
     """
     Run a test.
     """
-    arguments = [(b'testCase', NativeString())]
-    response = [(b'success', Boolean())]
 
+    arguments = [(b"testCase", NativeString())]
+    response = [(b"success", Boolean())]
 
 
 class Start(Command):
     """
     Set up the worker process, giving the running directory.
     """
-    arguments = [(b'directory', NativeString())]
-    response = [(b'success', Boolean())]
+
+    arguments = [(b"directory", NativeString())]
+    response = [(b"success", Boolean())]

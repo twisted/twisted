@@ -12,7 +12,6 @@ from hashlib import sha1, sha256, sha384, sha512
 from zope.interface import Attribute, implementer, Interface
 
 from twisted.conch import error
-from twisted.python.compat import long
 
 
 class _IKexAlgorithm(Interface):
@@ -23,12 +22,13 @@ class _IKexAlgorithm(Interface):
     preference = Attribute(
         "An L{int} giving the preference of the algorithm when negotiating "
         "key exchange. Algorithms with lower precedence values are more "
-        "preferred.")
+        "preferred."
+    )
 
     hashProcessor = Attribute(
         "A callable hash algorithm constructor (e.g. C{hashlib.sha256}) "
-        "suitable for use with this key exchange algorithm.")
-
+        "suitable for use with this key exchange algorithm."
+    )
 
 
 class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
@@ -38,14 +38,15 @@ class _IFixedGroupKexAlgorithm(_IKexAlgorithm):
     """
 
     prime = Attribute(
-        "A L{long} giving the prime number used in Diffie-Hellman key "
-        "exchange, or L{None} if not applicable.")
+        "An L{int} giving the prime number used in Diffie-Hellman key "
+        "exchange, or L{None} if not applicable."
+    )
 
     generator = Attribute(
-        "A L{long} giving the generator number used in Diffie-Hellman key "
+        "An L{int} giving the generator number used in Diffie-Hellman key "
         "exchange, or L{None} if not applicable. (This is not related to "
-        "Python generator functions.)")
-
+        "Python generator functions.)"
+    )
 
 
 class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
@@ -53,7 +54,6 @@ class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
     An L{_IEllipticCurveExchangeKexAlgorithm} describes a key exchange algorithm
     that uses an elliptic curve exchange between the client and server.
     """
-
 
 
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
@@ -66,63 +66,62 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
 
 
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _Curve25519SHA256(object):
+class _Curve25519SHA256:
     """
     Elliptic Curve Key Exchange using Curve25519 and SHA256. Defined in
     U{https://datatracker.ietf.org/doc/draft-ietf-curdle-ssh-curves/}.
     """
+
     preference = 1
     hashProcessor = sha256
 
 
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _Curve25519SHA256LibSSH(object):
+class _Curve25519SHA256LibSSH:
     """
     As L{_Curve25519SHA256}, but with a pre-standardized algorithm name.
     """
+
     preference = 2
     hashProcessor = sha256
 
 
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH256(object):
+class _ECDH256:
     """
     Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
     """
+
     preference = 3
     hashProcessor = sha256
 
 
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH384(object):
+class _ECDH384:
     """
     Elliptic Curve Key Exchange with SHA-384 as HASH. Defined in
     RFC 5656.
     """
+
     preference = 4
     hashProcessor = sha384
 
 
-
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
-class _ECDH512(object):
+class _ECDH512:
     """
     Elliptic Curve Key Exchange with SHA-512 as HASH. Defined in
     RFC 5656.
     """
+
     preference = 5
     hashProcessor = sha512
 
 
-
 @implementer(_IGroupExchangeKexAlgorithm)
-class _DHGroupExchangeSHA256(object):
+class _DHGroupExchangeSHA256:
     """
     Diffie-Hellman Group and Key Exchange with SHA-256 as HASH. Defined in
     RFC 4419, 4.2.
@@ -132,9 +131,8 @@ class _DHGroupExchangeSHA256(object):
     hashProcessor = sha256
 
 
-
 @implementer(_IGroupExchangeKexAlgorithm)
-class _DHGroupExchangeSHA1(object):
+class _DHGroupExchangeSHA1:
     """
     Diffie-Hellman Group and Key Exchange with SHA-1 as HASH. Defined in
     RFC 4419, 4.1.
@@ -144,9 +142,8 @@ class _DHGroupExchangeSHA1(object):
     hashProcessor = sha1
 
 
-
 @implementer(_IFixedGroupKexAlgorithm)
-class _DHGroup14SHA1(object):
+class _DHGroup14SHA1:
     """
     Diffie-Hellman key exchange with SHA-1 as HASH and Oakley Group 14
     (2048-bit MODP Group). Defined in RFC 4253, 8.2.
@@ -155,18 +152,20 @@ class _DHGroup14SHA1(object):
     preference = 8
     hashProcessor = sha1
     # Diffie-Hellman primes from Oakley Group 14 (RFC 3526, 3).
-    prime = long('32317006071311007300338913926423828248817941241140239112842'
-        '00975140074170663435422261968941736356934711790173790970419175460587'
-        '32091950288537589861856221532121754125149017745202702357960782362488'
-        '84246189477587641105928646099411723245426622522193230540919037680524'
-        '23551912567971587011700105805587765103886184728025797605490356973256'
-        '15261670813393617995413364765591603683178967290731783845896806396719'
-        '00977202194168647225871031411336429319536193471636533209717077448227'
-        '98858856536920864529663607725026895550592836275112117409697299806841'
-        '05543595848665832916421362182310789909994486524682624169720359118525'
-        '07045361090559')
+    prime = int(
+        "323170060713110073003389139264238282488179412411402391128420"
+        "097514007417066343542226196894173635693471179017379097041917"
+        "546058732091950288537589861856221532121754125149017745202702"
+        "357960782362488842461894775876411059286460994117232454266225"
+        "221932305409190376805242355191256797158701170010580558776510"
+        "388618472802579760549035697325615261670813393617995413364765"
+        "591603683178967290731783845896806396719009772021941686472258"
+        "710314113364293195361934716365332097170774482279885885653692"
+        "086452966360772502689555059283627511211740969729980684105543"
+        "595848665832916421362182310789909994486524682624169720359118"
+        "52507045361090559"
+    )
     generator = 2
-
 
 
 # Which ECDH hash function to use is dependent on the size.
@@ -179,8 +178,7 @@ _kexAlgorithms = {
     b"ecdh-sha2-nistp256": _ECDH256(),
     b"ecdh-sha2-nistp384": _ECDH384(),
     b"ecdh-sha2-nistp521": _ECDH512(),
-    }
-
+}
 
 
 def getKex(kexAlgorithm):
@@ -197,10 +195,8 @@ def getKex(kexAlgorithm):
     @raises ConchError: if the key exchange algorithm is not found.
     """
     if kexAlgorithm not in _kexAlgorithms:
-        raise error.ConchError(
-            "Unsupported key exchange algorithm: %s" % (kexAlgorithm,))
+        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm}")
     return _kexAlgorithms[kexAlgorithm]
-
 
 
 def isEllipticCurve(kexAlgorithm):
@@ -217,7 +213,6 @@ def isEllipticCurve(kexAlgorithm):
     return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-
 def isFixedGroup(kexAlgorithm):
     """
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
@@ -230,7 +225,6 @@ def isFixedGroup(kexAlgorithm):
     @rtype: L{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
-
 
 
 def getHashProcessor(kexAlgorithm):
@@ -247,7 +241,6 @@ def getHashProcessor(kexAlgorithm):
     return kex.hashProcessor
 
 
-
 def getDHGeneratorAndPrime(kexAlgorithm):
     """
     Get the generator and the prime to use in key exchange.
@@ -255,12 +248,11 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     @param kexAlgorithm: The key exchange algorithm name.
     @type kexAlgorithm: L{bytes}
 
-    @return: A L{tuple} containing L{long} generator and L{long} prime.
+    @return: A L{tuple} containing L{int} generator and L{int} prime.
     @rtype: L{tuple}
     """
     kex = getKex(kexAlgorithm)
     return kex.generator, kex.prime
-
 
 
 def getSupportedKeyExchanges():
@@ -281,7 +273,8 @@ def getSupportedKeyExchanges():
         if keyAlgorithm.startswith(b"ecdh"):
             keyAlgorithmDsa = keyAlgorithm.replace(b"ecdh", b"ecdsa")
             supported = backend.elliptic_curve_exchange_algorithm_supported(
-                ec.ECDH(), _curveTable[keyAlgorithmDsa])
+                ec.ECDH(), _curveTable[keyAlgorithmDsa]
+            )
         elif keyAlgorithm.startswith(b"curve25519-sha256"):
             supported = backend.x25519_supported()
         else:
@@ -289,5 +282,5 @@ def getSupportedKeyExchanges():
         if not supported:
             kexAlgorithms.pop(keyAlgorithm)
     return sorted(
-        kexAlgorithms,
-        key=lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference)
+        kexAlgorithms, key=lambda kexAlgorithm: kexAlgorithms[kexAlgorithm].preference
+    )

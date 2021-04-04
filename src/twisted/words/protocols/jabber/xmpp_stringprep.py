@@ -3,14 +3,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from encodings import idna  # type: ignore[attr-defined]
+from encodings import idna
 from itertools import chain
 import stringprep
 
 # We require Unicode version 3.2.
 from unicodedata import ucd_3_2_0 as unicodedata
 
-from twisted.python.compat import unichr
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
@@ -19,11 +18,8 @@ from zope.interface import Interface, implementer
 
 crippled = False
 deprecatedModuleAttribute(
-    Version("Twisted", 13, 1, 0),
-    "crippled is always False",
-    __name__,
-    "crippled")
-
+    Version("Twisted", 13, 1, 0), "crippled is always False", __name__, "crippled"
+)
 
 
 class ILookupTable(Interface):
@@ -37,7 +33,6 @@ class ILookupTable(Interface):
         """
 
 
-
 class IMappingTable(Interface):
     """
     Interface for character mapping classes.
@@ -49,18 +44,14 @@ class IMappingTable(Interface):
         """
 
 
-
 @implementer(ILookupTable)
 class LookupTableFromFunction:
-
     def __init__(self, in_table_function):
         self.lookup = in_table_function
 
 
-
 @implementer(ILookupTable)
 class LookupTable:
-
     def __init__(self, table):
         self._table = table
 
@@ -68,18 +59,14 @@ class LookupTable:
         return c in self._table
 
 
-
 @implementer(IMappingTable)
 class MappingTableFromFunction:
-
     def __init__(self, map_table_function):
         self.map = map_table_function
 
 
-
 @implementer(IMappingTable)
 class EmptyMappingTable:
-
     def __init__(self, in_table_function):
         self._in_table_function = in_table_function
 
@@ -90,10 +77,15 @@ class EmptyMappingTable:
             return c
 
 
-
 class Profile:
-    def __init__(self, mappings=[],  normalize=True, prohibiteds=[],
-                       check_unassigneds=True, check_bidi=True):
+    def __init__(
+        self,
+        mappings=[],
+        normalize=True,
+        prohibiteds=[],
+        check_unassigneds=True,
+        check_bidi=True,
+    ):
         self.mappings = mappings
         self.normalize = normalize
         self.prohibiteds = prohibiteds
@@ -125,7 +117,7 @@ class Profile:
             if result_c is not None:
                 result.append(result_c)
 
-        return u"".join(result)
+        return "".join(result)
 
     def check_prohibiteds(self, string):
         for c in string:
@@ -151,13 +143,14 @@ class Profile:
         if found_LCat and found_RandALCat:
             raise UnicodeError("Violation of BIDI Requirement 2")
 
-        if found_RandALCat and not (stringprep.in_table_d1(string[0]) and
-                                    stringprep.in_table_d1(string[-1])):
+        if found_RandALCat and not (
+            stringprep.in_table_d1(string[0]) and stringprep.in_table_d1(string[-1])
+        ):
             raise UnicodeError("Violation of BIDI Requirement 3")
 
 
 class NamePrep:
-    """ Implements preparation of internationalized domain names.
+    """Implements preparation of internationalized domain names.
 
     This class implements preparing internationalized domain names using the
     rules defined in RFC 3491, section 4 (Conversion operations).
@@ -179,11 +172,16 @@ class NamePrep:
     """
 
     # Prohibited characters.
-    prohibiteds = [unichr(n) for n in chain(range(0x00, 0x2c + 1),
-                                            range(0x2e, 0x2f + 1),
-                                            range(0x3a, 0x40 + 1),
-                                            range(0x5b, 0x60 + 1),
-                                            range(0x7b, 0x7f + 1))]
+    prohibiteds = [
+        chr(n)
+        for n in chain(
+            range(0x00, 0x2C + 1),
+            range(0x2E, 0x2F + 1),
+            range(0x3A, 0x40 + 1),
+            range(0x5B, 0x60 + 1),
+            range(0x7B, 0x7F + 1),
+        )
+    ]
 
     def prepare(self, string):
         result = []
@@ -191,27 +189,27 @@ class NamePrep:
         labels = idna.dots.split(string)
 
         if labels and len(labels[-1]) == 0:
-            trailing_dot = u'.'
+            trailing_dot = "."
             del labels[-1]
         else:
-            trailing_dot = u''
+            trailing_dot = ""
 
         for label in labels:
             result.append(self.nameprep(label))
 
-        return u".".join(result) + trailing_dot
+        return ".".join(result) + trailing_dot
 
     def check_prohibiteds(self, string):
         for c in string:
-           if c in self.prohibiteds:
-               raise UnicodeError("Invalid character %s" % repr(c))
+            if c in self.prohibiteds:
+                raise UnicodeError("Invalid character %s" % repr(c))
 
     def nameprep(self, label):
         label = idna.nameprep(label)
         self.check_prohibiteds(label)
-        if label[0] == u'-':
+        if label[0] == "-":
             raise UnicodeError("Invalid leading hyphen-minus")
-        if label[-1] == u'-':
+        if label[-1] == "-":
             raise UnicodeError("Invalid trailing hyphen-minus")
         return label
 
@@ -231,14 +229,29 @@ C_9 = LookupTableFromFunction(stringprep.in_table_c9)
 B_1 = EmptyMappingTable(stringprep.in_table_b1)
 B_2 = MappingTableFromFunction(stringprep.map_table_b2)
 
-nodeprep = Profile(mappings=[B_1, B_2],
-                   prohibiteds=[C_11, C_12, C_21, C_22,
-                                C_3, C_4, C_5, C_6, C_7, C_8, C_9,
-                                LookupTable([u'"', u'&', u"'", u'/',
-                                             u':', u'<', u'>', u'@'])])
+nodeprep = Profile(
+    mappings=[B_1, B_2],
+    prohibiteds=[
+        C_11,
+        C_12,
+        C_21,
+        C_22,
+        C_3,
+        C_4,
+        C_5,
+        C_6,
+        C_7,
+        C_8,
+        C_9,
+        LookupTable(['"', "&", "'", "/", ":", "<", ">", "@"]),
+    ],
+)
 
-resourceprep = Profile(mappings=[B_1,],
-                       prohibiteds=[C_12, C_21, C_22,
-                                    C_3, C_4, C_5, C_6, C_7, C_8, C_9])
+resourceprep = Profile(
+    mappings=[
+        B_1,
+    ],
+    prohibiteds=[C_12, C_21, C_22, C_3, C_4, C_5, C_6, C_7, C_8, C_9],
+)
 
 nameprep = NamePrep()

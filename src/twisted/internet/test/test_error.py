@@ -10,22 +10,20 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.internet import error
 
 
-
 class ConnectionAbortedTests(SynchronousTestCase):
     """
     Tests for the L{twisted.internet.error.ConnectionAborted} exception.
     """
+
     def test_str(self):
         """
         The default message of L{ConnectionAborted} is a sentence which points
         to L{ITCPTransport.abortConnection()}
         """
         self.assertEqual(
-            ("Connection was aborted locally"
-             " using ITCPTransport.abortConnection."),
+            ("Connection was aborted locally" " using ITCPTransport.abortConnection."),
             str(error.ConnectionAborted()),
         )
-
 
     def test_strArgs(self):
         """
@@ -33,8 +31,10 @@ class ConnectionAbortedTests(SynchronousTestCase):
         message.
         """
         self.assertEqual(
-            ("Connection was aborted locally using"
-             " ITCPTransport.abortConnection:"
-             " foo bar."),
-            str(error.ConnectionAborted('foo', 'bar')),
+            (
+                "Connection was aborted locally using"
+                " ITCPTransport.abortConnection:"
+                " foo bar."
+            ),
+            str(error.ConnectionAborted("foo", "bar")),
         )

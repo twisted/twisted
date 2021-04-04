@@ -6,8 +6,6 @@ Tests for implementations of L{ITLSTransport}.
 """
 
 
-__metaclass__ = type
-
 from typing import Optional, Sequence, Type
 from zope.interface import implementer, Interface
 
@@ -16,10 +14,16 @@ from twisted.python.filepath import FilePath
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
-    IReactorSSL, ITLSTransport, IStreamClientEndpoint)
+    IReactorSSL,
+    ITLSTransport,
+    IStreamClientEndpoint,
+)
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
-    SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
+    SSL4ServerEndpoint,
+    SSL4ClientEndpoint,
+    TCP4ClientEndpoint,
+)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
 from twisted.trial.unittest import SkipTest
@@ -27,10 +31,15 @@ from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
-    ConnectToTCPListenerMixin, StreamTransportTestsMixin, AbortConnectionMixin,
+    ConnectToTCPListenerMixin,
+    StreamTransportTestsMixin,
+    AbortConnectionMixin,
 )
 from twisted.internet.test.connectionmixins import (
-    EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
+    EndpointCreator,
+    ConnectionTestsMixin,
+    BrokenContextFactory,
+)
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -41,23 +50,26 @@ else:
     from twisted.internet.ssl import ClientContextFactory
 
 
-
 class TLSMixin:
-    requiredInterfaces = [IReactorSSL]  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = [IReactorSSL]
 
     if platform.isWindows():
         msg = (
             "For some reason, these reactors don't deal with SSL "
-            "disconnection correctly on Windows.  See #3371.")
+            "disconnection correctly on Windows.  See #3371."
+        )
         skippedReactors = {
             "twisted.internet.glib2reactor.Glib2Reactor": msg,
-            "twisted.internet.gtk2reactor.Gtk2Reactor": msg}
+            "twisted.internet.gtk2reactor.Gtk2Reactor": msg,
+        }
 
 
-class ContextGeneratingMixin(object):
+class ContextGeneratingMixin:
     import twisted
-    _pem = FilePath(
-        networkString(twisted.__file__)).sibling(b"test").child(b"server.pem")
+
+    _pem = (
+        FilePath(networkString(twisted.__file__)).sibling(b"test").child(b"server.pem")
+    )
     del twisted
 
     def getServerContext(self):
@@ -66,17 +78,16 @@ class ContextGeneratingMixin(object):
         """
         pem = self._pem.getContent()
         cert = PrivateCertificate.load(
-            pem, KeyPair.load(pem, FILETYPE_PEM), FILETYPE_PEM)
+            pem, KeyPair.load(pem, FILETYPE_PEM), FILETYPE_PEM
+        )
         return cert.options()
-
 
     def getClientContext(self):
         return ClientContextFactory()
 
 
-
 @implementer(IStreamClientEndpoint)
-class StartTLSClientEndpoint(object):
+class StartTLSClientEndpoint:
     """
     An endpoint which wraps another one and adds a TLS layer immediately when
     connections are set up.
@@ -91,7 +102,6 @@ class StartTLSClientEndpoint(object):
         self.wrapped = wrapped
         self.contextFactory = contextFactory
 
-
     def connect(self, factory):
         """
         Establish a connection using a protocol build by C{factory} and
@@ -103,14 +113,15 @@ class StartTLSClientEndpoint(object):
         class WrapperFactory(ServerFactory):
             def buildProtocol(wrapperSelf, addr):
                 protocol = factory.buildProtocol(addr)
+
                 def connectionMade(orig=protocol.connectionMade):
                     protocol.transport.startTLS(self.contextFactory)
                     orig()
+
                 protocol.connectionMade = connectionMade
                 return protocol
 
         return self.wrapped.connect(WrapperFactory())
-
 
 
 class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
@@ -118,6 +129,7 @@ class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
     Create L{ITLSTransport.startTLS} endpoint for the client, and normal SSL
     for server just because it's easier.
     """
+
     def server(self, reactor):
         """
         Construct an SSL server endpoint.  This should be constructing a TCP
@@ -126,23 +138,22 @@ class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
         """
         return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
 
-
     def client(self, reactor, serverAddress):
         """
         Construct a TCP client endpoint wrapped to immediately start TLS.
         """
         return StartTLSClientEndpoint(
-            TCP4ClientEndpoint(
-                reactor, '127.0.0.1', serverAddress.port),
-            ClientContextFactory())
+            TCP4ClientEndpoint(reactor, "127.0.0.1", serverAddress.port),
+            ClientContextFactory(),
+        )
 
 
-
-class BadContextTestsMixin(object):
+class BadContextTestsMixin:
     """
     Mixin for L{ReactorBuilder} subclasses which defines a helper for testing
     the handling of broken context factories.
     """
+
     def _testBadContext(self, useIt):
         """
         Assert that the exception raised by a broken context factory's
@@ -155,10 +166,8 @@ class BadContextTestsMixin(object):
             method.
         """
         reactor = self.buildReactor()
-        exc = self.assertRaises(
-            ValueError, useIt, reactor, BrokenContextFactory())
+        exc = self.assertRaises(ValueError, useIt, reactor, BrokenContextFactory())
         self.assertEqual(BrokenContextFactory.message, str(exc))
-
 
 
 class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
@@ -166,20 +175,20 @@ class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
     Tests for TLS connections established using L{ITLSTransport.startTLS} (as
     opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
     """
-    endpoints = StartTLSClientCreator()
 
+    endpoints = StartTLSClientCreator()
 
 
 class SSLCreator(EndpointCreator, ContextGeneratingMixin):
     """
     Create SSL endpoints.
     """
+
     def server(self, reactor):
         """
         Create an SSL server endpoint on a TCP/IP-stack allocated port.
         """
         return SSL4ServerEndpoint(reactor, 0, self.getServerContext())
-
 
     def client(self, reactor, serverAddress):
         """
@@ -189,15 +198,21 @@ class SSLCreator(EndpointCreator, ContextGeneratingMixin):
         @type serverAddress: L{IPv4Address}
         """
         return SSL4ClientEndpoint(
-            reactor, '127.0.0.1', serverAddress.port,
-            ClientContextFactory())
+            reactor, "127.0.0.1", serverAddress.port, ClientContextFactory()
+        )
 
 
-class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
-                          ConnectionTestsMixin, BadContextTestsMixin):
+class SSLClientTestsMixin(
+    TLSMixin,
+    ReactorBuilder,
+    ContextGeneratingMixin,
+    ConnectionTestsMixin,
+    BadContextTestsMixin,
+):
     """
     Mixin defining tests relating to L{ITLSTransport}.
     """
+
     endpoints = SSLCreator()
 
     def test_badContext(self):
@@ -206,11 +221,13 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
         exception from its C{getContext} method, that exception is raised by
         L{IReactorSSL.connectSSL}.
         """
+
         def useIt(reactor, contextFactory):
             return reactor.connectSSL(
-                "127.0.0.1", 1234, ClientFactory(), contextFactory)
-        self._testBadContext(useIt)
+                "127.0.0.1", 1234, ClientFactory(), contextFactory
+            )
 
+        self._testBadContext(useIt)
 
     def test_disconnectAfterWriteAfterStartTLS(self):
         """
@@ -220,6 +237,7 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
         implementation doesn't prevent the connection from being reported as
         closed.
         """
+
         class ShortProtocol(Protocol):
             def connectionMade(self):
                 if not ITLSTransport.providedBy(self.transport):
@@ -268,17 +286,20 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
 
         lostConnectionResults = []
         finished = DeferredList(
-            [serverFactory.finished, clientFactory.finished],
-            consumeErrors=True)
+            [serverFactory.finished, clientFactory.finished], consumeErrors=True
+        )
+
         def cbFinished(results):
             lostConnectionResults.extend([results[0][1], results[1][1]])
+
         finished.addCallback(cbFinished)
 
-        port = reactor.listenTCP(0, serverFactory, interface='127.0.0.1')
+        port = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
         self.addCleanup(port.stopListening)
 
         connector = reactor.connectTCP(
-            port.getHost().host, port.getHost().port, clientFactory)
+            port.getHost().host, port.getHost().port, clientFactory
+        )
         self.addCleanup(connector.disconnect)
 
         finished.addCallback(lambda ign: reactor.stop())
@@ -287,11 +308,15 @@ class SSLClientTestsMixin(TLSMixin, ReactorBuilder, ContextGeneratingMixin,
         lostConnectionResults[1].trap(ConnectionClosed)
 
 
-
-class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
-                          ObjectModelIntegrationMixin, BadContextTestsMixin,
-                          ConnectToTCPListenerMixin,
-                          StreamTransportTestsMixin, ReactorBuilder):
+class TLSPortTestsBuilder(
+    TLSMixin,
+    ContextGeneratingMixin,
+    ObjectModelIntegrationMixin,
+    BadContextTestsMixin,
+    ConnectToTCPListenerMixin,
+    StreamTransportTestsMixin,
+    ReactorBuilder,
+):
     """
     Tests for L{IReactorSSL.listenSSL}
     """
@@ -302,20 +327,17 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         """
         return reactor.listenSSL(0, factory, self.getServerContext())
 
-
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a TLS port starts listening.
         """
         return "%s (TLS) starting on %d" % (factory, port.getHost().port)
 
-
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a TLS port.
         """
-        return "(TLS Port %s Closed)" % (port.getHost().port,)
-
+        return f"(TLS Port {port.getHost().port} Closed)"
 
     def test_badContext(self):
         """
@@ -323,10 +345,11 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         exception from its C{getContext} method, that exception is raised by
         L{IReactorSSL.listenSSL}.
         """
+
         def useIt(reactor, contextFactory):
             return reactor.listenSSL(0, ServerFactory(), contextFactory)
-        self._testBadContext(useIt)
 
+        self._testBadContext(useIt)
 
     def connectToListener(self, reactor, address, factory):
         """
@@ -354,17 +377,18 @@ class TLSPortTestsBuilder(TLSMixin, ContextGeneratingMixin,
         )
 
 
-
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
 globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())
 globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
 
 
-
-class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin):
+class AbortSSLConnectionTests(
+    ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin
+):
     """
     C{abortConnection} tests using SSL.
     """
+
     requiredInterfaces = (IReactorSSL,)
     endpoints = SSLCreator()
 
@@ -374,14 +398,13 @@ class AbortSSLConnectionTests(ReactorBuilder, AbortConnectionMixin, ContextGener
 
         # Patch twisted.protocols.tls to use this reactor, until we get
         # around to fixing #5206, or the TLS code uses an explicit reactor:
-        cooperator = Cooperator(
-            scheduler=lambda x: reactor.callLater(0.00001, x))
+        cooperator = Cooperator(scheduler=lambda x: reactor.callLater(0.00001, x))
         self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
         return reactor
-
 
     def setUp(self):
         if FILETYPE_PEM is None:
             raise SkipTest("OpenSSL not available.")
+
 
 globals().update(AbortSSLConnectionTests.makeTestCaseClasses())

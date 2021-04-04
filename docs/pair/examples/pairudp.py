@@ -32,7 +32,6 @@ is sent to the right address, the example will display information about the
 datagram on its standard out.
 """
 
-from __future__ import print_function
 
 from sys import stdout
 
@@ -46,11 +45,9 @@ from twisted.pair.tuntap import TuntapPort
 from twisted.python.log import startLogging
 
 
-
 class MyProto(protocol.DatagramProtocol):
     def datagramReceived(self, datagram, address):
-        print('from', address, 'received', repr(datagram))
-
+        print("from", address, "received", repr(datagram))
 
 
 def main(reactor):
@@ -62,12 +59,12 @@ def main(reactor):
     eth = EthernetProtocol()
     eth.addProto(0x800, ip)
 
-    port = TuntapPort(interface='tap0', proto=eth, reactor=reactor)
+    port = TuntapPort(interface="tap0", proto=eth, reactor=reactor)
     port.startListening()
 
     # Run forever
     return Deferred()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     react(main, [])

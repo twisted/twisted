@@ -12,13 +12,13 @@ from twisted.python import failure, log
 from twisted.internet import defer
 
 
-
 class CacheResolver(common.ResolverBase):
     """
     A resolver that serves records from a local, memory cache.
 
     @ivar _reactor: A provider of L{interfaces.IReactorTime}.
     """
+
     cache = None
 
     def __init__(self, cache=None, verbose=0, reactor=None):
@@ -35,7 +35,6 @@ class CacheResolver(common.ResolverBase):
             for query, (seconds, payload) in cache.items():
                 self.cacheResult(query, payload, seconds)
 
-
     def __setstate__(self, state):
         self.__dict__ = state
 
@@ -47,13 +46,11 @@ class CacheResolver(common.ResolverBase):
                     del self.cache[k]
                     break
 
-
     def __getstate__(self):
         for c in self.cancel.values():
             c.cancel()
         self.cancel.clear()
         return self.__dict__
-
 
     def _lookup(self, name, cls, type, timeout):
         now = self._reactor.seconds()
@@ -62,30 +59,41 @@ class CacheResolver(common.ResolverBase):
             when, (ans, auth, add) = self.cache[q]
         except KeyError:
             if self.verbose > 1:
-                log.msg('Cache miss for ' + repr(name))
+                log.msg("Cache miss for " + repr(name))
             return defer.fail(failure.Failure(dns.DomainError(name)))
         else:
             if self.verbose:
-                log.msg('Cache hit for ' + repr(name))
+                log.msg("Cache hit for " + repr(name))
             diff = now - when
 
             try:
                 result = (
-                    [dns.RRHeader(r.name.name, r.type, r.cls, r.ttl - diff,
-                                  r.payload) for r in ans],
-                    [dns.RRHeader(r.name.name, r.type, r.cls, r.ttl - diff,
-                                  r.payload) for r in auth],
-                    [dns.RRHeader(r.name.name, r.type, r.cls, r.ttl - diff,
-                                  r.payload) for r in add])
+                    [
+                        dns.RRHeader(
+                            r.name.name, r.type, r.cls, r.ttl - diff, r.payload
+                        )
+                        for r in ans
+                    ],
+                    [
+                        dns.RRHeader(
+                            r.name.name, r.type, r.cls, r.ttl - diff, r.payload
+                        )
+                        for r in auth
+                    ],
+                    [
+                        dns.RRHeader(
+                            r.name.name, r.type, r.cls, r.ttl - diff, r.payload
+                        )
+                        for r in add
+                    ],
+                )
             except ValueError:
                 return defer.fail(failure.Failure(dns.DomainError(name)))
             else:
                 return defer.succeed(result)
 
-
-    def lookupAllRecords(self, name, timeout = None):
+    def lookupAllRecords(self, name, timeout=None):
         return defer.fail(failure.Failure(dns.DomainError(name)))
-
 
     def cacheResult(self, query, payload, cacheTime=None):
         """
@@ -101,7 +109,7 @@ class CacheResolver(common.ResolverBase):
             the current time is used.
         """
         if self.verbose > 1:
-            log.msg('Adding %r to cache' % query)
+            log.msg("Adding %r to cache" % query)
 
         self.cache[query] = (cacheTime or self._reactor.seconds(), payload)
 
@@ -117,7 +125,6 @@ class CacheResolver(common.ResolverBase):
             m = 0
 
         self.cancel[query] = self._reactor.callLater(m, self.clearEntry, query)
-
 
     def clearEntry(self, query):
         del self.cache[query]

@@ -13,12 +13,10 @@ from binascii import hexlify
 from hashlib import md5, sha1
 
 
-
 # The digest math
 
 algorithms = {
-    b'md5': md5,
-
+    b"md5": md5,
     # md5-sess is more complicated than just another algorithm.  It requires
     # H(A1) state to be remembered from the first WWW-Authenticate challenge
     # issued and re-used to process any Authorization header in response to
@@ -26,14 +24,16 @@ algorithms = {
     # recalculate H(A1) each time an Authorization header is received.  Read
     # RFC 2617, section 3.2.2.2 and do not try to make DigestCredentialFactory
     # support this unless you completely understand it. -exarkun
-    b'md5-sess': md5,
-
-    b'sha': sha1,
+    b"md5-sess": md5,
+    b"sha": sha1,
 }
 
 # DigestCalcHA1
-def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
-            preHA1=None):
+
+
+def calcHA1(
+    pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce, preHA1=None
+):
     """
     Compute H(A1) from RFC 2617.
 
@@ -50,9 +50,11 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
        pszUserName, pszRealm, and pszPassword must be L{None} and are ignored.
     """
 
-    if (preHA1 and (pszUserName or pszRealm or pszPassword)):
-        raise TypeError(("preHA1 is incompatible with the pszUserName, "
-                         "pszRealm, and pszPassword arguments"))
+    if preHA1 and (pszUserName or pszRealm or pszPassword):
+        raise TypeError(
+            "preHA1 is incompatible with the pszUserName, "
+            "pszRealm, and pszPassword arguments"
+        )
 
     if preHA1 is None:
         # We need to calculate the HA1 from the username:realm:password
@@ -83,7 +85,7 @@ def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
     """
     Compute H(A2) from RFC 2617.
 
-    @param pszAlg: The name of the algorithm to use to calculate the digest.
+    @param algo: The name of the algorithm to use to calculate the digest.
         Currently supported are md5, md5-sess, and sha.
     @param pszMethod: The request method.
     @param pszDigestUri: The request URI.

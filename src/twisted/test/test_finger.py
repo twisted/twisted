@@ -14,6 +14,7 @@ class FingerTests(unittest.TestCase):
     """
     Tests for L{finger.Finger}.
     """
+
     def setUp(self):
         """
         Create and connect a L{finger.Finger} instance.
@@ -22,17 +23,13 @@ class FingerTests(unittest.TestCase):
         self.protocol = finger.Finger()
         self.protocol.makeConnection(self.transport)
 
-
     def test_simple(self):
         """
         When L{finger.Finger} receives a CR LF terminated line, it responds
         with the default user status message - that no such user exists.
         """
         self.protocol.dataReceived(b"moshez\r\n")
-        self.assertEqual(
-            self.transport.value(),
-            b"Login: moshez\nNo such user\n")
-
+        self.assertEqual(self.transport.value(), b"Login: moshez\nNo such user\n")
 
     def test_simpleW(self):
         """
@@ -40,10 +37,7 @@ class FingerTests(unittest.TestCase):
         behavior for one which does not.  The user is reported as not existing.
         """
         self.protocol.dataReceived(b"/w moshez\r\n")
-        self.assertEqual(
-            self.transport.value(),
-            b"Login: moshez\nNo such user\n")
-
+        self.assertEqual(self.transport.value(), b"Login: moshez\nNo such user\n")
 
     def test_forwarding(self):
         """
@@ -51,10 +45,7 @@ class FingerTests(unittest.TestCase):
         with a message rejecting the request.
         """
         self.protocol.dataReceived(b"moshez@example.com\r\n")
-        self.assertEqual(
-            self.transport.value(),
-            b"Finger forwarding service denied\n")
-
+        self.assertEqual(self.transport.value(), b"Finger forwarding service denied\n")
 
     def test_list(self):
         """
@@ -62,6 +53,4 @@ class FingerTests(unittest.TestCase):
         rejecting the request for all online users.
         """
         self.protocol.dataReceived(b"\r\n")
-        self.assertEqual(
-            self.transport.value(),
-            b"Finger online list denied\n")
+        self.assertEqual(self.transport.value(), b"Finger online list denied\n")

@@ -17,10 +17,9 @@ from threading import local
 from typing import Dict, Type
 
 
-defaultContextDict = {}  # type: Dict[Type[object], Dict[str, str]]
+defaultContextDict: Dict[Type[object], Dict[str, str]] = {}
 
 setDefault = defaultContextDict.__setitem__
-
 
 
 class ContextTracker:
@@ -57,9 +56,9 @@ class ContextTracker:
         for the duration of the call, making the data available to the function
         called and restoring the previous data once it is complete..
     """
+
     def __init__(self):
         self.contexts = [defaultContextDict]
-
 
     def callWithContext(self, newContext, func, *args, **kw):
         """
@@ -71,20 +70,19 @@ class ContextTracker:
 
         @param func: A callable which will be called.
 
-        @param *args: Any additional positional arguments to pass to C{func}.
+        @param args: Any additional positional arguments to pass to C{func}.
 
-        @param **kw: Any additional keyword arguments to pass to C{func}.
+        @param kw: Any additional keyword arguments to pass to C{func}.
 
         @return: Whatever is returned by C{func}
 
-        @raise: Whatever is raised by C{func}.
+        @raise Exception: Whatever is raised by C{func}.
         """
         self.contexts.append(newContext)
         try:
-            return func(*args,**kw)
+            return func(*args, **kw)
         finally:
             self.contexts.pop()
-
 
     def getContext(self, key, default=None):
         """
@@ -105,8 +103,7 @@ class ContextTracker:
         return default
 
 
-
-class ThreadedContextTracker(object):
+class ThreadedContextTracker:
     def __init__(self):
         self.storage = local()
 
@@ -124,11 +121,9 @@ class ThreadedContextTracker(object):
         return self.currentContext().getContext(key, default)
 
 
-
 theContextTracker = ThreadedContextTracker()
 call = theContextTracker.callWithContext
 get = theContextTracker.getContext
-
 
 
 def installContextTracker(ctr):

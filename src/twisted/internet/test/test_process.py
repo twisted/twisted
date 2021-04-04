@@ -24,7 +24,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, items, unicode
+from twisted.python.compat import networkString
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
@@ -41,17 +41,20 @@ _uidgidSkipReason = ""
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
-    import resource
-    from twisted.internet import process
+    import resource as _resource
+    from twisted.internet import process as _process
+
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
 except ImportError:
-    resource = None  # type: ignore[assignment]
-    process = None  # type: ignore[assignment]
+    resource = None
+    process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
-
+else:
+    resource = _resource
+    process = _process
 
 
 def onlyOnPOSIX(testMethod):
@@ -67,7 +70,6 @@ def onlyOnPOSIX(testMethod):
     return testMethod
 
 
-
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} which fires a Deferred when the process it is
@@ -76,18 +78,16 @@ class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     @ivar received: A C{dict} mapping file descriptors to lists of bytes
         received from the child process on those file descriptors.
     """
+
     def __init__(self, whenFinished):
         self.whenFinished = whenFinished
         self.received = {}
 
-
     def childDataReceived(self, fd, bytes):
         self.received.setdefault(fd, []).append(bytes)
 
-
     def processEnded(self, reason):
         self.whenFinished.callback(None)
-
 
 
 class ProcessTestsBuilderBase(ReactorBuilder):
@@ -98,8 +98,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     Subclasses are expected to set the C{usePTY} attribute to C{True} or
     C{False}.
     """
-    requiredInterfaces = [IReactorProcess]
 
+    requiredInterfaces = [IReactorProcess]
 
     def test_processTransportInterface(self):
         """
@@ -111,8 +111,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor = self.buildReactor()
         transport = reactor.spawnProcess(
-            protocol, pyExe, [pyExe, b"-c", b""],
-            usePTY=self.usePTY)
+            protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+        )
 
         # The transport is available synchronously, so we can check it right
         # away (unlike many transport-based tests).  This is convenient even
@@ -126,7 +126,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # Let the process run and exit so we don't leave a zombie around.
         ended.addCallback(lambda ignored: reactor.stop())
         self.runReactor(reactor)
-
 
     def _writeTest(self, write):
         """
@@ -144,19 +143,16 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         protocol = _ShutdownCallbackProcessProtocol(ended)
 
         bytesToSend = b"hello, world" + networkString(os.linesep)
-        program = (
-            b"import sys\n"
-            b"sys.stdout.write(sys.stdin.readline())\n"
-            )
+        program = b"import sys\n" b"sys.stdout.write(sys.stdin.readline())\n"
 
         def startup():
-            transport = reactor.spawnProcess(
-                protocol, pyExe, [pyExe, b"-c", program])
+            transport = reactor.spawnProcess(protocol, pyExe, [pyExe, b"-c", program])
             try:
                 write(transport, bytesToSend)
-            except:
+            except BaseException:
                 err(None, "Unhandled exception while writing")
-                transport.signalProcess('KILL')
+                transport.signalProcess("KILL")
+
         reactor.callWhenRunning(startup)
 
         ended.addCallback(lambda ignored: reactor.stop())
@@ -164,53 +160,58 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(bytesToSend, b"".join(protocol.received[1]))
 
-
     def test_write(self):
         """
         L{IProcessTransport.write} writes the specified C{bytes} to the standard
         input of the child process.
         """
+
         def write(transport, bytesToSend):
             transport.write(bytesToSend)
-        self._writeTest(write)
 
+        self._writeTest(write)
 
     def test_writeSequence(self):
         """
         L{IProcessTransport.writeSequence} writes the specified C{list} of
         C{bytes} to the standard input of the child process.
         """
+
         def write(transport, bytesToSend):
             transport.writeSequence([bytesToSend])
-        self._writeTest(write)
 
+        self._writeTest(write)
 
     def test_writeToChild(self):
         """
         L{IProcessTransport.writeToChild} writes the specified C{bytes} to the
         specified file descriptor of the child process.
         """
+
         def write(transport, bytesToSend):
             transport.writeToChild(0, bytesToSend)
-        self._writeTest(write)
 
+        self._writeTest(write)
 
     def test_writeToChildBadFileDescriptor(self):
         """
         L{IProcessTransport.writeToChild} raises L{KeyError} if passed a file
         descriptor which is was not set up by L{IReactorProcess.spawnProcess}.
         """
+
         def write(transport, bytesToSend):
             try:
                 self.assertRaises(KeyError, transport.writeToChild, 13, bytesToSend)
             finally:
                 # Just get the process to exit so the test can complete
                 transport.write(bytesToSend)
+
         self._writeTest(write)
 
-
-    @skipIf(getattr(signal, 'SIGCHLD', None) is None,
-            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
+    @skipIf(
+        getattr(signal, "SIGCHLD", None) is None,
+        "Platform lacks SIGCHLD, early-spawnProcess test can't work.",
+    )
     def test_spawnProcessEarlyIsReaped(self):
         """
         If, before the reactor is started with L{IReactorCore.run}, a
@@ -230,15 +231,21 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         # Arrange to notice the SIGCHLD.
         signaled = threading.Event()
+
         def handler(*args):
             signaled.set()
+
         signal.signal(signal.SIGCHLD, handler)
 
         # Start a process - before starting the reactor!
         ended = Deferred()
         reactor.spawnProcess(
-            _ShutdownCallbackProcessProtocol(ended), pyExe,
-            [pyExe, b"-c", b""], usePTY=self.usePTY, childFDs=childFDs)
+            _ShutdownCallbackProcessProtocol(ended),
+            pyExe,
+            [pyExe, b"-c", b""],
+            usePTY=self.usePTY,
+            childFDs=childFDs,
+        )
 
         # Wait for the SIGCHLD (which might have been delivered before we got
         # here, but that's okay because the signal handler was installed above,
@@ -265,14 +272,13 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # Make sure the reactor stopped because the Deferred fired.
         self.assertTrue(result)
 
-
     def test_processExitedWithSignal(self):
         """
         The C{reason} argument passed to L{IProcessProtocol.processExited} is a
         L{ProcessTerminated} instance if the child process exits with a signal.
         """
-        sigName = 'TERM'
-        sigNum = getattr(signal, 'SIG' + sigName)
+        sigName = "TERM"
+        sigNum = getattr(signal, "SIG" + sigName)
         exited = Deferred()
         source = (
             b"import sys\n"
@@ -283,18 +289,19 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             # the exec.
             b"sys.stdout.write('x')\n"
             b"sys.stdout.flush()\n"
-            b"sys.stdin.read()\n")
+            b"sys.stdin.read()\n"
+        )
 
         class Exiter(ProcessProtocol):
             def childDataReceived(self, fd, data):
-                msg('childDataReceived(%d, %r)' % (fd, data))
+                msg("childDataReceived(%d, %r)" % (fd, data))
                 self.transport.signalProcess(sigName)
 
             def childConnectionLost(self, fd):
-                msg('childConnectionLost(%d)' % (fd,))
+                msg("childConnectionLost(%d)" % (fd,))
 
             def processExited(self, reason):
-                msg('processExited(%r)' % (reason,))
+                msg(f"processExited({reason!r})")
                 # Protect the Deferred from the failure so that it follows
                 # the callback chain.  This doesn't use the errback chain
                 # because it wants to make sure reason is a Failure.  An
@@ -303,15 +310,19 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 exited.callback([reason])
 
             def processEnded(self, reason):
-                msg('processEnded(%r)' % (reason,))
+                msg(f"processEnded({reason!r})")
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Exiter(), pyExe,
-            [pyExe, b"-c", source], usePTY=self.usePTY)
+            reactor.spawnProcess,
+            Exiter(),
+            pyExe,
+            [pyExe, b"-c", source],
+            usePTY=self.usePTY,
+        )
 
         def cbExited(args):
-            failure, = args
+            (failure,) = args
             # Trapping implicitly verifies that it's a Failure (rather than
             # an exception) and explicitly makes sure it's the right type.
             failure.trap(ProcessTerminated)
@@ -335,7 +346,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         self.runReactor(reactor)
 
-
     def test_systemCallUninterruptedByChildExit(self):
         """
         If a child process exits while a system call is in progress, the system
@@ -355,10 +365,10 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 exe = pyExe.decode(sys.getfilesystemencoding())
 
                 subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
-                f2 = subprocess.Popen([exe, "-c",
-                                       ("import time; time.sleep(0.5);"
-                                        "print(\'Foo\')")],
-                                      stdout=subprocess.PIPE)
+                f2 = subprocess.Popen(
+                    [exe, "-c", ("import time; time.sleep(0.5);" "print('Foo')")],
+                    stdout=subprocess.PIPE,
+                )
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
@@ -369,8 +379,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor.callWhenRunning(f)
         self.runReactor(reactor)
-        self.assertEqual(result, [b"Foo" + os.linesep.encode('ascii')])
-
+        self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
     @onlyOnPOSIX
     def test_openFileDescriptors(self):
@@ -383,12 +392,16 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # To test this, we are going to open a file descriptor in the parent
         # that is unlikely to be opened in the child, then verify that it's not
         # open in the child.
-        source = networkString("""
+        source = networkString(
+            """
 import sys
-sys.path.insert(0, '{0}')
+sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
-sys.stdout.flush()""".format(twistedRoot.path))
+sys.stdout.flush()""".format(
+                twistedRoot.path
+            )
+        )
 
         r, w = os.pipe()
         self.addCleanup(os.close, r)
@@ -414,23 +427,28 @@ sys.stdout.flush()""".format(twistedRoot.path))
         # might at least hypothetically select.)
 
         fudgeFactor = 17
-        unlikelyFD = (resource.getrlimit(resource.RLIMIT_NOFILE)[0]
-                      - fudgeFactor)
+        unlikelyFD = resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor
 
         os.dup2(w, unlikelyFD)
         self.addCleanup(os.close, unlikelyFD)
 
         output = io.BytesIO()
+
         class GatheringProtocol(ProcessProtocol):
             outReceived = output.write
+
             def processEnded(self, reason):
                 reactor.stop()
 
         reactor = self.buildReactor()
 
         reactor.callWhenRunning(
-            reactor.spawnProcess, GatheringProtocol(), pyExe,
-            [pyExe, b"-Wignore", b"-c", source], usePTY=self.usePTY)
+            reactor.spawnProcess,
+            GatheringProtocol(),
+            pyExe,
+            [pyExe, b"-Wignore", b"-c", source],
+            usePTY=self.usePTY,
+        )
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
@@ -441,10 +459,8 @@ sys.stdout.flush()""".format(twistedRoot.path))
         # since hypothetically, any library could open any file descriptor at
         # any time.  See comment above.
         self.assertEqual(
-            reportedChildFDs.intersection(set(stdFDs + [unlikelyFD])),
-            set(stdFDs)
+            reportedChildFDs.intersection(set(stdFDs + [unlikelyFD])), set(stdFDs)
         )
-
 
     @onlyOnPOSIX
     def test_errorDuringExec(self):
@@ -456,7 +472,7 @@ sys.stdout.flush()""".format(twistedRoot.path))
         def execvpe(*args, **kw):
             # Ensure that real traceback formatting has some non-ASCII in it,
             # by forcing the filename of the last frame to contain non-ASCII.
-            filename = u"<\N{SNOWMAN}>"
+            filename = "<\N{SNOWMAN}>"
             if not isinstance(filename, str):
                 filename = filename.encode("utf-8")
             codeobj = compile("1/0", filename, "single")
@@ -470,16 +486,16 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         @reactor.callWhenRunning
         def whenRunning():
-            class TracebackCatcher(ProcessProtocol, object):
+            class TracebackCatcher(ProcessProtocol):
                 errReceived = output.write
+
                 def processEnded(self, reason):
                     reactor.stop()
-            reactor.spawnProcess(TracebackCatcher(), pyExe,
-                                 [pyExe, b"-c", b""])
+
+            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
 
         self.runReactor(reactor, timeout=30)
-        self.assertIn(u"\N{SNOWMAN}".encode("utf-8"), output.getvalue())
-
+        self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
 
     def test_timelyProcessExited(self):
         """
@@ -498,14 +514,16 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         protocol = ExitingProtocol()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, pyExe,
+            reactor.spawnProcess,
+            protocol,
+            pyExe,
             [pyExe, b"-c", b"raise SystemExit(0)"],
-            usePTY=self.usePTY)
+            usePTY=self.usePTY,
+        )
 
         # This will timeout if processExited isn't called:
         self.runReactor(reactor, timeout=30)
         self.assertTrue(protocol.exited)
-
 
     def _changeIDTest(self, which):
         """
@@ -516,11 +534,10 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         @param which: Either C{b"uid"} or C{b"gid"}.
         """
-        program = [
-            "import os",
-            "raise SystemExit(os.get%s() != 1)" % (which,)]
+        program = ["import os", f"raise SystemExit(os.get{which}() != 1)"]
 
         container = []
+
         class CaptureExitStatus(ProcessProtocol):
             def processEnded(self, reason):
                 container.append(reason)
@@ -529,14 +546,16 @@ sys.stdout.flush()""".format(twistedRoot.path))
         reactor = self.buildReactor()
         protocol = CaptureExitStatus()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, pyExe,
+            reactor.spawnProcess,
+            protocol,
+            pyExe,
             [pyExe, "-c", "\n".join(program)],
-            **{which: 1})
+            **{which: 1},
+        )
 
         self.runReactor(reactor)
 
         self.assertEqual(0, container[0].value.exitCode)
-
 
     @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeUID(self):
@@ -546,7 +565,6 @@ sys.stdout.flush()""".format(twistedRoot.path))
         """
         self._changeIDTest("uid")
 
-
     @skipIf(_uidgidSkip, _uidgidSkipReason)
     def test_changeGID(self):
         """
@@ -554,7 +572,6 @@ sys.stdout.flush()""".format(twistedRoot.path))
         child process is run with that GID.
         """
         self._changeIDTest("gid")
-
 
     def test_processExitedRaises(self):
         """
@@ -574,23 +591,24 @@ sys.stdout.flush()""".format(twistedRoot.path))
 
         protocol = Protocol()
         transport = reactor.spawnProcess(
-               protocol, pyExe, [pyExe, b"-c", b""],
-               usePTY=self.usePTY)
+            protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+        )
         self.runReactor(reactor)
 
         # Manually clean-up broken process handler.
         # Only required if the test fails on systems that support
         # the process module.
         if process is not None:
-            for pid, handler in items(process.reapProcessHandlers):
+            for pid, handler in list(process.reapProcessHandlers.items()):
                 if handler is not transport:
                     continue
                 process.unregisterReapProcessHandler(pid, handler)
-                self.fail("After processExited raised, transport was left in"
-                          " reapProcessHandlers")
+                self.fail(
+                    "After processExited raised, transport was left in"
+                    " reapProcessHandlers"
+                )
 
         self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
-
 
 
 class ProcessTestsBuilder(ProcessTestsBuilderBase):
@@ -598,15 +616,15 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
     Builder defining tests relating to L{IReactorProcess} for child processes
     which do not have a PTY.
     """
+
     usePTY = False
 
-    keepStdioOpenProgram = b'twisted.internet.test.process_helper'
+    keepStdioOpenProgram = b"twisted.internet.test.process_helper"
     if platform.isWindows():
         keepStdioOpenArg = b"windows"
     else:
         # Just a value that doesn't equal "windows"
         keepStdioOpenArg = b""
-
 
     # Define this test here because PTY-using processes only have stdin and
     # stdout and the test would need to be different for that to work.
@@ -629,30 +647,38 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Closer(), pyExe,
-            [pyExe, b"-m", target], env=properEnv, usePTY=self.usePTY)
+            reactor.spawnProcess,
+            Closer(),
+            pyExe,
+            [pyExe, b"-m", target],
+            env=properEnv,
+            usePTY=self.usePTY,
+        )
 
         def cbConnected(transport):
-            transport.write(b'2\n')
+            transport.write(b"2\n")
             return lost[2].addCallback(lambda ign: transport)
+
         connected.addCallback(cbConnected)
 
         def lostSecond(transport):
-            transport.write(b'1\n')
+            transport.write(b"1\n")
             return lost[1].addCallback(lambda ign: transport)
+
         connected.addCallback(lostSecond)
 
         def lostFirst(transport):
-            transport.write(b'\n')
+            transport.write(b"\n")
+
         connected.addCallback(lostFirst)
         connected.addErrback(err)
 
         def cbEnded(ignored):
             reactor.stop()
+
         connected.addCallback(cbEnded)
 
         self.runReactor(reactor)
-
 
     # This test is here because PTYProcess never delivers childConnectionLost.
     def test_processEnded(self):
@@ -666,38 +692,41 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         class Ender(ProcessProtocol):
             def childDataReceived(self, fd, data):
-                msg('childDataReceived(%d, %r)' % (fd, data))
+                msg("childDataReceived(%d, %r)" % (fd, data))
                 self.transport.loseConnection()
 
             def childConnectionLost(self, childFD):
-                msg('childConnectionLost(%d)' % (childFD,))
+                msg("childConnectionLost(%d)" % (childFD,))
                 lost.append(childFD)
 
             def processExited(self, reason):
-                msg('processExited(%r)' % (reason,))
+                msg(f"processExited({reason!r})")
 
             def processEnded(self, reason):
-                msg('processEnded(%r)' % (reason,))
+                msg(f"processEnded({reason!r})")
                 ended.callback([reason])
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Ender(), pyExe,
-            [pyExe, b"-m", self.keepStdioOpenProgram, b"child",
-             self.keepStdioOpenArg],
-            env=properEnv, usePTY=self.usePTY)
+            reactor.spawnProcess,
+            Ender(),
+            pyExe,
+            [pyExe, b"-m", self.keepStdioOpenProgram, b"child", self.keepStdioOpenArg],
+            env=properEnv,
+            usePTY=self.usePTY,
+        )
 
         def cbEnded(args):
-            failure, = args
+            (failure,) = args
             failure.trap(ProcessDone)
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
+
         ended.addCallback(cbEnded)
 
         ended.addErrback(err)
         ended.addCallback(lambda ign: reactor.stop())
 
         self.runReactor(reactor)
-
 
     # This test is here because PTYProcess.loseConnection does not actually
     # close the file descriptors to the child process.  This test needs to be
@@ -714,37 +743,49 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         class Waiter(ProcessProtocol):
             def childDataReceived(self, fd, data):
-                msg('childDataReceived(%d, %r)' % (fd, data))
+                msg("childDataReceived(%d, %r)" % (fd, data))
 
             def childConnectionLost(self, childFD):
-                msg('childConnectionLost(%d)' % (childFD,))
+                msg("childConnectionLost(%d)" % (childFD,))
                 lost.append(childFD)
                 if len(lost) == 3:
                     allLost.callback(None)
 
             def processExited(self, reason):
-                msg('processExited(%r)' % (reason,))
+                msg(f"processExited({reason!r})")
                 # See test_processExitedWithSignal
                 exited.callback([reason])
                 self.transport.loseConnection()
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Waiter(), pyExe,
-            [pyExe, b"-u", b"-m", self.keepStdioOpenProgram, b"child",
-             self.keepStdioOpenArg],
-            env=properEnv, usePTY=self.usePTY)
+            reactor.spawnProcess,
+            Waiter(),
+            pyExe,
+            [
+                pyExe,
+                b"-u",
+                b"-m",
+                self.keepStdioOpenProgram,
+                b"child",
+                self.keepStdioOpenArg,
+            ],
+            env=properEnv,
+            usePTY=self.usePTY,
+        )
 
         def cbExited(args):
-            failure, = args
+            (failure,) = args
             failure.trap(ProcessDone)
-            msg('cbExited; lost = %s' % (lost,))
+            msg(f"cbExited; lost = {lost}")
             self.assertEqual(lost, [])
             return allLost
+
         exited.addCallback(cbExited)
 
         def cbAllLost(ignored):
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
+
         exited.addCallback(cbAllLost)
 
         exited.addErrback(err)
@@ -752,17 +793,15 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         self.runReactor(reactor)
 
-
     def makeSourceFile(self, sourceLines):
         """
         Write the given list of lines to a text file and return the absolute
         path to it.
         """
         script = _asFilesystemBytes(self.mktemp())
-        with open(script, 'wt') as scriptFile:
+        with open(script, "wt") as scriptFile:
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
-
 
     def test_shebang(self):
         """
@@ -770,13 +809,16 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         with an interpreter definition line (#!) uses that interpreter to
         evaluate the script.
         """
-        shebangOutput = b'this is the shebang output'
+        shebangOutput = b"this is the shebang output"
 
-        scriptFile = self.makeSourceFile([
-                "#!%s" % (pyExe.decode('ascii'),),
+        scriptFile = self.makeSourceFile(
+            [
+                "#!{}".format(pyExe.decode("ascii")),
                 "import sys",
-                "sys.stdout.write('%s')" % (shebangOutput.decode('ascii'),),
-                "sys.stdout.flush()"])
+                "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
+                "sys.stdout.flush()",
+            ]
+        )
         os.chmod(scriptFile, 0o700)
 
         reactor = self.buildReactor()
@@ -801,6 +843,25 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor.callWhenRunning(start)
         self.runReactor(reactor)
 
+    def test_pauseAndResumeProducing(self):
+        """
+        Pause producing and then resume producing.
+        """
+
+        def pauseAndResume(reactor):
+            try:
+                protocol = ProcessProtocol()
+                transport = reactor.spawnProcess(
+                    protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+                )
+                transport.pauseProducing()
+                transport.resumeProducing()
+            finally:
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(pauseAndResume, reactor)
+        self.runReactor(reactor)
 
     def test_processCommandLineArguments(self):
         """
@@ -809,17 +870,17 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b"hello", b'"', b" \t|<>^&", br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
-        if isinstance(allChars, unicode):
+        if isinstance(allChars, str):
             allChars.encode("utf-8")
 
         reactor = self.buildReactor()
 
         def processFinished(finishedArgs):
             output, err, code = finishedArgs
-            output = output.split(b'\0')
+            output = output.split(b"\0")
             # Drop the trailing \0.
             output.pop()
             self.assertEqual(args, output)
@@ -830,15 +891,16 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def spawnChild():
             d = succeed(None)
-            d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                pyExe, [b"-m", us] + args, env=properEnv,
-                reactor=reactor))
+            d.addCallback(
+                lambda dummy: utils.getProcessOutputAndValue(
+                    pyExe, [b"-m", us] + args, env=properEnv, reactor=reactor
+                )
+            )
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 
         reactor.callWhenRunning(spawnChild)
         self.runReactor(reactor)
-
 
     @onlyOnPOSIX
     def test_process_unregistered_before_protocol_ended_callback(self):
@@ -857,6 +919,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 has completed.
             @type deferred: L{Deferred<defer.Deferred>}
             """
+
             def __init__(self):
                 self.deferred = Deferred()
 
@@ -873,9 +936,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 processes = handlers.values()
 
                 if self.transport in processes:
-                    results.append('process present but should not be')
+                    results.append("process present but should not be")
                 else:
-                    results.append('process already removed as desired')
+                    results.append("process already removed as desired")
 
                 self.deferred.callback(None)
 
@@ -897,7 +960,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 reactor.spawnProcess(
                     testProcessProtocol,
                     pyExe,
-                    [pyExe, '--version'],
+                    [pyExe, "--version"],
                 )
                 yield testProcessProtocol.deferred
             except Exception as e:
@@ -911,13 +974,11 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         hamcrest.assert_that(
             results,
-            hamcrest.equal_to(['process already removed as desired']),
+            hamcrest.equal_to(["process already removed as desired"]),
         )
 
 
-
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
-
 
 
 class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
@@ -925,6 +986,7 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
     Builder defining tests relating to L{IReactorProcess} for child processes
     which have a PTY.
     """
+
     usePTY = True
 
     if platform.isWindows():
@@ -933,16 +995,18 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
         skip = "PTYs are flaky from a Darwin bug. See #8840."
 
         skippedReactors = {
-            "twisted.internet.pollreactor.PollReactor":
-                "macOS's poll() does not support PTYs"}
-globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
+            "twisted.internet.pollreactor.PollReactor": "macOS's poll() does not support PTYs"
+        }
 
+
+globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
 
 
 class PotentialZombieWarningTests(TestCase):
     """
     Tests for L{twisted.internet.error.PotentialZombieWarning}.
     """
+
     def test_deprecated(self):
         """
         Accessing L{PotentialZombieWarning} via the
@@ -950,17 +1014,18 @@ class PotentialZombieWarningTests(TestCase):
         results in a deprecation warning being emitted.
         """
         from twisted.internet import error
+
         error.PotentialZombieWarning
 
         warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "twisted.internet.error.PotentialZombieWarning was deprecated in "
             "Twisted 10.0.0: There is no longer any potential for zombie "
-            "process.")
+            "process.",
+        )
         self.assertEqual(len(warnings), 1)
-
 
 
 class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
@@ -968,6 +1033,7 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
     Tests to ensure that L{twisted.internet.process} is unimportable on
     platforms where it does not work (namely Windows).
     """
+
     @skipIf(not platform.isWindows(), "Only relevant on Windows.")
     def test_unimportableOnWindows(self):
         """
@@ -975,8 +1041,8 @@ class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
         """
         with self.assertRaises(ImportError):
             import twisted.internet.process
-            twisted.internet.process  # shh pyflakes
 
+            twisted.internet.process  # shh pyflakes
 
 
 class ReapingNonePidsLogsProperly(TestCase):
@@ -996,12 +1062,12 @@ class ReapingNonePidsLogsProperly(TestCase):
         self.assertEqual(
             type(error.value),
             self.expected_type,
-            'Wrong error type logged',
+            "Wrong error type logged",
         )
         self.assertEqual(
             str(error.value),
             self.expected_message,
-            'Wrong error message logged',
+            "Wrong error message logged",
         )
 
     @onlyOnPOSIX
@@ -1013,10 +1079,10 @@ class ReapingNonePidsLogsProperly(TestCase):
         self.assertEqual(
             type(error.value),
             self.expected_type,
-            'Wrong error type logged',
+            "Wrong error type logged",
         )
         self.assertEqual(
             str(error.value),
             self.expected_message,
-            'Wrong error message logged',
+            "Wrong error message logged",
         )

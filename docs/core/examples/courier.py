@@ -7,12 +7,14 @@
 Example of an interface to Courier's mail filter.
 """
 
-LOGFILE = '/tmp/filter.log'
+LOGFILE = "/tmp/filter.log"
 
 # Setup log file
 from twisted.python import log
-log.startLogging(open(LOGFILE, 'a'))
+
+log.startLogging(open(LOGFILE, "a"))
 import sys
+
 sys.stderr = log.logfile
 
 # Twisted imports
@@ -20,21 +22,26 @@ from twisted.internet import reactor, stdio
 from twisted.internet.protocol import Protocol, Factory
 from twisted.protocols import basic
 
-FILTERS='/var/lib/courier/filters'
-ALLFILTERS='/var/lib/courier/allfilters'
-FILTERNAME='twistedfilter'
+FILTERS = "/var/lib/courier/filters"
+ALLFILTERS = "/var/lib/courier/allfilters"
+FILTERNAME = "twistedfilter"
 
 import email.parser
 import email.message
 import os, os.path
 from syslog import syslog, openlog, LOG_MAIL
 
+
 def trace_dump():
-    t,v,tb = sys.exc_info()
+    t, v, tb = sys.exc_info()
     openlog(FILTERNAME, 0, LOG_MAIL)
-    syslog('Unhandled exception: {} - {}'.format(v, t))
+    syslog(f"Unhandled exception: {v} - {t}")
     while tb:
-        syslog('Trace: {}:{} {}'.format(tb.tb_frame.f_code.co_filename,tb.tb_frame.f_code.co_name,tb.tb_lineno))
+        syslog(
+            "Trace: {}:{} {}".format(
+                tb.tb_frame.f_code.co_filename, tb.tb_frame.f_code.co_name, tb.tb_lineno
+            )
+        )
         tb = tb.tb_next
     # just to be safe
     del tb
@@ -50,11 +57,9 @@ def safe_del(file):
         pass
 
 
-
 class DieWhenLost(Protocol):
     def connectionLost(self, reason=None):
         reactor.stop()
-
 
 
 class MailProcessor(basic.LineReceiver):
@@ -63,20 +68,20 @@ class MailProcessor(basic.LineReceiver):
 
     Override filterMessage to do any filtering you want.
     """
+
     messageFilename = None
-    delimiter = '\n'
+    delimiter = "\n"
 
     def connectionMade(self):
-        log.msg('Connection from {}'.format(self.transport))
-        self.state = 'connected'
+        log.msg(f"Connection from {self.transport}")
+        self.state = "connected"
         self.metaInfo = []
 
-
     def lineReceived(self, line):
-        if self.state == 'connected':
+        if self.state == "connected":
             self.messageFilename = line
-            self.state = 'gotMessageFilename'
-        if self.state == 'gotMessageFilename':
+            self.state = "gotMessageFilename"
+        if self.state == "gotMessageFilename":
             if line:
                 self.metaInfo.append(line)
             else:
@@ -84,7 +89,6 @@ class MailProcessor(basic.LineReceiver):
                     self.transport.loseConnection()
                     return
                 self.filterMessage()
-
 
     def filterMessage(self):
         """Override this.
@@ -95,18 +99,18 @@ class MailProcessor(basic.LineReceiver):
             emailParser = email.parser.Parser()
             with open(self.messageFilename) as f:
                 emailParser.parse(f)
-            self.sendLine(b'200 Ok')
-        except:
+            self.sendLine(b"200 Ok")
+        except BaseException:
             trace_dump()
-            self.sendLine(b'435 ' + FILTERNAME.encode("ascii") + b' processing error')
+            self.sendLine(b"435 " + FILTERNAME.encode("ascii") + b" processing error")
 
 
 def main():
     # Listen on the UNIX socket
     f = Factory()
     f.protocol = MailProcessor
-    safe_del('{}/{}'.format(ALLFILTERS, FILTERNAME))
-    reactor.listenUNIX('{}/{}'.format(ALLFILTERS, FILTERNAME), f, 10)
+    safe_del(f"{ALLFILTERS}/{FILTERNAME}")
+    reactor.listenUNIX(f"{ALLFILTERS}/{FILTERNAME}", f, 10)
 
     # Once started, close fd 3 to let Courier know we're ready
     reactor.callLater(0, os.close, 3)
@@ -117,5 +121,6 @@ def main():
     # Go!
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -21,10 +21,12 @@ from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
 from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
 from twisted.internet import defer
-from twisted.python import log
-from twisted.python.compat import nativeString, unicode
+from twisted.logger import Logger
+from twisted.python.compat import nativeString
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import FancyEqMixin
+
+log = Logger()
 
 
 def _b64encode(s):
@@ -38,7 +40,6 @@ def _b64encode(s):
     @rtype: L{bytes}
     """
     return b2a_base64(s).strip()
-
 
 
 def _extractCommon(string):
@@ -69,8 +70,7 @@ def _extractCommon(string):
     return hostnames, keyType, key, comment
 
 
-
-class _BaseEntry(object):
+class _BaseEntry:
     """
     Abstract base of both hashed and non-hashed entry objects, since they
     represent keys and key types the same way.
@@ -90,7 +90,6 @@ class _BaseEntry(object):
         self.publicKey = publicKey
         self.comment = comment
 
-
     def matchesKey(self, keyObject):
         """
         Check to see if this entry matches a given key object.
@@ -105,7 +104,6 @@ class _BaseEntry(object):
         return self.publicKey == keyObject
 
 
-
 @implementer(IKnownHostEntry)
 class PlainEntry(_BaseEntry):
     """
@@ -118,8 +116,7 @@ class PlainEntry(_BaseEntry):
 
     def __init__(self, hostnames, keyType, publicKey, comment):
         self._hostnames = hostnames
-        super(PlainEntry, self).__init__(keyType, publicKey, comment)
-
+        super().__init__(keyType, publicKey, comment)
 
     @classmethod
     def fromString(cls, string):
@@ -149,7 +146,6 @@ class PlainEntry(_BaseEntry):
         self = cls(hostnames.split(b","), keyType, key, comment)
         return self
 
-
     def matchesHost(self, hostname):
         """
         Check to see if this entry matches a given hostname.
@@ -162,10 +158,9 @@ class PlainEntry(_BaseEntry):
             C{False} otherwise.
         @rtype: L{bool}
         """
-        if isinstance(hostname, unicode):
+        if isinstance(hostname, str):
             hostname = hostname.encode("utf-8")
         return hostname in self._hostnames
-
 
     def toString(self):
         """
@@ -176,17 +171,18 @@ class PlainEntry(_BaseEntry):
             information.
         @rtype: L{bytes}
         """
-        fields = [b','.join(self._hostnames),
-                  self.keyType,
-                  _b64encode(self.publicKey.blob())]
+        fields = [
+            b",".join(self._hostnames),
+            self.keyType,
+            _b64encode(self.publicKey.blob()),
+        ]
         if self.comment is not None:
             fields.append(self.comment)
-        return b' '.join(fields)
-
+        return b" ".join(fields)
 
 
 @implementer(IKnownHostEntry)
-class UnparsedEntry(object):
+class UnparsedEntry:
     """
     L{UnparsedEntry} is an entry in a L{KnownHostsFile} which can't actually be
     parsed; therefore it matches no keys and no hosts.
@@ -199,20 +195,17 @@ class UnparsedEntry(object):
         """
         self._string = string
 
-
     def matchesHost(self, hostname):
         """
         Always returns False.
         """
         return False
 
-
     def matchesKey(self, key):
         """
         Always returns False.
         """
         return False
-
 
     def toString(self):
         """
@@ -223,7 +216,6 @@ class UnparsedEntry(object):
         @rtype: L{bytes}
         """
         return self._string.rstrip(b"\n")
-
 
 
 def _hmacedString(key, string):
@@ -240,11 +232,10 @@ def _hmacedString(key, string):
     @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
-    if isinstance(string, unicode):
+    if isinstance(string, str):
         string = string.encode("utf-8")
     hash.update(string)
     return hash.digest()
-
 
 
 @implementer(IKnownHostEntry)
@@ -261,16 +252,14 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
     known_hosts file as opposed to a plaintext one.
     """
 
-    MAGIC = b'|1|'
+    MAGIC = b"|1|"
 
-    compareAttributes = (
-        "_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
+    compareAttributes = ("_hostSalt", "_hostHash", "keyType", "publicKey", "comment")
 
     def __init__(self, hostSalt, hostHash, keyType, publicKey, comment):
         self._hostSalt = hostSalt
         self._hostHash = hostHash
-        super(HashedEntry, self).__init__(keyType, publicKey, comment)
-
+        super().__init__(keyType, publicKey, comment)
 
     @classmethod
     def fromString(cls, string):
@@ -296,14 +285,12 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             information from C{string}.
         """
         stuff, keyType, key, comment = _extractCommon(string)
-        saltAndHash = stuff[len(cls.MAGIC):].split(b"|")
+        saltAndHash = stuff[len(cls.MAGIC) :].split(b"|")
         if len(saltAndHash) != 2:
             raise InvalidEntry()
         hostSalt, hostHash = saltAndHash
-        self = cls(a2b_base64(hostSalt), a2b_base64(hostHash),
-                   keyType, key, comment)
+        self = cls(a2b_base64(hostSalt), a2b_base64(hostHash), keyType, key, comment)
         return self
-
 
     def matchesHost(self, hostname):
         """
@@ -318,8 +305,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             C{False} otherwise.
         @rtype: L{bool}
         """
-        return (_hmacedString(self._hostSalt, hostname) == self._hostHash)
-
+        return _hmacedString(self._hostSalt, hostname) == self._hostHash
 
     def toString(self):
         """
@@ -330,17 +316,18 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             hashed.
         @rtype: L{bytes}
         """
-        fields = [self.MAGIC + b'|'.join([_b64encode(self._hostSalt),
-                                          _b64encode(self._hostHash)]),
-                  self.keyType,
-                  _b64encode(self.publicKey.blob())]
+        fields = [
+            self.MAGIC
+            + b"|".join([_b64encode(self._hostSalt), _b64encode(self._hostHash)]),
+            self.keyType,
+            _b64encode(self.publicKey.blob()),
+        ]
         if self.comment is not None:
             fields.append(self.comment)
-        return b' '.join(fields)
+        return b" ".join(fields)
 
 
-
-class KnownHostsFile(object):
+class KnownHostsFile:
     """
     A structured representation of an OpenSSH-format ~/.ssh/known_hosts file.
 
@@ -371,14 +358,12 @@ class KnownHostsFile(object):
         self._savePath = savePath
         self._clobber = True
 
-
     @property
     def savePath(self):
         """
         @see: C{savePath} parameter of L{__init__}
         """
         return self._savePath
-
 
     def iterentries(self):
         """
@@ -397,7 +382,7 @@ class KnownHostsFile(object):
 
         try:
             fp = self._savePath.open()
-        except IOError:
+        except OSError:
             return
 
         with fp:
@@ -410,7 +395,6 @@ class KnownHostsFile(object):
                 except (DecodeError, InvalidEntry, BadKeyError):
                     entry = UnparsedEntry(line)
                 yield entry
-
 
     def hasHostKey(self, hostname, key):
         """
@@ -445,7 +429,6 @@ class KnownHostsFile(object):
                     raise HostKeyChanged(entry, path, line)
         return False
 
-
     def verifyHostKey(self, ui, hostname, ip, key):
         """
         Verify the given host key for the given IP and host, asking for
@@ -467,16 +450,20 @@ class KnownHostsFile(object):
         @rtype: L{Deferred}
         """
         hhk = defer.maybeDeferred(self.hasHostKey, hostname, key)
+
         def gotHasKey(result):
             if result:
                 if not self.hasHostKey(ip, key):
-                    ui.warn("Warning: Permanently added the %s host key for "
-                            "IP address '%s' to the list of known hosts." %
-                            (key.type(), nativeString(ip)))
+                    ui.warn(
+                        "Warning: Permanently added the %s host key for "
+                        "IP address '%s' to the list of known hosts."
+                        % (key.type(), nativeString(ip))
+                    )
                     self.addHostKey(ip, key)
                     self.save()
                 return result
             else:
+
                 def promptResponse(response):
                     if response:
                         self.addHostKey(hostname, key)
@@ -495,13 +482,18 @@ class KnownHostsFile(object):
                     "The authenticity of host '%s (%s)' "
                     "can't be established.\n"
                     "%s key fingerprint is SHA256:%s.\n"
-                    "Are you sure you want to continue connecting (yes/no)? " %
-                    (nativeString(hostname), nativeString(ip), keytype,
-                     key.fingerprint(format=FingerprintFormats.SHA256_BASE64)))
+                    "Are you sure you want to continue connecting (yes/no)? "
+                    % (
+                        nativeString(hostname),
+                        nativeString(ip),
+                        keytype,
+                        key.fingerprint(format=FingerprintFormats.SHA256_BASE64),
+                    )
+                )
                 proceed = ui.prompt(prompt.encode(sys.getdefaultencoding()))
                 return proceed.addCallback(promptResponse)
-        return hhk.addCallback(gotHasKey)
 
+        return hhk.addCallback(gotHasKey)
 
     def addHostKey(self, hostname, key):
         """
@@ -522,11 +514,9 @@ class KnownHostsFile(object):
         """
         salt = secureRandom(20)
         keyType = key.sshType()
-        entry = HashedEntry(salt, _hmacedString(salt, hostname),
-                            keyType, key, None)
+        entry = HashedEntry(salt, _hmacedString(salt, hostname), keyType, key, None)
         self._added.append(entry)
         return entry
-
 
     def save(self):
         """
@@ -544,11 +534,10 @@ class KnownHostsFile(object):
         with self._savePath.open(mode) as hostsFileObj:
             if self._added:
                 hostsFileObj.write(
-                    b"\n".join([entry.toString() for entry in self._added]) +
-                    b"\n")
+                    b"\n".join([entry.toString() for entry in self._added]) + b"\n"
+                )
                 self._added = []
         self._clobber = False
-
 
     @classmethod
     def fromPath(cls, path):
@@ -569,12 +558,12 @@ class KnownHostsFile(object):
         return knownHosts
 
 
-
-class ConsoleUI(object):
+class ConsoleUI:
     """
     A UI object that can ask true/false questions and post notifications on the
     console, to be used during key verification.
     """
+
     def __init__(self, opener):
         """
         @param opener: A no-argument callable which should open a console
@@ -584,7 +573,6 @@ class ConsoleUI(object):
             file-like object
         """
         self.opener = opener
-
 
     def prompt(self, text):
         """
@@ -600,19 +588,20 @@ class ConsoleUI(object):
             there were any I/O errors.
         """
         d = defer.succeed(None)
+
         def body(ignored):
             with closing(self.opener()) as f:
                 f.write(text)
                 while True:
                     answer = f.readline().strip().lower()
-                    if answer == b'yes':
+                    if answer == b"yes":
                         return True
-                    elif answer == b'no':
+                    elif answer == b"no":
                         return False
                     else:
                         f.write(b"Please type 'yes' or 'no': ")
-        return d.addCallback(body)
 
+        return d.addCallback(body)
 
     def warn(self, text):
         """
@@ -625,5 +614,5 @@ class ConsoleUI(object):
         try:
             with closing(self.opener()) as f:
                 f.write(text)
-        except:
-            log.err()
+        except Exception:
+            log.failure("Failed to write to console")

@@ -15,8 +15,7 @@ from twisted.python.failure import Failure
 from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
 
 
-
-class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]  # noqa
+class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]
     """
     A worker implementation that supplies a context.
     """
@@ -28,15 +27,13 @@ class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: igno
         self._realWorker = realWorker
         self._context = ctx
 
-
     def do(self, work):
         """
         Perform the given work with the context given to __init__.
 
         @param work: the work to pass on to the real worker.
         """
-        super(ContextualWorker, self).do(lambda: call(self._context, work))
-
+        super().do(lambda: call(self._context, work))
 
 
 class TeamTests(SynchronousTestCase):
@@ -67,18 +64,21 @@ class TeamTests(SynchronousTestCase):
             self.allWorkersEver.append(cw)
             self.allUnquitWorkers.append(cw)
             realQuit = cw.quit
+
             def quitAndRemove():
                 realQuit()
                 self.allUnquitWorkers.remove(cw)
                 self.activePerformers.remove(performer)
+
             cw.quit = quitAndRemove
             return cw
 
         self.failures = []
+
         def logException():
             self.failures.append(Failure())
-        self.team = Team(coordinator, createWorker, logException)
 
+        self.team = Team(coordinator, createWorker, logException)
 
     def coordinate(self):
         """
@@ -94,7 +94,6 @@ class TeamTests(SynchronousTestCase):
             did = True
         return did
 
-
     def performAllOutstandingWork(self):
         """
         Perform all work on the coordinator and worker performers that needs to
@@ -108,21 +107,21 @@ class TeamTests(SynchronousTestCase):
                     performer()
             continuing = continuing or self.coordinate()
 
-
     def test_doDoesWorkInWorker(self):
         """
         L{Team.do} does the work in a worker created by the createWorker
         callable.
         """
+
         def something():
             something.who = get("worker")
+
         self.team.do(something)
         self.coordinate()
         self.assertEqual(self.team.statistics().busyWorkerCount, 1)
         self.performAllOutstandingWork()
         self.assertEqual(something.who, 1)
         self.assertEqual(self.team.statistics().busyWorkerCount, 0)
-
 
     def test_initialStatistics(self):
         """
@@ -134,7 +133,6 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(stats.busyWorkerCount, 0)
         self.assertEqual(stats.backloggedWorkCount, 0)
 
-
     def test_growCreatesIdleWorkers(self):
         """
         L{Team.grow} increases the number of available idle workers.
@@ -142,7 +140,6 @@ class TeamTests(SynchronousTestCase):
         self.team.grow(5)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.workerPerformers), 5)
-
 
     def test_growCreateLimit(self):
         """
@@ -155,7 +152,6 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(len(self.allWorkersEver), 3)
         self.assertEqual(self.team.statistics().idleWorkerCount, 3)
 
-
     def test_shrinkQuitsWorkers(self):
         """
         L{Team.shrink} will quit the given number of workers.
@@ -165,7 +161,6 @@ class TeamTests(SynchronousTestCase):
         self.team.shrink(3)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.allUnquitWorkers), 2)
-
 
     def test_shrinkToZero(self):
         """
@@ -179,7 +174,6 @@ class TeamTests(SynchronousTestCase):
         self.performAllOutstandingWork()
         self.assertEqual(len(self.allUnquitWorkers), 0)
 
-
     def test_moreWorkWhenNoWorkersAvailable(self):
         """
         When no additional workers are available, the given work is backlogged,
@@ -187,8 +181,10 @@ class TeamTests(SynchronousTestCase):
         """
         self.team.grow(3)
         self.coordinate()
+
         def something():
             something.times += 1
+
         something.times = 0
         self.assertEqual(self.team.statistics().idleWorkerCount, 3)
         for i in range(3):
@@ -206,18 +202,16 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(self.team.statistics().backloggedWorkCount, 0)
         self.assertEqual(something.times, 4)
 
-
     def test_exceptionInTask(self):
         """
         When an exception is raised in a task passed to L{Team.do}, the
         C{logException} given to the L{Team} at construction is invoked in the
         exception context.
         """
-        self.team.do(lambda: 1/0)
+        self.team.do(lambda: 1 / 0)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.failures), 1)
         self.assertEqual(self.failures[0].type, ZeroDivisionError)
-
 
     def test_quit(self):
         """
@@ -227,7 +221,6 @@ class TeamTests(SynchronousTestCase):
         self.team.quit()
         self.assertRaises(AlreadyQuit, self.team.quit)
         self.assertRaises(AlreadyQuit, self.team.do, list)
-
 
     def test_quitQuits(self):
         """
@@ -241,7 +234,6 @@ class TeamTests(SynchronousTestCase):
         self.performAllOutstandingWork()
         self.assertEqual(len(self.allUnquitWorkers), 0)
         self.assertRaises(AlreadyQuit, self.coordinator.quit)
-
 
     def test_quitQuitsLaterWhenBusy(self):
         """
@@ -259,7 +251,6 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(len(self.allUnquitWorkers), 0)
         self.assertRaises(AlreadyQuit, self.coordinator.quit)
 
-
     def test_quitConcurrentWithWorkHappening(self):
         """
         If work happens after L{Team.quit} sets its C{Quit} flag, but before
@@ -267,14 +258,15 @@ class TeamTests(SynchronousTestCase):
         """
         self.team.do(list)
         originalSet = self.team._quit.set
+
         def performWorkConcurrently():
             originalSet()
             self.performAllOutstandingWork()
+
         self.team._quit.set = performWorkConcurrently
         self.team.quit()
         self.assertRaises(AlreadyQuit, self.team.quit)
         self.assertRaises(AlreadyQuit, self.team.do, list)
-
 
     def test_shrinkWhenBusy(self):
         """

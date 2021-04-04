@@ -13,11 +13,15 @@ from collections import deque
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
-    accumulateMethods, prefixedMethods, prefixedMethodNames,
-    addMethodNamesToDict, fullyQualifiedName)
+    accumulateMethods,
+    prefixedMethods,
+    prefixedMethodNames,
+    addMethodNamesToDict,
+    fullyQualifiedName,
+)
 
 
-class Base(object):
+class Base:
     """
     A no-op class which can be used to verify the behavior of
     method-discovering APIs.
@@ -29,15 +33,13 @@ class Base(object):
         """
 
 
-
 class Sub(Base):
     """
     A subclass of a class with a method which can be discovered.
     """
 
 
-
-class Separate(object):
+class Separate:
     """
     A no-op class with methods with differing prefixes.
     """
@@ -47,12 +49,10 @@ class Separate(object):
         A no-op method which a matching prefix to be discovered.
         """
 
-
     def bad_method(self):
         """
         A no-op method with a mismatched prefix to not be discovered.
         """
-
 
 
 class AccumulateMethodsTests(TestCase):
@@ -72,7 +72,6 @@ class AccumulateMethodsTests(TestCase):
         accumulateMethods(x, output)
         self.assertEqual({"method": x.method}, output)
 
-
     def test_baseClass(self):
         """
         If x is an instance of Sub and Sub is a subclass of Base and Base
@@ -85,7 +84,6 @@ class AccumulateMethodsTests(TestCase):
         accumulateMethods(x, output)
         self.assertEqual({"method": x.method}, output)
 
-
     def test_prefix(self):
         """
         If a prefix is given, L{accumulateMethods} limits its results to
@@ -94,9 +92,8 @@ class AccumulateMethodsTests(TestCase):
         """
         x = Separate()
         output = {}
-        accumulateMethods(x, output, 'good_')
-        self.assertEqual({'method': x.good_method}, output)
-
+        accumulateMethods(x, output, "good_")
+        self.assertEqual({"method": x.good_method}, output)
 
 
 class PrefixedMethodsTests(TestCase):
@@ -114,22 +111,21 @@ class PrefixedMethodsTests(TestCase):
         output = prefixedMethods(x)
         self.assertEqual([x.method], output)
 
-
     def test_prefix(self):
         """
         If a prefix is given, L{prefixedMethods} returns only methods named
         with that prefix.
         """
         x = Separate()
-        output = prefixedMethods(x, 'good_')
+        output = prefixedMethods(x, "good_")
         self.assertEqual([x.good_method], output)
-
 
 
 class PrefixedMethodNamesTests(TestCase):
     """
     Tests for L{prefixedMethodNames}.
     """
+
     def test_method(self):
         """
         L{prefixedMethodNames} returns a list including methods with the given
@@ -137,28 +133,30 @@ class PrefixedMethodNamesTests(TestCase):
         """
         self.assertEqual(["method"], prefixedMethodNames(Separate, "good_"))
 
-
     def test_inheritedMethod(self):
         """
         L{prefixedMethodNames} returns a list included methods with the given
         prefix defined on base classes of the class passed to it.
         """
+
         class Child(Separate):
             pass
-        self.assertEqual(["method"], prefixedMethodNames(Child, "good_"))
 
+        self.assertEqual(["method"], prefixedMethodNames(Child, "good_"))
 
 
 class AddMethodNamesToDictTests(TestCase):
     """
     Tests for L{addMethodNamesToDict}.
     """
+
     def test_baseClass(self):
         """
         If C{baseClass} is passed to L{addMethodNamesToDict}, only methods which
         are a subclass of C{baseClass} are added to the result dictionary.
         """
-        class Alternate(object):
+
+        class Alternate:
             pass
 
         class Child(Separate, Alternate):
@@ -166,12 +164,11 @@ class AddMethodNamesToDictTests(TestCase):
                 pass
 
         result = {}
-        addMethodNamesToDict(Child, result, 'good_', Alternate)
-        self.assertEqual({'alternate': 1}, result)
+        addMethodNamesToDict(Child, result, "good_", Alternate)
+        self.assertEqual({"alternate": 1}, result)
 
 
-
-class Summer(object):
+class Summer:
     """
     A class we look up as part of the LookupsTests.
     """
@@ -180,7 +177,6 @@ class Summer(object):
         """
         Do something.
         """
-
 
 
 class LookupsTests(TestCase):
@@ -192,10 +188,7 @@ class LookupsTests(TestCase):
         """
         L{namedClass} should return the class object for the name it is passed.
         """
-        self.assertIs(
-            reflect.namedClass("twisted.test.test_reflect.Summer"),
-            Summer)
-
+        self.assertIs(reflect.namedClass("twisted.test.test_reflect.Summer"), Summer)
 
     def test_namedModuleLookup(self):
         """
@@ -203,36 +196,30 @@ class LookupsTests(TestCase):
         passed.
         """
         from twisted.python import monkey
-        self.assertIs(
-            reflect.namedModule("twisted.python.monkey"), monkey)
 
+        self.assertIs(reflect.namedModule("twisted.python.monkey"), monkey)
 
     def test_namedAnyPackageLookup(self):
         """
         L{namedAny} should return the package object for the name it is passed.
         """
         import twisted.python
-        self.assertIs(
-            reflect.namedAny("twisted.python"), twisted.python)
 
+        self.assertIs(reflect.namedAny("twisted.python"), twisted.python)
 
     def test_namedAnyModuleLookup(self):
         """
         L{namedAny} should return the module object for the name it is passed.
         """
         from twisted.python import monkey
-        self.assertIs(
-            reflect.namedAny("twisted.python.monkey"), monkey)
 
+        self.assertIs(reflect.namedAny("twisted.python.monkey"), monkey)
 
     def test_namedAnyClassLookup(self):
         """
         L{namedAny} should return the class object for the name it is passed.
         """
-        self.assertIs(
-            reflect.namedAny("twisted.test.test_reflect.Summer"),
-            Summer)
-
+        self.assertIs(reflect.namedAny("twisted.test.test_reflect.Summer"), Summer)
 
     def test_namedAnyAttributeLookup(self):
         """
@@ -243,10 +230,9 @@ class LookupsTests(TestCase):
         # object every time.  This is a foolishness of Python's object
         # implementation, not a bug in Twisted.
         self.assertEqual(
-            reflect.namedAny(
-                "twisted.test.test_reflect.Summer.reallySet"),
-            Summer.reallySet)
-
+            reflect.namedAny("twisted.test.test_reflect.Summer.reallySet"),
+            Summer.reallySet,
+        )
 
     def test_namedAnySecondAttributeLookup(self):
         """
@@ -255,11 +241,9 @@ class LookupsTests(TestCase):
         for the name it is passed.
         """
         self.assertIs(
-            reflect.namedAny(
-                "twisted.test.test_reflect."
-                "Summer.reallySet.__doc__"),
-            Summer.reallySet.__doc__)
-
+            reflect.namedAny("twisted.test.test_reflect." "Summer.reallySet.__doc__"),
+            Summer.reallySet.__doc__,
+        )
 
     def test_importExceptions(self):
         """
@@ -267,21 +251,20 @@ class LookupsTests(TestCase):
         should pass through L{namedAny} to the caller.
         """
         self.assertRaises(
-            ZeroDivisionError,
-            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+            ZeroDivisionError, reflect.namedAny, "twisted.test.reflect_helper_ZDE"
+        )
         # Make sure that there is post-failed-import cleanup
         self.assertRaises(
-            ZeroDivisionError,
-            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+            ZeroDivisionError, reflect.namedAny, "twisted.test.reflect_helper_ZDE"
+        )
         self.assertRaises(
-            ValueError,
-            reflect.namedAny, "twisted.test.reflect_helper_VE")
+            ValueError, reflect.namedAny, "twisted.test.reflect_helper_VE"
+        )
         # Modules which themselves raise ImportError when imported should
         # result in an ImportError
         self.assertRaises(
-            ImportError,
-            reflect.namedAny, "twisted.test.reflect_helper_IE")
-
+            ImportError, reflect.namedAny, "twisted.test.reflect_helper_IE"
+        )
 
     def test_attributeExceptions(self):
         """
@@ -290,19 +273,19 @@ class LookupsTests(TestCase):
         the earlier segments, L{namedAny} should raise an L{AttributeError}.
         """
         self.assertRaises(
-            AttributeError,
-            reflect.namedAny, "twisted.nosuchmoduleintheworld")
+            AttributeError, reflect.namedAny, "twisted.nosuchmoduleintheworld"
+        )
         # ImportError behaves somewhat differently between "import
         # extant.nonextant" and "import extant.nonextant.nonextant", so test
         # the latter as well.
         self.assertRaises(
-            AttributeError,
-            reflect.namedAny, "twisted.nosuch.modulein.theworld")
+            AttributeError, reflect.namedAny, "twisted.nosuch.modulein.theworld"
+        )
         self.assertRaises(
             AttributeError,
             reflect.namedAny,
-            "twisted.test.test_reflect.Summer.nosuchattribute")
-
+            "twisted.test.test_reflect.Summer.nosuchattribute",
+        )
 
     def test_invalidNames(self):
         """
@@ -314,54 +297,52 @@ class LookupsTests(TestCase):
          - L{ModuleNotFound}: the object doesn't exist and there is only one
            component in the name
         """
-        err = self.assertRaises(reflect.ModuleNotFound, reflect.namedAny,
-                                'nosuchmoduleintheworld')
+        err = self.assertRaises(
+            reflect.ModuleNotFound, reflect.namedAny, "nosuchmoduleintheworld"
+        )
         self.assertEqual(str(err), "No module named 'nosuchmoduleintheworld'")
 
         # This is a dot-separated list, but it isn't valid!
-        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
-                                "@#$@(#.!@(#!@#")
+        err = self.assertRaises(
+            reflect.ObjectNotFound, reflect.namedAny, "@#$@(#.!@(#!@#"
+        )
         self.assertEqual(str(err), "'@#$@(#.!@(#!@#' does not name an object")
 
-        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
-                                "tcelfer.nohtyp.detsiwt")
-        self.assertEqual(
-            str(err),
-            "'tcelfer.nohtyp.detsiwt' does not name an object")
+        err = self.assertRaises(
+            reflect.ObjectNotFound, reflect.namedAny, "tcelfer.nohtyp.detsiwt"
+        )
+        self.assertEqual(str(err), "'tcelfer.nohtyp.detsiwt' does not name an object")
 
-        err = self.assertRaises(reflect.InvalidName, reflect.namedAny, '')
-        self.assertEqual(str(err), 'Empty module name')
+        err = self.assertRaises(reflect.InvalidName, reflect.namedAny, "")
+        self.assertEqual(str(err), "Empty module name")
 
-        for invalidName in ['.twisted', 'twisted.', 'twisted..python']:
-            err = self.assertRaises(
-                reflect.InvalidName, reflect.namedAny, invalidName)
+        for invalidName in [".twisted", "twisted.", "twisted..python"]:
+            err = self.assertRaises(reflect.InvalidName, reflect.namedAny, invalidName)
             self.assertEqual(
                 str(err),
                 "name must be a string giving a '.'-separated list of Python "
-                "identifiers, not %r" % (invalidName,))
-
+                "identifiers, not %r" % (invalidName,),
+            )
 
     def test_requireModuleImportError(self):
         """
         When module import fails with ImportError it returns the specified
         default value.
         """
-        for name in ['nosuchmtopodule', 'no.such.module']:
+        for name in ["nosuchmtopodule", "no.such.module"]:
             default = object()
 
             result = reflect.requireModule(name, default=default)
 
             self.assertIs(result, default)
 
-
     def test_requireModuleDefaultNone(self):
         """
         When module import fails it returns L{None} by default.
         """
-        result = reflect.requireModule('no.such.module')
+        result = reflect.requireModule("no.such.module")
 
         self.assertIsNone(result)
-
 
     def test_requireModuleRequestedImport(self):
         """
@@ -369,33 +350,31 @@ class LookupsTests(TestCase):
         value.
         """
         from twisted.python import monkey
+
         default = object()
 
         self.assertIs(
-            reflect.requireModule('twisted.python.monkey', default=default),
+            reflect.requireModule("twisted.python.monkey", default=default),
             monkey,
-            )
+        )
 
 
-
-class Breakable(object):
+class Breakable:
 
     breakRepr = False
     breakStr = False
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.breakStr:
             raise RuntimeError("str!")
         else:
-            return '<Breakable>'
+            return "<Breakable>"
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.breakRepr:
             raise RuntimeError("repr!")
         else:
-            return 'Breakable()'
-
+            return "Breakable()"
 
 
 class BrokenType(Breakable, type):
@@ -405,19 +384,14 @@ class BrokenType(Breakable, type):
     def __name__(self):
         if self.breakName:
             raise RuntimeError("no name")
-        return 'BrokenType'
+        return "BrokenType"
 
 
-
-BTBase = BrokenType('BTBase', (Breakable,),
-                    {"breakRepr": True,
-                     "breakStr": True})
-
+BTBase = BrokenType("BTBase", (Breakable,), {"breakRepr": True, "breakStr": True})
 
 
 class NoClassAttr(Breakable):
     __class__ = property(lambda x: x.not_class)  # type: ignore[assignment]
-
 
 
 class SafeReprTests(TestCase):
@@ -430,9 +404,8 @@ class SafeReprTests(TestCase):
         L{reflect.safe_repr} produces the same output as C{repr} on a working
         object.
         """
-        xs = ([1, 2, 3], b'a')
+        xs = ([1, 2, 3], b"a")
         self.assertEqual(list(map(reflect.safe_repr, xs)), list(map(repr, xs)))
-
 
     def test_brokenRepr(self):
         """
@@ -448,7 +421,6 @@ class SafeReprTests(TestCase):
         self.assertIn(os.path.splitext(__file__)[0], bRepr)
         self.assertIn("RuntimeError: repr!", bRepr)
 
-
     def test_brokenStr(self):
         """
         L{reflect.safe_repr} isn't affected by a broken C{__str__} method.
@@ -457,13 +429,12 @@ class SafeReprTests(TestCase):
         b.breakStr = True
         self.assertEqual(reflect.safe_repr(b), repr(b))
 
-
     def test_brokenClassRepr(self):
         class X(BTBase):
             breakRepr = True
+
         reflect.safe_repr(X)
         reflect.safe_repr(X())
-
 
     def test_brokenReprIncludesID(self):
         """
@@ -472,21 +443,20 @@ class SafeReprTests(TestCase):
         L{safe_repr} includes a traceback after a newline, so we only check
         against the first line of the repr.
         """
+
         class X(BTBase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        xReprExpected = ('<BrokenType instance at 0x%x with repr error:'
-                         % (id(X),))
-        self.assertEqual(xReprExpected, xRepr.split('\n')[0])
-
+        xReprExpected = "<BrokenType instance at 0x{:x} with repr error:".format(id(X))
+        self.assertEqual(xReprExpected, xRepr.split("\n")[0])
 
     def test_brokenClassStr(self):
         class X(BTBase):
             breakStr = True
+
         reflect.safe_repr(X)
         reflect.safe_repr(X())
-
 
     def test_brokenClassAttribute(self):
         """
@@ -501,20 +471,20 @@ class SafeReprTests(TestCase):
         self.assertIn(os.path.splitext(__file__)[0], bRepr)
         self.assertIn("RuntimeError: repr!", bRepr)
 
-
     def test_brokenClassNameAttribute(self):
         """
         If a class raises an exception when accessing its C{__name__} attribute
         B{and} when calling its C{__str__} implementation, L{reflect.safe_repr}
         returns 'BROKEN CLASS' instead of the class name.
         """
+
         class X(BTBase):
             breakName = True
+
         xRepr = reflect.safe_repr(X())
         self.assertIn("<BROKEN CLASS AT 0x", xRepr)
         self.assertIn(os.path.splitext(__file__)[0], xRepr)
         self.assertIn("RuntimeError: repr!", xRepr)
-
 
 
 class SafeStrTests(TestCase):
@@ -526,59 +496,53 @@ class SafeStrTests(TestCase):
         x = [1, 2, 3]
         self.assertEqual(reflect.safe_str(x), str(x))
 
-
     def test_brokenStr(self):
         b = Breakable()
         b.breakStr = True
         reflect.safe_str(b)
-
 
     def test_workingAscii(self):
         """
         L{safe_str} for C{str} with ascii-only data should return the
         value unchanged.
         """
-        x = 'a'
-        self.assertEqual(reflect.safe_str(x), 'a')
-
+        x = "a"
+        self.assertEqual(reflect.safe_str(x), "a")
 
     def test_workingUtf8_3(self):
         """
         L{safe_str} for C{bytes} with utf-8 encoded data should return
         the value decoded into C{str}.
         """
-        x = b't\xc3\xbcst'
-        self.assertEqual(reflect.safe_str(x), x.decode('utf-8'))
-
+        x = b"t\xc3\xbcst"
+        self.assertEqual(reflect.safe_str(x), x.decode("utf-8"))
 
     def test_brokenUtf8(self):
         """
         Use str() for non-utf8 bytes: "b'non-utf8'"
         """
-        x = b'\xff'
+        x = b"\xff"
         xStr = reflect.safe_str(x)
         self.assertEqual(xStr, str(x))
-
 
     def test_brokenRepr(self):
         b = Breakable()
         b.breakRepr = True
         reflect.safe_str(b)
 
-
     def test_brokenClassStr(self):
         class X(BTBase):
             breakStr = True
+
         reflect.safe_str(X)
         reflect.safe_str(X())
-
 
     def test_brokenClassRepr(self):
         class X(BTBase):
             breakRepr = True
+
         reflect.safe_str(X)
         reflect.safe_str(X())
-
 
     def test_brokenClassAttribute(self):
         """
@@ -593,20 +557,20 @@ class SafeStrTests(TestCase):
         self.assertIn(os.path.splitext(__file__)[0], bStr)
         self.assertIn("RuntimeError: str!", bStr)
 
-
     def test_brokenClassNameAttribute(self):
         """
         If a class raises an exception when accessing its C{__name__} attribute
         B{and} when calling its C{__str__} implementation, L{reflect.safe_str}
         returns 'BROKEN CLASS' instead of the class name.
         """
+
         class X(BTBase):
             breakName = True
+
         xStr = reflect.safe_str(X())
         self.assertIn("<BROKEN CLASS AT 0x", xStr)
         self.assertIn(os.path.splitext(__file__)[0], xStr)
         self.assertIn("RuntimeError: str!", xStr)
-
 
 
 class FilenameToModuleTests(TestCase):
@@ -619,10 +583,8 @@ class FilenameToModuleTests(TestCase):
         os.makedirs(self.path)
         with open(os.path.join(self.path, "__init__.py"), "w") as f:
             f.write("")
-        with open(os.path.join(os.path.dirname(self.path), "__init__.py"),
-                  "w") as f:
+        with open(os.path.join(os.path.dirname(self.path), "__init__.py"), "w") as f:
             f.write("")
-
 
     def test_directory(self):
         """
@@ -630,10 +592,9 @@ class FilenameToModuleTests(TestCase):
         directory.
         """
         module = reflect.filenameToModuleName(self.path)
-        self.assertEqual(module, 'fakepackage.test')
+        self.assertEqual(module, "fakepackage.test")
         module = reflect.filenameToModuleName(self.path + os.path.sep)
-        self.assertEqual(module, 'fakepackage.test')
-
+        self.assertEqual(module, "fakepackage.test")
 
     def test_file(self):
         """
@@ -641,9 +602,9 @@ class FilenameToModuleTests(TestCase):
         its file.
         """
         module = reflect.filenameToModuleName(
-            os.path.join(self.path, 'test_reflect.py'))
-        self.assertEqual(module, 'fakepackage.test.test_reflect')
-
+            os.path.join(self.path, "test_reflect.py")
+        )
+        self.assertEqual(module, "fakepackage.test.test_reflect")
 
     def test_bytes(self):
         """
@@ -651,10 +612,10 @@ class FilenameToModuleTests(TestCase):
         path to its file.
         """
         module = reflect.filenameToModuleName(
-            os.path.join(self.path.encode("utf-8"), b'test_reflect.py'))
+            os.path.join(self.path.encode("utf-8"), b"test_reflect.py")
+        )
         # Module names are always native string:
-        self.assertEqual(module, 'fakepackage.test.test_reflect')
-
+        self.assertEqual(module, "fakepackage.test.test_reflect")
 
 
 class FullyQualifiedNameTests(TestCase):
@@ -669,43 +630,41 @@ class FullyQualifiedNameTests(TestCase):
         """
         self.assertEqual(fullyQualifiedName(obj), expected)
 
-
     def test_package(self):
         """
         L{fullyQualifiedName} returns the full name of a package and a
         subpackage.
         """
         import twisted
-        self._checkFullyQualifiedName(twisted, 'twisted')
-        import twisted.python
-        self._checkFullyQualifiedName(twisted.python, 'twisted.python')
 
+        self._checkFullyQualifiedName(twisted, "twisted")
+        import twisted.python
+
+        self._checkFullyQualifiedName(twisted.python, "twisted.python")
 
     def test_module(self):
         """
         L{fullyQualifiedName} returns the name of a module inside a package.
         """
         import twisted.python.compat
-        self._checkFullyQualifiedName(
-            twisted.python.compat, 'twisted.python.compat')
 
+        self._checkFullyQualifiedName(twisted.python.compat, "twisted.python.compat")
 
     def test_class(self):
         """
         L{fullyQualifiedName} returns the name of a class and its module.
         """
         self._checkFullyQualifiedName(
-            FullyQualifiedNameTests,
-            '%s.FullyQualifiedNameTests' % (__name__,))
-
+            FullyQualifiedNameTests, f"{__name__}.FullyQualifiedNameTests"
+        )
 
     def test_function(self):
         """
         L{fullyQualifiedName} returns the name of a function inside its module.
         """
         self._checkFullyQualifiedName(
-            fullyQualifiedName, "twisted.python.reflect.fullyQualifiedName")
-
+            fullyQualifiedName, "twisted.python.reflect.fullyQualifiedName"
+        )
 
     def test_boundMethod(self):
         """
@@ -714,8 +673,8 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.test_boundMethod,
-            "%s.%s.test_boundMethod" % (__name__, self.__class__.__name__))
-
+            f"{__name__}.{self.__class__.__name__}.test_boundMethod",
+        )
 
     def test_unboundMethod(self):
         """
@@ -724,12 +683,11 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.__class__.test_unboundMethod,
-            "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))
-
+            f"{__name__}.{self.__class__.__name__}.test_unboundMethod",
+        )
 
 
 class ObjectGrepTests(TestCase):
-
     def test_dictionary(self):
         """
         Test references search through a dictionary, as a key or as a value.
@@ -763,8 +721,10 @@ class ObjectGrepTests(TestCase):
         """
         Test references search through an object attribute.
         """
+
         class Dummy:
             pass
+
         o = object()
         d = Dummy()
         d.o = o
@@ -775,8 +735,10 @@ class ObjectGrepTests(TestCase):
         """
         Test references search through a weakref object.
         """
+
         class Dummy:
             pass
+
         o = Dummy()
         w1 = weakref.ref(o)
 
@@ -786,23 +748,26 @@ class ObjectGrepTests(TestCase):
         """
         Test references search through method special attributes.
         """
+
         class Dummy:
             def dummy(self):
                 pass
+
         o = Dummy()
         m = o.dummy
 
-        self.assertIn(".__self__",
-                      reflect.objgrep(m, m.__self__, reflect.isSame))
-        self.assertIn(".__self__.__class__",
-                      reflect.objgrep(m, m.__self__.__class__, reflect.isSame))
-        self.assertIn(".__func__",
-                      reflect.objgrep(m, m.__func__, reflect.isSame))
+        self.assertIn(".__self__", reflect.objgrep(m, m.__self__, reflect.isSame))
+        self.assertIn(
+            ".__self__.__class__",
+            reflect.objgrep(m, m.__self__.__class__, reflect.isSame),
+        )
+        self.assertIn(".__func__", reflect.objgrep(m, m.__func__, reflect.isSame))
 
     def test_everything(self):
         """
         Test references search using complex set of objects.
         """
+
         class Dummy:
             def method(self):
                 pass
@@ -817,8 +782,9 @@ class ObjectGrepTests(TestCase):
         m = i.method
         w = weakref.ref(m)
 
-        self.assertIn("().__self__.attr[2][0][2]{'Foosh'}",
-                      reflect.objgrep(w, o, reflect.isSame))
+        self.assertIn(
+            "().__self__.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame)
+        )
 
     def test_depthLimit(self):
         """
@@ -829,10 +795,14 @@ class ObjectGrepTests(TestCase):
         c = [a, b]
         d = [a, c]
 
-        self.assertEqual(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
-        self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
-        self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
-
+        self.assertEqual(["[0]"], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
+        self.assertEqual(
+            ["[0]", "[1][0]"], reflect.objgrep(d, a, reflect.isSame, maxDepth=2)
+        )
+        self.assertEqual(
+            ["[0]", "[1][0]", "[1][1][0]"],
+            reflect.objgrep(d, a, reflect.isSame, maxDepth=3),
+        )
 
     def test_deque(self):
         """
@@ -846,11 +816,11 @@ class ObjectGrepTests(TestCase):
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
 
 
-
 class GetClassTests(TestCase):
     def test_new(self):
-        class NewClass(object):
+        class NewClass:
             pass
+
         new = NewClass()
-        self.assertEqual(reflect.getClass(NewClass).__name__, 'type')
-        self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
+        self.assertEqual(reflect.getClass(NewClass).__name__, "type")
+        self.assertEqual(reflect.getClass(new).__name__, "NewClass")

@@ -19,10 +19,19 @@ from unittest import skipIf
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import compat, log
+from twisted.python import log
 from twisted.internet.tcp import (
-    _ACCEPT_ERRORS, ECONNABORTED, EPERM, ENOMEM, ENFILE,
-    EAGAIN, EMFILE, ENOBUFS, EINPROGRESS, EWOULDBLOCK, Port,
+    _ACCEPT_ERRORS,
+    ECONNABORTED,
+    EPERM,
+    ENOMEM,
+    ENFILE,
+    EAGAIN,
+    EMFILE,
+    ENOBUFS,
+    EINPROGRESS,
+    EWOULDBLOCK,
+    Port,
 )
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.python.runtime import platform
@@ -30,9 +39,10 @@ from twisted.internet.defer import maybeDeferred, gatherResults
 from twisted.internet import reactor, interfaces
 
 
-
-@skipIf(not interfaces.IReactorFDSet.providedBy(reactor),
-        'This test only applies to reactors that implement IReactorFDset')
+@skipIf(
+    not interfaces.IReactorFDSet.providedBy(reactor),
+    "This test only applies to reactors that implement IReactorFDset",
+)
 class PlatformAssumptionsTests(TestCase):
     """
     Test assumptions about platform behaviors.
@@ -50,11 +60,13 @@ class PlatformAssumptionsTests(TestCase):
             # leaked too many fds for that to work, there's nothing we can
             # do.
             from twisted.internet.process import _listOpenFDs
+
             newLimit = len(_listOpenFDs()) + 2
             self.originalFileLimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-            resource.setrlimit(resource.RLIMIT_NOFILE, (newLimit, self.originalFileLimit[1]))
+            resource.setrlimit(
+                resource.RLIMIT_NOFILE, (newLimit, self.originalFileLimit[1])
+            )
             self.socketLimit = newLimit + 100
-
 
     def tearDown(self):
         while self.openSockets:
@@ -68,7 +80,6 @@ class PlatformAssumptionsTests(TestCase):
             newSoftLimit = min(self.originalFileLimit[0], currentHardLimit)
             resource.setrlimit(resource.RLIMIT_NOFILE, (newSoftLimit, currentHardLimit))
 
-
     def socket(self):
         """
         Create and return a new socket object, also tracking it so it can be
@@ -78,10 +89,11 @@ class PlatformAssumptionsTests(TestCase):
         self.openSockets.append(s)
         return s
 
-
-    @skipIf(platform.getType() == "win32",
-            "Windows requires an unacceptably large amount of resources to "
-            "provoke this behavior in the naive manner.")
+    @skipIf(
+        platform.getType() == "win32",
+        "Windows requires an unacceptably large amount of resources to "
+        "provoke this behavior in the naive manner.",
+    )
     def test_acceptOutOfFiles(self):
         """
         Test that the platform accept(2) call fails with either L{EMFILE} or
@@ -89,7 +101,7 @@ class PlatformAssumptionsTests(TestCase):
         """
         # Make a server to which to connect
         port = self.socket()
-        port.bind(('127.0.0.1', 0))
+        port.bind(("127.0.0.1", 0))
         serverPortNumber = port.getsockname()[1]
         port.listen(5)
 
@@ -101,7 +113,7 @@ class PlatformAssumptionsTests(TestCase):
         for i in range(self.socketLimit):
             try:
                 self.socket()
-            except socket.error as e:
+            except OSError as e:
                 if e.args[0] in (EMFILE, ENOBUFS):
                     # The desired state has been achieved.
                     break
@@ -113,17 +125,19 @@ class PlatformAssumptionsTests(TestCase):
 
         # Non-blocking connect is supposed to fail, but this is not true
         # everywhere (e.g. freeBSD)
-        self.assertIn(client.connect_ex(('127.0.0.1', serverPortNumber)),
-                      (0, EINPROGRESS))
+        self.assertIn(
+            client.connect_ex(("127.0.0.1", serverPortNumber)), (0, EINPROGRESS)
+        )
 
         # Make sure that the accept call fails in the way we expect.
         exc = self.assertRaises(socket.error, port.accept)
         self.assertIn(exc.args[0], (EMFILE, ENOBUFS))
 
 
-
-@skipIf(not interfaces.IReactorFDSet.providedBy(reactor),
-        'This test only applies to reactors that implement IReactorFDset')
+@skipIf(
+    not interfaces.IReactorFDSet.providedBy(reactor),
+    "This test only applies to reactors that implement IReactorFDset",
+)
 class SelectReactorTests(TestCase):
     """
     Tests for select-specific failure conditions.
@@ -134,13 +148,9 @@ class SelectReactorTests(TestCase):
         self.messages = []
         log.addObserver(self.messages.append)
 
-
     def tearDown(self):
         log.removeObserver(self.messages.append)
-        return gatherResults([
-            maybeDeferred(p.stopListening)
-            for p in self.ports])
-
+        return gatherResults([maybeDeferred(p.stopListening) for p in self.ports])
 
     def port(self, portNumber, factory, interface):
         """
@@ -151,7 +161,6 @@ class SelectReactorTests(TestCase):
         p.startListening()
         self.ports.append(p)
         return p
-
 
     def _acceptFailureTest(self, socketErrorNumber):
         """
@@ -164,16 +173,17 @@ class SelectReactorTests(TestCase):
 
         @param socketErrorNumber: The errno to simulate from accept.
         """
-        class FakeSocket(object):
+
+        class FakeSocket:
             """
             Pretend to be a socket in an overloaded system.
             """
+
             def accept(self):
-                raise socket.error(
-                    socketErrorNumber, os.strerror(socketErrorNumber))
+                raise OSError(socketErrorNumber, os.strerror(socketErrorNumber))
 
         factory = ServerFactory()
-        port = self.port(0, factory, interface='127.0.0.1')
+        port = self.port(0, factory, interface="127.0.0.1")
         self.patch(port, "socket", FakeSocket())
 
         port.doRead()
@@ -181,14 +191,17 @@ class SelectReactorTests(TestCase):
         expectedFormat = "Could not accept new connection ({acceptError})"
         expectedErrorCode = errno.errorcode[socketErrorNumber]
         matchingMessages = [
-            (msg.get('log_format') == expectedFormat
-             and msg.get('acceptError') == expectedErrorCode)
+            (
+                msg.get("log_format") == expectedFormat
+                and msg.get("acceptError") == expectedErrorCode
+            )
             for msg in self.messages
         ]
-        self.assertGreater(len(matchingMessages), 0,
-                           "Log event for failed accept not found in "
-                           "%r" % (self.messages,))
-
+        self.assertGreater(
+            len(matchingMessages),
+            0,
+            "Log event for failed accept not found in " "%r" % (self.messages,),
+        )
 
     def test_tooManyFilesFromAccept(self):
         """
@@ -201,7 +214,6 @@ class SelectReactorTests(TestCase):
         """
         return self._acceptFailureTest(EMFILE)
 
-
     def test_noBufferSpaceFromAccept(self):
         """
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
@@ -211,7 +223,6 @@ class SelectReactorTests(TestCase):
         Linux and other platforms as well.
         """
         return self._acceptFailureTest(ENOBUFS)
-
 
     def test_connectionAbortedFromAccept(self):
         """
@@ -223,9 +234,7 @@ class SelectReactorTests(TestCase):
         """
         return self._acceptFailureTest(ECONNABORTED)
 
-
-    @skipIf(platform.getType() == 'win32',
-            "Windows accept(2) cannot generate ENFILE")
+    @skipIf(platform.getType() == "win32", "Windows accept(2) cannot generate ENFILE")
     def test_noFilesFromAccept(self):
         """
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
@@ -236,9 +245,7 @@ class SelectReactorTests(TestCase):
         """
         return self._acceptFailureTest(ENFILE)
 
-
-    @skipIf(platform.getType() == 'win32',
-            "Windows accept(2) cannot generate ENOMEM")
+    @skipIf(platform.getType() == "win32", "Windows accept(2) cannot generate ENOMEM")
     def test_noMemoryFromAccept(self):
         """
         Similar to L{test_tooManyFilesFromAccept}, but test the case where
@@ -252,9 +259,10 @@ class SelectReactorTests(TestCase):
         """
         return self._acceptFailureTest(ENOMEM)
 
-
-    @skipIf(os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES",
-            "Hangs on Azure Pipelines due to firewall")
+    @skipIf(
+        os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES",
+        "Hangs on Azure Pipelines due to firewall",
+    )
     def test_acceptScaling(self):
         """
         L{tcp.Port.doRead} increases the number of consecutive
@@ -264,7 +272,7 @@ class SelectReactorTests(TestCase):
         """
         factory = ServerFactory()
         factory.protocol = Protocol
-        port = self.port(0, factory, interface='127.0.0.1')
+        port = self.port(0, factory, interface="127.0.0.1")
         self.addCleanup(port.stopListening)
 
         clients = []
@@ -296,9 +304,7 @@ class SelectReactorTests(TestCase):
         # accept should be tried next.
         self.assertEqual(port.numberAccepts, 1)
 
-
-    @skipIf(platform.getType() == 'win32',
-            "Windows accept(2) cannot generate EPERM")
+    @skipIf(platform.getType() == "win32", "Windows accept(2) cannot generate EPERM")
     def test_permissionFailure(self):
         """
         C{accept(2)} returning C{EPERM} is treated as a transient
@@ -308,31 +314,30 @@ class SelectReactorTests(TestCase):
         maximumNumberOfAccepts = 123
         acceptCalls = [0]
 
-        class FakeSocketWithAcceptLimit(object):
+        class FakeSocketWithAcceptLimit:
             """
             Pretend to be a socket in an overloaded system whose
             C{accept} method can only be called
             C{maximumNumberOfAccepts} times.
             """
+
             def accept(oself):
                 acceptCalls[0] += 1
                 if acceptCalls[0] > maximumNumberOfAccepts:
                     self.fail("Maximum number of accept calls exceeded.")
-                raise socket.error(EPERM, os.strerror(EPERM))
+                raise OSError(EPERM, os.strerror(EPERM))
 
         # Verify that FakeSocketWithAcceptLimit.accept() fails the
         # test if the number of accept calls exceeds the maximum.
         for _ in range(maximumNumberOfAccepts):
-            self.assertRaises(socket.error,
-                              FakeSocketWithAcceptLimit().accept)
+            self.assertRaises(socket.error, FakeSocketWithAcceptLimit().accept)
 
-        self.assertRaises(self.failureException,
-                          FakeSocketWithAcceptLimit().accept)
+        self.assertRaises(self.failureException, FakeSocketWithAcceptLimit().accept)
 
         acceptCalls = [0]
 
         factory = ServerFactory()
-        port = self.port(0, factory, interface='127.0.0.1')
+        port = self.port(0, factory, interface="127.0.0.1")
         port.numberAccepts = 123
         self.patch(port, "socket", FakeSocketWithAcceptLimit())
 
@@ -343,7 +348,6 @@ class SelectReactorTests(TestCase):
         # successfully.
         self.assertEquals(port.numberAccepts, 1)
 
-
     def test_unknownSocketErrorRaise(self):
         """
         A C{socket.error} raised by C{accept(2)} whose C{errno} is
@@ -352,23 +356,22 @@ class SelectReactorTests(TestCase):
         knownErrors = list(_ACCEPT_ERRORS)
         knownErrors.extend([EAGAIN, EPERM, EWOULDBLOCK])
         # Windows has object()s stubs for some errnos.
-        unknownAcceptError = max(
-            error for error in knownErrors
-            if isinstance(error, (int, compat.long))
-        ) + 1
+        unknownAcceptError = (
+            max(error for error in knownErrors if isinstance(error, int)) + 1
+        )
 
-        class FakeSocketWithUnknownAcceptError(object):
+        class FakeSocketWithUnknownAcceptError:
             """
             Pretend to be a socket in an overloaded system whose
             C{accept} method can only be called
             C{maximumNumberOfAccepts} times.
             """
+
             def accept(oself):
-                raise socket.error(unknownAcceptError,
-                                   "unknown socket error message")
+                raise OSError(unknownAcceptError, "unknown socket error message")
 
         factory = ServerFactory()
-        port = self.port(0, factory, interface='127.0.0.1')
+        port = self.port(0, factory, interface="127.0.0.1")
         self.patch(port, "socket", FakeSocketWithUnknownAcceptError())
 
         port.doRead()

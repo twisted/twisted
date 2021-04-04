@@ -22,7 +22,6 @@ from twisted.mail import relay
 from zope.interface import implementer
 
 
-
 @implementer(smtp.IMessageDelivery)
 class DomainDeliveryBase:
     """
@@ -36,8 +35,9 @@ class DomainDeliveryBase:
     @ivar protocolName: The protocol being used to deliver the mail.
         Sub-classes should set this appropriately.
     """
+
     service = None
-    protocolName = b'not-implemented-protocol'  # type: bytes
+    protocolName: bytes = b"not-implemented-protocol"
 
     def __init__(self, service, user, host=smtp.DNSNAME):
         """
@@ -53,7 +53,6 @@ class DomainDeliveryBase:
         self.service = service
         self.user = user
         self.host = host
-
 
     def receivedHeader(self, helo, origin, recipients):
         """
@@ -74,18 +73,23 @@ class DomainDeliveryBase:
         """
         authStr = heloStr = b""
         if self.user:
-            authStr = b" auth=" + self.user.encode('xtext')
+            authStr = b" auth=" + self.user.encode("xtext")
         if helo[0]:
             heloStr = b" helo=" + helo[0]
-        fromUser = (b"from " + helo[0] + b" ([" + helo[1] + b"]" +
-                 heloStr + authStr)
-        by = (b"by " + self.host + b" with " + self.protocolName +
-              b" (" + longversion.encode("ascii") + b")")
-        forUser = (b"for <" + b' '.join(map(bytes, recipients)) + b"> " +
-                smtp.rfc822date())
-        return (b"Received: " + fromUser + b"\n\t" + by +
-                b"\n\t" + forUser)
-
+        fromUser = b"from " + helo[0] + b" ([" + helo[1] + b"]" + heloStr + authStr
+        by = (
+            b"by "
+            + self.host
+            + b" with "
+            + self.protocolName
+            + b" ("
+            + longversion.encode("ascii")
+            + b")"
+        )
+        forUser = (
+            b"for <" + b" ".join(map(bytes, recipients)) + b"> " + smtp.rfc822date()
+        )
+        return b"Received: " + fromUser + b"\n\t" + by + b"\n\t" + forUser
 
     def validateTo(self, user):
         """
@@ -112,7 +116,6 @@ class DomainDeliveryBase:
             d = self.service.domains[user.dest.domain]
         return defer.maybeDeferred(d.exists, user)
 
-
     def validateFrom(self, helo, origin):
         """
         Validate the address from which a message originates.
@@ -131,29 +134,26 @@ class DomainDeliveryBase:
             origination address.
         """
         if not helo:
-            raise smtp.SMTPBadSender(origin, 503,
-                                     "Who are you?  Say HELO first.")
-        if origin.local != b'' and origin.domain == b'':
-            raise smtp.SMTPBadSender(origin, 501,
-                                     "Sender address must contain domain.")
+            raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
+        if origin.local != b"" and origin.domain == b"":
+            raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
         return origin
-
 
 
 class SMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an SMTP server.
     """
-    protocolName = b'smtp'
 
+    protocolName = b"smtp"
 
 
 class ESMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an ESMTP server.
     """
-    protocolName = b'esmtp'
 
+    protocolName = b"esmtp"
 
 
 class SMTPFactory(smtp.SMTPFactory):
@@ -168,10 +168,11 @@ class SMTPFactory(smtp.SMTPFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{SMTP}.
     """
+
     protocol = smtp.SMTP
     portal = None
 
-    def __init__(self, service, portal = None):
+    def __init__(self, service, portal=None):
         """
         @type service: L{MailService}
         @param service: An email service.
@@ -184,7 +185,6 @@ class SMTPFactory(smtp.SMTPFactory):
         self.service = service
         self.portal = portal
 
-
     def buildProtocol(self, addr):
         """
         Create an instance of an SMTP server protocol.
@@ -195,12 +195,11 @@ class SMTPFactory(smtp.SMTPFactory):
         @rtype: L{SMTP}
         @return: An SMTP protocol.
         """
-        log.msg('Connection from %s' % (addr,))
+        log.msg(f"Connection from {addr}")
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
         p.portal = self.portal
         return p
-
 
 
 class ESMTPFactory(SMTPFactory):
@@ -223,6 +222,7 @@ class ESMTPFactory(SMTPFactory):
     @ivar challengers: A mapping of acceptable authorization mechanism to
         callable which creates credentials to use for authentication.
     """
+
     protocol = smtp.ESMTP
     context = None
 
@@ -233,10 +233,7 @@ class ESMTPFactory(SMTPFactory):
         @see: L{SMTPFactory.__init__}
         """
         SMTPFactory.__init__(self, *args)
-        self.challengers = {
-            b'CRAM-MD5': CramMD5Credentials
-        }
-
+        self.challengers = {b"CRAM-MD5": CramMD5Credentials}
 
     def buildProtocol(self, addr):
         """
@@ -254,7 +251,6 @@ class ESMTPFactory(SMTPFactory):
         return p
 
 
-
 class VirtualPOP3(pop3.POP3):
     """
     A virtual hosting POP3 server.
@@ -267,11 +263,12 @@ class VirtualPOP3(pop3.POP3):
     @ivar domainSpecifier: The character to use to split an email address into
         local-part and domain. The default is '@'.
     """
+
     service = None
 
-    domainSpecifier = b'@'  # Gaagh! I hate POP3. No standardized way
-                            # to indicate user@host. '@' doesn't work
-                            # with NS, e.g.
+    domainSpecifier = b"@"  # Gaagh! I hate POP3. No standardized way
+    # to indicate user@host. '@' doesn't work
+    # with NS, e.g.
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -301,11 +298,8 @@ class VirtualPOP3(pop3.POP3):
             return defer.fail(UnauthorizedLogin())
         else:
             return portal.login(
-                pop3.APOPCredentials(self.magic, user, digest),
-                None,
-                pop3.IMailbox
+                pop3.APOPCredentials(self.magic, user, digest), None, pop3.IMailbox
             )
-
 
     def authenticateUserPASS(self, user, password):
         """
@@ -334,12 +328,7 @@ class VirtualPOP3(pop3.POP3):
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
-            return portal.login(
-                UsernamePassword(user, password),
-                None,
-                pop3.IMailbox
-            )
-
+            return portal.login(UsernamePassword(user, password), None, pop3.IMailbox)
 
     def lookupDomain(self, user):
         """
@@ -358,12 +347,10 @@ class VirtualPOP3(pop3.POP3):
         try:
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
-            domain = b''
+            domain = b""
         if domain not in self.service.domains:
-            raise pop3.POP3Error(
-                "no such domain {}".format(domain.decode("utf-8")))
+            raise pop3.POP3Error("no such domain {}".format(domain.decode("utf-8")))
         return user, domain
-
 
 
 class POP3Factory(protocol.ServerFactory):
@@ -377,6 +364,7 @@ class POP3Factory(protocol.ServerFactory):
     @ivar protocol: A callable which creates a protocol.  The default value is
         L{VirtualPOP3}.
     """
+
     protocol = VirtualPOP3
     service = None
 
@@ -386,7 +374,6 @@ class POP3Factory(protocol.ServerFactory):
         @param service: An email service.
         """
         self.service = service
-
 
     def buildProtocol(self, addr):
         """

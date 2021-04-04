@@ -13,49 +13,48 @@ from twisted.internet import defer, protocol
 from twisted.python import log
 from io import BytesIO
 
+
 def parseParam(line):
     """Chew one dqstring or atom from beginning of line and return (param, remaningline)"""
-    if line == b'':
-        return (None, b'')
-    elif line[0:1] != b'"': # atom
+    if line == b"":
+        return (None, b"")
+    elif line[0:1] != b'"':  # atom
         mode = 1
-    else: # dqstring
+    else:  # dqstring
         mode = 2
     res = b""
     io = BytesIO(line)
-    if mode == 2: # skip the opening quote
+    if mode == 2:  # skip the opening quote
         io.read(1)
     while 1:
         a = io.read(1)
         if a == b'"':
             if mode == 2:
-                io.read(1) # skip the separating space
+                io.read(1)  # skip the separating space
                 return (res, io.read())
-        elif a == b'\\':
+        elif a == b"\\":
             a = io.read(1)
-            if a == b'':
-                return (None, line) # unexpected end of string
-        elif a == b'':
+            if a == b"":
+                return (None, line)  # unexpected end of string
+        elif a == b"":
             if mode == 1:
                 return (res, io.read())
             else:
-                return (None, line) # unexpected end of string
-        elif a == b' ':
+                return (None, line)  # unexpected end of string
+        elif a == b" ":
             if mode == 1:
                 return (res, io.read())
         res += a
 
 
-
 def makeAtom(line):
     """Munch a string into an 'atom'"""
     # FIXME: proper quoting
-    return filter(lambda x: not (x in map(chr, range(33)+[34, 39, 92])), line)
-
+    return filter(lambda x: not (x in map(chr, range(33) + [34, 39, 92])), line)
 
 
 def makeWord(s):
-    mustquote = range(33)+[34, 39, 92]
+    mustquote = range(33) + [34, 39, 92]
     result = []
     for c in s:
         if ord(c) in mustquote:
@@ -65,31 +64,29 @@ def makeWord(s):
     return s
 
 
-
 def parseText(line):
-    if len(line) == 1 and line == b'.':
+    if len(line) == 1 and line == b".":
         return None
     else:
-        if len(line) > 1 and line[0:2] == b'..':
+        if len(line) > 1 and line[0:2] == b"..":
             line = line[1:]
         return line
 
 
-
 class Definition:
     """A word definition"""
+
     def __init__(self, name, db, dbdesc, text):
         self.name = name
         self.db = db
         self.dbdesc = dbdesc
-        self.text = text # list of strings not terminated by newline
-
+        self.text = text  # list of strings not terminated by newline
 
 
 class DictClient(basic.LineReceiver):
     """dict (RFC2229) client"""
 
-    data = None # multiline data
+    data = None  # multiline data
     MAX_LENGTH = 1024
     state = None
     mode = None
@@ -100,11 +97,9 @@ class DictClient(basic.LineReceiver):
         self.data = None
         self.result = None
 
-
     def connectionMade(self):
         self.state = "conn"
         self.mode = "command"
-
 
     def sendLine(self, line):
         """Throw up if the line is longer than 1022 characters"""
@@ -112,13 +107,12 @@ class DictClient(basic.LineReceiver):
             raise ValueError("DictClient tried to send a too long line")
         basic.LineReceiver.sendLine(self, line)
 
-
     def lineReceived(self, line):
         try:
             line = line.decode("utf-8")
-        except UnicodeError: # garbage received, skip
+        except UnicodeError:  # garbage received, skip
             return
-        if self.mode == "text": # we are receiving textual data
+        if self.mode == "text":  # we are receiving textual data
             code = "text"
         else:
             if len(line) < 4:
@@ -128,9 +122,8 @@ class DictClient(basic.LineReceiver):
                 return
             code = int(line[:3])
             line = line[4:]
-        method = getattr(self, 'dictCode_%s_%s' % (code, self.state), self.dictCode_default)
+        method = getattr(self, f"dictCode_{code}_{self.state}", self.dictCode_default)
         method(line)
-
 
     def dictCode_default(self, line):
         """Unknown message"""
@@ -138,50 +131,56 @@ class DictClient(basic.LineReceiver):
         self.protocolError("Unexpected server message")
         self.transport.loseConnection()
 
-
     def dictCode_221_ready(self, line):
         """We are about to get kicked off, do nothing"""
         pass
-
 
     def dictCode_220_conn(self, line):
         """Greeting message"""
         self.state = "ready"
         self.dictConnected()
 
-
     def dictCode_530_conn(self):
         self.protocolError("Access denied")
         self.transport.loseConnection()
-
 
     def dictCode_420_conn(self):
         self.protocolError("Server temporarily unavailable")
         self.transport.loseConnection()
 
-
     def dictCode_421_conn(self):
         self.protocolError("Server shutting down at operator request")
         self.transport.loseConnection()
 
-
     def sendDefine(self, database, word):
         """Send a dict DEFINE command"""
-        assert self.state == "ready", "DictClient.sendDefine called when not in ready state"
-        self.result = None  # these two are just in case. In "ready" state, result and data
-        self.data = None    # should be None
+        assert (
+            self.state == "ready"
+        ), "DictClient.sendDefine called when not in ready state"
+        self.result = (
+            None  # these two are just in case. In "ready" state, result and data
+        )
+        self.data = None  # should be None
         self.state = "define"
-        command = "DEFINE %s %s" % (makeAtom(database.encode("UTF-8")), makeWord(word.encode("UTF-8")))
+        command = "DEFINE {} {}".format(
+            makeAtom(database.encode("UTF-8")),
+            makeWord(word.encode("UTF-8")),
+        )
         self.sendLine(command)
-
 
     def sendMatch(self, database, strategy, word):
         """Send a dict MATCH command"""
-        assert self.state == "ready", "DictClient.sendMatch called when not in ready state"
+        assert (
+            self.state == "ready"
+        ), "DictClient.sendMatch called when not in ready state"
         self.result = None
         self.data = None
         self.state = "match"
-        command = "MATCH %s %s %s" % (makeAtom(database), makeAtom(strategy), makeAtom(word))
+        command = "MATCH {} {} {}".format(
+            makeAtom(database),
+            makeAtom(strategy),
+            makeAtom(word),
+        )
         self.sendLine(command.encode("UTF-8"))
 
     def dictCode_550_define(self, line):
@@ -189,35 +188,29 @@ class DictClient(basic.LineReceiver):
         self.mode = "ready"
         self.defineFailed("Invalid database")
 
-
     def dictCode_550_match(self, line):
         """Invalid database"""
         self.mode = "ready"
         self.matchFailed("Invalid database")
-
 
     def dictCode_551_match(self, line):
         """Invalid strategy"""
         self.mode = "ready"
         self.matchFailed("Invalid strategy")
 
-
     def dictCode_552_define(self, line):
         """No match"""
         self.mode = "ready"
         self.defineFailed("No match")
-
 
     def dictCode_552_match(self, line):
         """No match"""
         self.mode = "ready"
         self.matchFailed("No match")
 
-
     def dictCode_150_define(self, line):
         """n definitions retrieved"""
         self.result = []
-
 
     def dictCode_151_define(self, line):
         """Definition text follows"""
@@ -232,13 +225,11 @@ class DictClient(basic.LineReceiver):
             self.result.append(Definition(word, db, dbdesc, []))
             self.data = []
 
-
     def dictCode_152_match(self, line):
         """n matches found, text follows"""
         self.mode = "text"
         self.result = []
         self.data = []
-
 
     def dictCode_text_define(self, line):
         """A line of definition text received"""
@@ -250,13 +241,14 @@ class DictClient(basic.LineReceiver):
         else:
             self.data.append(line)
 
-
     def dictCode_text_match(self, line):
         """One line of match text received"""
+
         def l(s):
             p1, t = parseParam(s)
             p2, t = parseParam(t)
             return (p1, p2)
+
         res = parseText(line)
         if res == None:
             self.mode = "command"
@@ -265,14 +257,12 @@ class DictClient(basic.LineReceiver):
         else:
             self.data.append(line)
 
-
     def dictCode_250_define(self, line):
         """ok"""
         t = self.result
         self.result = None
         self.state = "ready"
         self.defineDone(t)
-
 
     def dictCode_250_match(self, line):
         """ok"""
@@ -281,41 +271,33 @@ class DictClient(basic.LineReceiver):
         self.state = "ready"
         self.matchDone(t)
 
-
     def protocolError(self, reason):
         """override to catch unexpected dict protocol conditions"""
         pass
-
 
     def dictConnected(self):
         """override to be notified when the server is ready to accept commands"""
         pass
 
-
     def defineFailed(self, reason):
         """override to catch reasonable failure responses to DEFINE"""
         pass
-
 
     def defineDone(self, result):
         """override to catch successful DEFINE"""
         pass
 
-
     def matchFailed(self, reason):
-        """override to catch resonable failure responses to MATCH"""
+        """override to catch reasonable failure responses to MATCH"""
         pass
-
 
     def matchDone(self, result):
         """override to catch successful MATCH"""
         pass
 
 
-
 class InvalidResponse(Exception):
     pass
-
 
 
 class DictLookup(DictClient):
@@ -326,31 +308,26 @@ class DictLookup(DictClient):
             self.factory.d.errback(InvalidResponse(reason))
             self.factory.clientDone()
 
-
     def dictConnected(self):
         if self.factory.queryType == "define":
             self.sendDefine(*self.factory.param)
         elif self.factory.queryType == "match":
             self.sendMatch(*self.factory.param)
 
-
     def defineFailed(self, reason):
         self.factory.d.callback([])
         self.factory.clientDone()
         self.transport.loseConnection()
-
 
     def defineDone(self, result):
         self.factory.d.callback(result)
         self.factory.clientDone()
         self.transport.loseConnection()
 
-
     def matchFailed(self, reason):
         self.factory.d.callback([])
         self.factory.clientDone()
         self.transport.loseConnection()
-
 
     def matchDone(self, result):
         self.factory.d.callback(result)
@@ -358,9 +335,9 @@ class DictLookup(DictClient):
         self.transport.loseConnection()
 
 
-
 class DictLookupFactory(protocol.ClientFactory):
     """Utility factory for a single dict transaction"""
+
     protocol = DictLookup
     done = None
 
@@ -370,27 +347,22 @@ class DictLookupFactory(protocol.ClientFactory):
         self.d = d
         self.done = 0
 
-
     def clientDone(self):
         """Called by client when done."""
         self.done = 1
         del self.d
 
-
     def clientConnectionFailed(self, connector, error):
         self.d.errback(error)
-
 
     def clientConnectionLost(self, connector, error):
         if not self.done:
             self.d.errback(error)
 
-
     def buildProtocol(self, addr):
         p = self.protocol()
         p.factory = self
         return p
-
 
 
 def define(host, port, database, word):
@@ -399,9 +371,9 @@ def define(host, port, database, word):
     factory = DictLookupFactory("define", (database, word), d)
 
     from twisted.internet import reactor
+
     reactor.connectTCP(host, port, factory)
     return d
-
 
 
 def match(host, port, database, strategy, word):
@@ -410,6 +382,6 @@ def match(host, port, database, strategy, word):
     factory = DictLookupFactory("match", (database, strategy, word), d)
 
     from twisted.internet import reactor
+
     reactor.connectTCP(host, port, factory)
     return d
-

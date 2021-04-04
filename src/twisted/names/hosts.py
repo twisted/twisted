@@ -17,7 +17,6 @@ from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.names import common
 
 
-
 def searchFileForAll(hostsFile, name):
     """
     Search the given file, which is in hosts(5) standard format, for addresses
@@ -35,12 +34,12 @@ def searchFileForAll(hostsFile, name):
     results = []
     try:
         lines = hostsFile.getContent().splitlines()
-    except:
+    except BaseException:
         return results
 
     name = name.lower()
     for line in lines:
-        idx = line.find(b'#')
+        idx = line.find(b"#")
         if idx != -1:
             line = line[:idx]
         if not line:
@@ -55,7 +54,6 @@ def searchFileForAll(hostsFile, name):
             if isIPAddress(maybeIP) or isIPv6Address(maybeIP):
                 results.append(maybeIP)
     return results
-
 
 
 def searchFileFor(file, name):
@@ -79,42 +77,45 @@ def searchFileFor(file, name):
     return None
 
 
-
 class Resolver(common.ResolverBase):
     """
     A resolver that services hosts(5) format files.
     """
-    def __init__(self, file=b'/etc/hosts', ttl = 60 * 60):
+
+    def __init__(self, file=b"/etc/hosts", ttl=60 * 60):
         common.ResolverBase.__init__(self)
         self.file = file
         self.ttl = ttl
-
 
     def _aRecords(self, name):
         """
         Return a tuple of L{dns.RRHeader} instances for all of the IPv4
         addresses in the hosts file.
         """
-        return tuple([
-            dns.RRHeader(name, dns.A, dns.IN, self.ttl,
-                         dns.Record_A(addr, self.ttl))
-            for addr
-            in searchFileForAll(FilePath(self.file), name)
-            if isIPAddress(addr)])
-
+        return tuple(
+            [
+                dns.RRHeader(
+                    name, dns.A, dns.IN, self.ttl, dns.Record_A(addr, self.ttl)
+                )
+                for addr in searchFileForAll(FilePath(self.file), name)
+                if isIPAddress(addr)
+            ]
+        )
 
     def _aaaaRecords(self, name):
         """
         Return a tuple of L{dns.RRHeader} instances for all of the IPv6
         addresses in the hosts file.
         """
-        return tuple([
-            dns.RRHeader(name, dns.AAAA, dns.IN, self.ttl,
-                         dns.Record_AAAA(addr, self.ttl))
-            for addr
-            in searchFileForAll(FilePath(self.file), name)
-            if isIPv6Address(addr)])
-
+        return tuple(
+            [
+                dns.RRHeader(
+                    name, dns.AAAA, dns.IN, self.ttl, dns.Record_AAAA(addr, self.ttl)
+                )
+                for addr in searchFileForAll(FilePath(self.file), name)
+                if isIPv6Address(addr)
+            ]
+        )
 
     def _respond(self, name, records):
         """
@@ -135,7 +136,6 @@ class Resolver(common.ResolverBase):
             return defer.succeed((records, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
-
     def lookupAddress(self, name, timeout=None):
         """
         Read any IPv4 addresses from C{self.file} and return them as
@@ -143,7 +143,6 @@ class Resolver(common.ResolverBase):
         """
         name = dns.domainString(name)
         return self._respond(name, self._aRecords(name))
-
 
     def lookupIPV6Address(self, name, timeout=None):
         """

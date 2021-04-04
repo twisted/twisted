@@ -8,32 +8,48 @@ Tests for twisted.names.dns.
 
 
 from io import BytesIO
-
 import struct
+from typing import cast
 
 from zope.interface.verify import verifyClass
 
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
-from twisted.trial import unittest
 from twisted.names import dns
-
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial import unittest
 
 RECORD_TYPES = [
-    dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
-    dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
-    dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
-    dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
-    dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
-    dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.Record_SSHFP,
+    dns.Record_NS,
+    dns.Record_MD,
+    dns.Record_MF,
+    dns.Record_CNAME,
+    dns.Record_MB,
+    dns.Record_MG,
+    dns.Record_MR,
+    dns.Record_PTR,
+    dns.Record_DNAME,
+    dns.Record_A,
+    dns.Record_SOA,
+    dns.Record_NULL,
+    dns.Record_WKS,
+    dns.Record_SRV,
+    dns.Record_AFSDB,
+    dns.Record_RP,
+    dns.Record_HINFO,
+    dns.Record_MINFO,
+    dns.Record_MX,
+    dns.Record_TXT,
+    dns.Record_AAAA,
+    dns.Record_A6,
+    dns.Record_NAPTR,
+    dns.Record_SSHFP,
     dns.Record_TSIG,
     dns.UnknownRecord,
-    ]
-
+]
 
 
 class DomainStringTests(unittest.SynchronousTestCase):
@@ -42,66 +58,61 @@ class DomainStringTests(unittest.SynchronousTestCase):
         L{dns.domainString} returns L{bytes} unchanged.
         """
         self.assertEqual(
-            b'twistedmatrix.com',
-            dns.domainString(b'twistedmatrix.com'),
+            b"twistedmatrix.com",
+            dns.domainString(b"twistedmatrix.com"),
         )
-
 
     def test_native(self):
         """
         L{dns.domainString} converts a native string to L{bytes}
         if necessary.
         """
-        self.assertEqual(b'example.com', dns.domainString('example.com'))
-
+        self.assertEqual(b"example.com", dns.domainString("example.com"))
 
     def test_text(self):
         """
         L{dns.domainString} always converts a unicode string to L{bytes}.
         """
-        self.assertEqual(b'foo.example', dns.domainString(u'foo.example'))
-
+        self.assertEqual(b"foo.example", dns.domainString("foo.example"))
 
     def test_idna(self):
         """
         L{dns.domainString} encodes Unicode using IDNA.
         """
-        self.assertEqual(b'xn--fwg.test', dns.domainString(u'\u203D.test'))
-
+        self.assertEqual(b"xn--fwg.test", dns.domainString("\u203D.test"))
 
     def test_nonsense(self):
         """
         L{dns.domainString} encodes Unicode using IDNA.
         """
         self.assertRaises(TypeError, dns.domainString, 9000)
-        self.assertRaises(TypeError, dns.domainString, dns.Name('bar.example'))
-
+        self.assertRaises(TypeError, dns.domainString, dns.Name("bar.example"))
 
 
 class Ord2ByteTests(unittest.TestCase):
     """
     Tests for L{dns._ord2bytes}.
     """
+
     def test_ord2byte(self):
         """
         L{dns._ord2byte} accepts an integer and returns a byte string of length
         one with an ordinal value equal to the given integer.
         """
-        self.assertEqual(b'\x10', dns._ord2bytes(0x10))
-
+        self.assertEqual(b"\x10", dns._ord2bytes(0x10))
 
 
 class Str2TimeTests(unittest.TestCase):
     """
     Tests for L{dns.str2name}.
     """
+
     def test_nonString(self):
         """
         When passed a non-string object, L{dns.str2name} returns it unmodified.
         """
         time = object()
         self.assertIs(time, dns.str2time(time))
-
 
     def test_seconds(self):
         """
@@ -111,14 +122,12 @@ class Str2TimeTests(unittest.TestCase):
         """
         self.assertEqual(10, dns.str2time("10S"))
 
-
     def test_minutes(self):
         """
         Like C{test_seconds}, but for the C{"M"} suffix which multiplies the
         time value by C{60} (the number of seconds in a minute!).
         """
         self.assertEqual(2 * 60, dns.str2time("2M"))
-
 
     def test_hours(self):
         """
@@ -127,14 +136,12 @@ class Str2TimeTests(unittest.TestCase):
         """
         self.assertEqual(3 * 3600, dns.str2time("3H"))
 
-
     def test_days(self):
         """
         Like L{test_seconds}, but for the C{"D"} suffix which multiplies the
         time value by C{86400}, the number of seconds in a day.
         """
         self.assertEqual(4 * 86400, dns.str2time("4D"))
-
 
     def test_weeks(self):
         """
@@ -143,14 +150,12 @@ class Str2TimeTests(unittest.TestCase):
         """
         self.assertEqual(5 * 604800, dns.str2time("5W"))
 
-
     def test_years(self):
         """
         Like L{test_seconds}, but for the C{"Y"} suffix which multiplies the
         time value by C{31536000}, the number of seconds in a year.
         """
         self.assertEqual(6 * 31536000, dns.str2time("6Y"))
-
 
     def test_invalidPrefix(self):
         """
@@ -159,12 +164,12 @@ class Str2TimeTests(unittest.TestCase):
         self.assertRaises(ValueError, dns.str2time, "fooS")
 
 
-
 class NameTests(unittest.TestCase):
     """
     Tests for L{Name}, the representation of a single domain name with support
     for encoding into and decoding from DNS message format.
     """
+
     def test_nonStringName(self):
         """
         When constructed with a name which is neither C{bytes} nor C{str},
@@ -174,16 +179,14 @@ class NameTests(unittest.TestCase):
         self.assertRaises(TypeError, dns.Name, object())
         self.assertRaises(TypeError, dns.Name, [])
 
-
     def test_unicodeName(self):
         """
         L{dns.Name} automatically encodes unicode domain name using C{idna}
         encoding.
         """
-        name = dns.Name(u'\u00e9chec.example.org')
+        name = dns.Name("\u00e9chec.example.org")
         self.assertIsInstance(name.name, bytes)
-        self.assertEqual(b'xn--chec-9oa.example.org', name.name)
-
+        self.assertEqual(b"xn--chec-9oa.example.org", name.name)
 
     def test_decode(self):
         """
@@ -194,7 +197,6 @@ class NameTests(unittest.TestCase):
         n.decode(BytesIO(b"\x07example\x03com\x00"))
         self.assertEqual(n.name, b"example.com")
 
-
     def test_encode(self):
         """
         L{Name.encode} encodes its name information and writes it to the
@@ -204,7 +206,6 @@ class NameTests(unittest.TestCase):
         stream = BytesIO()
         name.encode(stream)
         self.assertEqual(stream.getvalue(), b"\x03foo\x07example\x03com\x00")
-
 
     def test_encodeWithCompression(self):
         """
@@ -226,13 +227,10 @@ class NameTests(unittest.TestCase):
         # the stream.
         expected = len(previous) + dns.Message.headerSize
         name.encode(stream, compression)
+        self.assertEqual(b"\x03foo\xc0\x17", stream.getvalue()[len(previous) :])
         self.assertEqual(
-            b"\x03foo\xc0\x17",
-            stream.getvalue()[len(previous):])
-        self.assertEqual(
-            {b"example.com": 0x17, b"foo.example.com": expected},
-            compression)
-
+            {b"example.com": 0x17, b"foo.example.com": expected}, compression
+        )
 
     def test_unknown(self):
         """
@@ -242,56 +240,71 @@ class NameTests(unittest.TestCase):
         was parsed from.
         """
         wire = (
-            b'\x01\x00' # Message ID
-            b'\x00' # answer bit, opCode nibble, auth bit, trunc bit, recursive
-                    # bit
-            b'\x00' # recursion bit, empty bit, authenticData bit,
-                    # checkingDisabled bit, response code nibble
-            b'\x00\x01' # number of queries
-            b'\x00\x01' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x01' # number of additionals
-
+            b"\x01\x00"  # Message ID
+            b"\x00"  # answer bit, opCode nibble, auth bit, trunc bit, recursive
+            # bit
+            b"\x00"  # recursion bit, empty bit, authenticData bit,
+            # checkingDisabled bit, response code nibble
+            b"\x00\x01"  # number of queries
+            b"\x00\x01"  # number of answers
+            b"\x00\x00"  # number of authorities
+            b"\x00\x01"  # number of additionals
             # query
-            b'\x03foo\x03bar\x00'    # foo.bar
-            b'\xde\xad'              # type=0xdead
-            b'\xbe\xef'              # cls=0xbeef
-
+            b"\x03foo\x03bar\x00"  # foo.bar
+            b"\xde\xad"  # type=0xdead
+            b"\xbe\xef"  # cls=0xbeef
             # 1st answer
-            b'\xc0\x0c'              # foo.bar - compressed
-            b'\xde\xad'              # type=0xdead
-            b'\xbe\xef'              # cls=0xbeef
-            b'\x00\x00\x01\x01'      # ttl=257
-            b'\x00\x08somedata'      # some payload data
-
+            b"\xc0\x0c"  # foo.bar - compressed
+            b"\xde\xad"  # type=0xdead
+            b"\xbe\xef"  # cls=0xbeef
+            b"\x00\x00\x01\x01"  # ttl=257
+            b"\x00\x08somedata"  # some payload data
             # 1st additional
-            b'\x03baz\x03ban\x00'    # baz.ban
-            b'\x00\x01'              # type=A
-            b'\x00\x01'              # cls=IN
-            b'\x00\x00\x01\x01'      # ttl=257
-            b'\x00\x04'              # len=4
-            b'\x01\x02\x03\x04'      # 1.2.3.4
-            )
+            b"\x03baz\x03ban\x00"  # baz.ban
+            b"\x00\x01"  # type=A
+            b"\x00\x01"  # cls=IN
+            b"\x00\x00\x01\x01"  # ttl=257
+            b"\x00\x04"  # len=4
+            b"\x01\x02\x03\x04"  # 1.2.3.4
+        )
 
         msg = dns.Message()
         msg.fromStr(wire)
 
-        self.assertEqual(msg.queries, [
-                dns.Query(b'foo.bar', type=0xdead, cls=0xbeef),
-                ])
-        self.assertEqual(msg.answers, [
-                dns.RRHeader(b'foo.bar', type=0xdead, cls=0xbeef, ttl=257,
-                             payload=dns.UnknownRecord(b'somedata', ttl=257)),
-                ])
-        self.assertEqual(msg.additional, [
-                dns.RRHeader(b'baz.ban', type=dns.A, cls=dns.IN, ttl=257,
-                             payload=dns.Record_A('1.2.3.4', ttl=257)),
-                ])
+        self.assertEqual(
+            msg.queries,
+            [
+                dns.Query(b"foo.bar", type=0xDEAD, cls=0xBEEF),
+            ],
+        )
+        self.assertEqual(
+            msg.answers,
+            [
+                dns.RRHeader(
+                    b"foo.bar",
+                    type=0xDEAD,
+                    cls=0xBEEF,
+                    ttl=257,
+                    payload=dns.UnknownRecord(b"somedata", ttl=257),
+                ),
+            ],
+        )
+        self.assertEqual(
+            msg.additional,
+            [
+                dns.RRHeader(
+                    b"baz.ban",
+                    type=dns.A,
+                    cls=dns.IN,
+                    ttl=257,
+                    payload=dns.Record_A("1.2.3.4", ttl=257),
+                ),
+            ],
+        )
 
         enc = msg.toStr()
 
         self.assertEqual(enc, wire)
-
 
     def test_decodeWithCompression(self):
         """
@@ -302,10 +315,10 @@ class NameTests(unittest.TestCase):
         """
         # Slightly modified version of the example from RFC 1035, section 4.1.4.
         stream = BytesIO(
-            b"x" * 20 +
-            b"\x01f\x03isi\x04arpa\x00"
+            b"x" * 20 + b"\x01f\x03isi\x04arpa\x00"
             b"\x03foo\xc0\x14"
-            b"\x03bar\xc0\x20")
+            b"\x03bar\xc0\x20"
+        )
         stream.seek(20)
         name = dns.Name()
         name.decode(stream)
@@ -324,7 +337,6 @@ class NameTests(unittest.TestCase):
         self.assertEqual(name.name, b"bar.foo.f.isi.arpa")
         self.assertEqual(44, stream.tell())
 
-
     def test_rejectCompressionLoop(self):
         """
         L{Name.decode} raises L{ValueError} if the stream passed to it includes
@@ -334,7 +346,6 @@ class NameTests(unittest.TestCase):
         name = dns.Name()
         stream = BytesIO(b"\xc0\x00")
         self.assertRaises(ValueError, name.decode, stream)
-
 
     def test_equality(self):
         """
@@ -348,7 +359,6 @@ class NameTests(unittest.TestCase):
         name3 = dns.Name(b"fOO.bar")
         self.assertEqual(name1, name3)
 
-
     def test_inequality(self):
         """
         L{Name} instances are not equal as long as they have different
@@ -357,7 +367,6 @@ class NameTests(unittest.TestCase):
         name1 = dns.Name(b"foo.bar")
         name2 = dns.Name(b"bar.foo")
         self.assertNotEqual(name1, name2)
-
 
 
 class RoundtripDNSTests(unittest.TestCase):
@@ -420,6 +429,14 @@ class RoundtripDNSTests(unittest.TestCase):
         self.assertEqual(result.cls, 4)
         self.assertEqual(result.ttl, 17)
 
+    def test_resourceRecordHeaderTypeMismatch(self):
+        """
+        L{RRHeader()} raises L{ValueError} when the given type and the type
+        of the payload don't match.
+        """
+
+        with self.assertRaisesRegex(ValueError, r"Payload type \(AAAA\) .* type \(A\)"):
+            dns.RRHeader(type=dns.A, payload=dns.Record_AAAA())
 
     def test_resources(self):
         """
@@ -433,7 +450,7 @@ class RoundtripDNSTests(unittest.TestCase):
             b"will.compress.will.this.will.name.will.hopefully",
             b"test.CASE.preSErVatIOn.YeAH",
             b"a.s.h.o.r.t.c.a.s.e.t.o.t.e.s.t",
-            b"singleton"
+            b"singleton",
         )
         for s in names:
             f = BytesIO()
@@ -443,7 +460,6 @@ class RoundtripDNSTests(unittest.TestCase):
             result.decode(f)
             self.assertEqual(result.name, dns.Name(s))
 
-
     def test_hashable(self):
         """
         Instances of all record types are hashable.
@@ -452,8 +468,7 @@ class RoundtripDNSTests(unittest.TestCase):
             k1, k2 = k(), k()
             hk1 = hash(k1)
             hk2 = hash(k2)
-            self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
-
+            self.assertEqual(hk1, hk2, f"{hk1} != {hk2} (for {k})")
 
     def test_Charstr(self):
         """
@@ -469,7 +484,6 @@ class RoundtripDNSTests(unittest.TestCase):
             result = dns.Charstr()
             result.decode(f)
             self.assertEqual(result.string, n)
-
 
     def _recordRoundtripTest(self, record):
         """
@@ -488,7 +502,6 @@ class RoundtripDNSTests(unittest.TestCase):
         replica.decode(stream, length)
         self.assertEqual(record, replica)
 
-
     def assertEncodedFormat(self, expectedEncoding, record):
         """
         Assert that encoding C{record} produces the expected bytes.
@@ -505,7 +518,6 @@ class RoundtripDNSTests(unittest.TestCase):
 
         self.assertEqual(stream.getvalue(), expectedEncoding)
 
-
     def test_SOA(self):
         """
         The byte stream written by L{dns.Record_SOA.encode} can be used by
@@ -514,9 +526,15 @@ class RoundtripDNSTests(unittest.TestCase):
         """
         self._recordRoundtripTest(
             dns.Record_SOA(
-                mname=b'foo', rname=b'bar', serial=12, refresh=34,
-                retry=56, expire=78, minimum=90))
-
+                mname=b"foo",
+                rname=b"bar",
+                serial=12,
+                refresh=34,
+                retry=56,
+                expire=78,
+                minimum=90,
+            )
+        )
 
     def test_A(self):
         """
@@ -524,8 +542,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_A.decode} to reconstruct the state of the original
         L{dns.Record_A} instance.
         """
-        self._recordRoundtripTest(dns.Record_A('1.2.3.4'))
-
+        self._recordRoundtripTest(dns.Record_A("1.2.3.4"))
 
     def test_NULL(self):
         """
@@ -533,8 +550,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_NULL.decode} to reconstruct the state of the original
         L{dns.Record_NULL} instance.
         """
-        self._recordRoundtripTest(dns.Record_NULL(b'foo bar'))
-
+        self._recordRoundtripTest(dns.Record_NULL(b"foo bar"))
 
     def test_WKS(self):
         """
@@ -542,8 +558,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_WKS.decode} to reconstruct the state of the original
         L{dns.Record_WKS} instance.
         """
-        self._recordRoundtripTest(dns.Record_WKS('1.2.3.4', 3, b'xyz'))
-
+        self._recordRoundtripTest(dns.Record_WKS("1.2.3.4", 3, b"xyz"))
 
     def test_AAAA(self):
         """
@@ -551,8 +566,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_AAAA.decode} to reconstruct the state of the original
         L{dns.Record_AAAA} instance.
         """
-        self._recordRoundtripTest(dns.Record_AAAA('::1'))
-
+        self._recordRoundtripTest(dns.Record_AAAA("::1"))
 
     def test_A6(self):
         """
@@ -560,8 +574,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_A6.decode} to reconstruct the state of the original
         L{dns.Record_A6} instance.
         """
-        self._recordRoundtripTest(dns.Record_A6(8, '::1:2', b'foo'))
-
+        self._recordRoundtripTest(dns.Record_A6(8, "::1:2", b"foo"))
 
     def test_SRV(self):
         """
@@ -569,9 +582,9 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_SRV.decode} to reconstruct the state of the original
         L{dns.Record_SRV} instance.
         """
-        self._recordRoundtripTest(dns.Record_SRV(
-                priority=1, weight=2, port=3, target=b'example.com'))
-
+        self._recordRoundtripTest(
+            dns.Record_SRV(priority=1, weight=2, port=3, target=b"example.com")
+        )
 
     def test_SSHFP(self):
         """
@@ -580,30 +593,31 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_SSHFP} instance.
         """
 
-        fp = b'\xda\x39\xa3\xee\x5e\x6b\x4b\x0d' + \
-             b'\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09'
+        fp = (
+            b"\xda\x39\xa3\xee\x5e\x6b\x4b\x0d"
+            + b"\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09"
+        )
         rr = dns.Record_SSHFP(
             algorithm=dns.Record_SSHFP.ALGORITHM_DSS,
             fingerprintType=dns.Record_SSHFP.FINGERPRINT_TYPE_SHA1,
             fingerprint=fp,
-            )
+        )
         self._recordRoundtripTest(rr)
-        self.assertEncodedFormat(b'\x02\x01' + fp, rr)
-
+        self.assertEncodedFormat(b"\x02\x01" + fp, rr)
 
     def test_NAPTR(self):
         """
         Test L{dns.Record_NAPTR} encode and decode.
         """
         naptrs = [
-            (100, 10, b"u", b"sip+E2U",
-             b"!^.*$!sip:information@domain.tld!", b""),
-            (100, 50, b"s", b"http+I2L+I2C+I2R",
-             b"", b"_http._tcp.gatech.edu")]
+            (100, 10, b"u", b"sip+E2U", b"!^.*$!sip:information@domain.tld!", b""),
+            (100, 50, b"s", b"http+I2L+I2C+I2R", b"", b"_http._tcp.gatech.edu"),
+        ]
 
         for (order, preference, flags, service, regexp, replacement) in naptrs:
-            rin = dns.Record_NAPTR(order, preference, flags, service, regexp,
-                                   replacement)
+            rin = dns.Record_NAPTR(
+                order, preference, flags, service, regexp, replacement
+            )
             e = BytesIO()
             rin.encode(e)
             e.seek(0, 0)
@@ -617,16 +631,13 @@ class RoundtripDNSTests(unittest.TestCase):
             self.assertEqual(rin.replacement.name, rout.replacement.name)
             self.assertEqual(rin.ttl, rout.ttl)
 
-
     def test_AFSDB(self):
         """
         The byte stream written by L{dns.Record_AFSDB.encode} can be used by
         L{dns.Record_AFSDB.decode} to reconstruct the state of the original
         L{dns.Record_AFSDB} instance.
         """
-        self._recordRoundtripTest(dns.Record_AFSDB(
-                subtype=3, hostname=b'example.com'))
-
+        self._recordRoundtripTest(dns.Record_AFSDB(subtype=3, hostname=b"example.com"))
 
     def test_RP(self):
         """
@@ -634,9 +645,9 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_RP.decode} to reconstruct the state of the original
         L{dns.Record_RP} instance.
         """
-        self._recordRoundtripTest(dns.Record_RP(
-                mbox=b'alice.example.com', txt=b'example.com'))
-
+        self._recordRoundtripTest(
+            dns.Record_RP(mbox=b"alice.example.com", txt=b"example.com")
+        )
 
     def test_HINFO(self):
         """
@@ -644,8 +655,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_HINFO.decode} to reconstruct the state of the original
         L{dns.Record_HINFO} instance.
         """
-        self._recordRoundtripTest(dns.Record_HINFO(cpu=b'fast', os=b'great'))
-
+        self._recordRoundtripTest(dns.Record_HINFO(cpu=b"fast", os=b"great"))
 
     def test_MINFO(self):
         """
@@ -653,9 +663,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_MINFO.decode} to reconstruct the state of the original
         L{dns.Record_MINFO} instance.
         """
-        self._recordRoundtripTest(dns.Record_MINFO(
-                rmailbx=b'foo', emailbx=b'bar'))
-
+        self._recordRoundtripTest(dns.Record_MINFO(rmailbx=b"foo", emailbx=b"bar"))
 
     def test_MX(self):
         """
@@ -663,9 +671,7 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_MX.decode} to reconstruct the state of the original
         L{dns.Record_MX} instance.
         """
-        self._recordRoundtripTest(dns.Record_MX(
-                preference=1, name=b'example.com'))
-
+        self._recordRoundtripTest(dns.Record_MX(preference=1, name=b"example.com"))
 
     def test_TSIG(self):
         """
@@ -673,31 +679,40 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_TSIG.decode} to reconstruct the state of the original
         L{dns.Record_TSIG} instance.
         """
-        mac = (b'\x00\x01\x02\x03\x10\x11\x12\x13'
-               b'\x20\x21\x22\x23\x30\x31\x32\x33')
-        rr = dns.Record_TSIG(algorithm='hmac-md5.sig-alg.reg.int',
-                             timeSigned=1515548975,
-                             originalID=42, fudge=5,
-                             MAC=mac)
+        mac = b"\x00\x01\x02\x03\x10\x11\x12\x13" b"\x20\x21\x22\x23\x30\x31\x32\x33"
+        rr = dns.Record_TSIG(
+            algorithm="hmac-md5.sig-alg.reg.int",
+            timeSigned=1515548975,
+            originalID=42,
+            fudge=5,
+            MAC=mac,
+        )
         self._recordRoundtripTest(rr)
-        rdata = (b'\x08hmac-md5\x07sig-alg\x03reg\x03int\x00'
-                 b'\x00\x00\x5a\x55\x71\x2f\x00\x05\x00\x10' +
-                 mac + b'\x00\x2A\x00\x00\x00\x00')
+        rdata = (
+            b"\x08hmac-md5\x07sig-alg\x03reg\x03int\x00"
+            b"\x00\x00\x5a\x55\x71\x2f\x00\x05\x00\x10"
+            + mac
+            + b"\x00\x2A\x00\x00\x00\x00"
+        )
         self.assertEncodedFormat(rdata, rr)
 
-        rr = dns.Record_TSIG(algorithm='hmac-sha256',
-                             timeSigned=4511798055,  # More than 32 bits
-                             originalID=65535,
-                             error=dns.EBADTIME,
-                             otherData=b'\x80\x00\x00\x00\x00\x08',
-                             MAC=mac)
+        rr = dns.Record_TSIG(
+            algorithm="hmac-sha256",
+            timeSigned=4511798055,  # More than 32 bits
+            originalID=65535,
+            error=dns.EBADTIME,
+            otherData=b"\x80\x00\x00\x00\x00\x08",
+            MAC=mac,
+        )
         self._recordRoundtripTest(rr)
-        rdata = (b'\x0Bhmac-sha256\x00'
-                 b'\x00\x01\x0c\xec\x93\x27\x00\x05\x00\x10' +
-                 mac + b'\xff\xff\x00\x12\x00\x06'
-                 b'\x80\x00\x00\x00\x00\x08')
+        rdata = (
+            b"\x0Bhmac-sha256\x00"
+            b"\x00\x01\x0c\xec\x93\x27\x00\x05\x00\x10"
+            + mac
+            + b"\xff\xff\x00\x12\x00\x06"
+            b"\x80\x00\x00\x00\x00\x08"
+        )
         self.assertEncodedFormat(rdata, rr)
-
 
     def test_TXT(self):
         """
@@ -705,32 +720,29 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_TXT.decode} to reconstruct the state of the original
         L{dns.Record_TXT} instance.
         """
-        self._recordRoundtripTest(dns.Record_TXT(b'foo', b'bar'))
-
+        self._recordRoundtripTest(dns.Record_TXT(b"foo", b"bar"))
 
 
 MESSAGE_AUTHENTIC_DATA_BYTES = (
-    b'\x00\x00' # ID
-    b'\x00' #
-    b'\x20' # RA, Z, AD=1, CD, RCODE
-    b'\x00\x00' # Query count
-    b'\x00\x00' # Answer count
-    b'\x00\x00' # Authority count
-    b'\x00\x00' # Additional count
+    b"\x00\x00"  # ID
+    b"\x00"  #
+    b"\x20"  # RA, Z, AD=1, CD, RCODE
+    b"\x00\x00"  # Query count
+    b"\x00\x00"  # Answer count
+    b"\x00\x00"  # Authority count
+    b"\x00\x00"  # Additional count
 )
-
 
 
 MESSAGE_CHECKING_DISABLED_BYTES = (
-    b'\x00\x00' # ID
-    b'\x00' #
-    b'\x10' # RA, Z, AD, CD=1, RCODE
-    b'\x00\x00' # Query count
-    b'\x00\x00' # Answer count
-    b'\x00\x00' # Authority count
-    b'\x00\x00' # Additional count
+    b"\x00\x00"  # ID
+    b"\x00"  #
+    b"\x10"  # RA, Z, AD, CD=1, RCODE
+    b"\x00\x00"  # Query count
+    b"\x00\x00"  # Answer count
+    b"\x00\x00"  # Authority count
+    b"\x00\x00"  # Additional count
 )
-
 
 
 class MessageTests(unittest.SynchronousTestCase):
@@ -744,7 +756,6 @@ class MessageTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(dns.Message().authenticData, 0)
 
-
     def test_authenticDataOverride(self):
         """
         L{dns.Message.__init__} accepts a C{authenticData} argument which
@@ -752,17 +763,14 @@ class MessageTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(dns.Message(authenticData=1).authenticData, 1)
 
-
     def test_authenticDataEncode(self):
         """
         L{dns.Message.toStr} encodes L{dns.Message.authenticData} into
         byte4 of the byte string.
         """
         self.assertEqual(
-            dns.Message(authenticData=1).toStr(),
-            MESSAGE_AUTHENTIC_DATA_BYTES
+            dns.Message(authenticData=1).toStr(), MESSAGE_AUTHENTIC_DATA_BYTES
         )
-
 
     def test_authenticDataDecode(self):
         """
@@ -774,22 +782,18 @@ class MessageTests(unittest.SynchronousTestCase):
 
         self.assertEqual(m.authenticData, 1)
 
-
     def test_checkingDisabledDefault(self):
         """
         L{dns.Message.checkingDisabled} has default value 0.
         """
         self.assertEqual(dns.Message().checkingDisabled, 0)
 
-
     def test_checkingDisabledOverride(self):
         """
         L{dns.Message.__init__} accepts a C{checkingDisabled} argument which
         is assigned to L{dns.Message.checkingDisabled}.
         """
-        self.assertEqual(
-            dns.Message(checkingDisabled=1).checkingDisabled, 1)
-
+        self.assertEqual(dns.Message(checkingDisabled=1).checkingDisabled, 1)
 
     def test_checkingDisabledEncode(self):
         """
@@ -797,10 +801,8 @@ class MessageTests(unittest.SynchronousTestCase):
         byte4 of the byte string.
         """
         self.assertEqual(
-            dns.Message(checkingDisabled=1).toStr(),
-            MESSAGE_CHECKING_DISABLED_BYTES
+            dns.Message(checkingDisabled=1).toStr(), MESSAGE_CHECKING_DISABLED_BYTES
         )
-
 
     def test_checkingDisabledDecode(self):
         """
@@ -812,33 +814,34 @@ class MessageTests(unittest.SynchronousTestCase):
 
         self.assertEqual(m.checkingDisabled, 1)
 
-
     def test_reprDefaults(self):
         """
         L{dns.Message.__repr__} omits field values and sections which are
         identical to their defaults. The id field value is always shown.
         """
-        self.assertEqual(
-            '<Message id=0>',
-            repr(dns.Message())
-        )
-
+        self.assertEqual("<Message id=0>", repr(dns.Message()))
 
     def test_reprFlagsIfSet(self):
         """
         L{dns.Message.__repr__} displays flags if they are L{True}.
         """
-        m = dns.Message(answer=True, auth=True, trunc=True, recDes=True,
-                        recAv=True, authenticData=True, checkingDisabled=True)
+        m = dns.Message(
+            answer=True,
+            auth=True,
+            trunc=True,
+            recDes=True,
+            recAv=True,
+            authenticData=True,
+            checkingDisabled=True,
+        )
         self.assertEqual(
-            '<Message '
-            'id=0 '
-            'flags=answer,auth,trunc,recDes,recAv,authenticData,'
-            'checkingDisabled'
-            '>',
+            "<Message "
+            "id=0 "
+            "flags=answer,auth,trunc,recDes,recAv,authenticData,"
+            "checkingDisabled"
+            ">",
             repr(m),
         )
-
 
     def test_reprNonDefautFields(self):
         """
@@ -847,15 +850,9 @@ class MessageTests(unittest.SynchronousTestCase):
         """
         m = dns.Message(id=10, opCode=20, rCode=30, maxSize=40)
         self.assertEqual(
-            '<Message '
-            'id=10 '
-            'opCode=20 '
-            'rCode=30 '
-            'maxSize=40'
-            '>',
+            "<Message " "id=10 " "opCode=20 " "rCode=30 " "maxSize=40" ">",
             repr(m),
         )
-
 
     def test_reprNonDefaultSections(self):
         """
@@ -868,16 +865,15 @@ class MessageTests(unittest.SynchronousTestCase):
         m.authority = [7, 8, 9]
         m.additional = [10, 11, 12]
         self.assertEqual(
-            '<Message '
-            'id=0 '
-            'queries=[1, 2, 3] '
-            'answers=[4, 5, 6] '
-            'authority=[7, 8, 9] '
-            'additional=[10, 11, 12]'
-            '>',
+            "<Message "
+            "id=0 "
+            "queries=[1, 2, 3] "
+            "answers=[4, 5, 6] "
+            "authority=[7, 8, 9] "
+            "additional=[10, 11, 12]"
+            ">",
             repr(m),
         )
-
 
     def test_emptyMessage(self):
         """
@@ -885,8 +881,7 @@ class MessageTests(unittest.SynchronousTestCase):
         be raised when it is parsed.
         """
         msg = dns.Message()
-        self.assertRaises(EOFError, msg.fromStr, b'')
-
+        self.assertRaises(EOFError, msg.fromStr, b"")
 
     def test_emptyQuery(self):
         """
@@ -895,37 +890,33 @@ class MessageTests(unittest.SynchronousTestCase):
         """
         msg = dns.Message()
         msg.fromStr(
-            b'\x01\x00' # Message ID
-            b'\x00' # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
-            b'\x00' # recursion bit, empty bit, authenticData bit,
-                    # checkingDisabled bit, response code nibble
-            b'\x00\x00' # number of queries
-            b'\x00\x00' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x00' # number of additionals
-            )
+            b"\x01\x00"  # Message ID
+            b"\x00"  # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
+            b"\x00"  # recursion bit, empty bit, authenticData bit,
+            # checkingDisabled bit, response code nibble
+            b"\x00\x00"  # number of queries
+            b"\x00\x00"  # number of answers
+            b"\x00\x00"  # number of authorities
+            b"\x00\x00"  # number of additionals
+        )
         self.assertEqual(msg.id, 256)
-        self.assertFalse(
-            msg.answer, "Message was not supposed to be an answer.")
+        self.assertFalse(msg.answer, "Message was not supposed to be an answer.")
         self.assertEqual(msg.opCode, dns.OP_QUERY)
-        self.assertFalse(
-            msg.auth, "Message was not supposed to be authoritative.")
-        self.assertFalse(
-            msg.trunc, "Message was not supposed to be truncated.")
+        self.assertFalse(msg.auth, "Message was not supposed to be authoritative.")
+        self.assertFalse(msg.trunc, "Message was not supposed to be truncated.")
         self.assertEqual(msg.queries, [])
         self.assertEqual(msg.answers, [])
         self.assertEqual(msg.authority, [])
         self.assertEqual(msg.additional, [])
-
 
     def test_NULL(self):
         """
         A I{NULL} record with an arbitrary payload can be encoded and decoded as
         part of a L{dns.Message}.
         """
-        bytes = b''.join([dns._ord2bytes(i) for i in range(256)])
+        bytes = b"".join([dns._ord2bytes(i) for i in range(256)])
         rec = dns.Record_NULL(bytes)
-        rr = dns.RRHeader(b'testname', dns.NULL, payload=rec)
+        rr = dns.RRHeader(b"testname", dns.NULL, payload=rec)
         msg1 = dns.Message()
         msg1.answers.append(rr)
         s = BytesIO()
@@ -936,7 +927,6 @@ class MessageTests(unittest.SynchronousTestCase):
 
         self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
-
 
     def test_lookupRecordTypeDefault(self):
         """
@@ -949,32 +939,29 @@ class MessageTests(unittest.SynchronousTestCase):
         # allocated value.
         self.assertIs(dns.Message().lookupRecordType(65280), dns.UnknownRecord)
 
-
     def test_nonAuthoritativeMessage(self):
         """
         The L{RRHeader} instances created by L{Message} from a non-authoritative
         message are marked as not authoritative.
         """
         buf = BytesIO()
-        answer = dns.RRHeader(payload=dns.Record_A('1.2.3.4', ttl=0))
+        answer = dns.RRHeader(payload=dns.Record_A("1.2.3.4", ttl=0))
         answer.encode(buf)
         message = dns.Message()
         message.fromStr(
-            b'\x01\x00' # Message ID
+            b"\x01\x00"  # Message ID
             # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
-            b'\x00'
+            b"\x00"
             # recursion bit, empty bit, authenticData bit,
             # checkingDisabled bit, response code nibble
-            b'\x00'
-            b'\x00\x00' # number of queries
-            b'\x00\x01' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x00' # number of additionals
-            + buf.getvalue()
-            )
+            b"\x00"
+            b"\x00\x00"  # number of queries
+            b"\x00\x01"  # number of answers
+            b"\x00\x00"  # number of authorities
+            b"\x00\x00" + buf.getvalue()  # number of additionals
+        )
         self.assertEqual(message.answers, [answer])
         self.assertFalse(message.answers[0].auth)
-
 
     def test_authoritativeMessage(self):
         """
@@ -982,33 +969,31 @@ class MessageTests(unittest.SynchronousTestCase):
         message are marked as authoritative.
         """
         buf = BytesIO()
-        answer = dns.RRHeader(payload=dns.Record_A('1.2.3.4', ttl=0))
+        answer = dns.RRHeader(payload=dns.Record_A("1.2.3.4", ttl=0))
         answer.encode(buf)
         message = dns.Message()
         message.fromStr(
-            b'\x01\x00' # Message ID
+            b"\x01\x00"  # Message ID
             # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
-            b'\x04'
+            b"\x04"
             # recursion bit, empty bit, authenticData bit,
             # checkingDisabled bit, response code nibble
-            b'\x00'
-            b'\x00\x00' # number of queries
-            b'\x00\x01' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x00' # number of additionals
-            + buf.getvalue()
-            )
+            b"\x00"
+            b"\x00\x00"  # number of queries
+            b"\x00\x01"  # number of answers
+            b"\x00\x00"  # number of authorities
+            b"\x00\x00" + buf.getvalue()  # number of additionals
+        )
         answer.auth = True
         self.assertEqual(message.answers, [answer])
         self.assertTrue(message.answers[0].auth)
 
 
-
-class MessageComparisonTests(ComparisonTestsMixin,
-                             unittest.SynchronousTestCase):
+class MessageComparisonTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
     """
     Tests for the rich comparison of L{dns.Message} instances.
     """
+
     def messageFactory(self, *args, **kwargs):
         """
         Create a L{dns.Message}.
@@ -1021,10 +1006,10 @@ class MessageComparisonTests(ComparisonTestsMixin,
         @param kwargs: Keyword arguments.
         @return: A L{dns.Message} instance.
         """
-        queries = kwargs.pop('queries', [])
-        answers = kwargs.pop('answers', [])
-        authority = kwargs.pop('authority', [])
-        additional = kwargs.pop('additional', [])
+        queries = kwargs.pop("queries", [])
+        answers = kwargs.pop("answers", [])
+        authority = kwargs.pop("authority", [])
+        additional = kwargs.pop("additional", [])
         m = dns.Message(**kwargs)
         if queries:
             m.queries = queries
@@ -1035,7 +1020,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
         if additional:
             m.additional = additional
         return m
-
 
     def test_id(self):
         """
@@ -1048,7 +1032,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(id=20),
         )
 
-
     def test_answer(self):
         """
         Two L{dns.Message} instances compare equal if they have the same answer
@@ -1059,7 +1042,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(answer=1),
             self.messageFactory(answer=0),
         )
-
 
     def test_opCode(self):
         """
@@ -1072,7 +1054,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(opCode=20),
         )
 
-
     def test_recDes(self):
         """
         Two L{dns.Message} instances compare equal if they have the same recDes
@@ -1083,7 +1064,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(recDes=1),
             self.messageFactory(recDes=0),
         )
-
 
     def test_recAv(self):
         """
@@ -1096,7 +1076,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(recAv=0),
         )
 
-
     def test_auth(self):
         """
         Two L{dns.Message} instances compare equal if they have the same auth
@@ -1107,7 +1086,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(auth=1),
             self.messageFactory(auth=0),
         )
-
 
     def test_rCode(self):
         """
@@ -1120,7 +1098,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(rCode=20),
         )
 
-
     def test_trunc(self):
         """
         Two L{dns.Message} instances compare equal if they have the same trunc
@@ -1131,7 +1108,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(trunc=1),
             self.messageFactory(trunc=0),
         )
-
 
     def test_maxSize(self):
         """
@@ -1144,7 +1120,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(maxSize=20),
         )
 
-
     def test_authenticData(self):
         """
         Two L{dns.Message} instances compare equal if they have the same
@@ -1155,7 +1130,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(authenticData=1),
             self.messageFactory(authenticData=0),
         )
-
 
     def test_checkingDisabled(self):
         """
@@ -1168,18 +1142,16 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(checkingDisabled=0),
         )
 
-
     def test_queries(self):
         """
         Two L{dns.Message} instances compare equal if they have the same
         queries.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(queries=[dns.Query(b'example.com')]),
-            self.messageFactory(queries=[dns.Query(b'example.com')]),
-            self.messageFactory(queries=[dns.Query(b'example.org')]),
-            )
-
+            self.messageFactory(queries=[dns.Query(b"example.com")]),
+            self.messageFactory(queries=[dns.Query(b"example.com")]),
+            self.messageFactory(queries=[dns.Query(b"example.org")]),
+        )
 
     def test_answers(self):
         """
@@ -1187,14 +1159,16 @@ class MessageComparisonTests(ComparisonTestsMixin,
         answers.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.org', payload=dns.Record_A('4.3.2.1'))]),
-            )
-
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+            ),
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+            ),
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.org", payload=dns.Record_A("4.3.2.1"))]
+            ),
+        )
 
     def test_authority(self):
         """
@@ -1202,17 +1176,22 @@ class MessageComparisonTests(ComparisonTestsMixin,
         authority records.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.com',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.com',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.org',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            )
-
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.org", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+        )
 
     def test_additional(self):
         """
@@ -1220,17 +1199,25 @@ class MessageComparisonTests(ComparisonTestsMixin,
         additional records.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.org', payload=dns.Record_A('1.2.3.4'))]),
-            )
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.org", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+        )
 
 
-
-class TestController(object):
+class TestController:
     """
     Pretend to be a DNS query processor for a DNSDatagramProtocol.
 
@@ -1244,13 +1231,11 @@ class TestController(object):
         """
         self.messages = []
 
-
     def messageReceived(self, msg, proto, addr=None):
         """
         Save the message so that it can be checked during the tests.
         """
         self.messages.append((msg, proto, addr))
-
 
 
 class DatagramProtocolTests(unittest.TestCase):
@@ -1269,44 +1254,41 @@ class DatagramProtocolTests(unittest.TestCase):
         self.proto.makeConnection(transport)
         self.proto.callLater = self.clock.callLater
 
-
     def test_truncatedPacket(self):
         """
         Test that when a short datagram is received, datagramReceived does
         not raise an exception while processing it.
         """
-        self.proto.datagramReceived(
-            b'', address.IPv4Address('UDP', '127.0.0.1', 12345))
+        self.proto.datagramReceived(b"", address.IPv4Address("UDP", "127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
-
 
     def test_simpleQuery(self):
         """
         Test content received after a query.
         """
-        d = self.proto.query(('127.0.0.1', 21345), [dns.Query(b'foo')])
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
         m.id = next(iter(self.proto.liveMessages.keys()))
-        m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
-        def cb(result):
-            self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
-        d.addCallback(cb)
-        self.proto.datagramReceived(m.toStr(), ('127.0.0.1', 21345))
-        return d
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
 
+        def cb(result):
+            self.assertEqual(result.answers[0].payload.dottedQuad(), "1.2.3.4")
+
+        d.addCallback(cb)
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
+        return d
 
     def test_queryTimeout(self):
         """
         Test that query timeouts after some seconds.
         """
-        d = self.proto.query(('127.0.0.1', 21345), [dns.Query(b'foo')])
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(10)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
         self.assertEqual(len(self.proto.liveMessages), 0)
         return d
-
 
     def test_writeError(self):
         """
@@ -1314,13 +1296,14 @@ class DatagramProtocolTests(unittest.TestCase):
         C{Failure}s passed to errbacks of the C{Deferred} returned by
         L{DNSDatagramProtocol.query}.
         """
+
         def writeError(message, addr):
             raise RuntimeError("bar")
+
         self.proto.transport.write = writeError
 
-        d = self.proto.query(('127.0.0.1', 21345), [dns.Query(b'foo')])
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         return self.assertFailure(d, RuntimeError)
-
 
     def test_listenError(self):
         """
@@ -1328,15 +1311,16 @@ class DatagramProtocolTests(unittest.TestCase):
         into a C{Failure} passed to errback of the C{Deferred} returned by
         L{DNSDatagramProtocol.query}.
         """
+
         def startListeningError():
             raise CannotListenError(None, None, None)
+
         self.proto.startListening = startListeningError
         # Clean up transport so that the protocol calls startListening again
         self.proto.transport = None
 
-        d = self.proto.query(('127.0.0.1', 21345), [dns.Query(b'foo')])
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         return self.assertFailure(d, CannotListenError)
-
 
     def test_receiveMessageNotInLiveMessages(self):
         """
@@ -1346,12 +1330,9 @@ class DatagramProtocolTests(unittest.TestCase):
         """
         message = dns.Message()
         message.id = 1
-        message.answers = [dns.RRHeader(
-            payload=dns.Record_A(address='1.2.3.4'))]
-        self.proto.datagramReceived(message.toStr(), ('127.0.0.1', 21345))
-        self.assertEqual(self.controller.messages[-1][0].toStr(),
-                         message.toStr())
-
+        message.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
+        self.proto.datagramReceived(message.toStr(), ("127.0.0.1", 21345))
+        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
 
 
 class TestTCPController(TestController):
@@ -1362,18 +1343,16 @@ class TestTCPController(TestController):
         notified this controller that they are connected and have not
         yet notified it that their connection has been lost.
     """
+
     def __init__(self):
         TestController.__init__(self)
         self.connections = []
 
-
     def connectionMade(self, proto):
         self.connections.append(proto)
 
-
     def connectionLost(self, proto):
         self.connections.remove(proto)
-
 
 
 class DNSProtocolTests(unittest.TestCase):
@@ -1391,7 +1370,6 @@ class DNSProtocolTests(unittest.TestCase):
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
 
-
     def test_connectionTracking(self):
         """
         L{dns.DNSProtocol} calls its controller's C{connectionMade}
@@ -1399,40 +1377,38 @@ class DNSProtocolTests(unittest.TestCase):
         controller's C{connectionLost} method when it is disconnected.
         """
         self.assertEqual(self.controller.connections, [self.proto])
-        self.proto.connectionLost(
-            Failure(ConnectionDone("Fake Connection Done")))
+        self.proto.connectionLost(Failure(ConnectionDone("Fake Connection Done")))
         self.assertEqual(self.controller.connections, [])
-
 
     def test_queryTimeout(self):
         """
         Test that query timeouts after some seconds.
         """
-        d = self.proto.query([dns.Query(b'foo')])
+        d = self.proto.query([dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(60)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
         self.assertEqual(len(self.proto.liveMessages), 0)
         return d
 
-
     def test_simpleQuery(self):
         """
         Test content received after a query.
         """
-        d = self.proto.query([dns.Query(b'foo')])
+        d = self.proto.query([dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
         m.id = next(iter(self.proto.liveMessages.keys()))
-        m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
+
         def cb(result):
-            self.assertEqual(result.answers[0].payload.dottedQuad(), '1.2.3.4')
+            self.assertEqual(result.answers[0].payload.dottedQuad(), "1.2.3.4")
+
         d.addCallback(cb)
         s = m.toStr()
-        s = struct.pack('!H', len(s)) + s
+        s = struct.pack("!H", len(s)) + s
         self.proto.dataReceived(s)
         return d
-
 
     def test_writeError(self):
         """
@@ -1440,13 +1416,14 @@ class DNSProtocolTests(unittest.TestCase):
         C{Failure}s passed to errbacks of the C{Deferred} returned by
         L{DNSProtocol.query}.
         """
+
         def writeError(message):
             raise RuntimeError("bar")
+
         self.proto.transport.write = writeError
 
-        d = self.proto.query([dns.Query(b'foo')])
+        d = self.proto.query([dns.Query(b"foo")])
         return self.assertFailure(d, RuntimeError)
-
 
     def test_receiveMessageNotInLiveMessages(self):
         """
@@ -1455,29 +1432,26 @@ class DNSProtocolTests(unittest.TestCase):
         """
         message = dns.Message()
         message.id = 1
-        message.answers = [dns.RRHeader(
-            payload=dns.Record_A(address='1.2.3.4'))]
+        message.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
         string = message.toStr()
-        string = struct.pack('!H', len(string)) + string
+        string = struct.pack("!H", len(string)) + string
         self.proto.dataReceived(string)
-        self.assertEqual(self.controller.messages[-1][0].toStr(),
-                         message.toStr())
-
+        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
 
 
 class ReprTests(unittest.TestCase):
     """
     Tests for the C{__repr__} implementation of record classes.
     """
+
     def test_ns(self):
         """
         The repr of a L{dns.Record_NS} instance includes the name of the
         nameserver and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_NS(b'example.com', 4321)),
-            "<NS name=example.com ttl=4321>")
-
+            repr(dns.Record_NS(b"example.com", 4321)), "<NS name=example.com ttl=4321>"
+        )
 
     def test_md(self):
         """
@@ -1485,9 +1459,8 @@ class ReprTests(unittest.TestCase):
         mail destination and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MD(b'example.com', 4321)),
-            "<MD name=example.com ttl=4321>")
-
+            repr(dns.Record_MD(b"example.com", 4321)), "<MD name=example.com ttl=4321>"
+        )
 
     def test_mf(self):
         """
@@ -1495,9 +1468,8 @@ class ReprTests(unittest.TestCase):
         mail forwarder and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MF(b'example.com', 4321)),
-            "<MF name=example.com ttl=4321>")
-
+            repr(dns.Record_MF(b"example.com", 4321)), "<MF name=example.com ttl=4321>"
+        )
 
     def test_cname(self):
         """
@@ -1505,9 +1477,9 @@ class ReprTests(unittest.TestCase):
         mail forwarder and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_CNAME(b'example.com', 4321)),
-            "<CNAME name=example.com ttl=4321>")
-
+            repr(dns.Record_CNAME(b"example.com", 4321)),
+            "<CNAME name=example.com ttl=4321>",
+        )
 
     def test_mb(self):
         """
@@ -1515,9 +1487,8 @@ class ReprTests(unittest.TestCase):
         mailbox and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MB(b'example.com', 4321)),
-            "<MB name=example.com ttl=4321>")
-
+            repr(dns.Record_MB(b"example.com", 4321)), "<MB name=example.com ttl=4321>"
+        )
 
     def test_mg(self):
         """
@@ -1525,9 +1496,8 @@ class ReprTests(unittest.TestCase):
         mail group member and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MG(b'example.com', 4321)),
-            "<MG name=example.com ttl=4321>")
-
+            repr(dns.Record_MG(b"example.com", 4321)), "<MG name=example.com ttl=4321>"
+        )
 
     def test_mr(self):
         """
@@ -1535,9 +1505,8 @@ class ReprTests(unittest.TestCase):
         mail rename domain and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MR(b'example.com', 4321)),
-            "<MR name=example.com ttl=4321>")
-
+            repr(dns.Record_MR(b"example.com", 4321)), "<MR name=example.com ttl=4321>"
+        )
 
     def test_ptr(self):
         """
@@ -1545,9 +1514,9 @@ class ReprTests(unittest.TestCase):
         pointer and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_PTR(b'example.com', 4321)),
-            "<PTR name=example.com ttl=4321>")
-
+            repr(dns.Record_PTR(b"example.com", 4321)),
+            "<PTR name=example.com ttl=4321>",
+        )
 
     def test_dname(self):
         """
@@ -1555,9 +1524,9 @@ class ReprTests(unittest.TestCase):
         non-terminal DNS name redirection and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_DNAME(b'example.com', 4321)),
-            "<DNAME name=example.com ttl=4321>")
-
+            repr(dns.Record_DNAME(b"example.com", 4321)),
+            "<DNAME name=example.com ttl=4321>",
+        )
 
     def test_a(self):
         """
@@ -1566,9 +1535,8 @@ class ReprTests(unittest.TestCase):
         record.
         """
         self.assertEqual(
-            repr(dns.Record_A('1.2.3.4', 567)),
-            '<A address=1.2.3.4 ttl=567>')
-
+            repr(dns.Record_A("1.2.3.4", 567)), "<A address=1.2.3.4 ttl=567>"
+        )
 
     def test_soa(self):
         """
@@ -1576,12 +1544,21 @@ class ReprTests(unittest.TestCase):
         authority fields.
         """
         self.assertEqual(
-            repr(dns.Record_SOA(mname=b'mName', rname=b'rName', serial=123,
-                                refresh=456, retry=789, expire=10,
-                                minimum=11, ttl=12)),
+            repr(
+                dns.Record_SOA(
+                    mname=b"mName",
+                    rname=b"rName",
+                    serial=123,
+                    refresh=456,
+                    retry=789,
+                    expire=10,
+                    minimum=11,
+                    ttl=12,
+                )
+            ),
             "<SOA mname=mName rname=rName serial=123 refresh=456 "
-            "retry=789 expire=10 minimum=11 ttl=12>")
-
+            "retry=789 expire=10 minimum=11 ttl=12>",
+        )
 
     def test_null(self):
         """
@@ -1589,9 +1566,8 @@ class ReprTests(unittest.TestCase):
         payload and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_NULL(b'abcd', 123)),
-            "<NULL payload='abcd' ttl=123>")
-
+            repr(dns.Record_NULL(b"abcd", 123)), "<NULL payload='abcd' ttl=123>"
+        )
 
     def test_wks(self):
         """
@@ -1600,9 +1576,9 @@ class ReprTests(unittest.TestCase):
         number it is for, and the TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_WKS('2.3.4.5', 7, ttl=8)),
-            "<WKS address=2.3.4.5 protocol=7 ttl=8>")
-
+            repr(dns.Record_WKS("2.3.4.5", 7, ttl=8)),
+            "<WKS address=2.3.4.5 protocol=7 ttl=8>",
+        )
 
     def test_aaaa(self):
         """
@@ -1611,9 +1587,9 @@ class ReprTests(unittest.TestCase):
         record.
         """
         self.assertEqual(
-            repr(dns.Record_AAAA('8765::1234', ttl=10)),
-            "<AAAA address=8765::1234 ttl=10>")
-
+            repr(dns.Record_AAAA("8765::1234", ttl=10)),
+            "<AAAA address=8765::1234 ttl=10>",
+        )
 
     def test_a6(self):
         """
@@ -1622,9 +1598,9 @@ class ReprTests(unittest.TestCase):
         record.
         """
         self.assertEqual(
-            repr(dns.Record_A6(0, '1234::5678', b'foo.bar', ttl=10)),
-            "<A6 suffix=1234::5678 prefix=foo.bar ttl=10>")
-
+            repr(dns.Record_A6(0, "1234::5678", b"foo.bar", ttl=10)),
+            "<A6 suffix=1234::5678 prefix=foo.bar ttl=10>",
+        )
 
     def test_srv(self):
         """
@@ -1632,9 +1608,9 @@ class ReprTests(unittest.TestCase):
         the target and the priority, weight, and TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_SRV(1, 2, 3, b'example.org', 4)),
-            "<SRV priority=1 weight=2 target=example.org port=3 ttl=4>")
-
+            repr(dns.Record_SRV(1, 2, 3, b"example.org", 4)),
+            "<SRV priority=1 weight=2 target=example.org port=3 ttl=4>",
+        )
 
     def test_naptr(self):
         """
@@ -1642,13 +1618,12 @@ class ReprTests(unittest.TestCase):
         preference, flags, service, regular expression, replacement, and TTL of
         the record.
         """
-        record = dns.Record_NAPTR(
-            5, 9, b"S", b"http", b"/foo/bar/i", b"baz", 3)
+        record = dns.Record_NAPTR(5, 9, b"S", b"http", b"/foo/bar/i", b"baz", 3)
         self.assertEqual(
             repr(record),
             "<NAPTR order=5 preference=9 flags=S service=http "
-            "regexp=/foo/bar/i replacement=baz ttl=3>")
-
+            "regexp=/foo/bar/i replacement=baz ttl=3>",
+        )
 
     def test_afsdb(self):
         """
@@ -1656,9 +1631,9 @@ class ReprTests(unittest.TestCase):
         hostname, and TTL of the record.
         """
         self.assertEqual(
-            repr(dns.Record_AFSDB(3, b'example.org', 5)),
-            "<AFSDB subtype=3 hostname=example.org ttl=5>")
-
+            repr(dns.Record_AFSDB(3, b"example.org", 5)),
+            "<AFSDB subtype=3 hostname=example.org ttl=5>",
+        )
 
     def test_rp(self):
         """
@@ -1666,9 +1641,9 @@ class ReprTests(unittest.TestCase):
         fields of the record.
         """
         self.assertEqual(
-            repr(dns.Record_RP(b'alice.example.com', b'admin.example.com', 3)),
-            "<RP mbox=alice.example.com txt=admin.example.com ttl=3>")
-
+            repr(dns.Record_RP(b"alice.example.com", b"admin.example.com", 3)),
+            "<RP mbox=alice.example.com txt=admin.example.com ttl=3>",
+        )
 
     def test_hinfo(self):
         """
@@ -1676,22 +1651,20 @@ class ReprTests(unittest.TestCase):
         TTL fields of the record.
         """
         self.assertEqual(
-            repr(dns.Record_HINFO(b'sparc', b'minix', 12)),
-            "<HINFO cpu='sparc' os='minix' ttl=12>")
-
+            repr(dns.Record_HINFO(b"sparc", b"minix", 12)),
+            "<HINFO cpu='sparc' os='minix' ttl=12>",
+        )
 
     def test_minfo(self):
         """
         The repr of a L{dns.Record_MINFO} instance includes the rmailbx,
         emailbx, and TTL fields of the record.
         """
-        record = dns.Record_MINFO(
-            b'alice.example.com', b'bob.example.com', 15)
+        record = dns.Record_MINFO(b"alice.example.com", b"bob.example.com", 15)
         self.assertEqual(
             repr(record),
-            "<MINFO responsibility=alice.example.com "
-            "errors=bob.example.com ttl=15>")
-
+            "<MINFO responsibility=alice.example.com " "errors=bob.example.com ttl=15>",
+        )
 
     def test_mx(self):
         """
@@ -1699,9 +1672,9 @@ class ReprTests(unittest.TestCase):
         and TTL fields of the record.
         """
         self.assertEqual(
-            repr(dns.Record_MX(13, b'mx.example.com', 2)),
-            "<MX preference=13 name=mx.example.com ttl=2>")
-
+            repr(dns.Record_MX(13, b"mx.example.com", 2)),
+            "<MX preference=13 name=mx.example.com ttl=2>",
+        )
 
     def test_txt(self):
         """
@@ -1710,8 +1683,8 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_TXT(b"foo", b"bar", ttl=15)),
-            "<TXT data=['foo', 'bar'] ttl=15>")
-
+            "<TXT data=['foo', 'bar'] ttl=15>",
+        )
 
     def test_spf(self):
         """
@@ -1720,8 +1693,8 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_SPF(b"foo", b"bar", ttl=15)),
-            "<SPF data=['foo', 'bar'] ttl=15>")
-
+            "<SPF data=['foo', 'bar'] ttl=15>",
+        )
 
     def test_unknown(self):
         """
@@ -1730,18 +1703,19 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.UnknownRecord(b"foo\x1fbar", 12)),
-            "<UNKNOWN data='foo\\x1fbar' ttl=12>")
-
+            "<UNKNOWN data='foo\\x1fbar' ttl=12>",
+        )
 
 
 class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for the equality and non-equality behavior of record classes.
     """
+
     def _equalityTest(self, firstValueOne, secondValueOne, valueTwo):
         return self.assertNormalEqualityImplementation(
-            firstValueOne, secondValueOne, valueTwo)
-
+            firstValueOne, secondValueOne, valueTwo
+        )
 
     def test_charstr(self):
         """
@@ -1749,17 +1723,15 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         same string value.
         """
         self._equalityTest(
-            dns.Charstr(b'abc'), dns.Charstr(b'abc'), dns.Charstr(b'def'))
-
+            dns.Charstr(b"abc"), dns.Charstr(b"abc"), dns.Charstr(b"def")
+        )
 
     def test_name(self):
         """
         Two L{dns.Name} instances compare equal if and only if they have the
         same name value.
         """
-        self._equalityTest(
-            dns.Name(b'abc'), dns.Name(b'abc'), dns.Name(b'def'))
-
+        self._equalityTest(dns.Name(b"abc"), dns.Name(b"abc"), dns.Name(b"def"))
 
     def _simpleEqualityTest(self, cls):
         """
@@ -1771,15 +1743,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the TTL
         self._equalityTest(
-            cls(b'example.com', 123),
-            cls(b'example.com', 123),
-            cls(b'example.com', 321))
+            cls(b"example.com", 123), cls(b"example.com", 123), cls(b"example.com", 321)
+        )
         # Vary the name
         self._equalityTest(
-            cls(b'example.com', 123),
-            cls(b'example.com', 123),
-            cls(b'example.org', 123))
-
+            cls(b"example.com", 123), cls(b"example.com", 123), cls(b"example.org", 123)
+        )
 
     def test_rrheader(self):
         """
@@ -1789,41 +1758,46 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the name
         self._equalityTest(
-            dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.org', payload=dns.Record_A('1.2.3.4')))
+            dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.org", payload=dns.Record_A("1.2.3.4")),
+        )
 
         # Vary the payload
         self._equalityTest(
-            dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.5')))
+            dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.5")),
+        )
 
         # Vary the type.  Leave the payload as None so that we don't have to
         # provide non-equal values.
         self._equalityTest(
-            dns.RRHeader(b'example.com', dns.A),
-            dns.RRHeader(b'example.com', dns.A),
-            dns.RRHeader(b'example.com', dns.MX))
+            dns.RRHeader(b"example.com", dns.A),
+            dns.RRHeader(b"example.com", dns.A),
+            dns.RRHeader(b"example.com", dns.MX),
+        )
 
         # Probably not likely to come up.  Most people use the internet.
         self._equalityTest(
-            dns.RRHeader(b'example.com', cls=dns.IN, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', cls=dns.IN, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', cls=dns.CS, payload=dns.Record_A('1.2.3.4')))
+            dns.RRHeader(b"example.com", cls=dns.IN, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", cls=dns.IN, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", cls=dns.CS, payload=dns.Record_A("1.2.3.4")),
+        )
 
         # Vary the ttl
         self._equalityTest(
-            dns.RRHeader(b'example.com', ttl=60, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', ttl=60, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', ttl=120, payload=dns.Record_A('1.2.3.4')))
+            dns.RRHeader(b"example.com", ttl=60, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", ttl=60, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", ttl=120, payload=dns.Record_A("1.2.3.4")),
+        )
 
         # Vary the auth bit
         self._equalityTest(
-            dns.RRHeader(b'example.com', auth=1, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', auth=1, payload=dns.Record_A('1.2.3.4')),
-            dns.RRHeader(b'example.com', auth=0, payload=dns.Record_A('1.2.3.4')))
-
+            dns.RRHeader(b"example.com", auth=1, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", auth=1, payload=dns.Record_A("1.2.3.4")),
+            dns.RRHeader(b"example.com", auth=0, payload=dns.Record_A("1.2.3.4")),
+        )
 
     def test_ns(self):
         """
@@ -1832,14 +1806,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self._simpleEqualityTest(dns.Record_NS)
 
-
     def test_md(self):
         """
         Two L{dns.Record_MD} instances compare equal if and only if they have
         the same name and TTL.
         """
         self._simpleEqualityTest(dns.Record_MD)
-
 
     def test_mf(self):
         """
@@ -1848,14 +1820,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self._simpleEqualityTest(dns.Record_MF)
 
-
     def test_cname(self):
         """
         Two L{dns.Record_CNAME} instances compare equal if and only if they
         have the same name and TTL.
         """
         self._simpleEqualityTest(dns.Record_CNAME)
-
 
     def test_mb(self):
         """
@@ -1864,14 +1834,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self._simpleEqualityTest(dns.Record_MB)
 
-
     def test_mg(self):
         """
         Two L{dns.Record_MG} instances compare equal if and only if they have
         the same name and TTL.
         """
         self._simpleEqualityTest(dns.Record_MG)
-
 
     def test_mr(self):
         """
@@ -1880,14 +1848,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self._simpleEqualityTest(dns.Record_MR)
 
-
     def test_ptr(self):
         """
         Two L{dns.Record_PTR} instances compare equal if and only if they have
         the same name and TTL.
         """
         self._simpleEqualityTest(dns.Record_PTR)
-
 
     def test_dname(self):
         """
@@ -1896,7 +1862,6 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self._simpleEqualityTest(dns.Record_DNAME)
 
-
     def test_a(self):
         """
         Two L{dns.Record_A} instances compare equal if and only if they have
@@ -1904,15 +1869,16 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the TTL
         self._equalityTest(
-            dns.Record_A('1.2.3.4', 5),
-            dns.Record_A('1.2.3.4', 5),
-            dns.Record_A('1.2.3.4', 6))
+            dns.Record_A("1.2.3.4", 5),
+            dns.Record_A("1.2.3.4", 5),
+            dns.Record_A("1.2.3.4", 6),
+        )
         # Vary the address
         self._equalityTest(
-            dns.Record_A('1.2.3.4', 5),
-            dns.Record_A('1.2.3.4', 5),
-            dns.Record_A('1.2.3.5', 5))
-
+            dns.Record_A("1.2.3.4", 5),
+            dns.Record_A("1.2.3.4", 5),
+            dns.Record_A("1.2.3.5", 5),
+        )
 
     def test_soa(self):
         """
@@ -1922,45 +1888,52 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the mname
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'xname', b'rname', 123, 456, 789, 10, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"xname", b"rname", 123, 456, 789, 10, 20, 30),
+        )
         # Vary the rname
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'xname', 123, 456, 789, 10, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"xname", 123, 456, 789, 10, 20, 30),
+        )
         # Vary the serial
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 1, 456, 789, 10, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 1, 456, 789, 10, 20, 30),
+        )
         # Vary the refresh
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 1, 789, 10, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 1, 789, 10, 20, 30),
+        )
         # Vary the minimum
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 1, 10, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 1, 10, 20, 30),
+        )
         # Vary the expire
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 1, 20, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 1, 20, 30),
+        )
         # Vary the retry
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 1, 30))
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 1, 30),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'rname', 123, 456, 789, 10, 20, 30),
-            dns.Record_SOA(b'mname', b'xname', 123, 456, 789, 10, 20, 1))
-
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"rname", 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA(b"mname", b"xname", 123, 456, 789, 10, 20, 1),
+        )
 
     def test_null(self):
         """
@@ -1969,15 +1942,16 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the payload
         self._equalityTest(
-            dns.Record_NULL('foo bar', 10),
-            dns.Record_NULL('foo bar', 10),
-            dns.Record_NULL('bar foo', 10))
+            dns.Record_NULL("foo bar", 10),
+            dns.Record_NULL("foo bar", 10),
+            dns.Record_NULL("bar foo", 10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_NULL('foo bar', 10),
-            dns.Record_NULL('foo bar', 10),
-            dns.Record_NULL('foo bar', 100))
-
+            dns.Record_NULL("foo bar", 10),
+            dns.Record_NULL("foo bar", 10),
+            dns.Record_NULL("foo bar", 100),
+        )
 
     def test_wks(self):
         """
@@ -1986,25 +1960,28 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the address
         self._equalityTest(
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('4.3.2.1', 1, 'foo', 2))
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("4.3.2.1", 1, "foo", 2),
+        )
         # Vary the protocol
         self._equalityTest(
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 100, 'foo', 2))
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 100, "foo", 2),
+        )
         # Vary the map
         self._equalityTest(
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'bar', 2))
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "bar", 2),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
-            dns.Record_WKS('1.2.3.4', 1, 'foo', 200))
-
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "foo", 2),
+            dns.Record_WKS("1.2.3.4", 1, "foo", 200),
+        )
 
     def test_aaaa(self):
         """
@@ -2013,15 +1990,16 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the address
         self._equalityTest(
-            dns.Record_AAAA('1::2', 1),
-            dns.Record_AAAA('1::2', 1),
-            dns.Record_AAAA('2::1', 1))
+            dns.Record_AAAA("1::2", 1),
+            dns.Record_AAAA("1::2", 1),
+            dns.Record_AAAA("2::1", 1),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_AAAA('1::2', 1),
-            dns.Record_AAAA('1::2', 1),
-            dns.Record_AAAA('1::2', 10))
-
+            dns.Record_AAAA("1::2", 1),
+            dns.Record_AAAA("1::2", 1),
+            dns.Record_AAAA("1::2", 10),
+        )
 
     def test_a6(self):
         """
@@ -2033,25 +2011,28 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
 
         # Vary the prefix length
         self._equalityTest(
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(32, '::abcd', b'example.com', 10))
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(32, "::abcd", b"example.com", 10),
+        )
         # Vary the suffix
         self._equalityTest(
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd:0', b'example.com', 10))
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd:0", b"example.com", 10),
+        )
         # Vary the prefix
         self._equalityTest(
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.org', 10))
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.org", 10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.com', 10),
-            dns.Record_A6(16, '::abcd', b'example.com', 100))
-
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.com", 10),
+            dns.Record_A6(16, "::abcd", b"example.com", 100),
+        )
 
     def test_srv(self):
         """
@@ -2060,30 +2041,34 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the priority
         self._equalityTest(
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(100, 20, 30, b'example.com', 40))
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(100, 20, 30, b"example.com", 40),
+        )
         # Vary the weight
         self._equalityTest(
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 200, 30, b'example.com', 40))
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 200, 30, b"example.com", 40),
+        )
         # Vary the port
         self._equalityTest(
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 300, b'example.com', 40))
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 300, b"example.com", 40),
+        )
         # Vary the target
         self._equalityTest(
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.org', 40))
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.org", 40),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 40),
-            dns.Record_SRV(10, 20, 30, b'example.com', 400))
-
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 40),
+            dns.Record_SRV(10, 20, 30, b"example.com", 400),
+        )
 
     def test_sshfp(self):
         """
@@ -2092,25 +2077,28 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the key type.
         self._equalityTest(
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(2, 2, b'happyday', 40))
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(2, 2, b"happyday", 40),
+        )
         # Vary the fingerprint type.
         self._equalityTest(
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 1, b'happyday', 40))
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 1, b"happyday", 40),
+        )
         # Vary the fingerprint itself.
         self._equalityTest(
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happxday', 40))
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happxday", 40),
+        )
         # Vary the ttl.
         self._equalityTest(
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happyday', 40),
-            dns.Record_SSHFP(1, 2, b'happyday', 45))
-
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happyday", 40),
+            dns.Record_SSHFP(1, 2, b"happyday", 45),
+        )
 
     def test_naptr(self):
         """
@@ -2122,38 +2110,44 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(2, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12))
+            dns.Record_NAPTR(2, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
+        )
         # Vary the preference
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 3, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12))
+            dns.Record_NAPTR(1, 3, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
+        )
         # Vary the flags
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 2, b"p", b"sip+E2U", b"/foo/bar/", b"baz", 12))
+            dns.Record_NAPTR(1, 2, b"p", b"sip+E2U", b"/foo/bar/", b"baz", 12),
+        )
         # Vary the service
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 2, b"u", b"http", b"/foo/bar/", b"baz", 12))
+            dns.Record_NAPTR(1, 2, b"u", b"http", b"/foo/bar/", b"baz", 12),
+        )
         # Vary the regexp
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"baz", 12))
+            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"baz", 12),
+        )
         # Vary the replacement
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"quux", 12))
+            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"quux", 12),
+        )
         # Vary the ttl
         self._equalityTest(
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
             dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/foo/bar/", b"baz", 12),
-            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"baz", 5))
-
+            dns.Record_NAPTR(1, 2, b"u", b"sip+E2U", b"/bar/foo/", b"baz", 5),
+        )
 
     def test_afsdb(self):
         """
@@ -2162,20 +2156,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the subtype
         self._equalityTest(
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(2, b'example.com', 2))
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(2, b"example.com", 2),
+        )
         # Vary the hostname
         self._equalityTest(
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(1, b'example.org', 2))
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(1, b"example.org", 2),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(1, b'example.com', 2),
-            dns.Record_AFSDB(1, b'example.com', 3))
-
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(1, b"example.com", 2),
+            dns.Record_AFSDB(1, b"example.com", 3),
+        )
 
     def test_rp(self):
         """
@@ -2184,20 +2180,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the mbox
         self._equalityTest(
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'bob.example.com', b'alice is nice', 10))
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"bob.example.com", b"alice is nice", 10),
+        )
         # Vary the txt
         self._equalityTest(
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'alice.example.com', b'alice is not nice', 10))
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"alice.example.com", b"alice is not nice", 10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 10),
-            dns.Record_RP(b'alice.example.com', b'alice is nice', 100))
-
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 10),
+            dns.Record_RP(b"alice.example.com", b"alice is nice", 100),
+        )
 
     def test_hinfo(self):
         """
@@ -2206,20 +2204,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the cpu
         self._equalityTest(
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('i386', 'plan9', 10))
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("i386", "plan9", 10),
+        )
         # Vary the os
         self._equalityTest(
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('x86-64', 'plan11', 10))
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("x86-64", "plan11", 10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('x86-64', 'plan9', 10),
-            dns.Record_HINFO('x86-64', 'plan9', 100))
-
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("x86-64", "plan9", 10),
+            dns.Record_HINFO("x86-64", "plan9", 100),
+        )
 
     def test_minfo(self):
         """
@@ -2228,20 +2228,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the rmailbx
         self._equalityTest(
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'someplace', b'emailbox', 10))
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"someplace", b"emailbox", 10),
+        )
         # Vary the emailbx
         self._equalityTest(
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'rmailbox', b'something', 10))
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"rmailbox", b"something", 10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 10),
-            dns.Record_MINFO(b'rmailbox', b'emailbox', 100))
-
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 10),
+            dns.Record_MINFO(b"rmailbox", b"emailbox", 100),
+        )
 
     def test_mx(self):
         """
@@ -2250,20 +2252,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the preference
         self._equalityTest(
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(100, b'example.org', 20))
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(100, b"example.org", 20),
+        )
         # Vary the name
         self._equalityTest(
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(10, b'example.net', 20))
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(10, b"example.net", 20),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(10, b'example.org', 20),
-            dns.Record_MX(10, b'example.org', 200))
-
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(10, b"example.org", 20),
+            dns.Record_MX(10, b"example.org", 200),
+        )
 
     def test_txt(self):
         """
@@ -2272,20 +2276,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the length of the data
         self._equalityTest(
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('foo', 'bar', 'baz', ttl=10))
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("foo", "bar", "baz", ttl=10),
+        )
         # Vary the value of the data
         self._equalityTest(
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('bar', 'foo', ttl=10))
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("bar", "foo", ttl=10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('foo', 'bar', ttl=10),
-            dns.Record_TXT('foo', 'bar', ttl=100))
-
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("foo", "bar", ttl=10),
+            dns.Record_TXT("foo", "bar", ttl=100),
+        )
 
     def test_spf(self):
         """
@@ -2294,42 +2300,56 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the length of the data
         self._equalityTest(
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('foo', 'bar', 'baz', ttl=10))
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("foo", "bar", "baz", ttl=10),
+        )
         # Vary the value of the data
         self._equalityTest(
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('bar', 'foo', ttl=10))
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("bar", "foo", ttl=10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('foo', 'bar', ttl=10),
-            dns.Record_SPF('foo', 'bar', ttl=100))
-
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("foo", "bar", ttl=10),
+            dns.Record_SPF("foo", "bar", ttl=100),
+        )
 
     def test_tsig(self):
         """
         L{dns.Record_TSIG} instances compare equal if and only if they have the
         same RDATA (algorithm, timestamp, MAC, etc.) and ttl.
         """
-        baseargs = {'algorithm': 'hmac-sha224', 'timeSigned': 1515548975,
-                    'fudge': 5,
-                    'MAC': b'\x01\x02\x03\x04\x05', 'originalID': 99,
-                    'error': dns.OK, 'otherData': b'', 'ttl': 40}
-        altargs = {'algorithm': 'hmac-sha512', 'timeSigned': 1515548875,
-                   'fudge': 0,
-                   'MAC': b'\x05\x04\x03\x02\x01', 'originalID': 65437,
-                   'error': dns.EBADTIME, 'otherData': b'\x00\x00',
-                   'ttl': 400}
+        baseargs = {
+            "algorithm": "hmac-sha224",
+            "timeSigned": 1515548975,
+            "fudge": 5,
+            "MAC": b"\x01\x02\x03\x04\x05",
+            "originalID": 99,
+            "error": dns.OK,
+            "otherData": b"",
+            "ttl": 40,
+        }
+        altargs = {
+            "algorithm": "hmac-sha512",
+            "timeSigned": 1515548875,
+            "fudge": 0,
+            "MAC": b"\x05\x04\x03\x02\x01",
+            "originalID": 65437,
+            "error": dns.EBADTIME,
+            "otherData": b"\x00\x00",
+            "ttl": 400,
+        }
         for kw in baseargs.keys():
             altered = baseargs.copy()
             altered[kw] = altargs[kw]
-            self._equalityTest(dns.Record_TSIG(**altered),
-                               dns.Record_TSIG(**altered),
-                               dns.Record_TSIG(**baseargs))
-
+            self._equalityTest(
+                dns.Record_TSIG(**altered),
+                dns.Record_TSIG(**altered),
+                dns.Record_TSIG(**baseargs),
+            )
 
     def test_unknown(self):
         """
@@ -2338,20 +2358,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         # Vary the length of the data
         self._equalityTest(
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('foobar', ttl=10))
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("foobar", ttl=10),
+        )
         # Vary the value of the data
         self._equalityTest(
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('bar', ttl=10))
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("bar", ttl=10),
+        )
         # Vary the ttl
         self._equalityTest(
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('foo', ttl=10),
-            dns.UnknownRecord('foo', ttl=100))
-
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("foo", ttl=10),
+            dns.UnknownRecord("foo", ttl=100),
+        )
 
 
 class RRHeaderTests(unittest.TestCase):
@@ -2365,22 +2387,24 @@ class RRHeaderTests(unittest.TestCase):
         causes L{ValueError} to be raised.
         """
         self.assertRaises(
-            ValueError, dns.RRHeader, "example.com", dns.A,
-            dns.IN, -1, dns.Record_A("127.0.0.1"))
-
+            ValueError,
+            dns.RRHeader,
+            "example.com",
+            dns.A,
+            dns.IN,
+            -1,
+            dns.Record_A("127.0.0.1"),
+        )
 
     def test_nonIntegralTTL(self):
         """
         L{dns.RRHeader} converts TTLs to integers.
         """
         ttlAsFloat = 123.45
-        header = dns.RRHeader("example.com",
-                              dns.A,
-                              dns.IN,
-                              ttlAsFloat,
-                              dns.Record_A("127.0.0.1"))
+        header = dns.RRHeader(
+            "example.com", dns.A, dns.IN, ttlAsFloat, dns.Record_A("127.0.0.1")
+        )
         self.assertEqual(header.ttl, int(ttlAsFloat))
-
 
     def test_nonNumericTTLRaisesTypeError(self):
         """
@@ -2388,10 +2412,14 @@ class RRHeaderTests(unittest.TestCase):
         that L{int} cannot convert to an integer raises a L{TypeError}.
         """
         self.assertRaises(
-            ValueError, dns.RRHeader, "example.com", dns.A,
-            dns.IN, "this is not a number", dns.Record_A("127.0.0.1"))
-
-
+            ValueError,
+            dns.RRHeader,
+            "example.com",
+            dns.A,
+            dns.IN,
+            "this is not a number",
+            dns.Record_A("127.0.0.1"),
+        )
 
 
 class NameToLabelsTests(unittest.SynchronousTestCase):
@@ -2404,32 +2432,28 @@ class NameToLabelsTests(unittest.SynchronousTestCase):
         L{dns._nameToLabels} returns a list containing a single
         empty label for an empty name.
         """
-        self.assertEqual(dns._nameToLabels(b''), [b''])
-
+        self.assertEqual(dns._nameToLabels(b""), [b""])
 
     def test_onlyDot(self):
         """
         L{dns._nameToLabels} returns a list containing a single
         empty label for a name containing only a dot.
         """
-        self.assertEqual(dns._nameToLabels(b'.'), [b''])
-
+        self.assertEqual(dns._nameToLabels(b"."), [b""])
 
     def test_withoutTrailingDot(self):
         """
         L{dns._nameToLabels} returns a list ending with an empty
         label for a name without a trailing dot.
         """
-        self.assertEqual(dns._nameToLabels(b'com'), [b'com', b''])
-
+        self.assertEqual(dns._nameToLabels(b"com"), [b"com", b""])
 
     def test_withTrailingDot(self):
         """
         L{dns._nameToLabels} returns a list ending with an empty
         label for a name with a trailing dot.
         """
-        self.assertEqual(dns._nameToLabels(b'com.'), [b'com', b''])
-
+        self.assertEqual(dns._nameToLabels(b"com."), [b"com", b""])
 
     def test_subdomain(self):
         """
@@ -2437,19 +2461,16 @@ class NameToLabelsTests(unittest.SynchronousTestCase):
         for all labels in a subdomain name.
         """
         self.assertEqual(
-            dns._nameToLabels(b'foo.bar.baz.example.com.'),
-            [b'foo', b'bar', b'baz', b'example', b'com', b''])
-
+            dns._nameToLabels(b"foo.bar.baz.example.com."),
+            [b"foo", b"bar", b"baz", b"example", b"com", b""],
+        )
 
     def test_casePreservation(self):
         """
         L{dns._nameToLabels} preserves the case of ascii
         characters in labels.
         """
-        self.assertEqual(
-            dns._nameToLabels(b'EXAMPLE.COM'),
-            [b'EXAMPLE', b'COM', b''])
-
+        self.assertEqual(dns._nameToLabels(b"EXAMPLE.COM"), [b"EXAMPLE", b"COM", b""])
 
 
 def assertIsSubdomainOf(testCase, descendant, ancestor):
@@ -2467,8 +2488,8 @@ def assertIsSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertTrue(
         dns._isSubdomainOf(descendant, ancestor),
-        '%r is not a subdomain of %r' % (descendant, ancestor))
-
+        f"{descendant!r} is not a subdomain of {ancestor!r}",
+    )
 
 
 def assertIsNotSubdomainOf(testCase, descendant, ancestor):
@@ -2486,8 +2507,8 @@ def assertIsNotSubdomainOf(testCase, descendant, ancestor):
     """
     testCase.assertFalse(
         dns._isSubdomainOf(descendant, ancestor),
-        '%r is a subdomain of %r' % (descendant, ancestor))
-
+        f"{descendant!r} is a subdomain of {ancestor!r}",
+    )
 
 
 class IsSubdomainOfTests(unittest.SynchronousTestCase):
@@ -2500,48 +2521,42 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         L{dns._isSubdomainOf} returns C{True} for identical
         domain names.
         """
-        assertIsSubdomainOf(self, b'example.com', b'example.com')
-
+        assertIsSubdomainOf(self, b"example.com", b"example.com")
 
     def test_parent(self):
         """
         L{dns._isSubdomainOf} returns C{True} when the first
         name is an immediate descendant of the second name.
         """
-        assertIsSubdomainOf(self, b'foo.example.com', b'example.com')
-
+        assertIsSubdomainOf(self, b"foo.example.com", b"example.com")
 
     def test_distantAncestor(self):
         """
         L{dns._isSubdomainOf} returns C{True} when the first
         name is a distant descendant of the second name.
         """
-        assertIsSubdomainOf(self, b'foo.bar.baz.example.com', b'com')
-
+        assertIsSubdomainOf(self, b"foo.bar.baz.example.com", b"com")
 
     def test_superdomain(self):
         """
         L{dns._isSubdomainOf} returns C{False} when the first
         name is an ancestor of the second name.
         """
-        assertIsNotSubdomainOf(self, b'example.com', b'foo.example.com')
-
+        assertIsNotSubdomainOf(self, b"example.com", b"foo.example.com")
 
     def test_sibling(self):
         """
         L{dns._isSubdomainOf} returns C{False} if the first name
         is a sibling of the second name.
         """
-        assertIsNotSubdomainOf(self, b'foo.example.com', b'bar.example.com')
-
+        assertIsNotSubdomainOf(self, b"foo.example.com", b"bar.example.com")
 
     def test_unrelatedCommonSuffix(self):
         """
         L{dns._isSubdomainOf} returns C{False} even when domain
         names happen to share a common suffix.
         """
-        assertIsNotSubdomainOf(self, b'foo.myexample.com', b'example.com')
-
+        assertIsNotSubdomainOf(self, b"foo.myexample.com", b"example.com")
 
     def test_subdomainWithTrailingDot(self):
         """
@@ -2549,8 +2564,7 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         is a subdomain of the second name but the first name has a
         trailing ".".
         """
-        assertIsSubdomainOf(self, b'foo.example.com.', b'example.com')
-
+        assertIsSubdomainOf(self, b"foo.example.com.", b"example.com")
 
     def test_superdomainWithTrailingDot(self):
         """
@@ -2558,8 +2572,7 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         is a subdomain of the second name but the second name has a
         trailing ".".
         """
-        assertIsSubdomainOf(self, b'foo.example.com', b'example.com.')
-
+        assertIsSubdomainOf(self, b"foo.example.com", b"example.com.")
 
     def test_bothWithTrailingDot(self):
         """
@@ -2567,37 +2580,33 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         is a subdomain of the second name and both names have a
         trailing ".".
         """
-        assertIsSubdomainOf(self, b'foo.example.com.', b'example.com.')
-
+        assertIsSubdomainOf(self, b"foo.example.com.", b"example.com.")
 
     def test_emptySubdomain(self):
         """
         L{dns._isSubdomainOf} returns C{False} if the first name
         is empty and the second name is not.
         """
-        assertIsNotSubdomainOf(self, b'', b'example.com')
-
+        assertIsNotSubdomainOf(self, b"", b"example.com")
 
     def test_emptySuperdomain(self):
         """
         L{dns._isSubdomainOf} returns C{True} if the second name
         is empty and the first name is not.
         """
-        assertIsSubdomainOf(self, b'foo.example.com', b'')
-
+        assertIsSubdomainOf(self, b"foo.example.com", b"")
 
     def test_caseInsensitiveComparison(self):
         """
         L{dns._isSubdomainOf} does case-insensitive comparison
         of name labels.
         """
-        assertIsSubdomainOf(self, b'foo.example.com', b'EXAMPLE.COM')
+        assertIsSubdomainOf(self, b"foo.example.com", b"EXAMPLE.COM")
 
-        assertIsSubdomainOf(self, b'FOO.EXAMPLE.COM', b'example.com')
+        assertIsSubdomainOf(self, b"FOO.EXAMPLE.COM", b"example.com")
 
 
-
-class OPTNonStandardAttributes(object):
+class OPTNonStandardAttributes:
     """
     Generate byte and instance representations of an L{dns._OPTHeader}
     where all attributes are set to non-default values.
@@ -2605,6 +2614,7 @@ class OPTNonStandardAttributes(object):
     For testing whether attributes have really been read from the byte
     string during decoding.
     """
+
     @classmethod
     def bytes(cls, excludeName=False, excludeOptions=False):
         """
@@ -2623,19 +2633,18 @@ class OPTNonStandardAttributes(object):
         @return: L{bytes} representing the encoded OPT record returned
             by L{object}.
         """
-        rdlen = b'\x00\x00' # RDLEN 0
+        rdlen = b"\x00\x00"  # RDLEN 0
         if excludeOptions:
-            rdlen = b''
+            rdlen = b""
 
         return (
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x04' # version 4
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            ) + rdlen
-
+            b"\x00"  # 0 root zone
+            b"\x00\x29"  # type 41
+            b"\x02\x00"  # udpPayloadsize 512
+            b"\x03"  # extendedRCODE 3
+            b"\x04"  # version 4
+            b"\x80\x00"  # DNSSEC OK 1 + Z
+        ) + rdlen
 
     @classmethod
     def object(cls):
@@ -2646,40 +2655,34 @@ class OPTNonStandardAttributes(object):
             match the encoded record returned by L{bytes}.
         """
         return dns._OPTHeader(
-            udpPayloadSize=512,
-            extendedRCODE=3,
-            version=4,
-            dnssecOK=True)
-
+            udpPayloadSize=512, extendedRCODE=3, version=4, dnssecOK=True
+        )
 
 
 class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{twisted.names.dns._OPTHeader}.
     """
+
     def test_interface(self):
         """
         L{dns._OPTHeader} implements L{dns.IEncodable}.
         """
         verifyClass(dns.IEncodable, dns._OPTHeader)
 
-
     def test_name(self):
         """
         L{dns._OPTHeader.name} is an instance attribute whose value is
         fixed as the root domain
         """
-        self.assertEqual(dns._OPTHeader().name, dns.Name(b''))
-
+        self.assertEqual(dns._OPTHeader().name, dns.Name(b""))
 
     def test_nameReadonly(self):
         """
         L{dns._OPTHeader.name} is readonly.
         """
         h = dns._OPTHeader()
-        self.assertRaises(
-            AttributeError, setattr, h, 'name', dns.Name(b'example.com'))
-
+        self.assertRaises(AttributeError, setattr, h, "name", dns.Name(b"example.com"))
 
     def test_type(self):
         """
@@ -2688,15 +2691,12 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(dns._OPTHeader().type, 41)
 
-
     def test_typeReadonly(self):
         """
         L{dns._OPTHeader.type} is readonly.
         """
         h = dns._OPTHeader()
-        self.assertRaises(
-            AttributeError, setattr, h, 'type', dns.A)
-
+        self.assertRaises(AttributeError, setattr, h, "type", dns.A)
 
     def test_udpPayloadSize(self):
         """
@@ -2705,7 +2705,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(dns._OPTHeader().udpPayloadSize, 4096)
 
-
     def test_udpPayloadSizeOverride(self):
         """
         L{dns._OPTHeader.udpPayloadSize} can be overridden in the
@@ -2713,13 +2712,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(dns._OPTHeader(udpPayloadSize=512).udpPayloadSize, 512)
 
-
     def test_extendedRCODE(self):
         """
         L{dns._OPTHeader.extendedRCODE} defaults to 0.
         """
         self.assertEqual(dns._OPTHeader().extendedRCODE, 0)
-
 
     def test_extendedRCODEOverride(self):
         """
@@ -2728,13 +2725,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(dns._OPTHeader(extendedRCODE=1).extendedRCODE, 1)
 
-
     def test_version(self):
         """
         L{dns._OPTHeader.version} defaults to 0.
         """
         self.assertEqual(dns._OPTHeader().version, 0)
-
 
     def test_versionOverride(self):
         """
@@ -2743,13 +2738,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(dns._OPTHeader(version=1).version, 1)
 
-
     def test_dnssecOK(self):
         """
         L{dns._OPTHeader.dnssecOK} defaults to False.
         """
         self.assertFalse(dns._OPTHeader().dnssecOK)
-
 
     def test_dnssecOKOverride(self):
         """
@@ -2758,22 +2751,19 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertTrue(dns._OPTHeader(dnssecOK=True).dnssecOK)
 
-
     def test_options(self):
         """
         L{dns._OPTHeader.options} defaults to empty list.
         """
         self.assertEqual(dns._OPTHeader().options, [])
 
-
     def test_optionsOverride(self):
         """
         L{dns._OPTHeader.options} can be overridden in the
         constructor.
         """
-        h = dns._OPTHeader(options=[(1, 1, b'\x00')])
-        self.assertEqual(h.options, [(1, 1, b'\x00')])
-
+        h = dns._OPTHeader(options=[(1, 1, b"\x00")])
+        self.assertEqual(h.options, [(1, 1, b"\x00")])
 
     def test_encode(self):
         """
@@ -2783,11 +2773,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         b = BytesIO()
 
         OPTNonStandardAttributes.object().encode(b)
-        self.assertEqual(
-            b.getvalue(),
-            OPTNonStandardAttributes.bytes()
-            )
-
+        self.assertEqual(b.getvalue(), OPTNonStandardAttributes.bytes())
 
     def test_encodeWithOptions(self):
         """
@@ -2796,27 +2782,25 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         h = OPTNonStandardAttributes.object()
         h.options = [
-            dns._OPTVariableOption(1, b'foobarbaz'),
-            dns._OPTVariableOption(2, b'qux'),
-            ]
+            dns._OPTVariableOption(1, b"foobarbaz"),
+            dns._OPTVariableOption(2, b"qux"),
+        ]
         b = BytesIO()
 
         h.encode(b)
         self.assertEqual(
             b.getvalue(),
-
-            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
-                b'\x00\x14' # RDLEN 20
-
-                b'\x00\x01' # OPTION-CODE
-                b'\x00\x09' # OPTION-LENGTH
-                b'foobarbaz' # OPTION-DATA
-
-                b'\x00\x02' # OPTION-CODE
-                b'\x00\x03' # OPTION-LENGTH
-                b'qux' # OPTION-DATA
-                ))
-
+            OPTNonStandardAttributes.bytes(excludeOptions=True)
+            + (
+                b"\x00\x14"  # RDLEN 20
+                b"\x00\x01"  # OPTION-CODE
+                b"\x00\x09"  # OPTION-LENGTH
+                b"foobarbaz"  # OPTION-DATA
+                b"\x00\x02"  # OPTION-CODE
+                b"\x00\x03"  # OPTION-LENGTH
+                b"qux"  # OPTION-DATA
+            ),
+        )
 
     def test_decode(self):
         """
@@ -2827,10 +2811,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(BytesIO(OPTNonStandardAttributes.bytes()))
 
-        self.assertEqual(
-            decodedHeader,
-            OPTNonStandardAttributes.object())
-
+        self.assertEqual(decodedHeader, OPTNonStandardAttributes.object())
 
     def test_decodeAllExpectedBytes(self):
         """
@@ -2845,21 +2826,18 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
         self.assertEqual(b.tell(), len(b.getvalue()))
 
-
     def test_decodeOnlyExpectedBytes(self):
         """
         L{dns._OPTHeader.decode} reads only the bytes from the current
         file position to the end of the record that is being
         decoded. Trailing bytes are not consumed.
         """
-        b = BytesIO(OPTNonStandardAttributes.bytes()
-                    + b'xxxx') # Trailing bytes
+        b = BytesIO(OPTNonStandardAttributes.bytes() + b"xxxx")  # Trailing bytes
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
 
-        self.assertEqual(b.tell(), len(b.getvalue())-len(b'xxxx'))
-
+        self.assertEqual(b.tell(), len(b.getvalue()) - len(b"xxxx"))
 
     def test_decodeDiscardsName(self):
         """
@@ -2867,13 +2845,13 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the supplied bytes. The name attribute of the resulting
         L{dns._OPTHeader} instance will always be L{dns.Name(b'')}.
         """
-        b = BytesIO(OPTNonStandardAttributes.bytes(excludeName=True)
-                    + b'\x07example\x03com\x00')
+        b = BytesIO(
+            OPTNonStandardAttributes.bytes(excludeName=True) + b"\x07example\x03com\x00"
+        )
 
         h = dns._OPTHeader()
         h.decode(b)
-        self.assertEqual(h.name, dns.Name(b''))
-
+        self.assertEqual(h.name, dns.Name(b""))
 
     def test_decodeRdlengthTooShort(self):
         """
@@ -2881,16 +2859,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too short.
         """
         b = BytesIO(
-            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
-                b'\x00\x05' # RDLEN 5 Too short - should be 6
-
-                b'\x00\x01' # OPTION-CODE
-                b'\x00\x02' # OPTION-LENGTH
-                b'\x00\x00' # OPTION-DATA
-                ))
+            OPTNonStandardAttributes.bytes(excludeOptions=True)
+            + (
+                b"\x00\x05"  # RDLEN 5 Too short - should be 6
+                b"\x00\x01"  # OPTION-CODE
+                b"\x00\x02"  # OPTION-LENGTH
+                b"\x00\x00"  # OPTION-DATA
+            )
+        )
         h = dns._OPTHeader()
         self.assertRaises(EOFError, h.decode, b)
-
 
     def test_decodeRdlengthTooLong(self):
         """
@@ -2898,17 +2876,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too long.
         """
         b = BytesIO(
-            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
-
-                b'\x00\x07' # RDLEN 7 Too long - should be 6
-
-                b'\x00\x01' # OPTION-CODE
-                b'\x00\x02' # OPTION-LENGTH
-                b'\x00\x00' # OPTION-DATA
-                ))
+            OPTNonStandardAttributes.bytes(excludeOptions=True)
+            + (
+                b"\x00\x07"  # RDLEN 7 Too long - should be 6
+                b"\x00\x01"  # OPTION-CODE
+                b"\x00\x02"  # OPTION-LENGTH
+                b"\x00\x00"  # OPTION-DATA
+            )
+        )
         h = dns._OPTHeader()
         self.assertRaises(EOFError, h.decode, b)
-
 
     def test_decodeWithOptions(self):
         """
@@ -2919,27 +2896,27 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
 
         b = BytesIO(
-            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
-
-                b'\x00\x14' # RDLEN 20
-
-                b'\x00\x01' # OPTION-CODE
-                b'\x00\x09' # OPTION-LENGTH
-                b'foobarbaz' # OPTION-DATA
-
-                b'\x00\x02' # OPTION-CODE
-                b'\x00\x03' # OPTION-LENGTH
-                b'qux' # OPTION-DATA
-                ))
+            OPTNonStandardAttributes.bytes(excludeOptions=True)
+            + (
+                b"\x00\x14"  # RDLEN 20
+                b"\x00\x01"  # OPTION-CODE
+                b"\x00\x09"  # OPTION-LENGTH
+                b"foobarbaz"  # OPTION-DATA
+                b"\x00\x02"  # OPTION-CODE
+                b"\x00\x03"  # OPTION-LENGTH
+                b"qux"  # OPTION-DATA
+            )
+        )
 
         h = dns._OPTHeader()
         h.decode(b)
         self.assertEqual(
             h.options,
-            [dns._OPTVariableOption(1, b'foobarbaz'),
-             dns._OPTVariableOption(2, b'qux'),]
-            )
-
+            [
+                dns._OPTVariableOption(1, b"foobarbaz"),
+                dns._OPTVariableOption(2, b"qux"),
+            ],
+        )
 
     def test_fromRRHeader(self):
         """
@@ -2949,25 +2926,24 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         of the original header.
         """
         genericHeader = dns.RRHeader(
-            b'example.com',
+            b"example.com",
             type=dns.OPT,
-            cls=0xffff,
-            ttl=(0xfe << 24
-                 | 0xfd << 16
-                 | True << 15),
-            payload=dns.UnknownRecord(b'\xff\xff\x00\x03abc'))
+            cls=0xFFFF,
+            ttl=(0xFE << 24 | 0xFD << 16 | True << 15),
+            payload=dns.UnknownRecord(b"\xff\xff\x00\x03abc"),
+        )
 
         decodedOptHeader = dns._OPTHeader.fromRRHeader(genericHeader)
 
         expectedOptHeader = dns._OPTHeader(
-            udpPayloadSize=0xffff,
-            extendedRCODE=0xfe,
-            version=0xfd,
+            udpPayloadSize=0xFFFF,
+            extendedRCODE=0xFE,
+            version=0xFD,
             dnssecOK=True,
-            options=[dns._OPTVariableOption(code=0xffff, data=b'abc')])
+            options=[dns._OPTVariableOption(code=0xFFFF, data=b"abc")],
+        )
 
         self.assertEqual(decodedOptHeader, expectedOptHeader)
-
 
     def test_repr(self):
         """
@@ -2976,15 +2952,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(
             repr(dns._OPTHeader()),
-            '<_OPTHeader '
-            'name= '
-            'type=41 '
-            'udpPayloadSize=4096 '
-            'extendedRCODE=0 '
-            'version=0 '
-            'dnssecOK=False '
-            'options=[]>')
-
+            "<_OPTHeader "
+            "name= "
+            "type=41 "
+            "udpPayloadSize=4096 "
+            "extendedRCODE=0 "
+            "version=0 "
+            "dnssecOK=False "
+            "options=[]>",
+        )
 
     def test_equalityUdpPayloadSize(self):
         """
@@ -2994,8 +2970,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(udpPayloadSize=512),
             dns._OPTHeader(udpPayloadSize=512),
-            dns._OPTHeader(udpPayloadSize=4096))
-
+            dns._OPTHeader(udpPayloadSize=4096),
+        )
 
     def test_equalityExtendedRCODE(self):
         """
@@ -3005,8 +2981,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(extendedRCODE=1),
             dns._OPTHeader(extendedRCODE=1),
-            dns._OPTHeader(extendedRCODE=2))
-
+            dns._OPTHeader(extendedRCODE=2),
+        )
 
     def test_equalityVersion(self):
         """
@@ -3016,8 +2992,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(version=1),
             dns._OPTHeader(version=1),
-            dns._OPTHeader(version=2))
-
+            dns._OPTHeader(version=2),
+        )
 
     def test_equalityDnssecOK(self):
         """
@@ -3027,8 +3003,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(dnssecOK=True),
             dns._OPTHeader(dnssecOK=True),
-            dns._OPTHeader(dnssecOK=False))
-
+            dns._OPTHeader(dnssecOK=False),
+        )
 
     def test_equalityOptions(self):
         """
@@ -3036,32 +3012,31 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         options.
         """
         self.assertNormalEqualityImplementation(
-            dns._OPTHeader(options=[dns._OPTVariableOption(1, b'x')]),
-            dns._OPTHeader(options=[dns._OPTVariableOption(1, b'x')]),
-            dns._OPTHeader(options=[dns._OPTVariableOption(2, b'y')]))
-
+            dns._OPTHeader(options=[dns._OPTVariableOption(1, b"x")]),
+            dns._OPTHeader(options=[dns._OPTVariableOption(1, b"x")]),
+            dns._OPTHeader(options=[dns._OPTVariableOption(2, b"y")]),
+        )
 
 
 class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{dns._OPTVariableOption}.
     """
+
     def test_interface(self):
         """
         L{dns._OPTVariableOption} implements L{dns.IEncodable}.
         """
         verifyClass(dns.IEncodable, dns._OPTVariableOption)
 
-
     def test_constructorArguments(self):
         """
         L{dns._OPTVariableOption.__init__} requires code and data
         arguments which are saved as public instance attributes.
         """
-        h = dns._OPTVariableOption(1, b'x')
+        h = dns._OPTVariableOption(1, b"x")
         self.assertEqual(h.code, 1)
-        self.assertEqual(h.data, b'x')
-
+        self.assertEqual(h.data, b"x")
 
     def test_repr(self):
         """
@@ -3069,12 +3044,9 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         of the option.
         """
         self.assertEqual(
-            repr(dns._OPTVariableOption(1, b'x')),
-            '<_OPTVariableOption '
-            'code=1 '
-            "data=x"
-            '>')
-
+            repr(dns._OPTVariableOption(1, b"x")),
+            "<_OPTVariableOption " "code=1 " "data=x" ">",
+        )
 
     def test_equality(self):
         """
@@ -3082,15 +3054,16 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         code and data values.
         """
         self.assertNormalEqualityImplementation(
-            dns._OPTVariableOption(1, b'x'),
-            dns._OPTVariableOption(1, b'x'),
-            dns._OPTVariableOption(2, b'x'))
+            dns._OPTVariableOption(1, b"x"),
+            dns._OPTVariableOption(1, b"x"),
+            dns._OPTVariableOption(2, b"x"),
+        )
 
         self.assertNormalEqualityImplementation(
-            dns._OPTVariableOption(1, b'x'),
-            dns._OPTVariableOption(1, b'x'),
-            dns._OPTVariableOption(1, b'y'))
-
+            dns._OPTVariableOption(1, b"x"),
+            dns._OPTVariableOption(1, b"x"),
+            dns._OPTVariableOption(1, b"y"),
+        )
 
     def test_encode(self):
         """
@@ -3098,16 +3071,15 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         instance attributes to a byte string which also includes the
         data length.
         """
-        o = dns._OPTVariableOption(1, b'foobar')
+        o = dns._OPTVariableOption(1, b"foobar")
         b = BytesIO()
         o.encode(b)
         self.assertEqual(
             b.getvalue(),
-            b'\x00\x01' # OPTION-CODE 1
-            b'\x00\x06' # OPTION-LENGTH 6
-            b'foobar' # OPTION-DATA
-            )
-
+            b"\x00\x01"  # OPTION-CODE 1
+            b"\x00\x06"  # OPTION-LENGTH 6
+            b"foobar",  # OPTION-DATA
+        )
 
     def test_decode(self):
         """
@@ -3115,16 +3087,15 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         a byte string and returns a L{dns._OPTVariableOption} instance.
         """
         b = BytesIO(
-            b'\x00\x01' # OPTION-CODE 1
-            b'\x00\x06' # OPTION-LENGTH 6
-            b'foobar' # OPTION-DATA
-            )
+            b"\x00\x01"  # OPTION-CODE 1
+            b"\x00\x06"  # OPTION-LENGTH 6
+            b"foobar"  # OPTION-DATA
+        )
 
         o = dns._OPTVariableOption()
         o.decode(b)
         self.assertEqual(o.code, 1)
-        self.assertEqual(o.data, b'foobar')
-
+        self.assertEqual(o.data, b"foobar")
 
 
 class RaisedArgs(Exception):
@@ -3132,6 +3103,7 @@ class RaisedArgs(Exception):
     An exception which can be raised by fakes to test that the fake is called
     with expected arguments.
     """
+
     def __init__(self, args, kwargs):
         """
         Store the positional and keyword arguments as attributes.
@@ -3143,12 +3115,12 @@ class RaisedArgs(Exception):
         self.kwargs = kwargs
 
 
-
-class MessageEmpty(object):
+class MessageEmpty:
     """
     Generate byte string and constructor arguments for an empty
     L{dns._EDNSMessage}.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3159,15 +3131,14 @@ class MessageEmpty(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # id: 256
-            b'\x97' # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
-            b'\x8f' # RA: 1, Z, RCODE: 15
-            b'\x00\x00' # number of queries
-            b'\x00\x00' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x00' # number of additionals
+            b"\x01\x00"  # id: 256
+            b"\x97"  # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
+            b"\x8f"  # RA: 1, Z, RCODE: 15
+            b"\x00\x00"  # number of queries
+            b"\x00\x00"  # number of answers
+            b"\x00\x00"  # number of authorities
+            b"\x00\x00"  # number of additionals
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3190,11 +3161,11 @@ class MessageEmpty(object):
         )
 
 
-
-class MessageTruncated(object):
+class MessageTruncated:
     """
     An empty response message whose TR bit is set to 1.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3205,15 +3176,14 @@ class MessageTruncated(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # ID: 256
-            b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
-            b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # Number of queries
-            b'\x00\x00' # Number of answers
-            b'\x00\x00' # Number of authorities
-            b'\x00\x00' # Number of additionals
+            b"\x01\x00"  # ID: 256
+            b"\x82"  # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
+            b"\x00"  # RA: 0, Z, RCODE: 0
+            b"\x00\x00"  # Number of queries
+            b"\x00\x00"  # Number of answers
+            b"\x00\x00"  # Number of authorities
+            b"\x00\x00"  # Number of additionals
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3232,14 +3202,15 @@ class MessageTruncated(object):
             recDes=0,
             recAv=0,
             rCode=0,
-            ednsVersion=None,)
+            ednsVersion=None,
+        )
 
 
-
-class MessageNonAuthoritative(object):
+class MessageNonAuthoritative:
     """
     A minimal non-authoritative message.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3250,22 +3221,21 @@ class MessageNonAuthoritative(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # ID 256
-            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
-            b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # Query count
-            b'\x00\x01' # Answer count
-            b'\x00\x00' # Authorities count
-            b'\x00\x00' # Additionals count
+            b"\x01\x00"  # ID 256
+            b"\x00"  # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b"\x00"  # RA: 0, Z, RCODE: 0
+            b"\x00\x00"  # Query count
+            b"\x00\x01"  # Answer count
+            b"\x00\x00"  # Authorities count
+            b"\x00\x00"  # Additionals count
             # Answer
-            b'\x00' # RR NAME (root)
-            b'\x00\x01' # RR TYPE 1 (A)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\x00\x00\x00\x00' # RR TTL
-            b'\x00\x04' # RDLENGTH 4
-            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+            b"\x00"  # RR NAME (root)
+            b"\x00\x01"  # RR TYPE 1 (A)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\x00\x00\x00\x00"  # RR TTL
+            b"\x00\x04"  # RDLENGTH 4
+            b"\x01\x02\x03\x04"  # IPv4 1.2.3.4
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3280,17 +3250,16 @@ class MessageNonAuthoritative(object):
             auth=0,
             ednsVersion=None,
             answers=[
-                dns.RRHeader(
-                    b'',
-                    payload=dns.Record_A('1.2.3.4', ttl=0),
-                    auth=False)])
+                dns.RRHeader(b"", payload=dns.Record_A("1.2.3.4", ttl=0), auth=False)
+            ],
+        )
 
 
-
-class MessageAuthoritative(object):
+class MessageAuthoritative:
     """
     A minimal authoritative message.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3301,22 +3270,21 @@ class MessageAuthoritative(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # ID: 256
-            b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
-            b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # Query count
-            b'\x00\x01' # Answer count
-            b'\x00\x00' # Authorities count
-            b'\x00\x00' # Additionals count
+            b"\x01\x00"  # ID: 256
+            b"\x04"  # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
+            b"\x00"  # RA: 0, Z, RCODE: 0
+            b"\x00\x00"  # Query count
+            b"\x00\x01"  # Answer count
+            b"\x00\x00"  # Authorities count
+            b"\x00\x00"  # Additionals count
             # Answer
-            b'\x00' # RR NAME (root)
-            b'\x00\x01' # RR TYPE 1 (A)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\x00\x00\x00\x00' # RR TTL
-            b'\x00\x04' # RDLENGTH 4
-            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+            b"\x00"  # RR NAME (root)
+            b"\x00\x01"  # RR TYPE 1 (A)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\x00\x00\x00\x00"  # RR TTL
+            b"\x00\x04"  # RDLENGTH 4
+            b"\x01\x02\x03\x04"  # IPv4 1.2.3.4
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3331,11 +3299,9 @@ class MessageAuthoritative(object):
             auth=1,
             ednsVersion=None,
             answers=[
-                dns.RRHeader(
-                    b'',
-                    payload=dns.Record_A('1.2.3.4', ttl=0),
-                    auth=True)])
-
+                dns.RRHeader(b"", payload=dns.Record_A("1.2.3.4", ttl=0), auth=True)
+            ],
+        )
 
 
 class MessageComplete:
@@ -3344,6 +3310,7 @@ class MessageComplete:
 
     Contains name compression, answers, authority, and additional records.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3354,50 +3321,45 @@ class MessageComplete:
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # ID: 256
-            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
-            b'\x8f' # RA: 1, Z, RCODE: 15
-            b'\x00\x01' # Query count
-            b'\x00\x01' # Answer count
-            b'\x00\x01' # Authorities count
-            b'\x00\x01' # Additionals count
-
+            b"\x01\x00"  # ID: 256
+            b"\x95"  # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b"\x8f"  # RA: 1, Z, RCODE: 15
+            b"\x00\x01"  # Query count
+            b"\x00\x01"  # Answer count
+            b"\x00\x01"  # Authorities count
+            b"\x00\x01"  # Additionals count
             # Query begins at Byte 12
-            b'\x07example\x03com\x00' # QNAME
-            b'\x00\x06' # QTYPE 6 (SOA)
-            b'\x00\x01' # QCLASS 1 (IN)
-
+            b"\x07example\x03com\x00"  # QNAME
+            b"\x00\x06"  # QTYPE 6 (SOA)
+            b"\x00\x01"  # QCLASS 1 (IN)
             # Answers
-            b'\xc0\x0c' # RR NAME (compression ref b12)
-            b'\x00\x06' # RR TYPE 6 (SOA)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x27' # RDLENGTH 39
-            b'\x03ns1\xc0\x0c' # Mname (ns1.example.com (compression ref b15)
-            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-            b'\xff\xff\xff\xfe' # Serial
-            b'\x7f\xff\xff\xfd' # Refresh
-            b'\x7f\xff\xff\xfc' # Retry
-            b'\x7f\xff\xff\xfb' # Expire
-            b'\xff\xff\xff\xfa' # Minimum
-
+            b"\xc0\x0c"  # RR NAME (compression ref b12)
+            b"\x00\x06"  # RR TYPE 6 (SOA)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x27"  # RDLENGTH 39
+            b"\x03ns1\xc0\x0c"  # Mname (ns1.example.com (compression ref b15)
+            b"\x0ahostmaster\xc0\x0c"  # rname (hostmaster.example.com)
+            b"\xff\xff\xff\xfe"  # Serial
+            b"\x7f\xff\xff\xfd"  # Refresh
+            b"\x7f\xff\xff\xfc"  # Retry
+            b"\x7f\xff\xff\xfb"  # Expire
+            b"\xff\xff\xff\xfa"  # Minimum
             # Authority
-            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
-            b'\x00\x02' # RR TYPE 2 (NS)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x02' # RDLENGTH
-            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
-
+            b"\xc0\x0c"  # RR NAME (example.com compression ref b12)
+            b"\x00\x02"  # RR TYPE 2 (NS)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x02"  # RDLENGTH
+            b"\xc0\x29"  # RDATA (ns1.example.com (compression ref b41)
             # Additional
-            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
-            b'\x00\x01' # RR TYPE 1 (A)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x04' # RDLENGTH
-            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+            b"\xc0\x29"  # RR NAME (ns1.example.com compression ref b41)
+            b"\x00\x01"  # RR TYPE 1 (A)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x04"  # RDLENGTH
+            b"\x05\x06\x07\x08"  # RDATA 5.6.7.8
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3416,46 +3378,51 @@ class MessageComplete:
             recAv=1,
             rCode=15,
             ednsVersion=None,
-            queries=[dns.Query(b'example.com', dns.SOA)],
+            queries=[dns.Query(b"example.com", dns.SOA)],
             answers=[
                 dns.RRHeader(
-                    b'example.com',
+                    b"example.com",
                     type=dns.SOA,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
                     payload=dns.Record_SOA(
-                        ttl=0xffffffff,
-                        mname=b'ns1.example.com',
-                        rname=b'hostmaster.example.com',
-                        serial=0xfffffffe,
-                        refresh=0x7ffffffd,
-                        retry=0x7ffffffc,
-                        expire=0x7ffffffb,
-                        minimum=0xfffffffa,
-                        ))],
+                        ttl=0xFFFFFFFF,
+                        mname=b"ns1.example.com",
+                        rname=b"hostmaster.example.com",
+                        serial=0xFFFFFFFE,
+                        refresh=0x7FFFFFFD,
+                        retry=0x7FFFFFFC,
+                        expire=0x7FFFFFFB,
+                        minimum=0xFFFFFFFA,
+                    ),
+                )
+            ],
             authority=[
                 dns.RRHeader(
-                    b'example.com',
+                    b"example.com",
                     type=dns.NS,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
-                    payload=dns.Record_NS(
-                        'ns1.example.com', ttl=0xffffffff))],
+                    payload=dns.Record_NS("ns1.example.com", ttl=0xFFFFFFFF),
+                )
+            ],
             additional=[
                 dns.RRHeader(
-                    b'ns1.example.com',
+                    b"ns1.example.com",
                     type=dns.A,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
-                    payload=dns.Record_A(
-                        '5.6.7.8', ttl=0xffffffff))])
+                    payload=dns.Record_A("5.6.7.8", ttl=0xFFFFFFFF),
+                )
+            ],
+        )
 
 
-
-class MessageEDNSQuery(object):
+class MessageEDNSQuery:
     """
     A minimal EDNS query message.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3466,29 +3433,26 @@ class MessageEDNSQuery(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x00\x00' # ID: 0
-            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
-            b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x01' # Queries count
-            b'\x00\x00' # Anwers count
-            b'\x00\x00' # Authority count
-            b'\x00\x01' # Additionals count
-
+            b"\x00\x00"  # ID: 0
+            b"\x00"  # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b"\x00"  # RA: 0, Z, RCODE: 0
+            b"\x00\x01"  # Queries count
+            b"\x00\x00"  # Anwers count
+            b"\x00\x00"  # Authority count
+            b"\x00\x01"  # Additionals count
             # Queries
-            b'\x03www\x07example\x03com\x00' # QNAME
-            b'\x00\x01' # QTYPE (A)
-            b'\x00\x01' # QCLASS (IN)
-
+            b"\x03www\x07example\x03com\x00"  # QNAME
+            b"\x00\x01"  # QTYPE (A)
+            b"\x00\x01"  # QCLASS (IN)
             # Additional OPT record
-            b'\x00' # NAME (.)
-            b'\x00\x29' # TYPE (OPT 41)
-            b'\x10\x00' # UDP Payload Size (4096)
-            b'\x00' # Extended RCODE
-            b'\x03' # EDNS version
-            b'\x00\x00' # DO: False + Z
-            b'\x00\x00' # RDLENGTH
+            b"\x00"  # NAME (.)
+            b"\x00\x29"  # TYPE (OPT 41)
+            b"\x10\x00"  # UDP Payload Size (4096)
+            b"\x00"  # Extended RCODE
+            b"\x03"  # EDNS version
+            b"\x00\x00"  # DO: False + Z
+            b"\x00\x00"  # RDLENGTH
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3508,17 +3472,18 @@ class MessageEDNSQuery(object):
             rCode=0,
             ednsVersion=3,
             dnssecOK=False,
-            queries=[dns.Query(b'www.example.com', dns.A)],
-            additional=[])
+            queries=[dns.Query(b"www.example.com", dns.A)],
+            additional=[],
+        )
 
 
-
-class MessageEDNSComplete(object):
+class MessageEDNSComplete:
     """
     An example of a fully populated edns response message.
 
     Contains name compression, answers, authority, and additional records.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3529,59 +3494,53 @@ class MessageEDNSComplete(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # ID: 256
-            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
-            b'\xbf' # RA: 1, AD: 1, RCODE: 15
-            b'\x00\x01' # Query count
-            b'\x00\x01' # Answer count
-            b'\x00\x01' # Authorities count
-            b'\x00\x02' # Additionals count
-
+            b"\x01\x00"  # ID: 256
+            b"\x95"  # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b"\xbf"  # RA: 1, AD: 1, RCODE: 15
+            b"\x00\x01"  # Query count
+            b"\x00\x01"  # Answer count
+            b"\x00\x01"  # Authorities count
+            b"\x00\x02"  # Additionals count
             # Query begins at Byte 12
-            b'\x07example\x03com\x00' # QNAME
-            b'\x00\x06' # QTYPE 6 (SOA)
-            b'\x00\x01' # QCLASS 1 (IN)
-
+            b"\x07example\x03com\x00"  # QNAME
+            b"\x00\x06"  # QTYPE 6 (SOA)
+            b"\x00\x01"  # QCLASS 1 (IN)
             # Answers
-            b'\xc0\x0c' # RR NAME (compression ref b12)
-            b'\x00\x06' # RR TYPE 6 (SOA)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x27' # RDLENGTH 39
-            b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
-            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-            b'\xff\xff\xff\xfe' # Serial
-            b'\x7f\xff\xff\xfd' # Refresh
-            b'\x7f\xff\xff\xfc' # Retry
-            b'\x7f\xff\xff\xfb' # Expire
-            b'\xff\xff\xff\xfa' # Minimum
-
+            b"\xc0\x0c"  # RR NAME (compression ref b12)
+            b"\x00\x06"  # RR TYPE 6 (SOA)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x27"  # RDLENGTH 39
+            b"\x03ns1\xc0\x0c"  # mname (ns1.example.com (compression ref b15)
+            b"\x0ahostmaster\xc0\x0c"  # rname (hostmaster.example.com)
+            b"\xff\xff\xff\xfe"  # Serial
+            b"\x7f\xff\xff\xfd"  # Refresh
+            b"\x7f\xff\xff\xfc"  # Retry
+            b"\x7f\xff\xff\xfb"  # Expire
+            b"\xff\xff\xff\xfa"  # Minimum
             # Authority
-            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
-            b'\x00\x02' # RR TYPE 2 (NS)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x02' # RDLENGTH
-            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
-
+            b"\xc0\x0c"  # RR NAME (example.com compression ref b12)
+            b"\x00\x02"  # RR TYPE 2 (NS)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x02"  # RDLENGTH
+            b"\xc0\x29"  # RDATA (ns1.example.com (compression ref b41)
             # Additional
-            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
-            b'\x00\x01' # RR TYPE 1 (A)
-            b'\x00\x01' # RR CLASS 1 (IN)
-            b'\xff\xff\xff\xff' # RR TTL
-            b'\x00\x04' # RDLENGTH
-            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
-
+            b"\xc0\x29"  # RR NAME (ns1.example.com compression ref b41)
+            b"\x00\x01"  # RR TYPE 1 (A)
+            b"\x00\x01"  # RR CLASS 1 (IN)
+            b"\xff\xff\xff\xff"  # RR TTL
+            b"\x00\x04"  # RDLENGTH
+            b"\x05\x06\x07\x08"  # RDATA 5.6.7.8
             # Additional OPT record
-            b'\x00' # NAME (.)
-            b'\x00\x29' # TYPE (OPT 41)
-            b'\x04\x00' # UDP Payload Size (1024)
-            b'\x00' # Extended RCODE
-            b'\x03' # EDNS version
-            b'\x80\x00' # DO: True + Z
-            b'\x00\x00' # RDLENGTH
+            b"\x00"  # NAME (.)
+            b"\x00\x29"  # TYPE (OPT 41)
+            b"\x04\x00"  # UDP Payload Size (1024)
+            b"\x00"  # Extended RCODE
+            b"\x03"  # EDNS version
+            b"\x80\x00"  # DO: True + Z
+            b"\x00\x00"  # RDLENGTH
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3605,46 +3564,51 @@ class MessageEDNSComplete(object):
             authenticData=True,
             checkingDisabled=True,
             maxSize=1024,
-            queries=[dns.Query(b'example.com', dns.SOA)],
+            queries=[dns.Query(b"example.com", dns.SOA)],
             answers=[
                 dns.RRHeader(
-                    b'example.com',
+                    b"example.com",
                     type=dns.SOA,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
                     payload=dns.Record_SOA(
-                        ttl=0xffffffff,
-                        mname=b'ns1.example.com',
-                        rname=b'hostmaster.example.com',
-                        serial=0xfffffffe,
-                        refresh=0x7ffffffd,
-                        retry=0x7ffffffc,
-                        expire=0x7ffffffb,
-                        minimum=0xfffffffa,
-                        ))],
+                        ttl=0xFFFFFFFF,
+                        mname=b"ns1.example.com",
+                        rname=b"hostmaster.example.com",
+                        serial=0xFFFFFFFE,
+                        refresh=0x7FFFFFFD,
+                        retry=0x7FFFFFFC,
+                        expire=0x7FFFFFFB,
+                        minimum=0xFFFFFFFA,
+                    ),
+                )
+            ],
             authority=[
                 dns.RRHeader(
-                    b'example.com',
+                    b"example.com",
                     type=dns.NS,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
-                    payload=dns.Record_NS(
-                        'ns1.example.com', ttl=0xffffffff))],
+                    payload=dns.Record_NS("ns1.example.com", ttl=0xFFFFFFFF),
+                )
+            ],
             additional=[
                 dns.RRHeader(
-                    b'ns1.example.com',
+                    b"ns1.example.com",
                     type=dns.A,
-                    ttl=0xffffffff,
+                    ttl=0xFFFFFFFF,
                     auth=True,
-                    payload=dns.Record_A(
-                        '5.6.7.8', ttl=0xffffffff))])
+                    payload=dns.Record_A("5.6.7.8", ttl=0xFFFFFFFF),
+                )
+            ],
+        )
 
 
-
-class MessageEDNSExtendedRCODE(object):
+class MessageEDNSExtendedRCODE:
     """
     An example of an EDNS message with an extended RCODE.
     """
+
     @classmethod
     def bytes(cls):
         """
@@ -3655,24 +3619,22 @@ class MessageEDNSExtendedRCODE(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x00\x00'
-            b'\x00'
-            b'\x0c' # RA: 0, Z, RCODE: 12
-            b'\x00\x00'
-            b'\x00\x00'
-            b'\x00\x00'
-            b'\x00\x01' # 1 additionals
-
+            b"\x00\x00"
+            b"\x00"
+            b"\x0c"  # RA: 0, Z, RCODE: 12
+            b"\x00\x00"
+            b"\x00\x00"
+            b"\x00\x00"
+            b"\x00\x01"  # 1 additionals
             # Additional OPT record
-            b'\x00'
-            b'\x00\x29'
-            b'\x10\x00'
-            b'\xab' # Extended RCODE: 171
-            b'\x00'
-            b'\x00\x00'
-            b'\x00\x00'
+            b"\x00"
+            b"\x00\x29"
+            b"\x10\x00"
+            b"\xab"  # Extended RCODE: 171
+            b"\x00"
+            b"\x00\x00"
+            b"\x00\x00"
         )
-
 
     @classmethod
     def kwargs(cls):
@@ -3690,7 +3652,7 @@ class MessageEDNSExtendedRCODE(object):
             trunc=False,
             recDes=False,
             recAv=False,
-            rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
+            rCode=0xABC,  # Combined OPT extended RCODE + Message RCODE
             ednsVersion=0,
             dnssecOK=False,
             maxSize=4096,
@@ -3701,28 +3663,37 @@ class MessageEDNSExtendedRCODE(object):
         )
 
 
-
-class MessageComparable(FancyEqMixin, FancyStrMixin, object):
+class MessageComparable(FancyEqMixin, FancyStrMixin):
     """
     A wrapper around L{dns.Message} which is comparable so that it can be tested
     using some of the L{dns._EDNSMessage} tests.
     """
+
     showAttributes = compareAttributes = (
-        'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode',
-        'queries', 'answers', 'authority', 'additional')
+        "id",
+        "answer",
+        "opCode",
+        "auth",
+        "trunc",
+        "recDes",
+        "recAv",
+        "rCode",
+        "queries",
+        "answers",
+        "authority",
+        "additional",
+    )
 
     def __init__(self, original):
         self.original = original
-
 
     def __getattr__(self, key):
         return getattr(self.original, key)
 
 
-
-def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
-                              attrName=None):
+def verifyConstructorArgument(
+    testCase, cls, argName, defaultVal, altVal, attrName=None
+):
     """
     Verify that an attribute has the expected default value and that a
     corresponding argument passed to a constructor is assigned to that
@@ -3755,23 +3726,23 @@ def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
         attrName = argName
 
     actual = {}
-    expected = {'defaultVal': defaultVal, 'altVal': altVal}
+    expected = {"defaultVal": defaultVal, "altVal": altVal}
 
     o = cls()
-    actual['defaultVal'] = getattr(o, attrName)
+    actual["defaultVal"] = getattr(o, attrName)
 
     o = cls(**{argName: altVal})
-    actual['altVal'] = getattr(o, attrName)
+    actual["altVal"] = getattr(o, attrName)
 
     testCase.assertEqual(expected, actual)
 
 
-
-class ConstructorTestsMixin(object):
+class ConstructorTestsMixin:
     """
     Helper methods for verifying default attribute values and corresponding
     constructor arguments.
     """
+
     def _verifyConstructorArgument(self, argName, defaultVal, altVal):
         """
         Wrap L{verifyConstructorArgument} to provide simpler interface for
@@ -3782,10 +3753,13 @@ class ConstructorTestsMixin(object):
         @param altVal: An alternative value which is expected to be assigned to
             a correspondingly named attribute.
         """
-        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
-                                  argName=argName, defaultVal=defaultVal,
-                                  altVal=altVal)
-
+        verifyConstructorArgument(
+            testCase=self,
+            cls=self.messageFactory,
+            argName=argName,
+            defaultVal=defaultVal,
+            altVal=altVal,
+        )
 
     def _verifyConstructorFlag(self, argName, defaultVal):
         """
@@ -3796,13 +3770,16 @@ class ConstructorTestsMixin(object):
         @param defaultVal: The expected default value of the flag
         """
         assert defaultVal in (True, False)
-        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
-                                  argName=argName, defaultVal=defaultVal,
-                                  altVal=not defaultVal,)
+        verifyConstructorArgument(
+            testCase=self,
+            cls=self.messageFactory,
+            argName=argName,
+            defaultVal=defaultVal,
+            altVal=not defaultVal,
+        )
 
 
-
-class CommonConstructorTestsMixin(object):
+class CommonConstructorTestsMixin:
     """
     Tests for constructor arguments and their associated attributes that are
     common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
@@ -3813,21 +3790,20 @@ class CommonConstructorTestsMixin(object):
     TestCases must also mixin ConstructorTestsMixin which provides some custom
     assertions for testing constructor arguments.
     """
+
     def test_id(self):
         """
         L{dns._EDNSMessage.id} defaults to C{0} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorArgument('id', defaultVal=0, altVal=1)
-
+        self._verifyConstructorArgument("id", defaultVal=0, altVal=1)
 
     def test_answer(self):
         """
         L{dns._EDNSMessage.answer} defaults to C{False} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorFlag('answer', defaultVal=False)
-
+        self._verifyConstructorFlag("answer", defaultVal=False)
 
     def test_opCode(self):
         """
@@ -3835,56 +3811,50 @@ class CommonConstructorTestsMixin(object):
         overridden in the constructor.
         """
         self._verifyConstructorArgument(
-            'opCode', defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS)
-
+            "opCode", defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS
+        )
 
     def test_auth(self):
         """
         L{dns._EDNSMessage.auth} defaults to C{False} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorFlag('auth', defaultVal=False)
-
+        self._verifyConstructorFlag("auth", defaultVal=False)
 
     def test_trunc(self):
         """
         L{dns._EDNSMessage.trunc} defaults to C{False} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorFlag('trunc', defaultVal=False)
-
+        self._verifyConstructorFlag("trunc", defaultVal=False)
 
     def test_recDes(self):
         """
         L{dns._EDNSMessage.recDes} defaults to C{False} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorFlag('recDes', defaultVal=False)
-
+        self._verifyConstructorFlag("recDes", defaultVal=False)
 
     def test_recAv(self):
         """
         L{dns._EDNSMessage.recAv} defaults to C{False} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorFlag('recAv', defaultVal=False)
-
+        self._verifyConstructorFlag("recAv", defaultVal=False)
 
     def test_rCode(self):
         """
         L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden in the
         constructor.
         """
-        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
-
+        self._verifyConstructorArgument("rCode", defaultVal=0, altVal=123)
 
     def test_maxSize(self):
         """
         L{dns._EDNSMessage.maxSize} defaults to C{512} and can be overridden in
         the constructor.
         """
-        self._verifyConstructorArgument('maxSize', defaultVal=512, altVal=1024)
-
+        self._verifyConstructorArgument("maxSize", defaultVal=512, altVal=1024)
 
     def test_queries(self):
         """
@@ -3892,20 +3862,17 @@ class CommonConstructorTestsMixin(object):
         """
         self.assertEqual(self.messageFactory().queries, [])
 
-
     def test_answers(self):
         """
         L{dns._EDNSMessage.answers} defaults to C{[]}.
         """
         self.assertEqual(self.messageFactory().answers, [])
 
-
     def test_authority(self):
         """
         L{dns._EDNSMessage.authority} defaults to C{[]}.
         """
         self.assertEqual(self.messageFactory().authority, [])
-
 
     def test_additional(self):
         """
@@ -3914,37 +3881,36 @@ class CommonConstructorTestsMixin(object):
         self.assertEqual(self.messageFactory().additional, [])
 
 
-
-class EDNSMessageConstructorTests(ConstructorTestsMixin,
-                                  CommonConstructorTestsMixin,
-                                  unittest.SynchronousTestCase):
+class EDNSMessageConstructorTests(
+    ConstructorTestsMixin, CommonConstructorTestsMixin, unittest.SynchronousTestCase
+):
     """
     Tests for L{twisted.names.dns._EDNSMessage} constructor arguments that are
     shared with L{dns.Message}.
     """
+
     messageFactory = dns._EDNSMessage
 
 
-
-class MessageConstructorTests(ConstructorTestsMixin,
-                               CommonConstructorTestsMixin,
-                               unittest.SynchronousTestCase):
+class MessageConstructorTests(
+    ConstructorTestsMixin, CommonConstructorTestsMixin, unittest.SynchronousTestCase
+):
     """
     Tests for L{twisted.names.dns.Message} constructor arguments that are shared
     with L{dns._EDNSMessage}.
     """
+
     messageFactory = dns.Message
 
 
-
-class EDNSMessageSpecificsTests(ConstructorTestsMixin,
-                                unittest.SynchronousTestCase):
+class EDNSMessageSpecificsTests(ConstructorTestsMixin, unittest.SynchronousTestCase):
     """
     Tests for L{dns._EDNSMessage}.
 
     These tests are for L{dns._EDNSMessage} APIs which are not shared with
     L{dns.Message}.
     """
+
     messageFactory = dns._EDNSMessage
 
     def test_ednsVersion(self):
@@ -3952,59 +3918,48 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be overridden
         in the constructor.
         """
-        self._verifyConstructorArgument(
-            'ednsVersion', defaultVal=0, altVal=None)
-
+        self._verifyConstructorArgument("ednsVersion", defaultVal=0, altVal=None)
 
     def test_dnssecOK(self):
         """
         L{dns._EDNSMessage.dnssecOK} defaults to C{False} and can be overridden
         in the constructor.
         """
-        self._verifyConstructorFlag('dnssecOK', defaultVal=False)
-
+        self._verifyConstructorFlag("dnssecOK", defaultVal=False)
 
     def test_authenticData(self):
         """
         L{dns._EDNSMessage.authenticData} defaults to C{False} and can be
         overridden in the constructor.
         """
-        self._verifyConstructorFlag('authenticData', defaultVal=False)
-
+        self._verifyConstructorFlag("authenticData", defaultVal=False)
 
     def test_checkingDisabled(self):
         """
         L{dns._EDNSMessage.checkingDisabled} defaults to C{False} and can be
         overridden in the constructor.
         """
-        self._verifyConstructorFlag('checkingDisabled', defaultVal=False)
-
+        self._verifyConstructorFlag("checkingDisabled", defaultVal=False)
 
     def test_queriesOverride(self):
         """
         L{dns._EDNSMessage.queries} can be overridden in the constructor.
         """
-        msg = self.messageFactory(queries=[dns.Query(b'example.com')])
+        msg = self.messageFactory(queries=[dns.Query(b"example.com")])
 
-        self.assertEqual(
-            msg.queries,
-            [dns.Query(b'example.com')])
-
+        self.assertEqual(msg.queries, [dns.Query(b"example.com")])
 
     def test_answersOverride(self):
         """
         L{dns._EDNSMessage.answers} can be overridden in the constructor.
         """
         msg = self.messageFactory(
-            answers=[
-                dns.RRHeader(
-                    b'example.com',
-                    payload=dns.Record_A('1.2.3.4'))])
+            answers=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+        )
 
         self.assertEqual(
-            msg.answers,
-            [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
-
+            msg.answers, [dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+        )
 
     def test_authorityOverride(self):
         """
@@ -4012,78 +3967,74 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         """
         msg = self.messageFactory(
             authority=[
-                dns.RRHeader(
-                    b'example.com',
-                    type=dns.SOA,
-                    payload=dns.Record_SOA())])
+                dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())
+            ]
+        )
 
         self.assertEqual(
             msg.authority,
-            [dns.RRHeader(b'example.com', type=dns.SOA,
-                          payload=dns.Record_SOA())])
-
+            [dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())],
+        )
 
     def test_additionalOverride(self):
         """
         L{dns._EDNSMessage.authority} can be overridden in the constructor.
         """
         msg = self.messageFactory(
-            additional=[
-                dns.RRHeader(
-                    b'example.com',
-                    payload=dns.Record_A('1.2.3.4'))])
+            additional=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+        )
 
         self.assertEqual(
             msg.additional,
-            [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
-
+            [dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))],
+        )
 
     def test_reprDefaults(self):
         """
         L{dns._EDNSMessage.__repr__} omits field values and sections which are
         identical to their defaults. The id field value is always shown.
         """
-        self.assertEqual(
-            '<_EDNSMessage id=0>',
-            repr(self.messageFactory())
-        )
-
+        self.assertEqual("<_EDNSMessage id=0>", repr(self.messageFactory()))
 
     def test_reprFlagsIfSet(self):
         """
         L{dns._EDNSMessage.__repr__} displays flags if they are L{True}.
         """
-        m = self.messageFactory(answer=True, auth=True, trunc=True, recDes=True,
-                                recAv=True, authenticData=True,
-                                checkingDisabled=True, dnssecOK=True)
+        m = self.messageFactory(
+            answer=True,
+            auth=True,
+            trunc=True,
+            recDes=True,
+            recAv=True,
+            authenticData=True,
+            checkingDisabled=True,
+            dnssecOK=True,
+        )
         self.assertEqual(
-            '<_EDNSMessage '
-            'id=0 '
-            'flags=answer,auth,trunc,recDes,recAv,authenticData,'
-            'checkingDisabled,dnssecOK'
-            '>',
+            "<_EDNSMessage "
+            "id=0 "
+            "flags=answer,auth,trunc,recDes,recAv,authenticData,"
+            "checkingDisabled,dnssecOK"
+            ">",
             repr(m),
         )
-
 
     def test_reprNonDefautFields(self):
         """
         L{dns._EDNSMessage.__repr__} displays field values if they differ from
         their defaults.
         """
-        m = self.messageFactory(id=10, opCode=20, rCode=30, maxSize=40,
-                                ednsVersion=50)
+        m = self.messageFactory(id=10, opCode=20, rCode=30, maxSize=40, ednsVersion=50)
         self.assertEqual(
-            '<_EDNSMessage '
-            'id=10 '
-            'opCode=20 '
-            'rCode=30 '
-            'maxSize=40 '
-            'ednsVersion=50'
-            '>',
+            "<_EDNSMessage "
+            "id=10 "
+            "opCode=20 "
+            "rCode=30 "
+            "maxSize=40 "
+            "ednsVersion=50"
+            ">",
             repr(m),
         )
-
 
     def test_reprNonDefaultSections(self):
         """
@@ -4096,16 +4047,15 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         m.authority = [7, 8, 9]
         m.additional = [10, 11, 12]
         self.assertEqual(
-            '<_EDNSMessage '
-            'id=0 '
-            'queries=[1, 2, 3] '
-            'answers=[4, 5, 6] '
-            'authority=[7, 8, 9] '
-            'additional=[10, 11, 12]'
-            '>',
+            "<_EDNSMessage "
+            "id=0 "
+            "queries=[1, 2, 3] "
+            "answers=[4, 5, 6] "
+            "authority=[7, 8, 9] "
+            "additional=[10, 11, 12]"
+            ">",
             repr(m),
         )
-
 
     def test_fromStrCallsMessageFactory(self):
         """
@@ -4113,10 +4063,12 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         to create a new L{dns.Message} instance which is used to decode the
         supplied bytes.
         """
-        class FakeMessageFactory(object):
+
+        class FakeMessageFactory:
             """
             Fake message factory.
             """
+
             def fromStr(self, *args, **kwargs):
                 """
                 Fake fromStr method which raises the arguments it was passed.
@@ -4130,11 +4082,7 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         m._messageFactory = FakeMessageFactory
         dummyBytes = object()
         e = self.assertRaises(RaisedArgs, m.fromStr, dummyBytes)
-        self.assertEqual(
-            ((dummyBytes,), {}),
-            (e.args, e.kwargs)
-        )
-
+        self.assertEqual(((dummyBytes,), {}), (e.args, e.kwargs))
 
     def test_fromStrCallsFromMessage(self):
         """
@@ -4142,10 +4090,12 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         with a L{dns.Message} instance
         """
         m = dns._EDNSMessage()
-        class FakeMessageFactory():
+
+        class FakeMessageFactory:
             """
             Fake message factory.
             """
+
             def fromStr(self, bytes):
                 """
                 A noop fake version of fromStr
@@ -4158,28 +4108,23 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
 
         def fakeFromMessage(*args, **kwargs):
             raise RaisedArgs(args, kwargs)
-        m._fromMessage = fakeFromMessage
-        e = self.assertRaises(RaisedArgs, m.fromStr, b'')
-        self.assertEqual(
-            ((fakeMessage,), {}),
-            (e.args, e.kwargs)
-        )
 
+        m._fromMessage = fakeFromMessage
+        e = self.assertRaises(RaisedArgs, m.fromStr, b"")
+        self.assertEqual(((fakeMessage,), {}), (e.args, e.kwargs))
 
     def test_toStrCallsToMessage(self):
         """
         L{dns._EDNSMessage.toStr} calls L{dns._EDNSMessage._toMessage}
         """
         m = dns._EDNSMessage()
+
         def fakeToMessage(*args, **kwargs):
             raise RaisedArgs(args, kwargs)
+
         m._toMessage = fakeToMessage
         e = self.assertRaises(RaisedArgs, m.toStr)
-        self.assertEqual(
-            ((), {}),
-            (e.args, e.kwargs)
-        )
-
+        self.assertEqual(((), {}), (e.args, e.kwargs))
 
     def test_toStrCallsToMessageToStr(self):
         """
@@ -4188,10 +4133,12 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
         """
         m = dns._EDNSMessage()
         dummyBytes = object()
-        class FakeMessage(object):
+
+        class FakeMessage:
             """
             Fake Message
             """
+
             def toStr(self):
                 """
                 Fake toStr which returns dummyBytes.
@@ -4202,17 +4149,13 @@ class EDNSMessageSpecificsTests(ConstructorTestsMixin,
 
         def fakeToMessage(*args, **kwargs):
             return FakeMessage()
+
         m._toMessage = fakeToMessage
 
-        self.assertEqual(
-            dummyBytes,
-            m.toStr()
-        )
+        self.assertEqual(dummyBytes, m.toStr())
 
 
-
-class EDNSMessageEqualityTests(ComparisonTestsMixin,
-                               unittest.SynchronousTestCase):
+class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
     """
     Tests for equality between L{dns._EDNSMessage} instances.
 
@@ -4231,8 +4174,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(id=1),
             self.messageFactory(id=1),
             self.messageFactory(id=2),
-            )
-
+        )
 
     def test_answer(self):
         """
@@ -4243,8 +4185,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(answer=True),
             self.messageFactory(answer=True),
             self.messageFactory(answer=False),
-            )
-
+        )
 
     def test_opCode(self):
         """
@@ -4255,8 +4196,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(opCode=dns.OP_STATUS),
             self.messageFactory(opCode=dns.OP_STATUS),
             self.messageFactory(opCode=dns.OP_INVERSE),
-            )
-
+        )
 
     def test_auth(self):
         """
@@ -4267,8 +4207,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(auth=True),
             self.messageFactory(auth=True),
             self.messageFactory(auth=False),
-            )
-
+        )
 
     def test_trunc(self):
         """
@@ -4279,8 +4218,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(trunc=True),
             self.messageFactory(trunc=True),
             self.messageFactory(trunc=False),
-            )
-
+        )
 
     def test_recDes(self):
         """
@@ -4291,8 +4229,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(recDes=True),
             self.messageFactory(recDes=True),
             self.messageFactory(recDes=False),
-            )
-
+        )
 
     def test_recAv(self):
         """
@@ -4303,8 +4240,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(recAv=True),
             self.messageFactory(recAv=True),
             self.messageFactory(recAv=False),
-            )
-
+        )
 
     def test_rCode(self):
         """
@@ -4315,8 +4251,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(rCode=16),
             self.messageFactory(rCode=16),
             self.messageFactory(rCode=15),
-            )
-
+        )
 
     def test_ednsVersion(self):
         """
@@ -4327,8 +4262,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(ednsVersion=1),
             self.messageFactory(ednsVersion=1),
             self.messageFactory(ednsVersion=None),
-            )
-
+        )
 
     def test_dnssecOK(self):
         """
@@ -4339,8 +4273,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=False),
-            )
-
+        )
 
     def test_authenticData(self):
         """
@@ -4351,8 +4284,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(authenticData=True),
             self.messageFactory(authenticData=True),
             self.messageFactory(authenticData=False),
-            )
-
+        )
 
     def test_checkingDisabled(self):
         """
@@ -4363,8 +4295,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(checkingDisabled=True),
             self.messageFactory(checkingDisabled=True),
             self.messageFactory(checkingDisabled=False),
-            )
-
+        )
 
     def test_maxSize(self):
         """
@@ -4375,8 +4306,7 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
             self.messageFactory(maxSize=2048),
             self.messageFactory(maxSize=2048),
             self.messageFactory(maxSize=1024),
-            )
-
+        )
 
     def test_queries(self):
         """
@@ -4384,11 +4314,10 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
         queries.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(queries=[dns.Query(b'example.com')]),
-            self.messageFactory(queries=[dns.Query(b'example.com')]),
-            self.messageFactory(queries=[dns.Query(b'example.org')]),
-            )
-
+            self.messageFactory(queries=[dns.Query(b"example.com")]),
+            self.messageFactory(queries=[dns.Query(b"example.com")]),
+            self.messageFactory(queries=[dns.Query(b"example.org")]),
+        )
 
     def test_answers(self):
         """
@@ -4396,14 +4325,16 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
         answers.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(answers=[dns.RRHeader(
-                        b'example.org', payload=dns.Record_A('4.3.2.1'))]),
-            )
-
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+            ),
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))]
+            ),
+            self.messageFactory(
+                answers=[dns.RRHeader(b"example.org", payload=dns.Record_A("4.3.2.1"))]
+            ),
+        )
 
     def test_authority(self):
         """
@@ -4411,17 +4342,22 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
         authority records.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.com',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.com',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            self.messageFactory(authority=[dns.RRHeader(
-                        b'example.org',
-                        type=dns.SOA, payload=dns.Record_SOA())]),
-            )
-
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.com", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+            self.messageFactory(
+                authority=[
+                    dns.RRHeader(b"example.org", type=dns.SOA, payload=dns.Record_SOA())
+                ]
+            ),
+        )
 
     def test_additional(self):
         """
@@ -4429,17 +4365,25 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin,
         additional records.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
-            self.messageFactory(additional=[dns.RRHeader(
-                        b'example.org', payload=dns.Record_A('1.2.3.4'))]),
-            )
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.com", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+            self.messageFactory(
+                additional=[
+                    dns.RRHeader(b"example.org", payload=dns.Record_A("1.2.3.4"))
+                ]
+            ),
+        )
 
 
-
-class StandardEncodingTestsMixin(object):
+class StandardEncodingTestsMixin:
     """
     Tests for the encoding and decoding of various standard (not EDNS) messages.
 
@@ -4451,14 +4395,14 @@ class StandardEncodingTestsMixin(object):
     EDNS specific arguments may be discarded if not supported by the message
     class under construction.
     """
+
     def test_emptyMessageEncode(self):
         """
         An empty message can be encoded.
         """
         self.assertEqual(
-            self.messageFactory(**MessageEmpty.kwargs()).toStr(),
-            MessageEmpty.bytes())
-
+            self.messageFactory(**MessageEmpty.kwargs()).toStr(), MessageEmpty.bytes()
+        )
 
     def test_emptyMessageDecode(self):
         """
@@ -4469,15 +4413,14 @@ class StandardEncodingTestsMixin(object):
 
         self.assertEqual(m, self.messageFactory(**MessageEmpty.kwargs()))
 
-
     def test_completeQueryEncode(self):
         """
         A fully populated query message can be encoded.
         """
         self.assertEqual(
             self.messageFactory(**MessageComplete.kwargs()).toStr(),
-            MessageComplete.bytes())
-
+            MessageComplete.bytes(),
+        )
 
     def test_completeQueryDecode(self):
         """
@@ -4488,15 +4431,14 @@ class StandardEncodingTestsMixin(object):
 
         self.assertEqual(m, self.messageFactory(**MessageComplete.kwargs()))
 
-
     def test_NULL(self):
         """
         A I{NULL} record with an arbitrary payload can be encoded and decoded as
         part of a message.
         """
-        bytes = b''.join([dns._ord2bytes(i) for i in range(256)])
+        bytes = b"".join([dns._ord2bytes(i) for i in range(256)])
         rec = dns.Record_NULL(bytes)
-        rr = dns.RRHeader(b'testname', dns.NULL, payload=rec)
+        rr = dns.RRHeader(b"testname", dns.NULL, payload=rec)
         msg1 = self.messageFactory()
         msg1.answers.append(rr)
         s = msg1.toStr()
@@ -4507,7 +4449,6 @@ class StandardEncodingTestsMixin(object):
         self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
-
     def test_nonAuthoritativeMessageEncode(self):
         """
         If the message C{authoritative} attribute is set to 0, the encoded bytes
@@ -4515,8 +4456,8 @@ class StandardEncodingTestsMixin(object):
         """
         self.assertEqual(
             self.messageFactory(**MessageNonAuthoritative.kwargs()).toStr(),
-            MessageNonAuthoritative.bytes())
-
+            MessageNonAuthoritative.bytes(),
+        )
 
     def test_nonAuthoritativeMessageDecode(self):
         """
@@ -4526,9 +4467,7 @@ class StandardEncodingTestsMixin(object):
         m = self.messageFactory()
         m.fromStr(MessageNonAuthoritative.bytes())
 
-        self.assertEqual(
-            m, self.messageFactory(**MessageNonAuthoritative.kwargs()))
-
+        self.assertEqual(m, self.messageFactory(**MessageNonAuthoritative.kwargs()))
 
     def test_authoritativeMessageEncode(self):
         """
@@ -4537,8 +4476,8 @@ class StandardEncodingTestsMixin(object):
         """
         self.assertEqual(
             self.messageFactory(**MessageAuthoritative.kwargs()).toStr(),
-            MessageAuthoritative.bytes())
-
+            MessageAuthoritative.bytes(),
+        )
 
     def test_authoritativeMessageDecode(self):
         """
@@ -4548,9 +4487,7 @@ class StandardEncodingTestsMixin(object):
         m = self.messageFactory()
         m.fromStr(MessageAuthoritative.bytes())
 
-        self.assertEqual(
-            m, self.messageFactory(**MessageAuthoritative.kwargs()))
-
+        self.assertEqual(m, self.messageFactory(**MessageAuthoritative.kwargs()))
 
     def test_truncatedMessageEncode(self):
         """
@@ -4559,8 +4496,8 @@ class StandardEncodingTestsMixin(object):
         """
         self.assertEqual(
             self.messageFactory(**MessageTruncated.kwargs()).toStr(),
-            MessageTruncated.bytes())
-
+            MessageTruncated.bytes(),
+        )
 
     def test_truncatedMessageDecode(self):
         """
@@ -4573,23 +4510,25 @@ class StandardEncodingTestsMixin(object):
         self.assertEqual(m, self.messageFactory(**MessageTruncated.kwargs()))
 
 
-
-class EDNSMessageStandardEncodingTests(StandardEncodingTestsMixin,
-                                       unittest.SynchronousTestCase):
+class EDNSMessageStandardEncodingTests(
+    StandardEncodingTestsMixin, unittest.SynchronousTestCase
+):
     """
     Tests for the encoding and decoding of various standard (non-EDNS) messages
     by L{dns._EDNSMessage}.
     """
+
     messageFactory = dns._EDNSMessage
 
 
-
-class MessageStandardEncodingTests(StandardEncodingTestsMixin,
-                                   unittest.SynchronousTestCase):
+class MessageStandardEncodingTests(
+    StandardEncodingTestsMixin, unittest.SynchronousTestCase
+):
     """
     Tests for the encoding and decoding of various standard (non-EDNS) messages
     by L{dns.Message}.
     """
+
     @staticmethod
     def messageFactory(**kwargs):
         """
@@ -4611,12 +4550,12 @@ class MessageStandardEncodingTests(StandardEncodingTestsMixin,
 
         @return: An L{dns.Message} instance.
         """
-        queries = kwargs.pop('queries', [])
-        answers = kwargs.pop('answers', [])
-        authority = kwargs.pop('authority', [])
-        additional = kwargs.pop('additional', [])
+        queries = kwargs.pop("queries", [])
+        answers = kwargs.pop("answers", [])
+        authority = kwargs.pop("authority", [])
+        additional = kwargs.pop("additional", [])
 
-        kwargs.pop('ednsVersion', None)
+        kwargs.pop("ednsVersion", None)
 
         m = dns.Message(**kwargs)
         m.queries = queries
@@ -4626,13 +4565,13 @@ class MessageStandardEncodingTests(StandardEncodingTestsMixin,
         return MessageComparable(m)
 
 
-
 class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
     """
     Tests for the encoding and decoding of various EDNS messages.
 
     These test will not work with L{dns.Message}.
     """
+
     messageFactory = dns._EDNSMessage
 
     def test_ednsMessageDecodeStripsOptRecords(self):
@@ -4645,7 +4584,6 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         self.assertEqual(m.additional, [])
 
-
     def test_ednsMessageDecodeMultipleOptRecords(self):
         """
         An L(_EDNSMessage} instance created from a byte string containing
@@ -4656,15 +4594,12 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
         m = dns.Message()
-        m.additional = [
-            dns._OPTHeader(version=2),
-            dns._OPTHeader(version=3)]
+        m.additional = [dns._OPTHeader(version=2), dns._OPTHeader(version=3)]
 
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
 
         self.assertIsNone(ednsMessage.ednsVersion)
-
 
     def test_fromMessageCopiesSections(self):
         """
@@ -4678,16 +4613,15 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage._fromMessage(standardMessage)
 
         duplicates = []
-        for attrName in ('queries', 'answers', 'authority', 'additional'):
-            if (getattr(standardMessage, attrName)
-                is getattr(ednsMessage, attrName)):
+        for attrName in ("queries", "answers", "authority", "additional"):
+            if getattr(standardMessage, attrName) is getattr(ednsMessage, attrName):
                 duplicates.append(attrName)
 
         if duplicates:
             self.fail(
-                'Message and _EDNSMessage shared references to the following '
-                'section lists after decoding: %s' % (duplicates,))
-
+                "Message and _EDNSMessage shared references to the following "
+                "section lists after decoding: %s" % (duplicates,)
+            )
 
     def test_toMessageCopiesSections(self):
         """
@@ -4697,7 +4631,6 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage(ednsVersion=1)
         ednsMessage.toStr()
         self.assertEqual(ednsMessage.additional, [])
-
 
     def test_optHeaderPosition(self):
         """
@@ -4722,18 +4655,12 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         actualMessages.append(dns._EDNSMessage._fromMessage(m).ednsVersion)
 
         m.additional.append(dns.RRHeader(type=dns.A))
-        actualMessages.append(
-            dns._EDNSMessage._fromMessage(m).ednsVersion)
+        actualMessages.append(dns._EDNSMessage._fromMessage(m).ednsVersion)
 
         m.additional.insert(0, dns.RRHeader(type=dns.A))
-        actualMessages.append(
-            dns._EDNSMessage._fromMessage(m).ednsVersion)
+        actualMessages.append(dns._EDNSMessage._fromMessage(m).ednsVersion)
 
-        self.assertEqual(
-            [1] * 3,
-            actualMessages
-        )
-
+        self.assertEqual([1] * 3, actualMessages)
 
     def test_ednsDecode(self):
         """
@@ -4746,7 +4673,6 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         self.assertEqual(m, self.messageFactory(**MessageEDNSComplete.kwargs()))
 
-
     def test_ednsEncode(self):
         """
         The L(_EDNSMessage} instance created by L{dns._EDNSMessage.toStr}
@@ -4755,8 +4681,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(
             self.messageFactory(**MessageEDNSComplete.kwargs()).toStr(),
-            MessageEDNSComplete.bytes())
-
+            MessageEDNSComplete.bytes(),
+        )
 
     def test_extendedRcodeEncode(self):
         """
@@ -4766,8 +4692,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(
             self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()).toStr(),
-            MessageEDNSExtendedRCODE.bytes())
-
+            MessageEDNSExtendedRCODE.bytes(),
+        )
 
     def test_extendedRcodeDecode(self):
         """
@@ -4777,9 +4703,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         m = self.messageFactory()
         m.fromStr(MessageEDNSExtendedRCODE.bytes())
 
-        self.assertEqual(
-            m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
-
+        self.assertEqual(m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
 
     def test_extendedRcodeZero(self):
         """
@@ -4793,15 +4717,15 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         self.assertEqual(
             (15, 0),
-            (standardMessage.rCode, standardMessage.additional[0].extendedRCODE)
+            (standardMessage.rCode, standardMessage.additional[0].extendedRCODE),
         )
-
 
 
 class ResponseFromMessageTests(unittest.SynchronousTestCase):
     """
     Tests for L{dns._responseFromMessage}.
     """
+
     def test_responseFromMessageResponseType(self):
         """
         L{dns.Message._responseFromMessage} is a constructor function which
@@ -4809,27 +4733,28 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         instance.
         """
         request = dns.Message()
-        response = dns._responseFromMessage(responseConstructor=dns.Message,
-                                            message=request)
+        response = dns._responseFromMessage(
+            responseConstructor=dns.Message, message=request
+        )
         self.assertIsNot(request, response)
-
 
     def test_responseType(self):
         """
         L{dns._responseFromMessage} returns a new instance of C{cls}
         """
-        class SuppliedClass(object):
+
+        class SuppliedClass:
             id = 1
             queries = []
 
         expectedClass = dns.Message
 
         self.assertIsInstance(
-            dns._responseFromMessage(responseConstructor=expectedClass,
-                                     message=SuppliedClass()),
-            expectedClass
+            dns._responseFromMessage(
+                responseConstructor=expectedClass, message=SuppliedClass()
+            ),
+            expectedClass,
         )
-
 
     def test_responseId(self):
         """
@@ -4838,23 +4763,20 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         """
         self.assertEqual(
             1234,
-            dns._responseFromMessage(responseConstructor=dns.Message,
-                                     message=dns.Message(id=1234)).id
+            dns._responseFromMessage(
+                responseConstructor=dns.Message, message=dns.Message(id=1234)
+            ).id,
         )
-
 
     def test_responseAnswer(self):
         """
         L{dns._responseFromMessage} sets the C{answer} flag to L{True}
         """
         request = dns.Message()
-        response = dns._responseFromMessage(responseConstructor=dns.Message,
-                                            message=request)
-        self.assertEqual(
-            (False, True),
-            (request.answer, response.answer)
+        response = dns._responseFromMessage(
+            responseConstructor=dns.Message, message=request
         )
-
+        self.assertEqual((False, True), (request.answer, response.answer))
 
     def test_responseQueries(self):
         """
@@ -4867,10 +4789,10 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
 
         self.assertEqual(
             expectedQueries,
-            dns._responseFromMessage(responseConstructor=dns.Message,
-                                     message=request).queries
+            dns._responseFromMessage(
+                responseConstructor=dns.Message, message=request
+            ).queries,
         )
-
 
     def test_responseKwargs(self):
         """
@@ -4880,21 +4802,27 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         self.assertEqual(
             123,
             dns._responseFromMessage(
-                responseConstructor=dns.Message, message=dns.Message(),
-                rCode=123).rCode
+                responseConstructor=dns.Message, message=dns.Message(), rCode=123
+            ).rCode,
         )
 
 
-
-class Foo(object):
+class Foo:
     """
     An example class for use in L{dns._compactRepr} tests.
     It follows the pattern of initialiser settable flags, fields and sections
     found in L{dns.Message} and L{dns._EDNSMessage}.
     """
-    def __init__(self,
-                 field1=1, field2=2, alwaysShowField='AS',
-                 flagTrue=True, flagFalse=False, section1=None):
+
+    def __init__(
+        self,
+        field1=1,
+        field2=2,
+        alwaysShowField="AS",
+        flagTrue=True,
+        flagFalse=False,
+        section1=None,
+    ):
         """
         Set some flags, fields and sections as public attributes.
         """
@@ -4908,19 +4836,20 @@ class Foo(object):
             section1 = []
         self.section1 = section1
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return dns._compactRepr(
-            self,
-            alwaysShow='alwaysShowField'.split(),
-            fieldNames='field1 field2 alwaysShowField'.split(),
-            flagNames='flagTrue flagFalse'.split(),
-            sectionNames='section1 section2'.split()
+        return cast(
+            str,
+            dns._compactRepr(
+                self,
+                alwaysShow="alwaysShowField".split(),
+                fieldNames="field1 field2 alwaysShowField".split(),
+                flagNames="flagTrue flagFalse".split(),
+                sectionNames="section1 section2".split(),
+            ),
         )
-
 
 
 class CompactReprTests(unittest.SynchronousTestCase):
@@ -4936,10 +4865,8 @@ class CompactReprTests(unittest.SynchronousTestCase):
         default value. Flags which are True are always shown.
         """
         self.assertEqual(
-            "<Foo alwaysShowField='AS' flags=flagTrue>",
-            repr(self.messageFactory())
+            "<Foo alwaysShowField='AS' flags=flagTrue>", repr(self.messageFactory())
         )
-
 
     def test_flagsIfSet(self):
         """
@@ -4947,13 +4874,9 @@ class CompactReprTests(unittest.SynchronousTestCase):
         """
         m = self.messageFactory(flagTrue=True, flagFalse=True)
         self.assertEqual(
-            '<Foo '
-            "alwaysShowField='AS' "
-            'flags=flagTrue,flagFalse'
-            '>',
+            "<Foo " "alwaysShowField='AS' " "flags=flagTrue,flagFalse" ">",
             repr(m),
         )
-
 
     def test_nonDefautFields(self):
         """
@@ -4962,15 +4885,14 @@ class CompactReprTests(unittest.SynchronousTestCase):
         """
         m = self.messageFactory(field1=10, field2=20)
         self.assertEqual(
-            '<Foo '
-            'field1=10 '
-            'field2=20 '
+            "<Foo "
+            "field1=10 "
+            "field2=20 "
             "alwaysShowField='AS' "
-            'flags=flagTrue'
-            '>',
+            "flags=flagTrue"
+            ">",
             repr(m),
         )
-
 
     def test_nonDefaultSections(self):
         """
@@ -4980,11 +4902,11 @@ class CompactReprTests(unittest.SynchronousTestCase):
         m.section1 = [1, 1, 1]
         m.section2 = [2, 2, 2]
         self.assertEqual(
-            '<Foo '
+            "<Foo "
             "alwaysShowField='AS' "
-            'flags=flagTrue '
-            'section1=[1, 1, 1] '
-            'section2=[2, 2, 2]'
-            '>',
+            "flags=flagTrue "
+            "section1=[1, 1, 1] "
+            "section2=[2, 2, 2]"
+            ">",
             repr(m),
         )

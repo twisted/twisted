@@ -14,19 +14,19 @@ import time
 from unittest import skipIf
 from twisted.trial.unittest import TestCase
 
-from twisted.python.compat import range
-from twisted.internet import (reactor, defer, interfaces, threads, protocol,
-                              error)
+from twisted.internet import reactor, defer, interfaces, threads, protocol, error
 from twisted.python import failure, threadable, log, threadpool
+
 try:
     import threading
 except ImportError:
     pass
 
 
-
-@skipIf(not interfaces.IReactorThreads(reactor, None),
-        "No thread support, nothing to test here.")
+@skipIf(
+    not interfaces.IReactorThreads(reactor, None),
+    "No thread support, nothing to test here.",
+)
 class ReactorThreadsTests(TestCase):
     """
     Tests for the reactor threading API.
@@ -41,7 +41,6 @@ class ReactorThreadsTests(TestCase):
         reactor.suggestThreadPoolSize(4)
         self.assertEqual(reactor.threadpool.max, 4)
 
-
     def _waitForThread(self):
         """
         The reactor's threadpool is only available when the reactor is running,
@@ -50,15 +49,16 @@ class ReactorThreadsTests(TestCase):
         """
         return threads.deferToThread(time.sleep, 0)
 
-
     def test_callInThread(self):
         """
         Test callInThread functionality: set a C{threading.Event}, and check
         that it's not in the main thread.
         """
+
         def cb(ign):
             waiter = threading.Event()
             result = []
+
             def threadedFunc():
                 result.append(threadable.isInIOThread())
                 waiter.set()
@@ -69,14 +69,15 @@ class ReactorThreadsTests(TestCase):
                 self.fail("Timed out waiting for event.")
             else:
                 self.assertEqual(result, [False])
-        return self._waitForThread().addCallback(cb)
 
+        return self._waitForThread().addCallback(cb)
 
     def test_callFromThread(self):
         """
         Test callFromThread functionality: from the main thread, and from
         another thread.
         """
+
         def cb(ign):
             firedByReactorThread = defer.Deferred()
             firedByOtherThread = defer.Deferred()
@@ -88,34 +89,38 @@ class ReactorThreadsTests(TestCase):
             reactor.callFromThread(firedByReactorThread.callback, None)
 
             return defer.DeferredList(
-                [firedByReactorThread, firedByOtherThread],
-                fireOnOneErrback=True)
-        return self._waitForThread().addCallback(cb)
+                [firedByReactorThread, firedByOtherThread], fireOnOneErrback=True
+            )
 
+        return self._waitForThread().addCallback(cb)
 
     def test_wakerOverflow(self):
         """
         Try to make an overflow on the reactor waker using callFromThread.
         """
+
         def cb(ign):
             self.failure = None
             waiter = threading.Event()
+
             def threadedFunction():
                 # Hopefully a hundred thousand queued calls is enough to
                 # trigger the error condition
                 for i in range(100000):
                     try:
                         reactor.callFromThread(lambda: None)
-                    except:
+                    except BaseException:
                         self.failure = failure.Failure()
                         break
                 waiter.set()
+
             reactor.callInThread(threadedFunction)
             waiter.wait(120)
             if not waiter.isSet():
                 self.fail("Timed out waiting for event")
             if self.failure is not None:
                 return defer.fail(self.failure)
+
         return self._waitForThread().addCallback(cb)
 
     def _testBlockingCallFromThread(self, reactorFunc):
@@ -125,6 +130,7 @@ class ReactorThreadsTests(TestCase):
         waiter = threading.Event()
         results = []
         errors = []
+
         def cb1(ign):
             def threadedFunc():
                 try:
@@ -151,8 +157,10 @@ class ReactorThreadsTests(TestCase):
         in the reactor using L{threads.blockingCallFromThread}, and verify the
         result returned.
         """
+
         def reactorFunc():
             return defer.succeed("foo")
+
         def cb(res):
             self.assertEqual(res[0][0], "foo")
 
@@ -163,10 +171,12 @@ class ReactorThreadsTests(TestCase):
         Test blockingCallFromThread as above, but be sure the resulting
         Deferred is not already fired.
         """
+
         def reactorFunc():
             d = defer.Deferred()
             reactor.callLater(0.1, d.callback, "egg")
             return d
+
         def cb(res):
             self.assertEqual(res[0][0], "egg")
 
@@ -176,8 +186,10 @@ class ReactorThreadsTests(TestCase):
         """
         Test error report for blockingCallFromThread.
         """
+
         def reactorFunc():
             return defer.fail(RuntimeError("bar"))
+
         def cb(res):
             self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "bar")
@@ -189,10 +201,12 @@ class ReactorThreadsTests(TestCase):
         Test error report for blockingCallFromThread as above, but be sure the
         resulting Deferred is not already fired.
         """
+
         def reactorFunc():
             d = defer.Deferred()
             reactor.callLater(0.1, d.errback, RuntimeError("spam"))
             return d
+
         def cb(res):
             self.assertIsInstance(res[1][0], RuntimeError)
             self.assertEqual(res[1][0].args[0], "spam")
@@ -218,9 +232,10 @@ class Counter:
         self.index = next
 
 
-
-@skipIf(not interfaces.IReactorThreads(reactor, None),
-        "No thread support, nothing to test here.")
+@skipIf(
+    not interfaces.IReactorThreads(reactor, None),
+    "No thread support, nothing to test here.",
+)
 class DeferredResultTests(TestCase):
     """
     Test twisted.internet.threads.
@@ -229,10 +244,8 @@ class DeferredResultTests(TestCase):
     def setUp(self):
         reactor.suggestThreadPoolSize(8)
 
-
     def tearDown(self):
         reactor.suggestThreadPoolSize(0)
-
 
     def test_callMultiple(self):
         """
@@ -246,11 +259,11 @@ class DeferredResultTests(TestCase):
             self.assertEqual(L, list(range(N)))
             d.callback(None)
 
-        threads.callMultipleInThread([
-            (L.append, (i,), {}) for i in range(N)
-            ] + [(reactor.callFromThread, (finished,), {})])
+        threads.callMultipleInThread(
+            [(L.append, (i,), {}) for i in range(N)]
+            + [(reactor.callFromThread, (finished,), {})]
+        )
         return d
-
 
     def test_deferredResult(self):
         """
@@ -261,20 +274,21 @@ class DeferredResultTests(TestCase):
         d.addCallback(self.assertEqual, 7)
         return d
 
-
     def test_deferredFailure(self):
         """
         Check that L{threads.deferToThread} return a failure object
         with an appropriate exception instance when the called
         function raises an exception.
         """
+
         class NewError(Exception):
             pass
+
         def raiseError():
             raise NewError()
+
         d = threads.deferToThread(raiseError)
         return self.assertFailure(d, NewError)
-
 
     def test_deferredFailureAfterSuccess(self):
         """
@@ -292,9 +306,8 @@ class DeferredResultTests(TestCase):
         # alas, this test appears to flunk the default reactor too
 
         d = threads.deferToThread(lambda: None)
-        d.addCallback(lambda ign: threads.deferToThread(lambda: 1//0))
+        d.addCallback(lambda ign: threads.deferToThread(lambda: 1 // 0))
         return self.assertFailure(d, ZeroDivisionError)
-
 
 
 class DeferToThreadPoolTests(TestCase):
@@ -306,21 +319,17 @@ class DeferToThreadPoolTests(TestCase):
         self.tp = threadpool.ThreadPool(0, 8)
         self.tp.start()
 
-
     def tearDown(self):
         self.tp.stop()
-
 
     def test_deferredResult(self):
         """
         L{threads.deferToThreadPool} executes the function passed, and
         correctly handles the positional and keyword arguments given.
         """
-        d = threads.deferToThreadPool(reactor, self.tp,
-                                      lambda x, y=5: x + y, 3, y=4)
+        d = threads.deferToThreadPool(reactor, self.tp, lambda x, y=5: x + y, 3, y=4)
         d.addCallback(self.assertEqual, 7)
         return d
-
 
     def test_deferredFailure(self):
         """
@@ -328,13 +337,15 @@ class DeferToThreadPoolTests(TestCase):
         appropriate exception instance when the called function raises an
         exception.
         """
+
         class NewError(Exception):
             pass
+
         def raiseError():
             raise NewError()
+
         d = threads.deferToThreadPool(reactor, self.tp, raiseError)
         return self.assertFailure(d, NewError)
-
 
 
 _callBeforeStartupProgram = """
@@ -372,11 +383,14 @@ class ThreadStartupProcessProtocol(protocol.ProcessProtocol):
         self.finished.callback((self.out, self.err, reason))
 
 
-
-@skipIf(not interfaces.IReactorThreads(reactor, None),
-        "No thread support, nothing to test here.")
-@skipIf(not interfaces.IReactorProcess(reactor, None),
-        "No process support, cannot run subprocess thread tests.")
+@skipIf(
+    not interfaces.IReactorThreads(reactor, None),
+    "No thread support, nothing to test here.",
+)
+@skipIf(
+    not interfaces.IReactorProcess(reactor, None),
+    "No process support, cannot run subprocess thread tests.",
+)
 class StartupBehaviorTests(TestCase):
     """
     Test cases for the behavior of the reactor threadpool near startup
@@ -391,31 +405,28 @@ class StartupBehaviorTests(TestCase):
     torn down).
     """
 
-
     def testCallBeforeStartupUnexecuted(self):
         progname = self.mktemp()
-        with open(progname, 'w') as progfile:
-            progfile.write(_callBeforeStartupProgram % {'reactor': reactor.__module__})
+        with open(progname, "w") as progfile:
+            progfile.write(_callBeforeStartupProgram % {"reactor": reactor.__module__})
 
         def programFinished(result):
             (out, err, reason) = result
             if reason.check(error.ProcessTerminated):
-                self.fail("Process did not exit cleanly (out: %s err: %s)" % (out, err))
+                self.fail(f"Process did not exit cleanly (out: {out} err: {err})")
 
             if err:
-                log.msg("Unexpected output on standard error: %s" % (err,))
-            self.assertFalse(
-                out,
-                "Expected no output, instead received:\n%s" % (out,))
+                log.msg(f"Unexpected output on standard error: {err}")
+            self.assertFalse(out, f"Expected no output, instead received:\n{out}")
 
         def programTimeout(err):
             err.trap(error.TimeoutError)
-            proto.signalProcess('KILL')
+            proto.signalProcess("KILL")
             return err
 
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
         d = defer.Deferred().addCallbacks(programFinished, programTimeout)
         proto = ThreadStartupProcessProtocol(d)
-        reactor.spawnProcess(proto, sys.executable, ('python', progname), env)
+        reactor.spawnProcess(proto, sys.executable, ("python", progname), env)
         return d

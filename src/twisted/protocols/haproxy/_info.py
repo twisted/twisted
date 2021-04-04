@@ -12,7 +12,7 @@ from ._interfaces import IProxyInfo
 
 
 @implementer(IProxyInfo)
-class ProxyInfo(object):
+class ProxyInfo:
     """
     A data container for parsed PROXY protocol information.
 
@@ -25,9 +25,9 @@ class ProxyInfo(object):
     """
 
     __slots__ = (
-        'header',
-        'source',
-        'destination',
+        "header",
+        "source",
+        "destination",
     )
 
     def __init__(self, header, source, destination):

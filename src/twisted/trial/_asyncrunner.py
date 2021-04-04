@@ -19,7 +19,6 @@ import unittest as pyunit
 from zope.interface import implementer
 
 
-
 class TestSuite(pyunit.TestSuite):
     """
     Extend the standard library's C{TestSuite} with a consistently overrideable
@@ -37,10 +36,12 @@ class TestSuite(pyunit.TestSuite):
         return result
 
 
-
 @implementer(itrial.ITestCase)
-class TestDecorator(components.proxyForInterface(itrial.ITestCase,  # type: ignore[misc]  # noqa
-                                                 "_originalTest")):
+class TestDecorator(
+    components.proxyForInterface(  # type: ignore[misc]
+        itrial.ITestCase, "_originalTest"
+    )
+):
     """
     Decorator for test cases.
 
@@ -56,16 +57,13 @@ class TestDecorator(components.proxyForInterface(itrial.ITestCase,  # type: igno
         """
         return self.run(result)
 
-
     def run(self, result):
         """
         Run the unit test.
 
         @param result: A TestResult object.
         """
-        return self._originalTest.run(
-            reporter._AdaptedReporter(result, self.__class__))
-
+        return self._originalTest.run(reporter._AdaptedReporter(result, self.__class__))
 
 
 def _clearSuite(suite):
@@ -77,7 +75,6 @@ def _clearSuite(suite):
     C{_tests}.
     """
     suite._tests = []
-
 
 
 def decorate(test, decorator):
@@ -111,12 +108,10 @@ def decorate(test, decorator):
     return test
 
 
-
 class _PyUnitTestCaseAdapter(TestDecorator):
     """
     Adapt from pyunit.TestCase to ITestCase.
     """
-
 
 
 class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
@@ -133,7 +128,6 @@ class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
         if testID is not None:
             return testID
         return self._originalTest.id()
-
 
 
 class _ForceGarbageCollectionDecorator(TestDecorator):
@@ -154,19 +148,17 @@ class _ForceGarbageCollectionDecorator(TestDecorator):
         _logObserver._remove()
 
 
-components.registerAdapter(
-    _PyUnitTestCaseAdapter, pyunit.TestCase, itrial.ITestCase)
+components.registerAdapter(_PyUnitTestCaseAdapter, pyunit.TestCase, itrial.ITestCase)
 
 
 components.registerAdapter(
-    _BrokenIDTestCaseAdapter, pyunit.FunctionTestCase, itrial.ITestCase)
+    _BrokenIDTestCaseAdapter, pyunit.FunctionTestCase, itrial.ITestCase
+)
 
 
-_docTestCase = getattr(doctest, 'DocTestCase', None)
+_docTestCase = getattr(doctest, "DocTestCase", None)
 if _docTestCase:
-    components.registerAdapter(
-        _BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
-
+    components.registerAdapter(_BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
 
 
 def _iterateTests(testSuiteOrCase):
@@ -179,5 +171,4 @@ def _iterateTests(testSuiteOrCase):
         yield testSuiteOrCase
     else:
         for test in suite:
-            for subtest in _iterateTests(test):
-                yield subtest
+            yield from _iterateTests(test)

@@ -10,12 +10,11 @@ from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
-unix = requireModule('twisted.conch.unix')
-
+unix = requireModule("twisted.conch.unix")
 
 
 @implementer(IReactorProcess)
-class MockProcessSpawner(object):
+class MockProcessSpawner:
     """
     An L{IReactorProcess} that logs calls to C{spawnProcess}.
     """
@@ -23,26 +22,37 @@ class MockProcessSpawner(object):
     def __init__(self):
         self._spawnProcessCalls = []
 
-
-    def spawnProcess(self, processProtocol, executable, args=(), env={},
-                     path=None, uid=None, gid=None, usePTY=0, childFDs=None):
+    def spawnProcess(
+        self,
+        processProtocol,
+        executable,
+        args=(),
+        env={},
+        path=None,
+        uid=None,
+        gid=None,
+        usePTY=0,
+        childFDs=None,
+    ):
         """
         Log a call to C{spawnProcess}. Do not actually spawn a process.
         """
         self._spawnProcessCalls.append(
-            {'processProtocol': processProtocol,
-             'executable': executable,
-             'args': args,
-             'env': env,
-             'path': path,
-             'uid': uid,
-             'gid': gid,
-             'usePTY': usePTY,
-             'childFDs': childFDs})
+            {
+                "processProtocol": processProtocol,
+                "executable": executable,
+                "args": args,
+                "env": env,
+                "path": path,
+                "uid": uid,
+                "gid": gid,
+                "usePTY": usePTY,
+                "childFDs": childFDs,
+            }
+        )
 
 
-
-class StubUnixConchUser(object):
+class StubUnixConchUser:
     """
     Enough of UnixConchUser to exercise SSHSessionForUnixConchUser in the
     tests below.
@@ -54,18 +64,14 @@ class StubUnixConchUser(object):
         self._homeDirectory = homeDirectory
         self.conn = StubConnection(transport=StubClient())
 
-
     def getUserGroupId(self):
         return (None, None)
-
 
     def getHomeDir(self):
         return self._homeDirectory
 
-
     def getShell(self):
         pass
-
 
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
@@ -74,7 +80,6 @@ class TestSSHSessionForUnixConchUser(unittest.TestCase):
         skip = "Cannot run without cryptography"
     elif unix is None:
         skip = "Unix system required"
-
 
     def testExecCommandEnvironment(self):
         """
@@ -89,4 +94,4 @@ class TestSSHSessionForUnixConchUser(unittest.TestCase):
         command = ["not-actually-executed"]
         session.execCommand(protocol, command)
         [call] = mockReactor._spawnProcessCalls
-        self.assertEqual(homeDirectory, call['env']['HOME'])
+        self.assertEqual(homeDirectory, call["env"]["HOME"])

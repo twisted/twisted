@@ -8,13 +8,13 @@ Tests for L{twisted.names} example scripts.
 
 import os
 import sys
+from io import StringIO
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.compat import NativeStringIO
 
 
-class ExampleTestBase(object):
+class ExampleTestBase:
     """
     This is a mixin which adds an example to the path, tests it, and then
     removes it from the path and unimports the modules which the test loaded.
@@ -39,34 +39,32 @@ class ExampleTestBase(object):
         self.originalModules = sys.modules.copy()
 
         # Python usually expects native strs to be written to sys.stdout/stderr
-        self.fakeErr = NativeStringIO()
-        self.patch(sys, 'stderr', self.fakeErr)
-        self.fakeOut = NativeStringIO()
-        self.patch(sys, 'stdout', self.fakeOut)
+        self.fakeErr = StringIO()
+        self.patch(sys, "stderr", self.fakeErr)
+        self.fakeOut = StringIO()
+        self.patch(sys, "stdout", self.fakeOut)
 
         # Get documentation root
         try:
-            here = FilePath(os.environ['TOX_INI_DIR']).child('docs')
+            here = FilePath(os.environ["TOX_INI_DIR"]).child("docs")
         except KeyError:
             raise SkipTest(
                 "Examples not found ($TOX_INI_DIR unset) - cannot test",
             )
 
         # Find the example script within this branch
-        for childName in self.exampleRelativePath.split('/'):
+        for childName in self.exampleRelativePath.split("/"):
             here = here.child(childName)
             if not here.exists():
-                raise SkipTest(
-                    "Examples (%s) not found - cannot test" % (here.path,))
+                raise SkipTest(f"Examples ({here.path}) not found - cannot test")
         self.examplePath = here
 
         # Add the example parent folder to the Python path
         sys.path.append(self.examplePath.parent().path)
 
         # Import the example as a module
-        moduleName = self.examplePath.basename().split('.')[0]
+        moduleName = self.examplePath.basename().split(".")[0]
         self.example = __import__(moduleName)
-
 
     def tearDown(self):
         """
@@ -77,14 +75,12 @@ class ExampleTestBase(object):
         sys.modules.update(self.originalModules)
         sys.path[:] = self.originalPath
 
-
     def test_shebang(self):
         """
         The example scripts start with the standard shebang line.
         """
         with self.examplePath.open() as f:
-            self.assertEqual(f.readline().rstrip(), b'#!/usr/bin/env python')
-
+            self.assertEqual(f.readline().rstrip(), b"#!/usr/bin/env python")
 
     def test_usageConsistency(self):
         """
@@ -96,15 +92,14 @@ class ExampleTestBase(object):
         """
         # Pass None as first parameter - the reactor - it shouldn't
         # get as far as calling it.
-        self.assertRaises(
-            SystemExit, self.example.main, None, '--help')
+        self.assertRaises(SystemExit, self.example.main, None, "--help")
 
         out = self.fakeOut.getvalue().splitlines()
         self.assertTrue(
-            out[0].startswith('Usage:'),
+            out[0].startswith("Usage:"),
             'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (out[0],))
-
+            "Actual: %r" % (out[0],),
+        )
 
     def test_usageConsistencyOnError(self):
         """
@@ -119,19 +114,19 @@ class ExampleTestBase(object):
         """
         # Pass None as first parameter - the reactor - it shouldn't
         # get as far as calling it.
-        self.assertRaises(
-            SystemExit, self.example.main, None, '--unexpected_argument')
+        self.assertRaises(SystemExit, self.example.main, None, "--unexpected_argument")
 
         err = self.fakeErr.getvalue().splitlines()
         self.assertTrue(
-            err[0].startswith('Usage:'),
+            err[0].startswith("Usage:"),
             'Usage message first line should start with "Usage:". '
-            'Actual: %r' % (err[0],))
+            "Actual: %r" % (err[0],),
+        )
         self.assertTrue(
-            err[-1].startswith('ERROR:'),
+            err[-1].startswith("ERROR:"),
             'Usage message last line should start with "ERROR:" '
-            'Actual: %r' % (err[-1],))
-
+            "Actual: %r" % (err[-1],),
+        )
 
 
 class TestDnsTests(ExampleTestBase, TestCase):
@@ -139,8 +134,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
     Test the testdns.py example script.
     """
 
-    exampleRelativePath = 'names/examples/testdns.py'
-
+    exampleRelativePath = "names/examples/testdns.py"
 
 
 class GetHostByNameTests(ExampleTestBase, TestCase):
@@ -148,8 +142,7 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
     Test the gethostbyname.py example script.
     """
 
-    exampleRelativePath = 'names/examples/gethostbyname.py'
-
+    exampleRelativePath = "names/examples/gethostbyname.py"
 
 
 class DnsServiceTests(ExampleTestBase, TestCase):
@@ -157,8 +150,7 @@ class DnsServiceTests(ExampleTestBase, TestCase):
     Test the dns-service.py example script.
     """
 
-    exampleRelativePath = 'names/examples/dns-service.py'
-
+    exampleRelativePath = "names/examples/dns-service.py"
 
 
 class MultiReverseLookupTests(ExampleTestBase, TestCase):
@@ -166,4 +158,4 @@ class MultiReverseLookupTests(ExampleTestBase, TestCase):
     Test the multi_reverse_lookup.py example script.
     """
 
-    exampleRelativePath = 'names/examples/multi_reverse_lookup.py'
+    exampleRelativePath = "names/examples/multi_reverse_lookup.py"

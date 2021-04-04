@@ -10,7 +10,6 @@ Usage:
     $ sudo python endpointconstructor.py [<docker API path>]
 """
 
-from __future__ import print_function
 
 from sys import argv
 
@@ -23,24 +22,24 @@ from twisted.web.client import Agent, readBody
 
 
 @implementer(IAgentEndpointFactory)
-class DockerEndpointFactory(object):
+class DockerEndpointFactory:
     """
     Connect to Docker's Unix socket.
     """
+
     def __init__(self, reactor):
         self.reactor = reactor
-
 
     def endpointForURI(self, uri):
         return UNIXClientEndpoint(self.reactor, b"/var/run/docker.sock")
 
 
-
 def main(reactor, path=b"/containers/json?all=1"):
     agent = Agent.usingEndpointFactory(reactor, DockerEndpointFactory(reactor))
-    d = agent.request(b'GET', b"unix://localhost" + path)
+    d = agent.request(b"GET", b"unix://localhost" + path)
     d.addCallback(readBody)
     d.addCallback(print)
     return d
+
 
 react(main, argv[1:])
