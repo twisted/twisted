@@ -403,8 +403,8 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @param canceller: a callable used to stop the pending operation
             scheduled by this L{Deferred} when L{Deferred.cancel} is invoked.
-            The canceller will be passed the deferred whose cancelation is
-            requested (i.e., self).
+            The canceller will be passed the deferred whose cancellation is
+            requested (i.e., C{self}).
 
             If a canceller is not given, or does not invoke its argument's
             C{callback} or C{errback} method, L{Deferred.cancel} will
@@ -586,7 +586,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         def convertCancelled(value: object) -> object:
             # if C{deferred} was timed out, call the translation function,
-            # if provdied, otherwise just use L{cancelledToTimedOutError}
+            # if provided, otherwise just use L{cancelledToTimedOutError}
             if timedOut[0]:
                 toCall = onTimeoutCancel or _cancelledToTimedOutError
                 return toCall(value, timeout)
