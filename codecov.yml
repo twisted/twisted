@@ -19,9 +19,22 @@ coverage:
   status:
     patch:
       default:
+        # New code should have 100% CI coverage as the minimum
+        # quality assurance measurement.
+        # If there is a good reason for new code not to have coverage,
+        # add inline pragma comments.
         target: 100%
     project:
       default:
+        # Allow for a bit of slack in overall project report.
+        # As long as the patch is 100% the PR should be ok.
+        # We report coverage even on errors.
+        # So a run on trunk might fail and during the failure process will
+        # exercise a different code branch (ex timeout errors).
+        # This code branch is reported at the end of the run.
+        # Future test runs will not trigger the error and the error handling
+        # code branch is not called, and if no other tests is touching that
+        # branch we are left with overall reduced code coverage.
         threshold: 0.02%
 
 
