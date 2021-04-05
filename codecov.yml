@@ -20,6 +20,10 @@ coverage:
     patch:
       default:
         target: 100%
+    project:
+      default:
+        threshold: 0.02%
+
 
 # We don't want to receive general PR comments about coverage.
 # We have the commit status checks and that should be enough.
