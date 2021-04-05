@@ -89,9 +89,15 @@ steps:
 # https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/api.py#L147
 # https://github.com/TheKevJames/coveralls-python/blob/04b6a2876e4e7ab2e8cf0778f88ce23f94679931/coveralls/git.py#L31
 - bash: |
-    export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
-    export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
-    export CI_BUILD_URL=$SYSTEM_PULLREQUEST_SOURCEREPOSITORYURI/pull/$CI_PULL_REQUEST
+    # Start by trying to get the branch for a push.
+    export CI_BRANCH=$BUILD_SOURCEBRANCHNAME
+    if ["$CI_BRANCH" == "merge"]; then
+      # Looks like we have a PR request.
+      export CI_BRANCH=$SYSTEM_PULLREQUEST_SOURCEBRANCH
+      export CI_PULL_REQUEST=$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER
+      export CI_BUILD_URL=$SYSTEM_PULLREQUEST_SOURCEREPOSITORYURI/pull/$CI_PULL_REQUEST
+    fi
+
     python -m coveralls -v
   displayName: 'Report to Coveralls'
   condition: always()
