@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
-from sys import exc_info, implementation, version_info
+from sys import exc_info, version_info
 import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
@@ -43,7 +43,7 @@ from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python.failure import Failure, _extraneous
 from twisted.python import lockfile
-from twisted.python.compat import cmp, comparable
+from twisted.python.compat import cmp, comparable, _PYPY
 from twisted.python.deprecate import deprecated, warnAboutFunction
 
 try:
@@ -403,8 +403,8 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @param canceller: a callable used to stop the pending operation
             scheduled by this L{Deferred} when L{Deferred.cancel} is invoked.
-            The canceller will be passed the deferred whose cancelation is
-            requested (i.e., self).
+            The canceller will be passed the deferred whose cancellation is
+            requested (i.e., C{self}).
 
             If a canceller is not given, or does not invoke its argument's
             C{callback} or C{errback} method, L{Deferred.cancel} will
@@ -586,7 +586,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         def convertCancelled(value: object) -> object:
             # if C{deferred} was timed out, call the translation function,
-            # if provdied, otherwise just use L{cancelledToTimedOutError}
+            # if provided, otherwise just use L{cancelledToTimedOutError}
             if timedOut[0]:
                 toCall = onTimeoutCancel or _cancelledToTimedOutError
                 return toCall(value, timeout)
@@ -1079,7 +1079,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
             react(main)
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
 
         @param coro: The coroutine object to schedule.
 
@@ -1612,7 +1612,7 @@ def _inlineCallbacks(
                 # The contextvars backport and our no-op shim add an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
-            elif implementation.name == "pypy":
+            elif _PYPY:
                 # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None

@@ -10,7 +10,7 @@ from io import StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import succeed, gatherResults
+from twisted.internet.defer import succeed
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
@@ -336,11 +336,8 @@ class FlattenIntegrationTests(FlattenTestCase):
             b'<test1 xmlns="urn:test2"><test3></test3></test1>',
             b"<p>\xe2\x98\x83</p>",
         ]
-        deferreds = [
-            self.assertFlattensTo(Element(loader=XMLString(xml)), xml)
-            for xml in fragments
-        ]
-        return gatherResults(deferreds)
+        for xml in fragments:
+            self.assertFlattensImmediately(Element(loader=XMLString(xml)), xml)
 
     def test_entityConversion(self):
         """
@@ -348,14 +345,14 @@ class FlattenIntegrationTests(FlattenTestCase):
         representation if possible.
         """
         element = Element(loader=XMLString("<p>&#9731;</p>"))
-        return self.assertFlattensTo(element, b"<p>\xe2\x98\x83</p>")
+        self.assertFlattensImmediately(element, b"<p>\xe2\x98\x83</p>")
 
     def test_missingTemplateLoader(self):
         """
         Rendering an Element without a loader attribute raises the appropriate
         exception.
         """
-        return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
+        self.assertFlatteningRaises(Element(), MissingTemplateLoader)
 
     def test_missingRenderMethod(self):
         """
@@ -371,7 +368,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlatteningRaises(element, MissingRenderMethod)
+        self.assertFlatteningRaises(element, MissingRenderMethod)
 
     def test_transparentRendering(self):
         """
@@ -386,7 +383,7 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</t:transparent>"
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
     def test_attrRendering(self):
         """
@@ -401,9 +398,16 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</a>"
             )
         )
-        return self.assertFlattensTo(
+        self.assertFlattensImmediately(
             element, b'<a href="http://example.com">Hello, world.</a>'
         )
+
+    def test_synchronousDeferredRecursion(self):
+        """
+        When rendering a large number of already-fired Deferreds we should not
+        encounter any recursion errors or stack-depth issues.
+        """
+        self.assertFlattensImmediately([succeed("x") for i in range(250)], b"x" * 250)
 
     def test_errorToplevelAttr(self):
         """
@@ -467,7 +471,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
     def test_loaderClassAttribute(self):
         """
@@ -478,7 +482,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         class SubElement(Element):
             loader = XMLString("<p>Hello, world.</p>")
 
-        return self.assertFlattensTo(SubElement(), b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(SubElement(), b"<p>Hello, world.</p>")
 
     def test_directiveRendering(self):
         """
@@ -501,7 +505,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
     def test_directiveRenderingOmittingTag(self):
         """
@@ -524,7 +528,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
     def test_elementContainingStaticElement(self):
         """
@@ -545,7 +549,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p><em>Hello, world.</em></p>")
+        self.assertFlattensImmediately(element, b"<p><em>Hello, world.</em></p>")
 
     def test_elementUsingSlots(self):
         """
@@ -567,7 +571,7 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</p>"
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
     def test_elementContainingDynamicElement(self):
         """
@@ -604,7 +608,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
     def test_sameLoaderTwice(self):
         """

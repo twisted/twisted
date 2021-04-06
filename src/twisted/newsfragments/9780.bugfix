@@ -1,1 +1,0 @@
-DelayedCall.reset() is now working properly with asyncioreactor
