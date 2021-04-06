@@ -5,7 +5,7 @@
 Test for distributed trial worker side.
 """
 
-import _bootlocale
+import locale
 import os
 from io import BytesIO, StringIO
 
@@ -347,14 +347,12 @@ class LocalWorkerTests(TestCase):
         tempDir = FilePath(self.mktemp())
         logFile = tempDir.child("test.log")
 
-        def getLatin1(do_setlocale: bool = True) -> str:
-            """
-            A replacement for L{locale.getpreferredencoding} that always
-            returns the Latin-1 encoding.
-            """
-            return "latin-1"
-
-        self.patch(_bootlocale, "getpreferredencoding", getLatin1)
+        # Modern OSes are running default locale in UTF-8 and this is what
+        # is used by Python at startup.
+        # For this test, we force an ASCII default encoding.
+        currentLocale = locale.getlocale()
+        self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
+        locale.setlocale(locale.LC_ALL, ("C", "ascii"))
 
         worker = LocalWorker(amp, tempDir.path, "test.log")
         worker.makeConnection(FakeTransport())
