@@ -288,7 +288,7 @@ class DictClient(basic.LineReceiver):
         pass
 
     def matchFailed(self, reason):
-        """override to catch resonable failure responses to MATCH"""
+        """override to catch reasonable failure responses to MATCH"""
         pass
 
     def matchDone(self, result):

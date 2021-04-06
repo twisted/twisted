@@ -21,7 +21,9 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
-      TRIAL_ARGS: "${{ matrix.trial-args }}"
+      # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
+      TRIAL_ARGS: "-j 4"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
       fail-fast: false
@@ -32,10 +34,10 @@ jobs:
         # Run on latest minor release of each major python version.
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
         tox-env: ['alldeps-withcov-posix']
+        # By default, tests are executed without disabling IPv6.
         noipv6: ['']
-        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-        # Trial distributed jobs enabled to speed up the CI jobs.
-        trial-args: ['-j 4']
+        # Tests are executed with the default target which is the full test suite.
+        trial-target: ['']
 
         include:
 
@@ -47,22 +49,24 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
             tox-env: nodeps-withcov-posix
-            trial-args: '-j 4'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
             tox-env: alldeps-withcov-posix
             noipv6: -noipv6
-            trial-args: '-j 4'
-          # On PYPY concurrent test jobs result in random failures so for now
-          # run non-distributed tests.
+          # On PYPY coverage is very slow (5min vs 30min) as there is no C
+          # extension.
+          # There is very little PYPY specific code so there is not much to
+          # gain from reporting coverage.
           - python-version: pypy-3.6
-            tox-env: alldeps-withcov-posix
-            trial-args:
+            tox-env: alldeps-nocov-posix
+          - python-version: pypy-3.7
+            tox-env: alldeps-nocov-posix
+          # We still run some tests with coverage
           - python-version: pypy-3.7
             tox-env: alldeps-withcov-posix
-            trial-args:
+            trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
 
 
     steps:
@@ -99,28 +103,24 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox coveralls
-        tox --notest
+        python -m pip install --upgrade pip tox coverage coveralls
 
     - name: Test
       run: |
-        python --version
-        tox --skip-pkg-install
+        tox --skip-pkg-install ${{ matrix.trial-target }}
 
     - name: Prepare coverage
-      if: always()
-      continue-on-error: true
+      if: always() && contains(matrix['tox-env'], 'withcov')
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
         # The XML is generate to be used with 3rd party tools like diff-cover.
         python -m coverage combine
         python -m coverage xml -o coverage.xml -i
-        python -m coverage report
+        python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v1
-      if: always()
-      continue-on-error: true
+      if: always() && contains(matrix['tox-env'], 'withcov')
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -128,7 +128,7 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      if: always()
+      if: always() && contains(matrix['tox-env'], 'withcov')
       continue-on-error: true
       run: |
         python -m coveralls -v
