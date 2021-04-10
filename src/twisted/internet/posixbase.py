@@ -383,7 +383,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         usePTY=0,
         childFDs=None,
     ):
-        args, env = self._checkProcessArgs(args, env)
         if platformType == "posix":
             if usePTY:
                 if childFDs is not None:
