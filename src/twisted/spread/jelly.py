@@ -86,19 +86,6 @@ from incremental import Version
 _SetTypes = [set]
 _ImmutableSetTypes = [frozenset]
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    try:
-        import sets as _sets
-    except ImportError:
-        # sets module is deprecated in Python 2.6, and gone in
-        # Python 3
-        _sets = None
-    else:
-        _SetTypes.append(_sets.Set)
-        _ImmutableSetTypes.append(_sets.ImmutableSet)
-
-
 DictTypes = (dict,)
 
 None_atom = b"None"  # N
