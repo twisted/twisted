@@ -499,13 +499,13 @@ class ProcessTests(unittest.TestCase):
         """
         L{twisted.internet.stdio} test.
         """
-        scriptPath = b"twisted.test.process_twisted"
+        scriptPath = "twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(
             p,
             pyExe,
-            [pyExe, b"-u", b"-m", scriptPath],
+            [pyExe, "-u", "-m", scriptPath],
             env=properEnv,
             path=None,
             usePTY=self.usePTY,
@@ -560,8 +560,7 @@ class ProcessTests(unittest.TestCase):
 
         self.patch(sys, "stdout", StringIO())
         self.patch(sys, "__stdout__", StringIO())
-        with self.assertRaises(ValueError):
-            return self.test_stdio()
+        return self.test_stdio()
 
     def test_unsetPid(self):
         """
@@ -702,45 +701,6 @@ class ProcessTests(unittest.TestCase):
             self.assertEqual(recvdArgs, args)
 
         return d.addCallback(processEnded)
-
-    def test_wrongArguments(self):
-        """
-        Test invalid arguments to spawnProcess: arguments and environment
-        must only contains string or unicode, and not null bytes.
-        """
-        p = protocol.ProcessProtocol()
-
-        badEnvs = [{b"foo": 2}, {b"foo": b"egg\0a"}, {3: b"bar"}, {b"bar\0foo": b"bar"}]
-
-        badArgs = [[pyExe, 2], b"spam", [pyExe, b"foo\0bar"]]
-
-        # Sanity check - this will fail for people who have mucked with
-        # their site configuration in a stupid way, but there's nothing we
-        # can do about that.
-        badUnicode = "\N{SNOWMAN}"
-        try:
-            badUnicode.encode(sys.stdout.encoding)
-        except UnicodeEncodeError:
-            # Okay, that unicode doesn't encode, put it in as a bad environment
-            # key.
-            badEnvs.append({badUnicode: "value for bad unicode key"})
-            badEnvs.append({"key for bad unicode value": badUnicode})
-            badArgs.append([pyExe, badUnicode])
-        else:
-            # It _did_ encode.  Most likely, Gtk2 is being used and the
-            # default system encoding is UTF-8, which can encode anything.
-            # In any case, if implicit unicode -> str conversion works for
-            # that string, we can't test that TypeError gets raised instead,
-            # so just leave it off.
-            pass
-
-        for env in badEnvs:
-            self.assertRaises(
-                TypeError, reactor.spawnProcess, p, pyExe, [pyExe, b"-c", b""], env=env
-            )
-
-        for args in badArgs:
-            self.assertRaises(TypeError, reactor.spawnProcess, p, pyExe, args, env=None)
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
