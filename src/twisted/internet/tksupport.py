@@ -31,7 +31,7 @@ fix::
 
 from twisted.internet import task
 
-import tkinter.simpledialog as tkSimpleDialog
+import tkinter.simpledialog as tkSimpleDialog  # type: ignore[import] # type: ignore[import]
 import tkinter.messagebox as tkMessageBox
 
 

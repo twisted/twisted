@@ -8,8 +8,8 @@ Creation of  Windows shortcuts.
 Requires win32all.
 """
 
-from win32com.shell import shell
-import pythoncom
+from win32com.shell import shell  # type: ignore[import]
+import pythoncom  # type: ignore[import]
 import os
 
 

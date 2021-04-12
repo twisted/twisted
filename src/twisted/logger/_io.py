@@ -9,8 +9,8 @@ File-like object that logs.
 import sys
 from typing import AnyStr, Iterable, Optional
 
-from constantly import NamedConstant
-from incremental import Version
+from constantly import NamedConstant  # type: ignore[import]
+from incremental import Version  # type: ignore[import]
 
 from twisted.python.deprecate import deprecatedProperty
 from ._levels import LogLevel

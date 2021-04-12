@@ -10,7 +10,7 @@ Support for creating a service which runs a web server.
 import os
 import warnings
 
-import incremental
+import incremental  # type: ignore[import]
 
 from twisted.application import service, strports
 from twisted.internet import interfaces, reactor

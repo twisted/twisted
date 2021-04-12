@@ -42,7 +42,7 @@ from typing import Any, AnyStr, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 

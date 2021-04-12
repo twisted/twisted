@@ -8,7 +8,7 @@ Support for starting, monitoring, and restarting child process.
 from typing import List, Optional, Dict
 
 import attr
-import incremental
+import incremental  # type: ignore[import]
 
 from twisted.python import deprecate
 from twisted.internet import error, protocol, reactor as _reactor

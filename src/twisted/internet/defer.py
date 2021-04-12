@@ -37,7 +37,7 @@ import warnings
 
 import attr
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger

@@ -30,7 +30,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 from twisted.python.url import URL
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 from twisted.python.deprecate import deprecated
 
 from urllib.parse import quote, unquote

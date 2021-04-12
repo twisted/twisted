@@ -13,7 +13,7 @@ def grandchild():
 def main():
     if sys.argv[1] == "child":
         if sys.argv[2] == "windows":
-            import win32api as api, win32process as proc
+            import win32api as api, win32process as proc  # type: ignore[import] # type: ignore[import]
 
             info = proc.STARTUPINFO()
             info.hStdInput = api.GetStdHandle(api.STD_INPUT_HANDLE)

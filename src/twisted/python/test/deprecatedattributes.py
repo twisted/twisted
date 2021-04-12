@@ -7,7 +7,7 @@ testing purposes.
 """
 
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 

@@ -22,7 +22,7 @@ from zope.interface import implementer
 from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
 from twisted.python.failure import Failure
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
 from twisted.python.deprecate import getDeprecationWarningString
@@ -852,7 +852,7 @@ from twisted.web._newclient import (
 
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL  # type: ignore[import]
 except ImportError:
     SSL = None
 else:

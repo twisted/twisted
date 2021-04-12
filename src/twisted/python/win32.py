@@ -15,7 +15,7 @@ See also twisted.python.shortcut.
 import re
 import os
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.python.deprecate import deprecatedModuleAttribute
 
@@ -127,7 +127,7 @@ class _ErrorFormatter:
         except ImportError:
             WinError = None
         try:
-            from win32api import FormatMessage
+            from win32api import FormatMessage  # type: ignore[import]
         except ImportError:
             FormatMessage = None
         try:

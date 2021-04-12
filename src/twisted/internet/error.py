@@ -9,7 +9,7 @@ Exceptions and errors for use in twisted.internet modules.
 import socket
 
 from twisted.python import deprecate
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 
 class BindError(Exception):

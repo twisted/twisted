@@ -7,7 +7,7 @@ Test cases for L{twisted.logger._filter}.
 
 from typing import Iterable, List, Tuple, Union, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation

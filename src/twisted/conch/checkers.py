@@ -29,7 +29,7 @@ else:
 
 from zope.interface import providedBy, implementer, Interface
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.conch import error
 from twisted.conch.ssh import keys

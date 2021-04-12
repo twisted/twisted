@@ -18,7 +18,7 @@ from twisted.python import log
 from twisted.python import reflect
 from twisted.python.deprecate import _getDeprecationWarningString
 from twisted.python.failure import Failure
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime

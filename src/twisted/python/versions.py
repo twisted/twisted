@@ -8,6 +8,6 @@ See L{incremental}.
 """
 
 
-from incremental import IncomparableVersions, Version, getVersionString
+from incremental import IncomparableVersions, Version, getVersionString  # type: ignore[import]
 
 __all__ = ["Version", "getVersionString", "IncomparableVersions"]

@@ -99,7 +99,7 @@ from typing import Any, Callable, Dict, Optional, TypeVar, cast
 import sys
 from warnings import warn, warn_explicit
 
-from incremental import Version, getVersionString
+from incremental import Version, getVersionString  # type: ignore[import]
 
 DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 

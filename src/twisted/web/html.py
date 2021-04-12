@@ -11,7 +11,7 @@ from io import StringIO
 
 from twisted.python import log
 from twisted.python.deprecate import deprecated
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 
 @deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")

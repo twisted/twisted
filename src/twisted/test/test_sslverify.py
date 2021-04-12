@@ -30,7 +30,7 @@ from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 
 skipSSL = ""
@@ -43,8 +43,8 @@ if requireModule("OpenSSL"):
 
     from twisted.internet import ssl
 
-    from OpenSSL import SSL
-    from OpenSSL.crypto import get_elliptic_curves
+    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL.crypto import get_elliptic_curves  # type: ignore[import]
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
 

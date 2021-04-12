@@ -117,7 +117,7 @@ from typing import Callable
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 from twisted.logger import Logger
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush

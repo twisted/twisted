@@ -56,7 +56,7 @@ from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from zope.interface.declarations import implementer
 from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 from twisted.web.client import BrowserLikePolicyForHTTPS, HostnameCachingHTTPSPolicy
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.endpoints import HostnameEndpoint

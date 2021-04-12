@@ -80,7 +80,7 @@ from twisted.persisted.crefutil import _Container
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
+from incremental import Version  # type: ignore[import]
 
 
 _SetTypes = [set]
@@ -89,7 +89,7 @@ _ImmutableSetTypes = [frozenset]
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
     try:
-        import sets as _sets
+        import sets as _sets  # type: ignore[import]
     except ImportError:
         # sets module is deprecated in Python 2.6, and gone in
         # Python 3
