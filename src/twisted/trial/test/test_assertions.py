@@ -23,7 +23,7 @@ from twisted.python.reflect import (
     fullyQualifiedName,
 )
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from incremental import Version, getVersionString  # type: ignore[import]
+from incremental import Version, getVersionString
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, fail, succeed

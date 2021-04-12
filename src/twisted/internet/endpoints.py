@@ -20,7 +20,7 @@ from unicodedata import normalize
 import warnings
 
 from constantly import NamedConstant, Names  # type: ignore[import]
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 
 from zope.interface import implementer, directlyProvides, provider
 

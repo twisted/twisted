@@ -37,7 +37,7 @@ from twisted import copyright
 from twisted.web import resource
 from twisted.web.error import UnsupportedMethod
 
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
 

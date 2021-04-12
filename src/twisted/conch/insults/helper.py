@@ -14,7 +14,7 @@ import string
 
 from zope.interface import implementer
 
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import _textattributes

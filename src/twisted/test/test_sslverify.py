@@ -30,7 +30,7 @@ from twisted.internet._idna import _idnaText
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 
 
 skipSSL = ""

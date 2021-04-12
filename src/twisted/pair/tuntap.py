@@ -20,7 +20,7 @@ from constantly import Flags, FlagConstant  # type: ignore[import]
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.util import FancyEqMixin, FancyStrMixin
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecated
 from twisted.python import log

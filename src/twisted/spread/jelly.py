@@ -80,7 +80,7 @@ from twisted.persisted.crefutil import _Container
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 
 
 _SetTypes = [set]

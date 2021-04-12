@@ -10,7 +10,7 @@ import operator
 
 from twisted.python.versions import getVersionString, IncomparableVersions
 from twisted.python.versions import Version
-from incremental import _inf  # type: ignore[import]
+from incremental import _inf
 
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 

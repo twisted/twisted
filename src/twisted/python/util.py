@@ -38,7 +38,7 @@ from typing import (
     cast,
 )
 
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 from twisted.python.deprecate import deprecatedModuleAttribute
 
 # For backwards compatibility, some things import this, so just link it

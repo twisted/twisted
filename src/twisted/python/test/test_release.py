@@ -28,7 +28,7 @@ from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 
 from subprocess import CalledProcessError
 

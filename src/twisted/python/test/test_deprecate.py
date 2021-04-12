@@ -34,7 +34,7 @@ from twisted.python.deprecate import (
     _passedSignature,
 )
 
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 

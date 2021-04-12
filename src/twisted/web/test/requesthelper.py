@@ -14,7 +14,7 @@ from typing import Optional
 from zope.interface import implementer, verify
 
 from twisted.python.deprecate import deprecated
-from incremental import Version  # type: ignore[import]
+from incremental import Version
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import ISSLTransport, IAddress
