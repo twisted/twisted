@@ -666,7 +666,7 @@ class AmpBox(Dict[bytes, bytes]):
             module docstring.
         """
         i = sorted(self.items())
-        L = []  # type: List[bytes]
+        L: List[bytes] = []
         w = L.append
         for k, v in i:
             if type(k) == str:
@@ -786,8 +786,8 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    _failAllReason = None  # type: Optional[Failure]
-    _outstandingRequests = None  # type: Optional[Dict[bytes, Deferred]]
+    _failAllReason: Optional[Failure] = None
+    _outstandingRequests: Optional[Dict[bytes, Deferred]] = None
     _counter = 0
     boxSender = None
 
@@ -2307,8 +2307,8 @@ class BinaryBoxProtocol(
     _justStartedTLS = False
     _startingTLSBuffer = None
     _locked = False
-    _currentKey = None  # type: Optional[bytes]
-    _currentBox = None  # type: Optional[AmpBox]
+    _currentKey: Optional[bytes] = None
+    _currentBox: Optional[AmpBox] = None
 
     _keyLengthLimitExceeded = False
 
