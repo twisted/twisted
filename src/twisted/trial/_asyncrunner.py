@@ -171,5 +171,4 @@ def _iterateTests(testSuiteOrCase):
         yield testSuiteOrCase
     else:
         for test in suite:
-            for subtest in _iterateTests(test):
-                yield subtest
+            yield from _iterateTests(test)

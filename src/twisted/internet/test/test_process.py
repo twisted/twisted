@@ -149,7 +149,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             transport = reactor.spawnProcess(protocol, pyExe, [pyExe, b"-c", program])
             try:
                 write(transport, bytesToSend)
-            except:
+            except BaseException:
                 err(None, "Unhandled exception while writing")
                 transport.signalProcess("KILL")
 
@@ -301,7 +301,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 msg("childConnectionLost(%d)" % (fd,))
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg(f"processExited({reason!r})")
                 # Protect the Deferred from the failure so that it follows
                 # the callback chain.  This doesn't use the errback chain
                 # because it wants to make sure reason is a Failure.  An
@@ -310,7 +310,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 exited.callback([reason])
 
             def processEnded(self, reason):
-                msg("processEnded(%r)" % (reason,))
+                msg(f"processEnded({reason!r})")
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
@@ -395,7 +395,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         source = networkString(
             """
 import sys
-sys.path.insert(0, '{0}')
+sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
 sys.stdout.flush()""".format(
@@ -495,7 +495,7 @@ sys.stdout.flush()""".format(
             reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
 
         self.runReactor(reactor, timeout=30)
-        self.assertIn("\N{SNOWMAN}".encode("utf-8"), output.getvalue())
+        self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
 
     def test_timelyProcessExited(self):
         """
@@ -534,7 +534,7 @@ sys.stdout.flush()""".format(
 
         @param which: Either C{b"uid"} or C{b"gid"}.
         """
-        program = ["import os", "raise SystemExit(os.get%s() != 1)" % (which,)]
+        program = ["import os", f"raise SystemExit(os.get{which}() != 1)"]
 
         container = []
 
@@ -700,10 +700,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 lost.append(childFD)
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg(f"processExited({reason!r})")
 
             def processEnded(self, reason):
-                msg("processEnded(%r)" % (reason,))
+                msg(f"processEnded({reason!r})")
                 ended.callback([reason])
 
         reactor = self.buildReactor()
@@ -719,7 +719,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbEnded(args):
             (failure,) = args
             failure.trap(ProcessDone)
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
 
         ended.addCallback(cbEnded)
 
@@ -752,7 +752,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                     allLost.callback(None)
 
             def processExited(self, reason):
-                msg("processExited(%r)" % (reason,))
+                msg(f"processExited({reason!r})")
                 # See test_processExitedWithSignal
                 exited.callback([reason])
                 self.transport.loseConnection()
@@ -777,14 +777,14 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbExited(args):
             (failure,) = args
             failure.trap(ProcessDone)
-            msg("cbExited; lost = %s" % (lost,))
+            msg(f"cbExited; lost = {lost}")
             self.assertEqual(lost, [])
             return allLost
 
         exited.addCallback(cbExited)
 
         def cbAllLost(ignored):
-            self.assertEqual(set(lost), set([0, 1, 2]))
+            self.assertEqual(set(lost), {0, 1, 2})
 
         exited.addCallback(cbAllLost)
 
@@ -813,9 +813,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         scriptFile = self.makeSourceFile(
             [
-                "#!%s" % (pyExe.decode("ascii"),),
+                "#!{}".format(pyExe.decode("ascii")),
                 "import sys",
-                "sys.stdout.write('%s')" % (shebangOutput.decode("ascii"),),
+                "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
             ]
         )
@@ -841,6 +841,26 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             d.addErrback(err)
 
         reactor.callWhenRunning(start)
+        self.runReactor(reactor)
+
+    def test_pauseAndResumeProducing(self):
+        """
+        Pause producing and then resume producing.
+        """
+
+        def pauseAndResume(reactor):
+            try:
+                protocol = ProcessProtocol()
+                transport = reactor.spawnProcess(
+                    protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+                )
+                transport.pauseProducing()
+                transport.resumeProducing()
+            finally:
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(pauseAndResume, reactor)
         self.runReactor(reactor)
 
     def test_processCommandLineArguments(self):

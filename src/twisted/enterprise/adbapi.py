@@ -56,7 +56,7 @@ class Connection:
             curs.close()
             self._connection.commit()
             return
-        except:
+        except BaseException:
             log.err(None, "Rollback failed")
 
         self._pool.disconnect(self._connection)
@@ -104,7 +104,7 @@ class Transaction:
         try:
             self._cursor = self._connection.cursor()
             return
-        except:
+        except BaseException:
             if not self._pool.reconnect:
                 raise
             else:
@@ -215,7 +215,7 @@ class ConnectionPool:
         self.connkw = connkw
 
         for arg in self.CP_ARGS:
-            cpArg = "cp_%s" % (arg,)
+            cpArg = f"cp_{arg}"
             if cpArg in connkw:
                 setattr(self, arg, connkw[cpArg])
                 del connkw[cpArg]
@@ -284,11 +284,11 @@ class ConnectionPool:
             result = func(conn, *args, **kw)
             conn.commit()
             return result
-        except:
+        except BaseException:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
 
@@ -409,7 +409,7 @@ class ConnectionPool:
         conn = self.connections.get(tid)
         if conn is None:
             if self.noisy:
-                log.msg("adbapi connecting: %s" % (self.dbapiName,))
+                log.msg(f"adbapi connecting: {self.dbapiName}")
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
             if self.openfun is not None:
                 self.openfun(conn)
@@ -433,10 +433,10 @@ class ConnectionPool:
 
     def _close(self, conn):
         if self.noisy:
-            log.msg("adbapi closing: %s" % (self.dbapiName,))
+            log.msg(f"adbapi closing: {self.dbapiName}")
         try:
             conn.close()
-        except:
+        except BaseException:
             log.err(None, "Connection close failed")
 
     def _runInteraction(self, interaction, *args, **kw):
@@ -447,11 +447,11 @@ class ConnectionPool:
             trans.close()
             conn.commit()
             return result
-        except:
+        except BaseException:
             excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
             compat.reraise(excValue, excTraceback)
 

@@ -51,11 +51,11 @@ class Interop(pb.Root):
     def remote_receive(self, obj):
         expected = [1, 1.5, "hi", "hi", {1: 2}]
         if obj != expected:
-            raise ValueError("{} != {}".format(obj, expected))
+            raise ValueError(f"{obj} != {expected}")
 
     def remote_self(self, obj):
         if obj != self:
-            raise ValueError("{} != {}".format(obj, self))
+            raise ValueError(f"{obj} != {self}")
 
     def remote_copy(self, x):
         o = flavors.Copyable()

@@ -170,7 +170,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
                         break
                     try:
                         f()
-                    except:
+                    except BaseException:
                         log.err()
 
 

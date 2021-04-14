@@ -7,26 +7,36 @@ L{twisted.web._flatten}.
 """
 
 import sys
+import re
 import traceback
+from collections import OrderedDict
+from textwrap import dedent
 
+from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
 
-from collections import OrderedDict
-
-from zope.interface import implementer
-
-from twisted.trial.unittest import TestCase
-from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.internet.defer import passthru, succeed, gatherResults
-
+from twisted.internet.defer import Deferred, gatherResults, passthru, succeed
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.web.error import (
+    FlattenerError,
+    UnfilledSlot,
+    UnsupportedType,
+)
 from twisted.web.iweb import IRenderable
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
-from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.template import Element, renderer, TagLoader, flattenString
-
+from twisted.web.template import (
+    CDATA,
+    CharRef,
+    Comment,
+    Element,
+    Tag,
+    TagLoader,
+    flattenString,
+    renderer,
+    slot,
+    tags,
+)
 from twisted.web.test._util import FlattenTestCase
+from zope.interface import implementer
 
 
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):
@@ -38,7 +48,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that nested tags flatten correctly.
         """
-        return self.assertFlattensTo(
+        self.assertFlattensImmediately(
             tags.html(tags.body("42"), hi="there"),
             b'<html hi="there"><body>42</body></html>',
         )
@@ -47,18 +57,14 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that strings will be flattened and escaped correctly.
         """
-        return gatherResults(
-            [
-                self.assertFlattensTo("one", b"one"),
-                self.assertFlattensTo("<abc&&>123", b"&lt;abc&amp;&amp;&gt;123"),
-            ]
-        )
+        self.assertFlattensImmediately("one", b"one"),
+        self.assertFlattensImmediately("<abc&&>123", b"&lt;abc&amp;&amp;&gt;123"),
 
     def test_serializeSelfClosingTags(self):
         """
         The serialized form of a self-closing tag is C{'<tagName />'}.
         """
-        return self.assertFlattensTo(tags.img(), b"<img />")
+        self.assertFlattensImmediately(tags.img(), b"<img />")
 
     def test_serializeAttribute(self):
         """
@@ -138,7 +144,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         class WithRenderer(Element):
             def __init__(self, value, loader):
                 self.value = value
-                super(WithRenderer, self).__init__(loader)
+                super().__init__(loader)
 
             @renderer
             def stuff(self, request, tag):
@@ -228,7 +234,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that comments are correctly flattened and escaped.
         """
-        return (self.assertFlattensTo(Comment("foo bar"), b"<!--foo bar-->"),)
+        self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
     def test_commentEscaping(self):
         """
@@ -248,14 +254,15 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         def verifyComment(c):
             self.assertTrue(
                 c.startswith(b"<!--"),
-                "%r does not start with the comment prefix" % (c,),
+                f"{c!r} does not start with the comment prefix",
             )
             self.assertTrue(
-                c.endswith(b"-->"), "%r does not end with the comment suffix" % (c,)
+                c.endswith(b"-->"),
+                f"{c!r} does not end with the comment suffix",
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(c) >= 7, "%r is too short to be a legal comment" % (c,))
+            self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
             self.assertNotIn(b"--", content)
             self.assertNotIn(b">", content)
@@ -280,13 +287,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that CDATA is correctly flattened and escaped.
         """
-        return gatherResults(
-            [
-                self.assertFlattensTo(CDATA("foo bar"), b"<![CDATA[foo bar]]>"),
-                self.assertFlattensTo(
-                    CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>"
-                ),
-            ]
+        self.assertFlattensImmediately(CDATA("foo bar"), b"<![CDATA[foo bar]]>"),
+        self.assertFlattensImmediately(
+            CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>"
         )
 
     def test_serializeUnicode(self):
@@ -295,17 +298,13 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         raises an error when it occurs in inappropriate place.
         """
         snowman = "\N{SNOWMAN}"
-        return gatherResults(
-            [
-                self.assertFlattensTo(snowman, b"\xe2\x98\x83"),
-                self.assertFlattensTo(tags.p(snowman), b"<p>\xe2\x98\x83</p>"),
-                self.assertFlattensTo(Comment(snowman), b"<!--\xe2\x98\x83-->"),
-                self.assertFlattensTo(CDATA(snowman), b"<![CDATA[\xe2\x98\x83]]>"),
-                self.assertFlatteningRaises(Tag(snowman), UnicodeEncodeError),
-                self.assertFlatteningRaises(
-                    Tag("p", attributes={snowman: ""}), UnicodeEncodeError
-                ),
-            ]
+        self.assertFlattensImmediately(snowman, b"\xe2\x98\x83")
+        self.assertFlattensImmediately(tags.p(snowman), b"<p>\xe2\x98\x83</p>")
+        self.assertFlattensImmediately(Comment(snowman), b"<!--\xe2\x98\x83-->")
+        self.assertFlattensImmediately(CDATA(snowman), b"<![CDATA[\xe2\x98\x83]]>")
+        self.assertFlatteningRaises(Tag(snowman), UnicodeEncodeError)
+        self.assertFlatteningRaises(
+            Tag("p", attributes={snowman: ""}), UnicodeEncodeError
         )
 
     def test_serializeCharRef(self):
@@ -314,26 +313,22 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         syntax.
         """
         ref = CharRef(ord("\N{SNOWMAN}"))
-        return self.assertFlattensTo(ref, b"&#9731;")
+        self.assertFlattensImmediately(ref, b"&#9731;")
 
     def test_serializeDeferred(self):
         """
         Test that a deferred is substituted with the current value in the
         callback chain when flattened.
         """
-        return self.assertFlattensTo(succeed("two"), b"two")
+        self.assertFlattensImmediately(succeed("two"), b"two")
 
     def test_serializeSameDeferredTwice(self):
         """
         Test that the same deferred can be flattened twice.
         """
         d = succeed("three")
-        return gatherResults(
-            [
-                self.assertFlattensTo(d, b"three"),
-                self.assertFlattensTo(d, b"three"),
-            ]
-        )
+        self.assertFlattensImmediately(d, b"three")
+        self.assertFlattensImmediately(d, b"three")
 
     def test_serializeCoroutine(self):
         """
@@ -354,7 +349,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         )
         coro = namespace["coro"]
 
-        return self.assertFlattensTo(coro("four"), b"four")
+        self.assertFlattensImmediately(coro("four"), b"four")
 
     def test_serializeCoroutineWithAwait(self):
         """
@@ -375,7 +370,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         )
         coro = namespace["coro"]
 
-        return self.assertFlattensTo(coro("four"), b"four")
+        self.assertFlattensImmediately(coro("four"), b"four")
 
     def test_serializeIRenderable(self):
         """
@@ -396,11 +391,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
                 self.assertEqual(name, "test")
                 return lambda ign, node: node("world")
 
-        return gatherResults(
-            [
-                self.assertFlattensTo(FakeElement(), b"<p>hello, world - world</p>"),
-            ]
-        )
+        self.assertFlattensImmediately(FakeElement(), b"<p>hello, world - world</p>")
 
     def test_serializeSlots(self):
         """
@@ -409,12 +400,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         t1 = tags.p(slot("test"))
         t2 = t1.clone()
         t2.fillSlots(test="hello, world")
-        return gatherResults(
-            [
-                self.assertFlatteningRaises(t1, UnfilledSlot),
-                self.assertFlattensTo(t2, b"<p>hello, world</p>"),
-            ]
-        )
+        self.assertFlatteningRaises(t1, UnfilledSlot)
+        self.assertFlattensImmediately(t2, b"<p>hello, world</p>")
 
     def test_serializeDeferredSlots(self):
         """
@@ -423,13 +410,13 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         t = tags.p(slot("test"))
         t.fillSlots(test=succeed(tags.em("four>")))
-        return self.assertFlattensTo(t, b"<p><em>four&gt;</em></p>")
+        self.assertFlattensImmediately(t, b"<p><em>four&gt;</em></p>")
 
     def test_unknownTypeRaises(self):
         """
         Test that flattening an unknown type of thing raises an exception.
         """
-        return self.assertFlatteningRaises(None, UnsupportedType)
+        self.assertFlatteningRaises(None, UnsupportedType)
 
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
@@ -443,7 +430,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 HERE = (lambda: None).__code__.co_filename
 
 
-class FlattenerErrorTests(TestCase):
+class FlattenerErrorTests(SynchronousTestCase):
     """
     Tests for L{FlattenerError}.
     """
@@ -530,3 +517,49 @@ class FlattenerErrorTests(TestCase):
                 g.__code__.co_firstlineno + 1,
             ),
         )
+
+    def test_asynchronousFlattenError(self):
+        """
+        When flattening a renderer which raises an exception asynchronously,
+        the error is reported when it occurs.
+        """
+        failing = Deferred()
+
+        @implementer(IRenderable)
+        class NotActuallyRenderable:
+            "No methods provided; this will fail"
+
+            def __repr__(self):
+                return "<unrenderable>"
+
+            def lookupRenderMethod(self, name):
+                ...
+
+            def render(self, request):
+                return failing
+
+        flattening = flattenString(None, [NotActuallyRenderable()])
+        self.assertNoResult(flattening)
+        exc = RuntimeError("example")
+        failing.errback(exc)
+        failure = self.failureResultOf(flattening, FlattenerError)
+        self.assertRegex(
+            str(failure.value),
+            re.compile(
+                dedent(
+                    """\
+                    Exception while flattening:
+                      \\[<unrenderable>\\]
+                      <unrenderable>
+                      .*
+                      File ".*", line \\d*, in _flattenTree
+                        element = await element
+                    RuntimeError: example
+                    """
+                ),
+                flags=re.MULTILINE,
+            ),
+        )
+        # The original exception is unmodified and will be logged separately if
+        # unhandled.
+        self.failureResultOf(failing, RuntimeError)

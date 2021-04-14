@@ -235,19 +235,19 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if nsPrefix is None:
                 attrKey = attrName
             else:
-                attrKey = "%s:%s" % (nsPrefix, attrName)
+                attrKey = f"{nsPrefix}:{attrName}"
             nonTemplateAttrs[attrKey] = v
 
         if ns == TEMPLATE_NAMESPACE and name == "attr":
             if not self.stack:
                 # TODO: define a better exception for this?
                 raise AssertionError(
-                    "<{%s}attr> as top-level element" % (TEMPLATE_NAMESPACE,)
+                    f"<{{{TEMPLATE_NAMESPACE}}}attr> as top-level element"
                 )
             if "name" not in nonTemplateAttrs:
                 # TODO: same here
                 raise AssertionError(
-                    "<{%s}attr> requires a name attribute" % (TEMPLATE_NAMESPACE,)
+                    f"<{{{TEMPLATE_NAMESPACE}}}attr> requires a name attribute"
                 )
             el = Tag(
                 "",
@@ -271,7 +271,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         if ns != TEMPLATE_NAMESPACE and ns is not None:
             prefix = self.prefixMap[ns]
             if prefix is not None:
-                name = "%s:%s" % (self.prefixMap[ns], name)
+                name = "{}:{}".format(self.prefixMap[ns], name)
         el = Tag(
             name,
             attributes=OrderedDict(nonTemplateAttrs),
@@ -459,7 +459,7 @@ class XMLFile:
                 return _flatsaxParse(f)
 
     def __repr__(self) -> str:
-        return "<XMLFile of %r>" % (self._path,)
+        return f"<XMLFile of {self._path!r}>"
 
     def load(self):
         """
@@ -477,130 +477,128 @@ class XMLFile:
 # http://www.w3schools.com/html5/html5_reference.asp
 # Note that <xmp> is explicitly omitted; its semantics do not work with
 # t.w.template and it is officially deprecated.
-VALID_HTML_TAG_NAMES = set(
-    [
-        "a",
-        "abbr",
-        "acronym",
-        "address",
-        "applet",
-        "area",
-        "article",
-        "aside",
-        "audio",
-        "b",
-        "base",
-        "basefont",
-        "bdi",
-        "bdo",
-        "big",
-        "blockquote",
-        "body",
-        "br",
-        "button",
-        "canvas",
-        "caption",
-        "center",
-        "cite",
-        "code",
-        "col",
-        "colgroup",
-        "command",
-        "datalist",
-        "dd",
-        "del",
-        "details",
-        "dfn",
-        "dir",
-        "div",
-        "dl",
-        "dt",
-        "em",
-        "embed",
-        "fieldset",
-        "figcaption",
-        "figure",
-        "font",
-        "footer",
-        "form",
-        "frame",
-        "frameset",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "head",
-        "header",
-        "hgroup",
-        "hr",
-        "html",
-        "i",
-        "iframe",
-        "img",
-        "input",
-        "ins",
-        "isindex",
-        "keygen",
-        "kbd",
-        "label",
-        "legend",
-        "li",
-        "link",
-        "map",
-        "mark",
-        "menu",
-        "meta",
-        "meter",
-        "nav",
-        "noframes",
-        "noscript",
-        "object",
-        "ol",
-        "optgroup",
-        "option",
-        "output",
-        "p",
-        "param",
-        "pre",
-        "progress",
-        "q",
-        "rp",
-        "rt",
-        "ruby",
-        "s",
-        "samp",
-        "script",
-        "section",
-        "select",
-        "small",
-        "source",
-        "span",
-        "strike",
-        "strong",
-        "style",
-        "sub",
-        "summary",
-        "sup",
-        "table",
-        "tbody",
-        "td",
-        "textarea",
-        "tfoot",
-        "th",
-        "thead",
-        "time",
-        "title",
-        "tr",
-        "tt",
-        "u",
-        "ul",
-        "var",
-        "video",
-        "wbr",
-    ]
-)
+VALID_HTML_TAG_NAMES = {
+    "a",
+    "abbr",
+    "acronym",
+    "address",
+    "applet",
+    "area",
+    "article",
+    "aside",
+    "audio",
+    "b",
+    "base",
+    "basefont",
+    "bdi",
+    "bdo",
+    "big",
+    "blockquote",
+    "body",
+    "br",
+    "button",
+    "canvas",
+    "caption",
+    "center",
+    "cite",
+    "code",
+    "col",
+    "colgroup",
+    "command",
+    "datalist",
+    "dd",
+    "del",
+    "details",
+    "dfn",
+    "dir",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "embed",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "font",
+    "footer",
+    "form",
+    "frame",
+    "frameset",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "head",
+    "header",
+    "hgroup",
+    "hr",
+    "html",
+    "i",
+    "iframe",
+    "img",
+    "input",
+    "ins",
+    "isindex",
+    "keygen",
+    "kbd",
+    "label",
+    "legend",
+    "li",
+    "link",
+    "map",
+    "mark",
+    "menu",
+    "meta",
+    "meter",
+    "nav",
+    "noframes",
+    "noscript",
+    "object",
+    "ol",
+    "optgroup",
+    "option",
+    "output",
+    "p",
+    "param",
+    "pre",
+    "progress",
+    "q",
+    "rp",
+    "rt",
+    "ruby",
+    "s",
+    "samp",
+    "script",
+    "section",
+    "select",
+    "small",
+    "source",
+    "span",
+    "strike",
+    "strong",
+    "style",
+    "sub",
+    "summary",
+    "sup",
+    "table",
+    "tbody",
+    "td",
+    "textarea",
+    "tfoot",
+    "th",
+    "thead",
+    "time",
+    "title",
+    "tr",
+    "tt",
+    "u",
+    "ul",
+    "var",
+    "video",
+    "wbr",
+}
 
 
 class _TagFactory:
@@ -623,7 +621,7 @@ class _TagFactory:
         # allow for E.del as E.del_
         tagName = tagName.rstrip("_")
         if tagName not in VALID_HTML_TAG_NAMES:
-            raise AttributeError("unknown tag %r" % (tagName,))
+            raise AttributeError(f"unknown tag {tagName!r}")
         return Tag(tagName)
 
 
@@ -662,12 +660,10 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
             return flatten(request, _failElement(failure), request.write).encode("utf8")
         else:
             request.write(
-                (
-                    b'<div style="font-size:800%;'
-                    b"background-color:#FFF;"
-                    b"color:#F00"
-                    b'">An error occurred while rendering the response.</div>'
-                )
+                b'<div style="font-size:800%;'
+                b"background-color:#FFF;"
+                b"color:#F00"
+                b'">An error occurred while rendering the response.</div>'
             )
 
     d.addErrback(eb)

@@ -37,7 +37,7 @@ class DomainDeliveryBase:
     """
 
     service = None
-    protocolName = b"not-implemented-protocol"  # type: bytes
+    protocolName: bytes = b"not-implemented-protocol"
 
     def __init__(self, service, user, host=smtp.DNSNAME):
         """
@@ -195,7 +195,7 @@ class SMTPFactory(smtp.SMTPFactory):
         @rtype: L{SMTP}
         @return: An SMTP protocol.
         """
-        log.msg("Connection from %s" % (addr,))
+        log.msg(f"Connection from {addr}")
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
         p.portal = self.portal

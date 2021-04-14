@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
     import echoclient_shared_ssh
     from twisted.internet.task import react
+
     react(echoclient_shared_ssh.main, sys.argv[1:])
 
 from twisted.internet.task import cooperate
@@ -20,13 +20,11 @@ from echoclient_ssh import ConnectionParameters
 
 class PrinterProtocol(Protocol):
     def dataReceived(self, data):
-        print("Got some data:", data, end=' ')
-
+        print("Got some data:", data, end=" ")
 
     def connectionLost(self, reason):
         print("Lost my connection")
         self.factory.done.callback(None)
-
 
 
 def main(reactor, *argv):
@@ -48,7 +46,8 @@ def main(reactor, *argv):
             done.append(factory.done)
 
             e = SSHCommandClientEndpoint.existingConnection(
-                conn, b"/bin/echo %d" % (i,))
+                conn, b"/bin/echo %d" % (i,)
+            )
             yield e.connect(factory)
 
     d.addCallback(gotConnection)

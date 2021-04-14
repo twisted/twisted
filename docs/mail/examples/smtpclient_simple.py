@@ -5,7 +5,6 @@
 Demonstrate sending mail via SMTP.
 """
 
-from __future__ import print_function
 
 import sys
 from email.mime.text import MIMEText

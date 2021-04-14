@@ -47,7 +47,7 @@ from twisted.web.error import ExcessiveBufferingError
 
 
 # This API is currently considered private.
-__all__ = []  # type: List[str]
+__all__: List[str] = []
 
 
 _END_STREAM_SENTINEL = object()

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.python import util
 from twisted.spread import pb
 from twisted.cred import portal, checkers, credentials

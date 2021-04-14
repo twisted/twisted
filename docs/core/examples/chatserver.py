@@ -3,7 +3,6 @@
 run me with twistd -y chatserver.py, and then connect with multiple
 telnet clients to port 1025
 """
-from __future__ import print_function
 
 from twisted.protocols import basic
 

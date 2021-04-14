@@ -3,17 +3,20 @@ from twisted.application import service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
+
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return b'Internal error in server'
+            return b"Internal error in server"
+
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + b'\r\n')
+            self.transport.write(message + b"\r\n")
             self.transport.loseConnection()
+
         d.addCallback(writeResponse)
 
 
@@ -25,7 +28,7 @@ class FingerService(service.Service):
     def _read(self):
         with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(b':', 1)
+                user, status = line.split(b":", 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
@@ -49,8 +52,8 @@ class FingerService(service.Service):
         return f
 
 
-application = service.Application('finger', uid=1, gid=1)
-f = FingerService('/etc/users')
+application = service.Application("finger", uid=1, gid=1)
+f = FingerService("/etc/users")
 finger = strports.service("tcp:79", f.getFingerFactory())
 
 finger.setServiceParent(service.IServiceCollection(application))

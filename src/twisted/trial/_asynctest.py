@@ -25,7 +25,7 @@ from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
-_wait_is_running = []  # type: List[None]
+_wait_is_running: List[None] = []
 
 
 @implementer(itrial.ITestCase)
@@ -54,7 +54,7 @@ class TestCase(SynchronousTestCase):
         L{SynchronousTestCase.runTest} will be used as the test method. This is
         mostly useful for testing Trial.
         """
-        super(TestCase, self).__init__(methodName)
+        super().__init__(methodName)
 
     def assertFailure(self, deferred, *expectedFailures):
         """
@@ -65,14 +65,16 @@ class TestCase(SynchronousTestCase):
 
         def _cb(ignore):
             raise self.failureException(
-                "did not catch an error, instead got %r" % (ignore,)
+                f"did not catch an error, instead got {ignore!r}"
             )
 
         def _eb(failure):
             if failure.check(*expectedFailures):
                 return failure.value
             else:
-                output = "\nExpected: %r\nGot:\n%s" % (expectedFailures, str(failure))
+                output = "\nExpected: {!r}\nGot:\n{}".format(
+                    expectedFailures, str(failure)
+                )
                 raise self.failureException(output)
 
         return deferred.addCallbacks(_cb, _eb)
@@ -86,7 +88,7 @@ class TestCase(SynchronousTestCase):
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                "%r (%s) still running at %s secs" % (self, methodName, timeout)
+                f"{self!r} ({methodName}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
@@ -112,7 +114,9 @@ class TestCase(SynchronousTestCase):
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
-                "%r is a generator function and therefore will never run" % (method,)
+                "{!r} is a generator function and therefore will never run".format(
+                    method
+                )
             )
             return defer.fail(exc)
         d = defer.maybeDeferred(
@@ -212,7 +216,7 @@ class TestCase(SynchronousTestCase):
             clean = util._Janitor(self, result).postCaseCleanup()
             if not clean:
                 self._passed = False
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
             self._passed = False
         for error in self._observer.getErrors():
@@ -226,7 +230,7 @@ class TestCase(SynchronousTestCase):
     def _classCleanUp(self, result):
         try:
             util._Janitor(self, result).postClassCleanup()
-        except:
+        except BaseException:
             result.addError(self, failure.Failure())
 
     def _makeReactorMethod(self, name):
@@ -300,7 +304,7 @@ class TestCase(SynchronousTestCase):
         If the function C{f} returns a Deferred, C{TestCase} will wait until the
         Deferred has fired before proceeding to the next function.
         """
-        return super(TestCase, self).addCleanup(f, *args, **kwargs)
+        return super().addCleanup(f, *args, **kwargs)
 
     def getSuppress(self):
         return self._getSuppress()

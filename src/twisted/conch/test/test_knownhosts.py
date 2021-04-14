@@ -506,7 +506,7 @@ class KnownHostsDatabaseTests(TestCase):
         L{HashedEntry} entry will result in a L{KnownHostsFile} object
         with one L{IKnownHostEntry} provider.
         """
-        hostsFile = self.loadSampleHostsFile((sampleHashedLine))
+        hostsFile = self.loadSampleHostsFile(sampleHashedLine)
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], HashedEntry)
         self.assertTrue(entries[0].matchesHost(b"www.twistedmatrix.com"))
@@ -518,7 +518,7 @@ class KnownHostsDatabaseTests(TestCase):
         L{PlainEntry} entry will result in a L{KnownHostsFile} object
         with one L{IKnownHostEntry} provider.
         """
-        hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
+        hostsFile = self.loadSampleHostsFile(otherSamplePlaintextLine)
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], PlainEntry)
         self.assertTrue(entries[0].matchesHost(b"divmod.com"))
@@ -530,7 +530,7 @@ class KnownHostsDatabaseTests(TestCase):
         result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
         object.
         """
-        hostsFile = self.loadSampleHostsFile((b"\n"))
+        hostsFile = self.loadSampleHostsFile(b"\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"")
@@ -542,7 +542,7 @@ class KnownHostsDatabaseTests(TestCase):
         result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
         object.
         """
-        hostsFile = self.loadSampleHostsFile((b"# That was a blank line.\n"))
+        hostsFile = self.loadSampleHostsFile(b"# That was a blank line.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"# That was a blank line.")
@@ -552,7 +552,7 @@ class KnownHostsDatabaseTests(TestCase):
         Loading a L{KnownHostsFile} from a path that contains an unparseable
         line will be represented as an L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile((b"This is just unparseable.\n"))
+        hostsFile = self.loadSampleHostsFile(b"This is just unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"This is just unparseable.")
@@ -564,7 +564,7 @@ class KnownHostsDatabaseTests(TestCase):
         that starts with an encryption marker will be represented as an
         L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile((b"|1|This is unparseable.\n"))
+        hostsFile = self.loadSampleHostsFile(b"|1|This is unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"|1|This is unparseable.")
@@ -992,7 +992,7 @@ class FakeFile:
         Append the given item to the 'outchunks' list.
         """
         if self.closed:
-            raise IOError("the file was closed")
+            raise OSError("the file was closed")
         self.outchunks.append(chunk)
 
     def close(self):
@@ -1090,7 +1090,7 @@ class ConsoleUITests(TestCase):
         """
 
         def raiseIt():
-            raise IOError()
+            raise OSError()
 
         ui = ConsoleUI(raiseIt)
         d = ui.prompt("This is a test.")

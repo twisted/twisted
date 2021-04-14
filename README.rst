@@ -11,7 +11,7 @@ For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 3.5+.
+Twisted is an event-based framework for internet applications, supporting Python 3.6+.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -74,23 +74,18 @@ Static Code Checkers
 
 You can ensure that code complies to Twisted `coding standards <https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html>`_::
 
-  $ tox -e lint   # run pyflakes to check syntax
-  $ tox -e black  # run Black to check against coding standard
+  $ tox -e lint   # run pre-commit to check coding stanards
   $ tox -e mypy   # run MyPy static type checker to check for type errors
 
-To automatically format code according to the coding standards::
+Or, for speed, use pre-commit directly::
 
-  $ tox -e black-reformat
-
-Or, for speed, specify exactly what to format::
-
-  $ tox -e black-reformat -- path/to/file.py
+  $ pipx run pre-commit run
 
 
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2020 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

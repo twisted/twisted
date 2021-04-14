@@ -554,7 +554,7 @@ class InternetTests(TestCase):
         for cls in internet.__all__:
             self.assertTrue(
                 hasattr(internet, cls),
-                "%s not importable from twisted.application.internet" % (cls,),
+                f"{cls} not importable from twisted.application.internet",
             )
 
     def test_reactorParametrizationInServer(self):

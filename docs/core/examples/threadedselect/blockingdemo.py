@@ -2,8 +2,6 @@
 # See LICENSE for details.
 
 
-from __future__ import print_function
-
 from twisted.internet import _threadedselect
 
 _threadedselect.install()
@@ -22,7 +20,7 @@ except ImportError:
     from Queue import Queue, Empty
 
 
-class TwistedManager(object):
+class TwistedManager:
     def __init__(self):
         self.twistedQueue = Queue()
         self.key = count()

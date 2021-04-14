@@ -1,8 +1,8 @@
 from twisted.web import xmlrpc, server
 from twisted.internet import endpoints
 
-class EchoHandler:
 
+class EchoHandler:
     def echo(self, x):
         """
         Return all passed args
@@ -10,15 +10,12 @@ class EchoHandler:
         return x
 
 
-
 class AddHandler:
-
     def add(self, a, b):
         """
         Return sum of arguments.
         """
         return a + b
-
 
 
 class Example(xmlrpc.XMLRPC):
@@ -31,31 +28,32 @@ class Example(xmlrpc.XMLRPC):
         self._addHandler = AddHandler()
         self._echoHandler = EchoHandler()
 
-        #We keep a dict of all relevant
-        #procedure names and callable.
+        # We keep a dict of all relevant
+        # procedure names and callable.
         self._procedureToCallable = {
-            'add':self._addHandler.add,
-            'echo':self._echoHandler.echo
+            "add": self._addHandler.add,
+            "echo": self._echoHandler.echo,
         }
 
     def lookupProcedure(self, procedurePath):
         try:
             return self._procedureToCallable[procedurePath]
         except KeyError as e:
-            raise xmlrpc.NoSuchFunction(self.NOT_FOUND,
-                        "procedure %s not found" % procedurePath)
+            raise xmlrpc.NoSuchFunction(
+                self.NOT_FOUND, "procedure %s not found" % procedurePath
+            )
 
     def listProcedures(self):
         """
         Since we override lookupProcedure, its suggested to override
         listProcedures too.
         """
-        return ['add', 'echo']
+        return ["add", "echo"]
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     from twisted.internet import reactor
+
     r = Example()
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 7080)
     endpoint.listen(server.Site(r))

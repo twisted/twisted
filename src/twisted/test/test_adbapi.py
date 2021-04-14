@@ -29,7 +29,7 @@ class ADBAPITestBase:
     Test the asynchronous DB-API code.
     """
 
-    openfun_called = {}  # type: Dict[object, bool]
+    openfun_called: Dict[object, bool] = {}
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
@@ -335,7 +335,7 @@ class DBTestConnector:
     """
 
     # used for creating new test cases
-    TEST_PREFIX = None  # type: Optional[str]
+    TEST_PREFIX: Optional[str] = None
 
     DB_NAME = "twisted_test"
     DB_USER = "twisted_test"
@@ -348,7 +348,7 @@ class DBTestConnector:
     can_rollback = True  # rollback supported
     test_failures = True  # test bad sql?
     escape_slashes = True  # escape \ in sql?
-    good_sql = ConnectionPool.good_sql  # type: Optional[str]
+    good_sql: Optional[str] = ConnectionPool.good_sql
     early_reconnect = True  # cursor() will fail on closed connection
     can_clear = True  # can try to clear out tables when starting
 
@@ -447,7 +447,7 @@ class PyPgSQLConnector(DBTestConnector):
     def can_connect(self):
         try:
             from pyPgSQL import PgSQL
-        except:
+        except BaseException:
             return False
         try:
             conn = PgSQL.connect(
@@ -455,7 +455,7 @@ class PyPgSQLConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -475,7 +475,7 @@ class PsycopgConnector(DBTestConnector):
     def can_connect(self):
         try:
             import psycopg
-        except:
+        except BaseException:
             return False
         try:
             conn = psycopg.connect(
@@ -483,7 +483,7 @@ class PsycopgConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -507,7 +507,7 @@ class MySQLConnector(DBTestConnector):
     def can_connect(self):
         try:
             import MySQLdb
-        except:
+        except BaseException:
             return False
         try:
             conn = MySQLdb.connect(
@@ -515,7 +515,7 @@ class MySQLConnector(DBTestConnector):
             )
             conn.close()
             return True
-        except:
+        except BaseException:
             return False
 
     def getPoolArgs(self):
@@ -541,7 +541,7 @@ class FirebirdConnector(DBTestConnector):
             self.startDB()
             self.stopDB()
             return True
-        except:
+        except BaseException:
             return False
 
     def startDB(self):

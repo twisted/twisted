@@ -7,7 +7,6 @@ and an instance of a Protocol class which has had L{twisted.conch.mixin}'s
 L{BufferingMixin<twisted.conch.mixin.BufferingMixin>} mixed in to perform
 Nagle-like write coalescing.
 """
-from __future__ import print_function
 
 from sys import stdout
 from pprint import pprint
@@ -29,12 +28,16 @@ class BufferingBenchmark(Options):
     """
 
     optParameters = [
-        ('scale', 's', '1',
-         'Work multiplier (bigger takes longer, might resist noise better)')]
+        (
+            "scale",
+            "s",
+            "1",
+            "Work multiplier (bigger takes longer, might resist noise better)",
+        )
+    ]
 
     def postOptions(self):
-        self['scale'] = int(self['scale'])
-
+        self["scale"] = int(self["scale"])
 
 
 class ServerProtocol(Protocol):
@@ -42,10 +45,10 @@ class ServerProtocol(Protocol):
     A silent protocol which only waits for a particular amount of input and
     then fires a Deferred.
     """
+
     def __init__(self, expected, finished):
         self.expected = expected
         self.finished = finished
-
 
     def dataReceived(self, bytes):
         self.expected -= len(bytes)
@@ -54,12 +57,10 @@ class ServerProtocol(Protocol):
             finished.callback(None)
 
 
-
 class BufferingProtocol(Protocol, BufferingMixin):
     """
     A protocol which uses the buffering mixin to provide a write method.
     """
-
 
 
 class UnbufferingProtocol(Protocol):
@@ -78,24 +79,24 @@ class UnbufferingProtocol(Protocol):
         self.flush = lambda: None
 
 
-
 def _write(proto, byteCount):
     write = proto.write
     flush = proto.flush
 
     for i in range(byteCount):
-        write('x')
+        write("x")
     flush()
-
 
 
 def _benchmark(byteCount, clientProtocol):
     result = {}
     finished = Deferred()
+
     def cbFinished(ignored):
-        result[u'disconnected'] = time()
-        result[u'duration'] = result[u'disconnected'] - result[u'connected']
+        result["disconnected"] = time()
+        result["duration"] = result["disconnected"] - result["connected"]
         return result
+
     finished.addCallback(cbFinished)
 
     f = ServerFactory()
@@ -103,24 +104,23 @@ def _benchmark(byteCount, clientProtocol):
     server = reactor.listenTCP(0, f)
 
     f2 = ClientCreator(reactor, clientProtocol)
-    proto = f2.connectTCP('127.0.0.1', server.getHost().port)
+    proto = f2.connectTCP("127.0.0.1", server.getHost().port)
+
     def connected(proto):
-        result[u'connected'] = time()
+        result["connected"] = time()
         return proto
+
     proto.addCallback(connected)
     proto.addCallback(_write, byteCount)
     return finished
-
 
 
 def _benchmarkBuffered(byteCount):
     return _benchmark(byteCount, BufferingProtocol)
 
 
-
 def _benchmarkUnbuffered(byteCount):
     return _benchmark(byteCount, UnbufferingProtocol)
-
 
 
 def benchmark(scale=1):
@@ -134,7 +134,7 @@ def benchmark(scale=1):
 
     @return: A Deferred which will fire with a dictionary mapping each of
     the two unicode strings C{u'buffered'} and C{u'unbuffered'} to
-    dictionaries describing the performance of a protocol of each type. 
+    dictionaries describing the performance of a protocol of each type.
     These value dictionaries will map the unicode strings C{u'connected'}
     and C{u'disconnected'} to the times at which each of those events
     occurred and C{u'duration'} two the difference between these two values.
@@ -144,17 +144,20 @@ def benchmark(scale=1):
     byteCount = 1024
 
     bufferedDeferred = _benchmarkBuffered(byteCount * scale)
+
     def didBuffered(bufferedResult):
-        overallResult[u'buffered'] = bufferedResult
-        unbufferedDeferred =  _benchmarkUnbuffered(byteCount * scale)
+        overallResult["buffered"] = bufferedResult
+        unbufferedDeferred = _benchmarkUnbuffered(byteCount * scale)
+
         def didUnbuffered(unbufferedResult):
-            overallResult[u'unbuffered'] = unbufferedResult
+            overallResult["unbuffered"] = unbufferedResult
             return overallResult
+
         unbufferedDeferred.addCallback(didUnbuffered)
         return unbufferedDeferred
+
     bufferedDeferred.addCallback(didBuffered)
     return bufferedDeferred
-
 
 
 def main(args=None):
@@ -167,17 +170,22 @@ def main(args=None):
     options = BufferingBenchmark()
     options.parseOptions(args)
 
-    d = benchmark(options['scale'])
+    d = benchmark(options["scale"])
+
     def cbBenchmark(result):
         pprint(result)
+
     def ebBenchmark(err):
         print(err.getTraceback())
+
     d.addCallbacks(cbBenchmark, ebBenchmark)
+
     def stopReactor(ign):
         reactor.stop()
+
     d.addBoth(stopReactor)
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -17,7 +17,6 @@ To run the script:
 
 """
 
-from __future__ import print_function
 
 import sys
 from twisted.python import log
@@ -97,7 +96,9 @@ def main():
     Set up logging, have the real main function run, and start the reactor.
     """
     if len(sys.argv) != 6:
-        raise SystemExit("Usage: %s host port username password group" % (sys.argv[0],))
+        raise SystemExit(
+            "Usage: {} host port username password group".format(sys.argv[0])
+        )
     log.startLogging(sys.stdout)
 
     host, port, username, password, group = sys.argv[1:]

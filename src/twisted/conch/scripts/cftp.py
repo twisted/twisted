@@ -37,12 +37,12 @@ class ClientOptions(options.ConchOptions):
         "executing commands to send and receive file information"
     )
 
-    optParameters = [
+    optParameters: List[List[Optional[Union[str, int]]]] = [
         ["buffersize", "B", 32768, "Size of the buffer to use for sending/receiving."],
         ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
         ["requests", "R", 5, "Number of requests to make before waiting for a reply."],
         ["subsystem", "s", "sftp", "Subsystem/server program to connect to."],
-    ]  # type: List[List[Optional[Union[str, int]]]]  # noqa
+    ]
 
     compData = usage.Completions(
         descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},
@@ -88,7 +88,7 @@ def handleError():
     exitStatus = 2
     try:
         reactor.stop()
-    except:
+    except BaseException:
         pass
     log.err(failure.Failure())
     raise
@@ -420,7 +420,7 @@ class StdioClient(basic.LineReceiver):
         lf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred %s to %s" % (rf.name, lf.name)
+        return f"Transferred {rf.name} to {lf.name}"
 
     def cmd_PUT(self, rest):
         """
@@ -517,7 +517,7 @@ class StdioClient(basic.LineReceiver):
             try:
                 currentFile = files.pop(0)
                 localStream = open(currentFile, "rb")
-            except:
+            except BaseException:
                 self._printFailure(failure.Failure())
                 currentFile = None
 
@@ -590,7 +590,7 @@ class StdioClient(basic.LineReceiver):
         rf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred %s to %s" % (lf.name, rf.name)
+        return f"Transferred {lf.name} to {rf.name}"
 
     def cmd_LCD(self, path):
         os.chdir(path)
@@ -779,7 +779,7 @@ version                         Print the SFTP version.
             return matchedFiles
 
     def _abbrevSize(self, size):
-        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html  # noqa
+        # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
             (1 << 50, "PB"),
             (1 << 40, "TB"),
@@ -823,7 +823,7 @@ version                         Print the SFTP version.
         total = f.total
         try:
             winSize = struct.unpack("4H", fcntl.ioctl(0, tty.TIOCGWINSZ, "12345679"))
-        except IOError:
+        except OSError:
             winSize = [None, 80]
         if diff == 0.0:
             speed = 0.0
@@ -845,7 +845,7 @@ version                         Print the SFTP version.
             self._abbrevTime(timeLeft),
         )
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * " "
-        command = "\r%s%s%s" % (front, spaces, back)
+        command = f"\r{front}{spaces}{back}"
         self._writeToTransport(command)
 
     def _getFilename(self, line):
@@ -873,7 +873,7 @@ version                         Print the SFTP version.
                     elif c == "\\":  # quoted character
                         del line[i]
                         if line[i] not in "'\"\\":
-                            raise IndexError("bad quote: \\%s" % (line[i],))
+                            raise IndexError("bad quote: \\{}".format(line[i]))
                         ret.append(line[i])
                     else:
                         ret.append(line[i])

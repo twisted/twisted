@@ -78,7 +78,7 @@ classInfo = [
 ]
 
 
-uuidToLoader = dict([(uuid, loader) for (predicate, uuid, saver, loader) in classInfo])
+uuidToLoader = {uuid: loader for (predicate, uuid, saver, loader) in classInfo}
 
 
 def objectLoadHook(aDict: JSONDict) -> object:
@@ -183,7 +183,7 @@ def jsonFileLogObserver(
     @return: A file log observer.
     """
     return FileLogObserver(
-        outFile, lambda event: "{0}{1}\n".format(recordSeparator, eventAsJSON(event))
+        outFile, lambda event: "{}{}\n".format(recordSeparator, eventAsJSON(event))
     )
 
 

@@ -15,8 +15,12 @@ See also twisted.python.shortcut.
 import re
 import os
 
+from incremental import Version
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+
+# https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
@@ -32,10 +36,25 @@ class FakeWindowsError(OSError):
     """
 
 
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "FakeWindowsError",
+)
+
+
 try:
-    WindowsError = WindowsError  # type: OSError
+    WindowsError: OSError = WindowsError
 except NameError:
     WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
+
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "WindowsError",
+)
 
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
@@ -80,7 +99,7 @@ class _ErrorFormatter:
     Formatter for Windows error messages.
 
     @ivar winError: A callable which takes one integer error number argument
-        and returns an L{exceptions.WindowsError} instance for that error (like
+        and returns a L{WindowsError} instance for that error (like
         L{ctypes.WinError}).
 
     @ivar formatMessage: A callable which takes one integer error number

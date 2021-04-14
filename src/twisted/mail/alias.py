@@ -205,7 +205,7 @@ class AddressAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the destination address.
         """
-        return "<Address %s>" % (self.alias,)
+        return f"<Address {self.alias}>"
 
     def createMessageReceiver(self):
         """
@@ -291,7 +291,7 @@ class FileWrapper:
         self.fp.seek(0, 0)
         try:
             f = open(self.finalname, "a")
-        except:
+        except BaseException:
             return defer.fail(failure.Failure())
 
         with f:
@@ -314,7 +314,7 @@ class FileWrapper:
         @rtype: L{bytes}
         @return: A string containing the file name of the message.
         """
-        return "<FileWrapper %s>" % (self.finalname,)
+        return f"<FileWrapper {self.finalname}>"
 
 
 @implementer(IAlias)
@@ -344,7 +344,7 @@ class FileAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the name of the file.
         """
-        return "<File %s>" % (self.filename,)
+        return f"<File {self.filename}>"
 
     def createMessageReceiver(self):
         """
@@ -480,9 +480,7 @@ class MessageWrapper:
         """
         self._timeoutCallID = None
         self.protocol.transport.signalProcess("KILL")
-        exc = ProcessAliasTimeout(
-            "No answer after %s seconds" % (self.completionTimeout,)
-        )
+        exc = ProcessAliasTimeout(f"No answer after {self.completionTimeout} seconds")
         self.protocol.onEnd = None
         self.completion.errback(failure.Failure(exc))
 
@@ -498,7 +496,7 @@ class MessageWrapper:
         @rtype: L{bytes}
         @return: A string containing the name of the process.
         """
-        return "<ProcessWrapper %s>" % (self.processName,)
+        return f"<ProcessWrapper {self.processName}>"
 
 
 class ProcessAliasProtocol(protocol.ProcessProtocol):
@@ -566,7 +564,7 @@ class ProcessAlias(AliasBase):
         @rtype: L{bytes}
         @return: A string containing the command used to invoke the process.
         """
-        return "<Process %s>" % (self.path,)
+        return f"<Process {self.path}>"
 
     def spawnProcess(self, proto, program, path):
         """
@@ -660,7 +658,7 @@ class MultiWrapper:
         @rtype: L{bytes}
         @return: A string containing a list of the message receivers.
         """
-        return "<GroupWrapper %r>" % (map(str, self.objs),)
+        return "<GroupWrapper {!r}>".format(map(str, self.objs))
 
 
 @implementer(IAlias)
@@ -700,8 +698,8 @@ class AliasGroup(AliasBase):
             if addr.startswith(":"):
                 try:
                     f = open(addr[1:])
-                except:
-                    log.err("Invalid filename in alias file %r" % (addr[1:],))
+                except BaseException:
+                    log.err("Invalid filename in alias file {!r}".format(addr[1:]))
                 else:
                     with f:
                         addr = " ".join([l.strip() for l in f])

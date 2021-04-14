@@ -32,7 +32,7 @@ class LoseConnChild(protocol.Protocol):
         try:
             try:
                 reason.trap(ConnectionDone)
-            except:
+            except BaseException:
                 log.err(None, "Problem with reason passed to connectionLost")
                 self.exitCode = 1
         finally:

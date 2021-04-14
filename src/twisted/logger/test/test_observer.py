@@ -41,7 +41,7 @@ class LogPublisherTests(unittest.TestCase):
         o2 = cast(ILogObserver, lambda e: None)
 
         publisher = LogPublisher(o1, o2)
-        self.assertEqual(set((o1, o2)), set(publisher._observers))
+        self.assertEqual({o1, o2}, set(publisher._observers))
 
     def test_addObserver(self) -> None:
         """
@@ -53,7 +53,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.addObserver(o3)
-        self.assertEqual(set((o1, o2, o3)), set(publisher._observers))
+        self.assertEqual({o1, o2, o3}, set(publisher._observers))
 
     def test_addObserverNotCallable(self) -> None:
         """
@@ -73,7 +73,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2, o3)
         publisher.removeObserver(o2)
-        self.assertEqual(set((o1, o3)), set(publisher._observers))
+        self.assertEqual({o1, o3}, set(publisher._observers))
 
     def test_removeObserverNotRegistered(self) -> None:
         """
@@ -86,7 +86,7 @@ class LogPublisherTests(unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.removeObserver(o3)
-        self.assertEqual(set((o1, o2)), set(publisher._observers))
+        self.assertEqual({o1, o2}, set(publisher._observers))
 
     def test_fanOut(self) -> None:
         """
@@ -94,9 +94,9 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1 = []  # type: List[LogEvent]
-        events2 = []  # type: List[LogEvent]
-        events3 = []  # type: List[LogEvent]
+        events1: List[LogEvent] = []
+        events2: List[LogEvent] = []
+        events3: List[LogEvent] = []
 
         o1 = cast(ILogObserver, events1.append)
         o2 = cast(ILogObserver, events2.append)
@@ -116,7 +116,7 @@ class LogPublisherTests(unittest.TestCase):
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")
 
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -125,7 +125,7 @@ class LogPublisherTests(unittest.TestCase):
             if shouldRaise:
                 raise exception
 
-        collector = []  # type: List[LogEvent]
+        collector: List[LogEvent] = []
 
         publisher = LogPublisher(observer, cast(ILogObserver, collector.append))
         publisher(event)
@@ -169,7 +169,7 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2, log_trace=[])
 
-        traces = {}  # type: Dict[int, Tuple[Tuple[Logger, ILogObserver]]]
+        traces: Dict[int, Tuple[Tuple[Logger, ILogObserver]]] = {}
 
         # Copy trace to a tuple; otherwise, both observers will store the same
         # mutable list, and we won't be able to see o1's view distinctly.

@@ -22,7 +22,7 @@ This is the sixth part of the Twisted tutorial :doc:`Twisted from Scratch, or Th
 
 
 In this part, we demonstrate adding a web frontend using
-simple :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` 
+simple :py:class:`twisted.web.resource.Resource` 
 objects: ``UserStatusTree`` , which will
 produce a listing of all users at the base URL (``/`` ) of our
 site; ``UserStatus`` , which gives the status

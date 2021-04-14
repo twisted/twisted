@@ -243,7 +243,7 @@ def handshakingClientAndServer(
         peerAfterHandshake = None
 
         def connectionMade(self):
-            super(Client, self).connectionMade()
+            super().connectionMade()
             if clientGreetingData is not None:
                 self.transport.write(clientGreetingData)
 

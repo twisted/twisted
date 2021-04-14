@@ -28,7 +28,7 @@ class PyUnitTestTests(SynchronousTestCase):
         """
         Tests must be callable in order to be used with Python's unittest.py.
         """
-        self.assertTrue(callable(self.test), "%r is not callable." % (self.test,))
+        self.assertTrue(callable(self.test), f"{self.test!r} is not callable.")
 
 
 class PyUnitResultTests(SynchronousTestCase):

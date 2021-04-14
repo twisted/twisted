@@ -84,7 +84,7 @@ def shouldLogEvent(predicates: Iterable[ILogFilterPredicate], event: LogEvent) -
             return False
         if result == PredicateResult.maybe:
             continue
-        raise TypeError("Invalid predicate result: {0!r}".format(result))
+        raise TypeError(f"Invalid predicate result: {result!r}")
     return True
 
 
@@ -138,7 +138,7 @@ class LogLevelFilterPredicate:
         """
         @param defaultLogLevel: The default minimum log level.
         """
-        self._logLevelsByNamespace = {}  # type: Dict[str, NamedConstant]
+        self._logLevelsByNamespace: Dict[str, NamedConstant] = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
 

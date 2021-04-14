@@ -224,7 +224,7 @@ class Resource:
         if not isinstance(path, bytes):
             warnings.warn(
                 "Path segment must be bytes; "
-                "passing {0} has never worked, and "
+                "passing {} has never worked, and "
                 "will raise an exception in the future.".format(type(path)),
                 category=DeprecationWarning,
                 stacklevel=2,
@@ -380,7 +380,7 @@ class _IEncodingResource(Interface):
 
 
 @implementer(_IEncodingResource)
-class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc] # noqa
+class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[misc]
     """
     Wrap a L{IResource}, potentially applying an encoding to the response body
     generated.
@@ -400,7 +400,7 @@ class EncodingResourceWrapper(proxyForInterface(IResource)):  # type: ignore[mis
     """
 
     def __init__(self, original, encoders):
-        super(EncodingResourceWrapper, self).__init__(original)
+        super().__init__(original)
         self._encoders = encoders
 
     def getEncoder(self, request):

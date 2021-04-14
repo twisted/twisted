@@ -65,7 +65,7 @@ and how to use a particular implementation is available via
 
 
 
-Twisted applications can use the interfaces in :api:`twisted.application.service <twisted.application.service>` to configure and run the
+Twisted applications can use the interfaces in :py:mod:`twisted.application.service` to configure and run the
 application instead of using
 boilerplate reactor code. See :doc:`Using Application <application>` for an introduction to
 Application.
@@ -80,7 +80,7 @@ Using the reactor object
 
 
     
-You can get to the :api:`twisted.internet.reactor <reactor>` object using the following code:
+You can get to the :py:mod:`reactor <twisted.internet.reactor>` object using the following code:
 
 
 
@@ -103,23 +103,23 @@ the interfaces may not be implemented:
 
 
 
-- :api:`twisted.internet.interfaces.IReactorCore <IReactorCore>` : Core (required) functionality.
-- :api:`twisted.internet.interfaces.IReactorFDSet <IReactorFDSet>` : Use FileDescriptor objects.
-- :api:`twisted.internet.interfaces.IReactorProcess <IReactorProcess>` : Process management. Read the 
+- :py:class:`IReactorCore <twisted.internet.interfaces.IReactorCore>` : Core (required) functionality.
+- :py:class:`IReactorFDSet <twisted.internet.interfaces.IReactorFDSet>` : Use FileDescriptor objects.
+- :py:class:`IReactorProcess <twisted.internet.interfaces.IReactorProcess>` : Process management. Read the 
   :doc:`Using Processes <process>` document for
   more information.
-- :api:`twisted.internet.interfaces.IReactorSSL <IReactorSSL>` : SSL networking support.
-- :api:`twisted.internet.interfaces.IReactorTCP <IReactorTCP>` : TCP networking support. More information
+- :py:class:`IReactorSSL <twisted.internet.interfaces.IReactorSSL>` : SSL networking support.
+- :py:class:`IReactorTCP <twisted.internet.interfaces.IReactorTCP>` : TCP networking support. More information
   can be found in the :doc:`Writing Servers <servers>` 
   and :doc:`Writing Clients <clients>` documents.
-- :api:`twisted.internet.interfaces.IReactorThreads <IReactorThreads>` : Threading use and management. More
+- :py:class:`IReactorThreads <twisted.internet.interfaces.IReactorThreads>` : Threading use and management. More
   information can be found within :doc:`Threading In Twisted <threading>` .
-- :api:`twisted.internet.interfaces.IReactorTime <IReactorTime>` : Scheduling interface.  More information
+- :py:class:`IReactorTime <twisted.internet.interfaces.IReactorTime>` : Scheduling interface.  More information
   can be found within :doc:`Scheduling Tasks <time>` .
-- :api:`twisted.internet.interfaces.IReactorUDP <IReactorUDP>` : UDP networking support. More information
+- :py:class:`IReactorUDP <twisted.internet.interfaces.IReactorUDP>` : UDP networking support. More information
   can be found within :doc:`UDP Networking <udp>` .
-- :api:`twisted.internet.interfaces.IReactorUNIX <IReactorUNIX>` : UNIX socket support.
-- :api:`twisted.internet.interfaces.IReactorSocket <IReactorSocket>` : Third-party socket support.
+- :py:class:`IReactorUNIX <twisted.internet.interfaces.IReactorUNIX>` : UNIX socket support.
+- :py:class:`IReactorSocket <twisted.internet.interfaces.IReactorSocket>` : Third-party socket support.
 
   
 

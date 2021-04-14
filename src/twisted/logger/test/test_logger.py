@@ -57,7 +57,7 @@ class LogComposedObject:
         self.state = state
 
     def __str__(self) -> str:
-        return "<LogComposedObject {state}>".format(state=self.state)
+        return f"<LogComposedObject {self.state}>"
 
 
 class LoggerTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
+        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
 
     def test_namespaceDefault(self) -> None:
         """
@@ -86,7 +86,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result = []  # type: List[Logger]
+        result: List[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -101,7 +101,7 @@ class LoggerTests(unittest.TestCase):
         """
         obj = LogComposedObject()
 
-        expectedNamespace = "{0}.{1}".format(
+        expectedNamespace = "{}.{}".format(
             obj.__module__,
             obj.__class__.__name__,
         )
@@ -120,12 +120,12 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed = []  # type: List[LogEvent]
+        observed: List[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))
 
-        cast(Logger, MyObject.log).info("hello")
+        MyObject.log.info("hello")
         self.assertEqual(len(observed), 1)
         self.assertEqual(observed[0]["log_format"], "hello")
 

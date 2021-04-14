@@ -32,13 +32,11 @@ class SetAsideModule:
         Find the given module and all of its hierarchically inferior modules in
         C{sys.modules}, remove them from it, and return whatever was found.
         """
-        modules = dict(
-            [
-                (moduleName, module)
-                for (moduleName, module) in list(sys.modules.items())
-                if (moduleName == self.name or moduleName.startswith(self.name + "."))
-            ]
-        )
+        modules = {
+            moduleName: module
+            for (moduleName, module) in list(sys.modules.items())
+            if (moduleName == self.name or moduleName.startswith(self.name + "."))
+        }
         for name in modules:
             del sys.modules[name]
         return modules

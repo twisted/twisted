@@ -10,8 +10,8 @@ from twisted.python import components, log
 from twisted.web import resource, server, xmlrpc
 from twisted.spread import pb
 
-class IFingerService(Interface):
 
+class IFingerService(Interface):
     def getUser(user):
         """
         Return a deferred returning a L{bytes}.
@@ -24,7 +24,6 @@ class IFingerService(Interface):
 
 
 class IFingerSetterService(Interface):
-
     def setUser(user, status):
         """
         Set the user's status to something.
@@ -36,18 +35,18 @@ def catchError(err):
 
 
 class FingerProtocol(basic.LineReceiver):
-
     def lineReceived(self, user):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
+
         def writeValue(value):
-            self.transport.write(value + b'\n')
+            self.transport.write(value + b"\n")
             self.transport.loseConnection()
+
         d.addCallback(writeValue)
 
 
 class IFingerFactory(Interface):
-
     def getUser(user):
         """
         Return a deferred returning L{bytes}.
@@ -70,13 +69,11 @@ class FingerFactoryFromService(protocol.ServerFactory):
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(FingerFactoryFromService,
-                           IFingerService,
-                           IFingerFactory)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService, IFingerFactory)
 
 
 class FingerSetterProtocol(basic.LineReceiver):
-
     def connectionMade(self):
         self.lines = []
 
@@ -89,7 +86,6 @@ class FingerSetterProtocol(basic.LineReceiver):
 
 
 class IFingerSetterFactory(Interface):
-
     def setUser(user, status):
         """
         Return a deferred returning L{bytes}.
@@ -113,23 +109,22 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
         self.service.setUser(user, status)
 
 
-components.registerAdapter(FingerSetterFactoryFromService,
-                           IFingerSetterService,
-                           IFingerSetterFactory)
+components.registerAdapter(
+    FingerSetterFactoryFromService, IFingerSetterService, IFingerSetterFactory
+)
 
 
 class IRCReplyBot(irc.IRCClient):
-
     def connectionMade(self):
         self.nickname = self.factory.nickname
         irc.IRCClient.connectionMade(self)
 
     def privmsg(self, user, channel, msg):
-        user = user.split('!')[0]
+        user = user.split("!")[0]
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
+            d.addCallback(lambda m: f"Status of {msg}: {m}")
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -162,9 +157,10 @@ class IRCClientFactoryFromService(protocol.ClientFactory):
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(IRCClientFactoryFromService,
-                           IFingerService,
-                           IIRCClientFactory)
+
+components.registerAdapter(
+    IRCClientFactoryFromService, IFingerService, IIRCClientFactory
+)
 
 
 class UserStatusTree(resource.Resource):
@@ -182,35 +178,48 @@ class UserStatusTree(resource.Resource):
         self.service = service
 
     def getChild(self, path, request):
-        if path == '':
+        if path == "":
             return self
-        elif path == 'RPC2':
+        elif path == "RPC2":
             return UserStatusXR(self.service)
         else:
             return UserStatus(path, self.service)
 
     def render_GET(self, request):
         users = self.service.getUsers()
+
         def cbUsers(users):
-            request.write(self.template % {'users': ''.join([
-                    # Name should be quoted properly these uses.
-                    '<li><a href="%s">%s</a></li>' % (name, name)
-                    for name in users])})
+            request.write(
+                self.template
+                % {
+                    "users": "".join(
+                        [
+                            # Name should be quoted properly these uses.
+                            f'<li><a href="{name}">{name}</a></li>'
+                            for name in users
+                        ]
+                    )
+                }
+            )
             request.finish()
+
         users.addCallback(cbUsers)
+
         def ebUsers(err):
             log.err(err, "UserStatusTree failed")
             request.finish()
+
         users.addErrback(ebUsers)
         return server.NOT_DONE_YET
+
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
 
 class UserStatus(resource.Resource):
 
-    template='''<html><head><title>%(title)s</title></head>
-    <body><h1>%(name)s</h1><p>%(status)s</p></body></html>'''
+    template = """<html><head><title>%(title)s</title></head>
+    <body><h1>%(name)s</h1><p>%(status)s</p></body></html>"""
 
     def __init__(self, user, service):
         resource.Resource.__init__(self)
@@ -219,22 +228,25 @@ class UserStatus(resource.Resource):
 
     def render_GET(self, request):
         status = self.service.getUser(self.user)
+
         def cbStatus(status):
-            request.write(self.template % {
-                'title': self.user,
-                'name': self.user,
-                'status': status})
+            request.write(
+                self.template
+                % {"title": self.user, "name": self.user, "status": status}
+            )
             request.finish()
+
         status.addCallback(cbStatus)
+
         def ebStatus(err):
             log.err(err, "UserStatus failed")
             request.finish()
+
         status.addErrback(ebStatus)
         return server.NOT_DONE_YET
 
 
 class UserStatusXR(xmlrpc.XMLRPC):
-
     def __init__(self, service):
         xmlrpc.XMLRPC.__init__(self)
         self.service = service
@@ -247,7 +259,6 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 
 class IPerspectiveFinger(Interface):
-
     def remote_getUser(username):
         """
         Return a user's status.
@@ -261,7 +272,6 @@ class IPerspectiveFinger(Interface):
 
 @implementer(IPerspectiveFinger)
 class PerspectiveFingerFromService(pb.Root):
-
     def __init__(self, service):
         self.service = service
 
@@ -271,14 +281,14 @@ class PerspectiveFingerFromService(pb.Root):
     def remote_getUsers(self):
         return self.service.getUsers()
 
-components.registerAdapter(PerspectiveFingerFromService,
-                           IFingerService,
-                           IPerspectiveFinger)
+
+components.registerAdapter(
+    PerspectiveFingerFromService, IFingerService, IPerspectiveFinger
+)
 
 
 @implementer(IFingerService)
 class FingerService(service.Service):
-
     def __init__(self, filename):
         self.filename = filename
 
@@ -286,7 +296,7 @@ class FingerService(service.Service):
         self.users = {}
         with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(b':', 1)
+                user, status = line.split(b":", 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
@@ -307,46 +317,45 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-
 # Easy configuration
+
 
 def makeService(config):
     # finger on port 79
     s = service.MultiService()
-    f = FingerService(config['file'])
+    f = FingerService(config["file"])
     h = strports.service("tcp:1079", IFingerFactory(f))
     h.setServiceParent(s)
 
-
     # website on port 8000
     r = resource.IResource(f)
-    r.templateDirectory = config['templates']
+    r.templateDirectory = config["templates"]
     site = server.Site(r)
     j = strports.service("tcp:8000", site)
     j.setServiceParent(s)
 
     # ssl on port 443
-#    if config.get('ssl'):
-#        k = strports.service(
-#            "ssl:port=443:certKey=cert.pem:privateKey=key.pem", site
-#        )
-#        k.setServiceParent(s)
+    #    if config.get('ssl'):
+    #        k = strports.service(
+    #            "ssl:port=443:certKey=cert.pem:privateKey=key.pem", site
+    #        )
+    #        k.setServiceParent(s)
 
     # irc fingerbot
-    if 'ircnick' in config:
+    if "ircnick" in config:
         i = IIRCClientFactory(f)
-        i.nickname = config['ircnick']
-        ircserver = config['ircserver']
+        i.nickname = config["ircnick"]
+        ircserver = config["ircserver"]
         b = internet.ClientService(
             endpoints.HostnameEndpoint(reactor, ircserver, 6667), i
         )
         b.setServiceParent(s)
 
     # Pespective Broker on port 8889
-    if 'pbport' in config:
+    if "pbport" in config:
         m = internet.StreamServerEndpointService(
-            endpoints.TCP4ServerEndpoint(reactor, int(config['pbport'])),
-            pb.PBServerFactory(IPerspectiveFinger(f))
+            endpoints.TCP4ServerEndpoint(reactor, int(config["pbport"])),
+            pb.PBServerFactory(IPerspectiveFinger(f)),
         )
         m.setServiceParent(s)
 

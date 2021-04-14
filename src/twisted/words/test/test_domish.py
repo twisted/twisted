@@ -140,7 +140,7 @@ class ElementTests(unittest.TestCase):
         element.addContent("\N{SNOWMAN}")
 
         text = bytes(element)
-        self.assertEqual("\N{SNOWMAN}".encode("utf-8"), text)
+        self.assertEqual("\N{SNOWMAN}".encode(), text)
         self.assertIsInstance(text, bytes)
 
     def test_characterDataMixed(self):

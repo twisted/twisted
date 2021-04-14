@@ -42,7 +42,7 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents = []  # type: List[LogEvent]
+        outEvents: List[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events, outEvents)
 
@@ -58,6 +58,6 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents = []  # type: List[LogEvent]
+        outEvents: List[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events[-size:], outEvents)

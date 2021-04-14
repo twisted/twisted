@@ -300,9 +300,9 @@ def namedAny(name):
                 moduleNames.pop()
         else:
             if len(names) == 1:
-                raise ModuleNotFound("No module named %r" % (name,))
+                raise ModuleNotFound(f"No module named {name!r}")
             else:
-                raise ObjectNotFound("%r does not name an object" % (name,))
+                raise ObjectNotFound(f"{name!r} does not name an object")
 
     obj = topLevelPackage
     for n in names[1:]:
@@ -340,7 +340,7 @@ def filenameToModuleName(fn):
     while 1:
         fullName = os.path.dirname(fullName)
         if os.path.exists(os.path.join(fullName, initPy)):
-            modName = "%s.%s" % (
+            modName = "{}.{}".format(
                 nativeString(os.path.basename(fullName)),
                 nativeString(modName),
             )
@@ -359,7 +359,7 @@ def qual(clazz):
 def _determineClass(x):
     try:
         return x.__class__
-    except:
+    except BaseException:
         return type(x)
 
 
@@ -367,10 +367,10 @@ def _determineClassName(x):
     c = _determineClass(x)
     try:
         return c.__name__
-    except:
+    except BaseException:
         try:
             return str(c)
-        except:
+        except BaseException:
             return "<BROKEN CLASS AT 0x%x>" % id(c)
 
 
@@ -393,7 +393,7 @@ def _safeFormat(formatter: Union[types.FunctionType, Type[str]], o: object) -> s
     traceback.print_exc(file=io)
     className = _determineClassName(o)
     tbValue = io.getvalue()
-    return "<%s instance at 0x%x with %s error:\n %s>" % (
+    return "<{} instance at 0x{:x} with {} error:\n {}>".format(
         className,
         id(o),
         formatter.__name__,
@@ -412,7 +412,7 @@ def safe_repr(o):
     """
     try:
         return repr(o)
-    except:
+    except BaseException:
         return _safeFormat(repr, o)
 
 
@@ -428,11 +428,11 @@ def safe_str(o: object) -> str:
         # convert it to str.
         try:
             return o.decode("utf-8")
-        except:
+        except BaseException:
             pass
     try:
         return str(o)
-    except:
+    except BaseException:
         return _safeFormat(str, o)
 
 
@@ -452,7 +452,7 @@ class QueueMethod:
 def fullFuncName(func):
     qualName = str(pickle.whichmodule(func, func.__name__)) + "." + func.__name__
     if namedObject(qualName) is not func:
-        raise Exception("Couldn't find %s as %s." % (func, qualName))
+        raise Exception(f"Couldn't find {func} as {qualName}.")
     return qualName
 
 

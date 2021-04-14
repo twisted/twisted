@@ -44,14 +44,14 @@ Creating formatted text
 
 The API used for creating formatted text in the IRC client is almost the
 same as that used by
-Twisted :api:`twisted.conch.insults <insults>` .
+Twisted :py:mod:`insults <twisted.conch.insults>` .
 Text attributes are built up by accessing and indexing attributes on
 a special module-level attribute,
-:api:`twisted.words.protocols.irc.attributes <twisted.words.protocols.irc.attributes>` ,
+:py:attr:`twisted.words.protocols.irc.attributes` ,
 multiple values can be passed when indexing attributes to mix text with
 nested text attributes. The resulting object can then be serialized to
 formatted text, with
-:api:`twisted.words.protocols.irc.assembleFormattedText <twisted.words.protocols.irc.assembleFormattedText>` ,
+:py:func:`twisted.words.protocols.irc.assembleFormattedText` ,
 suitable for use with any of the IRC client messaging functions.
 
 
@@ -69,7 +69,7 @@ Bold, underline and reverse video attributes are just flags and are the
 simplest text attributes to apply. They are accessed by the names
 ``bold`` , ``underline`` and ``reverseVideo`` ,
 respectively, on
-:api:`twisted.words.protocols.irc.attributes <twisted.words.protocols.irc.attributes>` . For
+:py:attr:`twisted.words.protocols.irc.attributes` . For
 example, messaging someone the bold and underlined text "Hello world!":
 
 
@@ -201,7 +201,7 @@ Parsing formatted text
 
 Most IRC clients format text so it is logical that you may want to parse
 this formatted text.
-:api:`twisted.words.protocols.irc.parseFormattedText <twisted.words.protocols.irc.parseFormattedText>` 
+:py:func:`twisted.words.protocols.irc.parseFormattedText` 
 will parse text into structured text attributes. It is worth noting that
 while feeding the output of ``parseFormattedText`` back to
 ``assembleFormattedText`` will produce the same final result,
@@ -222,7 +222,7 @@ Removing formatting
 In some cases, such as an automaton handling user input from IRC, it is
 desirable to have all formatting stripped from text. This can be
 accomplished with
-:api:`twisted.words.protocols.irc.stripFormatting <twisted.words.protocols.irc.stripFormatting>` .
+:py:func:`twisted.words.protocols.irc.stripFormatting` .
 
   
 

@@ -23,7 +23,7 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
     """
 
     def __init__(self, original):
-        super(DistReporter, self).__init__(original)
+        super().__init__(original)
         self.running = {}
 
     def startTest(self, test):

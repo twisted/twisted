@@ -99,7 +99,7 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
 
     def setUp(self):
-        super(IQAuthInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID("user@example.com/resource")
         self.authenticator.password = "secret"
@@ -298,7 +298,7 @@ class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
 
     def setUp(self):
-        super(BindInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.BindInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID("user@example.com/resource")
 
@@ -344,7 +344,7 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
 
     def setUp(self):
-        super(SessionInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.SessionInitializer(self.xmlstream)
 
     def testSuccess(self):

@@ -642,7 +642,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         A test case that fails when run 3 times in a row.
         """
 
-        count = []  # type: List[None]
+        count: List[None] = []
 
         def test_foo(self):
             self.count.append(None)

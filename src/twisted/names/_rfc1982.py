@@ -84,7 +84,7 @@ class SerialNumber(FancyStrMixin):
         @raise TypeError: If C{other} is not compatible.
         """
         if not isinstance(other, SerialNumber):
-            raise TypeError("cannot compare or combine %r and %r" % (self, other))
+            raise TypeError(f"cannot compare or combine {self!r} and {other!r}")
 
         if self._serialBits != other._serialBits:
             raise TypeError(

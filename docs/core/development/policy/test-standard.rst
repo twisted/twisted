@@ -237,17 +237,17 @@ Real I/O
 Most unit tests should avoid performing real, platform-implemented I/O operations.
 Real I/O is slow, unreliable, and unwieldy.
 
-When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
+When implementing a protocol, :py:class:`twisted.internet.testing.StringTransport` can be used instead of a real TCP transport.
 ``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
-If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
+If you need pair a client to a server and have them talk to each other, use ``twisted.test.iosim.connect`` with ``twisted.test.iosim.FakeTransport`` transports.
 
 
 Real Time
 ~~~~~~~~~
 
 Most unit tests should also avoid waiting for real time to pass.
-Unit tests which construct and advance a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and deterministic.
+Unit tests which construct and advance a :py:class:`twisted.internet.task.Clock` are fast and deterministic.
 
 When designing your code allow for the reactor to be injected during tests.
 
@@ -306,7 +306,7 @@ Since unit tests are avoiding real I/O and real time, they can usually avoid usi
 The only exceptions to this are unit tests for a real reactor implementation.
 Unit tests for protocol implementations or other application code should not use a reactor.
 Unit tests for real reactor implementations should not use the global reactor, but should
-instead use :api:`twisted.internet.test.reactormixins.ReactorBuilder` so they can be applied to all of the reactor implementations automatically.
+instead use ``twisted.internet.test.reactormixins.ReactorBuilder`` so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 

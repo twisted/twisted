@@ -126,7 +126,7 @@ class VersionsTests(TestCase):
         Calling C{str} on a version with a prerelease includes the prerelease.
         """
         self.assertEqual(
-            str(Version("dummy", 1, 0, 0, prerelease=1)), "[dummy, version 1.0.0rc1]"
+            str(Version("dummy", 1, 0, 0, prerelease=1)), "[dummy, version 1.0.0.rc1]"
         )
 
     def testShort(self):
@@ -145,7 +145,7 @@ class VersionsTests(TestCase):
         """
         self.assertEqual(
             getVersionString(Version("whatever", 8, 0, 0, prerelease=1)),
-            "whatever 8.0.0rc1",
+            "whatever 8.0.0.rc1",
         )
 
     def test_base(self):
@@ -158,4 +158,4 @@ class VersionsTests(TestCase):
         """
         The base version includes 'preX' for versions with prereleases.
         """
-        self.assertEqual(Version("foo", 1, 0, 0, prerelease=8).base(), "1.0.0rc8")
+        self.assertEqual(Version("foo", 1, 0, 0, prerelease=8).base(), "1.0.0.rc8")

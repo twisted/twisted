@@ -6,8 +6,6 @@ Tests for L{twisted.internet._baseprocess} which implements process-related
 functionality that is useful in all platforms supporting L{IReactorProcess}.
 """
 
-__metaclass__ = type
-
 from twisted.python.deprecate import getWarningMethod, setWarningMethod
 from twisted.trial.unittest import TestCase
 from twisted.internet._baseprocess import BaseProcess

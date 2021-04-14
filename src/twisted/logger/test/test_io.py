@@ -34,8 +34,8 @@ class TestLoggingFile(LoggingFile):
         encoding: Optional[str] = None,
     ) -> None:
         super().__init__(logger=logger, level=level, encoding=encoding)
-        self.events = []  # type: List[LogEvent]
-        self.messages = []  # type: List[str]
+        self.events: List[LogEvent] = []
+        self.messages: List[str] = []
 
     def __call__(self, event: LogEvent) -> None:
         self.events.append(event)
@@ -59,7 +59,16 @@ class LoggingFileTests(unittest.TestCase):
         """
         L{LoggingFile.softspace} is 0.
         """
-        self.assertEqual(LoggingFile.softspace, 0)
+        self.assertEqual(LoggingFile(self.logger).softspace, 0)
+
+        warningsShown = self.flushWarnings([self.test_softspace])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        deprecatedClass = "twisted.logger._io.LoggingFile.softspace"
+        self.assertEqual(
+            warningsShown[0]["message"],
+            "%s was deprecated in Twisted 21.2.0" % (deprecatedClass),
+        )
 
     def test_readOnlyAttributes(self) -> None:
         """
@@ -269,7 +278,7 @@ class LoggingFileTests(unittest.TestCase):
         # TestLoggingFile we will create, but that takes the Logger as an
         # argument, so we'll use an array to indirectly reference the
         # TestLoggingFile.
-        loggingFiles = []  # type: List[TestLoggingFile]
+        loggingFiles: List[TestLoggingFile] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:

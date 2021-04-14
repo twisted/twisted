@@ -37,7 +37,7 @@ class Twist:
         try:
             options.parseOptions(argv[1:])
         except UsageError as e:
-            exit(ExitStatus.EX_USAGE, "Error: {}\n\n{}".format(e, options))
+            exit(ExitStatus.EX_USAGE, f"Error: {e}\n\n{options}")
 
         return options
 
@@ -102,8 +102,12 @@ class Twist:
         options = cls.options(argv)
 
         reactor = options["reactor"]
+        # If subCommand is None, TwistOptions.parseOptions() raises UsageError
+        # and Twist.options() will exit the runner, so we'll never get here.
+        subCommand = options.subCommand
+        assert subCommand is not None
         service = cls.service(
-            plugin=options.plugins[options.subCommand],
+            plugin=options.plugins[subCommand],
             options=options.subOptions,
         )
 

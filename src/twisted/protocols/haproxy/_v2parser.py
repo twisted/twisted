@@ -137,7 +137,7 @@ class V2Parser:
         """
         hexString = binascii.b2a_hex(bytestring)
         return b":".join(
-            ("%x" % (int(hexString[b : b + 4], 16),)).encode("ascii")
+            ("{:x}".format(int(hexString[b : b + 4], 16))).encode("ascii")
             for b in range(0, 32, 4)
         )
 

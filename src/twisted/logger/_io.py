@@ -10,7 +10,9 @@ import sys
 from typing import AnyStr, Iterable, Optional
 
 from constantly import NamedConstant
+from incremental import Version
 
+from twisted.python.deprecate import deprecatedProperty
 from ._levels import LogLevel
 from ._logger import Logger
 
@@ -22,11 +24,19 @@ class LoggingFile:
     Note that because event formats are L{str}, C{bytes} received via C{write()}
     are converted to C{str}, which is the opposite of what C{file} does.
 
-    @ivar softspace: File-like L{'softspace' attribute <file.softspace>}; zero
-        or one.
+    @ivar softspace: Attribute to make this class more file-like under Python 2;
+        value is zero or one.  Do not use.
     """
 
-    softspace = 0
+    _softspace = 0
+
+    @deprecatedProperty(Version("Twisted", 21, 2, 0))
+    def softspace(self):
+        return self._softspace
+
+    @softspace.setter  # type: ignore[no-redef]
+    def softspace(self, value):
+        self._softspace = value
 
     def __init__(
         self,
@@ -95,7 +105,7 @@ class LoggingFile:
 
         @return: A file name.
         """
-        return "<{0} {1}#{2}>".format(
+        return "<{} {}#{}>".format(
             self.__class__.__name__,
             self.log.namespace,
             self.level.name,
@@ -165,7 +175,7 @@ class LoggingFile:
 
         @param args: Arguments.
         """
-        raise IOError("unsupported operation")
+        raise OSError("unsupported operation")
 
     read = _unsupported
     next = _unsupported

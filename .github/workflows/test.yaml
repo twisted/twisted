@@ -1,19 +1,73 @@
-name: Run tests
+# Try to get a short workflow name and a job name that start with Python
+# version to make it easier to check the status inside GitHub UI.
+name: CI
 
 on:
   push:
     branches: [ trunk ]
+    tags:
+      - twisted-*
   pull_request:
     branches: [ trunk ]
+
+
+defaults:
+  run:
+    shell: bash
+
 
 jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
+      TOXENV: "${{ matrix.tox-env }}"
+      # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
+      TRIAL_ARGS: "-j 4"
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
+      fail-fast: false
       matrix:
-          python-version: [3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2, pypy3]
+        # Run on the minimum micro Python version that we can get on CI.
+        # When updating the minimum Python version here, also update the
+        # `python_requires` from `setup.cfg`.
+        # Run on latest minor release of each major python version.
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
+        tox-env: ['alldeps-withcov-posix']
+        # By default, tests are executed without disabling IPv6.
+        noipv6: ['']
+        # Tests are executed with the default target which is the full test suite.
+        trial-target: ['']
+
+        include:
+
+          # `nodeps` is created to make sure we don't have import errors in the
+          # runtime and production code.
+          # The minimum supported Python version should be used to maximize
+          # coverage of code that otherwise depends on backports.
+          # Distributed test run is disabled here so that we also have
+          # end to end functional test usage for non-distributed trial runs.
+          - python-version: 3.6.7
+            tox-env: nodeps-withcov-posix
+          # `noipv6` is created to make sure all is OK on an OS which doesn't
+          # have IPv6 available.
+          # Any supported Python version is OK for this job.
+          - python-version: 3.6
+            tox-env: alldeps-withcov-posix
+            noipv6: -noipv6
+          # On PYPY coverage is very slow (5min vs 30min) as there is no C
+          # extension.
+          # There is very little PYPY specific code so there is not much to
+          # gain from reporting coverage.
+          - python-version: pypy-3.6
+            tox-env: alldeps-nocov-posix
+          - python-version: pypy-3.7
+            tox-env: alldeps-nocov-posix
+          # We still run some tests with coverage
+          - python-version: pypy-3.7
+            tox-env: alldeps-withcov-posix
+            trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
+
 
     steps:
     - uses: actions/checkout@v2
@@ -23,85 +77,94 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Display Python information
-      run: |
-        python --version
-        python -c "import sys; print(sys.prefix)"
-        python -c "import sys; print(sys.exec_prefix)"
-        python -c "import sys; print(sys.executable)"
-        python -c "import struct; print(struct.calcsize('P') * 8)"
-        python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
-
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
+        echo "::set-output name=dir::$(pip cache dir)"
 
-    - uses: actions/cache@v2
+    - name: pip cache
+      uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
         restore-keys: |
             ${{ runner.os }}-pip-
 
+    - name: Disable IPv6
+      if: matrix.noipv6
+      run: |
+        sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+        ip a
+
+    - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
-        tox --notest
+        python -m pip install --upgrade pip tox coverage coveralls
 
     - name: Test
       run: |
-        python --version
-        tox -q
+        tox ${{ matrix.trial-target }}
 
-  # We need a builder without IPv6. This is going to be slower than all the
-  # others, but that's ok.
-  testing_no_ipv6:
+    - name: Prepare coverage
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report --skip-covered
+
+    - uses: codecov/codecov-action@v1
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      with:
+        files: coverage.xml
+        name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        fail_ci_if_error: true
+        functionalities: gcov,search
+
+    - name: Publish to Coveralls
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      continue-on-error: true
+      run: |
+        python -m coveralls -v
+      env:
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
+
+
+  pypi-publish:
+    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    name: Check release and publish on twisted-* tag
     runs-on: ubuntu-20.04
-    env:
-      DISABLE_IPV6: yes
-      TOXENV: "alldeps-withcov-posix,coverage-prepare,codecov-push,coveralls-push"
-    strategy:
-      matrix:
-          python-version: [3.6]
-
     steps:
     - uses: actions/checkout@v2
 
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        python -c "from pip._internal.locations import USER_CACHE_DIR; print('::set-output name=dir::' + USER_CACHE_DIR)"
-
-    - uses: actions/cache@v2
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-            ${{ runner.os }}-pip-
-
-    - name: Display Python information
-      run: |
-        python --version
-        python -c "import sys; print(sys.prefix)"
-        python -c "import sys; print(sys.exec_prefix)"
-        python -c "import sys; print(sys.executable)"
-        python -c "import struct; print(struct.calcsize('P') * 8)"
-        python -c "print('\nENVIRONMENT VARIABLES\n=====================\n\n')"
-        python -c "import os; [ print(e,v) for (e,v) in os.environ.items() ]" 
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip tox
-        tox --notest
+        python-version: 3.9
 
     - name: Test
       run: |
-        python --version
-        tox -q
+        python -m pip install --upgrade pip tox pep517
+        rm -rf dist/*
+        tox -e release-prepare
+
+    - uses: twisted/python-info-action@v1
+
+    - name: Display structure of files to be pushed
+      run: ls -R dist/
+
+    - name: Check matched tag version and branch version - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+
+    - name: Publish to PyPI - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}

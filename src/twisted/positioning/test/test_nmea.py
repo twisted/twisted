@@ -96,7 +96,7 @@ class CallbackTests(TestCase):
         for sentenceType, sentences in sentencesByType.items():
             for sentence in sentences:
                 self.protocol.lineReceived(sentence)
-                self.assertEqual(self.sentenceTypes, set([sentenceType]))
+                self.assertEqual(self.sentenceTypes, {sentenceType})
                 self.sentenceTypes.clear()
 
 
@@ -997,9 +997,11 @@ class NMEAReceiverTests(TestCase):
         """
         self.protocol.lineReceived(GPGGA)
 
-        gpggaCallbacks = set(
-            ["positionReceived", "positionErrorReceived", "altitudeReceived"]
-        )
+        gpggaCallbacks = {
+            "positionReceived",
+            "positionErrorReceived",
+            "altitudeReceived",
+        }
         self.assertEqual(set(self.receiver.called.keys()), gpggaCallbacks)
 
         self.receiver.clear()
@@ -1009,7 +1011,7 @@ class NMEAReceiverTests(TestCase):
         # altitude or anything like that; but that information is
         # still in the state.
         self.protocol.lineReceived(GPHDT)
-        gphdtCallbacks = set(["headingReceived"])
+        gphdtCallbacks = {"headingReceived"}
         self.assertEqual(set(self.receiver.called.keys()), gphdtCallbacks)
 
     def _receiverTest(self, sentences, expectedFired=(), extraTest=None):

@@ -35,7 +35,7 @@ def linkList(lst):
     io = StringIO()
     io.write("<ul>\n")
     for hr, el in lst:
-        io.write('<li> <a href="%s">%s</a></li>\n' % (hr, el))
+        io.write(f'<li> <a href="{hr}">{el}</a></li>\n')
     io.write("</ul>")
     return io.getvalue()
 
@@ -49,7 +49,7 @@ def output(func, *args, **kw):
     """
     try:
         return func(*args, **kw)
-    except:
-        log.msg("Error calling %r:" % (func,))
+    except BaseException:
+        log.msg(f"Error calling {func!r}:")
         log.err()
         return PRE("An error occurred.")

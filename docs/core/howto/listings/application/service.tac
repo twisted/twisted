@@ -14,6 +14,7 @@ import os
 from twisted.application import service, internet
 from twisted.web import static, server
 
+
 def getWebService():
     """
     Return a service suitable for creating an application object.
@@ -24,6 +25,7 @@ def getWebService():
     # create a resource to serve static files
     fileServer = server.Site(static.File(os.getcwd()))
     return internet.TCPServer(8080, fileServer)
+
 
 # this is the core part of any tac file, the creation of the root-level
 # application object

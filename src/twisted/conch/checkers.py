@@ -11,6 +11,7 @@ import sys
 import binascii
 import errno
 from base64 import decodebytes
+from typing import BinaryIO, Callable, Iterator
 
 try:
     import pwd as _pwd
@@ -201,7 +202,7 @@ class SSHPublicKeyDatabase:
                 continue
             try:
                 lines = filepath.open()
-            except IOError as e:
+            except OSError as e:
                 if e.errno == errno.EACCES:
                     lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:
@@ -337,7 +338,9 @@ class IAuthorizedKeysDB(Interface):
         """
 
 
-def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
+def readAuthorizedKeyFile(
+    fileobj: BinaryIO, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString
+) -> Iterator[keys.Key]:
     """
     Reads keys from an authorized keys file.  Any non-comment line that cannot
     be parsed as a key will be ignored, although that particular line will
@@ -345,16 +348,10 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
 
     @param fileobj: something from which to read lines which can be parsed
         as keys
-    @type fileobj: L{file}-like object
-
-    @param parseKey: a callable that takes a string and returns a
+    @param parseKey: a callable that takes bytes and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.ssh.keys.Key.fromString}.
-    @type parseKey: L{callable}
-
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
-    @rtype: iterable
-
     @since: 15.0
     """
     for line in fileobj:
@@ -392,9 +389,8 @@ def _keysFromFilepaths(filepaths, parseKey):
         if fp.exists():
             try:
                 with fp.open() as f:
-                    for key in readAuthorizedKeyFile(f, parseKey):
-                        yield key
-            except (IOError, OSError) as e:
+                    yield from readAuthorizedKeyFile(f, parseKey)
+            except OSError as e:
                 _log.error("Unable to read {path!r}: {error!s}", path=fp.path, error=e)
 
 

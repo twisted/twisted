@@ -45,11 +45,11 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         Patch L{_options.open} so we can capture usage and prevent actual opens.
         """
-        self.opened = []  # type: List[Tuple[str, Optional[str]]]
+        self.opened: List[Tuple[str, Optional[str]]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> NotImplemented:
+        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
             if name == "nocanopen":
-                raise IOError(None, None, name)
+                raise OSError(None, None, name)
 
             self.opened.append((name, mode))
             return NotImplemented
@@ -61,7 +61,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors = {}  # type: Dict[str, IReactorCore]
+        self.installedReactors: Dict[str, IReactorCore] = {}
 
         def installReactor(name: str) -> IReactorCore:
             if name != "fusion":
@@ -104,7 +104,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_reactor("fusion")
 
-        self.assertEqual(set(self.installedReactors), set(["fusion"]))
+        self.assertEqual(set(self.installedReactors), {"fusion"})
         self.assertEquals(options["reactorName"], "fusion")
 
     def test_installCorrectReactor(self) -> None:
@@ -118,7 +118,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.subCommand = "test-subcommand"
         options.parseOptions(["--reactor=fusion"])
 
-        self.assertEqual(set(self.installedReactors), set(["fusion"]))
+        self.assertEqual(set(self.installedReactors), {"fusion"})
 
     def test_installReactorBogus(self) -> None:
         """
@@ -340,7 +340,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
 
         plugins = set(options.plugins)
-        subCommands = set(name for name, shortcut, parser, doc in options.subCommands)
+        subCommands = {name for name, shortcut, parser, doc in options.subCommands}
 
         self.assertEqual(subCommands, plugins)
 

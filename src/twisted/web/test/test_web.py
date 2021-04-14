@@ -1345,9 +1345,7 @@ class AllowedMethodsTests(unittest.TestCase):
         """
         res = GettableResource()
         allowedMethods = resource._computeAllowedMethods(res)
-        self.assertEqual(
-            set(allowedMethods), set([b"GET", b"HEAD", b"fred_render_ethel"])
-        )
+        self.assertEqual(set(allowedMethods), {b"GET", b"HEAD", b"fred_render_ethel"})
 
     def test_notAllowed(self):
         """
@@ -1362,7 +1360,7 @@ class AllowedMethodsTests(unittest.TestCase):
         self.assertEqual(req.code, 405)
         self.assertEqual(
             set(req.responseHeaders.getRawHeaders(b"allow")[0].split(b", ")),
-            set([b"GET", b"HEAD", b"fred_render_ethel"]),
+            {b"GET", b"HEAD", b"fred_render_ethel"},
         )
 
     def test_notAllowedQuoting(self):

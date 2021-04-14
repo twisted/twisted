@@ -62,7 +62,7 @@ class ContactsList:
         @param client: The client being added to your list of account clients.
         @type client: L{IClient<interfaces.IClient>} provider
         """
-        if not client in self.clients:
+        if client not in self.clients:
             self.clients.append(client)
 
     def unregisterAccountClient(self, client):
@@ -259,7 +259,7 @@ class GroupConversation:
         @param member: The person joining the group conversation.
         @type member: C{str}
         """
-        if not member in self.members:
+        if member not in self.members:
             self.members.append(member)
 
     def memberChangedNick(self, oldnick, newnick):

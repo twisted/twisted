@@ -117,7 +117,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._add(
                 reader, self._reads, self._writes, self._selectables, EPOLLIN, EPOLLOUT
             )
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -134,7 +134,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._add(
                 writer, self._writes, self._reads, self._selectables, EPOLLOUT, EPOLLIN
             )
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -225,7 +225,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # the amount of time we block to the value specified by our
             # caller.
             l = self._poller.poll(timeout, len(self._selectables))
-        except IOError as err:
+        except OSError as err:
             if err.errno == errno.EINTR:
                 return
             # See epoll_wait(2) for documentation on the other conditions

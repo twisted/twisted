@@ -7,6 +7,7 @@ Posix reactor base class
 """
 
 
+import contextlib
 import socket
 import errno
 import os
@@ -117,13 +118,15 @@ class _SocketWaker(log.Logger):
         """Initialize."""
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        server.bind(("127.0.0.1", 0))
-        server.listen(1)
-        client.connect(server.getsockname())
-        reader, clientaddr = server.accept()
+        with contextlib.closing(
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ) as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen(1)
+            client.connect(server.getsockname())
+            reader, clientaddr = server.accept()
         client.setblocking(0)
         reader.setblocking(0)
         self.r = reader
@@ -134,7 +137,7 @@ class _SocketWaker(log.Logger):
         """Send a byte to my connection."""
         try:
             util.untilConcludes(self.w.send, b"x")
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 
@@ -144,7 +147,7 @@ class _SocketWaker(log.Logger):
         """
         try:
             self.r.recv(8192)
-        except socket.error:
+        except OSError:
             pass
 
     def connectionLost(self, reason):
@@ -195,7 +198,7 @@ class _FDWaker(log.Logger):
         for fd in self.i, self.o:
             try:
                 os.close(fd)
-            except IOError:
+            except OSError:
                 pass
         del self.i, self.o
 
@@ -500,11 +503,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
     # IReactorSocket (no AF_UNIX on Windows)
 
     if unixEnabled:
-        _supportedAddressFamilies = (
+        _supportedAddressFamilies: Sequence[socket.AddressFamily] = (
             socket.AF_INET,
             socket.AF_INET6,
             socket.AF_UNIX,
-        )  # type: Sequence[socket.AddressFamily]
+        )
     else:
         _supportedAddressFamilies = (
             socket.AF_INET,
@@ -688,7 +691,7 @@ class _PollLikeMixin:
                         # disconnect us.
                         why = selectable.doWrite()
                         inRead = False
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = sys.exc_info()[1]

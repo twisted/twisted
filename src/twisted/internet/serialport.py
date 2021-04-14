@@ -89,4 +89,4 @@ class BaseSerialPort:
 if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
 else:
-    from twisted.internet._posixserialport import SerialPort  # type: ignore[misc]  # noqa
+    from twisted.internet._posixserialport import SerialPort  # type: ignore[misc]
