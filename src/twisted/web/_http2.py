@@ -23,7 +23,7 @@ from typing import List
 from zope.interface import implementer
 
 import priority  # type: ignore[import]
-import h2.config  # type: ignore[import] # type: ignore[import]
+import h2.config  # type: ignore[import]
 import h2.connection  # type: ignore[import]
 import h2.errors  # type: ignore[import]
 import h2.events  # type: ignore[import]

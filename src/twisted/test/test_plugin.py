@@ -457,7 +457,7 @@ class DeveloperSetupTests(unittest.TestCase):
         """
         # Import the module we just added to our path.  (Local scope because
         # this package doesn't exist outside of this test.)
-        import plugindummy.plugins  # type: ignore[import] # type: ignore[import]
+        import plugindummy.plugins  # type: ignore[import]
 
         x = list(plugin.getPlugins(ITestPlugin, plugindummy.plugins))
         return [plug.__name__ for plug in x]
@@ -645,7 +645,7 @@ class AdjacentPackageTests(unittest.TestCase):
         sys.path.append(firstDirectory.path)
         sys.path.append(secondDirectory.path)
 
-        import dummy.plugins  # type: ignore[import] # type: ignore[import]
+        import dummy.plugins  # type: ignore[import]
 
         plugins = list(plugin.getPlugins(ITestPlugin, dummy.plugins))
         self.assertEqual(["first"], [p.__name__ for p in plugins])

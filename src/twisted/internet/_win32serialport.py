@@ -15,7 +15,7 @@ from serial import PARITY_NONE  # type: ignore[import]
 from serial import STOPBITS_ONE
 from serial import EIGHTBITS
 from serial.serialutil import to_bytes  # type: ignore[import]
-import win32file, win32event  # type: ignore[import] # type: ignore[import]
+import win32file, win32event  # type: ignore[import]
 
 # twisted imports
 from twisted.internet import abstract
