@@ -11,15 +11,15 @@ import os
 import sys
 
 # Win32 imports
-import win32api
-import win32con
-import win32event
-import win32file
-import win32pipe
-import win32process
-import win32security
+import win32api  # type: ignore[import]
+import win32con  # type: ignore[import]
+import win32event  # type: ignore[import]
+import win32file  # type: ignore[import]
+import win32pipe  # type: ignore[import]
+import win32process  # type: ignore[import]
+import win32security  # type: ignore[import]
 
-import pywintypes
+import pywintypes  # type: ignore[import]
 
 from zope.interface import implementer
 from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer

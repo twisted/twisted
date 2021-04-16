@@ -10,7 +10,7 @@ IProxyParser implementation for version two of the PROXY protocol.
 import binascii
 import struct
 
-from constantly import Values, ValueConstant
+from constantly import Values, ValueConstant  # type: ignore[import]
 
 from zope.interface import implementer
 from twisted.internet import address

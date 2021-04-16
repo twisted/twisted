@@ -12,8 +12,8 @@ This documentation does not link to pydoctor API as there is no public API yet.
 import ast
 from typing import Optional
 
-from pydoctor import model, zopeinterface, astbuilder
-from pydoctor.sphinx import SphinxInventory
+from pydoctor import model, zopeinterface, astbuilder  # type: ignore[import]
+from pydoctor.sphinx import SphinxInventory  # type: ignore[import]
 
 
 class TwistedSphinxInventory(SphinxInventory):
