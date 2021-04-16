@@ -1144,7 +1144,7 @@ class ReactorBase(PluggableResolverMixin):
             self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
 
-        def callFromThread(
+        def callFromThread(  # type: ignore[override]
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """
@@ -1199,7 +1199,7 @@ class ReactorBase(PluggableResolverMixin):
                 assert self.threadpool is not None
             return self.threadpool
 
-        def callInThread(
+        def callInThread(  # type: ignore[override]
             self, _callable: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """
