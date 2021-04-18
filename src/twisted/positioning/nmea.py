@@ -25,7 +25,7 @@ import datetime
 from functools import reduce
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant
+from constantly import Values, ValueConstant  # type: ignore[import]
 
 from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles

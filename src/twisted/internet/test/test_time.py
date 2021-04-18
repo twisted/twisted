@@ -96,7 +96,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        import gobject
+        import gobject  # type: ignore[import]
 
         reactor = self.buildReactor()
 
