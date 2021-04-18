@@ -16,7 +16,7 @@ import re
 import sys
 import traceback
 import types
-from typing import Type, Union
+from typing import Any, Optional, Type, Union
 import weakref
 
 from twisted.python.compat import nativeString
@@ -247,7 +247,7 @@ def _importAndCheckStack(importName):
         raise _NoModuleFound()
 
 
-def namedAny(name):
+def namedAny(name: str) -> Any:
     """
     Retrieve a Python object by its fully qualified name from the global Python
     module namespace.  The first part of the name, that describes a module,
@@ -289,7 +289,7 @@ def namedAny(name):
             "identifiers, not %r" % (name,)
         )
 
-    topLevelPackage = None
+    topLevelPackage: Optional[types.ModuleType] = None
     moduleNames = names[:]
     while not topLevelPackage:
         if moduleNames:
