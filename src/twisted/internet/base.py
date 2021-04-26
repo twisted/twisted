@@ -19,7 +19,6 @@ from typing import (
     AnyStr,
     Callable,
     Dict,
-    Iterable,
     List,
     Mapping,
     NewType,
@@ -895,14 +894,14 @@ class ReactorBase(PluggableResolverMixin):
     def _cancelCallLater(self, delayedCall: DelayedCall) -> None:
         self._cancellations += 1
 
-    def getDelayedCalls(self) -> Iterable[IDelayedCall]:
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
         Return all the outstanding delayed calls in the system.
         They are returned in no particular order.
         This method is not efficient -- it is really only meant for
         test cases.
 
-        @return: A list of outstanding delayed calls.
+        @return: A sequence of outstanding delayed calls.
         """
         return [
             x
