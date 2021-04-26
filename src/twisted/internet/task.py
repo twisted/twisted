@@ -82,7 +82,7 @@ class LoopingCall:
         self.kw = kw
         from twisted.internet import reactor
 
-        self.clock: IReactorTime = cast(IReactorTime, reactor)
+        self.clock = cast(IReactorTime, reactor)
 
     @property
     def deferred(self) -> Optional[Deferred["LoopingCall"]]:
