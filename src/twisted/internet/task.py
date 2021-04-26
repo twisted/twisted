@@ -840,7 +840,7 @@ def deferLater(
 
     @param delay: The number of seconds to wait before calling the function.
 
-    @param callable: The object to call after the delay.
+    @param callable: The callable to call after the delay, or C{None}.
 
     @param args: The positional arguments to pass to C{callable}.
 
