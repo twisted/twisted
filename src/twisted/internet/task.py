@@ -139,10 +139,14 @@ class LoopingCall:
 
             lastTime = self._realLastTime
             if lastTime is None:
+                assert (
+                    self.starttime is not None
+                ), "LoopingCall called before it was started"
                 lastTime = self.starttime
-                assert lastTime is not None
                 if self._runAtStart:
-                    assert self.interval is not None
+                    assert (
+                        self.interval is not None
+                    ), "Looping call called with None interval"
                     lastTime -= self.interval
             lastInterval = self._intervalOf(lastTime)
             thisInterval = self._intervalOf(now)
