@@ -18,6 +18,7 @@ from typing import (
     List,
     NoReturn,
     Optional,
+    Sequence,
     TypeVar,
     Union,
     cast,
@@ -790,7 +791,7 @@ class Clock:
         self._sortCalls()
         return dc
 
-    def getDelayedCalls(self) -> Iterable[IDelayedCall]:
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
         See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """

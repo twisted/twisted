@@ -1194,7 +1194,7 @@ class IReactorTime(Interface):
                  C{reset()} methods.
         """
 
-    def getDelayedCalls() -> Iterable["IDelayedCall"]:
+    def getDelayedCalls() -> Sequence["IDelayedCall"]:
         """
         Retrieve all currently scheduled delayed calls.
 
