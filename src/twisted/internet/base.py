@@ -896,12 +896,7 @@ class ReactorBase(PluggableResolverMixin):
 
     def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
-        Return all the outstanding delayed calls in the system.
-        They are returned in no particular order.
-        This method is not efficient -- it is really only meant for
-        test cases.
-
-        @return: A sequence of outstanding delayed calls.
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
         return [
             x

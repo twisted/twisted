@@ -1196,11 +1196,7 @@ class IReactorTime(Interface):
 
     def getDelayedCalls() -> Sequence["IDelayedCall"]:
         """
-        Retrieve all currently scheduled delayed calls.
-
-        @return: An iterable of L{IDelayedCall} providers representing all
-                 currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or cancelled.
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
 
 
