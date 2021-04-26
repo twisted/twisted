@@ -16,7 +16,7 @@ Pluggable method lookup policies.
 """
 
 # SOAPpy
-import SOAPpy
+import SOAPpy  # type: ignore[import]
 
 # twisted imports
 from twisted.web import server, resource, client

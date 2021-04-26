@@ -12,7 +12,7 @@ __all__ = [
     "send",
 ]
 
-from twisted_iocpsupport.iocpsupport import (
+from twisted_iocpsupport.iocpsupport import (  # type: ignore[import]
     CompletionPort,
     Event,
     accept,

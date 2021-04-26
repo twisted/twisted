@@ -13,7 +13,7 @@ from typing import Any, TextIO, Callable, Mapping
 
 from attr import attrib, attrs, Factory
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (

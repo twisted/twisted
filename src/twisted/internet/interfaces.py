@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from socket import AddressFamily
 
     try:
-        from OpenSSL.SSL import (
+        from OpenSSL.SSL import (  # type: ignore[import]
             Connection as _OpenSSLConnection,
             Context as _OpenSSLContext,
         )
