@@ -18,6 +18,7 @@ from incremental import Version
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import ISSLTransport, IAddress
+from twisted.internet.task import Clock
 
 from twisted.trial import unittest
 
@@ -233,7 +234,7 @@ class DummyRequest:
         self.postpath = postpath
         self.prepath = []
         self.session = None
-        self.protoSession = session or Session(0, self)
+        self.protoSession = session or Session(site=None, uid=b"0", reactor=Clock())
         self.args = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
