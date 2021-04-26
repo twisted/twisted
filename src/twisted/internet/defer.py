@@ -615,11 +615,12 @@ class Deferred(Awaitable[_DeferredResultT]):
 
             d1.addCallbacks(d2.callback, d2.errback)
 
-        When you chain a deferred d2 to another deferred d1 with
-        d1.chainDeferred(d2), you are making d2 participate in the callback
-        chain of d1. Thus any event that fires d1 will also fire d2.
-        However, the converse is B{not} true; if d2 is fired d1 will not be
-        affected.
+        When you chain a deferred C{d2} to another deferred C{d1} with
+        C{d1.chainDeferred(d2)}, you are making C{d2} participate in the
+        callback chain of C{d1}.
+        Thus any event that fires C{d1} will also fire C{d2}.
+        However, the converse is B{not} true; if C{d2} is fired, C{d1} will not
+        be affected.
 
         Note that unlike the case where chaining is caused by a L{Deferred}
         being returned from a callback, it is possible to cause the call
@@ -647,7 +648,9 @@ class Deferred(Awaitable[_DeferredResultT]):
         L{errback} called on it, and only once.
 
         @param result: The object which will be passed to the first callback
-            added to this L{Deferred} (via L{addCallback}).
+            added to this L{Deferred} (via L{addCallback}), unless C{result} is
+            a L{Failure}, in which case the behavior is the same as calling
+            C{errback(result)}.
 
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
