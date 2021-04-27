@@ -209,6 +209,9 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_303(self):
         self.factory.method = b"GET"
         self.handleStatus_301()
+        
+    def handleStatus_308(self):
+        self.handleStatus_301()
 
     def connectionLost(self, reason):
         """
