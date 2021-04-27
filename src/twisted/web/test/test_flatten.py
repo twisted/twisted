@@ -15,7 +15,13 @@ from textwrap import dedent
 from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
 
-from twisted.internet.defer import Deferred, gatherResults, passthru, succeed
+from twisted.internet.defer import (
+    CancelledError,
+    Deferred,
+    gatherResults,
+    passthru,
+    succeed,
+)
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.error import (
     FlattenerError,
@@ -563,3 +569,17 @@ class FlattenerErrorTests(SynchronousTestCase):
         # The original exception is unmodified and will be logged separately if
         # unhandled.
         self.failureResultOf(failing, RuntimeError)
+
+    def test_cancel(self):
+        """
+        The flattening of a Deferred can be cancelled.
+        """
+        d = Deferred()
+        flattening = flattenString(None, d)
+        self.assertNoResult(flattening)
+
+        flattening.cancel()
+
+        failure = self.failureResultOf(flattening, FlattenerError)
+        exc = failure.value.args[0]
+        self.assertIsInstance(exc, CancelledError)
