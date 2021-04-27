@@ -657,7 +657,7 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
             "An error occurred while rendering the response.", failure=failure
         )
         if request.site.displayTracebacks:
-            return flatten(request, _failElement(failure), request.write).encode("utf8")
+            return flatten(request, _failElement(failure), request.write)
         else:
             request.write(
                 b'<div style="font-size:800%;'
@@ -665,6 +665,7 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
                 b"color:#F00"
                 b'">An error occurred while rendering the response.</div>'
             )
+            return None
 
     def finish(result, *, request=request):
         request.finish()
