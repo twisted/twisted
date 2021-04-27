@@ -666,8 +666,12 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
                 b'">An error occurred while rendering the response.</div>'
             )
 
+    def finish(result, *, request=request):
+        request.finish()
+        return result
+
     d.addErrback(eb)
-    d.addBoth(lambda _: request.finish())
+    d.addBoth(finish)
     return NOT_DONE_YET
 
 
