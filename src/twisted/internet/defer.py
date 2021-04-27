@@ -959,7 +959,11 @@ class Deferred(Awaitable[_DeferredResultT]):
     # type note: base class "Awaitable" defined the type as:
     #     Callable[[], Generator[Any, None, _DeferredResultT]]
     #     See: https://github.com/python/typeshed/issues/5125
-    __await__ = __iter__  # type: ignore[assignment]
+    #     When the typeshed patch is included in a mypy release,
+    #     this method can be replaced by `__await__ = __iter__`.
+    def __await__(self) -> Generator[Any, None, _DeferredResultT]:
+        return self.__iter__()  # type: ignore[return-value]
+
     __next__ = send
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_DeferredResultT]":
