@@ -22,6 +22,7 @@ from twisted.internet.defer import (
     passthru,
     succeed,
 )
+from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.error import (
     FlattenerError,
@@ -582,9 +583,16 @@ class FlattenerErrorTests(SynchronousTestCase):
             cancel_arg = cancelled
             cancel_count += 1
 
+        err = None
+
+        def save_err(failure):
+            nonlocal err
+            err = failure
+
         d = Deferred(check_cancel)
         flattening = flattenString(None, d)
         self.assertNoResult(flattening)
+        d.addErrback(save_err)
 
         flattening.cancel()
 
@@ -594,6 +602,9 @@ class FlattenerErrorTests(SynchronousTestCase):
 
         self.assertEqual(cancel_count, 1)
         self.assertIs(cancel_arg, d)
+
+        self.assertIsInstance(err, Failure)
+        self.assertIsInstance(err.value, CancelledError)
 
         exc = failure.value.args[0]
         self.assertIsInstance(exc, CancelledError)
