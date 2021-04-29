@@ -80,6 +80,7 @@ class slot:
     """
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
@@ -96,13 +97,13 @@ class Tag:
     For a tag like C{<div></div>}, this would be C{"div"}.
     """
 
-    attributes: Dict[Union[bytes, str], "Flattenable"]
+    attributes: Dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
     """The attributes of the element."""
 
-    children: List["Flattenable"]
+    children: List["Flattenable"] = attr.ib(factory=list)
     """The contents of this C{Tag}."""
 
-    render: Optional[str]
+    render: Optional[str] = None
     """
     The name of the render method to use for this L{Tag}.
 
@@ -135,7 +136,7 @@ class Tag:
     If it was not parsed from an XML file, L{None}.
     """
 
-    slotData: Optional[Dict[str, "Flattenable"]] = None
+    slotData: Optional[Dict[str, "Flattenable"]] = attr.ib(init=False, default=None)
     """
     The data which can fill slots.
 
@@ -143,33 +144,6 @@ class Tag:
     The values in this dict might be anything that can be present as
     the child of a L{Tag}: strings, lists, L{Tag}s, generators, etc.
     """
-
-    def __init__(
-        self,
-        tagName: Union[bytes, str],
-        attributes: Optional[Dict[Union[bytes, str], "Flattenable"]] = None,
-        children: Optional[List["Flattenable"]] = None,
-        render: Optional[str] = None,
-        filename: Optional[str] = None,
-        lineNumber: Optional[int] = None,
-        columnNumber: Optional[int] = None,
-    ):
-        self.tagName = tagName
-        self.render = render
-        if attributes is None:
-            self.attributes = {}
-        else:
-            self.attributes = attributes
-        if children is None:
-            self.children = []
-        else:
-            self.children = children
-        if filename is not None:
-            self.filename = filename
-        if lineNumber is not None:
-            self.lineNumber = lineNumber
-        if columnNumber is not None:
-            self.columnNumber = columnNumber
 
     def fillSlots(self, **slots: "Flattenable") -> "Tag":
         """
