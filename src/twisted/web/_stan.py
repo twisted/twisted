@@ -24,52 +24,60 @@ cumbersome.
 
 from typing import TYPE_CHECKING, Dict, List, Optional, TypeVar, Union
 
+import attr
+
 
 T = TypeVar("T")
 
 
+@attr.s(hash=False, eq=False, auto_attribs=True)
 class slot:
     """
     Marker for markup insertion in a template.
-
-    @ivar name: The name of this slot.  The key which must be used in
-        L{Tag.fillSlots} to fill it.
-
-    @ivar children: The L{Tag} objects included in this L{slot}'s template.
-
-    @ivar default: The default contents of this slot, if it is left unfilled.
-        If this is L{None}, an L{UnfilledSlot} will be raised, rather than
-        L{None} actually being used.
-
-    @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, L{None}.
-
-    @ivar lineNumber: The line number on which this tag was encountered in the
-        XML file from which it was parsed.  If it was not parsed from an XML
-        file, L{None}.
-
-    @ivar columnNumber: The column number at which this tag was encountered in
-        the XML file from which it was parsed.  If it was not parsed from an
-        XML file, L{None}.
     """
 
-    def __init__(
-        self,
-        name: str,
-        default: Optional["Flattenable"] = None,
-        filename: Optional[str] = None,
-        lineNumber: Optional[int] = None,
-        columnNumber: Optional[int] = None,
-    ):
-        self.name: str = name
-        self.children: List[Tag] = []
-        self.default: Optional["Flattenable"] = default
-        self.filename: Optional[str] = filename
-        self.lineNumber: Optional[int] = lineNumber
-        self.columnNumber: Optional[int] = columnNumber
+    name: str
+    """
+    The name of this slot.
 
-    def __repr__(self) -> str:
-        return f"slot({self.name!r})"
+    The key which must be used in L{Tag.fillSlots} to fill it.
+    """
+
+    children: List["Tag"] = attr.ib(init=False, factory=list)
+    """
+    The L{Tag} objects included in this L{slot}'s template.
+    """
+
+    default: Optional["Flattenable"] = None
+    """
+    The default contents of this slot, if it is left unfilled.
+
+    If this is L{None}, an L{UnfilledSlot} will be raised, rather than
+    L{None} actually being used.
+    """
+
+    filename: Optional[str] = None
+    """
+    The name of the XML file from which this tag was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    lineNumber: Optional[int] = None
+    """
+    The line number on which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    columnNumber: Optional[int] = None
+    """
+    The column number at which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
 
 
 class Tag:
