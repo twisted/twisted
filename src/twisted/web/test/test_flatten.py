@@ -575,24 +575,24 @@ class FlattenerErrorTests(SynchronousTestCase):
         """
         The flattening of a Deferred can be cancelled.
         """
-        cancel_count = 0
-        cancel_arg = None
+        cancelCount = 0
+        cancelArg = None
 
-        def check_cancel(cancelled):
-            nonlocal cancel_arg, cancel_count
-            cancel_arg = cancelled
-            cancel_count += 1
+        def checkCancel(cancelled):
+            nonlocal cancelArg, cancelCount
+            cancelArg = cancelled
+            cancelCount += 1
 
         err = None
 
-        def save_err(failure):
+        def saveErr(failure):
             nonlocal err
             err = failure
 
-        d = Deferred(check_cancel)
+        d = Deferred(checkCancel)
         flattening = flattenString(None, d)
         self.assertNoResult(flattening)
-        d.addErrback(save_err)
+        d.addErrback(saveErr)
 
         flattening.cancel()
 
@@ -600,8 +600,8 @@ class FlattenerErrorTests(SynchronousTestCase):
         # Do this first to get more meaningful reporting if something crashed.
         failure = self.failureResultOf(flattening, FlattenerError)
 
-        self.assertEqual(cancel_count, 1)
-        self.assertIs(cancel_arg, d)
+        self.assertEqual(cancelCount, 1)
+        self.assertIs(cancelArg, d)
 
         self.assertIsInstance(err, Failure)
         self.assertIsInstance(err.value, CancelledError)
