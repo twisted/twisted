@@ -22,6 +22,7 @@ from twisted.internet.defer import (
     passthru,
     succeed,
 )
+from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.error import (
     FlattenerError,
@@ -574,12 +575,36 @@ class FlattenerErrorTests(SynchronousTestCase):
         """
         The flattening of a Deferred can be cancelled.
         """
-        d = Deferred()
+        cancelCount = 0
+        cancelArg = None
+
+        def checkCancel(cancelled):
+            nonlocal cancelArg, cancelCount
+            cancelArg = cancelled
+            cancelCount += 1
+
+        err = None
+
+        def saveErr(failure):
+            nonlocal err
+            err = failure
+
+        d = Deferred(checkCancel)
         flattening = flattenString(None, d)
         self.assertNoResult(flattening)
+        d.addErrback(saveErr)
 
         flattening.cancel()
 
+        # Check whether we got an orderly cancellation.
+        # Do this first to get more meaningful reporting if something crashed.
         failure = self.failureResultOf(flattening, FlattenerError)
+
+        self.assertEqual(cancelCount, 1)
+        self.assertIs(cancelArg, d)
+
+        self.assertIsInstance(err, Failure)
+        self.assertIsInstance(err.value, CancelledError)
+
         exc = failure.value.args[0]
         self.assertIsInstance(exc, CancelledError)

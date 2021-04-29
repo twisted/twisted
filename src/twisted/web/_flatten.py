@@ -162,7 +162,7 @@ def _fork(d):
     Create a new L{Deferred} based on C{d} that will fire and fail with C{d}'s
     result or error, but will not modify C{d}'s callback type.
     """
-    d2 = Deferred(lambda _: d.cancel)
+    d2 = Deferred(lambda _: d.cancel())
 
     def callback(result):
         d2.callback(result)
