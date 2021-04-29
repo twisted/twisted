@@ -19,9 +19,6 @@ class Expose:
     Instances of this class can be called with one or more functions as
     positional arguments.  The names of these functions will be added to a list
     on the class object of which they are methods.
-
-    @ivar attributeName: The attribute with which exposed methods will be
-    tracked.
     """
 
     def __init__(self, doc=None):
