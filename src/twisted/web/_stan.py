@@ -292,6 +292,7 @@ voidElements = (
 )
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
@@ -299,14 +300,14 @@ class CDATA:
     information.
     """
 
-    def __init__(self, data: str):
-        self.data: str = data
-        """The data between "C{<![CDATA[}" and "C{]]>}"."""
+    data: str
+    """The data between "C{<![CDATA[}" and "C{]]>}"."""
 
     def __repr__(self) -> str:
         return f"CDATA({self.data!r})"
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
@@ -314,14 +315,14 @@ class Comment:
     information.
     """
 
-    def __init__(self, data: str):
-        self.data: str = data
-        """The data between "C{<!--}" and "C{-->}"."""
+    data: str
+    """The data between "C{<!--}" and "C{-->}"."""
 
     def __repr__(self) -> str:
         return f"Comment({self.data!r})"
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM
@@ -330,9 +331,8 @@ class CharRef:
     @since: 12.0
     """
 
-    def __init__(self, ordinal: int):
-        self.ordinal: int = ordinal
-        """The ordinal value of the unicode character to which this object refers."""
+    ordinal: int
+    """The ordinal value of the unicode character to which this object refers."""
 
     def __repr__(self) -> str:
         return "CharRef(%d)" % (self.ordinal,)
