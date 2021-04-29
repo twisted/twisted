@@ -9,7 +9,7 @@ Interface definitions for L{twisted.web}.
     L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
-from typing import Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 from zope.interface import Interface, Attribute
 
@@ -508,11 +508,12 @@ class IRenderable(Interface):
     L{twisted.web.template} templating system.
     """
 
-    def lookupRenderMethod(name):
+    def lookupRenderMethod(
+        name: str,
+    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
         """
         Look up and return the render method associated with the given name.
 
-        @type name: L{str}
         @param name: The value of a render directive encountered in the
             document returned by a call to L{IRenderable.render}.
 
@@ -521,11 +522,10 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request):
+    def render(request: Optional[IRequest]) -> "Flattenable":
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or L{None}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -539,12 +539,12 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load():
+    def load() -> List["Flattenable"]:
         """
         Load a template suitable for rendering.
 
-        @return: a L{list} of L{list}s, L{unicode} objects, C{Element}s and
-            other L{IRenderable} providers.
+        @return: a L{list} of flattenable objects, such as byte and unicode
+            strings, L{twisted.web.template.Element}s and L{IRenderable} providers.
         """
 
 
@@ -825,3 +825,7 @@ __all__ = [
     "IClientRequest",
     "UNKNOWN_LENGTH",
 ]
+
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag

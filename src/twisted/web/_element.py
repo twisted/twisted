@@ -3,12 +3,15 @@
 # See LICENSE for details.
 
 
-from typing import Optional
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union, overload
 from zope.interface import implementer
 
-from twisted.web.iweb import IRenderable, ITemplateLoader
+from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
 from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
+
+
+T = TypeVar("T")
 
 
 class Expose:
@@ -21,7 +24,7 @@ class Expose:
     on the class object of which they are methods.
     """
 
-    def __call__(self, *funcObjs):
+    def __call__(self, *funcObjs: Callable) -> Callable:
         """
         Add one or more functions to the set of exposed functions.
 
@@ -52,13 +55,24 @@ class Expose:
         if not funcObjs:
             raise TypeError("expose() takes at least 1 argument (0 given)")
         for fObj in funcObjs:
-            fObj.exposedThrough = getattr(fObj, "exposedThrough", [])
-            fObj.exposedThrough.append(self)
+            exposedThrough = getattr(fObj, "exposedThrough", [])
+            exposedThrough.append(self)
+            setattr(fObj, "exposedThrough", exposedThrough)
         return funcObjs[0]
 
     _nodefault = object()
 
-    def get(self, instance, methodName, default=_nodefault):
+    @overload
+    def get(self, instance: object, methodName: str) -> Callable:
+        ...
+
+    @overload
+    def get(self, instance: object, methodName: str, default: T) -> Union[Callable, T]:
+        ...
+
+    def get(
+        self, instance: object, methodName: str, default: object = _nodefault
+    ) -> object:
         """
         Retrieve an exposed method with the given name from the given instance.
 
@@ -77,14 +91,14 @@ class Expose:
         return method
 
 
-def exposer(thunk):
+def exposer(thunk: Callable) -> Expose:
     expose = Expose()
     expose.__doc__ = thunk.__doc__
     return expose
 
 
 @exposer
-def renderer():
+def renderer() -> None:
     """
     Decorate with L{renderer} to use methods as template render directives.
 
@@ -131,18 +145,19 @@ class Element:
     L{twisted.web.http.Request} being served and second, the tag object which
     "invoked" the render method.
 
-    @type loader: L{ITemplateLoader} provider
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
 
     loader: Optional[ITemplateLoader] = None
 
-    def __init__(self, loader=None):
+    def __init__(self, loader: Optional[ITemplateLoader] = None):
         if loader is not None:
             self.loader = loader
 
-    def lookupRenderMethod(self, name):
+    def lookupRenderMethod(
+        self, name: str
+    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
         """
         Look up and return the named render method.
         """
@@ -151,7 +166,7 @@ class Element:
             raise MissingRenderMethod(self, name)
         return method
 
-    def render(self, request):
+    def render(self, request: Optional[IRequest]) -> "Flattenable":
         """
         Implement L{IRenderable} to allow one L{Element} to be embedded in
         another's template or rendering output.
@@ -166,3 +181,7 @@ class Element:
         if loader is None:
             raise MissingTemplateLoader(self)
         return loader.load()
+
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
