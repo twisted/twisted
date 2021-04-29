@@ -18,7 +18,7 @@ else:
     cryptography = _cryptography
 
 try:
-    import pyasn1 as _pyasn1
+    import pyasn1 as _pyasn1  # type: ignore[import]
 except ImportError:
     pyasn1 = None
 else:

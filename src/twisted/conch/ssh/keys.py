@@ -26,10 +26,10 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from pyasn1.codec.ber import decoder as berDecoder
+from pyasn1.codec.ber import decoder as berDecoder  # type: ignore[import]
 from pyasn1.codec.ber import encoder as berEncoder
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
+from pyasn1.error import PyAsn1Error  # type: ignore[import]
+from pyasn1.type import univ  # type: ignore[import]
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes

@@ -1144,7 +1144,10 @@ class ReactorBase(PluggableResolverMixin):
             self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
 
-        def callFromThread(
+        # `IReactorFromThreads` defines the first named argument as
+        # `callable: Callable[..., Any]` but this defines it as `f`
+        # really both should be defined using py3.8 positional only
+        def callFromThread(  # type: ignore[override]
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """
@@ -1199,7 +1202,10 @@ class ReactorBase(PluggableResolverMixin):
                 assert self.threadpool is not None
             return self.threadpool
 
-        def callInThread(
+        # `IReactorInThreads` defines the first named argument as
+        # `callable: Callable[..., Any]` but this defines it as `_callable`
+        # really both should be defined using py3.8 positional only
+        def callInThread(  # type: ignore[override]
             self, _callable: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """

@@ -11,7 +11,7 @@ Generic positioning base classes.
 from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
-from constantly import Names, NamedConstant
+from constantly import Names, NamedConstant  # type: ignore[import]
 from typing import ClassVar, Sequence
 
 from twisted.python.util import FancyEqMixin
