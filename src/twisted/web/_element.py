@@ -21,9 +21,6 @@ class Expose:
     on the class object of which they are methods.
     """
 
-    def __init__(self, doc=None):
-        self.doc = doc
-
     def __call__(self, *funcObjs):
         """
         Add one or more functions to the set of exposed functions.
@@ -79,20 +76,11 @@ class Expose:
             return default
         return method
 
-    @classmethod
-    def _withDocumentation(cls, thunk):
-        """
-        Slight hack to make users of this class appear to have a docstring to
-        documentation generators, by defining them with a decorator.  (This hack
-        should be removed when epydoc can be convinced to use some other method
-        for documenting.)
-        """
-        return cls(thunk.__doc__)
 
-
-# Avoid exposing the ugly, private classmethod name in the docs.  Luckily this
-# namespace is private already so this doesn't leak further.
-exposer = Expose._withDocumentation
+def exposer(thunk):
+    expose = Expose()
+    expose.__doc__ = thunk.__doc__
+    return expose
 
 
 @exposer
