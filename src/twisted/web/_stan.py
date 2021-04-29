@@ -192,6 +192,10 @@ class Tag:
                 k = k[:-1]
 
             if k == "render":
+                if not isinstance(v, str):
+                    raise TypeError(
+                        f'Value for "render" attribute must be str, got {v!r}'
+                    )
                 self.render = v
             else:
                 self.attributes[k] = v

@@ -23,6 +23,26 @@ class TagTests(TestCase):
     Tests for L{Tag}.
     """
 
+    def test_renderAttribute(self) -> None:
+        """
+        Setting an attribute named C{render} will change the C{render} instance
+        variable instead of adding an attribute.
+        """
+        tag = proto(render="myRenderer")
+        self.assertEqual(tag.render, "myRenderer")
+        self.assertEqual(tag.attributes, {})
+
+    def test_renderAttributeNonString(self) -> None:
+        """
+        Attempting to set an attribute named C{render} to something other than
+        a string will raise L{TypeError}.
+        """
+        with self.assertRaises(TypeError) as e:
+            proto(render=83)
+        self.assertEqual(
+            e.exception.args[0], 'Value for "render" attribute must be str, got 83'
+        )
+
     def test_fillSlots(self):
         """
         L{Tag.fillSlots} returns self.
