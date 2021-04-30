@@ -400,6 +400,14 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         self.assertFlattensImmediately(FakeElement(), b"<p>hello, world - world</p>")
 
+    def test_serializeMissingRenderFactory(self):
+        """
+        Test that flattening a tag with a C{render} attribute when no render
+        factory is available in the context raises an exception.
+        """
+
+        self.assertFlatteningRaises(tags.transparent(render="test"), ValueError)
+
     def test_serializeSlots(self):
         """
         Test that flattening a slot will use the slot value from the tag.

@@ -241,8 +241,13 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         write(b"-->")
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
-        if root.render is not None:
-            rendererName = root.render
+        rendererName = root.render
+        if rendererName is not None:
+            if renderFactory is None:
+                raise ValueError(
+                    f'Tag wants to be rendered by method "{rendererName}" '
+                    f"but is not contained in any IRenderable"
+                )
             rootClone = root.clone(False)
             rootClone.render = None
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
