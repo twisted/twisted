@@ -630,12 +630,12 @@ tags = _TagFactory()
 
 def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=None):
     """
-    Render an element or other C{IRenderable}.
+    Render an element or other L{IRenderable}.
 
-    @param request: The C{Request} being rendered to.
-    @param element: An C{IRenderable} which will be rendered.
-    @param doctype: A C{bytes} which will be written as the first line of
-        the request, or L{None} to disable writing of a doctype.  The C{string}
+    @param request: The L{twisted.web.server.Request} being rendered to.
+    @param element: An L{IRenderable} which will be rendered.
+    @param doctype: A L{bytes} which will be written as the first line of
+        the request, or L{None} to disable writing of a doctype.  The argument
         should not include a trailing newline and will default to the HTML5
         doctype C{'<!DOCTYPE html>'}.
 
