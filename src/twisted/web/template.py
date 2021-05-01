@@ -632,7 +632,7 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
     """
     Render an element or other L{IRenderable}.
 
-    @param request: The L{twisted.web.server.Request} being rendered to.
+    @param request: The L{IRequest} being rendered to.
     @param element: An L{IRenderable} which will be rendered.
     @param doctype: A L{bytes} which will be written as the first line of
         the request, or L{None} to disable writing of a doctype.  The argument
@@ -656,7 +656,8 @@ def renderElement(request, element, doctype=b"<!DOCTYPE html>", _failElement=Non
         _moduleLog.failure(
             "An error occurred while rendering the response.", failure=failure
         )
-        if request.site.displayTracebacks:
+        site = getattr(request, "site", None)
+        if site is not None and site.displayTracebacks:
             return flatten(request, _failElement(failure), request.write)
         else:
             request.write(
