@@ -10,6 +10,9 @@ from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
 from twisted.web.error import MissingRenderMethod, UnexposedMethodError
 from twisted.web.error import MissingTemplateLoader
 
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
+
 
 T = TypeVar("T")
 
@@ -181,7 +184,3 @@ class Element:
         if loader is None:
             raise MissingTemplateLoader(self)
         return loader.load()
-
-
-if TYPE_CHECKING:
-    from twisted.web.template import Flattenable, Tag

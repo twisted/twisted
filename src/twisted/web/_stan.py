@@ -26,6 +26,9 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import attr
 
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable
+
 
 @attr.s(hash=False, eq=False, auto_attribs=True)
 class slot:
@@ -335,7 +338,3 @@ class CharRef:
 
     def __repr__(self) -> str:
         return "CharRef(%d)" % (self.ordinal,)
-
-
-if TYPE_CHECKING:
-    from twisted.web.template import Flattenable

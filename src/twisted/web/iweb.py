@@ -18,6 +18,9 @@ from twisted.internet.interfaces import IPushProducer
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
 
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
+
 
 class IRequest(Interface):
     """
@@ -825,7 +828,3 @@ __all__ = [
     "IClientRequest",
     "UNKNOWN_LENGTH",
 ]
-
-
-if TYPE_CHECKING:
-    from twisted.web.template import Flattenable, Tag
