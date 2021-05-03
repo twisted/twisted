@@ -22,12 +22,9 @@ cumbersome.
 """
 
 
-from typing import TYPE_CHECKING, Dict, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import attr
-
-
-T = TypeVar("T")
 
 
 @attr.s(hash=False, eq=False, auto_attribs=True)
@@ -201,9 +198,11 @@ class Tag:
                 self.attributes[k] = v
         return self
 
-    def _clone(self, obj: T, deep: bool) -> T:
+    def _clone(self, obj: "Flattenable", deep: bool) -> "Flattenable":
         """
-        Clone an arbitrary object; used by L{Tag.clone}.
+        Clone a C{Flattenable} object; used by L{Tag.clone}.
+
+        Note that both lists and tuples are cloned into lists.
 
         @param obj: an object with a clone method, a list or tuple, or something
             which should be immutable.
@@ -214,9 +213,9 @@ class Tag:
         @return: a clone of C{obj}.
         """
         if hasattr(obj, "clone"):
-            return obj.clone(deep)  # type: ignore[attr-defined, no-any-return]
+            return obj.clone(deep)  # type: ignore[union-attr]
         elif isinstance(obj, (list, tuple)):
-            return [self._clone(x, deep) for x in obj]  # type: ignore[return-value]
+            return [self._clone(x, deep) for x in obj]
         else:
             return obj
 
