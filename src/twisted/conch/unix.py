@@ -38,7 +38,7 @@ from twisted.python.compat import nativeString
 from twisted.logger import Logger
 
 try:
-    import utmp
+    import utmp  # type: ignore[import]
 except ImportError:
     utmp = None
 

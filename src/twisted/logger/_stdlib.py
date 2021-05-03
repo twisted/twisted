@@ -9,7 +9,7 @@ Integration with Python standard library logging.
 import logging as stdlibLogging
 from typing import Mapping, Tuple
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 

@@ -8,7 +8,7 @@ Test cases for L{twisted.logger._io}.
 import sys
 from typing import List, Optional
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 
