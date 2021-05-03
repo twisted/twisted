@@ -1262,9 +1262,17 @@ class DeferredList(Deferred[List[Tuple[bool, _DeferredResultT]]]):  # type: igno
             logged.  This does not prevent C{fireOnOneErrback} from working.
         """
         self._deferredList = list(deferredList)
+
         self.resultList: List[Optional[Tuple[bool, _DeferredResultT]]] = [None] * len(
             self._deferredList
         )
+        """
+        The final result, in progress.
+        Each item in the list corresponds to the L{Deferred} at the same
+        position in L{_deferredList}. It will be L{None} if the L{Deferred}
+        did not complete yet, or a C{(success, result)} pair if it did.
+        """
+
         Deferred.__init__(self)
         if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback([])
