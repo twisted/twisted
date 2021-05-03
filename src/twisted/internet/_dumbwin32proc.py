@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-http://isometri.cc/strips/gates_in_the_head
+Windows Process Management, used with reactor.spawnProcess
 """
 
 
