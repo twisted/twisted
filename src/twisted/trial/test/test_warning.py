@@ -296,7 +296,7 @@ def foo():
         pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_private_helper import missingsourcefile
+        from twisted_private_helper import missingsourcefile  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_private_helper")
         self.addCleanup(sys.modules.pop, missingsourcefile.__name__)
@@ -354,7 +354,7 @@ def foo():
         package.moveTo(package.sibling(b"twisted_renamed_helper"))
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)

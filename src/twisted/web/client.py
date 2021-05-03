@@ -852,7 +852,7 @@ from twisted.web._newclient import (
 
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL  # type: ignore[import]
 except ImportError:
     SSL = None
 else:

@@ -21,7 +21,7 @@ testingForced = "TWISTED_FORCE_SERIAL_TESTS" in os.environ
 
 try:
     from twisted.internet import serialport
-    import serial
+    import serial  # type: ignore[import]
 except ImportError:
     if testingForced:
         raise

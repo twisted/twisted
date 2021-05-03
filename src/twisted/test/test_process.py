@@ -609,7 +609,7 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob
+                import process_tester, glob  # type: ignore[import]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -2217,7 +2217,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api
+        import win32api  # type: ignore[import]
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

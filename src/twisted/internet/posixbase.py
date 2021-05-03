@@ -67,7 +67,7 @@ if unixEnabled:
 
 if platform.isWindows():
     try:
-        import win32process
+        import win32process  # type: ignore[import]
 
         processEnabled = True
     except ImportError:
