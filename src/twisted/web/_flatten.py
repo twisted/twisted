@@ -40,9 +40,9 @@ from twisted.web.iweb import IRenderable, IRequest
 
 T = TypeVar("T")
 
-FlattenableRec = Any
+FlattenableRecursive = Any
 """
-For documentation purposes, read C{FlattenableRec} as L{Flattenable}.
+For documentation purposes, read C{FlattenableRecursive} as L{Flattenable}.
 However, since mypy doesn't support recursive type definitions (yet?),
 we'll put Any in the actual definition.
 """
@@ -54,12 +54,12 @@ Flattenable = Union[
     CDATA,
     Comment,
     Tag,
-    Tuple[FlattenableRec, ...],
-    List[FlattenableRec],
-    Generator[FlattenableRec, None, None],
+    Tuple[FlattenableRecursive, ...],
+    List[FlattenableRecursive],
+    Generator[FlattenableRecursive, None, None],
     CharRef,
-    Deferred[FlattenableRec],
-    Coroutine[Deferred[FlattenableRec], object, FlattenableRec],
+    Deferred[FlattenableRecursive],
+    Coroutine[Deferred[FlattenableRecursive], object, FlattenableRecursive],
     IRenderable,
 ]
 """
