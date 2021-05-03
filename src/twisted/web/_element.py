@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union, overload
 from zope.interface import implementer
 
 from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
@@ -55,7 +55,7 @@ class Expose:
         if not funcObjs:
             raise TypeError("expose() takes at least 1 argument (0 given)")
         for fObj in funcObjs:
-            exposedThrough = getattr(fObj, "exposedThrough", [])
+            exposedThrough: List[Expose] = getattr(fObj, "exposedThrough", [])
             exposedThrough.append(self)
             setattr(fObj, "exposedThrough", exposedThrough)
         return funcObjs[0]
