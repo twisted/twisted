@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Any, Callable, Dict, NoReturn, Optional, cast
+from typing import Callable, Dict, List, NoReturn, Optional, cast
 
 from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
@@ -264,7 +264,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_commentEscaping(self) -> Deferred[Any]:
+    def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
         so that the result is a legal SGML and XML comment.
