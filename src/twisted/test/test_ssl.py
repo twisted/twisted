@@ -18,7 +18,7 @@ import os
 import hamcrest
 
 try:
-    from OpenSSL import SSL, crypto
+    from OpenSSL import SSL, crypto  # type: ignore[import]
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:

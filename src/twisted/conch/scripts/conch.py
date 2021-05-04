@@ -75,8 +75,8 @@ class ClientOptions(ConchOptions):
         ],
     )
 
-    localForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
-    remoteForwards = []  # type: List[Tuple[int, Tuple[int, int]]]
+    localForwards: List[Tuple[int, Tuple[int, int]]] = []
+    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
 
     def opt_escape(self, esc):
         """
@@ -89,7 +89,7 @@ class ClientOptions(ConchOptions):
         elif len(esc) == 1:
             self["escape"] = esc
         else:
-            sys.exit("Bad escape character '{}'.".format(esc))
+            sys.exit(f"Bad escape character '{esc}'.")
 
     def opt_localforward(self, f):
         """
@@ -141,7 +141,7 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print("ERROR: {}".format(u))
+        print(f"ERROR: {u}")
         options.opt_help()
         sys.exit(1)
     if options["log"]:
@@ -161,13 +161,13 @@ def run():
     fd = sys.stdin.fileno()
     try:
         old = tty.tcgetattr(fd)
-    except:
+    except BaseException:
         old = None
     try:
         oldUSR1 = signal.signal(
             signal.SIGUSR1, lambda *a: reactor.callLater(0, reConnect)
         )
-    except:
+    except BaseException:
         oldUSR1 = None
     try:
         reactor.run()
@@ -196,7 +196,7 @@ def handleError():
 def _stopReactor():
     try:
         reactor.stop()
-    except:
+    except BaseException:
         pass
 
 
@@ -223,7 +223,7 @@ def doConnect():
 
 def _ebExit(f):
     global exitStatus
-    exitStatus = "conch: exiting with error {}".format(f)
+    exitStatus = f"conch: exiting with error {f}"
     reactor.callLater(0.1, _stopReactor)
 
 
@@ -244,9 +244,7 @@ def onConnect():
             conn.localForwards.append(s)
     if options.remoteForwards:
         for remotePort, hostport in options.remoteForwards:
-            log.msg(
-                "asking for remote forwarding for {}:{}".format(remotePort, hostport)
-            )
+            log.msg(f"asking for remote forwarding for {remotePort}:{hostport}")
             conn.requestRemoteForwarding(remotePort, hostport)
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutdown)
     if not options["noshell"] or options["agent"]:
@@ -273,7 +271,7 @@ def reConnect():
 def beforeShutdown():
     remoteForwards = options.remoteForwards
     for remotePort, hostport in remoteForwards:
-        log.msg("cancelling {}:{}".format(remotePort, hostport))
+        log.msg(f"cancelling {remotePort}:{hostport}")
         conn.cancelRemoteForwarding(remotePort)
 
 
@@ -313,10 +311,6 @@ class SSHConnection(connection.SSHConnection):
         conn = self
         self.localForwards = []
         self.remoteForwards = {}
-        if not isinstance(self, connection.SSHConnection):
-            # make these fall through
-            del self.__class__.requestRemoteForwarding
-            del self.__class__.cancelRemoteForwarding
         onConnect()
 
     def serviceStopped(self):
@@ -329,23 +323,23 @@ class SSHConnection(connection.SSHConnection):
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
         d = self.sendGlobalRequest(b"tcpip-forward", data, wantReply=1)
-        log.msg("requesting remote forwarding {}:{}".format(remotePort, hostport))
+        log.msg(f"requesting remote forwarding {remotePort}:{hostport}")
         d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
         d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
 
     def _cbRemoteForwarding(self, result, remotePort, hostport):
-        log.msg("accepted remote forwarding {}:{}".format(remotePort, hostport))
+        log.msg(f"accepted remote forwarding {remotePort}:{hostport}")
         self.remoteForwards[remotePort] = hostport
         log.msg(repr(self.remoteForwards))
 
     def _ebRemoteForwarding(self, f, remotePort, hostport):
-        log.msg("remote forwarding {}:{} failed".format(remotePort, hostport))
+        log.msg(f"remote forwarding {remotePort}:{hostport} failed")
         log.msg(f)
 
     def cancelRemoteForwarding(self, remotePort):
         data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
         self.sendGlobalRequest(b"cancel-tcpip-forward", data)
-        log.msg("cancelling remote forwarding {}".format(remotePort))
+        log.msg(f"cancelling remote forwarding {remotePort}")
         try:
             del self.remoteForwards[remotePort]
         except Exception:
@@ -353,13 +347,13 @@ class SSHConnection(connection.SSHConnection):
         log.msg(repr(self.remoteForwards))
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
-        log.msg("FTCP {!r}".format(data))
+        log.msg(f"FTCP {data!r}")
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
         log.msg(remoteHP)
         if remoteHP[1] in self.remoteForwards:
             connectHP = self.remoteForwards[remoteHP[1]]
-            log.msg("connect forwarding {}".format(connectHP))
+            log.msg(f"connect forwarding {connectHP}")
             return SSHConnectForwardingChannel(
                 connectHP, remoteWindow=windowSize, remoteMaxPacket=maxPacket, conn=self
             )
@@ -369,7 +363,7 @@ class SSHConnection(connection.SSHConnection):
             )
 
     def channelClosed(self, channel):
-        log.msg("connection closing {}".format(channel))
+        log.msg(f"connection closing {channel}")
         log.msg(self.channels)
         if len(self.channels) == 1:  # Just us left
             log.msg("stopping connection")
@@ -384,7 +378,7 @@ class SSHSession(channel.SSHChannel):
     name = b"session"
 
     def channelOpen(self, foo):
-        log.msg("session {} open".format(self.id))
+        log.msg(f"session {self.id} open")
         if options["agent"]:
             d = self.conn.sendRequest(
                 self, b"auth-agent-req@openssh.com", b"", wantReply=1
@@ -487,18 +481,18 @@ class SSHSession(channel.SSHChannel):
         self.stdio.loseWriteConnection()
 
     def closeReceived(self):
-        log.msg("remote side closed {}".format(self))
+        log.msg(f"remote side closed {self}")
         self.conn.sendClose(self)
 
     def closed(self):
         global old
-        log.msg("closed {}".format(self))
+        log.msg(f"closed {self}")
         log.msg(repr(self.conn.channels))
 
     def request_exit_status(self, data):
         global exitStatus
         exitStatus = int(struct.unpack(">L", data)[0])
-        log.msg("exit status: {}".format(exitStatus))
+        log.msg(f"exit status: {exitStatus}")
 
     def sendEOF(self):
         self.conn.sendEOF(self)
@@ -541,7 +535,7 @@ def _enterRawMode():
     try:
         old = tty.tcgetattr(fd)
         new = old[:]
-    except:
+    except BaseException:
         log.msg("not a typewriter!")
     else:
         # iflage

@@ -231,12 +231,12 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         if childFD == 1:
             self.stages.append(2)
             if self.data != b"abcd":
-                raise RuntimeError("Data was %r instead of 'abcd'" % (self.data,))
+                raise RuntimeError(f"Data was {self.data!r} instead of 'abcd'")
             self.transport.write(b"1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != b"1234":
-                raise RuntimeError("Err was %r instead of '1234'" % (self.err,))
+                raise RuntimeError(f"Err was {self.err!r} instead of '1234'")
             self.transport.write(b"abcd")
             self.stages.append(4)
         elif childFD == 0:
@@ -309,7 +309,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         is set up and ready to receive the signal) by sending the signal to
         it.  Also log all output to help with debugging.
         """
-        msg("Received %r from child stdout" % (data,))
+        msg(f"Received {data!r} from child stdout")
         if not self.signaled:
             self.signaled = True
             self.transport.signalProcess(self.signal)
@@ -319,7 +319,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         Log all data received from the child's stderr to help with
         debugging.
         """
-        msg("Received %r from child stderr" % (data,))
+        msg(f"Received {data!r} from child stderr")
 
     def processEnded(self, reason):
         """
@@ -329,11 +329,9 @@ class SignalProtocol(protocol.ProcessProtocol):
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
         """
-        msg("Child exited: %r" % (reason.getTraceback(),))
+        msg(f"Child exited: {reason.getTraceback()!r}")
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: %s" % (reason,))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if isinstance(self.signal, str):
             signalValue = getattr(signal, "SIG" + self.signal)
@@ -341,9 +339,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             signalValue = self.signal
         if v.exitCode is not None:
             return self.deferred.errback(
-                ValueError(
-                    "SIG%s: exitCode is %s, not None" % (self.signal, v.exitCode)
-                )
+                ValueError(f"SIG{self.signal}: exitCode is {v.exitCode}, not None")
             )
         if v.signal != signalValue:
             return self.deferred.errback(
@@ -354,7 +350,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             )
         if os.WTERMSIG(v.status) != signalValue:
             return self.deferred.errback(
-                ValueError("SIG%s: %s" % (self.signal, os.WTERMSIG(v.status)))
+                ValueError("SIG{}: {}".format(self.signal, os.WTERMSIG(v.status)))
             )
         self.deferred.callback(None)
 
@@ -378,7 +374,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     @ivar programName: The name of the program to run.
     """
 
-    programName = b""  # type: bytes
+    programName: bytes = b""
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -531,6 +527,42 @@ class ProcessTests(unittest.TestCase):
 
         return d.addCallback(processEnded)
 
+    def test_patchSysStdoutWithNone(self):
+        """
+        In some scenarious, such as Python running as part of a Windows
+        Windows GUI Application with no console, L{sys.stdout} is L{None}.
+        """
+        import sys
+
+        self.patch(sys, "stdout", None)
+        return self.test_stdio()
+
+    def test_patchSysStdoutWithStringIO(self):
+        """
+        Some projects which use the Twisted reactor
+        such as Buildbot patch L{sys.stdout} with L{io.StringIO}
+        before running their tests.
+        """
+        import sys
+        from io import StringIO
+
+        stdoutStringIO = StringIO()
+        self.patch(sys, "stdout", stdoutStringIO)
+        return self.test_stdio()
+
+    def test_patch_sys__stdout__WithStringIO(self):
+        """
+        If L{sys.stdout} and L{sys.__stdout__} are patched with L{io.StringIO},
+        we should get a L{ValueError}.
+        """
+        import sys
+        from io import StringIO
+
+        self.patch(sys, "stdout", StringIO())
+        self.patch(sys, "__stdout__", StringIO())
+        with self.assertRaises(ValueError):
+            return self.test_stdio()
+
     def test_unsetPid(self):
         """
         Test if pid is None/non-None before/after process termination.  This
@@ -550,6 +582,12 @@ class ProcessTests(unittest.TestCase):
         p.transport.closeStdin()
         return finished.addCallback(afterProcessEnd)
 
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true"
+        and runtime.platform.getType() == "win32"
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        "See https://twistedmatrix.com/trac/ticket/10014",
+    )
     def test_process(self):
         """
         Test running a process: check its output, it exitCode, some property of
@@ -572,16 +610,22 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob
+                import process_tester, glob  # type: ignore[import]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
-            except:
+            except BaseException:
                 pass
 
         d.addCallback(check)
         return d
 
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true"
+        and runtime.platform.getType() == "win32"
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        "See https://twistedmatrix.com/trac/ticket/10014",
+    )
     def test_manyProcesses(self):
         def _check(results, protocols):
             for p in protocols:
@@ -851,11 +895,11 @@ class FDChecker(protocol.ProcessProtocol):
                 self.transport.writeToChild(3, b"efgh")
                 return
         if self.state == 2:
-            self.fail("read '%s' on fd %s during state 2" % (childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 2")
             return
         if self.state == 3:
             if childFD != 1:
-                self.fail("read '%s' on fd %s (not 1) during state 3" % (childFD, data))
+                self.fail(f"read '{childFD}' on fd {data} (not 1) during state 3")
                 return
             self.data += data
             if len(self.data) == 6:
@@ -865,7 +909,7 @@ class FDChecker(protocol.ProcessProtocol):
                 self.state = 4
             return
         if self.state == 4:
-            self.fail("read '%s' on fd %s during state 4" % (childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 4")
             return
 
     def childConnectionLost(self, childFD):
@@ -984,7 +1028,7 @@ class PosixProcessBase:
         elif usrbinLoc.exists():
             return usrbinLoc._asBytesPath()
         else:
-            raise RuntimeError("%s not found in /bin or /usr/bin" % (commandName,))
+            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -1683,7 +1727,7 @@ class MockProcessTests(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6]))
+        self.assertEqual(set(self.mockos.closed), {-1, -4, -6})
         self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
 
     def test_mockForkInParentGarbageCollectorEnabled(self):
@@ -1760,7 +1804,7 @@ class MockProcessTests(unittest.TestCase):
         before are closed and don't leak.
         """
         self._mockWithForkError()
-        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6, -2, -3, -5]))
+        self.assertEqual(set(self.mockos.closed), {-1, -4, -6, -2, -3, -5})
 
     def test_mockForkErrorGivenFDs(self):
         """
@@ -1788,7 +1832,7 @@ class MockProcessTests(unittest.TestCase):
             None,
             childFDs={0: "r", 1: -11, 2: -13},
         )
-        self.assertEqual(set(self.mockos.closed), set([-1, -2]))
+        self.assertEqual(set(self.mockos.closed), {-1, -2})
 
     def test_mockForkErrorClosePTY(self):
         """
@@ -1800,7 +1844,7 @@ class MockProcessTests(unittest.TestCase):
         protocol = TrivialProcessProtocol(None)
         self.assertRaises(OSError, reactor.spawnProcess, protocol, None, usePTY=True)
         self.assertEqual(self.mockos.actions, [("fork", False)])
-        self.assertEqual(set(self.mockos.closed), set([-12, -13]))
+        self.assertEqual(set(self.mockos.closed), {-12, -13})
 
     def test_mockForkErrorPTYGivenFDs(self):
         """
@@ -1986,7 +2030,7 @@ class MockProcessTests(unittest.TestCase):
         protocol = TrivialProcessProtocol(None)
         self.assertRaises(OSError, reactor.spawnProcess, protocol, None)
         self.assertEqual(self.mockos.actions, [])
-        self.assertEqual(set(self.mockos.closed), set([-4, -3, -2, -1]))
+        self.assertEqual(set(self.mockos.closed), {-4, -3, -2, -1})
 
     def test_kill(self):
         """
@@ -2071,7 +2115,7 @@ class PosixProcessTests(unittest.TestCase, PosixProcessBase):
             [
                 pyExe,
                 b"-c",
-                networkString("import sys; sys.stderr.write" "('{0}')".format(value)),
+                networkString("import sys; sys.stderr.write" "('{}')".format(value)),
             ],
             env=None,
             path="/tmp",
@@ -2176,14 +2220,10 @@ class Win32SignalProtocol(SignalProtocol):
         Otherwise, errback with a C{ValueError} describing the problem.
         """
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: %s" % (reason,))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if v.exitCode != 1:
-            return self.deferred.errback(
-                ValueError("Wrong exit code: %s" % (v.exitCode,))
-            )
+            return self.deferred.errback(ValueError(f"Wrong exit code: {v.exitCode}"))
         self.deferred.callback(None)
 
 
@@ -2217,7 +2257,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api
+        import win32api  # type: ignore[import]
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]
@@ -2456,7 +2496,7 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
 
     @defer.inlineCallbacks
     def test_flags(self):
-        """
+        r"""
         Verify that the flags passed to win32process.CreateProcess() prevent a
         new console window from being created. Use the following script
         to test this interactively::

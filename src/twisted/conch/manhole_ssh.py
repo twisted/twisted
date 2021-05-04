@@ -141,8 +141,8 @@ class TerminalRealm:
 
 
 class ConchFactory(factory.SSHFactory):
-    publicKeys = {}  # type: Dict[bytes, bytes]
-    privateKeys = {}  # type: Dict[bytes, bytes]
+    publicKeys: Dict[bytes, bytes] = {}
+    privateKeys: Dict[bytes, bytes] = {}
 
     def __init__(self, portal):
         self.portal = portal

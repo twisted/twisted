@@ -17,7 +17,7 @@ from tkinter import Tk, Frame, Button, LEFT
 from twisted.internet import reactor, tksupport
 
 
-class App(object):
+class App:
     def onQuit(self):
         print("Quit!")
         reactor.stop()

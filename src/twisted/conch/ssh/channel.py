@@ -13,7 +13,6 @@ Maintainer: Paul Swartz
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python.compat import nativeString
 from twisted.internet import interfaces
 from twisted.logger import Logger
 
@@ -53,7 +52,7 @@ class SSHChannel(log.Logger):
     """
 
     _log = Logger()
-    name = None  # type: bytes  # only needed for client channels
+    name: bytes = None  # type: ignore[assignment]  # only needed for client channels
 
     def __init__(
         self,
@@ -83,9 +82,9 @@ class SSHChannel(log.Logger):
         self.id = None  # gets set later by SSHConnection
 
     def __str__(self) -> str:
-        return nativeString(self.__bytes__())
+        return self.__bytes__().decode("ascii")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         """
         Return a byte string representation of the channel
         """
@@ -101,10 +100,11 @@ class SSHChannel(log.Logger):
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
-        name = self.name
-        if name:
-            name = nativeString(name)
-        return "SSHChannel %s (%s) on %s" % (name, id, self.conn.logPrefix())
+        if self.name:
+            name = self.name.decode("ascii")
+        else:
+            name = "None"
+        return f"SSHChannel {name} ({id}) on {self.conn.logPrefix()}"
 
     def channelOpen(self, specificData):
         """
@@ -156,7 +156,7 @@ class SSHChannel(log.Logger):
         @type data:         L{bytes}
         @rtype:             L{bool}
         """
-        foo = nativeString(requestType.replace(b"-", b"_"))
+        foo = requestType.replace(b"-", b"_").decode("ascii")
         f = getattr(self, "request_" + foo, None)
         if f:
             return f(data)

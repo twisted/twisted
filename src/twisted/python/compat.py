@@ -37,8 +37,8 @@ from io import IOBase
 from io import StringIO as NativeStringIO
 from io import TextIOBase
 from sys import intern
-from types import MethodType as _MethodType
-from typing import Any, cast
+from types import FrameType, MethodType as _MethodType
+from typing import Any, AnyStr, cast
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
@@ -59,7 +59,7 @@ else:
 
 FileType = IOBase
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for io.IOBase",
     __name__,
     "FileType",
@@ -67,7 +67,7 @@ deprecatedModuleAttribute(
 
 frozenset = frozenset
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for frozenset builtin type",
     __name__,
     "frozenset",
@@ -75,7 +75,7 @@ deprecatedModuleAttribute(
 
 InstanceType = object
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Old-style classes don't exist in Python 3",
     __name__,
     "InstanceType",
@@ -83,7 +83,7 @@ deprecatedModuleAttribute(
 
 izip = zip
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for zip() builtin",
     __name__,
     "izip",
@@ -91,7 +91,7 @@ deprecatedModuleAttribute(
 
 long = int
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for int builtin type",
     __name__,
     "long",
@@ -99,7 +99,7 @@ deprecatedModuleAttribute(
 
 range = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "range",
@@ -107,7 +107,7 @@ deprecatedModuleAttribute(
 
 raw_input = input
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for input() builtin",
     __name__,
     "raw_input",
@@ -115,7 +115,7 @@ deprecatedModuleAttribute(
 
 set = set
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for set builtin type",
     __name__,
     "set",
@@ -123,7 +123,7 @@ deprecatedModuleAttribute(
 
 StringType = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "StringType",
@@ -131,7 +131,7 @@ deprecatedModuleAttribute(
 
 unichr = chr
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for chr() builtin",
     __name__,
     "unichr",
@@ -139,7 +139,7 @@ deprecatedModuleAttribute(
 
 unicode = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "unicode",
@@ -147,14 +147,14 @@ deprecatedModuleAttribute(
 
 xrange = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "xrange",
 )
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.items()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -165,7 +165,7 @@ def iteritems(d):
     return d.items()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.values()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -176,7 +176,7 @@ def itervalues(d):
     return d.values()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="list(d.items())")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -187,22 +187,21 @@ def items(d):
     return list(d.items())
 
 
-def currentframe(n=0):
+def currentframe(n: int = 0) -> FrameType:
     """
     In Python 3, L{inspect.currentframe} does not take a stack-level argument.
     Restore that functionality from Python 2 so we don't have to re-implement
     the C{f_back}-walking loop in places where it's called.
 
     @param n: The number of stack levels above the caller to walk.
-    @type n: L{int}
 
     @return: a frame, n levels up the stack from the caller.
-    @rtype: L{types.FrameType}
     """
     f = inspect.currentframe()
     for x in range(n + 1):
         assert f is not None
         f = f.f_back
+    assert f is not None
     return f
 
 
@@ -225,14 +224,16 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-def cmp(a, b):
+# type note: Can't find a Comparable type, despite
+# https://github.com/python/typing/issues/59
+def cmp(a: object, b: object) -> int:
     """
     Compare two objects.
 
     Returns a negative number if C{a < b}, zero if they are equal, and a
     positive number if C{a > b}.
     """
-    if a < b:
+    if a < b:  # type: ignore[operator]
         return -1
     elif a == b:
         return 0
@@ -309,17 +310,11 @@ def ioType(fileIshObject, default=str):
 
     @return: There are 3 possible return values:
 
-            1. L{unicode}, if the file is unambiguously opened in text mode.
+            1. L{str}, if the file is unambiguously opened in text mode.
 
             2. L{bytes}, if the file is unambiguously opened in binary mode.
 
-            3. L{basestring}, if we are on python 2 (the L{basestring} type
-               does not exist on python 3) and the file is opened in binary
-               mode, but has an encoding and can therefore accept both bytes
-               and text reliably for writing, but will return L{bytes} from
-               read methods.
-
-            4. The C{default} parameter, if the given type is not understood.
+            3. The C{default} parameter, if the given type is not understood.
 
     @rtype: L{type}
     """
@@ -342,13 +337,13 @@ def ioType(fileIshObject, default=str):
     return default
 
 
-def nativeString(s):
+def nativeString(s: AnyStr) -> str:
     """
-    Convert C{bytes} or C{unicode} to the native C{str} type, using ASCII
-    encoding if conversion is necessary.
+    Convert C{bytes} or C{str} to C{str} type, using ASCII encoding if
+    conversion is necessary.
 
     @raise UnicodeError: The input string is not ASCII encodable/decodable.
-    @raise TypeError: The input is neither C{bytes} nor C{unicode}.
+    @raise TypeError: The input is neither C{bytes} nor C{str}.
     """
     if not isinstance(s, (bytes, str)):
         raise TypeError("%r is neither bytes nor str" % s)
@@ -368,15 +363,15 @@ def _matchingString(constantString, inputString):
     C{os.path.join}, that constant would be C{os.path.sep}) involved in the
     parsing or processing, that must be of a matching type in order to use
     string operations on it.  L{_matchingString} will take a constant string
-    (either L{bytes} or L{unicode}) and convert it to the same type as the
+    (either L{bytes} or L{str}) and convert it to the same type as the
     input string.  C{constantString} should contain only characters from ASCII;
     to ensure this, it will be encoded or decoded regardless.
 
     @param constantString: A string literal used in processing.
-    @type constantString: L{unicode} or L{bytes}
+    @type constantString: L{str} or L{bytes}
 
     @param inputString: A byte string or text string provided by the user.
-    @type inputString: L{unicode} or L{bytes}
+    @type inputString: L{str} or L{bytes}
 
     @return: C{constantString} converted into the same type as C{inputString}
     @rtype: the type of C{inputString}
@@ -392,7 +387,7 @@ def _matchingString(constantString, inputString):
 
 
 @deprecated(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     replacement="raise exception.with_traceback(traceback)",
 )
 def reraise(exception, traceback):
@@ -423,7 +418,7 @@ def iterbytes(originalBytes):
         yield originalBytes[i : i + 1]
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="b'%d'")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="b'%d'")
 def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
@@ -477,7 +472,7 @@ def networkString(s: str) -> bytes:
     return s.encode("ascii")
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.environb")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -497,7 +492,7 @@ def _constructMethod(cls, name, self):
     Construct a bound method.
 
     @param cls: The class that the method should be bound to.
-    @type cls: L{types.ClassType} or L{type}.
+    @type cls: L{type}
 
     @param name: The name of the method.
     @type name: native L{str}
@@ -506,7 +501,7 @@ def _constructMethod(cls, name, self):
     @type self: any object
 
     @return: a bound method
-    @rtype: L{types.MethodType}
+    @rtype: L{_MethodType}
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
@@ -543,8 +538,7 @@ def _get_async_param(isAsync=None, **kwargs):
 
 def _pypy3BlockingHack():
     """
-    Work around U{this pypy bug
-    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:
@@ -572,57 +566,57 @@ _pypy3BlockingHack()
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use functools.reduce() directly",
     __name__,
     "reduce",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use io.StringIO directly",
     __name__,
     "NativeStringIO",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Import urllib.parse directly",
     __name__,
     "urllib_parse",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use html.escape directly", __name__, "escape"
+    Version("Twisted", 21, 2, 0), "Use html.escape directly", __name__, "escape"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.quote() directly",
     __name__,
     "urlquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.unquote() directly",
     __name__,
     "urlunquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use http.cookiejar directly",
     __name__,
     "cookielib",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use sys.intern() directly", __name__, "intern"
+    Version("Twisted", 21, 2, 0), "Use sys.intern() directly", __name__, "intern"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use collections.abc.Sequence directly",
     __name__,
     "Sequence",

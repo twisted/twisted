@@ -448,7 +448,7 @@ class SafeReprTests(TestCase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        xReprExpected = "<BrokenType instance at 0x%x with repr error:" % (id(X),)
+        xReprExpected = "<BrokenType instance at 0x{:x} with repr error:".format(id(X))
         self.assertEqual(xReprExpected, xRepr.split("\n")[0])
 
     def test_brokenClassStr(self):
@@ -655,7 +655,7 @@ class FullyQualifiedNameTests(TestCase):
         L{fullyQualifiedName} returns the name of a class and its module.
         """
         self._checkFullyQualifiedName(
-            FullyQualifiedNameTests, "%s.FullyQualifiedNameTests" % (__name__,)
+            FullyQualifiedNameTests, f"{__name__}.FullyQualifiedNameTests"
         )
 
     def test_function(self):
@@ -673,7 +673,7 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.test_boundMethod,
-            "%s.%s.test_boundMethod" % (__name__, self.__class__.__name__),
+            f"{__name__}.{self.__class__.__name__}.test_boundMethod",
         )
 
     def test_unboundMethod(self):
@@ -683,7 +683,7 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.__class__.test_unboundMethod,
-            "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__),
+            f"{__name__}.{self.__class__.__name__}.test_unboundMethod",
         )
 
 

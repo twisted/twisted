@@ -9,7 +9,6 @@ To run the script:
 $ python xmpp_client.py <jid> <secret>
 """
 
-from __future__ import print_function
 
 import sys
 
@@ -21,7 +20,7 @@ from twisted.words.protocols.jabber import xmlstream, client
 from twisted.words.protocols.jabber.jid import JID
 
 
-class Client(object):
+class Client:
     def __init__(self, reactor, jid, secret):
         self.reactor = reactor
         f = client.XMPPClientFactory(jid, secret)

@@ -156,7 +156,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
+    protocol: "Type[protocol.Protocol]" = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -245,8 +245,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
             (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
-        @type pKwArgs: L{dict}
-        @param pKwArgs: Keyword arguments for L{SMTPClient.__init__}
+        @param kw: Keyword arguments for L{SMTPClient.__init__}
         """
         self.secret = secret
         self.contextFactory = contextFactory
@@ -456,7 +455,7 @@ class Queue:
         @type message: L{bytes}
         @param message: The base filename of a message.
 
-        @rtype: L{file}
+        @rtype: file
         @return: The envelope file for the message.
         """
         return open(os.path.join(self.directory, message + "-H"), "rb")
@@ -465,11 +464,11 @@ class Queue:
         """
         Create a new message in the queue.
 
-        @rtype: 2-L{tuple} of (0) L{file}, (1) L{FileMessage}
+        @rtype: 2-L{tuple} of (0) file, (1) L{FileMessage}
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
+        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
         self.n = self.n + 1
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
@@ -677,7 +676,7 @@ class SmartHostSMTPRelayingManager:
         filenames of messages the managed relayer is responsible for.
     """
 
-    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
+    factory: Type[protocol.ClientFactory] = SMTPManagedRelayerFactory
 
     PORT = 25
 
@@ -926,7 +925,7 @@ class MXCalculator:
         """
         @type resolver: L{IResolver <twisted.internet.interfaces.IResolver>}
             provider or L{None}
-        @param: A resolver.
+        @param resolver: A resolver.
 
         @type clock: L{IReactorTime <twisted.internet.interfaces.IReactorTime>}
             provider or L{None}
@@ -1088,7 +1087,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(error.DNSNameError("No MX records for %r" % (domain,)))
+            return Failure(error.DNSNameError(f"No MX records for {domain!r}"))
 
     def _ebMX(self, failure, domain):
         """
@@ -1118,7 +1117,9 @@ class MXCalculator:
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)
             log.msg(
-                "MX lookup failed; attempting to use hostname (%s) directly" % (domain,)
+                "MX lookup failed; attempting to use hostname ({}) directly".format(
+                    domain
+                )
             )
 
             # Alright, I admit, this is a bit icky.
@@ -1134,5 +1135,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise IOError("No MX found for %r" % (domain,))
+            raise OSError(f"No MX found for {domain!r}")
         return failure

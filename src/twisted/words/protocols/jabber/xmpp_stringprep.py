@@ -3,7 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from encodings import idna  # type: ignore[attr-defined]
+from encodings import idna
 from itertools import chain
 import stringprep
 

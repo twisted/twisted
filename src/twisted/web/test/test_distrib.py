@@ -97,7 +97,7 @@ class DistribTests(TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        url = "http://127.0.0.1:{}/here/there".format(self.port2.getHost().port)
+        url = f"http://127.0.0.1:{self.port2.getHost().port}/here/there"
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
@@ -144,7 +144,7 @@ class DistribTests(TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
-        url = "http://%s:%s/child" % (mainAddr.host, mainAddr.port)
+        url = f"http://{mainAddr.host}:{mainAddr.port}/child"
         url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
@@ -165,7 +165,7 @@ class DistribTests(TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = f"http://{mainAddr.host}:{mainAddr.port}/child"
         url = url.encode("ascii")
         d = client.Agent(reactor).request(b"GET", url, **kwargs)
 

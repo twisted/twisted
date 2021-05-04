@@ -11,7 +11,7 @@ Tests for L{twisted.conch.manhole}.
 import traceback
 from typing import Optional
 
-ssh = None  # type: Optional[bool]
+ssh: Optional[bool] = None
 
 from twisted.trial import unittest
 from twisted.internet import error, defer
@@ -34,7 +34,7 @@ def determineDefaultFunctionName():
     """
     try:
         1 // 0
-    except:
+    except BaseException:
         # The last frame is this function.  The second to last frame is this
         # function's caller, which is module-scope, which is what we want,
         # so -2.
@@ -289,7 +289,7 @@ class ManholeLoopbackMixin:
         return continuing
 
     def test_ControlBackslash(self):
-        """
+        r"""
         Evaluate cancelling with CTRL-\.
         """
         self._testwrite(b"cancelled line")

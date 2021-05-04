@@ -53,14 +53,14 @@ class BananaBench:
         self.tearDown()
 
     def runTests(self, testData):
-        print("Test data is: {}".format(testData))
+        print(f"Test data is: {testData}")
         print("  Using Pure Python Banana:")
         self.performTest(self.testEncode, testData, banana.Banana)
         self.performTest(self.testDecode, testData, banana.Banana)
 
 
 bench = BananaBench()
-print("Doing {} iterations of each test.".format(iterationCount))
+print(f"Doing {iterationCount} iterations of each test.")
 print("")
 testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)

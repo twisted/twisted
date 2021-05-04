@@ -43,8 +43,8 @@ if requireModule("OpenSSL"):
 
     from twisted.internet import ssl
 
-    from OpenSSL import SSL
-    from OpenSSL.crypto import get_elliptic_curves
+    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL.crypto import get_elliptic_curves  # type: ignore[import]
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
 
@@ -729,7 +729,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
         L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
-        super(OpenSSLOptionsTests, self).setUp()
+        super().setUp()
         self.patch(
             sslverify,
             "_ChooseDiffieHellmanEllipticCurve",
@@ -1413,8 +1413,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertIn(k, s, "%r was not in inspect output." % (k,))
-            self.assertIn(k.title(), s, "%r was not in inspect output." % (k,))
+            self.assertIn(k, s, f"{k!r} was not in inspect output.")
+            self.assertIn(k.title(), s, f"{k!r} was not in inspect output.")
 
     def testInspectDistinguishedNameWithoutAllFields(self):
         n = sslverify.DN(localityName=b"locality name")
@@ -1427,8 +1427,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             "country name",
             "email address",
         ]:
-            self.assertNotIn(k, s, "%r was in inspect output." % (k,))
-            self.assertNotIn(k.title(), s, "%r was in inspect output." % (k,))
+            self.assertNotIn(k, s, f"{k!r} was in inspect output.")
+            self.assertNotIn(k.title(), s, f"{k!r} was in inspect output.")
         self.assertIn("locality name", s)
         self.assertIn("Locality Name", s)
 
@@ -1542,10 +1542,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertTrue(opts.fixBrokenPeers)
         self.assertTrue(opts.enableSessionTickets)
 
-    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]  # noqa
+    test_certificateOptionsSerialization.suppress = [  # type: ignore[attr-defined]
         util.suppress(
             category=DeprecationWarning,
-            message="twisted\.internet\._sslverify\.*__[gs]etstate__",
+            message=r"twisted\.internet\._sslverify\.*__[gs]etstate__",
         )
     ]
 

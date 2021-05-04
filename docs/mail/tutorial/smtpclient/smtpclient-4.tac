@@ -8,5 +8,5 @@ from twisted.internet import protocol
 smtpClientFactory = protocol.ClientFactory()
 smtpClientFactory.protocol = protocol.Protocol
 
-smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
+smtpClientService = internet.TCPClient("localhost", 25, smtpClientFactory)
 smtpClientService.setServiceParent(application)

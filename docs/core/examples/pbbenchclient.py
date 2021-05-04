@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from twisted.spread import pb
 from twisted.internet import defer, reactor
 from twisted.cred.credentials import UsernamePassword

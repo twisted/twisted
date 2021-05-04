@@ -22,12 +22,12 @@ from typing import List
 
 from zope.interface import implementer
 
-import priority
-import h2.config
-import h2.connection
-import h2.errors
-import h2.events
-import h2.exceptions
+import priority  # type: ignore[import]
+import h2.config  # type: ignore[import]
+import h2.connection  # type: ignore[import]
+import h2.errors  # type: ignore[import]
+import h2.events  # type: ignore[import]
+import h2.exceptions  # type: ignore[import]
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
@@ -47,7 +47,7 @@ from twisted.web.error import ExcessiveBufferingError
 
 
 # This API is currently considered private.
-__all__ = []  # type: List[str]
+__all__: List[str] = []
 
 
 _END_STREAM_SENTINEL = object()
@@ -1075,7 +1075,7 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type: Any iterable of two-tuples of L{bytes}, representing header
+        @type headers: Any iterable of two-tuples of L{bytes}, representing header
             names and header values.
         """
         self._conn.writeHeaders(version, code, reason, headers, self.streamID)

@@ -12,7 +12,7 @@ from twisted.python.compat import nativeString
 from twisted.internet import ssl
 from twisted.python.filepath import FilePath
 
-from OpenSSL import SSL
+from OpenSSL import SSL  # type: ignore[import]
 
 certPath = nativeString(FilePath(__file__.encode("utf-8")).sibling(b"server.pem").path)
 

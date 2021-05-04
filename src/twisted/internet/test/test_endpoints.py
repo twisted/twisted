@@ -78,7 +78,7 @@ try:
         DiffieHellmanParameters,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3
+    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3  # type: ignore[import]
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -785,9 +785,7 @@ class MemoryProcessTransport(StringTransportWithDisconnection):
     """
 
     def __init__(self, protocol=None):
-        super(MemoryProcessTransport, self).__init__(
-            hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress()
-        )
+        super().__init__(hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress())
         self.signals = []
         self.closedChildFDs = set()
         self.protocol = Protocol()
@@ -1847,7 +1845,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         """
         try:
             result = f(*args, **kwargs)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(result)
@@ -3118,7 +3116,7 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,)
+            reactor, f"ssl:4321:privateKey={escapedPEMPathName}"
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
@@ -3207,7 +3205,7 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:4321:privateKey={0}:certKey={1}:dhParameters={2}".format(
+            "ssl:4321:privateKey={}:certKey={}:dhParameters={}".format(
                 escapedPEMPathName, escapedPEMPathName, fileName
             ),
         )
@@ -3284,7 +3282,7 @@ class ServerStringTests(unittest.TestCase):
         fakeEndpoint = endpoints.serverFromString(
             notAReactor, "fake:hello:world:yes=no:up=down"
         )
-        from twisted.plugins.fakeendpoint import fake
+        from twisted.plugins.fakeendpoint import fake  # type: ignore[import]
 
         self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, "hello", "world"))
@@ -3590,7 +3588,7 @@ class SSLClientStringTests(unittest.TestCase):
                 # There is a duplicate of thing2.pem, so ignore anything that
                 # looks like it.
                 if data == casPath.child("thing2.pem").getContent():
-                    raise IOError(EPERM)
+                    raise OSError(EPERM)
                 else:
                     return data
 
@@ -3751,7 +3749,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find systemd parser in %r" % (parsers,))
+            self.fail(f"Did not find systemd parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3833,7 +3831,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
+            self.fail(f"Did not find TCP6ServerEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3851,7 +3849,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         'tcp6' endpoint string description.
         """
         ep = endpoints.serverFromString(
-            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1"
+            MemoryReactor(), r"tcp6:8080:backlog=12:interface=\:\:1"
         )
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
@@ -3877,7 +3875,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find StandardIOEndpoint parser in %r" % (parsers,))
+            self.fail(f"Did not find StandardIOEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3952,7 +3950,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).dataReceived(data.upper())
+        super().dataReceived(data.upper())
 
     def write(self, data):
         """
@@ -3961,7 +3959,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).write(data.upper())
+        super().write(data.upper())
 
     def writeSequence(self, seq):
         """

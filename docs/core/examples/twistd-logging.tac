@@ -18,7 +18,7 @@ logfile = open("twistd-logging.log", "a")
 def log(eventDict):
     # untilConcludes is necessary to retry the operation when the system call
     # has been interrupted.
-    untilConcludes(logfile.write, "Got a log! {}\n".format(eventDict))
+    untilConcludes(logfile.write, f"Got a log! {eventDict}\n")
     untilConcludes(logfile.flush)
 
 
@@ -30,4 +30,3 @@ LoopingCall(logSomething).start(1)
 
 application = Application("twistd-logging")
 application.setComponent(ILogObserver, log)
-

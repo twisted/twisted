@@ -276,10 +276,10 @@ class Tunnel:
         """
         if self.pendingSignals:
             self.pendingSignals.popleft()
-            raise IOError(EINTR, "Interrupted system call")
+            raise OSError(EINTR, "Interrupted system call")
 
         if len(datagram) > self.SEND_BUFFER_SIZE:
-            raise IOError(ENOBUFS, "No buffer space available")
+            raise OSError(ENOBUFS, "No buffer space available")
 
         self.writeBuffer.append(datagram)
         return len(datagram)
@@ -300,7 +300,7 @@ def _privileged(original):
     @wraps(original)
     def permissionChecker(self, *args, **kwargs):
         if original.__name__ not in self.permissions:
-            raise IOError(EPERM, "Operation not permitted")
+            raise OSError(EPERM, "Operation not permitted")
         return original(self, *args, **kwargs)
 
     return permissionChecker
@@ -328,7 +328,7 @@ class MemoryIOSystem:
     def __init__(self):
         self._devices = {}
         self._openFiles = {}
-        self.permissions = set(["open", "ioctl"])
+        self.permissions = {"open", "ioctl"}
 
     def getTunnel(self, port):
         """
@@ -434,10 +434,10 @@ class MemoryIOSystem:
         try:
             tunnel = self._openFiles[fd]
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
         if request != _TUNSETIFF:
-            raise IOError(EINVAL, "Request or args is not valid.")
+            raise OSError(EINVAL, "Request or args is not valid.")
 
         name, mode = struct.unpack("%dsH" % (_IFNAMSIZ,), args)
         tunnel.tunnelMode = mode

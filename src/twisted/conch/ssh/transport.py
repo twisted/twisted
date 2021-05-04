@@ -34,7 +34,7 @@ from twisted.logger import Logger
 # from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs, int_from_bytes
+from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs
 
 
 def _mpFromBytes(data):
@@ -48,7 +48,7 @@ def _mpFromBytes(data):
     @rtype: L{bytes}
     @return: The given data encoded as an SSH multiple-precision integer.
     """
-    return MP(int_from_bytes(data, "big"))
+    return MP(int.from_bytes(data, "big"))
 
 
 class _MACParams(tuple):
@@ -631,7 +631,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString("bad packet length {}".format(packetLen)),
+                networkString(f"bad packet length {packetLen}"),
             )
             return
         if len(self.buf) < packetLen + 4 + ms:
@@ -733,7 +733,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, "ssh_%s" % (messageType,), None)
+            f = getattr(self, f"ssh_{messageType}", None)
             if f is not None:
                 f(payload)
             else:
@@ -1263,7 +1263,9 @@ class SSHTransportBase(protocol.Protocol):
             return x25519.X25519PrivateKey.generate()
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve private key for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve private key for {!r}".format(
+                    self.kexAlg
+                )
             )
 
     def _encodeECPublicKey(self, ecPub):
@@ -1290,7 +1292,7 @@ class SSHTransportBase(protocol.Protocol):
             )
         else:
             raise UnsupportedAlgorithm(
-                "Cannot encode elliptic curve public key for %r" % (self.kexAlg,)
+                f"Cannot encode elliptic curve public key for {self.kexAlg!r}"
             )
 
     def _generateECSharedSecret(self, ecPriv, theirECPubBytes):
@@ -1322,7 +1324,9 @@ class SSHTransportBase(protocol.Protocol):
             sharedSecret = ecPriv.exchange(theirECPub)
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve shared secret for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve shared secret for {!r}".format(
+                    self.kexAlg
+                )
             )
 
         return _mpFromBytes(sharedSecret)
@@ -1846,7 +1850,7 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}
@@ -1906,7 +1910,7 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}

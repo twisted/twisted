@@ -10,7 +10,7 @@ Utilities and helpers for simulating a network
 import itertools
 
 try:
-    from OpenSSL.SSL import Error as NativeOpenSSLError
+    from OpenSSL.SSL import Error as NativeOpenSSLError  # type: ignore[import]
 except ImportError:
     pass
 
@@ -33,7 +33,7 @@ class TLSNegotiation:
         self.readyToSend = connectState
 
     def __repr__(self) -> str:
-        return "TLSNegotiation(%r)" % (self.obj,)
+        return f"TLSNegotiation({self.obj!r})"
 
     def pretendToVerify(self, other, tpt):
         # Set the transport problems list here?  disconnections?
@@ -99,7 +99,7 @@ class FakeTransport:
         self.peerAddress = peerAddress
 
     def __repr__(self) -> str:
-        return "FakeTransport<%s,%s,%s>" % (
+        return "FakeTransport<{},{},{}>".format(
             self.isServer and "S" or "C",
             self.serial,
             self.protocol.__class__.__name__,

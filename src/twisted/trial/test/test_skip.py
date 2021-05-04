@@ -86,7 +86,7 @@ class SkipAttributeOnMethods(TestCase):
     def test_one(self):
         raise Exception("Should never reach here")
 
-    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]  # noqa
+    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
 
     def test_shouldNotSkip(self):
         self.assertTrue(True, "Test should run and not be skipped")

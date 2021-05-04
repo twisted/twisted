@@ -55,7 +55,7 @@ APIs listed above.
 
 
 # System imports
-from OpenSSL import SSL
+from OpenSSL import SSL  # type: ignore[import]
 
 from zope.interface import implementer, implementer_only, implementedBy
 

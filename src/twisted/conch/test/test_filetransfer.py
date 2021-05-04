@@ -186,7 +186,7 @@ class OurServerOurClientTests(SFTPTestBase):
         """
         self.assertTrue(
             filetransfer.ISFTPServer.providedBy(self.server.client),
-            "ISFTPServer not provided by %r" % (self.server.client,),
+            f"ISFTPServer not provided by {self.server.client!r}",
         )
 
     def test_openedFileClosedWithConnection(self):
@@ -562,15 +562,13 @@ class OurServerOurClientTests(SFTPTestBase):
 
         self.assertEqual(
             filenames,
-            set(
-                [
-                    b".testHiddenFile",
-                    b"testDirectory",
-                    b"testRemoveFile",
-                    b"testRenameFile",
-                    b"testfile1",
-                ]
-            ),
+            {
+                b".testHiddenFile",
+                b"testDirectory",
+                b"testRemoveFile",
+                b"testRenameFile",
+                b"testfile1",
+            },
         )
 
     @defer.inlineCallbacks
@@ -654,6 +652,7 @@ class FileTransferCloseTests(TestCase):
         # make a server connection
         conn = connection.SSHConnection()
         # server connections have a 'self.transport.avatar'.
+
         class DummyTransport:
             def __init__(self):
                 self.transport = self

@@ -9,11 +9,14 @@ Interface definitions for L{twisted.web}.
     L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
+from typing import Optional
 
 from zope.interface import Interface, Attribute
 
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
 from twisted.cred.credentials import IUsernameDigestHash
+from twisted.web.http_headers import Headers
 
 
 class IRequest(Interface):
@@ -214,7 +217,7 @@ class IRequest(Interface):
         @see: {twisted.web.server.Request.prepath}
 
         @return: An absolute URL.
-        @type: L{bytes}
+        @rtype: L{bytes}
         """
 
     def rememberRootURL():
@@ -228,7 +231,7 @@ class IRequest(Interface):
         Get a previously-remembered URL.
 
         @return: An absolute URL.
-        @type: L{bytes}
+        @rtype: L{bytes}
         """
 
     # Methods for outgoing response
@@ -307,7 +310,7 @@ class IRequest(Interface):
 
         @param when: The last time the resource being returned was modified, in
             seconds since the epoch.
-        @type when: L{int}, L{long} or L{float}
+        @type when: L{int} or L{float}
 
         @return: If I am a C{If-Modified-Since} conditional request and the time
             given is not newer than the condition, I return
@@ -413,9 +416,9 @@ class ICredentialFactory(Interface):
         """
         Generate a new challenge to be sent to a client.
 
-        @type peer: L{twisted.web.http.Request}
-        @param peer: The request the response to which this challenge will be
-            included.
+        @type request: L{twisted.web.http.Request}
+        @param request: The request the response to which this challenge will
+            be included.
 
         @rtype: L{dict}
         @return: A mapping from L{str} challenge fields to associated L{str}
@@ -717,38 +720,38 @@ class IAgent(Interface):
         doSomeRequests(cache)
     """
 
-    def request(method, uri, headers=None, bodyProducer=None):
+    def request(
+        method: bytes,
+        uri: bytes,
+        headers: Optional[Headers] = None,
+        bodyProducer: Optional[IBodyProducer] = None,
+    ) -> Deferred[IResponse]:
         """
         Request the resource at the given location.
 
-        @param method: The request method to use, such as C{"GET"}, C{"HEAD"},
-            C{"PUT"}, C{"POST"}, etc.
-        @type method: L{bytes}
+        @param method: The request method to use, such as C{b"GET"}, C{b"HEAD"},
+            C{b"PUT"}, C{b"POST"}, etc.
 
         @param uri: The location of the resource to request.  This should be an
             absolute URI but some implementations may support relative URIs
             (with absolute or relative paths).  I{HTTP} and I{HTTPS} are the
             schemes most likely to be supported but others may be as well.
-        @type uri: L{bytes}
 
         @param headers: The headers to send with the request (or L{None} to
             send no extra headers).  An implementation may add its own headers
             to this (for example for client identification or content
             negotiation).
-        @type headers: L{Headers} or L{None}
 
         @param bodyProducer: An object which can generate bytes to make up the
             body of this request (for example, the properly encoded contents of
             a file for a file upload).  Or, L{None} if the request is to have
             no body.
-        @type bodyProducer: L{IBodyProducer} provider
 
         @return: A L{Deferred} that fires with an L{IResponse} provider when
             the header of the response has been received (regardless of the
             response status code) or with a L{Failure} if there is any problem
             which prevents that response from being received (including
             problems that prevent the request from being sent).
-        @rtype: L{Deferred}
         """
 
 

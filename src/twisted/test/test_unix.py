@@ -219,14 +219,14 @@ class UnixSocketTests(unittest.TestCase):
         filename = self.mktemp()
         unixPort = reactor.listenUNIX(filename, serverFactory)
 
-        connectedString = "<%s on %r>" % (factoryName, filename)
+        connectedString = f"<{factoryName} on {filename!r}>"
         self.assertEqual(repr(unixPort), connectedString)
         self.assertEqual(str(unixPort), connectedString)
 
         d = defer.maybeDeferred(unixPort.stopListening)
 
         def stoppedListening(ign):
-            unconnectedString = "<%s (not listening)>" % (factoryName,)
+            unconnectedString = f"<{factoryName} (not listening)>"
             self.assertEqual(repr(unixPort), unconnectedString)
             self.assertEqual(str(unixPort), unconnectedString)
 
@@ -359,14 +359,14 @@ class DatagramUnixSocketTests(unittest.TestCase):
         filename = self.mktemp()
         unixPort = reactor.listenUNIXDatagram(filename, serverProto)
 
-        connectedString = "<%s on %r>" % (protocolName, filename)
+        connectedString = f"<{protocolName} on {filename!r}>"
         self.assertEqual(repr(unixPort), connectedString)
         self.assertEqual(str(unixPort), connectedString)
 
         stopDeferred = defer.maybeDeferred(unixPort.stopListening)
 
         def stoppedListening(ign):
-            unconnectedString = "<%s (not listening)>" % (protocolName,)
+            unconnectedString = f"<{protocolName} (not listening)>"
             self.assertEqual(repr(unixPort), unconnectedString)
             self.assertEqual(str(unixPort), unconnectedString)
 

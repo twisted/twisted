@@ -1,0 +1,1 @@
+skip failing twisted.web.test.test_http.QueryArgumentsTests.testParseqs

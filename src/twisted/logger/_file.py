@@ -6,13 +6,16 @@
 File log observer.
 """
 
+from typing import Any, Callable, IO, Optional
+
 from zope.interface import implementer
 
 from twisted.python.compat import ioType
-from ._observer import ILogObserver
+
 from ._format import formatTime
 from ._format import timeFormatRFC3339
 from ._format import formatEventAsClassicLogText
+from ._interfaces import ILogObserver, LogEvent
 
 
 @implementer(ILogObserver)
@@ -21,63 +24,55 @@ class FileLogObserver:
     Log observer that writes to a file-like object.
     """
 
-    def __init__(self, outFile, formatEvent):
+    def __init__(
+        self, outFile: IO[Any], formatEvent: Callable[[LogEvent], Optional[str]]
+    ) -> None:
         """
         @param outFile: A file-like object.  Ideally one should be passed which
-            accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
-        @type outFile: L{io.IOBase}
-
+            accepts text data.  Otherwise, UTF-8 L{bytes} will be used.
         @param formatEvent: A callable that formats an event.
-        @type formatEvent: L{callable} that takes an C{event} argument and
-            returns a formatted event as L{unicode}.
         """
         if ioType(outFile) is not str:
-            self._encoding = "utf-8"
+            self._encoding: Optional[str] = "utf-8"
         else:
             self._encoding = None
 
         self._outFile = outFile
         self.formatEvent = formatEvent
 
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         Write event to file.
 
         @param event: An event.
-        @type event: L{dict}
         """
         text = self.formatEvent(event)
 
-        if text is None:
-            text = ""
-
-        if self._encoding is not None:
-            text = text.encode(self._encoding)
-
         if text:
-            self._outFile.write(text)
+            if self._encoding is None:
+                self._outFile.write(text)
+            else:
+                self._outFile.write(text.encode(self._encoding))
             self._outFile.flush()
 
 
-def textFileLogObserver(outFile, timeFormat=timeFormatRFC3339):
+def textFileLogObserver(
+    outFile: IO[Any], timeFormat: Optional[str] = timeFormatRFC3339
+) -> FileLogObserver:
     """
     Create a L{FileLogObserver} that emits text to a specified (writable)
     file-like object.
 
     @param outFile: A file-like object.  Ideally one should be passed which
-        accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
-    @type outFile: L{io.IOBase}
-
+        accepts text data.  Otherwise, UTF-8 L{bytes} will be used.
     @param timeFormat: The format to use when adding timestamp prefixes to
         logged events.  If L{None}, or for events with no C{"log_timestamp"}
-        key, the default timestamp prefix of C{u"-"} is used.
-    @type timeFormat: L{unicode} or L{None}
+        key, the default timestamp prefix of C{"-"} is used.
 
     @return: A file log observer.
-    @rtype: L{FileLogObserver}
     """
 
-    def formatEvent(event):
+    def formatEvent(event: LogEvent) -> Optional[str]:
         return formatEventAsClassicLogText(
             event, formatTime=lambda e: formatTime(e, timeFormat)
         )

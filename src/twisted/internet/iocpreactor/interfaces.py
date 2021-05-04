@@ -15,8 +15,8 @@ class IReadHandle(Interface):
         """
         Read into the given buffers from this handle.
 
-        @param buff: the buffers to read into
-        @type buff: list of objects implementing the read/write buffer protocol
+        @param bufflist: the buffers to read into
+        @type bufflist: list of objects implementing the read/write buffer protocol
 
         @param evt: an IOCP Event object
 

@@ -36,7 +36,7 @@ class GuardedResource(resource.Resource):
 
 
 @implementer(IRealm)
-class SimpleRealm(object):
+class SimpleRealm:
     """
     A realm which gives out L{GuardedResource} instances for authenticated
     users.

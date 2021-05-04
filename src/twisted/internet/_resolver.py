@@ -9,8 +9,6 @@ IPv6-aware hostname resolution.
 """
 
 
-__metaclass__ = type
-
 from socket import (
     getaddrinfo,
     AF_INET,

@@ -26,6 +26,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TYPE_CHECKING,
     Union,
     cast,
 )
@@ -57,10 +58,12 @@ from twisted.internet.interfaces import (
     IWriteDescriptor,
 )
 from twisted.internet.protocol import ClientFactory
-from twisted.internet.tcp import Client
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import seconds as runtimeSeconds, platform
+
+if TYPE_CHECKING:
+    from twisted.internet.tcp import Client
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
@@ -78,7 +81,7 @@ class DelayedCall:
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
-    _repr = None  # type: Optional[str]
+    _repr: Optional[str] = None
 
     def __init__(
         self,
@@ -235,7 +238,7 @@ class DelayedCall:
             # This code should be replaced by a utility function in reflect;
             # see ticket #6066:
             if hasattr(self.func, "__qualname__"):
-                func = self.func.__qualname__  # type: Optional[str]
+                func: Optional[str] = self.func.__qualname__
             elif hasattr(self.func, "__name__"):
                 func = self.func.func_name  # type: ignore[attr-defined]
                 if hasattr(self.func, "im_class"):
@@ -260,7 +263,7 @@ class DelayedCall:
                 L.append(
                     ", ".join(
                         [
-                            "%s=%s" % (k, reflect.safe_repr(v))
+                            "{}={}".format(k, reflect.safe_repr(v))
                             for (k, v) in self.kw.items()
                         ]
                     )
@@ -289,19 +292,21 @@ class ThreadedResolver:
 
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
-        self._runningQueries = {}  # type: Dict[Deferred, Tuple[Deferred, IDelayedCall]]
+        self._runningQueries: Dict[
+            Deferred[str], Tuple[Deferred[str], IDelayedCall]
+        ] = {}
 
     def _fail(self, name: str, err: str) -> Failure:
-        lookupError = error.DNSLookupError("address %r not found: %s" % (name, err))
+        lookupError = error.DNSLookupError(f"address {name!r} not found: {err}")
         return Failure(lookupError)
 
-    def _cleanup(self, name: str, lookupDeferred: Deferred) -> None:
+    def _cleanup(self, name: str, lookupDeferred: Deferred[str]) -> None:
         userDeferred, cancelCall = self._runningQueries[lookupDeferred]
         del self._runningQueries[lookupDeferred]
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: object, name: str, lookupDeferred: Deferred
+        self, result: str, name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -318,7 +323,7 @@ class ThreadedResolver:
 
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         """
         See L{twisted.internet.interfaces.IResolverSimple.getHostByName}.
 
@@ -330,7 +335,7 @@ class ThreadedResolver:
             timeoutDelay = sum(timeout)
         else:
             timeoutDelay = 60
-        userDeferred = defer.Deferred()
+        userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
             self.reactor,
             cast(IReactorThreads, self.reactor).getThreadPool(),
@@ -349,11 +354,11 @@ class ThreadedResolver:
 class BlockingResolver:
     def getHostByName(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred:
+    ) -> Deferred[str]:
         try:
             address = socket.gethostbyname(name)
-        except socket.error:
-            msg = "address %r not found" % (name,)
+        except OSError:
+            msg = f"address {name!r} not found"
             err = error.DNSLookupError(msg)
             return defer.fail(err)
         else:
@@ -401,9 +406,9 @@ class _ThreePhaseEvent:
     """
 
     def __init__(self) -> None:
-        self.before = []  # type: List[_ThreePhaseEventTrigger]
-        self.during = []  # type: List[_ThreePhaseEventTrigger]
-        self.after = []  # type: List[_ThreePhaseEventTrigger]
+        self.before: List[_ThreePhaseEventTrigger] = []
+        self.during: List[_ThreePhaseEventTrigger] = []
+        self.after: List[_ThreePhaseEventTrigger] = []
         self.state = "BASE"
 
     def addTrigger(
@@ -411,7 +416,7 @@ class _ThreePhaseEvent:
         phase: str,
         callable: _ThreePhaseEventTriggerCallable,
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _ThreePhaseEventTriggerHandle:
         """
         Add a trigger to the indicate phase.
@@ -419,8 +424,8 @@ class _ThreePhaseEvent:
         @param phase: One of C{'before'}, C{'during'}, or C{'after'}.
 
         @param callable: An object to be called when this event is triggered.
-        @param *args: Positional arguments to pass to C{callable}.
-        @param **kwargs: Keyword arguments to pass to C{callable}.
+        @param args: Positional arguments to pass to C{callable}.
+        @param kwargs: Keyword arguments to pass to C{callable}.
 
         @return: An opaque handle which may be passed to L{removeTrigger} to
             reverse the effects of calling this method.
@@ -484,13 +489,13 @@ class _ThreePhaseEvent:
         """
         self.state = "BEFORE"
         self.finishedBefore = []
-        beforeResults = []  # type: List[object]
+        beforeResults: List[Deferred[object]] = []
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
             try:
                 result = callable(*args, **kwargs)
-            except:
+            except BaseException:
                 log.err()
             else:
                 if isinstance(result, Deferred):
@@ -508,7 +513,7 @@ class _ThreePhaseEvent:
                 callable, args, kwargs = phase.pop(0)
                 try:
                     callable(*args, **kwargs)
-                except:
+                except BaseException:
                     log.err()
 
 
@@ -521,8 +526,8 @@ class PluggableResolverMixin:
     @ivar _nameResolver: The installed L{IHostnameResolver}.
     """
 
-    resolver = BlockingResolver()  # type: IResolverSimple
-    _nameResolver = _SimpleResolverComplexifier(resolver)  # type: IHostnameResolver
+    resolver: IResolverSimple = BlockingResolver()
+    _nameResolver: IHostnameResolver = _SimpleResolverComplexifier(resolver)
 
     # IReactorPluggableResolver
     def installResolver(self, resolver: IResolverSimple) -> IResolverSimple:
@@ -600,11 +605,11 @@ class ReactorBase(PluggableResolverMixin):
     __name__ = "twisted.internet.reactor"
 
     def __init__(self) -> None:
-        super(ReactorBase, self).__init__()
-        self.threadCallQueue = []  # type: List[_ThreadCall]
-        self._eventTriggers = {}  # type: Dict[str, _ThreePhaseEvent]
-        self._pendingTimedCalls = []  # type: List[DelayedCall]
-        self._newTimedCalls = []  # type: List[DelayedCall]
+        super().__init__()
+        self.threadCallQueue: List[_ThreadCall] = []
+        self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
+        self._pendingTimedCalls: List[DelayedCall] = []
+        self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
         self.running = False
         self._started = False
@@ -612,8 +617,8 @@ class ReactorBase(PluggableResolverMixin):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
-        self._internalReaders = set()  # type: Set[Any]
-        self.waker = None  # type: Any
+        self._internalReaders: Set[Any] = set()
+        self.waker: Any = None
 
         # Arrange for the running attribute to change to True at the right time
         # and let a subclass possibly do other things at that time (eg install
@@ -688,7 +693,9 @@ class ReactorBase(PluggableResolverMixin):
         )
 
     # IReactorCore
-    def resolve(self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> Deferred:
+    def resolve(
+        self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
+    ) -> Deferred[str]:
         """
         Return a Deferred that will resolve a hostname."""
         if not name:
@@ -724,7 +731,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGINT interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
@@ -734,7 +742,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGBREAK interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
@@ -744,7 +753,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         Handle a SIGTERM interrupt.
 
-        @param args: See handler specification in L{signal.signal}
+        @param number: See handler specification in L{signal.signal}
+        @param frame: See handler specification in L{signal.signal}
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
@@ -779,12 +789,12 @@ class ReactorBase(PluggableResolverMixin):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> _SystemEventID:
         """
         See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
+        assert builtins.callable(callable), f"{callable} is not callable"
         if eventType not in self._eventTriggers:
             self._eventTriggers[eventType] = _ThreePhaseEvent()
         return _SystemEventID(
@@ -860,8 +870,8 @@ class ReactorBase(PluggableResolverMixin):
         """
         See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert builtins.callable(callable), "{} is not callable".format(callable)
-        assert delay >= 0, "{} is not greater than or equal to 0 seconds".format(delay)
+        assert builtins.callable(callable), f"{callable} is not callable"
+        assert delay >= 0, f"{delay} is not greater than or equal to 0 seconds"
         delayedCall = DelayedCall(
             self.seconds() + delay,
             callable,
@@ -962,7 +972,7 @@ class ReactorBase(PluggableResolverMixin):
             for (f, a, kw) in self.threadCallQueue:
                 try:
                     f(*a, **kw)
-                except:
+                except BaseException:
                     log.err()
                 count += 1
                 if count == total:
@@ -989,7 +999,7 @@ class ReactorBase(PluggableResolverMixin):
             try:
                 call.called = 1
                 call.func(*call.args, **call.kw)
-            except:
+            except BaseException:
                 log.deferr()
                 if hasattr(call, "creator"):
                     e = "\n"
@@ -1020,7 +1030,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def _checkProcessArgs(
         self, args: List[Union[bytes, str]], env: Optional[Mapping[AnyStr, AnyStr]]
-    ) -> Tuple[List[bytes], Optional[Dict[bytes, bytes]]]:
+    ) -> Union[
+        Tuple[List[bytes], Optional[Dict[bytes, bytes]]],
+        Tuple[List[Union[bytes, str]], Optional[Mapping[AnyStr, AnyStr]]],
+    ]:
         """
         Check for valid arguments and environment to spawnProcess.
 
@@ -1049,8 +1062,19 @@ class ReactorBase(PluggableResolverMixin):
         #  - PYTHONIOENCODING
         #
         # are set before the Python interpreter runs, they will affect the
-        # value of sys.stdout.encoding
-        defaultEncoding = sys.stdout.encoding
+        # value of sys.stdout.encoding.
+
+        # In certain cases, such as a Windows GUI Application which has no
+        # console, sys.stdout is None.  In this case,
+        # just return the args and env unmodified.
+        if not sys.stdout:
+            return args, env
+
+        # If a client application patches sys.stdout so that encoding is not
+        # set properly, try to fall back to sys.__stdout__.encoding.
+        defaultEncoding = sys.stdout.encoding or sys.__stdout__.encoding
+        if not defaultEncoding:
+            raise ValueError("sys.stdout does not have a valid encoding")
 
         # Common check function
         def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
@@ -1066,7 +1090,7 @@ class ReactorBase(PluggableResolverMixin):
                     arg = arg.encode(defaultEncoding)
                 except UnicodeEncodeError:
                     return None
-            if isinstance(arg, bytes) and b"\0" not in arg:  # type: ignore[unreachable]
+            if isinstance(arg, bytes) and b"\0" not in arg:
                 return arg
 
             return None
@@ -1079,9 +1103,7 @@ class ReactorBase(PluggableResolverMixin):
         for arg in args:
             _arg = argChecker(arg)
             if _arg is None:
-                raise TypeError(
-                    "Arguments contain a non-string value: {!r}".format(arg)
-                )
+                raise TypeError(f"Arguments contain a non-string value: {arg!r}")
             else:
                 outputArgs.append(_arg)
 
@@ -1122,14 +1144,17 @@ class ReactorBase(PluggableResolverMixin):
             self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
 
-        def callFromThread(
+        # `IReactorFromThreads` defines the first named argument as
+        # `callable: Callable[..., Any]` but this defines it as `f`
+        # really both should be defined using py3.8 positional only
+        def callFromThread(  # type: ignore[override]
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """
             See
             L{twisted.internet.interfaces.IReactorFromThreads.callFromThread}.
             """
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), f"{f} is not callable"
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
             # won't work in Jython.
@@ -1177,7 +1202,10 @@ class ReactorBase(PluggableResolverMixin):
                 assert self.threadpool is not None
             return self.threadpool
 
-        def callInThread(
+        # `IReactorInThreads` defines the first named argument as
+        # `callable: Callable[..., Any]` but this defines it as `_callable`
+        # really both should be defined using py3.8 positional only
+        def callInThread(  # type: ignore[override]
             self, _callable: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
             """
@@ -1196,7 +1224,7 @@ class ReactorBase(PluggableResolverMixin):
         def callFromThread(
             self, f: Callable[..., Any], *args: object, **kwargs: object
         ) -> None:
-            assert callable(f), "%s is not callable" % (f,)
+            assert callable(f), f"{f} is not callable"
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kwargs))
 
@@ -1233,7 +1261,7 @@ class BaseConnector(ABC):
             self.transport.loseConnection()
 
     @abstractmethod
-    def _makeTransport(self) -> Client:
+    def _makeTransport(self) -> "Client":
         pass
 
     def connect(self) -> None:
@@ -1245,7 +1273,7 @@ class BaseConnector(ABC):
         if not self.factoryStarted:
             self.factory.doStart()
             self.factoryStarted = 1
-        self.transport = self._makeTransport()  # type: Optional[Client]
+        self.transport: Optional[Client] = self._makeTransport()
         if self.timeout is not None:
             self.timeoutID = self.reactor.callLater(
                 self.timeout, self.transport.failIfNotConnected, error.TimeoutError()
@@ -1270,7 +1298,7 @@ class BaseConnector(ABC):
                 pass
             del self.timeoutID
 
-    def buildProtocol(self, addr: Tuple[str, int]) -> IProtocol:
+    def buildProtocol(self, addr: IAddress) -> Optional[IProtocol]:
         self.state = "connected"
         self.cancelTimeout()
         return self.factory.buildProtocol(addr)
@@ -1299,7 +1327,7 @@ class BaseConnector(ABC):
         )
 
     def __repr__(self) -> str:
-        return "<%s instance at 0x%x %s %s>" % (
+        return "<{} instance at 0x{:x} {} {}>".format(
             reflect.qual(self.__class__),
             id(self),
             self.state,
@@ -1313,8 +1341,8 @@ class BasePort(abstract.FileDescriptor):
     Note: This does not actually implement IListeningPort.
     """
 
-    addressFamily = None  # type: socket.AddressFamily
-    socketType = None  # type: socket.SocketKind
+    addressFamily: socket.AddressFamily = None  # type: ignore[assignment]
+    socketType: socket.SocketKind = None  # type: ignore[assignment]
 
     def createInternetSocket(self) -> socket.socket:
         s = socket.socket(self.addressFamily, self.socketType)
@@ -1365,8 +1393,9 @@ class _SignalReactorMixin:
         signal.signal(signal.SIGTERM, reactorBaseSelf.sigTerm)
 
         # Catch Ctrl-Break in windows
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, reactorBaseSelf.sigBreak)
+        SIGBREAK = getattr(signal, "SIGBREAK", None)
+        if SIGBREAK is not None:
+            signal.signal(SIGBREAK, reactorBaseSelf.sigBreak)
 
     def startRunning(self, installSignalHandlers: bool = True) -> None:
         """
@@ -1411,11 +1440,11 @@ class _SignalReactorMixin:
                     t2 = reactorBaseSelf.timeout()
                     t = reactorBaseSelf.running and t2
                     reactorBaseSelf.doIteration(t)
-            except:
+            except BaseException:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
                 log.msg("Main loop terminated.")
 
 
-__all__ = []  # type: List[str]
+__all__: List[str] = []

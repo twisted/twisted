@@ -7,7 +7,6 @@ See how fast deferreds are.
 This is mainly useful to compare cdefer.Deferred to defer.Deferred
 """
 
-from __future__ import print_function
 
 from twisted.internet import defer
 from twisted.python.compat import range
@@ -15,16 +14,20 @@ from timer import timeit
 
 benchmarkFuncs = []
 
+
 def benchmarkFunc(iter, args=()):
     """
     A decorator for benchmark functions that measure a single iteration
     count. Registers the function with the given iteration count to the global
     benchmarkFuncs list
     """
+
     def decorator(func):
         benchmarkFuncs.append((func, args, iter))
         return func
+
     return decorator
+
 
 def benchmarkNFunc(iter, ns):
     """
@@ -32,18 +35,24 @@ def benchmarkNFunc(iter, ns):
     counts. Registers the function with the given iteration count to the global
     benchmarkFuncs list.
     """
+
     def decorator(func):
         for n in ns:
             benchmarkFuncs.append((func, (n,), iter))
         return func
+
     return decorator
+
 
 def instantiate():
     """
     Only create a deferred
     """
     d = defer.Deferred()
+
+
 instantiate = benchmarkFunc(100000)(instantiate)
+
 
 def instantiateShootCallback():
     """
@@ -51,7 +60,10 @@ def instantiateShootCallback():
     """
     d = defer.Deferred()
     d.callback(1)
+
+
 instantiateShootCallback = benchmarkFunc(100000)(instantiateShootCallback)
+
 
 def instantiateShootErrback():
     """
@@ -60,13 +72,16 @@ def instantiateShootErrback():
     """
     d = defer.Deferred()
     try:
-        1/0
-    except:
+        1 / 0
+    except BaseException:
         d.errback()
     d.addErrback(lambda x: None)
+
+
 instantiateShootErrback = benchmarkFunc(200)(instantiateShootErrback)
 
 ns = [10, 1000, 10000]
+
 
 def instantiateAddCallbacksNoResult(n):
     """
@@ -74,14 +89,21 @@ def instantiateAddCallbacksNoResult(n):
     number of times.
     """
     d = defer.Deferred()
+
     def f(result):
         return result
+
     for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
         d.addCallbacks(f, f)
-instantiateAddCallbacksNoResult = benchmarkNFunc(20, ns)(instantiateAddCallbacksNoResult)
+
+
+instantiateAddCallbacksNoResult = benchmarkNFunc(20, ns)(
+    instantiateAddCallbacksNoResult
+)
+
 
 def instantiateAddCallbacksBeforeResult(n):
     """
@@ -89,15 +111,22 @@ def instantiateAddCallbacksBeforeResult(n):
     number of times, and then shoots a result through all of the callbacks.
     """
     d = defer.Deferred()
+
     def f(result):
         return result
+
     for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
         d.addCallbacks(f)
     d.callback(1)
-instantiateAddCallbacksBeforeResult = benchmarkNFunc(20, ns)(instantiateAddCallbacksBeforeResult)
+
+
+instantiateAddCallbacksBeforeResult = benchmarkNFunc(20, ns)(
+    instantiateAddCallbacksBeforeResult
+)
+
 
 def instantiateAddCallbacksAfterResult(n):
     """
@@ -106,15 +135,22 @@ def instantiateAddCallbacksAfterResult(n):
     callbacks as they are added.
     """
     d = defer.Deferred()
+
     def f(result):
         return result
+
     d.callback(1)
     for i in range(n):
         d.addCallback(f)
         d.addErrback(f)
         d.addBoth(f)
         d.addCallbacks(f)
-instantiateAddCallbacksAfterResult = benchmarkNFunc(20, ns)(instantiateAddCallbacksAfterResult)
+
+
+instantiateAddCallbacksAfterResult = benchmarkNFunc(20, ns)(
+    instantiateAddCallbacksAfterResult
+)
+
 
 def pauseUnpause(n):
     """
@@ -123,8 +159,10 @@ def pauseUnpause(n):
     callbacks.
     """
     d = defer.Deferred()
+
     def f(result):
         return result
+
     d.callback(1)
     d.pause()
     for i in range(n):
@@ -133,7 +171,10 @@ def pauseUnpause(n):
         d.addBoth(f)
         d.addCallbacks(f)
     d.unpause()
+
+
 pauseUnpause = benchmarkNFunc(20, ns)(pauseUnpause)
+
 
 def benchmark():
     """
@@ -143,5 +184,6 @@ def benchmark():
     for func, args, iter in benchmarkFuncs:
         print(func.__name__, args, timeit(func, iter, *args))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     benchmark()

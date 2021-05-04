@@ -26,14 +26,14 @@ real applications.
 from queue import Empty, Queue
 
 try:
-    from wx import (
+    from wx import (  # type: ignore[import]
         PySimpleApp as wxPySimpleApp,
         CallAfter as wxCallAfter,
         Timer as wxTimer,
     )
 except ImportError:
     # older version of wxPython:
-    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
+    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer  # type: ignore[import]
 
 from twisted.python import log, runtime
 from twisted.internet import _threadedselect
@@ -170,7 +170,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
                         break
                     try:
                         f()
-                    except:
+                    except BaseException:
                         log.err()
 
 

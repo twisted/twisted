@@ -11,7 +11,6 @@ To run the script:
 $ python minchat.py
 """
 
-from __future__ import print_function
 
 from twisted.words.im import basechat, baseaccount, ircsupport
 
@@ -70,11 +69,11 @@ class MinConversation(basechat.Conversation):
         pass
 
     def showMessage(self, text, metadata=None):
-        print("<%s> %s" % (self.person.name, text))
+        print(f"<{self.person.name}> {text}")
 
     def contactChangedNick(self, person, newnick):
         basechat.Conversation.contactChangedNick(self, person, newnick)
-        print("-!- %s is now known as %s" % (person.name, newnick))
+        print(f"-!- {person.name} is now known as {newnick}")
 
 
 class MinGroupConversation(basechat.GroupConversation):
@@ -97,22 +96,22 @@ class MinGroupConversation(basechat.GroupConversation):
         pass
 
     def showGroupMessage(self, sender, text, metadata=None):
-        print("<%s/%s> %s" % (sender, self.group.name, text))
+        print(f"<{sender}/{self.group.name}> {text}")
 
     def setTopic(self, topic, author):
-        print("-!- %s set the topic of %s to: %s" % (author, self.group.name, topic))
+        print(f"-!- {author} set the topic of {self.group.name} to: {topic}")
 
     def memberJoined(self, member):
         basechat.GroupConversation.memberJoined(self, member)
-        print("-!- %s joined %s" % (member, self.group.name))
+        print(f"-!- {member} joined {self.group.name}")
 
     def memberChangedNick(self, oldnick, newnick):
         basechat.GroupConversation.memberChangedNick(self, oldnick, newnick)
-        print("-!- %s is now known as %s in %s" % (oldnick, newnick, self.group.name))
+        print(f"-!- {oldnick} is now known as {newnick} in {self.group.name}")
 
     def memberLeft(self, member):
         basechat.GroupConversation.memberLeft(self, member)
-        print("-!- %s left %s" % (member, self.group.name))
+        print(f"-!- {member} left {self.group.name}")
 
 
 class MinChat(basechat.ChatUI):

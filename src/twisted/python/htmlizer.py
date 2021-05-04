@@ -73,11 +73,11 @@ class HTMLWriter:
     tokens as HTML spans.
     """
 
-    noSpan = []  # type: List[str]
+    noSpan: List[str] = []
 
     def __init__(self, writer):
         self.writer = writer
-        noSpan = []  # type: List[str]
+        noSpan: List[str] = []
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
 

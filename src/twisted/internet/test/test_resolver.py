@@ -7,8 +7,6 @@ reactor implementations.
 """
 
 
-__metaclass__ = type
-
 from collections import defaultdict
 
 from socket import (

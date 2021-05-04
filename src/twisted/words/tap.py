@@ -20,14 +20,14 @@ from twisted.cred import checkers, credentials, portal, strcred
 
 class Options(usage.Options, strcred.AuthOptionMixin):
     supportedInterfaces = [credentials.IUsernamePassword]
-    optParameters = [
+    optParameters: List[Sequence[Optional[str]]] = [
         (
             "hostname",
             None,
             socket.gethostname(),
             "Name of this server; purely an informative",
         )
-    ]  # type: List[Sequence[Optional[str]]]  # noqa
+    ]
 
     compData = usage.Completions(multiUse=["group"])
 

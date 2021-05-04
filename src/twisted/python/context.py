@@ -17,7 +17,7 @@ from threading import local
 from typing import Dict, Type
 
 
-defaultContextDict = {}  # type: Dict[Type[object], Dict[str, str]]
+defaultContextDict: Dict[Type[object], Dict[str, str]] = {}
 
 setDefault = defaultContextDict.__setitem__
 
@@ -70,13 +70,13 @@ class ContextTracker:
 
         @param func: A callable which will be called.
 
-        @param *args: Any additional positional arguments to pass to C{func}.
+        @param args: Any additional positional arguments to pass to C{func}.
 
-        @param **kw: Any additional keyword arguments to pass to C{func}.
+        @param kw: Any additional keyword arguments to pass to C{func}.
 
         @return: Whatever is returned by C{func}
 
-        @raise: Whatever is raised by C{func}.
+        @raise Exception: Whatever is raised by C{func}.
         """
         self.contexts.append(newContext)
         try:

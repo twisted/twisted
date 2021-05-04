@@ -165,7 +165,7 @@ class Screen(CursesStdIO):
             # for testing too
             try:
                 self.irc.sendLine(self.searchText)
-            except:
+            except BaseException:
                 pass
             self.stdscr.refresh()
             self.searchText = ""

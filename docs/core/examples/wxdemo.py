@@ -3,7 +3,6 @@
 
 """Demo of wxPython integration with Twisted."""
 
-from __future__ import print_function
 
 import sys
 

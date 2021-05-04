@@ -22,7 +22,7 @@ from twisted.internet.posixbase import _NO_FILEDESC
 
 from twisted.python import log
 
-from CoreFoundation import (
+from CoreFoundation import (  # type: ignore[import]
     CFRunLoopAddSource,
     CFRunLoopRemoveSource,
     CFRunLoopGetMain,
@@ -36,7 +36,7 @@ from CoreFoundation import (
     CFAbsoluteTimeGetCurrent,
 )
 
-from CFNetwork import (
+from CFNetwork import (  # type: ignore[import]
     CFSocketCreateWithNative,
     CFSocketSetSocketFlags,
     CFSocketEnableCallBacks,
@@ -203,7 +203,7 @@ class CFReactor(PosixReactorBase):
                     else:
                         if rw[_WRITE]:
                             why = readWriteDescriptor.doWrite()
-            except:
+            except BaseException:
                 why = sys.exc_info()[1]
                 log.err()
             if why:
@@ -340,7 +340,7 @@ class CFReactor(PosixReactorBase):
         """
         Implement L{IReactorFDSet.removeAll}.
         """
-        allDesc = set([descr for src, cfs, descr, rw in self._fdmap.values()])
+        allDesc = {descr for src, cfs, descr, rw in self._fdmap.values()}
         allDesc -= set(self._internalReaders)
         for desc in allDesc:
             self.removeReader(desc)

@@ -76,7 +76,7 @@ class MainTests(TestCase):
             self.assertEqual("wb", mode)
             return self.writeStream
         else:
-            raise AssertionError("Unexpected fd %r" % (fd,))
+            raise AssertionError(f"Unexpected fd {fd!r}")
 
     def startLoggingWithObserver(self, emit, setStdout):
         """
@@ -118,7 +118,7 @@ class MainTests(TestCase):
             def read(oself, size):
                 oself.count += 1
                 if oself.count == 1:
-                    raise IOError(errno.EINTR)
+                    raise OSError(errno.EINTR)
                 else:
                     excInfos.append(sys.exc_info())
                 return b""
@@ -140,7 +140,7 @@ class MainTests(TestCase):
             def read(oself, size):
                 oself.count += 1
                 if oself.count == 1:
-                    raise IOError("Something else")
+                    raise OSError("Something else")
                 return ""
 
         self.readStream = FakeStream()

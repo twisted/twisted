@@ -5,8 +5,6 @@
 Tests for implementations of L{IReactorTime}.
 """
 
-__metaclass__ = type
-
 from twisted.python.log import msg
 from twisted.python.runtime import platform
 
@@ -98,7 +96,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        import gobject
+        import gobject  # type: ignore[import]
 
         reactor = self.buildReactor()
 

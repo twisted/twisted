@@ -43,8 +43,8 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        from win32api import OpenProcess
-        import pywintypes
+        from win32api import OpenProcess  # type: ignore[import]
+        import pywintypes  # type: ignore[import]
     except ImportError:
         kill = None  # type: ignore[assignment,misc]
     else:
@@ -90,7 +90,7 @@ else:
 
         try:
             rename(newlinkname, filename)
-        except:
+        except BaseException:
             os.remove(newvalname)
             os.rmdir(newlinkname)
             raise
@@ -104,7 +104,7 @@ else:
         """
         try:
             fObj = _open(os.path.join(filename, "symlink"), "r")
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
             raise
@@ -152,8 +152,8 @@ class FilesystemLock:
         @rtype: C{bool}
         @return: True if the lock is acquired, false otherwise.
 
-        @raise: Any exception os.symlink() may raise, other than
-        EEXIST.
+        @raise OSError: Any exception L{os.symlink()} may raise,
+            other than L{errno.EEXIST}.
         """
         clean = True
         while True:
@@ -168,7 +168,7 @@ class FilesystemLock:
                 if e.errno == errno.EEXIST:
                     try:
                         pid = readlink(self.name)
-                    except (IOError, OSError) as e:
+                    except OSError as e:
                         if e.errno == errno.ENOENT:
                             # The lock has vanished, try to claim it in the
                             # next iteration through the loop.
@@ -212,12 +212,12 @@ class FilesystemLock:
 
         This deletes the directory with the given name.
 
-        @raise: Any exception os.readlink() may raise, or
-        ValueError if the lock is not owned by this process.
+        @raise OSError: Any exception L{os.readlink()} may raise.
+        @raise ValueError: If the lock is not owned by this process.
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock %r not owned by this process" % (self.name,))
+            raise ValueError(f"Lock {self.name!r} not owned by this process")
         rmlink(self.name)
         self.locked = False
 

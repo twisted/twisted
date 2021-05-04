@@ -7,7 +7,6 @@ Interface documentation.
 Maintainer: Itamar Shtull-Trauring
 """
 
-
 from typing import (
     Any,
     AnyStr,
@@ -18,17 +17,25 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
     TYPE_CHECKING,
+    Union,
 )
-from twisted.python.runtime.platform import supportsThreads as _supportsThreads
 from twisted.python.failure import Failure
 from zope.interface import Interface, Attribute
 
 if TYPE_CHECKING:
     from socket import AddressFamily
 
-    from OpenSSL.SSL import Connection as OpenSSLConnection, Context as OpenSSLContext
+    try:
+        from OpenSSL.SSL import (  # type: ignore[import]
+            Connection as _OpenSSLConnection,
+            Context as _OpenSSLContext,
+        )
+    except ImportError:
+        OpenSSLConnection = OpenSSLContext = object
+    else:
+        OpenSSLConnection = _OpenSSLConnection
+        OpenSSLContext = _OpenSSLContext
 
     from twisted.internet.abstract import FileDescriptor
     from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
@@ -41,13 +48,15 @@ if TYPE_CHECKING:
         ServerFactory,
     )
     from twisted.internet.ssl import ClientContextFactory
-    from twisted.names.dns import Query
+    from twisted.names.dns import Query, RRHeader
     from twisted.protocols.tls import TLSMemoryBIOProtocol
 
-    if _supportsThreads():
+    from twisted.python.runtime import platform
+
+    if platform.supportsThreads():
         from twisted.python.threadpool import ThreadPool
     else:
-        ThreadPool = None  # type: ignore[misc, assignment]
+        ThreadPool = object  # type: ignore[misc, assignment]
 
 
 class IAddress(Interface):
@@ -95,7 +104,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> Deferred:
+    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -162,7 +171,6 @@ class IResolutionReceiver(Interface):
         well, for future-proofing.
 
         @param address: An address object.
-        @type address: L{IAddress}
         """
 
     def resolutionComplete() -> None:
@@ -213,7 +221,9 @@ class IHostnameResolver(Interface):
 
 
 class IResolver(IResolverSimple):
-    def query(query: Query, timeout: Sequence[int]) -> Deferred:
+    def query(
+        query: "Query", timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Dispatch C{query} to the method which can handle its type.
 
@@ -231,7 +241,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A record lookup.
 
@@ -248,7 +260,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAddress6(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAddress6(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A6 record lookup.
 
@@ -265,7 +279,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupIPV6Address(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupIPV6Address(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AAAA record lookup.
 
@@ -282,7 +298,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailExchange(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailExchange(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MX record lookup.
 
@@ -299,7 +317,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNameservers(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNameservers(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an NS record lookup.
 
@@ -316,7 +336,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupCanonicalName(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupCanonicalName(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a CNAME record lookup.
 
@@ -333,7 +355,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailBox(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailBox(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MB record lookup.
 
@@ -350,7 +374,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailGroup(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailGroup(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MG record lookup.
 
@@ -367,7 +393,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailRename(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailRename(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MR record lookup.
 
@@ -384,7 +412,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupPointer(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupPointer(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a PTR record lookup.
 
@@ -401,7 +431,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAuthority(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAuthority(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SOA record lookup.
 
@@ -418,7 +450,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNull(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNull(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NULL record lookup.
 
@@ -435,7 +469,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupWellKnownServices(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupWellKnownServices(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a WKS record lookup.
 
@@ -452,7 +488,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupHostInfo(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupHostInfo(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a HINFO record lookup.
 
@@ -469,7 +507,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupMailboxInfo(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupMailboxInfo(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MINFO record lookup.
 
@@ -486,7 +526,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupText(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupText(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a TXT record lookup.
 
@@ -503,7 +545,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupResponsibility(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupResponsibility(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an RP record lookup.
 
@@ -520,7 +564,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAFSDatabase(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAFSDatabase(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AFSDB record lookup.
 
@@ -537,7 +583,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupService(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupService(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SRV record lookup.
 
@@ -554,7 +602,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupAllRecords(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupAllRecords(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an ALL_RECORD lookup.
 
@@ -571,7 +621,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupSenderPolicy(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupSenderPolicy(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a SPF record lookup.
 
@@ -588,7 +640,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupNamingAuthorityPointer(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupNamingAuthorityPointer(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NAPTR record lookup.
 
@@ -605,7 +659,9 @@ class IResolver(IResolverSimple):
             C{NotImplementedError}.
         """
 
-    def lookupZone(name: AnyStr, timeout: Sequence[int]) -> Deferred:
+    def lookupZone(
+        name: str, timeout: Sequence[int]
+    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AXFR record lookup.
 
@@ -632,7 +688,7 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
     def listenTCP(
-        port: int, factory: ServerFactory, backlog: int, interface: str
+        port: int, factory: "ServerFactory", backlog: int, interface: str
     ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -655,7 +711,7 @@ class IReactorTCP(Interface):
     def connectTCP(
         host: bytes,
         port: int,
-        factory: ClientFactory,
+        factory: "ClientFactory",
         timeout: float,
         bindAddress: Optional[Tuple[str, int]],
     ) -> IConnector:
@@ -682,8 +738,8 @@ class IReactorSSL(Interface):
     def connectSSL(
         host: str,
         port: int,
-        factory: ClientFactory,
-        contextFactory: ClientContextFactory,
+        factory: "ClientFactory",
+        contextFactory: "ClientContextFactory",
         timeout: float,
         bindAddress: Optional[Tuple[str, int]],
     ) -> IConnector:
@@ -704,7 +760,7 @@ class IReactorSSL(Interface):
 
     def listenSSL(
         port: int,
-        factory: ServerFactory,
+        factory: "ServerFactory",
         contextFactory: "IOpenSSLContextFactory",
         backlog: int,
         interface: str,
@@ -728,7 +784,7 @@ class IReactorUNIX(Interface):
     """
 
     def connectUNIX(
-        address: str, factory: ClientFactory, timeout: float, checkPID: bool
+        address: str, factory: "ClientFactory", timeout: float, checkPID: bool
     ) -> IConnector:
         """
         Connect a client protocol to a UNIX socket.
@@ -745,7 +801,7 @@ class IReactorUNIX(Interface):
         """
 
     def listenUNIX(
-        address: str, factory: Factory, backlog: int, mode: int, wantPID: bool
+        address: str, factory: "Factory", backlog: int, mode: int, wantPID: bool
     ) -> "IListeningPort":
         """
         Listen on a UNIX socket.
@@ -770,7 +826,7 @@ class IReactorUNIXDatagram(Interface):
 
     def connectUNIXDatagram(
         address: str,
-        protocol: ConnectedDatagramProtocol,
+        protocol: "ConnectedDatagramProtocol",
         maxPacketSize: int,
         mode: int,
         bindAddress: Optional[Tuple[str, int]],
@@ -791,7 +847,7 @@ class IReactorUNIXDatagram(Interface):
         """
 
     def listenUNIXDatagram(
-        address: str, protocol: DatagramProtocol, maxPacketSize: int, mode: int
+        address: str, protocol: "DatagramProtocol", maxPacketSize: int, mode: int
     ) -> "IListeningPort":
         """
         Listen on a datagram UNIX socket.
@@ -814,7 +870,7 @@ class IReactorWin32Events(Interface):
     @since: 10.2
     """
 
-    def addEvent(event: object, fd: FileDescriptor, action: str) -> None:
+    def addEvent(event: object, fd: "FileDescriptor", action: str) -> None:
         """
         Add a new win32 event to the event loop.
 
@@ -840,24 +896,17 @@ class IReactorUDP(Interface):
     """
 
     def listenUDP(
-        port: int, protocol: DatagramProtocol, interface: str, maxPacketSize: int
+        port: int, protocol: "DatagramProtocol", interface: str, maxPacketSize: int
     ) -> "IListeningPort":
         """
         Connects a given L{DatagramProtocol} to the given numeric UDP port.
 
         @param port: A port number on which to listen.
-        @type port: C{int}
-
         @param protocol: A L{DatagramProtocol} instance which will be
             connected to the given C{port}.
-        @type protocol: L{DatagramProtocol}
-
         @param interface: The local IPv4 or IPv6 address to which to bind;
             defaults to '', ie all IPv4 addresses.
-        @type interface: C{str}
-
         @param maxPacketSize: The maximum packet size to accept.
-        @type maxPacketSize: C{int}
 
         @return: object which provides L{IListeningPort}.
         """
@@ -873,7 +922,7 @@ class IReactorMulticast(Interface):
 
     def listenMulticast(
         port: int,
-        protocol: DatagramProtocol,
+        protocol: "DatagramProtocol",
         interface: str,
         maxPacketSize: int,
         listenMultiple: bool,
@@ -929,7 +978,7 @@ class IReactorSocket(Interface):
     """
 
     def adoptStreamPort(
-        fileDescriptor: int, addressFamily: AddressFamily, factory: ServerFactory
+        fileDescriptor: int, addressFamily: "AddressFamily", factory: "ServerFactory"
     ) -> "IListeningPort":
         """
         Add an existing listening I{SOCK_STREAM} socket to the reactor to
@@ -957,7 +1006,7 @@ class IReactorSocket(Interface):
         """
 
     def adoptStreamConnection(
-        fileDescriptor: int, addressFamily: AddressFamily, factory: ServerFactory
+        fileDescriptor: int, addressFamily: "AddressFamily", factory: "ServerFactory"
     ) -> None:
         """
         Add an existing connected I{SOCK_STREAM} socket to the reactor to
@@ -987,8 +1036,8 @@ class IReactorSocket(Interface):
 
     def adoptDatagramPort(
         fileDescriptor: int,
-        addressFamily: AddressFamily,
-        protocol: DatagramProtocol,
+        addressFamily: "AddressFamily",
+        protocol: "DatagramProtocol",
         maxPacketSize: int,
     ) -> "IListeningPort":
         """
@@ -1036,10 +1085,10 @@ class IReactorProcess(Interface):
         L{unicode} may be encoded or decoded depending on the platform and the
         argument type given.  On UNIX systems (Linux, FreeBSD, macOS) and
         Python 2 on Windows, L{unicode} arguments will be encoded down to
-        L{bytes} using the encoding given by L{os.getfilesystemencoding}, to be
+        L{bytes} using the encoding given by L{sys.getfilesystemencoding}, to be
         used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
         arguments will be decoded up to L{unicode} using the encoding given by
-        L{os.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
+        L{sys.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
         thereafter) and given to Windows's native "wide" APIs.
 
         @param processProtocol: An object which will be notified of all events
@@ -1134,13 +1183,9 @@ class IReactorTime(Interface):
         """
         Call a function later.
 
-        @type delay:  C{float}
         @param delay: the number of seconds to wait.
-
         @param callable: the callable object to call later.
-
         @param args: the arguments to call it with.
-
         @param kwargs: the keyword arguments to call it with.
 
         @return: An object which provides L{IDelayedCall} and can be used to
@@ -1267,7 +1312,7 @@ class IReactorThreads(IReactorFromThreads, IReactorInThreads):
     Internally, this should use a thread pool and dispatch methods to them.
     """
 
-    def getThreadPool() -> ThreadPool:
+    def getThreadPool() -> "ThreadPool":
         """
         Return the threadpool used by L{IReactorInThreads.callInThread}.
         Create it first if necessary.
@@ -1290,7 +1335,7 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> Deferred:
+    def resolve(name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         Return a L{twisted.internet.defer.Deferred} that will resolve
         a hostname.
@@ -1347,7 +1392,7 @@ class IReactorCore(Interface):
         eventType: str,
         callable: Callable[..., Any],
         *args: object,
-        **kwargs: object
+        **kwargs: object,
     ) -> Any:
         """
         Add a function to be called when a system event occurs.
@@ -1531,7 +1576,6 @@ class IReactorFDSet(Interface):
         events by the reactor.
 
         @return: the list of file descriptors monitored for input events.
-        @rtype: C{list} of C{IReadDescriptor}
         """
 
     def getWriters() -> List["IWriteDescriptor"]:
@@ -1540,7 +1584,6 @@ class IReactorFDSet(Interface):
         by the reactor.
 
         @return: the list of file descriptors monitored for output events.
-        @rtype: C{list} of C{IWriteDescriptor}
         """
 
 
@@ -1593,9 +1636,6 @@ class IFileDescriptor(ILoggingContext):
 
     def fileno() -> object:
         """
-        @raise: If the descriptor no longer has a valid file descriptor
-            number associated with it.
-
         @return: The platform-specified representation of a file descriptor
             number.  Or C{-1} if the descriptor no longer has a valid file
             descriptor number associated with it.  As long as the descriptor
@@ -1858,7 +1898,6 @@ class IProcessProtocol(Interface):
         """
         Called when the process has been created.
 
-        @type process: L{IProcessTransport} provider
         @param process: An object representing the process which has been
             created and associated with this protocol.
         """
@@ -1977,7 +2016,6 @@ class IFileDescriptorReceiver(Interface):
         Called when a file descriptor is received over the connection.
 
         @param descriptor: The descriptor which was received.
-        @type descriptor: C{int}
 
         @return: L{None}
         """
@@ -1988,7 +2026,7 @@ class IProtocolFactory(Interface):
     Interface for protocol factories.
     """
 
-    def buildProtocol(addr: Tuple[str, int]) -> Optional[IProtocol]:
+    def buildProtocol(addr: IAddress) -> Optional[IProtocol]:
         """
         Called when a connection has been established to addr.
 
@@ -2131,12 +2169,12 @@ class ITCPTransport(ITransport):
         to allow detection of lost peers in a non-infinite amount of time.
         """
 
-    def getHost() -> Union[IPv4Address, IPv6Address]:
+    def getHost() -> Union["IPv4Address", "IPv6Address"]:
         """
         Returns L{IPv4Address} or L{IPv6Address}.
         """
 
-    def getPeer() -> Union[IPv4Address, IPv6Address]:
+    def getPeer() -> Union["IPv4Address", "IPv6Address"]:
         """
         Returns L{IPv4Address} or L{IPv6Address}.
         """
@@ -2182,11 +2220,9 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:
+    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
         """
         Create a connection for the given server protocol.
-
-        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
 
         @return: an OpenSSL connection object configured appropriately for the
             given Twisted protocol.
@@ -2206,7 +2242,7 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: TLSMemoryBIOProtocol) -> OpenSSLConnection:
+    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
         """
         Create a connection for the given client protocol.
 
@@ -2247,7 +2283,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> OpenSSLContext:
+    def getContext() -> "OpenSSLContext":  # type: ignore[valid-type]
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection
@@ -2264,7 +2300,11 @@ class ITLSTransport(ITCPTransport):
     Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
 
-    def startTLS(contextFactory: Callable[..., Any]) -> None:
+    def startTLS(
+        contextFactory: Union[
+            IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator
+        ]
+    ) -> None:
         """
         Initiate TLS negotiation.
 
@@ -2463,7 +2503,7 @@ class IUDPTransport(Interface):
         @param port: port to connect to.
         """
 
-    def getHost() -> Union[IPv4Address, IPv6Address]:
+    def getHost() -> Union["IPv4Address", "IPv6Address"]:
         """
         Get this port's host address.
 
@@ -2503,7 +2543,7 @@ class IUNIXDatagramTransport(Interface):
         Write packet to given address.
         """
 
-    def getHost() -> UNIXAddress:
+    def getHost() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
@@ -2519,12 +2559,12 @@ class IUNIXDatagramConnectedTransport(Interface):
         Write packet to address we are connected to.
         """
 
-    def getHost() -> UNIXAddress:
+    def getHost() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
 
-    def getPeer() -> UNIXAddress:
+    def getPeer() -> "UNIXAddress":
         """
         Returns L{UNIXAddress}.
         """
@@ -2567,7 +2607,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> Deferred:
+    def joinGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2575,7 +2615,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> Deferred:
+    def leaveGroup(addr: str, interface: str) -> "Deferred[None]":
         """
         Leave multicast group, return L{Deferred} of success.
         """
@@ -2589,7 +2629,7 @@ class IStreamClientEndpoint(Interface):
     @since: 10.1
     """
 
-    def connect(protocolFactory: IProtocolFactory) -> Deferred:
+    def connect(protocolFactory: IProtocolFactory) -> "Deferred[IProtocol]":
         """
         Connect the C{protocolFactory} to the location specified by this
         L{IStreamClientEndpoint} provider.
@@ -2610,7 +2650,7 @@ class IStreamServerEndpoint(Interface):
     @since: 10.1
     """
 
-    def listen(protocolFactory: IProtocolFactory) -> Deferred:
+    def listen(protocolFactory: IProtocolFactory) -> "Deferred[IListeningPort]":
         """
         Listen with C{protocolFactory} at the location specified by this
         L{IStreamServerEndpoint} provider.

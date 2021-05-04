@@ -296,7 +296,7 @@ def foo():
         pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_private_helper import missingsourcefile
+        from twisted_private_helper import missingsourcefile  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_private_helper")
         self.addCleanup(sys.modules.pop, missingsourcefile.__name__)
@@ -354,7 +354,7 @@ def foo():
         package.moveTo(package.sibling(b"twisted_renamed_helper"))
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -364,6 +364,29 @@ def foo():
 
         # Flush it
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
+
+    def test_offendingFunctions_deep_branch(self):
+        """
+        In Python 3.6 the dis.findlinestarts documented behaviour
+        was changed such that the reported lines might not be sorted ascending.
+        In Python 3.10 PEP 626 introduced byte-code change such that the last
+        line of a function wasn't always associated with the last byte-code.
+        In the past flushWarning was not detecting that such a function was
+        associated with any warnings.
+        """
+
+        def foo(a=1, b=1):
+            if a:
+                if b:
+                    warnings.warn("oh no")
+                else:
+                    pass
+
+        # Generate the warning
+        foo()
+
+        # Flush it
+        self.assertEqual(len(self.flushWarnings([foo])), 1)
 
 
 class FakeWarning(Warning):
@@ -494,4 +517,4 @@ class CollectWarningsTests(SynchronousTestCase):
 
         # If both key2 and key4 were added, then both A instanced were
         # processed.
-        self.assertEqual(set([key1, key2, key3, key4]), set(d.keys()))
+        self.assertEqual({key1, key2, key3, key4}, set(d.keys()))

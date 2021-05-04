@@ -37,7 +37,7 @@ transports, such as UNIX sockets and stdio.
 """
 
 
-from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
+from OpenSSL.SSL import Error, ZeroReturnError, WantReadError  # type: ignore[import]
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 
 try:
@@ -759,7 +759,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
             logPrefix = self.wrappedFactory.logPrefix()
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
-        return "%s (TLS)" % (logPrefix,)
+        return f"{logPrefix} (TLS)"
 
     def _applyProtocolNegotiation(self, connection):
         """

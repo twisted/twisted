@@ -57,10 +57,10 @@ class AbstractGroup:
         self.account.client.leaveGroup(self.name)
 
     def __repr__(self) -> str:
-        return "<%s %r>" % (self.__class__, self.name)
+        return f"<{self.__class__} {self.name!r}>"
 
     def __str__(self) -> str:
-        return "%s@%s" % (self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractPerson:
@@ -84,10 +84,10 @@ class AbstractPerson:
         return "--"
 
     def __repr__(self) -> str:
-        return "<%s %r/%s>" % (self.__class__, self.name, self.status)
+        return f"<{self.__class__} {self.name!r}/{self.status}>"
 
     def __str__(self) -> str:
-        return "%s@%s" % (self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractClientMixin:
@@ -98,7 +98,7 @@ class AbstractClientMixin:
     @ivar _logonDeferred: Fired when I am done logging in.
     """
 
-    _protoBase = None  # type: Type[Protocol]
+    _protoBase: Type[Protocol] = None  # type: ignore[assignment]
 
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
@@ -117,7 +117,7 @@ class AbstractClientMixin:
     def connectionLost(self, reason: Failure = connectionDone):
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
-        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]  # noqa
+        return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]
 
     def unregisterAsAccountClient(self):
         """Tell the chat UI that I have `signed off'."""
@@ -269,7 +269,7 @@ class AbstractAccount(styles.Versioned):
         return reason
 
     def __repr__(self) -> str:
-        return "<%s: %s (%s@%s:%s)>" % (
+        return "<{}: {} ({}@{}:{})>".format(
             self.__class__,
             self.accountName,
             self.username,

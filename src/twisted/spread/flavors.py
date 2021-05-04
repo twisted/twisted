@@ -119,18 +119,18 @@ class Referenceable(Serializable):
         # which may try to send use keywords where keys are of type
         # bytes.
         if [key for key in kw.keys() if isinstance(key, bytes)]:
-            kw = dict((k.decode("utf8"), v) for k, v in kw.items())
+            kw = {k.decode("utf8"): v for k, v in kw.items()}
 
         if not isinstance(message, str):
             message = message.decode("utf8")
 
         method = getattr(self, "remote_%s" % message, None)
         if method is None:
-            raise NoSuchMethod("No such method: remote_%s" % (message,))
+            raise NoSuchMethod(f"No such method: remote_{message}")
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, self.perspective)
 
@@ -231,7 +231,7 @@ class ViewPoint(Referenceable):
         try:
             state = method(*(self.perspective,) + args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
@@ -438,7 +438,7 @@ class RemoteCache(RemoteCopy, Serializable):
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, None, method, args, kw)
 
@@ -496,7 +496,7 @@ class RemoteCache(RemoteCopy, Serializable):
             # log.msg( ' --- decache: %s %s' % (self, self.luid) )
             if self.broker:
                 self.broker.decCacheRef(self.luid)
-        except:
+        except BaseException:
             log.deferr()
 
     def _borgify(self):
@@ -571,7 +571,7 @@ class RemoteCacheMethod:
         """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
-            from pb import ProtocolError
+            from pb import ProtocolError  # type: ignore[import]
 
             raise ProtocolError(
                 "You can't call a cached method when the object hasn't been given to the peer yet."
@@ -607,7 +607,7 @@ class RemoteCacheObserver:
         self.perspective = perspective
 
     def __repr__(self) -> str:
-        return "<RemoteCacheObserver(%s, %s, %s) at %s>" % (
+        return "<RemoteCacheObserver({}, {}, {}) at {}>".format(
             self.broker,
             self.cached,
             self.perspective,
