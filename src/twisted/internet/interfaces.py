@@ -1597,7 +1597,7 @@ class IListeningPort(Interface):
                                   port number).
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 
@@ -2506,7 +2506,7 @@ class IUDPTransport(Interface):
         @return: an address describing the listening port.
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 
