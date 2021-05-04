@@ -1,1 +1,0 @@
-Exempt ``__repr__``, ``__slots__`` and other ``@attrs.define`` related changes from compatibility policy.

@@ -1,0 +1,1 @@
+Fixed type hint for addr argument to twisted.internet.interfaces.buildProtocol.

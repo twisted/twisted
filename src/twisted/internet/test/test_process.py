@@ -843,6 +843,26 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         reactor.callWhenRunning(start)
         self.runReactor(reactor)
 
+    def test_pauseAndResumeProducing(self):
+        """
+        Pause producing and then resume producing.
+        """
+
+        def pauseAndResume(reactor):
+            try:
+                protocol = ProcessProtocol()
+                transport = reactor.spawnProcess(
+                    protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+                )
+                transport.pauseProducing()
+                transport.resumeProducing()
+            finally:
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(pauseAndResume, reactor)
+        self.runReactor(reactor)
+
     def test_processCommandLineArguments(self):
         """
         Arguments given to spawnProcess are passed to the child process as

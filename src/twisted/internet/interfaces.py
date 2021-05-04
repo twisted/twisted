@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from socket import AddressFamily
 
     try:
-        from OpenSSL.SSL import (
+        from OpenSSL.SSL import (  # type: ignore[import]
             Connection as _OpenSSLConnection,
             Context as _OpenSSLContext,
         )
@@ -1601,7 +1601,7 @@ class IListeningPort(Interface):
                                   port number).
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 
@@ -2026,7 +2026,7 @@ class IProtocolFactory(Interface):
     Interface for protocol factories.
     """
 
-    def buildProtocol(addr: Tuple[str, int]) -> Optional[IProtocol]:
+    def buildProtocol(addr: IAddress) -> Optional[IProtocol]:
         """
         Called when a connection has been established to addr.
 
@@ -2510,7 +2510,7 @@ class IUDPTransport(Interface):
         @return: an address describing the listening port.
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 

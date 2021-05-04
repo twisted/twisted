@@ -11,11 +11,11 @@ from hashlib import md5
 
 from zope.interface import Interface, implementer
 
-from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib
+from OpenSSL import SSL, crypto  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names
+from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -159,8 +159,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError
-        from service_identity.pyopenssl import (
+        from service_identity import VerificationError  # type: ignore[import]
+        from service_identity.pyopenssl import (  # type: ignore[import]
             verify_hostname,
             verify_ip_address,
         )
