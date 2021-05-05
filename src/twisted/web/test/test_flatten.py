@@ -419,6 +419,28 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         t.fillSlots(test=succeed(tags.em("four>")))
         self.assertFlattensImmediately(t, b"<p><em>four&gt;</em></p>")
 
+    def test_slotDataPropagation(self):
+        """
+        slot data propagation is only made to child nodes.
+        Before #9383 fix, slot datas were not correctly clean during tree
+        traversal and some elements that are not directly child nodes can
+        reach forbidden slot data.
+        """
+        span1 = tags.span(slot('test'))
+        span2 = tags.span(slot('test', default='17'))
+        tree = tags.div(
+            tags.p(span1).fillSlots(test='42'),
+            tags.p(span2)
+        )
+        result = (
+            b'<div>'
+            b'<p><span>42</span></p>'
+            b'<p><span>17</span></p>'  # '42' was written before #9383
+            b'</div>'
+        )
+        return self.assertFlattensTo(tree, result)
+
+
     def test_unknownTypeRaises(self):
         """
         Test that flattening an unknown type of thing raises an exception.

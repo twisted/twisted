@@ -253,6 +253,7 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
 
         if not root.tagName:
             yield keepGoing(root.children)
+            slotData.pop()
             return
 
         write(b"<")
@@ -284,6 +285,8 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
             write(b"</" + tagName + b">")
         else:
             write(b" />")
+
+        slotData.pop()
 
     elif isinstance(root, (tuple, list, GeneratorType)):
         for element in root:

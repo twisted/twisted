@@ -1,0 +1,1 @@
+twisted.web._flatten._flattenElement, slot data stack is cleaned after flattening a node tree.
