@@ -7,6 +7,8 @@ implementation.
 """
 
 
+import sys
+
 from twisted.web.template import Comment, CDATA, CharRef, Flattenable, Tag
 from twisted.trial.unittest import TestCase
 
@@ -108,6 +110,48 @@ class TagTests(TestCase):
         self.assertEqual(clone.lineNumber, 6)
         self.assertEqual(clone.columnNumber, 12)
         self.assertEqual(clone.render, "aSampleMethod")
+
+    def test_cloneGeneratorDeprecation(self) -> None:
+        """
+        Cloning a tag containing a generator is unsafe. To avoid breaking
+        programs that only flatten the clone or only flatten the original,
+        we deprecate old behavior rather than making it an error immediately.
+        """
+        tag = proto(str(n) for n in range(10))
+        self.assertWarns(
+            DeprecationWarning,
+            "Cloning a Tag which contains a generator is unsafe, "
+            "since the generator can be consumed only once; "
+            "this is deprecated since Twisted NEXT and will raise "
+            "an exception in the future",
+            sys.modules[Tag.__module__].__file__,
+            tag.clone,
+        )
+
+    def test_cloneCoroutineDeprecation(self) -> None:
+        """
+        Cloning a tag containing a coroutine is unsafe. To avoid breaking
+        programs that only flatten the clone or only flatten the original,
+        we deprecate old behavior rather than making it an error immediately.
+        """
+
+        async def asyncFunc():
+            return "456"
+
+        coro = asyncFunc()
+        tag = proto("123", coro, "789")
+        try:
+            self.assertWarns(
+                DeprecationWarning,
+                "Cloning a Tag which contains a coroutine is unsafe, "
+                "since the coroutine can run only once; "
+                "this is deprecated since Twisted NEXT and will raise "
+                "an exception in the future",
+                sys.modules[Tag.__module__].__file__,
+                tag.clone,
+            )
+        finally:
+            coro.close()
 
     def test_clear(self) -> None:
         """

@@ -22,7 +22,9 @@ cumbersome.
 """
 
 
+from inspect import isgenerator, iscoroutine
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from warnings import warn
 
 import attr
 
@@ -219,6 +221,24 @@ class Tag:
             return obj.clone(deep)  # type: ignore[union-attr]
         elif isinstance(obj, (list, tuple)):
             return [self._clone(x, deep) for x in obj]
+        elif isgenerator(obj):
+            warn(
+                "Cloning a Tag which contains a generator is unsafe, "
+                "since the generator can be consumed only once; "
+                "this is deprecated since Twisted NEXT and will raise "
+                "an exception in the future",
+                DeprecationWarning,
+            )
+            return obj
+        elif iscoroutine(obj):
+            warn(
+                "Cloning a Tag which contains a coroutine is unsafe, "
+                "since the coroutine can run only once; "
+                "this is deprecated since Twisted NEXT and will raise "
+                "an exception in the future",
+                DeprecationWarning,
+            )
+            return obj
         else:
             return obj
 
