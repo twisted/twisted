@@ -8,6 +8,7 @@ implementation.
 
 
 import sys
+from typing import NoReturn
 
 from twisted.web.template import Comment, CDATA, CharRef, Flattenable, Tag
 from twisted.trial.unittest import TestCase
@@ -135,8 +136,8 @@ class TagTests(TestCase):
         we deprecate old behavior rather than making it an error immediately.
         """
 
-        async def asyncFunc():
-            return "456"
+        async def asyncFunc() -> NoReturn:
+            raise NotImplementedError
 
         coro = asyncFunc()
         tag = proto("123", coro, "789")
