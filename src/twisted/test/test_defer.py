@@ -12,11 +12,13 @@ import functools
 import traceback
 import re
 import types
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
 
 from asyncio import new_event_loop, Future, CancelledError
 
+from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
-from twisted.python import failure, log
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -38,9 +40,9 @@ else:
     contextvarsSkip = "contextvars is not available"
 
 
-def ensuringDeferred(f):
+def ensuringDeferred(f: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(f)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: object, **kwargs: object) -> Deferred[Any]:
         result = f(*args, **kwargs)
         return ensureDeferred(result)
 
@@ -51,9 +53,9 @@ class GenericError(Exception):
     pass
 
 
-def getDivisionFailure(*args, **kwargs):
+def getDivisionFailure(*args: object, **kwargs: object) -> Failure:
     """
-    Make a L{failure.Failure} of a divide-by-zero error.
+    Make a L{Failure} of a divide-by-zero error.
 
     @param args: Any C{*args} are passed to Failure's constructor.
     @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
@@ -61,11 +63,11 @@ def getDivisionFailure(*args, **kwargs):
     try:
         1 / 0
     except BaseException:
-        f = failure.Failure(*args, **kwargs)
+        f = Failure(*args, **kwargs)
     return f
 
 
-def fakeCallbackCanceller(deferred):
+def fakeCallbackCanceller(deferred: Deferred[object]) -> None:
     """
     A fake L{Deferred} canceller which callbacks the L{Deferred}
     with C{str} "Callback Result" when cancelling it.
@@ -80,18 +82,21 @@ class ImmediateFailureMixin:
     Add additional assertion methods.
     """
 
-    def assertImmediateFailure(self, deferred, exception):
+    def assertImmediateFailure(
+        self, deferred: Deferred[object], exception: Exception
+    ) -> Exception:
         """
         Assert that the given Deferred current result is a Failure with the
         given exception.
 
         @return: The exception instance in the Deferred.
         """
-        failures = []
+        testCase = cast(unittest.TestCase, self)
+        failures: List[Failure] = []
         deferred.addErrback(failures.append)
-        self.assertEqual(len(failures), 1)
-        self.assertTrue(failures[0].check(exception))
-        return failures[0].value
+        testCase.assertEqual(len(failures), 1)
+        testCase.assertTrue(failures[0].check(exception))
+        return cast(Exception, failures[0].value)
 
 
 class UtilTests(unittest.TestCase):
@@ -103,7 +108,7 @@ class UtilTests(unittest.TestCase):
         """
         L{defer.logError} returns the given error.
         """
-        error = failure.Failure(RuntimeError())
+        error = Failure(RuntimeError())
         result = defer.logError(error)
         self.flushLoggedErrors(RuntimeError)
 
@@ -113,7 +118,7 @@ class UtilTests(unittest.TestCase):
         """
         L{defer.logError} logs the given error.
         """
-        error = failure.Failure(RuntimeError())
+        error = Failure(RuntimeError())
         defer.logError(error)
         errors = self.flushLoggedErrors(RuntimeError)
 
@@ -125,12 +130,14 @@ class UtilTests(unittest.TestCase):
         """
         output = []
 
-        def emit(eventDict):
-            output.append(log.textFromEventDict(eventDict))
+        def emit(eventDict: Dict[str, Any]) -> None:
+            text = log.textFromEventDict(eventDict)
+            assert text is not None
+            output.append(text)
 
         log.addObserver(emit)
 
-        error = failure.Failure(RuntimeError())
+        error = Failure(RuntimeError())
         defer.logError(error)
         self.flushLoggedErrors(RuntimeError)
 
@@ -139,21 +146,28 @@ class UtilTests(unittest.TestCase):
 
 class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def setUp(self) -> None:
-        self.callbackResults = None
-        self.errbackResults = None
-        self.callback2Results = None
+        self.callbackResults: Optional[
+            Tuple[Tuple[object, ...], Dict[str, object]]
+        ] = None
+        self.callback2Results: Optional[
+            Tuple[Tuple[object, ...], Dict[str, object]]
+        ] = None
+        self.errbackResults: Optional[
+            Tuple[Tuple[Failure, ...], Dict[str, object]]
+        ] = None
+
         # Restore the debug flag to its original state when done.
         self.addCleanup(defer.setDebugging, defer.getDebugging())
 
-    def _callback(self, *args, **kw):
-        self.callbackResults = args, kw
+    def _callback(self, *args: object, **kwargs: object) -> Any:
+        self.callbackResults = args, kwargs
         return args[0]
 
-    def _callback2(self, *args, **kw):
-        self.callback2Results = args, kw
+    def _callback2(self, *args: object, **kwargs: object) -> None:
+        self.callback2Results = args, kwargs
 
-    def _errback(self, *args, **kw):
-        self.errbackResults = args, kw
+    def _errback(self, *args: Failure, **kwargs: object) -> None:
+        self.errbackResults = args, kwargs
 
     def testCallbackWithoutArgs(self) -> None:
         deferred: Deferred[str] = Deferred()
@@ -163,21 +177,21 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callbackResults, (("hello",), {}))
 
     def testCallbackWithArgs(self) -> None:
-        deferred = Deferred()
+        deferred: Deferred[str] = Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
         self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (("hello", "world"), {}))
 
     def testCallbackWithKwArgs(self) -> None:
-        deferred = Deferred()
+        deferred: Deferred[str] = Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
         self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (("hello",), {"world": "world"}))
 
     def testTwoCallbacks(self) -> None:
-        deferred = Deferred()
+        deferred: Deferred[str] = Deferred()
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
         deferred.callback("hello")
@@ -190,11 +204,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         If given None for an errback, addCallbacks uses a pass-through.
         """
         error = GenericError("oopsie")
-        deferred = Deferred()
-        deferred.addCallbacks(self._callback, None)
+        deferred: Deferred[None] = Deferred()
+        deferred.addCallbacks(self._callback, cast(Callable[..., object], None))
         deferred.errback(error)
         deferred.addErrback(self._errback)
         self.assertIsNone(self.callbackResults)
+        assert self.errbackResults is not None
         self.assertEqual(len(self.errbackResults[0]), 1)
         self.assertEqual(self.errbackResults[0][0].value, error)
         self.assertEqual(self.errbackResults[1], {})
@@ -203,8 +218,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         If given None as a callback args and kwargs, () and {} are used.
         """
-        deferred = Deferred()
-        deferred.addCallbacks(self._callback, self._errback, None, None, (), {})
+        deferred: Deferred[str] = Deferred()
+        deferred.addCallbacks(
+            self._callback,
+            self._errback,
+            cast(Tuple[object], None),
+            cast(Mapping[str, object], None),
+            (),
+            {},
+        )
         deferred.callback("hello")
         self.assertIsNone(self.errbackResults)
         self.assertEqual(self.callbackResults, (("hello",), {}))
@@ -214,26 +236,36 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         If given None as a errback args and kwargs, () and {} are used.
         """
         error = GenericError("oopsie")
-        deferred = Deferred()
-        deferred.addCallbacks(self._callback, self._errback, (), {}, None, None)
+        deferred: Deferred[None] = Deferred()
+        deferred.addCallbacks(
+            self._callback,
+            self._errback,
+            (),
+            {},
+            cast(Tuple[object], None),
+            cast(Mapping[str, object], None),
+        )
         deferred.errback(error)
         deferred.addErrback(self._errback)
         self.assertIsNone(self.callbackResults)
+        assert self.errbackResults is not None
         self.assertEqual(len(self.errbackResults[0]), 1)
         self.assertEqual(self.errbackResults[0][0].value, error)
         self.assertEqual(self.errbackResults[1], {})
 
     def testDeferredList(self) -> None:
-        defr1 = Deferred()
-        defr2 = Deferred()
-        defr3 = Deferred()
-        dl = DeferredList([defr1, defr2, defr3])
-        result = []
+        ResultList = List[Tuple[bool, Union[str, Failure]]]
 
-        def cb(resultList, result=result):
+        defr1: Deferred[str] = Deferred()
+        defr2: Deferred[str] = Deferred()
+        defr3: Deferred[str] = Deferred()
+        dl = DeferredList([defr1, defr2, defr3])
+        result: ResultList = []
+
+        def cb(resultList: ResultList, result: ResultList = result) -> None:
             result.extend(resultList)
 
-        def catch(err):
+        def catch(err: Failure) -> None:
             return None
 
         dl.addCallbacks(cb, cb)
@@ -251,7 +283,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             [
                 result[0],
                 # result[1][1] is now a Failure instead of an Exception
-                (result[1][0], str(result[1][1].value)),
+                (result[1][0], str(cast(Failure, result[1][1]).value)),
                 result[2],
             ],
             [(defer.SUCCESS, "1"), (defer.FAILURE, "2"), (defer.SUCCESS, "3")],
@@ -559,7 +591,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         l = []
         d = (
             Deferred()
-            .addCallback(lambda _: failure.Failure(ZeroDivisionError()))
+            .addCallback(lambda _: Failure(ZeroDivisionError()))
             .addErrback(l.append)
         )
         d.callback(1)
@@ -634,7 +666,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         dl = [defer.succeed(1), defer.fail(ValueError())]
         defer.gatherResults(dl).addErrback(l.append)
         self.assertEqual(len(l), 1)
-        self.assertIsInstance(l[0], failure.Failure)
+        self.assertIsInstance(l[0], Failure)
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 
@@ -729,14 +761,14 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def test_maybeDeferredSyncFailure(self) -> None:
         """
-        L{defer.maybeDeferred} should handle a L{failure.Failure} returned by a
+        L{defer.maybeDeferred} should handle a L{Failure} returned by a
         function and errback with it.
         """
         S, E = [], []
         try:
             "10" + 5
         except TypeError:
-            expected = failure.Failure()
+            expected = Failure()
         d = defer.maybeDeferred(lambda: expected)
         d.addCallbacks(S.append, E.append)
         self.assertEqual(S, [])
@@ -758,12 +790,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_maybeDeferredAsyncError(self) -> None:
         """
         L{defer.maybeDeferred} should let L{Deferred} instance pass by
-        so that L{failure.Failure} returned by the original instance is the
+        so that L{Failure} returned by the original instance is the
         same.
         """
         d = Deferred()
         d2 = defer.maybeDeferred(lambda: d)
-        d.errback(failure.Failure(RuntimeError()))
+        d.errback(Failure(RuntimeError()))
         self.assertImmediateFailure(d2, RuntimeError)
 
     def test_innerCallbacksPreserved(self) -> None:
@@ -899,7 +931,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         A callback added to a L{Deferred} by a callback on that L{Deferred}
         should be added to the end of the callback chain.
         """
-        deferred = Deferred()
+        deferred: Deferred[int] = Deferred()
         called = []
 
         def callback3(result):
@@ -922,7 +954,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         A callback added to a L{Deferred} by a callback on that L{Deferred}
         should not be executed until the running callback returns.
         """
-        deferred = Deferred()
+        deferred: Deferred[int] = Deferred()
         called = []
 
         def callback2(result):
@@ -944,12 +976,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         call the first errback with a L{Failure} wrapping that exception.
         """
         exceptionMessage = "callback raised exception"
-        deferred = Deferred()
+        deferred: Deferred[None] = Deferred()
 
-        def callback2(result):
+        def callback2(result: object) -> None:
             raise Exception(exceptionMessage)
 
-        def callback1(result):
+        def callback1(result: object) -> None:
             deferred.addCallback(callback2)
 
         deferred.addCallback(callback1)
@@ -1532,7 +1564,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         try:
             raise exc
         except BaseException:
-            f = failure.Failure()
+            f = Failure()
 
         error = defer.FirstError(f, 3)
         self.assertEqual(repr(error), "FirstError[#3, {}]".format(repr(exc)))
@@ -1546,7 +1578,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         try:
             raise exc
         except BaseException:
-            f = failure.Failure()
+            f = Failure()
 
         error = defer.FirstError(f, 5)
         self.assertEqual(str(error), "FirstError[#5, {}]".format(str(f)))
@@ -1560,7 +1592,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         try:
             1 // 0
         except BaseException:
-            firstFailure = failure.Failure()
+            firstFailure = Failure()
 
         one = defer.FirstError(firstFailure, 13)
         anotherOne = defer.FirstError(firstFailure, 13)
@@ -1568,7 +1600,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
         try:
             raise ValueError("bar")
         except BaseException:
-            secondFailure = failure.Failure()
+            secondFailure = Failure()
 
         another = defer.FirstError(secondFailure, 9)
 
@@ -1588,10 +1620,10 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
     def tearDown(self) -> None:
         defer.setDebugging(self._deferredWasDebugging)
 
-    def _callback(self, *args, **kw):
+    def _callback(self, *args: object, **kwargs: object) -> None:
         pass
 
-    def _errback(self, *args, **kw):
+    def _errback(self, *args: object, **kwargs: object) -> None:
         pass
 
     def _call_1(self, d):
@@ -1601,10 +1633,10 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
         d.callback("twice")
 
     def _err_1(self, d):
-        d.errback(failure.Failure(RuntimeError()))
+        d.errback(Failure(RuntimeError()))
 
     def _err_2(self, d):
-        d.errback(failure.Failure(RuntimeError()))
+        d.errback(Failure(RuntimeError()))
 
     def testAlreadyCalled_CC(self) -> None:
         d = Deferred()
@@ -2635,7 +2667,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is errbacked immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIs(dErrbacked[0].value, error)
 
         # The timeout never happens - if it did, d would have been cancelled,
@@ -2669,7 +2701,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is errbacked immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIs(dErrbacked[0].value, error)
 
         # The timeout never happens - if it did, d would have been cancelled,
@@ -2765,7 +2797,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is cancelled immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dCanceled[0], failure.Failure)
+        self.assertIsInstance(dCanceled[0], Failure)
         self.assertIs(dCanceled[0].type, defer.CancelledError)
 
         # The timeout never happens - if it did, d would have been cancelled
@@ -2798,7 +2830,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is cancelled immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dCanceled[0], failure.Failure)
+        self.assertIsInstance(dCanceled[0], Failure)
         self.assertIs(dCanceled[0].type, defer.CancelledError)
 
         # The timeout never happens - if it did, d would have been cancelled
@@ -2841,7 +2873,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
 
         self.failureResultOf(d, defer.TimeoutError)
@@ -2867,7 +2899,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
 
         self.successResultOf(d)
@@ -2893,7 +2925,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
@@ -2918,7 +2950,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], failure.Failure)
+        self.assertIsInstance(dErrbacked[0], Failure)
         self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
@@ -3054,7 +3086,7 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
         """
         L{twisted.internet.defer.timeout} is deprecated.
         """
-        deferred = Deferred()
+        deferred: Deferred[None] = Deferred()
         defer.timeout(deferred)
         self.assertFailure(deferred, defer.TimeoutError)
         warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
@@ -3137,7 +3169,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         exception when the given L{Deferred} does.
         """
         d = Deferred()
-        theFailure = failure.Failure(ZeroDivisionError())
+        theFailure = Failure(ZeroDivisionError())
         loop = new_event_loop()
         future = d.asFuture(loop)
         callAllSoonCalls(loop)

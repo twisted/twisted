@@ -1190,7 +1190,7 @@ class DeferredList(Deferred[object]):
 
     def __init__(
         self,
-        deferredList: List[Deferred[object]],
+        deferredList: List[Deferred[Any]],
         fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
