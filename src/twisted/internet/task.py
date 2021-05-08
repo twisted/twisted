@@ -878,34 +878,30 @@ def react(main, argv=(), _reactor=None):
     """
     if _reactor is None:
         from twisted.internet import reactor as _reactor
-    finished = defer.ensureDeferred(main(_reactor, *argv))
     codes = [0]
 
-    stopping = []
-    _reactor.addSystemEventTrigger("before", "shutdown", stopping.append, True)
+    def runMain():
+        try:
+            finished = main(_reactor, *argv)
+        except BaseException as exc:
+            cbFinish(Failure(exc))
+        else:
+            finished.addBoth(cbFinish)
 
-    def stop(result, stopReactor):
-        if stopReactor:
-            try:
-                _reactor.stop()
-            except ReactorNotRunning:
-                pass
+    def cbFinish(result):
+        try:
+            _reactor.stop()
+        except ReactorNotRunning:
+            pass
 
         if isinstance(result, Failure):
             if result.check(SystemExit) is not None:
-                code = result.value.code
+                codes[0] = result.value.code
             else:
                 log.err(result, "main function encountered error")
-                code = 1
-            codes[0] = code
+                codes[0] = 1
 
-    def cbFinish(result):
-        if stopping:
-            stop(result, False)
-        else:
-            _reactor.callWhenRunning(stop, result, True)
-
-    finished.addBoth(cbFinish)
+    _reactor.callWhenRunning(runMain)
     _reactor.run()
     sys.exit(codes[0])
 
