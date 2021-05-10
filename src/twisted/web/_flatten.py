@@ -12,17 +12,62 @@ from io import BytesIO
 
 from sys import exc_info
 from types import GeneratorType
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 from traceback import extract_tb
 from inspect import iscoroutine
 
 from twisted.python.compat import nativeString
+
 from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.python.failure import Failure
 from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
 from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-from twisted.web.iweb import IRenderable
+from twisted.web.iweb import IRenderable, IRequest
 
 
-def escapeForContent(data):
+T = TypeVar("T")
+
+FlattenableRecursive = Any
+"""
+For documentation purposes, read C{FlattenableRecursive} as L{Flattenable}.
+However, since mypy doesn't support recursive type definitions (yet?),
+we'll put Any in the actual definition.
+"""
+
+Flattenable = Union[
+    bytes,
+    str,
+    slot,
+    CDATA,
+    Comment,
+    Tag,
+    Tuple[FlattenableRecursive, ...],
+    List[FlattenableRecursive],
+    Generator[FlattenableRecursive, None, None],
+    CharRef,
+    Deferred[FlattenableRecursive],
+    Coroutine[Deferred[FlattenableRecursive], object, FlattenableRecursive],
+    IRenderable,
+]
+"""
+Type alias containing all types that can be flattened by L{flatten()}.
+"""
+
+
+def escapeForContent(data: Union[bytes, str]) -> bytes:
     """
     Escape some character or UTF-8 byte data for inclusion in an HTML or XML
     document, by replacing metacharacters (C{&<>}) with their entity
@@ -30,11 +75,9 @@ def escapeForContent(data):
 
     This is used as an input to L{_flattenElement}'s C{dataEscaper} parameter.
 
-    @type data: C{bytes} or C{unicode}
     @param data: The string to escape.
 
-    @rtype: C{bytes}
-    @return: The quoted form of C{data}.  If C{data} is unicode, return a utf-8
+    @return: The quoted form of C{data}.  If C{data} is L{str}, return a utf-8
         encoded string.
     """
     if isinstance(data, str):
@@ -43,7 +86,7 @@ def escapeForContent(data):
     return data
 
 
-def attributeEscapingDoneOutside(data):
+def attributeEscapingDoneOutside(data: Union[bytes, str]) -> bytes:
     """
     Escape some character or UTF-8 byte data for inclusion in the top level of
     an attribute.  L{attributeEscapingDoneOutside} actually passes the data
@@ -53,18 +96,18 @@ def attributeEscapingDoneOutside(data):
     L{_flattenElement} call so that that generator does not redundantly escape
     its text output.
 
-    @type data: C{bytes} or C{unicode}
     @param data: The string to escape.
 
     @return: The string, unchanged, except for encoding.
-    @rtype: C{bytes}
     """
     if isinstance(data, str):
         return data.encode("utf-8")
     return data
 
 
-def writeWithAttributeEscaping(write):
+def writeWithAttributeEscaping(
+    write: Callable[[bytes], object]
+) -> Callable[[bytes], None]:
     """
     Decorate a C{write} callable so that all output written is properly quoted
     for inclusion within an XML attribute value.
@@ -103,20 +146,18 @@ def writeWithAttributeEscaping(write):
     @return: A callable that writes data with escaping.
     """
 
-    def _write(data):
+    def _write(data: bytes) -> None:
         write(escapeForContent(data).replace(b'"', b"&quot;"))
 
     return _write
 
 
-def escapedCDATA(data):
+def escapedCDATA(data: Union[bytes, str]) -> bytes:
     """
     Escape CDATA for inclusion in a document.
 
-    @type data: L{str} or L{unicode}
     @param data: The string to escape.
 
-    @rtype: L{str}
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
@@ -125,14 +166,12 @@ def escapedCDATA(data):
     return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
-def escapedComment(data):
+def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     Escape a comment for inclusion in a document.
 
-    @type data: L{str} or L{unicode}
     @param data: The string to escape.
 
-    @rtype: C{str}
     @return: The quoted form of C{data}. If C{data} is unicode, return a utf-8
         encoded string.
     """
@@ -144,7 +183,11 @@ def escapedComment(data):
     return data
 
 
-def _getSlotValue(name, slotData, default=None):
+def _getSlotValue(
+    name: str,
+    slotData: Sequence[Optional[Mapping[str, Flattenable]]],
+    default: Optional[Flattenable] = None,
+) -> Flattenable:
     """
     Find the value of the named slot in the given stack of slot data.
     """
@@ -157,18 +200,18 @@ def _getSlotValue(name, slotData, default=None):
         raise UnfilledSlot(name)
 
 
-def _fork(d):
+def _fork(d: Deferred[T]) -> Deferred[T]:
     """
     Create a new L{Deferred} based on C{d} that will fire and fail with C{d}'s
     result or error, but will not modify C{d}'s callback type.
     """
-    d2 = Deferred(lambda _: d.cancel())
+    d2: Deferred[T] = Deferred(lambda _: d.cancel())
 
-    def callback(result):
+    def callback(result: T) -> T:
         d2.callback(result)
         return result
 
-    def errback(failure):
+    def errback(failure: Failure) -> Failure:
         d2.errback(failure)
         return failure
 
@@ -176,7 +219,17 @@ def _fork(d):
     return d2
 
 
-def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
+def _flattenElement(
+    request: Optional[IRequest],
+    root: Flattenable,
+    write: Callable[[bytes], object],
+    slotData: List[Optional[Mapping[str, Flattenable]]],
+    renderFactory: Optional[IRenderable],
+    dataEscaper: Callable[[Union[bytes, str]], bytes],
+    # This is annotated as Generator[T, None, None] instead of Iterator[T]
+    # because mypy does not consider an Iterator to be an instance of
+    # GeneratorType.
+) -> Generator[Union[Generator, Deferred[Flattenable]], None, None]:
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -205,25 +258,25 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         whether the rendering context is within an attribute or not.  See the
         explanation in L{writeWithAttributeEscaping}.
 
-    @return: An iterator that eventually yields L{bytes} that should be written
-        to the output.  However it may also yield other iterators or
-        L{Deferred}s; if it yields another iterator, the caller will iterate
-        it; if it yields a L{Deferred}, the result of that L{Deferred} will
-        either be L{bytes}, in which case it's written, or another generator,
-        in which case it is iterated.  See L{_flattenTree} for the trampoline
-        that consumes said values.
-    @rtype: An iterator which yields L{bytes}, L{Deferred}, and more iterators
-        of the same type.
+    @return: An iterator that eventually writes L{bytes} to C{write}.
+        It can yield other iterators or L{Deferred}s; if it yields another
+        iterator, the caller will iterate it; if it yields a L{Deferred},
+        the result of that L{Deferred} will be another generator, in which
+        case it is iterated.  See L{_flattenTree} for the trampoline that
+        consumes said values.
     """
 
     def keepGoing(
-        newRoot, dataEscaper=dataEscaper, renderFactory=renderFactory, write=write
-    ):
+        newRoot: Flattenable,
+        dataEscaper: Callable[[Union[bytes, str]], bytes] = dataEscaper,
+        renderFactory: Optional[IRenderable] = renderFactory,
+        write: Callable[[bytes], object] = write,
+    ) -> Generator[Union[Generator, Deferred[Generator]], None, None]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )
 
-    def keepGoingAsync(result):
+    def keepGoingAsync(result: Deferred[Flattenable]) -> Deferred[Flattenable]:
         return result.addCallback(keepGoing)
 
     if isinstance(root, (bytes, str)):
@@ -241,8 +294,13 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         write(b"-->")
     elif isinstance(root, Tag):
         slotData.append(root.slotData)
-        if root.render is not None:
-            rendererName = root.render
+        rendererName = root.render
+        if rendererName is not None:
+            if renderFactory is None:
+                raise ValueError(
+                    f'Tag wants to be rendered by method "{rendererName}" '
+                    f"but is not contained in any IRenderable"
+                )
             rootClone = root.clone(False)
             rootClone.render = None
             renderMethod = renderFactory.lookupRenderMethod(rendererName)
@@ -294,7 +352,11 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
     elif isinstance(root, Deferred):
         yield keepGoingAsync(_fork(root))
     elif iscoroutine(root):
-        yield keepGoingAsync(Deferred.fromCoroutine(root))
+        yield keepGoingAsync(
+            Deferred.fromCoroutine(
+                cast(Coroutine[Deferred[Flattenable], object, Flattenable], root)
+            )
+        )
     elif IRenderable.providedBy(root):
         result = root.render(request)
         yield keepGoing(result, renderFactory=root)
@@ -302,7 +364,9 @@ def _flattenElement(request, root, write, slotData, renderFactory, dataEscaper):
         raise UnsupportedType(root)
 
 
-async def _flattenTree(request, root, write):
+async def _flattenTree(
+    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+) -> None:
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
     first traversal of the tree.
@@ -320,7 +384,9 @@ async def _flattenTree(request, root, write):
 
     @return: A C{Deferred}-returning coroutine that resolves to C{None}.
     """
-    stack = [_flattenElement(request, root, write, [], None, escapeForContent)]
+    stack: List[Generator] = [
+        _flattenElement(request, root, write, [], None, escapeForContent)
+    ]
     while stack:
         try:
             frame = stack[-1].gi_frame
@@ -340,7 +406,9 @@ async def _flattenTree(request, root, write):
             stack.append(element)
 
 
-def flatten(request, root, write):
+def flatten(
+    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+) -> Deferred[None]:
     """
     Incrementally write out a string representation of C{root} using C{write}.
 
@@ -351,7 +419,7 @@ def flatten(request, root, write):
     @param request: A request object which will be passed to the C{render}
         method of any L{IRenderable} provider which is encountered.
 
-    @param root: An object to be made flatter.  This may be of type L{unicode},
+    @param root: An object to be made flatter.  This may be of type L{str},
         L{bytes}, L{slot}, L{Tag <twisted.web.template.Tag>}, L{tuple},
         L{list}, L{types.GeneratorType}, L{Deferred}, or something that
         provides L{IRenderable}.
@@ -366,7 +434,7 @@ def flatten(request, root, write):
     return ensureDeferred(_flattenTree(request, root, write))
 
 
-def flattenString(request, root):
+def flattenString(request: Optional[IRequest], root: Flattenable) -> Deferred[bytes]:
     """
     Collate a string representation of C{root} into a single string.
 
@@ -374,11 +442,11 @@ def flattenString(request, root):
     the results. See L{flatten} for the exact meanings of C{request} and
     C{root}.
 
-    @return: A L{Deferred} which will be called back with a single string as
-        its result when C{root} has been completely flattened into C{write} or
-        which will be errbacked if an unexpected exception occurs.
+    @return: A L{Deferred} which will be called back with a single UTF-8 encoded
+        string as its result when C{root} has been completely flattened or which
+        will be errbacked if an unexpected exception occurs.
     """
     io = BytesIO()
     d = flatten(request, root, io.write)
     d.addCallback(lambda _: io.getvalue())
-    return d
+    return cast(Deferred[bytes], d)
