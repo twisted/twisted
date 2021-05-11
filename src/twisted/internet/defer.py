@@ -1169,6 +1169,7 @@ class FirstError(Exception):
         return -1
 
 
+_DeferredListSingleResultT = Tuple[_DeferredResultT, int]
 _DeferredListResultItemT = Tuple[bool, _DeferredResultT]
 _DeferredListResultListT = List[_DeferredListResultItemT]
 
@@ -1185,7 +1186,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[True],
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[Tuple[_T, int]]:
+    ) -> Deferred[_DeferredListSingleResultT]:
         ...
 
     @overload
@@ -1194,7 +1195,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[False] = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[List[Tuple[bool, _T]]]:
+    ) -> Deferred[_DeferredListResultListT]:
         ...
 
     def _DeferredList(
@@ -1202,7 +1203,9 @@ if TYPE_CHECKING:
         fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[Any]:
+    ) -> Union[
+        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
+    ]:
         ...
 
     DeferredList = _DeferredList
@@ -1269,9 +1272,9 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         """
         self._deferredList = list(deferredList)
 
-        self.resultList: List[Optional[_DeferredListResultItemT]] = [None] * len(
-            self._deferredList
-        )
+        self.resultList: _DeferredListResultListT = [
+            cast(_DeferredListResultItemT, None)
+        ] * len(self._deferredList)
         """
         The final result, in progress.
         Each item in the list corresponds to the L{Deferred} at the same
@@ -1319,7 +1322,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
             elif self.finishedCount == len(self.resultList):
                 # All the None values have been replaced by results, so we can
                 # safely cast away the Optional[].
-                self.callback(cast(_DeferredListResultListT, self.resultList))
+                self.callback(self.resultList)
 
         if succeeded == FAILURE and self.consumeErrors:
             return None
@@ -1347,7 +1350,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
 
 
 def _parseDeferredListResult(
-    resultList: List[Tuple[bool, _T]], fireOnOneErrback: bool = False
+    resultList: _DeferredListResultListT, fireOnOneErrback: bool = False
 ) -> List[_T]:
     if __debug__:
         for success, value in resultList:

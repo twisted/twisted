@@ -23,6 +23,7 @@ from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
     _DeferredListResultListT,
+    _DeferredListSingleResultT,
     ensureDeferred,
     Deferred,
     DeferredFilesystemLock,
@@ -299,13 +300,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         ) -> None:
             result.append(resultList)
 
-        dl = DeferredList([])
-        dl.addCallbacks(cb)
+        dl1: Deferred[_DeferredListResultListT] = DeferredList([])
+        dl1.addCallbacks(cb)
         self.assertEqual(result, [[]])
 
         result[:] = []
-        dl = DeferredList([], fireOnOneCallback=True)
-        dl.addCallbacks(cb)
+        dl2: Deferred[_DeferredListSingleResultT] = DeferredList(
+            [], fireOnOneCallback=True
+        )
+        dl2.addCallbacks(cb)
         self.assertEqual(result, [])
 
     def testDeferredListFireOnOneError(self) -> None:
