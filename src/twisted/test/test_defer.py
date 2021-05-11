@@ -632,14 +632,14 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         for it to be unpaused.
         """
         expected = object()
-        paused = Deferred()
+        paused: Deferred[object] = Deferred()
         paused.callback(expected)
         paused.pause()
-        chained = Deferred()
+        chained: Deferred[None] = Deferred()
         chained.addCallback(lambda ignored: paused)
         chained.callback(None)
 
-        result = []
+        result: List[object] = []
         chained.addCallback(result.append)
         self.assertEqual(result, [])
         paused.unpause()
@@ -651,27 +651,29 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         chain does not prevent earlier Deferreds from continuing to execute
         their callbacks.
         """
-        first = Deferred()
-        second = Deferred()
+        first: Deferred[None] = Deferred()
+        second: Deferred[None] = Deferred()
         first.addCallback(lambda ignored: second)
         first.callback(None)
         first.pause()
         second.callback(None)
-        result = []
+        result: List[None] = []
         second.addCallback(result.append)
         self.assertEqual(result, [None])
 
     def test_gatherResults(self) -> None:
         # test successful list of deferreds
-        l = []
-        defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(l.append)
-        self.assertEqual(l, [[1, 2]])
+        results: List[List[int]] = []
+        defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(
+            results.append
+        )
+        self.assertEqual(results, [[1, 2]])
         # test failing list of deferreds
-        l = []
+        errors: List[Failure] = []
         dl = [defer.succeed(1), defer.fail(ValueError())]
-        defer.gatherResults(dl).addErrback(l.append)
-        self.assertEqual(len(l), 1)
-        self.assertIsInstance(l[0], Failure)
+        defer.gatherResults(dl).addErrback(errors.append)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], Failure)
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 
@@ -685,9 +687,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         dgood = defer.succeed(1)
         dbad = defer.fail(RuntimeError("oh noes"))
         d = defer.gatherResults([dgood, dbad], consumeErrors=True)
-        unconsumedErrors = []
+        unconsumedErrors: List[Failure] = []
         dbad.addErrback(unconsumedErrors.append)
-        gatheredErrors = []
+        gatheredErrors: List[Failure] = []
         d.addErrback(gatheredErrors.append)
 
         self.assertEqual((len(unconsumedErrors), len(gatheredErrors)), (0, 1))
@@ -700,8 +702,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         When cancelling the L{defer.gatherResults} call, all the
         L{Deferred}s in the list will be cancelled.
         """
-        deferredOne = Deferred()
-        deferredTwo = Deferred()
+        deferredOne: Deferred[object] = Deferred()
+        deferredTwo: Deferred[object] = Deferred()
         result = defer.gatherResults([deferredOne, deferredTwo])
         result.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
@@ -717,8 +719,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         returned by L{defer.gatherResults} will be callbacked with the C{list}
         of the results.
         """
-        deferredOne = Deferred(fakeCallbackCanceller)
-        deferredTwo = Deferred(fakeCallbackCanceller)
+        deferredOne: Deferred[str] = Deferred(fakeCallbackCanceller)
+        deferredTwo: Deferred[str] = Deferred(fakeCallbackCanceller)
         result = defer.gatherResults([deferredOne, deferredTwo])
         result.cancel()
         callbackResult = self.successResultOf(result)
@@ -731,22 +733,24 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         function and pass it to its resulting L{Deferred}.
         """
         result = object()
-        S, E = [], []
+        results: List[object] = []
+        errors: List[Failure] = []
         d = defer.maybeDeferred(lambda: result)
-        d.addCallbacks(S.append, E.append)
-        self.assertEqual(E, [])
-        self.assertEqual(len(S), 1)
-        self.assertIdentical(S[0], result)
+        d.addCallbacks(results.append, errors.append)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(results), 1)
+        self.assertIdentical(results[0], result)
 
     def test_maybeDeferredSyncWithArgs(self) -> None:
         """
         L{defer.maybeDeferred} should pass arguments to the called function.
         """
-        S, E = [], []
+        results: List[int] = []
+        errors: List[Failure] = []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
-        d.addCallbacks(S.append, E.append)
-        self.assertEqual(E, [])
-        self.assertEqual(S, [15])
+        d.addCallbacks(results.append, errors.append)
+        self.assertEqual(errors, [])
+        self.assertEqual(results, [15])
 
     def test_maybeDeferredSyncException(self) -> None:
         """
