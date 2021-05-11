@@ -1159,10 +1159,26 @@ class FirstError(Exception):
         return -1
 
 
-_DeferredListResult = Tuple[bool, object]
+# This wants to be TypeVar, but is set to Any for now, since we can't type
+# DeferredList's superclass the way we'd like to (see below), which means a
+# TypeVar would be unbound (which is an error).
+_DeferredListResultT = Any
+
+# type note for DeferredList:
+#
+# If fireOnOneCallback is False, this wants to be:
+#
+#   class DeferredList(Deferred[List[Tuple[bool, _DeferredListResultT]]]):
+#
+# ...but if fireOnOneCallback is True, it wants to be:
+#
+#   class DeferredList(Deferred[Tuple[_DeferredListResultT, int]]):
+#
+# Absent a way to overload a class definition in the type system, we use
+# Deferred[Any], to avoid type errors.
 
 
-class DeferredList(Deferred[object]):
+class DeferredList(Deferred[Any]):
     """
     L{DeferredList} is a tool for collecting the results of several Deferreds.
 
@@ -1222,9 +1238,9 @@ class DeferredList(Deferred[object]):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         """
         self._deferredList = list(deferredList)
-        self.resultList: List[Optional[_DeferredListResult]] = [None] * len(
-            self._deferredList
-        )
+        self.resultList: List[Tuple[bool, _DeferredListResultT]] = [
+            cast(Tuple[bool, _DeferredListResultT], None)
+        ] * len(self._deferredList)
         Deferred.__init__(self)
         if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
@@ -1247,7 +1263,9 @@ class DeferredList(Deferred[object]):
             )
             index = index + 1
 
-    def _cbDeferred(self, result: _T, index: int, succeeded: bool) -> Optional[_T]:
+    def _cbDeferred(
+        self, result: _DeferredListResultT, index: int, succeeded: bool
+    ) -> Optional[_DeferredListResultT]:
         """
         (internal) Callback for when one of my deferreds fires.
         """
@@ -1289,8 +1307,8 @@ class DeferredList(Deferred[object]):
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResult], fireOnOneErrback: bool = False
-) -> List[object]:
+    resultList: List[Tuple[bool, _DeferredListResultT]], fireOnOneErrback: bool = False
+) -> List[_DeferredListResultT]:
     if __debug__:
         for success, value in resultList:
             assert success
@@ -1298,8 +1316,8 @@ def _parseDeferredListResult(
 
 
 def gatherResults(
-    deferredList: List[Deferred[object]], consumeErrors: bool = False
-) -> Deferred[Any]:
+    deferredList: List[Deferred[_DeferredListResultT]], consumeErrors: bool = False
+) -> Deferred[List[_DeferredListResultT]]:
     """
     Returns, via a L{Deferred}, a list with the results of the given
     L{Deferred}s - in effect, a "join" of multiple deferred operations.
