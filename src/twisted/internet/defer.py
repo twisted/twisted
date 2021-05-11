@@ -1159,16 +1159,18 @@ class FirstError(Exception):
         return -1
 
 
-# This wants to be TypeVar, but is set to Any for now, since we can't type
-# DeferredList's superclass the way we'd like to (see below), which means a
-# TypeVar would be unbound (which is an error).
+# _DeferredListResultT wants to be TypeVar, but is set to Any for now, since we
+# can't type DeferredList's superclass the way we'd like to (see below), which
+# means a TypeVar would be unbound (which is an error).
 _DeferredListResultT = Any
+_DeferredListResultItemT = Tuple[bool, _DeferredListResultT]
+_DeferredListResultListT = List[_DeferredListResultItemT]
 
 # type note for DeferredList:
 #
 # If fireOnOneCallback is False, this wants to be:
 #
-#   class DeferredList(Deferred[List[Tuple[bool, _DeferredListResultT]]]):
+#   class DeferredList(Deferred[_DeferredListResultListT]):
 #
 # ...but if fireOnOneCallback is True, it wants to be:
 #
@@ -1238,8 +1240,8 @@ class DeferredList(Deferred[Any]):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         """
         self._deferredList = list(deferredList)
-        self.resultList: List[Tuple[bool, _DeferredListResultT]] = [
-            cast(Tuple[bool, _DeferredListResultT], None)
+        self.resultList: _DeferredListResultListT = [
+            cast(_DeferredListResultItemT, None)
         ] * len(self._deferredList)
         Deferred.__init__(self)
         if len(self._deferredList) == 0 and not fireOnOneCallback:
@@ -1307,7 +1309,7 @@ class DeferredList(Deferred[Any]):
 
 
 def _parseDeferredListResult(
-    resultList: List[Tuple[bool, _DeferredListResultT]], fireOnOneErrback: bool = False
+    resultList: _DeferredListResultListT, fireOnOneErrback: bool = False
 ) -> List[_DeferredListResultT]:
     if __debug__:
         for success, value in resultList:

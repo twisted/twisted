@@ -22,6 +22,7 @@ from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
+    _DeferredListResultListT,
     ensureDeferred,
     Deferred,
     DeferredFilesystemLock,
@@ -290,9 +291,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         )
 
     def testEmptyDeferredList(self) -> None:
-        result = []
+        result: List[_DeferredListResultListT] = []
 
-        def cb(resultList, result=result):
+        def cb(
+            resultList: _DeferredListResultListT,
+            result: List[_DeferredListResultListT] = result,
+        ) -> None:
             result.append(resultList)
 
         dl = DeferredList([])
