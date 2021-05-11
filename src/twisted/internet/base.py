@@ -231,27 +231,14 @@ class DelayedCall:
         """
         if self._repr is not None:
             return self._repr
-        if hasattr(self, "func"):
-            # This code should be replaced by a utility function in reflect;
-            # see ticket #6066:
-            if hasattr(self.func, "__qualname__"):
-                func: Optional[str] = self.func.__qualname__
-            elif hasattr(self.func, "__name__"):
-                func = self.func.func_name  # type: ignore[attr-defined]
-                if hasattr(self.func, "im_class"):
-                    func = self.func.im_class.__name__ + "." + func  # type: ignore[attr-defined]
-            else:
-                func = reflect.safe_repr(self.func)
-        else:
-            func = None
 
         now = self.seconds()
         L = [
             "<DelayedCall 0x%x [%ss] called=%s cancelled=%s"
             % (id(self), self.time - now, self.called, self.cancelled)
         ]
-        if func is not None:
-            L.extend((" ", func, "("))
+        if hasattr(self, "func"):
+            L.extend((" ", self.func.__qualname__, "("))
             if self.args:
                 L.append(", ".join([reflect.safe_repr(e) for e in self.args]))
                 if self.kw:
@@ -904,14 +891,9 @@ class ReactorBase(PluggableResolverMixin):
     def _cancelCallLater(self, delayedCall: DelayedCall) -> None:
         self._cancellations += 1
 
-    def getDelayedCalls(self) -> List[IDelayedCall]:
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
-        Return all the outstanding delayed calls in the system.
-        They are returned in no particular order.
-        This method is not efficient -- it is really only meant for
-        test cases.
-
-        @return: A list of outstanding delayed calls.
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
         return [
             x

@@ -6,12 +6,15 @@ General helpers for L{twisted.web} unit tests.
 """
 
 
-from twisted.internet.defer import succeed
+from typing import Type
+
+from twisted.internet.defer import Deferred, succeed
 from twisted.web import server
 from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
+from twisted.web.template import Flattenable
 
 
 def _render(resource, request):
@@ -34,15 +37,19 @@ class FlattenTestCase(SynchronousTestCase):
     A test case that assists with testing L{twisted.web._flatten}.
     """
 
-    def assertFlattensTo(self, root, target):
+    def assertFlattensTo(self, root: Flattenable, target: bytes) -> Deferred[bytes]:
         """
         Assert that a root element, when flattened, is equal to a string.
         """
-        d = flattenString(None, root)
-        d.addCallback(lambda s: self.assertEqual(s, target))
+
+        def check(result: bytes) -> bytes:
+            return self.assertEqual(result, target)  # type: ignore[no-any-return]
+
+        d: Deferred[bytes] = flattenString(None, root)
+        d.addCallback(check)
         return d
 
-    def assertFlattensImmediately(self, root, target):
+    def assertFlattensImmediately(self, root: Flattenable, target: bytes) -> bytes:
         """
         Assert that a root element, when flattened, is equal to a string, and
         performs no asynchronus Deferred anything.
@@ -55,9 +62,9 @@ class FlattenTestCase(SynchronousTestCase):
             L{target}.
         @rtype: L{bytes}
         """
-        return self.successResultOf(self.assertFlattensTo(root, target))
+        return self.successResultOf(self.assertFlattensTo(root, target))  # type: ignore[no-any-return]
 
-    def assertFlatteningRaises(self, root, exn):
+    def assertFlatteningRaises(self, root: Flattenable, exn: Type[Exception]) -> None:
         """
         Assert flattening a root element raises a particular exception.
         """
