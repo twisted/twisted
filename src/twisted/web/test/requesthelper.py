@@ -276,7 +276,7 @@ class DummyRequest:
         """TODO: make this assert on write() if the header is content-length"""
         self.responseHeaders.addRawHeader(name, value)
 
-    def getSession(self):
+    def getSession(self, sessionInterface=None):
         if self.session:
             return self.session
         assert (
@@ -309,13 +309,13 @@ class DummyRequest:
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
-        finished = Deferred()
+        finished: Deferred[None] = Deferred()
         self._finishedDeferreds.append(finished)
         return finished
 
