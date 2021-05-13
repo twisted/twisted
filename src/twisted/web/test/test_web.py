@@ -15,7 +15,7 @@ from zope.interface.verify import verifyObject
 from twisted.python import reflect, failure
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet import reactor, interfaces
+from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
