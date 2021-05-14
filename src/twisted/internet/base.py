@@ -11,16 +11,13 @@ from abc import ABC, abstractmethod
 import builtins
 from heapq import heappush, heappop, heapify
 import socket  # needed only for sync-dns
-import sys
 from traceback import format_stack
 from types import FrameType
 from typing import (
     Any,
-    AnyStr,
     Callable,
     Dict,
     List,
-    Mapping,
     NewType,
     Optional,
     Sequence,
@@ -234,27 +231,14 @@ class DelayedCall:
         """
         if self._repr is not None:
             return self._repr
-        if hasattr(self, "func"):
-            # This code should be replaced by a utility function in reflect;
-            # see ticket #6066:
-            if hasattr(self.func, "__qualname__"):
-                func: Optional[str] = self.func.__qualname__
-            elif hasattr(self.func, "__name__"):
-                func = self.func.func_name  # type: ignore[attr-defined]
-                if hasattr(self.func, "im_class"):
-                    func = self.func.im_class.__name__ + "." + func  # type: ignore[attr-defined]
-            else:
-                func = reflect.safe_repr(self.func)
-        else:
-            func = None
 
         now = self.seconds()
         L = [
             "<DelayedCall 0x%x [%ss] called=%s cancelled=%s"
             % (id(self), self.time - now, self.called, self.cancelled)
         ]
-        if func is not None:
-            L.extend((" ", func, "("))
+        if hasattr(self, "func"):
+            L.extend((" ", self.func.__qualname__, "("))
             if self.args:
                 L.append(", ".join([reflect.safe_repr(e) for e in self.args]))
                 if self.kw:
@@ -907,14 +891,9 @@ class ReactorBase(PluggableResolverMixin):
     def _cancelCallLater(self, delayedCall: DelayedCall) -> None:
         self._cancellations += 1
 
-    def getDelayedCalls(self) -> List[IDelayedCall]:
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
-        Return all the outstanding delayed calls in the system.
-        They are returned in no particular order.
-        This method is not efficient -- it is really only meant for
-        test cases.
-
-        @return: A list of outstanding delayed calls.
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
         return [
             x
@@ -1025,110 +1004,6 @@ class ReactorBase(PluggableResolverMixin):
         if self._justStopped:
             self._justStopped = False
             self.fireSystemEvent("shutdown")
-
-    # IReactorProcess
-
-    def _checkProcessArgs(
-        self, args: List[Union[bytes, str]], env: Optional[Mapping[AnyStr, AnyStr]]
-    ) -> Union[
-        Tuple[List[bytes], Optional[Dict[bytes, bytes]]],
-        Tuple[List[Union[bytes, str]], Optional[Mapping[AnyStr, AnyStr]]],
-    ]:
-        """
-        Check for valid arguments and environment to spawnProcess.
-
-        @return: A two element tuple giving values to use when creating the
-        process.  The first element of the tuple is a C{list} of C{bytes}
-        giving the values for argv of the child process.  The second element
-        of the tuple is either L{None} if C{env} was L{None} or a C{dict}
-        mapping C{bytes} environment keys to C{bytes} environment values.
-        """
-        # Any unicode string which Python would successfully implicitly
-        # encode to a byte string would have worked before these explicit
-        # checks were added.  Anything which would have failed with a
-        # UnicodeEncodeError during that implicit encoding step would have
-        # raised an exception in the child process and that would have been
-        # a pain in the butt to debug.
-        #
-        # So, we will explicitly attempt the same encoding which Python
-        # would implicitly do later.  If it fails, we will report an error
-        # without ever spawning a child process.  If it succeeds, we'll save
-        # the result so that Python doesn't need to do it implicitly later.
-        #
-        # -exarkun
-
-        # If any of the following environment variables:
-        #  - PYTHONUTF8
-        #  - PYTHONIOENCODING
-        #
-        # are set before the Python interpreter runs, they will affect the
-        # value of sys.stdout.encoding.
-
-        # In certain cases, such as a Windows GUI Application which has no
-        # console, sys.stdout is None.  In this case,
-        # just return the args and env unmodified.
-        if not sys.stdout:
-            return args, env
-
-        # If a client application patches sys.stdout so that encoding is not
-        # set properly, try to fall back to sys.__stdout__.encoding.
-        defaultEncoding = sys.stdout.encoding or sys.__stdout__.encoding
-        if not defaultEncoding:
-            raise ValueError("sys.stdout does not have a valid encoding")
-
-        # Common check function
-        def argChecker(arg: Union[bytes, str]) -> Optional[bytes]:
-            """
-            Return either L{bytes} or L{None}.  If the given value is not
-            allowable for some reason, L{None} is returned.  Otherwise, a
-            possibly different object which should be used in place of arg is
-            returned.  This forces unicode encoding to happen now, rather than
-            implicitly later.
-            """
-            if isinstance(arg, str):
-                try:
-                    arg = arg.encode(defaultEncoding)
-                except UnicodeEncodeError:
-                    return None
-            if isinstance(arg, bytes) and b"\0" not in arg:
-                return arg
-
-            return None
-
-        # Make a few tests to check input validity
-        if not isinstance(args, (tuple, list)):
-            raise TypeError("Arguments must be a tuple or list")
-
-        outputArgs = []
-        for arg in args:
-            _arg = argChecker(arg)
-            if _arg is None:
-                raise TypeError(f"Arguments contain a non-string value: {arg!r}")
-            else:
-                outputArgs.append(_arg)
-
-        outputEnv = None
-        if env is not None:
-            outputEnv = {}
-            for key, val in env.items():
-                _key = argChecker(key)
-                if _key is None:
-                    raise TypeError(
-                        "Environment contains a "
-                        "non-string key: {!r}, using encoding: {}".format(
-                            key, sys.stdout.encoding
-                        )
-                    )
-                _val = argChecker(val)
-                if _val is None:
-                    raise TypeError(
-                        "Environment contains a "
-                        "non-string value: {!r}, using encoding {}".format(
-                            val, sys.stdout.encoding
-                        )
-                    )
-                outputEnv[_key] = _val
-        return outputArgs, outputEnv
 
     # IReactorThreads
     if platform.supportsThreads():
