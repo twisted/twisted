@@ -69,7 +69,7 @@ And register it all:
 .. literalinclude:: listings/finger/twisted/plugins/finger_tutorial.py
 
 
-Note that the second argument to :api:`twisted.application.service.ServiceMaker <ServiceMaker>` ,``finger.tap`` , is a reference to a module
+Note that the second argument to :py:class:`ServiceMaker <twisted.application.service.ServiceMaker>` ,``finger.tap`` , is a reference to a module
 (``finger/tap.py`` ), not to a filename.
 
 

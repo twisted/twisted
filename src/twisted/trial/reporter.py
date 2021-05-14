@@ -26,7 +26,7 @@ from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
 try:
-    from subunit import TestProtocolClient
+    from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
 
@@ -638,7 +638,7 @@ class Reporter(TestResult):
         )
 
     def _printUnexpectedSuccess(self, todo):
-        ret = "Reason: {!r}\n".format(todo.reason)
+        ret = f"Reason: {todo.reason!r}\n"
         if todo.errors:
             ret += "Expected errors: {}\n".format(", ".join(todo.errors))
         return ret
@@ -881,7 +881,7 @@ class _AnsiColorizer:
         @param color: A string label for a color. e.g. 'red', 'white'.
         """
         color = self._colors[color]
-        self.stream.write("\x1b[{};1m{}\x1b[0m".format(color, text))
+        self.stream.write(f"\x1b[{color};1m{text}\x1b[0m")
 
 
 class _Win32Colorizer:
@@ -890,7 +890,7 @@ class _Win32Colorizer:
     """
 
     def __init__(self, stream):
-        from win32console import (
+        from win32console import (  # type: ignore[import]
             GetStdHandle,
             STD_OUTPUT_HANDLE,
             FOREGROUND_RED,
@@ -926,7 +926,7 @@ class _Win32Colorizer:
             screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes
+        import pywintypes  # type: ignore[import]
 
         try:
             screenBuffer.SetConsoleTextAttribute(

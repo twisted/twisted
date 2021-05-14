@@ -24,7 +24,7 @@ def _idnaBytes(text):
     @rtype: L{bytes}
     """
     try:
-        import idna
+        import idna  # type: ignore[import]
     except ImportError:
         return text.encode("idna")
     else:

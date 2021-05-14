@@ -65,7 +65,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = []  # type: List[Thread]
+        self.threads: List[Thread] = []
 
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(  # type: ignore[misc]
@@ -302,6 +302,6 @@ class ThreadPool:
         Dump some plain-text informational messages to the log about the state
         of this L{ThreadPool}.
         """
-        log.msg("waiters: {}".format(self.waiters))
-        log.msg("workers: {}".format(self.working))
-        log.msg("total: {}".format(self.threads))
+        log.msg(f"waiters: {self.waiters}")
+        log.msg(f"workers: {self.working}")
+        log.msg(f"total: {self.threads}")

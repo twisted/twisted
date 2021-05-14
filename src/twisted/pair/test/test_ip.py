@@ -40,7 +40,7 @@ class MyProtocol:
             assert (
                 expectKw[k] == localVariables[k]
             ), "Expected {}={!r}, got {!r}".format(k, expectKw[k], localVariables[k])
-        assert expectData == data, "Expected {!r}, got {!r}".format(expectData, data)
+        assert expectData == data, f"Expected {expectData!r}, got {data!r}"
 
     def addProto(self, num, proto):
         # IRawDatagramProtocol.addProto

@@ -1,0 +1,1 @@
+twisted.web.template.flatten and flattenString will no longer raise RecursionError if a large number of synchronous Deferreds are included in a document.

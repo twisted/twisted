@@ -85,7 +85,7 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
@@ -138,11 +138,11 @@ class Port(base.BasePort):
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
-        @param addressFamily: L{int}
+        @type addressFamily: L{int}
 
         @param protocol: A C{DatagramProtocol} instance which will be
             connected to the C{port}.
-        @type proto: L{twisted.internet.protocol.DatagramProtocol}
+        @type protocol: L{twisted.internet.protocol.DatagramProtocol}
 
         @param maxPacketSize: The maximum packet size to accept.
         @type maxPacketSize: L{int}
@@ -164,9 +164,9 @@ class Port(base.BasePort):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<{} not connected>".format(self.protocol.__class__)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """

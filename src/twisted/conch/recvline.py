@@ -19,7 +19,7 @@ from twisted.python import reflect
 from twisted.python.compat import iterbytes
 from twisted.logger import Logger
 
-_counters = {}  # type: Dict[str, int]
+_counters: Dict[str, int] = {}
 
 
 class Logging:

@@ -123,17 +123,17 @@ def _fullyQualifiedName(obj):
 
     if inspect.isclass(obj) or inspect.isfunction(obj):
         moduleName = obj.__module__
-        return "{}.{}".format(moduleName, name)
+        return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
         try:
             cls = obj.im_class
         except AttributeError:
             # Python 3 eliminates im_class, substitutes __module__ and
             # __qualname__ to provide similar information.
-            return "{}.{}".format(obj.__module__, obj.__qualname__)
+            return f"{obj.__module__}.{obj.__qualname__}"
         else:
             className = _fullyQualifiedName(cls)
-            return "{}.{}".format(className, name)
+            return f"{className}.{name}"
     return name
 
 
@@ -155,7 +155,7 @@ def _getReplacementString(replacement):
     """
     if callable(replacement):
         replacement = _fullyQualifiedName(replacement)
-    return "please use {} instead".format(replacement)
+    return f"please use {replacement} instead"
 
 
 def _getDeprecationDocstring(version, replacement=None):
@@ -222,18 +222,13 @@ def getDeprecationWarningString(callableThing, version, format=None, replacement
     @param callableThing: Callable object to be deprecated
 
     @type version: L{incremental.Version}
-    @param version: Version that C{callableThing} was deprecated in
+    @param version: Version that C{callableThing} was deprecated in.
 
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
-
-    @param callableThing: A callable to be deprecated.
-
-    @param version: The L{incremental.Version} that the callable
-        was deprecated in.
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -283,9 +278,6 @@ def deprecated(version, replacement=None):
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
-
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
@@ -324,9 +316,6 @@ def deprecatedProperty(version, replacement=None):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
-
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable.
         Either pass in a string, which will be inserted into the warning
@@ -615,21 +604,15 @@ def warnAboutFunction(offender, warningString):
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
     offenderModule = sys.modules[offender.__module__]
-    filename = inspect.getabsfile(offenderModule)
-    lineStarts = list(findlinestarts(offender.__code__))
-    lastLineNo = lineStarts[-1][1]
-    globals = offender.__globals__
-
-    kwargs = dict(
+    warn_explicit(
+        warningString,
         category=DeprecationWarning,
-        filename=filename,
-        lineno=lastLineNo,
+        filename=inspect.getabsfile(offenderModule),
+        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
         module=offenderModule.__name__,
-        registry=globals.setdefault("__warningregistry__", {}),
+        registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,
     )
-
-    warn_explicit(warningString, **kwargs)
 
 
 def _passedArgSpec(argspec, positional, keyword):
@@ -651,7 +634,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}  # type: Dict[str, object]
+    result: Dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}
@@ -714,13 +697,11 @@ def _passedSignature(signature, positional, keyword):
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
             if name not in keyword:
                 if param.default == inspect.Parameter.empty:
-                    raise TypeError("missing keyword arg {}".format(name))
+                    raise TypeError(f"missing keyword arg {name}")
                 else:
                     result[name] = param.default
         else:
-            raise TypeError(
-                "'{}' parameter is invalid kind: {}".format(name, param.kind)
-            )
+            raise TypeError(f"'{name}' parameter is invalid kind: {param.kind}")
 
     if len(positional) > numPositional:
         raise TypeError("Too many arguments.")
@@ -797,7 +778,7 @@ def deprecatedKeywordParameter(
     @param replacement: Optional text indicating what should be used in
         place of the deprecated parameter.
 
-    @since: Twisted NEXT
+    @since: Twisted 21.2.0
     """
 
     def wrapper(wrappee: _Tc) -> _Tc:

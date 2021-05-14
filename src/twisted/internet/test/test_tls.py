@@ -42,7 +42,7 @@ from twisted.internet.test.connectionmixins import (
 )
 
 try:
-    from OpenSSL.crypto import FILETYPE_PEM
+    from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
 except ImportError:
     FILETYPE_PEM = None
 else:
@@ -51,7 +51,7 @@ else:
 
 
 class TLSMixin:
-    requiredInterfaces = [IReactorSSL]  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = [IReactorSSL]
 
     if platform.isWindows():
         msg = (
@@ -337,7 +337,7 @@ class TLSPortTestsBuilder(
         """
         Get the expected connection lost message for a TLS port.
         """
-        return "(TLS Port {} Closed)".format(port.getHost().port)
+        return f"(TLS Port {port.getHost().port} Closed)"
 
     def test_badContext(self):
         """

@@ -43,8 +43,8 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        from win32api import OpenProcess
-        import pywintypes
+        from win32api import OpenProcess  # type: ignore[import]
+        import pywintypes  # type: ignore[import]
     except ImportError:
         kill = None  # type: ignore[assignment,misc]
     else:
@@ -217,7 +217,7 @@ class FilesystemLock:
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock {!r} not owned by this process".format(self.name))
+            raise ValueError(f"Lock {self.name!r} not owned by this process")
         rmlink(self.name)
         self.locked = False
 

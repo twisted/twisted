@@ -37,7 +37,7 @@ class FakeWindowsError(OSError):
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "FakeWindowsError",
@@ -45,12 +45,12 @@ deprecatedModuleAttribute(
 
 
 try:
-    WindowsError = WindowsError  # type: OSError
+    WindowsError: OSError = WindowsError
 except NameError:
     WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "WindowsError",
@@ -127,7 +127,7 @@ class _ErrorFormatter:
         except ImportError:
             WinError = None
         try:
-            from win32api import FormatMessage
+            from win32api import FormatMessage  # type: ignore[import]
         except ImportError:
             FormatMessage = None
         try:

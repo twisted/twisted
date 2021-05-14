@@ -45,9 +45,9 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         Patch L{_options.open} so we can capture usage and prevent actual opens.
         """
-        self.opened = []  # type: List[Tuple[str, Optional[str]]]
+        self.opened: List[Tuple[str, Optional[str]]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> NotImplemented:
+        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
             if name == "nocanopen":
                 raise OSError(None, None, name)
 
@@ -61,7 +61,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors = {}  # type: Dict[str, IReactorCore]
+        self.installedReactors: Dict[str, IReactorCore] = {}
 
         def installReactor(name: str) -> IReactorCore:
             if name != "fusion":

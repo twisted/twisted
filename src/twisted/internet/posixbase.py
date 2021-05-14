@@ -67,7 +67,7 @@ if unixEnabled:
 
 if platform.isWindows():
     try:
-        import win32process
+        import win32process  # type: ignore[import]
 
         processEnabled = True
     except ImportError:
@@ -383,7 +383,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         usePTY=0,
         childFDs=None,
     ):
-        args, env = self._checkProcessArgs(args, env)
         if platformType == "posix":
             if usePTY:
                 if childFDs is not None:
@@ -503,11 +502,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
     # IReactorSocket (no AF_UNIX on Windows)
 
     if unixEnabled:
-        _supportedAddressFamilies = (
+        _supportedAddressFamilies: Sequence[socket.AddressFamily] = (
             socket.AF_INET,
             socket.AF_INET6,
             socket.AF_UNIX,
-        )  # type: Sequence[socket.AddressFamily]
+        )
     else:
         _supportedAddressFamilies = (
             socket.AF_INET,

@@ -42,8 +42,8 @@ class Bucket:
     @type rate: C{int}
     """
 
-    maxburst = None  # type: Optional[int]
-    rate = None  # type: Optional[int]
+    maxburst: Optional[int] = None
+    rate: Optional[int] = None
 
     _refcount = 0
 
@@ -129,7 +129,7 @@ class HierarchicalBucketFilter:
     """
 
     bucketFactory = Bucket
-    sweepInterval = None  # type: Optional[int]
+    sweepInterval: Optional[int] = None
 
     def __init__(self, parentFilter=None):
         self.buckets = {}

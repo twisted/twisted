@@ -51,14 +51,13 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
     ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]],
     ['dereference', 1]]
 
-The C{set} builtin and the C{sets.Set} class are serialized to the same
-thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
-that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set}.
-
-The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
+The Python 2.x C{sets.Set} and C{sets.ImmutableSet} classes are
+serialized to the same thing as the builtin C{set} and C{frozenset}
+classes.  (This is only relevant if you are communicating with a
+version of jelly running on an older version of Python.)
 
 @author: Glyph Lefkowitz
+
 """
 
 # System Imports
@@ -81,23 +80,6 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
-
-
-_SetTypes = [set]
-_ImmutableSetTypes = [frozenset]
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    try:
-        import sets as _sets
-    except ImportError:
-        # sets module is deprecated in Python 2.6, and gone in
-        # Python 3
-        _sets = None
-    else:
-        _SetTypes.append(_sets.Set)
-        _ImmutableSetTypes.append(_sets.ImmutableSet)
-
 
 DictTypes = (dict,)
 
@@ -267,7 +249,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
             "It's not a class."
         else:
             if yes:
-                setUnjellyableForClass("{}{}".format(prefix, name), loaded)
+                setUnjellyableForClass(f"{prefix}{name}", loaded)
 
 
 def getInstanceState(inst, jellier):
@@ -551,9 +533,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType in _SetTypes:
+                elif objType is set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType in _ImmutableSetTypes:
+                elif objType is frozenset:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__).encode("utf-8")
@@ -578,9 +560,7 @@ class _Jellier:
                         )
                 return self.preserve(obj, sxp)
         else:
-            raise InsecureJelly(
-                "Type not allowed for object: {} {}".format(objType, obj)
-            )
+            raise InsecureJelly(f"Type not allowed for object: {objType} {obj}")
 
     def _jellyIterable(self, atom, obj):
         """
@@ -679,7 +659,7 @@ class _Unjellier:
             modName = ".".join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module {} not allowed (in type {}).".format(modName, jelTypeText)
+                    f"Module {modName} not allowed (in type {jelTypeText})."
                 )
             clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
@@ -831,9 +811,7 @@ class _Unjellier:
         if type(moduleName) != str:
             raise InsecureJelly("Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
-            raise InsecureJelly(
-                "Attempted to unjelly module named {!r}".format(moduleName)
-            )
+            raise InsecureJelly(f"Attempted to unjelly module named {moduleName!r}")
         mod = __import__(moduleName, {}, {}, "x")
         return mod
 

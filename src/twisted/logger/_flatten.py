@@ -28,7 +28,7 @@ class KeyFlattener:
         """
         Initialize a L{KeyFlattener}.
         """
-        self.keys = defaultdict(lambda: 0)  # type: Dict[str, int]
+        self.keys: Dict[str, int] = defaultdict(lambda: 0)
 
     def flatKey(
         self, fieldName: str, formatSpec: Optional[str], conversion: Optional[str]

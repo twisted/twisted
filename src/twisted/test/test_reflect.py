@@ -655,7 +655,7 @@ class FullyQualifiedNameTests(TestCase):
         L{fullyQualifiedName} returns the name of a class and its module.
         """
         self._checkFullyQualifiedName(
-            FullyQualifiedNameTests, "{}.FullyQualifiedNameTests".format(__name__)
+            FullyQualifiedNameTests, f"{__name__}.FullyQualifiedNameTests"
         )
 
     def test_function(self):
@@ -673,7 +673,7 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.test_boundMethod,
-            "{}.{}.test_boundMethod".format(__name__, self.__class__.__name__),
+            f"{__name__}.{self.__class__.__name__}.test_boundMethod",
         )
 
     def test_unboundMethod(self):
@@ -683,7 +683,7 @@ class FullyQualifiedNameTests(TestCase):
         """
         self._checkFullyQualifiedName(
             self.__class__.test_unboundMethod,
-            "{}.{}.test_unboundMethod".format(__name__, self.__class__.__name__),
+            f"{__name__}.{self.__class__.__name__}.test_unboundMethod",
         )
 
 

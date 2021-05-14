@@ -175,14 +175,14 @@ class StructureAssertingMixin:
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
+                self.assertTrue(child.isdir(), f"{child.path} is not a dir!")
                 self.assertStructure(child, expectation)
             else:
                 actual = child.getContent().decode().replace(os.linesep, "\n")
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
-            self.fail("There were extra children in {}: {}".format(root.path, children))
+            self.fail(f"There were extra children in {root.path}: {children}")
 
 
 class ProjectTests(ExternalTempdirTestCase):
@@ -377,7 +377,10 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
-@skipIf(not requireModule("pydoctor"), "Pydoctor is not present.")
+pydoctor = requireModule("pydoctor")
+
+
+@skipIf(pydoctor is None, "Pydoctor is not present.")
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
@@ -416,10 +419,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
 
         self.assertTrue(
-            indexPath.exists(), "API index {!r} did not exist.".format(outputPath.path)
+            indexPath.exists(), f"API index {outputPath.path!r} did not exist."
         )
         self.assertIn(
-            '<a href="{}">{}</a>'.format(projectURL, projectName),
+            f'<a href="{projectURL}">{projectName}</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -427,7 +430,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file {!r} did not exist.".format(quuxPath.path),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
@@ -435,7 +438,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="{}/{}">View Source</a>'.format(sourceURL, packageName),
+            f'<a href="{sourceURL}/{packageName}/__init__.py">(source)</a>',
             quuxPath.getContent().decode(),
         )
         self.assertIn(
@@ -444,9 +447,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
             quuxPath.getContent().decode(),
         )
         self.assertIn(privateDocstring, quuxPath.getContent().decode())
-
-        # There should also be a page for the foo function in quux.
-        self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
 
         self.assertEqual(stdout.getvalue(), b"")
 
@@ -476,10 +476,10 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         indexPath = outputPath.child("index.html")
         self.assertTrue(
-            indexPath.exists(), "API index {} did not exist.".format(outputPath.path)
+            indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
-            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            '<a href="https://twistedmatrix.com/">Twisted</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -487,7 +487,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file {!r} did not exist.".format(twistedPath.path),
+            f"Package documentation file {twistedPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
@@ -498,7 +498,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # source code.
         self.assertIn(
             '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted">View Source</a>',
+            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
             twistedPath.getContent().decode(),
         )
 
@@ -547,7 +547,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file {!r} did not exist.".format(quuxPath.path),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
 
         self.assertIn(
@@ -563,14 +563,6 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent().decode()
         )
         self.assertIn(privateDocstring, quuxPath.getContent().decode())
-
-        # There should also be a page for the foo function in quux.
-        self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
-
-        self.assertIn(
-            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.sibling("quux.foo.html").getContent().decode(),
-        )
 
         self.assertIn(
             "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",

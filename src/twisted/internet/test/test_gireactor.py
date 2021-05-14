@@ -11,7 +11,7 @@ from unittest import skipIf
 
 try:
     from twisted.internet import gireactor as _gireactor
-    from gi.repository import Gio
+    from gi.repository import Gio  # type: ignore[import]
 except ImportError:
     gireactor = None
     gtk3reactor = None
@@ -189,6 +189,6 @@ class PygtkCompatibilityTests(TestCase):
         """
         if "gi.pygtkcompat" not in sys.modules:
             raise SkipTest("This version of gi doesn't include pygtkcompat.")
-        import gobject
+        import gobject  # type: ignore[import]
 
         self.assertTrue(gobject.__name__.startswith("gi."))

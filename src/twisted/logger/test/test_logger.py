@@ -7,7 +7,7 @@ Test cases for L{twisted.logger._logger}.
 
 from typing import List, Optional, Type, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 
@@ -57,7 +57,7 @@ class LogComposedObject:
         self.state = state
 
     def __str__(self) -> str:
-        return "<LogComposedObject {state}>".format(state=self.state)
+        return f"<LogComposedObject {self.state}>"
 
 
 class LoggerTests(unittest.TestCase):
@@ -86,7 +86,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result = []  # type: List[Logger]
+        result: List[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -120,12 +120,12 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed = []  # type: List[LogEvent]
+        observed: List[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))
 
-        cast(Logger, MyObject.log).info("hello")
+        MyObject.log.info("hello")
         self.assertEqual(len(observed), 1)
         self.assertEqual(observed[0]["log_format"], "hello")
 

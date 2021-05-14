@@ -15,7 +15,7 @@ All of the previous examples have focused on ``GET``
 requests. Unlike ``GET`` requests, ``POST`` requests can have
 a request body - extra data after the request headers; for example, data
 representing the contents of an HTML form. Twisted Web makes this data available
-to applications via the :api:`twisted.web.server.Request <Request>` object.
+to applications via the :py:class:`Request <twisted.web.server.Request>` object.
 
 
 

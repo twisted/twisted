@@ -192,13 +192,13 @@ class IRCProtocolTests(unittest.TestCase):
         for (prefix, command, args) in response:
             if command in expected:
                 expected.remove(command)
-        self.assertFalse(expected, "Missing responses for {!r}".format(expected))
+        self.assertFalse(expected, f"Missing responses for {expected!r}")
 
     def _login(self, user, nick, password=None):
         if password is None:
             password = nick + "_password"
-        user.write("PASS {}\r\n".format(password))
-        user.write("NICK {} extrainfo\r\n".format(nick))
+        user.write(f"PASS {password}\r\n")
+        user.write(f"NICK {nick} extrainfo\r\n")
 
     def _loggedInUser(self, name):
         user = self.successResultOf(self.realm.lookupUser(name))

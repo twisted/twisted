@@ -12,7 +12,7 @@ def printResult(result):
     answers, authority, additional = result
     if answers:
         a = answers[0]
-        print("{} IN {}".format(a.name.name, a.payload))
+        print(f"{a.name.name} IN {a.payload}")
 
 
 def main(reactor, address):

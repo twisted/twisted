@@ -797,7 +797,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         self.assertEqual(self.expectedKeys, list(keydb.getAuthorizedKeys(b"alice")))
 
 
-_KeyDB = namedtuple("KeyDB", ["getAuthorizedKeys"])
+_KeyDB = namedtuple("_KeyDB", ["getAuthorizedKeys"])
 
 
 class _DummyException(Exception):

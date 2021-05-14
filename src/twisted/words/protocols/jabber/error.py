@@ -84,7 +84,7 @@ class BaseError(Exception):
     @type appCondition: object providing L{domish.IElement}.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def __init__(self, condition, text=None, textLang=None, appCondition=None):
         Exception.__init__(self)

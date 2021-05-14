@@ -27,7 +27,7 @@ from twisted.web.server import NOT_DONE_YET, Session, Site
 from twisted.web._responses import FOUND
 
 
-textLinearWhitespaceComponents = ["Foo{}bar".format(lw) for lw in ["\r", "\n", "\r\n"]]
+textLinearWhitespaceComponents = [f"Foo{lw}bar" for lw in ["\r", "\n", "\r\n"]]
 
 sanitizedText = "Foo bar"
 bytesLinearWhitespaceComponents = [
@@ -60,9 +60,7 @@ class DummyChannel:
 
         def write(self, data):
             if not isinstance(data, bytes):
-                raise TypeError(
-                    "Can only write bytes to a transport, not {!r}".format(data)
-                )
+                raise TypeError(f"Can only write bytes to a transport, not {data!r}")
             self.written.write(data)
 
         def writeSequence(self, iovec):
@@ -208,7 +206,7 @@ class DummyRequest:
 
     uri = b"http://dummy/"
     method = b"GET"
-    client = None  # type: Optional[IAddress]
+    client: Optional[IAddress] = None
 
     def registerProducer(self, prod, s):
         """
@@ -277,7 +275,7 @@ class DummyRequest:
         """TODO: make this assert on write() if the header is content-length"""
         self.responseHeaders.addRawHeader(name, value)
 
-    def getSession(self):
+    def getSession(self, sessionInterface=None):
         if self.session:
             return self.session
         assert (
@@ -310,13 +308,13 @@ class DummyRequest:
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
-        finished = Deferred()
+        finished: Deferred[None] = Deferred()
         self._finishedDeferreds.append(finished)
         return finished
 

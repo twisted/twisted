@@ -500,7 +500,7 @@ class PermissionsTests(BytesTestCase):
 
         def _rwxFromStat(statModeInt, who):
             def getPermissionBit(what, who):
-                return (statModeInt & getattr(stat, "S_I{}{}".format(what, who))) > 0
+                return (statModeInt & getattr(stat, f"S_I{what}{who}")) > 0
 
             return filepath.RWX(
                 *[getPermissionBit(what, who) for what in ("R", "W", "X")]
@@ -515,17 +515,17 @@ class PermissionsTests(BytesTestCase):
                     self.assertEqual(
                         perm.user,
                         _rwxFromStat(chmodVal, "USR"),
-                        "{}: got user: {}".format(chmodString, perm.user),
+                        f"{chmodString}: got user: {perm.user}",
                     )
                     self.assertEqual(
                         perm.group,
                         _rwxFromStat(chmodVal, "GRP"),
-                        "{}: got group: {}".format(chmodString, perm.group),
+                        f"{chmodString}: got group: {perm.group}",
                     )
                     self.assertEqual(
                         perm.other,
                         _rwxFromStat(chmodVal, "OTH"),
-                        "{}: got other: {}".format(chmodString, perm.other),
+                        f"{chmodString}: got other: {perm.other}",
                     )
         perm = filepath.Permissions(0o777)
         for who in ("user", "group", "other"):
@@ -856,7 +856,7 @@ class FilePathTests(AbstractFilePathTests):
         ts = self.path.temporarySibling(testExtension)
         self.assertTrue(
             ts.basename().endswith(testExtension),
-            "{} does not end with {}".format(ts.basename(), testExtension),
+            f"{ts.basename()} does not end with {testExtension}",
         )
 
     def test_removeDirectory(self):

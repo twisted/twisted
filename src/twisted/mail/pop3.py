@@ -434,7 +434,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     @ivar _auth: Authorization credentials.
     """
 
-    magic = None  # type: Optional[bytes]
+    magic: Optional[bytes] = None
     _userIs = None
     _onLogout = None
 
@@ -1676,7 +1676,7 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b"QUIT")
 
 
-from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
+from twisted.mail._pop3client import POP3Client as AdvancedPOP3Client
 from twisted.mail._except import (
     InsecureAuthenticationDisallowed,
     ServerErrorResponse,
