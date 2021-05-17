@@ -2301,7 +2301,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         result: Optional[object] = None
 
-        def helper(self: Any, b: object) -> Deferred[object]:
+        def helper(self: object, b: object) -> Deferred[object]:
             nonlocal result
             result = b
             return controlDeferred
