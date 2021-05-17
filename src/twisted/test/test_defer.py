@@ -2365,11 +2365,11 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         controlDeferred: Deferred[None] = Deferred()
 
-        arg: object = None
+        helperArg: object = None
 
-        def helper(result: object) -> Deferred[None]:
-            nonlocal arg
-            arg = result
+        def helper(arg: object) -> Deferred[None]:
+            nonlocal helperArg
+            helperArg = arg
             return controlDeferred
 
         results: List[object] = []
@@ -2378,7 +2378,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         resultDeferred.addCallback(results.append)
         resultDeferred.addCallback(self._incr)
         self.assertEqual(results, [])
-        self.assertEqual(arg, uniqueObject)
+        self.assertEqual(helperArg, uniqueObject)
         controlDeferred.callback(None)
         self.assertIsNone(results.pop())
         self.assertEqual(self.counter, 1)
