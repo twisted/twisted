@@ -2301,20 +2301,18 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         result: Optional[object] = None
 
-        def helper(self: object, b: object) -> Deferred[object]:
+        def helper(resultValue: object, returnValue: object = None) -> object:
             nonlocal result
-            result = b
-            return controlDeferred
+            result = resultValue
+            return returnValue
 
-        resultDeferred = lock.run(helper, self=self, b=firstUnique)
+        resultDeferred = lock.run(
+            helper, resultValue=firstUnique, returnValue=controlDeferred
+        )
         self.assertTrue(lock.locked)
         self.assertEqual(result, firstUnique)
 
-        def setResult(_result: object) -> None:
-            nonlocal result
-            result = _result
-
-        resultDeferred.addCallback(setResult)
+        resultDeferred.addCallback(helper)
 
         lock.acquire().addCallback(self._incr)
         self.assertTrue(lock.locked)
@@ -2325,7 +2323,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertTrue(lock.locked)
         self.assertEqual(self.counter, 3)
 
-        d = lock.acquire().addBoth(setResult)
+        d = lock.acquire().addBoth(helper)
         d.cancel()
         self.assertIsInstance(result, Failure)
         self.assertEqual(cast(Failure, result).type, defer.CancelledError)
