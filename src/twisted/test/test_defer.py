@@ -2337,12 +2337,12 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         has the lock, the cancel should have no effect.
         """
 
-        def _failOnErrback(_: object) -> None:
+        def failOnErrback(f: Failure) -> None:
             self.fail("Unexpected errback call!")
 
         lock = DeferredLock()
         d = lock.acquire()
-        d.addErrback(_failOnErrback)
+        d.addErrback(failOnErrback)
         d.cancel()
 
     def test_cancelLockBeforeAcquired(self) -> None:
