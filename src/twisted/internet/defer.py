@@ -1498,7 +1498,7 @@ def _deferGenerator(
             result = None
 
 
-@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.x")
+@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.inlineCallbacks")
 def deferredGenerator(
     f: Callable[..., _DeferableGenerator]
 ) -> Callable[..., Deferred[object]]:
