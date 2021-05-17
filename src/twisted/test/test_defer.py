@@ -1227,19 +1227,23 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         # A Deferred returned in the inner callback after a callback is
         # added explicitly and directly to it.
-        inner: Deferred[str] = Deferred()
+        inner: Deferred[Union[str, List[str]]] = Deferred()
 
         def cb(result: str) -> Deferred[str]:
             results.append(("start-of-cb", result))
             d = defer.succeed("inner")
 
             def firstCallback(result: str) -> Deferred[List[str]]:
-                results.append(("firstCallback", results))
+                results.append(("firstCallback", result))
                 # Return a Deferred that definitely has not fired yet with a
                 # result-transforming callback so we can fire the Deferreds
                 # out of order and see how the callback affects the ultimate
                 # results.
-                return inner.addCallback(lambda x: [x])
+
+                def transform(result: str) -> List[str]:
+                    return [result]
+
+                return inner.addCallback(transform)
 
             def secondCallback(result: List[str]) -> List[str]:
                 results.append(("secondCallback", result))
