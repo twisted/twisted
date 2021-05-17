@@ -1058,7 +1058,11 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     @classmethod
     def fromCoroutine(
-        cls, coro: Coroutine["Deferred[_T]", object, _T]
+        cls,
+        coro: Union[
+            Coroutine["Deferred[_T]", Any, _T],
+            Generator["Deferred[_T]", Any, _T],
+        ],
     ) -> "Deferred[_T]":
         """
         Schedule the execution of a coroutine that awaits on L{Deferred}s,
@@ -1095,14 +1099,19 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
-        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
+        # type note: Subclass of "Generator[Deferred[_T], object, _T]" and "GeneratorType" cannot exist
+        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):  # type: ignore[unreachable]
             raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
 
 
 def ensureDeferred(
-    coro: Union[Coroutine["Deferred[_T]", object, "_T"], Deferred[_T]]
+    coro: Union[
+        Coroutine[Deferred[_T], Any, _T],
+        Generator[Deferred[_T], Any, _T],
+        Deferred[_T],
+    ]
 ) -> Deferred[_T]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
@@ -1489,7 +1498,7 @@ def _deferGenerator(
             result = None
 
 
-@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.inlineCallbacks")
+@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.x")
 def deferredGenerator(
     f: Callable[..., _DeferableGenerator]
 ) -> Callable[..., Deferred[object]]:
@@ -1813,8 +1822,8 @@ class _InternalInlineCallbacksCancelledError(Exception):
 # type note: "..." is used here because we don't have a better way to express
 #     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
-    f: Callable[..., Generator[Deferred[object], object, None]]
-) -> Callable[..., Deferred[object]]:
+    f: Callable[..., Generator[Any, Any, None]]
+) -> Callable[..., Deferred[Any]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::

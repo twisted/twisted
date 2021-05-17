@@ -16,20 +16,21 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     List,
     Mapping,
     Optional,
     Tuple,
     Type,
+    TYPE_CHECKING,
     Union,
     cast,
 )
 
-from asyncio import new_event_loop, Future, CancelledError
+from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -46,11 +47,13 @@ from twisted.internet.defer import (
 from twisted.internet.task import Clock
 
 
-contextvars = requireModule("contextvars")
-if contextvars:
-    contextvarsSkip = None
+if TYPE_CHECKING:
+    import contextvars
 else:
-    contextvarsSkip = "contextvars is not available"
+    try:
+        import contextvars
+    except ImportError:
+        contextvars = None
 
 
 def ensuringDeferred(f: Callable[..., Any]) -> Callable[..., Any]:
@@ -1570,10 +1573,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         except BaseException:
             d.errback()
 
-        def ic(d):
+        def ic(d: object) -> Generator[Any, Any, None]:
             yield d
 
-        ic = defer.inlineCallbacks(ic)
+        defer.inlineCallbacks(ic)
         newFailure = self.failureResultOf(d)
         tb = traceback.extract_tb(newFailure.getTracebackObject())
 
@@ -2871,16 +2874,17 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         function is not called, preserving the original L{CancelledError}.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
         d.addTimeout(10, clock)
 
         # addTimeout is added first so that if d is timed out, d would be
         # canceled before innerDeferred gets returned from an errback on d
-        innerDeferred = Deferred()
-        dCanceled = [None]
+        innerDeferred: Deferred[None] = Deferred()
+        dCanceled = None
 
-        def onErrback(f):
-            dCanceled[0] = f
+        def onErrback(f: Failure) -> Deferred[None]:
+            nonlocal dCanceled
+            dCanceled = f
             return innerDeferred
 
         d.addErrback(onErrback)
@@ -2888,8 +2892,9 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is cancelled immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dCanceled[0], Failure)
-        self.assertIs(dCanceled[0].type, defer.CancelledError)
+        assert dCanceled is not None
+        self.assertIsInstance(dCanceled, Failure)
+        self.assertIs(dCanceled.type, defer.CancelledError)
 
         # The timeout never happens - if it did, d would have been cancelled
         # again, which would cancel innerDeferred too
@@ -2904,16 +2909,17 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         function is not called, preserving the original L{CancelledError}.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
         d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
 
         # addTimeout is added first so that if d is timed out, d would be
         # canceled before innerDeferred gets returned from an errback on d
-        innerDeferred = Deferred()
-        dCanceled = [None]
+        innerDeferred: Deferred[None] = Deferred()
+        dCanceled = None
 
-        def onErrback(f):
-            dCanceled[0] = f
+        def onErrback(f: Failure) -> Deferred[None]:
+            nonlocal dCanceled
+            dCanceled = f
             return innerDeferred
 
         d.addErrback(onErrback)
@@ -2921,8 +2927,9 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         # d is cancelled immediately, before innerDeferred is returned from the
         # errback on d
-        self.assertIsInstance(dCanceled[0], Failure)
-        self.assertIs(dCanceled[0].type, defer.CancelledError)
+        assert dCanceled is not None
+        self.assertIsInstance(dCanceled, Failure)
+        self.assertIs(dCanceled.type, defer.CancelledError)
 
         # The timeout never happens - if it did, d would have been cancelled
         # again, which would cancel innerDeferred too
@@ -2935,7 +2942,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         custom cancellation function.
         """
         clock = Clock()
-        d = Deferred(lambda c: c.errback(ValueError("what!")))
+        d: Deferred[None] = Deferred(lambda c: c.errback(ValueError("what!")))
         d.addTimeout(10, clock, onTimeoutCancel=_overrideFunc)
         self.assertNoResult(d)
 
@@ -2951,12 +2958,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         to a L{defer.TimeoutError} by the timeout implementation.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
 
-        dErrbacked = [None]
+        dErrbacked = None
 
-        def errback(f):
-            dErrbacked[0] = f
+        def errback(f: Failure) -> Failure:
+            nonlocal dErrbacked
+            dErrbacked = f
             return f
 
         d.addErrback(errback)
@@ -2964,8 +2972,9 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], Failure)
-        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+        assert dErrbacked is not None
+        self.assertIsInstance(dErrbacked, Failure)
+        self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.failureResultOf(d, defer.TimeoutError)
 
@@ -2977,12 +2986,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         successfully completes.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
 
-        dErrbacked = [None]
+        dErrbacked = None
 
-        def errback(f):
-            dErrbacked[0] = f
+        def errback(f: Failure) -> None:
+            nonlocal dErrbacked
+            dErrbacked = f
             f.trap(defer.CancelledError)
 
         d.addErrback(errback)
@@ -2990,8 +3000,9 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], Failure)
-        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+        assert dErrbacked is not None
+        self.assertIsInstance(dErrbacked, Failure)
+        self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.successResultOf(d)
 
@@ -3003,12 +3014,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         returns the L{defer.CancelledError}.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
 
-        dErrbacked = [None]
+        dErrbacked = None
 
-        def errback(f):
-            dErrbacked[0] = f
+        def errback(f: Failure) -> Failure:
+            nonlocal dErrbacked
+            dErrbacked = f
             return f
 
         d.addErrback(errback)
@@ -3016,8 +3028,9 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], Failure)
-        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+        assert dErrbacked is not None
+        self.assertIsInstance(dErrbacked, Failure)
+        self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
 
@@ -3029,20 +3042,22 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         suppresses the L{defer.CancelledError}.
         """
         clock = Clock()
-        d = Deferred()
+        d: Deferred[None] = Deferred()
 
-        dErrbacked = [None]
+        dErrbacked = None
 
-        def errback(f):
-            dErrbacked[0] = f
+        def errback(f: Failure) -> None:
+            nonlocal dErrbacked
+            dErrbacked = f
 
         d.addErrback(errback)
         d.addTimeout(10, clock, _overrideFunc)
 
         clock.advance(15)
 
-        self.assertIsInstance(dErrbacked[0], Failure)
-        self.assertIsInstance(dErrbacked[0].value, defer.CancelledError)
+        assert dErrbacked is not None
+        self.assertIsInstance(dErrbacked, Failure)
+        self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
 
@@ -3056,12 +3071,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         """
         clock = Clock()
         success = "success"
-        d = Deferred(lambda d: d.callback(success))
+        d: Deferred[str] = Deferred(lambda d: d.callback(success))
 
-        dCallbacked = [None]
+        dCallbacked = None
 
-        def callback(value):
-            dCallbacked[0] = value
+        def callback(value: str) -> str:
+            nonlocal dCallbacked
+            dCallbacked = value
             return value
 
         d.addCallback(callback)
@@ -3069,7 +3085,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertEqual(dCallbacked[0], success)
+        self.assertEqual(dCallbacked, success)
 
         self.assertIs(success, self.successResultOf(d))
 
@@ -3084,12 +3100,13 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         """
         clock = Clock()
         success = "success"
-        d = Deferred(lambda d: d.callback(success))
+        d: Deferred[str] = Deferred(lambda d: d.callback(success))
 
-        dCallbacked = [None]
+        dCallbacked = None
 
-        def callback(value):
-            dCallbacked[0] = value
+        def callback(value: str) -> str:
+            nonlocal dCallbacked
+            dCallbacked = value
             return value
 
         d.addCallback(callback)
@@ -3097,7 +3114,7 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
         clock.advance(15)
 
-        self.assertEqual(dCallbacked[0], success)
+        self.assertEqual(dCallbacked, success)
 
         self.assertEqual("OVERRIDDEN", self.successResultOf(d))
 
@@ -3111,7 +3128,7 @@ class EnsureDeferredTests(unittest.TestCase):
         """
         L{ensureDeferred} will pass through a Deferred unchanged.
         """
-        d1 = Deferred()
+        d1: Deferred[None] = Deferred()
         d2 = ensureDeferred(d1)
         self.assertIs(d1, d2)
 
@@ -3121,14 +3138,14 @@ class EnsureDeferredTests(unittest.TestCase):
         raise a L{ValueError}.
         """
         with self.assertRaises(defer.NotACoroutineError):
-            ensureDeferred("something")
+            ensureDeferred("something")  # type: ignore[arg-type]
 
     def test_ensureDeferredCoroutine(self) -> None:
         """
         L{ensureDeferred} will turn a coroutine into a L{Deferred}.
         """
 
-        async def run():
+        async def run() -> str:
             d = defer.succeed("foo")
             res = await d
             return res
@@ -3150,9 +3167,9 @@ class EnsureDeferredTests(unittest.TestCase):
         L{ensureDeferred} will turn a yield-from coroutine into a L{Deferred}.
         """
 
-        def run():
+        def run() -> Generator[Deferred[str], None, str]:
             d = defer.succeed("foo")
-            res = yield from d
+            res = cast(str, (yield from d))
             return res
 
         # It's a generator...
@@ -3160,7 +3177,7 @@ class EnsureDeferredTests(unittest.TestCase):
         self.assertIsInstance(r, types.GeneratorType)
 
         # Now it's a Deferred.
-        d = ensureDeferred(r)
+        d: Deferred[str] = ensureDeferred(r)
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.
@@ -3190,7 +3207,7 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
         )
 
 
-def callAllSoonCalls(loop):
+def callAllSoonCalls(loop: AbstractEventLoop) -> None:
     """
     Tickle an asyncio event loop to call all of the things scheduled with
     call_soon, inasmuch as this can be done via the public API.
@@ -3208,7 +3225,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.asFuture} returns a L{asyncio.Future} which fires when
         the given L{Deferred} does.
         """
-        d = Deferred()
+        d: Deferred[int] = Deferred()
         loop = new_event_loop()
         aFuture = d.asFuture(loop)
         self.assertEqual(aFuture.done(), False)
@@ -3223,16 +3240,18 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         cancelled, will cancel the original L{Deferred}.
         """
 
-        def canceler(dprime):
-            canceler.called = True
+        called = False
 
-        canceler.called = False
-        d = Deferred(canceler)
+        def canceler(dprime: Deferred[object]) -> None:
+            nonlocal called
+            called = True
+
+        d: Deferred[None] = Deferred(canceler)
         loop = new_event_loop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
         callAllSoonCalls(loop)
-        self.assertEqual(canceler.called, True)
+        self.assertTrue(called)
         self.assertEqual(self.successResultOf(d), None)
         self.assertRaises(CancelledError, aFuture.result)
 
@@ -3243,10 +3262,10 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         cancellation, that should just be ignored.
         """
 
-        def canceler(dprime):
+        def canceler(dprime: Deferred[object]) -> None:
             dprime.callback(9)
 
-        d = Deferred(canceler)
+        d: Deferred[None] = Deferred(canceler)
         loop = new_event_loop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
@@ -3259,7 +3278,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.asFuture} makes a L{asyncio.Future} fire with an
         exception when the given L{Deferred} does.
         """
-        d = Deferred()
+        d: Deferred[None] = Deferred()
         theFailure = Failure(ZeroDivisionError())
         loop = new_event_loop()
         future = d.asFuture(loop)
@@ -3274,7 +3293,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         when the given L{asyncio.Future} does.
         """
         loop = new_event_loop()
-        aFuture = Future(loop=loop)
+        aFuture: Future[int] = Future(loop=loop)
         d = Deferred.fromFuture(aFuture)
         self.assertNoResult(d)
         aFuture.set_result(7)
@@ -3288,7 +3307,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{asyncio.Future} is cancelled.
         """
         loop = new_event_loop()
-        cancelled = Future(loop=loop)
+        cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         cancelled.cancel()
         callAllSoonCalls(loop)
@@ -3301,7 +3320,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         cancelled, cancels the L{asyncio.Future} it was created from.
         """
         loop = new_event_loop()
-        cancelled = Future(loop=loop)
+        cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         d.cancel()
         callAllSoonCalls(loop)
@@ -3312,7 +3331,8 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 class CoroutineContextVarsTests(unittest.TestCase):
 
-    skip = contextvarsSkip
+    if contextvars is None:
+        skip = "contextvars is not available"  # type: ignore[unreachable]
 
     def test_withInlineCallbacks(self) -> None:
         """
@@ -3321,27 +3341,27 @@ class CoroutineContextVarsTests(unittest.TestCase):
         """
         clock = Clock()
 
-        var = contextvars.ContextVar("testvar")
+        var: contextvars.ContextVar[int] = contextvars.ContextVar("testvar")
         var.set(1)
 
         # This Deferred will set its own context to 3 when it is called
-        mutatingDeferred = Deferred()
+        mutatingDeferred: Deferred[bool] = Deferred()
         mutatingDeferred.addCallback(lambda _: var.set(3))
 
-        mutatingDeferredThatFails = Deferred()
+        mutatingDeferredThatFails: Deferred[int] = Deferred()
         mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
         mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
 
         @defer.inlineCallbacks
-        def yieldingDeferred():
-            d = Deferred()
+        def yieldingDeferred() -> Generator[Deferred[Any], Any, None]:
+            d: Deferred[int] = Deferred()
             clock.callLater(1, d.callback, True)
             yield d
             var.set(3)
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
-        def testFunction():
+        def testFunction() -> Generator[Deferred[Any], Any, None]:
 
             # Expected to be 2
             self.assertEqual(var.get(), 2)
@@ -3446,7 +3466,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
             async with lock:
                 self.assertTrue(lock.locked)
                 raise Exception("some specific exception")
-        self.assertFalse(lock.locked)  # type: ignore[unreachable]
+        self.assertFalse(lock.locked)
 
     def test_contextvarsWithAsyncAwait(self) -> None:
         """
@@ -3455,25 +3475,25 @@ class CoroutineContextVarsTests(unittest.TestCase):
         """
         clock = Clock()
 
-        var = contextvars.ContextVar("testvar")
+        var: contextvars.ContextVar[int] = contextvars.ContextVar("testvar")
         var.set(1)
 
         # This Deferred will set its own context to 3 when it is called
-        mutatingDeferred = Deferred()
+        mutatingDeferred: Deferred[bool] = Deferred()
         mutatingDeferred.addCallback(lambda _: var.set(3))
 
-        mutatingDeferredThatFails = Deferred()
+        mutatingDeferredThatFails: Deferred[bool] = Deferred()
         mutatingDeferredThatFails.addCallback(lambda _: var.set(4))
         mutatingDeferredThatFails.addCallback(lambda _: 1 / 0)
 
-        async def asyncFuncAwaitingDeferred():
-            d = Deferred()
+        async def asyncFuncAwaitingDeferred() -> None:
+            d: Deferred[bool] = Deferred()
             clock.callLater(1, d.callback, True)
             await d
             var.set(3)
 
         # context is 1 when the function is defined
-        async def testFunction():
+        async def testFunction() -> bool:
 
             # Expected to be 2
             self.assertEqual(var.get(), 2)
