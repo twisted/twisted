@@ -15,6 +15,7 @@ import types
 from typing import (
     Any,
     Callable,
+    Coroutine,
     Dict,
     Generator,
     List,
@@ -34,6 +35,7 @@ from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
+    _DeferredResultT,
     _DeferredListResultListT,
     _DeferredListSingleResultT,
     ensureDeferred,
@@ -56,11 +58,13 @@ else:
         contextvars = None
 
 
-def ensuringDeferred(f: Callable[..., Any]) -> Callable[..., Any]:
+def ensuringDeferred(
+    f: Callable[..., Coroutine[Deferred[_DeferredResultT], Any, _DeferredResultT]]
+) -> Callable[..., Deferred[_DeferredResultT]]:
     @functools.wraps(f)
-    def wrapper(*args: object, **kwargs: object) -> Deferred[Any]:
-        result = f(*args, **kwargs)
-        return ensureDeferred(result)
+    def wrapper(*args: object, **kwargs: object) -> Deferred[_DeferredResultT]:
+        coro = f(*args, **kwargs)
+        return Deferred.fromCoroutine(coro)
 
     return wrapper
 
