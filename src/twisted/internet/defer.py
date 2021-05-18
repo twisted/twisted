@@ -1327,8 +1327,6 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                 assert isinstance(result, Failure)
                 self.errback(Failure(FirstError(result, index)))
             elif self.finishedCount == len(self.resultList):
-                # All the None values have been replaced by results, so we can
-                # safely cast away the Optional[].
                 self.callback(self.resultList)
 
         if succeeded == FAILURE and self.consumeErrors:
