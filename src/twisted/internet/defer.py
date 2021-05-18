@@ -1180,7 +1180,7 @@ class FirstError(Exception):
 
 _DeferredListSingleResultT = Tuple[_DeferredResultT, int]
 _DeferredListResultItemT = Tuple[bool, _DeferredResultT]
-_DeferredListResultListT = List[_DeferredListResultItemT]
+_DeferredListResultListT = List[Optional[_DeferredListResultItemT]]
 
 if TYPE_CHECKING:
 
@@ -1281,9 +1281,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         """
         self._deferredList = list(deferredList)
 
-        self.resultList: _DeferredListResultListT = [
-            cast(_DeferredListResultItemT, None)
-        ] * len(self._deferredList)
+        self.resultList: _DeferredListResultListT = [None] * len(self._deferredList)
         """
         The final result, in progress.
         Each item in the list corresponds to the L{Deferred} at the same
@@ -1359,10 +1357,12 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
 
 
 def _parseDeferredListResult(
-    resultList: _DeferredListResultListT, fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT], fireOnOneErrback: bool = False
 ) -> List[_T]:
     if __debug__:
-        for success, value in resultList:
+        for result in resultList:
+            assert result is not None
+            success, value = result
             assert success
     return [x[1] for x in resultList]
 

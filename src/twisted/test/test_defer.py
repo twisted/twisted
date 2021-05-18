@@ -373,13 +373,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         errorTrap: List[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        result: List[_DeferredListResultListT] = []
-        dl.addCallback(result.append)
+        resultLists: List[_DeferredListResultListT] = []
+        dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
         self.assertEqual("Bang", errorTrap[0].value.args[0])
-        self.assertEqual(1, len(result))
-        self.assertEqual("Bang", result[0][0][1].value.args[0])
+        self.assertEqual(1, len(resultLists))
+        firstResult = resultLists[0][0]
+        assert firstResult is not None
+        self.assertEqual("Bang", firstResult[1].value.args[0])
 
     def testDeferredListConsumeErrors(self) -> None:
         d1: Deferred[None] = Deferred()
@@ -388,13 +390,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         errorTrap: List[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        result: List[_DeferredListResultListT] = []
-        dl.addCallback(result.append)
+        resultLists: List[_DeferredListResultListT] = []
+        dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
         self.assertEqual([], errorTrap)
-        self.assertEqual(1, len(result))
-        self.assertEqual("Bang", result[0][0][1].value.args[0])
+        self.assertEqual(1, len(resultLists))
+        firstResult = resultLists[0][0]
+        assert firstResult is not None
+        self.assertEqual("Bang", firstResult[1].value.args[0])
 
     def testDeferredListFireOnOneErrorWithAlreadyFiredDeferreds(self) -> None:
         # Create some deferreds, and errback one
