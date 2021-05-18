@@ -1820,8 +1820,8 @@ class _InternalInlineCallbacksCancelledError(Exception):
 # type note: "..." is used here because we don't have a better way to express
 #     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
-    f: Callable[..., Generator[Any, Any, None]]
-) -> Callable[..., Deferred[Any]]:
+    f: Callable[..., Generator[Deferred[object], object, None]]
+) -> Callable[..., Deferred[object]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::
