@@ -12,7 +12,7 @@ Maintainer: Jonathan Lange
 import inspect
 import warnings
 
-from typing import List
+from typing import List, Type
 
 from zope.interface import implementer
 
@@ -56,7 +56,9 @@ class TestCase(SynchronousTestCase):
         """
         super().__init__(methodName)
 
-    def assertFailure(self, deferred, *expectedFailures):
+    def assertFailure(
+        self, deferred: defer.Deferred[object], *expectedFailures: Type[Exception]
+    ) -> defer.Deferred[Type[Exception]]:
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
         Returns the original Deferred with callbacks added. You will need
