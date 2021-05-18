@@ -23,6 +23,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     TYPE_CHECKING,
     Union,
     cast,
@@ -97,14 +98,17 @@ def fakeCallbackCanceller(deferred: Deferred[str]) -> None:
     deferred.callback("Callback Result")
 
 
+_ExceptionT = TypeVar("_ExceptionT", bound=Exception)
+
+
 class ImmediateFailureMixin:
     """
     Add additional assertion methods.
     """
 
     def assertImmediateFailure(
-        self, deferred: Deferred[Any], exception: Type[Exception]
-    ) -> Exception:
+        self, deferred: Deferred[Any], exception: Type[_ExceptionT]
+    ) -> _ExceptionT:
         """
         Assert that the given Deferred current result is a Failure with the
         given exception.
@@ -116,7 +120,7 @@ class ImmediateFailureMixin:
         deferred.addErrback(failures.append)
         testCase.assertEqual(len(failures), 1)
         testCase.assertTrue(failures[0].check(exception))
-        return cast(Exception, failures[0].value)
+        return cast(_ExceptionT, failures[0].value)
 
 
 class UtilTests(unittest.TestCase):
