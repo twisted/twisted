@@ -843,7 +843,7 @@ class ReactorLoopTests(unittest.TestCase):
         provided.
         """
         testClock = Clock()
-        d1: Deferred[None] = Deferred()
+        d: Deferred[Optional[task.LoopingCall]] = Deferred()
         deferredCounts = []
 
         def countTracker(possibleCount: int) -> Optional[Deferred[None]]:
@@ -851,7 +851,7 @@ class ReactorLoopTests(unittest.TestCase):
             deferredCounts.append(possibleCount)
             # Return a deferred, but only on the first request
             if len(deferredCounts) == 1:
-                return d1
+                return d
             else:
                 return None
 
@@ -859,7 +859,7 @@ class ReactorLoopTests(unittest.TestCase):
         # Set the increment to 0.2, and do not call the function on startup.
         lc = task.LoopingCall.withCount(countTracker)
         lc.clock = testClock
-        d2: Deferred[Optional[task.LoopingCall]] = lc.start(0.2, now=False)
+        d = lc.start(0.2, now=False)
 
         # Confirm that nothing has happened yet.
         self.assertEqual(deferredCounts, [])
@@ -870,7 +870,7 @@ class ReactorLoopTests(unittest.TestCase):
         self.assertEqual(len(deferredCounts), 1)
 
         # Fire the deferred, and advance the clock by another 0.2
-        d2.callback(None)
+        d.callback(None)
         testClock.pump([0.2])
         # We should now have exactly 2 counts...
         self.assertEqual(len(deferredCounts), 2)
