@@ -21,6 +21,7 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
+import gi  # type: ignore[import]
 import gi.pygtkcompat  # type: ignore[import]
 from gi.repository import GLib  # type: ignore[import]
 
@@ -69,6 +70,7 @@ class GIReactor(_glibbase.GlibReactorBase):
     def __init__(self, useGtk=False):
         _gtk = None
         if useGtk is True:
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk as _gtk
 
         _glibbase.GlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
@@ -113,6 +115,7 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
     def __init__(self, useGtk=False):
         _gtk = None
         if useGtk is True:
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk as _gtk
 
         _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)

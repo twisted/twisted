@@ -1,0 +1,1 @@
+twisted.internet.gireactor was fixed to force GTK+3 in order to fix use of incompatible GTK+4 API when installed

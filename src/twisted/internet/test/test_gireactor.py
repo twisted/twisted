@@ -26,6 +26,9 @@ else:
         gtk3reactor = None
     else:
         gtk3reactor = _gtk3reactor
+        import gi  # type: ignore[import]
+
+        gi.require_version("Gtk", "3.0")
         from gi.repository import Gtk
 
 from twisted.internet.error import ReactorAlreadyRunning
