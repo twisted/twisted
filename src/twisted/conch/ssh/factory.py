@@ -8,7 +8,7 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
-
+from typing import Optional, Tuple
 
 from twisted.internet import protocol
 from twisted.logger import Logger
@@ -98,13 +98,20 @@ class SSHFactory(protocol.Factory):
         @rtype: L{dict}
         """
 
-    def getDHPrime(self, bits):
+    def getDHPrime(
+        self, bits: int, minimum: Optional[int] = None, maximum: Optional[int] = None
+    ) -> Tuple[int, int]:
         """
         Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
-        close to bits bits as possible.
+        close to ideal bits as possible.
 
-        @type bits: L{int}
-        @rtype:     L{tuple}
+        The C{minimum} and C{maximum} parameters are not used in the default implementation.
+
+        @param bits: The ideal size for a group key exchange algorithm or the actual size requested for a non-group key exchange algorithm.
+        @param minimum: The minimum accepted size for group key exchange algorithm. This is C{None} for non-group algorithms.
+        @param maximum: The maximum accepted size for group key exchange algorithm. This is C{None} for non-group algorithms.
+
+        @return: A random tuple of prime and associated generator.
         """
         primesKeys = sorted(self.primes.keys(), key=lambda i: abs(i - bits))
         realBits = primesKeys[0]

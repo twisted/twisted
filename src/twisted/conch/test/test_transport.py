@@ -308,36 +308,18 @@ class MockFactory(factory.SSHFactory):
         return {2048: (group14,), 4096: ((5, 7),)}
 
 
-class MockOldFactoryPublicKeys(MockFactory):
+class LegacyGetDHPrimesFactory(MockFactory):
     """
-    The old SSHFactory returned mappings from key names to strings from
-    getPublicKeys().  We return those here for testing.
-    """
-
-    def getPublicKeys(self):
-        """
-        We used to map key types to public key blobs as strings.
-        """
-        keys = MockFactory.getPublicKeys(self)
-        for name, key in keys.items()[:]:
-            keys[name] = key.blob()
-        return keys
-
-
-class MockOldFactoryPrivateKeys(MockFactory):
-    """
-    The old SSHFactory returned mappings from key names to cryptography key
-    objects from getPrivateKeys().  We return those here for testing.
+    A factory that implements L{twisted.conch.ssh.factory.SSHFactory.getDHPrime}
+    with a single argument.
     """
 
-    def getPrivateKeys(self):
+    def getDHPrime(self, ideal):
         """
-        We used to map key types to cryptography key objects.
+        Return the prime number only based on the ideal size.
         """
-        keys = MockFactory.getPrivateKeys(self)
-        for name, key in keys.items()[:]:
-            keys[name] = key.keyObject
-        return keys
+        # Just delegate to main factory.
+        return super().getDHPrime(ideal, minimum=None, maximum=None)
 
 
 def generatePredictableKey(transport):
@@ -1734,6 +1716,31 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             b"\x00\x00\x04\x00\x00\x00\x08\x00" + b"\x00\x00\x0c\x00"
         )
         dhGenerator, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
+        self.assertEqual(
+            self.packets,
+            [
+                (
+                    transport.MSG_KEX_DH_GEX_GROUP,
+                    common.MP(dhPrime) + b"\x00\x00\x00\x01\x02",
+                )
+            ],
+        )
+        self.assertEqual(self.proto.g, 2)
+        self.assertEqual(self.proto.p, dhPrime)
+
+    def test_KEX_DH_GEX_REQUEST_legacyFacotry(self):
+        """
+        When the protocol has a legacy SSH factory without support for minimum or maximum size,
+        it will uses only the ideal size to return the group.
+        """
+        factory = LegacyGetDHPrimesFactory()
+        factory.startFactory()
+        self.proto.factory = factory
+
+        packet = struct.pack(">3L", 1024, 2048, 4086)
+        self.proto.ssh_KEX_DH_GEX_REQUEST(packet)
+
+        _, dhPrime = self.proto.factory.getPrimes().get(2048)[0]
         self.assertEqual(
             self.packets,
             [
