@@ -1,0 +1,2 @@
+twisted.conch.ssh._kex.getSupportedKeyExchanges() will now return than
+curve25519-sha256 is supported only for OpenSSL 1.1.1b or greater.

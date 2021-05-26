@@ -276,7 +276,7 @@ def getSupportedKeyExchanges():
                 ec.ECDH(), _curveTable[keyAlgorithmDsa]
             )
         elif keyAlgorithm.startswith(b"curve25519-sha256"):
-            supported = backend.x25519_supported()
+            supported = backend.ed25519_supported()
         else:
             supported = True
         if not supported:
