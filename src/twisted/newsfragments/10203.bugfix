@@ -1,0 +1,2 @@
+twisted.conch.ssh.transport.SSHServerTransport and twisted.conch.ssh.transport.SSHClientTransport no longer use the hardcoded
+SHA1 digest for non-group key exchanges.
