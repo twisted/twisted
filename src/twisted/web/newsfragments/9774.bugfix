@@ -1,1 +1,0 @@
-Importing twisted.web.client no longer has the side effect of initializing the reactor.

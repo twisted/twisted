@@ -1174,7 +1174,7 @@ class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
 
     def getFileType(self):
         try:
-            from StringIO import StringIO
+            from StringIO import StringIO  # type: ignore[import]
         except ImportError:
             raise SkipTest("StringIO.StringIO is not available.")
         else:
@@ -1191,7 +1191,7 @@ class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
 
     def getFileType(self):
         try:
-            from cStringIO import StringIO
+            from cStringIO import StringIO  # type: ignore[import]
         except ImportError:
             raise SkipTest("cStringIO.StringIO is not available.")
         else:
