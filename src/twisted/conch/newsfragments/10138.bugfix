@@ -1,1 +1,1 @@
-t.c.ssh.Factory assign list instead of dict_keys to transport supportedPublicKeys
+twisted.conch.ssh.Factory.buildProtocol now sets transport's supportedPublicKeys to a list, like it was in Python 2.x. This prevents an exception when we try to subscript that list in SSHServerTransport.ssh_KEXINIT().

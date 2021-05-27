@@ -57,7 +57,10 @@ class SSHFactory(protocol.Factory):
         """
         t = protocol.Factory.buildProtocol(self, addr)
         # Advertise only the host-key algorithms that correspond to
-        # keys we have
+        # algorithms we support (from the class's supportedPublicKeys)
+        # intersected with keys we have (from self.privateKeys).
+        # We also want to preserve the algorithm preference order from
+        # supportedPublicKeys.
         t.supportedPublicKeys = [
             keyAlgorithm
             for keyAlgorithm in t.supportedPublicKeys
