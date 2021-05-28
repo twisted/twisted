@@ -11,6 +11,7 @@ import gc
 import functools
 import traceback
 import re
+import sys
 import types
 
 from asyncio import new_event_loop, Future, CancelledError
@@ -3405,3 +3406,92 @@ class CoroutineContextVarsTests(unittest.TestCase):
         clock.advance(1)
 
         self.assertEqual(self.successResultOf(d), True)
+
+
+class InlineCallbacksExceptionContextTests(unittest.TestCase):
+    @defer.inlineCallbacks
+    def doNothingReturnValue(self):
+        """
+        L{defer.inlineCallbacks}-decorated function that returns using _DefGen_Return.
+        """
+        yield None
+        defer.returnValue("doNothingReturnValue")
+
+    @defer.inlineCallbacks
+    def doNothingReturn(self):
+        """
+        L{defer.inlineCallbacks}-decorated function that returns using StopIteration.
+        """
+        yield None
+        return "doNothingReturn"
+
+    @defer.inlineCallbacks
+    def doNothingRaise(self):
+        yield None
+        raise Exception("Errback exception")
+
+    @defer.inlineCallbacks
+    def test_exceptionContextEmtpyInCallback(self):
+        """
+        When in the callbacks of an L{defer.inlineCallbacks}-decorated function
+        there should not be any exception context if there wasn't any to begin
+        with.
+        """
+        for do_nothing in (self.doNothingReturn, self.doNothingReturnValue):
+            yield do_nothing()
+            # There were never any exceptions that this function was aware of
+            # (_DefGen_Return and StopIteration are implementation details
+            #  of 'do_nothing' and shouldn't leak into the exc_info of the
+            #  caller)
+            self.assertEqual(sys.exc_info(), (None, None, None))
+
+    @defer.inlineCallbacks
+    def test_inlineCallbacksPreservesPreviousExceptionContext(self):
+        """
+        When a L{defer.inlineCallbacks}-decorated function is called inside of
+        an exception handler, maintain the previous exception context during the
+        callback.
+        """
+        for do_nothing in (self.doNothingReturn, self.doNothingReturnValue):
+            try:
+                raise Exception("foo")
+            except Exception as ex:
+                prev_exc_info = sys.exc_info()
+                yield do_nothing()
+                # The exception context didn't change from before
+                self.assertEqual(sys.exc_info(), prev_exc_info)
+                # There was no previous exception in the context while the exception
+                # was raised
+                self.assertEqual(ex.__context__, None)
+
+            # We're outside of the exception context now
+            self.assertEqual(sys.exc_info(), (None, None, None))
+
+    @defer.inlineCallbacks
+    def test_errbackExceptionChain(self):
+        """
+        When a L{defer.inlineCallbacks}-decorated function raises an exception
+        while handling another exception, the context chain should look like
+        "first exception -> errback exception".
+        """
+        try:
+            try:
+                raise Exception("The first exception")
+            except Exception:
+                yield self.doNothingRaise()
+        except Exception as e:
+            self.assertEqual("Errback exception", str(e))
+            self.assertEqual("The first exception", str(e.__context__))
+
+    @defer.inlineCallbacks
+    def test_errbackNoExceptionChain(self):
+        """
+        When a L{defer.inlineCallbacks}-decorated function raises an exception
+        there should be no previous exception in the context when there was
+        no exception being handled at the time.
+        """
+        try:
+            yield self.doNothingRaise()
+        except Exception as e:
+            self.assertEqual("Errback exception", str(e))
+            self.assertEqual(e.__context__, None)

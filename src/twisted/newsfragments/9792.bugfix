@@ -1,0 +1,3 @@
+twisted.internet.defer.inlineCallbacks and twisted.internet.defer.ensureDeferred
+no longer run their callbacks within the context of the _DefGen_Return or
+StopIteration exception that triggered the callback.

@@ -1630,6 +1630,8 @@ def _inlineCallbacks(
     current_context = _copy_context()
 
     while 1:
+        should_callback = False
+        callback_val = None
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, Failure)
@@ -1642,8 +1644,8 @@ def _inlineCallbacks(
                 result = current_context.run(gen.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            status.deferred.callback(getattr(e, "value", None))
-            return
+            should_callback = True
+            callback_val = getattr(e, "value", None)
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
@@ -1716,10 +1718,14 @@ def _inlineCallbacks(
                     lineno,
                 )
 
-            status.deferred.callback(e.value)
-            return
+            should_callback = True
+            callback_val = e.value
         except BaseException:
             status.deferred.errback()
+            return
+
+        if should_callback:
+            status.deferred.callback(callback_val)
             return
 
         if isinstance(result, Deferred):
