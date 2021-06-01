@@ -1180,7 +1180,7 @@ class FirstError(Exception):
 
 _DeferredListSingleResultT = Tuple[_DeferredResultT, int]
 _DeferredListResultItemT = Tuple[bool, _DeferredResultT]
-_DeferredListResultListT = List[Optional[_DeferredListResultItemT]]
+_DeferredListResultListT = List[_DeferredListResultItemT]
 
 if TYPE_CHECKING:
 
@@ -1281,7 +1281,12 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         """
         self._deferredList = list(deferredList)
 
-        self.resultList: _DeferredListResultListT = [None] * len(self._deferredList)
+        # Note this contains optional result values as the DeferredList is
+        # processing its results, even though the callback result will not,
+        # which is why we aren't using _DeferredListResultListT here.
+        self.resultList: List[Optional[_DeferredListResultItemT]] = [None] * len(
+            self._deferredList
+        )
         """
         The final result, in progress.
         Each item in the list corresponds to the L{Deferred} at the same
@@ -1327,7 +1332,10 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                 assert isinstance(result, Failure)
                 self.errback(Failure(FirstError(result, index)))
             elif self.finishedCount == len(self.resultList):
-                self.callback(self.resultList)
+                # At this point, None values in self.resultList have been
+                # replaced by result values, so we cast it to
+                # _DeferredListResultListT to match the callback result type.
+                self.callback(cast(_DeferredListResultListT, self.resultList))
 
         if succeeded == FAILURE and self.consumeErrors:
             return None
