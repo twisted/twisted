@@ -349,7 +349,7 @@ def filenameToModuleName(fn):
     return modName
 
 
-def qual(clazz):
+def qual(clazz: Type) -> str:
     """
     Return full import path of a class.
     """
