@@ -3562,7 +3562,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
 class InlineCallbacksExceptionContextTests(unittest.TestCase):
     @defer.inlineCallbacks
-    def doNothingReturnValue(self):
+    def doNothingReturnValue(self) -> Generator[Any, Any, None]:
         """
         L{defer.inlineCallbacks}-decorated function that returns using _DefGen_Return.
         """
@@ -3570,7 +3570,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         defer.returnValue("doNothingReturnValue")
 
     @defer.inlineCallbacks
-    def doNothingReturn(self):
+    def doNothingReturn(self) -> Generator[Any, Any, Any]:
         """
         L{defer.inlineCallbacks}-decorated function that returns using StopIteration.
         """
@@ -3578,12 +3578,14 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         return "doNothingReturn"
 
     @defer.inlineCallbacks
-    def doNothingRaise(self):
+    def doNothingRaise(self) -> Generator[Any, Any, None]:
         yield None
         raise Exception("Errback exception")
 
     @defer.inlineCallbacks
-    def test_exceptionContextEmtpyInCallback(self):
+    def test_exceptionContextEmtpyInCallback(
+        self,
+    ) -> Generator[Deferred[Any], Any, None]:
         """
         When in the callbacks of an L{defer.inlineCallbacks}-decorated function
         there should not be any exception context if there wasn't any to begin
@@ -3598,7 +3600,9 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
             self.assertEqual(sys.exc_info(), (None, None, None))
 
     @defer.inlineCallbacks
-    def test_inlineCallbacksPreservesPreviousExceptionContext(self):
+    def test_inlineCallbacksPreservesPreviousExceptionContext(
+        self,
+    ) -> Generator[Deferred[Any], Any, None]:
         """
         When a L{defer.inlineCallbacks}-decorated function is called inside of
         an exception handler, maintain the previous exception context during the
@@ -3620,7 +3624,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
             self.assertEqual(sys.exc_info(), (None, None, None))
 
     @defer.inlineCallbacks
-    def test_errbackExceptionChain(self):
+    def test_errbackExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
         """
         When a L{defer.inlineCallbacks}-decorated function raises an exception
         while handling another exception, the context chain should look like
@@ -3636,7 +3640,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
             self.assertEqual("The first exception", str(e.__context__))
 
     @defer.inlineCallbacks
-    def test_errbackNoExceptionChain(self):
+    def test_errbackNoExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
         """
         When a L{defer.inlineCallbacks}-decorated function raises an exception
         there should be no previous exception in the context when there was
