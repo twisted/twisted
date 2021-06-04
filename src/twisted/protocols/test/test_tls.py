@@ -16,8 +16,8 @@ from twisted.python.compat import iterbytes
 try:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
     from twisted.protocols.tls import _PullToPush, _ProducerMembrane
-    from OpenSSL.crypto import X509Type
-    from OpenSSL.SSL import (
+    from OpenSSL.crypto import X509Type  # type: ignore[import]
+    from OpenSSL.SSL import (  # type: ignore[import]
         TLSv1_METHOD,
         TLSv1_1_METHOD,
         TLSv1_2_METHOD,

@@ -6,7 +6,7 @@
 Application data directory support.
 """
 
-import appdirs
+import appdirs  # type: ignore[import]
 import inspect
 from typing import cast
 

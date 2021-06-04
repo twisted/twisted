@@ -19,7 +19,7 @@ import socket
 from unicodedata import normalize
 import warnings
 
-from constantly import NamedConstant, Names
+from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
 from zope.interface import implementer, directlyProvides, provider
@@ -74,7 +74,7 @@ try:
         CertificateOptions,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError
+    from OpenSSL.SSL import Error as SSLError  # type: ignore[import]
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
