@@ -18,6 +18,7 @@ from incremental import Version
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import ISSLTransport, IAddress
+from twisted.internet.task import Clock
 
 from twisted.trial import unittest
 
@@ -233,7 +234,7 @@ class DummyRequest:
         self.postpath = postpath
         self.prepath = []
         self.session = None
-        self.protoSession = session or Session(0, self)
+        self.protoSession = session or Session(site=None, uid=b"0", reactor=Clock())
         self.args = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
@@ -275,7 +276,7 @@ class DummyRequest:
         """TODO: make this assert on write() if the header is content-length"""
         self.responseHeaders.addRawHeader(name, value)
 
-    def getSession(self):
+    def getSession(self, sessionInterface=None):
         if self.session:
             return self.session
         assert (
@@ -308,13 +309,13 @@ class DummyRequest:
             raise TypeError("write() only accepts bytes")
         self.written.append(data)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Return a L{Deferred} which is called back with L{None} when the request
         is finished.  This will probably only work if you haven't called
         C{finish} yet.
         """
-        finished = Deferred()
+        finished: Deferred[None] = Deferred()
         self._finishedDeferreds.append(finished)
         return finished
 

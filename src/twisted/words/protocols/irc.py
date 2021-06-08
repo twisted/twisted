@@ -3678,10 +3678,10 @@ def ctcpExtract(message):
             normal_messages.append(messages.pop(0))
         odd = not odd
 
-    extended_messages[:] = filter(None, extended_messages)
-    normal_messages[:] = filter(None, normal_messages)
+    extended_messages[:] = list(filter(None, extended_messages))
+    normal_messages[:] = list(filter(None, normal_messages))
 
-    extended_messages[:] = map(ctcpDequote, extended_messages)
+    extended_messages[:] = list(map(ctcpDequote, extended_messages))
     for i in range(len(extended_messages)):
         m = extended_messages[i].split(SPC, 1)
         tag = m[0]

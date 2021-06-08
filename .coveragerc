@@ -17,3 +17,4 @@ ignore_errors = True
 exclude_lines =
     if (typing\.)?TYPE_CHECKING
     \s*\.\.\.$
+    raise NotImplementedError
