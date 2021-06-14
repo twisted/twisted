@@ -667,7 +667,7 @@ class ASCIIConsumerWrapper:
             self.write = cons.write
 
     def write(self, bytes):
-        return self.cons.write(bytes.replace(os.linesep, "\r\n"))
+        return self.cons.write(bytes.replace(os.linesep.encode(), b"\r\n"))
 
 
 @implementer(interfaces.IConsumer)
