@@ -26,6 +26,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
+from nacl.signing import SigningKey, VerifyKey
 from pyasn1.codec.ber import decoder as berDecoder  # type: ignore[import]
 from pyasn1.codec.ber import encoder as berEncoder
 from pyasn1.error import PyAsn1Error  # type: ignore[import]
@@ -62,6 +63,58 @@ _secToNist = {
     b"secp384r1": b"nistp384",
     b"secp521r1": b"nistp521",
 }
+
+
+@utils.register_interface(ed25519.Ed25519PublicKey)
+class _NaClEd25519PublicKey(VerifyKey):
+    @classmethod
+    def from_public_bytes(cls, data):
+        return cls(data)
+
+    def public_bytes(self, encoding, format):
+        if (
+            encoding is not serialization.Encoding.Raw
+            or format is not serialization.PublicFormat.Raw
+        ):
+            raise ValueError("Both encoding and format must be Raw")
+        return bytes(self)
+
+    def verify(self, signature, data):
+        super().verify(data, signature)
+
+
+@utils.register_interface(ed25519.Ed25519PrivateKey)
+class _NaClEd25519PrivateKey(SigningKey):
+    @classmethod
+    def from_private_bytes(cls, data):
+        return cls(data)
+
+    def public_key(self):
+        return Ed25519PublicKey(bytes(self.verify_key))
+
+    def private_bytes(self, encoding, format, encryption_algorithm):
+        if (
+            encoding is not serialization.Encoding.Raw
+            or format is not serialization.PrivateFormat.Raw
+            or not isinstance(encryption_algorithm, serialization.NoEncryption)
+        ):
+            raise ValueError(
+                "Encoding and format must be Raw and "
+                "encryption_algorithm must be NoEncryption"
+            )
+        return bytes(self)
+
+    def sign(self, data):
+        return super().sign(data).signature
+
+
+_ed25519_supported = default_backend().ed25519_supported()
+if _ed25519_supported:
+    Ed25519PublicKey = ed25519.Ed25519PublicKey
+    Ed25519PrivateKey = ed25519.Ed25519PrivateKey
+else:
+    Ed25519PublicKey = _NaClEd25519PublicKey
+    Ed25519PrivateKey = _NaClEd25519PrivateKey
 
 
 class BadKeyError(Exception):
@@ -914,9 +967,9 @@ class Key:
         """
 
         if k is None:
-            keyObject = ed25519.Ed25519PublicKey.from_public_bytes(a)
+            keyObject = Ed25519PublicKey.from_public_bytes(a)
         else:
-            keyObject = ed25519.Ed25519PrivateKey.from_private_bytes(k)
+            keyObject = Ed25519PrivateKey.from_private_bytes(k)
 
         return cls(keyObject)
 

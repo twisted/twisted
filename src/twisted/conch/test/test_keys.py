@@ -28,7 +28,7 @@ if cryptography and pyasn1:
     from cryptography.hazmat.backends import default_backend
     from twisted.conch.ssh import keys, common, sexpy
 
-    ED25519_SUPPORTED = default_backend().ed25519_supported()
+    ED25519_SUPPORTED = keys._ed25519_supported
 else:
     ED25519_SUPPORTED = False
 
@@ -1576,6 +1576,17 @@ attr n:
                 \t44:58>"""
             ),
         )
+
+
+class PyNaClKeyTests(KeyTests):
+    """
+    Key tests, but forcing the use of C{PyNaCl}.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.patch(keys, "Ed25519PublicKey", keys._NaClEd25519PublicKey)
+        self.patch(keys, "Ed25519PrivateKey", keys._NaClEd25519PrivateKey)
 
 
 class PersistentRSAKeyTests(unittest.TestCase):
