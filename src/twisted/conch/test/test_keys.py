@@ -1560,6 +1560,100 @@ class PyNaClKeyTests(KeyTests):
         self.patch(keys, "Ed25519PublicKey", keys._NaClEd25519PublicKey)
         self.patch(keys, "Ed25519PrivateKey", keys._NaClEd25519PrivateKey)
 
+    def test_naclPrivateBytes(self):
+        """
+        L{keys._NaClEd25519PrivateKey.private_bytes} and
+        L{keys._NaClEd25519PrivateKey.from_private_bytes} round-trip.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = keys._NaClEd25519PrivateKey.generate()
+        key_bytes = key.private_bytes(
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        )
+        self.assertIsInstance(key_bytes, bytes)
+        self.assertEqual(key, keys._NaClEd25519PrivateKey.from_private_bytes(key_bytes))
+
+    def test_naclPrivateBytesInvalidParameters(self):
+        """
+        L{keys._NaClEd25519PrivateKey.private_bytes} only accepts certain parameters.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = keys._NaClEd25519PrivateKey.generate()
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        )
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.BestAvailableEncryption(b"password"),
+        )
+
+    def test_naclPublicBytes(self):
+        """
+        L{keys._NaClEd25519PublicKey.public_bytes} and
+        L{keys._NaClEd25519PublicKey.from_public_bytes} round-trip.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = keys._NaClEd25519PrivateKey.generate().public_key()
+        key_bytes = key.public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        self.assertIsInstance(key_bytes, bytes)
+        self.assertEqual(key, keys._NaClEd25519PublicKey.from_public_bytes(key_bytes))
+
+    def test_naclPublicBytesInvalidParameters(self):
+        """
+        L{keys._NaClEd25519PublicKey.public_bytes} only accepts certain parameters.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = keys._NaClEd25519PrivateKey.generate().public_key()
+        self.assertRaises(
+            ValueError,
+            key.public_bytes,
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.Raw,
+        )
+        self.assertRaises(
+            ValueError,
+            key.public_bytes,
+            serialization.Encoding.Raw,
+            serialization.PublicFormat.PKCS1,
+        )
+
+    def test_naclVerify(self):
+        """
+        L{keys._NaClEd25519PublicKey.verify} raises appropriate exceptions.
+        """
+        key = keys._NaClEd25519PrivateKey.generate()
+        self.assertIsInstance(key, keys.Ed25519PrivateKey)
+        signature = key.sign(b"test data")
+        self.assertIsNone(key.public_key().verify(signature, b"test data"))
+        self.assertRaises(
+            InvalidSignature, key.public_key().verify, signature, b"wrong data"
+        )
+        self.assertRaises(
+            InvalidSignature, key.public_key().verify, b"0" * 64, b"test data"
+        )
+
 
 class PersistentRSAKeyTests(unittest.TestCase):
     """

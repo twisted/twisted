@@ -27,6 +27,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
+from nacl.exceptions import BadSignatureError  # type: ignore[import]
 from nacl.signing import SigningKey, VerifyKey  # type: ignore[import]
 from pyasn1.codec.ber import decoder as berDecoder  # type: ignore[import]
 from pyasn1.codec.ber import encoder as berEncoder
@@ -83,7 +84,10 @@ class _NaClEd25519PublicKey(VerifyKey):
         return bytes(self)
 
     def verify(self, signature: bytes, data: bytes) -> None:
-        super().verify(data, signature)
+        try:
+            super().verify(data, signature)
+        except BadSignatureError as e:
+            raise InvalidSignature(str(e))
 
 
 @utils.register_interface(ed25519.Ed25519PrivateKey)
