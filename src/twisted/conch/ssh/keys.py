@@ -14,6 +14,7 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
+from typing import Type, Union
 
 import bcrypt
 from cryptography import utils
@@ -26,7 +27,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from nacl.signing import SigningKey, VerifyKey
+from nacl.signing import SigningKey, VerifyKey  # type: ignore[import]
 from pyasn1.codec.ber import decoder as berDecoder  # type: ignore[import]
 from pyasn1.codec.ber import encoder as berEncoder
 from pyasn1.error import PyAsn1Error  # type: ignore[import]
@@ -68,10 +69,12 @@ _secToNist = {
 @utils.register_interface(ed25519.Ed25519PublicKey)
 class _NaClEd25519PublicKey(VerifyKey):
     @classmethod
-    def from_public_bytes(cls, data):
+    def from_public_bytes(cls, data: bytes) -> ed25519.Ed25519PublicKey:
         return cls(data)
 
-    def public_bytes(self, encoding, format):
+    def public_bytes(
+        self, encoding: serialization.Encoding, format: serialization.PublicFormat
+    ) -> bytes:
         if (
             encoding is not serialization.Encoding.Raw
             or format is not serialization.PublicFormat.Raw
@@ -79,20 +82,29 @@ class _NaClEd25519PublicKey(VerifyKey):
             raise ValueError("Both encoding and format must be Raw")
         return bytes(self)
 
-    def verify(self, signature, data):
+    def verify(self, signature: bytes, data: bytes) -> None:
         super().verify(data, signature)
 
 
 @utils.register_interface(ed25519.Ed25519PrivateKey)
 class _NaClEd25519PrivateKey(SigningKey):
     @classmethod
-    def from_private_bytes(cls, data):
+    def generate(cls) -> ed25519.Ed25519PrivateKey:
+        return super().generate()
+
+    @classmethod
+    def from_private_bytes(cls, data: bytes) -> ed25519.Ed25519PrivateKey:
         return cls(data)
 
-    def public_key(self):
-        return Ed25519PublicKey(bytes(self.verify_key))
+    def public_key(self) -> ed25519.Ed25519PublicKey:
+        return _NaClEd25519PublicKey(bytes(self.verify_key))
 
-    def private_bytes(self, encoding, format, encryption_algorithm):
+    def private_bytes(
+        self,
+        encoding: serialization.Encoding,
+        format: serialization.PrivateFormat,
+        encryption_algorithm: serialization.KeySerializationEncryption,
+    ) -> bytes:
         if (
             encoding is not serialization.Encoding.Raw
             or format is not serialization.PrivateFormat.Raw
@@ -104,17 +116,24 @@ class _NaClEd25519PrivateKey(SigningKey):
             )
         return bytes(self)
 
-    def sign(self, data):
+    def sign(self, data: bytes) -> bytes:
         return super().sign(data).signature
 
 
+# mypy doesn't support ABCMeta.register yet
+# (https://github.com/python/mypy/issues/2922), so we have to cheat.
+_Ed25519PublicKeyT = Union[Type[ed25519.Ed25519PublicKey], Type[_NaClEd25519PublicKey]]
+_Ed25519PrivateKeyT = Union[
+    Type[ed25519.Ed25519PrivateKey], Type[_NaClEd25519PrivateKey]
+]
+
 _ed25519_supported = default_backend().ed25519_supported()
-if _ed25519_supported:
-    Ed25519PublicKey = ed25519.Ed25519PublicKey
-    Ed25519PrivateKey = ed25519.Ed25519PrivateKey
-else:
-    Ed25519PublicKey = _NaClEd25519PublicKey
-    Ed25519PrivateKey = _NaClEd25519PrivateKey
+Ed25519PublicKey: _Ed25519PublicKeyT = (
+    ed25519.Ed25519PublicKey if _ed25519_supported else _NaClEd25519PublicKey
+)
+Ed25519PrivateKey: _Ed25519PrivateKeyT = (
+    ed25519.Ed25519PrivateKey if _ed25519_supported else _NaClEd25519PrivateKey
+)
 
 
 class BadKeyError(Exception):
