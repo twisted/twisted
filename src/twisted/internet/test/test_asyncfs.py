@@ -100,7 +100,9 @@ class TestFs(unittest.TestCase):
             os.close(r[1][1].fileno())
 
         d1 = asyncfs.openAsync(FilePath("one.txt"), FileAsyncFlags.READ)
-        d2 = asyncfs.openAsync(FilePath("three.txt"), FileAsyncFlags.CREATE)
+        d2 = asyncfs.openAsync(
+            FilePath("three.txt"), FileAsyncFlags.CREATE | FileAsyncFlags.EXCLUSIVE
+        )
         d3 = DeferredList([d1, d2])
         d3.addCallback(cb_open)
         return d3
@@ -120,14 +122,16 @@ class TestFs(unittest.TestCase):
         return d1
 
     def test_write_close(self):
-        def cb_write3(_):
-            with open("three.txt") as fd:
-                self.assertEqual(fd.read(), "lorem ipsum")
+        def cb_write3(_, fd):
+            with open("three.txt") as fd2:
+                self.assertEqual(fd2.read(), "lorem ipsum")
+            with self.assertRaises(AssertionError):
+                fd.close()
 
         def cb_write2(n, fd):
             self.assertEqual(n, 11)
             d3 = fd.close()
-            d3.addCallback(cb_write3)
+            d3.addCallback(cb_write3, fd)
             return d3
 
         def cb_write1(fd):
@@ -160,9 +164,34 @@ class TestFs(unittest.TestCase):
         d1.addCallback(cb_write1)
         return d1
 
+    def test_truncate(self):
+        def cb_trunc3(_, fd):
+            with open("four.txt") as fd2:
+                self.assertEqual(fd2.read(), "consectetur")
+            os.close(fd.fileno())
+
+        def cb_trunc2(n, fd):
+            self.assertEqual(n, 11)
+            d3 = fd.flush()
+            d3.addCallback(cb_trunc3, fd)
+            return d3
+
+        def cb_trunc1(fd):
+            d2 = fd.write(0, b"consectetur")
+            d2.addCallback(cb_trunc2, fd)
+            return d2
+
+        with open("four.txt", "w") as fd:
+            fd.write("lorem ipsum dolor sit amet")
+        d1 = asyncfs.openAsync(FilePath("four.txt"), FileAsyncFlags.TRUNCATE)
+        d1.addCallback(cb_trunc1)
+        return d1
+
     def test_consumer(self):
         def cb_con2(_, fd, consumer):
             self.assertEqual(consumer.total_bytes, len(EIGHT_MEG_OF_BLAH))
+            consumer.unregisterProducer()
+            fd.producer().stopProducing()
             return fd.close()
 
         def cb_con1(fd):
@@ -179,9 +208,10 @@ class TestFs(unittest.TestCase):
         return d1
 
     def test_producer(self):
-        def cb_pro2(_):
+        def cb_pro2(_, consumer):
             s = os.stat("bigfile.txt")
             self.assertEqual(s.st_size, len(EIGHT_MEG_OF_BLAH))
+            consumer.unregisterProducer()
 
         def cb_pro1(fd):
             producer = FakeProducer()
@@ -189,7 +219,7 @@ class TestFs(unittest.TestCase):
             consumer.registerProducer(producer, True)
             producer.fire(consumer)
             d2 = fd.close()
-            d2.addCallback(cb_pro2)
+            d2.addCallback(cb_pro2, consumer)
             return d2
 
         d1 = asyncfs.openAsync(FilePath("bigfile.txt"), FileAsyncFlags.CREATE)

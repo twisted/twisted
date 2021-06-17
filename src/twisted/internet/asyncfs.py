@@ -137,6 +137,7 @@ class ThreadFileReader:
 @implementer(IAsyncWriter)
 class ThreadFileWriter:
     def __init__(self, fd: int, pool: ThreadPool):
+        self._open = True
         self._write_consumer: Optional["_ThreadFileConsumer"] = None
         self.fd = fd
         self.pool = pool
@@ -163,6 +164,8 @@ class ThreadFileWriter:
         return d
 
     def close(self) -> Deferred:
+        assert self._open, "don't close a ThreadFileWriter twice"
+        self._open = False
         if self._write_consumer:
             self._write_consumer.close()
             d = self._write_consumer.write_deferred
