@@ -2713,6 +2713,7 @@ class _ISupportsExitSignalCapturing(Interface):
 
 
 DEFAULT_CHUNK_SIZE = 4096
+DEFAULT_BUFFER_MAX = 2 ** 22  # 4 megabytes
 
 
 class IAsyncReader(Interface):
@@ -2727,7 +2728,12 @@ class IAsyncReader(Interface):
         @return: a Deferred that is called back when the close succeeds.
         """
 
-    def readChunk(offset: int, length: int) -> "Deferred":
+    def fileno() -> int:
+        """
+        @return: the underlying file handle
+        """
+
+    def read(offset: int, length: int) -> "Deferred":
         """
         Read from the file.
 
@@ -2771,7 +2777,12 @@ class IAsyncWriter(Interface):
         @return: a Deferred that is called back when the close succeeds.
         """
 
-    def writeChunk(offset: int, data: bytes) -> "Deferred":
+    def fileno() -> int:
+        """
+        @return: the underlying file handle
+        """
+        
+    def write(offset: int, data: bytes) -> "Deferred":
         """
         Write to the file.
 
@@ -2788,7 +2799,9 @@ class IAsyncWriter(Interface):
         @return: a Deferred that is called back when the flush succeeds.
         """
 
-    def receive(append: bool = False) -> IConsumer:
+    def receive(
+        append: bool = False, buffer_max: int = DEFAULT_BUFFER_MAX
+    ) -> IConsumer:
         """
         Write to the file using a C{IConsumer}
 
