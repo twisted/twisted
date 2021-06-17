@@ -65,7 +65,7 @@ def openAsync(
     """
     if not user_reactor:
         user_reactor = reactor
-    if IReactorFileAsync in providedBy(user_reactor):
+    if IReactorFileAsync in providedBy(user_reactor):  # pragma: no cover
         return user_reactor.openAsync(path, flags)
     if flags & FileAsyncFlags.READ:
         return ThreadFileReader.open(path, pool)
@@ -137,6 +137,7 @@ class ThreadFileReader:
 @implementer(IAsyncWriter)
 class ThreadFileWriter:
     def __init__(self, fd: int, pool: ThreadPool):
+        self._open = True
         self._write_consumer: Optional["_ThreadFileConsumer"] = None
         self.fd = fd
         self.pool = pool
@@ -163,6 +164,8 @@ class ThreadFileWriter:
         return d
 
     def close(self) -> Deferred:
+        assert self._open, "don't close a ThreadFileWriter twice"
+        self._open = False
         if self._write_consumer:
             self._write_consumer.close()
             d = self._write_consumer.write_deferred
@@ -253,6 +256,7 @@ class _ThreadFileConsumer:
             self._paused = True
 
     def close(self) -> None:
+        assert not self._closed, "don't close _ThreadFileConsumer twice"
         with self.lock:
             self._closed = True
             self.event.set()
