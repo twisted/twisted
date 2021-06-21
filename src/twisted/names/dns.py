@@ -36,6 +36,7 @@ __all__ = [
     "IRecord",
     "IEncodableRecord",
     "A",
+    "APL",
     "A6",
     "AAAA",
     "AFSDB",
@@ -82,6 +83,7 @@ __all__ = [
     "EBADKEY",
     "EBADTIME",
     "Record_A",
+    "Record_APL",
     "Record_A6",
     "Record_AAAA",
     "Record_AFSDB",
@@ -211,7 +213,7 @@ DNAME = 39
 OPT = 41
 SSHFP = 44
 SPF = 99
-
+APL=42
 # These record types do not exist in zones, but are transferred in
 # messages the same way normal RRs are.
 TKEY = 249
@@ -219,6 +221,7 @@ TSIG = 250
 
 QUERY_TYPES = {
     A: "A",
+    A:"APL",
     NS: "NS",
     MD: "MD",
     MF: "MF",
@@ -1250,6 +1253,67 @@ class Record_A(tputil.FancyEqMixin):
     def dottedQuad(self):
         return socket.inet_ntoa(self.address)
 
+
+@implementer(IEncodableRecord)
+class Record_APL(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    An IPv4 host address.
+    @type afi:L{int} length in octets of the address
+
+    @type address: L{bytes}
+    @ivar address: The packed network-order representation of the IPv4 address
+        associated with this record.
+   
+    @type address : L{prefix}  prefix length
+
+    @type ttl: L{int}
+    @ivar ttl: The maximum number of seconds which this record should be
+        cached.
+    """
+
+    showAttributes = (("afi", "afi", "%s"),("_address", "address", "%s"),"prefix", "ttl")
+    compareAttributes = ("afi", "address", "prefix", "ttl")
+    TYPE = APL
+    address = ""
+
+    @property
+    def _address(self):
+        return socket.inet_ntoa(self.address)
+
+    def __init__(self, afi="", address="0.0.0.0", prefix="", ttl=None):
+        """
+        @type address: L{bytes} or L{str}
+        @param address: The IPv4 address associated with this record, in
+            quad-dotted notation.
+        """
+        if isinstance(address, bytes):
+            address = address.decode("ascii")
+
+        self.afi = Name(afi)
+        self.address = socket.inet_aton(address)
+        self.prefix = Name(prefix)
+        self.ttl = str2time(ttl)
+
+    def encode(self, strio, compDict=None):
+        strio.write(self.address)
+
+    #
+    def decode(self, strio, length=None):
+       self.address= readPrecisely(strio,4)
+
+
+    #
+    def __hash__(self):
+        return hash((self.afi, self.address, self.prefix))
+
+    def __str__(self) -> str:
+        return "<APL %s%s%s%s%s ttl=%s>" % (
+            self.afi, ":",
+            socket.inet_ntoa(self.address),
+            "/",
+            self.prefix,
+            self.ttl,
+        )
 
 @implementer(IEncodableRecord)
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
