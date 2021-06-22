@@ -40,7 +40,7 @@ log = Logger()
 def openAsync(
     path: FilePath,
     flags: FileAsyncFlags,
-    user_reactor: Any = None,
+    userReactor: Any = None,
     pool: Optional[ThreadPool] = None,
 ) -> Deferred:
     """
@@ -53,7 +53,7 @@ def openAsync(
     - B{CREATE} create the file if it doesn't exist
     - B{EXCLUSIVE} create the file (if it exists already, error)and
 
-    @param user_reactor: the reactor to use. If the reactor implements
+    @param userReactor: the reactor to use. If the reactor implements
     L{twisted.internet.interfaces.IReactorFileAsync} this is used,
     otherwise fallback to the threaded implementation.
 
@@ -63,13 +63,20 @@ def openAsync(
 
     @return: a Deferred returning L{IAsyncWriter} or L{IAsyncReader}
     """
-    if not user_reactor:
-        user_reactor = reactor
-    if IReactorFileAsync in providedBy(user_reactor):  # pragma: no cover
-        return user_reactor.openAsync(path, flags)
-    if flags & FileAsyncFlags.READ:
-        return ThreadFileReader.open(path, pool)
-    return ThreadFileWriter.open(path, flags, pool)
+    return IReactorFileAsync(userReactor, threadedFallbackReactor(pool)).openAsync(
+        path, flags
+    )
+
+
+@implementer(IReactorFileAsync)
+class threadedFallbackReactor:
+    def __init__(self, pool):
+        self.pool = pool
+
+    def openAsync(self, path, flags):
+        if flags & FileAsyncFlags.READ:
+            return ThreadFileReader.open(path, self.pool)
+        return ThreadFileWriter.open(path, flags, self.pool)
 
 
 def _deferToThread(pool, f: Callable, *args: Any, **kwargs: Any) -> Deferred:
