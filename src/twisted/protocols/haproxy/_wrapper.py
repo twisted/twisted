@@ -6,6 +6,7 @@
 """
 Protocol wrapper that provides HAProxy PROXY protocol support.
 """
+from typing import Optional, Union
 
 from twisted.protocols import policies
 from twisted.internet import interfaces
@@ -14,6 +15,7 @@ from twisted.internet.endpoints import _WrapperServerEndpoint
 from ._exceptions import InvalidProxyHeader
 from ._v1parser import V1Parser
 from ._v2parser import V2Parser
+from . import _info
 
 
 class HAProxyProtocolWrapper(policies.ProtocolWrapper):
@@ -25,43 +27,48 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper):
     the data provided by the PROXY header.
     """
 
-    def __init__(self, factory, wrappedProtocol):
-        policies.ProtocolWrapper.__init__(self, factory, wrappedProtocol)
-        self._proxyInfo = None
-        self._parser = None
+    def __init__(
+        self, factory: interfaces.Factory, wrappedProtocol: interfaces.IProtocol
+    ):
+        super().__init__(factory, wrappedProtocol)
+        self._proxyInfo: Optional[_info.ProxyInfo]
+        self._parser: Union[V2Parser, V1Parser, None] = None
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         if self._proxyInfo is not None:
             return self.wrappedProtocol.dataReceived(data)
 
-        if self._parser is None:
+        parser = self._parser
+        if parser is None:
             if (
                 len(data) >= 16
                 and data[:12] == V2Parser.PREFIX
                 and ord(data[12:13]) & 0b11110000 == 0x20
             ):
-                self._parser = V2Parser()
+                self._parser = parser = V2Parser()
             elif len(data) >= 8 and data[:5] == V1Parser.PROXYSTR:
-                self._parser = V1Parser()
+                self._parser = parser = V1Parser()
             else:
                 self.loseConnection()
                 return None
 
         try:
-            self._proxyInfo, remaining = self._parser.feed(data)
+            self._proxyInfo, remaining = parser.feed(data)
             if remaining:
                 self.wrappedProtocol.dataReceived(remaining)
         except InvalidProxyHeader:
             self.loseConnection()
 
-    def getPeer(self):
+    def getPeer(self) -> interfaces.IAddress:
         if self._proxyInfo and self._proxyInfo.source:
             return self._proxyInfo.source
+        assert self.transport
         return self.transport.getPeer()
 
-    def getHost(self):
+    def getHost(self) -> interfaces.IAddress:
         if self._proxyInfo and self._proxyInfo.destination:
             return self._proxyInfo.destination
+        assert self.transport
         return self.transport.getHost()
 
 
@@ -72,7 +79,7 @@ class HAProxyWrappingFactory(policies.WrappingFactory):
 
     protocol = HAProxyProtocolWrapper
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """
         Annotate the wrapped factory's log prefix with some text indicating
         the PROXY protocol is in use.
@@ -86,7 +93,9 @@ class HAProxyWrappingFactory(policies.WrappingFactory):
         return f"{logPrefix} (PROXY)"
 
 
-def proxyEndpoint(wrappedEndpoint):
+def proxyEndpoint(
+    wrappedEndpoint: interfaces.IStreamServerEndpoint,
+) -> _WrapperServerEndpoint:
     """
     Wrap an endpoint with PROXY protocol support, so that the transport's
     C{getHost} and C{getPeer} methods reflect the attributes of the proxied

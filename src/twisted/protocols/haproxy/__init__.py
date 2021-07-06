@@ -5,9 +5,6 @@
 """
 HAProxy PROXY protocol implementations.
 """
+__all__ = ["proxyEndpoint"]
 
 from ._wrapper import proxyEndpoint
-
-__all__ = [
-    "proxyEndpoint",
-]
