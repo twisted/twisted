@@ -1,0 +1,1 @@
+haproxy transport wrapper returns a transport.getPeer().host of type bytes, when the type annotation is str
