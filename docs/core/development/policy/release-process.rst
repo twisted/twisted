@@ -74,14 +74,17 @@ Prepare for a release
 #. Any regression should be fixed and merged trunk before making the release branch
 
 #. Choose a version number.
+   $RELEASE will be something like 21.7.0 for a major release.
+   $RELEASE will be something like 21.7.1 for a bugfix release.
 
 #. File a ticket in Trac called "Release $RELEASE" and assign it to yourself.
 
-#. Make a branch for the release and include the ticket number in the name (4290 is Trac ticket ID):
+#. Make a branch for the release.
+   Use `$TRAC_ID-release-$RELEASE` as the branch name (4290 is Trac ticket ID, 21.7.0 is the release number):
 
    - ``git fetch origin``
    - ``git checkout origin/trunk``
-   - ``git checkout -b release-$RELEASE-4290``
+   - ``git checkout -b 4290-release-21.7.0``
 
 
 How to do a release candidate
@@ -100,12 +103,14 @@ Prepare the branch
 #. Push the changes up to GitHub and create a new release PR.
 #. The GitHub PR is dedicated to the final release and the same PR is used to release the candidate and final version.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
+#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo.
 #. Read the Docs hooks will publish a new version of the docs.
+#. The review for the PR will be requested after the files are on PyPI so that a full review can be done.
+
 
 Announce
 ~~~~~~~~
