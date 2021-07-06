@@ -68,7 +68,7 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto.dataReceived(b"2.2.2.2 8080\r\n")
         self.assertFalse(transport.connected)
 
-    def test_preDataRecieved_getPeerHost(self) -> None:
+    def test_preDataReceived_getPeerHost(self) -> None:
         factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address("TCP", "127.0.0.1", 8080),
