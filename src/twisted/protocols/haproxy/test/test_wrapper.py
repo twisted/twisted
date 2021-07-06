@@ -69,6 +69,10 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         self.assertFalse(transport.connected)
 
     def test_preDataReceived_getPeerHost(self) -> None:
+        """
+        Before any data is received the HAProxy protocol will return the same peer
+        and host as the IP connection.
+        """
         factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
         proto = factory.buildProtocol(
             address.IPv4Address("TCP", "127.0.0.1", 8080),
