@@ -535,7 +535,7 @@ class Options(dict):
         if not (getattr(self, "longdesc", None) is None):
             longdesc = cast(str, self.longdesc)  # type: ignore[attr-defined]
         else:
-            import __main__  # type: ignore[import]
+            import __main__
 
             if getattr(__main__, "__doc__", None):
                 longdesc = __main__.__doc__
