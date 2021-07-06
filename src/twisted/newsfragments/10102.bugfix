@@ -1,2 +1,0 @@
-The priority for SSH ECDSA key exchange algorithm was updated so that is the
-most preferred ecdh-sha2-nistp521 and ecdh-sha2-nistp256 is the less preferred.

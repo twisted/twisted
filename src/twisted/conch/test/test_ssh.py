@@ -916,7 +916,7 @@ class SSHFactoryTests(unittest.TestCase):
 
     def test_buildProtocolKexECDSA(self):
         """
-        ECDSA key exchanges are listed with 521 having a higher priority than 256.
+        ECDSA key exchanges are listed with 256 having a higher priority among ECDSA.
         """
         f2 = self.makeSSHFactory()
 
@@ -925,7 +925,7 @@ class SSHFactoryTests(unittest.TestCase):
         # The list might contain other algorightm.
         # For this test just check the order for ECDSA KEX.
         self.assertIn(
-            b"ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256",
+            b"ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521",
             b",".join(p2.supportedKeyExchanges),
         )
 
