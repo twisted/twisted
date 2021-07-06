@@ -509,10 +509,10 @@ def bytesEnviron():
     This function is POSIX only; environment variables are always text strings
     on Windows.
     """
-    encodekey = os.environ.encodekey  # type: ignore[attr-defined]
-    encodevalue = os.environ.encodevalue  # type: ignore[attr-defined]
+    encodekey = os.environ.encodekey
+    encodevalue = os.environ.encodevalue
 
-    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}  # type: ignore[call-arg]
 
 
 def _constructMethod(cls: type, name: str, self: object) -> _MethodType:

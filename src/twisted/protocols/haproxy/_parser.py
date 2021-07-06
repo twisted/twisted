@@ -5,20 +5,22 @@
 """
 Parser for 'haproxy:' string endpoint.
 """
-
+from typing import Tuple, Mapping
 from zope.interface import implementer
 from twisted.plugin import IPlugin
 
+from twisted.internet import interfaces
 from twisted.internet.endpoints import (
     quoteStringArgument,
     serverFromString,
     IStreamServerEndpointStringParser,
+    _WrapperServerEndpoint,
 )
 
 from . import proxyEndpoint
 
 
-def unparseEndpoint(args, kwargs):
+def unparseEndpoint(args: Tuple[object, ...], kwargs: Mapping[str, object]) -> str:
     """
     Un-parse the already-parsed args and kwargs back into endpoint syntax.
 
@@ -27,7 +29,7 @@ def unparseEndpoint(args, kwargs):
 
     @param kwargs: C{:} and then C{=}-separated keyword arguments
 
-    @type kwargs: L{tuple} of native L{str}
+    @type kwargs: L{Mapping[str, str]}
 
     @return: a string equivalent to the original format which this was parsed
         as.
@@ -56,7 +58,9 @@ class HAProxyServerParser:
 
     prefix = "haproxy"
 
-    def parseStreamServer(self, reactor, *args, **kwargs):
+    def parseStreamServer(
+        self, reactor: interfaces.IReactorCore, *args: object, **kwargs: object
+    ) -> _WrapperServerEndpoint:
         """
         Parse a stream server endpoint from a reactor and string-only arguments
         and keyword arguments.
