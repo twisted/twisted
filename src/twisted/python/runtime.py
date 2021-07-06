@@ -40,7 +40,6 @@ class Platform:
 
     type: Optional[str] = knownPlatforms.get(os.name)
     seconds = staticmethod(seconds)
-
     _platform = sys.platform
 
     def __init__(
