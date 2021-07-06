@@ -4,7 +4,9 @@
 """
 Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 """
+from unittest import mock
 from typing import Optional
+
 from twisted.trial import unittest
 from twisted.internet import address
 from twisted.internet.protocol import Protocol, Factory
@@ -65,6 +67,19 @@ class HAProxyWrappingFactoryV1Tests(unittest.TestCase):
         proto.dataReceived(b"PROXY TCP4 1.1.1.1\r\n")
         proto.dataReceived(b"2.2.2.2 8080\r\n")
         self.assertFalse(transport.connected)
+
+    def test_preDataRecieved_getPeerHost(self) -> None:
+        factory = HAProxyWrappingFactory(Factory.forProtocol(StaticProtocol))
+        proto = factory.buildProtocol(
+            address.IPv4Address("TCP", "127.0.0.1", 8080),
+        )
+        transport = StringTransportWithDisconnection(
+            hostAddress=mock.sentinel.host_address,
+            peerAddress=mock.sentinel.peer_address,
+        )
+        proto.makeConnection(transport)
+        self.assertEqual(proto.getHost(), mock.sentinel.host_address)
+        self.assertEqual(proto.getPeer(), mock.sentinel.peer_address)
 
     def test_validIPv4HeaderResolves_getPeerHost(self) -> None:
         """
