@@ -67,7 +67,7 @@ if unixEnabled:
 
 if platform.isWindows():
     try:
-        import win32process
+        import win32process  # type: ignore[import]
 
         processEnabled = True
     except ImportError:
@@ -383,7 +383,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         usePTY=0,
         childFDs=None,
     ):
-        args, env = self._checkProcessArgs(args, env)
         if platformType == "posix":
             if usePTY:
                 if childFDs is not None:

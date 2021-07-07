@@ -11,7 +11,6 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-
 import re
 import os
 
@@ -37,7 +36,7 @@ class FakeWindowsError(OSError):
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "FakeWindowsError",
@@ -47,10 +46,10 @@ deprecatedModuleAttribute(
 try:
     WindowsError: OSError = WindowsError
 except NameError:
-    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
+    WindowsError = FakeWindowsError
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "WindowsError",
@@ -127,7 +126,7 @@ class _ErrorFormatter:
         except ImportError:
             WinError = None
         try:
-            from win32api import FormatMessage
+            from win32api import FormatMessage  # type: ignore[import]
         except ImportError:
             FormatMessage = None
         try:

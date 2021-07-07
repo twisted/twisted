@@ -55,7 +55,7 @@ from twisted.internet.defer import (
     maybeDeferred,
 )
 
-from automat import MethodicalMachine
+from automat import MethodicalMachine  # type: ignore[import]
 
 
 def _maybeGlobalReactor(maybeReactor):

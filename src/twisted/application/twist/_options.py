@@ -59,6 +59,10 @@ class TwistOptions(Options):
         self["reactorName"] = self.defaultReactorName
         self["logLevel"] = self.defaultLogLevel
         self["logFile"] = stdout
+        # An empty long description is explicitly set here as otherwise
+        # when executing from distributed trial twisted.python.usage will
+        # pull the description from `__main__` which is another entry point.
+        self.longdesc = ""
 
     def getSynopsis(self) -> str:
         return "{} plugin [plugin_options]".format(Options.getSynopsis(self))
@@ -98,7 +102,7 @@ class TwistOptions(Options):
 
             return cast(IReactorCore, reactor)
         else:
-            return cast(IReactorCore, installReactor(name))
+            return installReactor(name)
 
     def opt_log_level(self, levelName: str) -> None:
         """

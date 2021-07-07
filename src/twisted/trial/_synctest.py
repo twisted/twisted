@@ -1204,7 +1204,7 @@ class SynchronousTestCase(_Assertions):
             please-use-something-else message that is standard for Twisted
             deprecations according to the given version and replacement.
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         fqpn = moduleName + "." + name
         module = sys.modules[moduleName]

@@ -7,15 +7,27 @@ Tests for L{twisted.web.template}
 
 
 from io import StringIO
+from typing import List, Optional
 
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import succeed, gatherResults
+from twisted.internet.defer import Deferred, succeed
+from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
-from twisted.web.template import Element, TagLoader, renderer, tags, XMLFile, XMLString
-from twisted.web.iweb import ITemplateLoader
+from twisted.web.template import (
+    Element,
+    Flattenable,
+    Tag,
+    TagLoader,
+    renderer,
+    tags,
+    XMLFile,
+    XMLString,
+)
+from twisted.web.iweb import IRequest, ITemplateLoader
 
 from twisted.web.error import FlattenerError, MissingTemplateLoader, MissingRenderMethod
 
@@ -41,14 +53,14 @@ class TagFactoryTests(TestCase):
     Tests for L{_TagFactory} through the publicly-exposed L{tags} object.
     """
 
-    def test_lookupTag(self):
+    def test_lookupTag(self) -> None:
         """
         HTML tags can be retrieved through C{tags}.
         """
         tag = tags.a
         self.assertEqual(tag.tagName, "a")
 
-    def test_lookupHTML5Tag(self):
+    def test_lookupHTML5Tag(self) -> None:
         """
         Twisted supports the latest and greatest HTML tags from the HTML5
         specification.
@@ -56,7 +68,7 @@ class TagFactoryTests(TestCase):
         tag = tags.video
         self.assertEqual(tag.tagName, "video")
 
-    def test_lookupTransparentTag(self):
+    def test_lookupTransparentTag(self) -> None:
         """
         To support transparent inclusion in templates, there is a special tag,
         the transparent tag, which has no name of its own but is accessed
@@ -65,14 +77,14 @@ class TagFactoryTests(TestCase):
         tag = tags.transparent
         self.assertEqual(tag.tagName, "")
 
-    def test_lookupInvalidTag(self):
+    def test_lookupInvalidTag(self) -> None:
         """
         Invalid tags which are not part of HTML cause AttributeErrors when
         accessed through C{tags}.
         """
         self.assertRaises(AttributeError, getattr, tags, "invalid")
 
-    def test_lookupXMP(self):
+    def test_lookupXMP(self) -> None:
         """
         As a special case, the <xmp> tag is simply not available through
         C{tags} or any other part of the templating machinery.
@@ -85,7 +97,7 @@ class ElementTests(TestCase):
     Tests for the awesome new L{Element} class.
     """
 
-    def test_missingTemplateLoader(self):
+    def test_missingTemplateLoader(self) -> None:
         """
         L{Element.render} raises L{MissingTemplateLoader} if the C{loader}
         attribute is L{None}.
@@ -94,7 +106,7 @@ class ElementTests(TestCase):
         err = self.assertRaises(MissingTemplateLoader, element.render, None)
         self.assertIdentical(err.element, element)
 
-    def test_missingTemplateLoaderRepr(self):
+    def test_missingTemplateLoaderRepr(self) -> None:
         """
         A L{MissingTemplateLoader} instance can be repr()'d without error.
         """
@@ -107,7 +119,7 @@ class ElementTests(TestCase):
             "Pretty Repr Element", repr(MissingTemplateLoader(PrettyReprElement()))
         )
 
-    def test_missingRendererMethod(self):
+    def test_missingRendererMethod(self) -> None:
         """
         When called with the name which is not associated with a render method,
         L{Element.lookupRenderMethod} raises L{MissingRenderMethod}.
@@ -117,7 +129,7 @@ class ElementTests(TestCase):
         self.assertIdentical(err.element, element)
         self.assertEqual(err.renderName, "foo")
 
-    def test_missingRenderMethodRepr(self):
+    def test_missingRenderMethodRepr(self) -> None:
         """
         A L{MissingRenderMethod} instance can be repr()'d without error.
         """
@@ -130,7 +142,7 @@ class ElementTests(TestCase):
         self.assertIn("Pretty Repr Element", s)
         self.assertIn("expectedMethod", s)
 
-    def test_definedRenderer(self):
+    def test_definedRenderer(self) -> None:
         """
         When called with the name of a defined render method,
         L{Element.lookupRenderMethod} returns that render method.
@@ -138,29 +150,30 @@ class ElementTests(TestCase):
 
         class ElementWithRenderMethod(Element):
             @renderer
-            def foo(self, request, tag):
+            def foo(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
                 return "bar"
 
         foo = ElementWithRenderMethod().lookupRenderMethod("foo")
-        self.assertEqual(foo(None, None), "bar")
+        self.assertEqual(foo(None, tags.br), "bar")
 
-    def test_render(self):
+    def test_render(self) -> None:
         """
         L{Element.render} loads a document from the C{loader} attribute and
         returns it.
         """
 
+        @implementer(ITemplateLoader)
         class TemplateLoader:
-            def load(self):
-                return "result"
+            def load(self) -> List[Flattenable]:
+                return ["result"]
 
         class StubElement(Element):
             loader = TemplateLoader()
 
         element = StubElement()
-        self.assertEqual(element.render(None), "result")
+        self.assertEqual(element.render(None), ["result"])
 
-    def test_misuseRenderer(self):
+    def test_misuseRenderer(self) -> None:
         """
         If the L{renderer} decorator  is called without any arguments, it will
         raise a comprehensible exception.
@@ -168,7 +181,7 @@ class ElementTests(TestCase):
         te = self.assertRaises(TypeError, renderer)
         self.assertEqual(str(te), "expose() takes at least 1 argument (0 given)")
 
-    def test_renderGetDirectlyError(self):
+    def test_renderGetDirectlyError(self) -> None:
         """
         Called directly, without a default, L{renderer.get} raises
         L{UnexposedMethodError} when it cannot find a renderer.
@@ -181,49 +194,56 @@ class XMLFileReprTests(TestCase):
     Tests for L{twisted.web.template.XMLFile}'s C{__repr__}.
     """
 
-    def test_filePath(self):
+    def test_filePath(self) -> None:
         """
         An L{XMLFile} with a L{FilePath} returns a useful repr().
         """
         path = FilePath("/tmp/fake.xml")
         self.assertEqual(f"<XMLFile of {path!r}>", repr(XMLFile(path)))
 
-    def test_filename(self):
+    def test_filename(self) -> None:
         """
         An L{XMLFile} with a filename returns a useful repr().
         """
-        fname = "/tmp/fake.xml"
-        self.assertEqual(f"<XMLFile of {fname!r}>", repr(XMLFile(fname)))
+        fname = "/tmp/fake.xml"  # deprecated
+        self.assertEqual(f"<XMLFile of {fname!r}>", repr(XMLFile(fname)))  # type: ignore[arg-type]
 
     test_filename.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
-    def test_file(self):
+    def test_file(self) -> None:
         """
         An L{XMLFile} with a file object returns a useful repr().
         """
-        fobj = StringIO("not xml")
-        self.assertEqual(f"<XMLFile of {fobj!r}>", repr(XMLFile(fobj)))
+        fobj = StringIO("not xml")  # deprecated
+        self.assertEqual(f"<XMLFile of {fobj!r}>", repr(XMLFile(fobj)))  # type: ignore[arg-type]
 
     test_file.suppress = [_xmlFileSuppress]  # type: ignore[attr-defined]
 
 
 class XMLLoaderTestsMixin:
-    """
-    @ivar templateString: Simple template to use to exercise the loaders.
 
-    @ivar deprecatedUse: C{True} if this use of L{XMLFile} is deprecated and
-        should emit a C{DeprecationWarning}.
+    deprecatedUse: bool
+    """
+    C{True} if this use of L{XMLFile} is deprecated and should emit
+    a C{DeprecationWarning}.
     """
 
-    loaderFactory = None
     templateString = "<p>Hello, world.</p>"
+    """
+    Simple template to use to exercise the loaders.
+    """
 
-    def test_load(self):
+    def loaderFactory(self) -> ITemplateLoader:
+        raise NotImplementedError
+
+    def test_load(self) -> None:
         """
         Verify that the loader returns a tag with the correct children.
         """
+        assert isinstance(self, TestCase)
         loader = self.loaderFactory()
         (tag,) = loader.load()
+        assert isinstance(tag, Tag)
 
         warnings = self.flushWarnings(offendingFunctions=[self.loaderFactory])
         if self.deprecatedUse:
@@ -240,11 +260,12 @@ class XMLLoaderTestsMixin:
         self.assertEqual(tag.tagName, "p")
         self.assertEqual(tag.children, ["Hello, world."])
 
-    def test_loadTwice(self):
+    def test_loadTwice(self) -> None:
         """
         If {load()} can be called on a loader twice the result should be the
         same.
         """
+        assert isinstance(self, TestCase)
         loader = self.loaderFactory()
         tags1 = loader.load()
         tags2 = loader.load()
@@ -260,7 +281,7 @@ class XMLStringLoaderTests(TestCase, XMLLoaderTestsMixin):
 
     deprecatedUse = False
 
-    def loaderFactory(self):
+    def loaderFactory(self) -> ITemplateLoader:
         """
         @return: an L{XMLString} constructed with C{self.templateString}.
         """
@@ -274,7 +295,7 @@ class XMLFileWithFilePathTests(TestCase, XMLLoaderTestsMixin):
 
     deprecatedUse = False
 
-    def loaderFactory(self):
+    def loaderFactory(self) -> ITemplateLoader:
         """
         @return: an L{XMLString} constructed with a L{FilePath} pointing to a
             file that contains C{self.templateString}.
@@ -291,12 +312,12 @@ class XMLFileWithFileTests(TestCase, XMLLoaderTestsMixin):
 
     deprecatedUse = True
 
-    def loaderFactory(self):
+    def loaderFactory(self) -> ITemplateLoader:
         """
         @return: an L{XMLString} constructed with a file object that contains
             C{self.templateString}.
         """
-        return XMLFile(StringIO(self.templateString))
+        return XMLFile(StringIO(self.templateString))  # type: ignore[arg-type]
 
 
 class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
@@ -306,14 +327,14 @@ class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
 
     deprecatedUse = True
 
-    def loaderFactory(self):
+    def loaderFactory(self) -> ITemplateLoader:
         """
         @return: an L{XMLString} constructed with a filename that points to a
             file containing C{self.templateString}.
         """
         fp = FilePath(self.mktemp())
         fp.setContent(self.templateString.encode("utf8"))
-        return XMLFile(fp.path)
+        return XMLFile(fp.path)  # type: ignore[arg-type]
 
 
 class FlattenIntegrationTests(FlattenTestCase):
@@ -322,7 +343,7 @@ class FlattenIntegrationTests(FlattenTestCase):
     L{twisted.web._flatten.flatten}.
     """
 
-    def test_roundTrip(self):
+    def test_roundTrip(self) -> None:
         """
         Given a series of parsable XML strings, verify that
         L{twisted.web._flatten.flatten} will flatten the L{Element} back to the
@@ -336,28 +357,25 @@ class FlattenIntegrationTests(FlattenTestCase):
             b'<test1 xmlns="urn:test2"><test3></test3></test1>',
             b"<p>\xe2\x98\x83</p>",
         ]
-        deferreds = [
-            self.assertFlattensTo(Element(loader=XMLString(xml)), xml)
-            for xml in fragments
-        ]
-        return gatherResults(deferreds)
+        for xml in fragments:
+            self.assertFlattensImmediately(Element(loader=XMLString(xml)), xml)
 
-    def test_entityConversion(self):
+    def test_entityConversion(self) -> None:
         """
         When flattening an HTML entity, it should flatten out to the utf-8
         representation if possible.
         """
         element = Element(loader=XMLString("<p>&#9731;</p>"))
-        return self.assertFlattensTo(element, b"<p>\xe2\x98\x83</p>")
+        self.assertFlattensImmediately(element, b"<p>\xe2\x98\x83</p>")
 
-    def test_missingTemplateLoader(self):
+    def test_missingTemplateLoader(self) -> None:
         """
         Rendering an Element without a loader attribute raises the appropriate
         exception.
         """
-        return self.assertFlatteningRaises(Element(), MissingTemplateLoader)
+        self.assertFlatteningRaises(Element(), MissingTemplateLoader)
 
-    def test_missingRenderMethod(self):
+    def test_missingRenderMethod(self) -> None:
         """
         Flattening an L{Element} with a C{loader} which has a tag with a render
         directive fails with L{FlattenerError} if there is no available render
@@ -371,9 +389,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlatteningRaises(element, MissingRenderMethod)
+        self.assertFlatteningRaises(element, MissingRenderMethod)
 
-    def test_transparentRendering(self):
+    def test_transparentRendering(self) -> None:
         """
         A C{transparent} element should be eliminated from the DOM and rendered as
         only its children.
@@ -386,9 +404,9 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</t:transparent>"
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
-    def test_attrRendering(self):
+    def test_attrRendering(self) -> None:
         """
         An Element with an attr tag renders the vaule of its attr tag as an
         attribute of its containing tag.
@@ -401,11 +419,18 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</a>"
             )
         )
-        return self.assertFlattensTo(
+        self.assertFlattensImmediately(
             element, b'<a href="http://example.com">Hello, world.</a>'
         )
 
-    def test_errorToplevelAttr(self):
+    def test_synchronousDeferredRecursion(self) -> None:
+        """
+        When rendering a large number of already-fired Deferreds we should not
+        encounter any recursion errors or stack-depth issues.
+        """
+        self.assertFlattensImmediately([succeed("x") for i in range(250)], b"x" * 250)
+
+    def test_errorToplevelAttr(self) -> None:
         """
         A template with a toplevel C{attr} tag will not load; it will raise
         L{AssertionError} if you try.
@@ -420,7 +445,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             """,
         )
 
-    def test_errorUnnamedAttr(self):
+    def test_errorUnnamedAttr(self) -> None:
         """
         A template with an C{attr} tag with no C{name} attribute will not load;
         it will raise L{AssertionError} if you try.
@@ -433,7 +458,7 @@ class FlattenIntegrationTests(FlattenTestCase):
             >hello</t:attr></html>""",
         )
 
-    def test_lenientPrefixBehavior(self):
+    def test_lenientPrefixBehavior(self) -> None:
         """
         If the parser sees a prefix it doesn't recognize on an attribute, it
         will pass it on through to serialization.
@@ -446,7 +471,7 @@ class FlattenIntegrationTests(FlattenTestCase):
         element = Element(loader=XMLString(theInput))
         self.assertFlattensTo(element, theInput.encode("utf8"))
 
-    def test_deferredRendering(self):
+    def test_deferredRendering(self) -> None:
         """
         An Element with a render method which returns a Deferred will render
         correctly.
@@ -454,7 +479,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(self, request, tag):
+            def renderMethod(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 return succeed("Hello, world.")
 
         element = RenderfulElement(
@@ -467,9 +494,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
-    def test_loaderClassAttribute(self):
+    def test_loaderClassAttribute(self) -> None:
         """
         If there is a non-None loader attribute on the class of an Element
         instance but none on the instance itself, the class attribute is used.
@@ -478,9 +505,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         class SubElement(Element):
             loader = XMLString("<p>Hello, world.</p>")
 
-        return self.assertFlattensTo(SubElement(), b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(SubElement(), b"<p>Hello, world.</p>")
 
-    def test_directiveRendering(self):
+    def test_directiveRendering(self) -> None:
         """
         An Element with a valid render directive has that directive invoked and
         the result added to the output.
@@ -489,7 +516,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(self, request, tag):
+            def renderMethod(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 renders.append((self, request))
                 return tag("Hello, world.")
 
@@ -501,9 +530,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
-    def test_directiveRenderingOmittingTag(self):
+    def test_directiveRenderingOmittingTag(self) -> None:
         """
         An Element with a render method which omits the containing tag
         successfully removes that tag from the output.
@@ -511,7 +540,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(self, request, tag):
+            def renderMethod(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 return "Hello, world."
 
         element = RenderfulElement(
@@ -524,9 +555,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"Hello, world.")
+        self.assertFlattensImmediately(element, b"Hello, world.")
 
-    def test_elementContainingStaticElement(self):
+    def test_elementContainingStaticElement(self) -> None:
         """
         An Element which is returned by the render method of another Element is
         rendered properly.
@@ -534,7 +565,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(self, request, tag):
+            def renderMethod(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 return tag(Element(loader=XMLString("<em>Hello, world.</em>")))
 
         element = RenderfulElement(
@@ -545,9 +578,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p><em>Hello, world.</em></p>")
+        self.assertFlattensImmediately(element, b"<p><em>Hello, world.</em></p>")
 
-    def test_elementUsingSlots(self):
+    def test_elementUsingSlots(self) -> None:
         """
         An Element which is returned by the render method of another Element is
         rendered properly.
@@ -555,7 +588,9 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(self, request, tag):
+            def renderMethod(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 return tag.fillSlots(test2="world.")
 
         element = RenderfulElement(
@@ -567,9 +602,9 @@ class FlattenIntegrationTests(FlattenTestCase):
                 "</p>"
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
-    def test_elementContainingDynamicElement(self):
+    def test_elementContainingDynamicElement(self) -> None:
         """
         Directives in the document factory of an Element returned from a render
         method of another Element are satisfied from the correct object: the
@@ -578,7 +613,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class OuterElement(Element):
             @renderer
-            def outerMethod(self, request, tag):
+            def outerMethod(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
                 return tag(
                     InnerElement(
                         loader=XMLString(
@@ -593,7 +628,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class InnerElement(Element):
             @renderer
-            def innerMethod(self, request, tag):
+            def innerMethod(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
                 return "Hello, world."
 
         element = OuterElement(
@@ -604,9 +639,9 @@ class FlattenIntegrationTests(FlattenTestCase):
         """
             )
         )
-        return self.assertFlattensTo(element, b"<p>Hello, world.</p>")
+        self.assertFlattensImmediately(element, b"<p>Hello, world.</p>")
 
-    def test_sameLoaderTwice(self):
+    def test_sameLoaderTwice(self) -> None:
         """
         Rendering the output of a loader, or even the same element, should
         return different output each time.
@@ -624,12 +659,16 @@ class FlattenIntegrationTests(FlattenTestCase):
             loader = sharedLoader
 
             @renderer
-            def classCounter(self, request, tag):
+            def classCounter(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 DestructiveElement.count += 1
                 return tag(str(DestructiveElement.count))
 
             @renderer
-            def instanceCounter(self, request, tag):
+            def instanceCounter(
+                self, request: Optional[IRequest], tag: Tag
+            ) -> Flattenable:
                 self.instanceCount += 1
                 return tag(str(self.instanceCount))
 
@@ -645,22 +684,22 @@ class TagLoaderTests(FlattenTestCase):
     Tests for L{TagLoader}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.loader = TagLoader(tags.i("test"))
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         An instance of L{TagLoader} provides L{ITemplateLoader}.
         """
         self.assertTrue(verifyObject(ITemplateLoader, self.loader))
 
-    def test_loadsList(self):
+    def test_loadsList(self) -> None:
         """
         L{TagLoader.load} returns a list, per L{ITemplateLoader}.
         """
         self.assertIsInstance(self.loader.load(), list)
 
-    def test_flatten(self):
+    def test_flatten(self) -> None:
         """
         L{TagLoader} can be used in an L{Element}, and flattens as the tag used
         to construct the L{TagLoader} would flatten.
@@ -693,7 +732,7 @@ class TestFailureElement(Element):
         "</p>"
     )
 
-    def __init__(self, failure, loader=None):
+    def __init__(self, failure: Failure, loader: object = None):
         self.failure = failure
 
 
@@ -702,10 +741,10 @@ class FailingElement(Element):
     An element that raises an exception when rendered.
     """
 
-    def render(self, request):
+    def render(self, request: Optional[IRequest]) -> "Flattenable":
         a = 42
         b = 0
-        return a // b
+        return f"{a // b}"
 
 
 class FakeSite:
@@ -716,19 +755,32 @@ class FakeSite:
     displayTracebacks = False
 
 
+@implementer(IRequest)
+class DummyRenderRequest(DummyRequest):  # type: ignore[misc]
+    """
+    A dummy request object that has a C{site} attribute.
+
+    This does not implement the full IRequest interface, but enough of it
+    for this test suite.
+    """
+
+    def __init__(self) -> None:
+        super().__init__([""])
+        self.site = FakeSite()
+
+
 class RenderElementTests(TestCase):
     """
     Test L{renderElement}
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
-        Set up a common L{DummyRequest} and L{FakeSite}.
+        Set up a common L{DummyRenderRequest}.
         """
-        self.request = DummyRequest([""])
-        self.request.site = FakeSite()
+        self.request = DummyRenderRequest()
 
-    def test_simpleRender(self):
+    def test_simpleRender(self) -> Deferred[None]:
         """
         L{renderElement} returns NOT_DONE_YET and eventually
         writes the rendered L{Element} to the request before finishing the
@@ -738,7 +790,7 @@ class RenderElementTests(TestCase):
 
         d = self.request.notifyFinish()
 
-        def check(_):
+        def check(_: object) -> None:
             self.assertEqual(
                 b"".join(self.request.written),
                 b"<!DOCTYPE html>\n" b"<p>Hello, world.</p>",
@@ -751,7 +803,7 @@ class RenderElementTests(TestCase):
 
         return d
 
-    def test_simpleFailure(self):
+    def test_simpleFailure(self) -> Deferred[None]:
         """
         L{renderElement} handles failures by writing a minimal
         error message to the request and finishing it.
@@ -760,7 +812,7 @@ class RenderElementTests(TestCase):
 
         d = self.request.notifyFinish()
 
-        def check(_):
+        def check(_: object) -> None:
             flushed = self.flushLoggedErrors(FlattenerError)
             self.assertEqual(len(flushed), 1)
             self.assertEqual(
@@ -781,7 +833,7 @@ class RenderElementTests(TestCase):
 
         return d
 
-    def test_simpleFailureWithTraceback(self):
+    def test_simpleFailureWithTraceback(self) -> Deferred[None]:
         """
         L{renderElement} will render a traceback when rendering of
         the element fails and our site is configured to display tracebacks.
@@ -793,7 +845,7 @@ class RenderElementTests(TestCase):
 
         d = self.request.notifyFinish()
 
-        def check(_):
+        def check(_: object) -> None:
             self.assertEquals(1, len(logObserver))
             f = logObserver[0]["log_failure"]
             self.assertIsInstance(f.value, FlattenerError)
@@ -810,7 +862,7 @@ class RenderElementTests(TestCase):
 
         return d
 
-    def test_nonDefaultDoctype(self):
+    def test_nonDefaultDoctype(self) -> Deferred[None]:
         """
         L{renderElement} will write the doctype string specified by the
         doctype keyword argument.
@@ -819,7 +871,7 @@ class RenderElementTests(TestCase):
 
         d = self.request.notifyFinish()
 
-        def check(_):
+        def check(_: object) -> None:
             self.assertEqual(
                 b"".join(self.request.written),
                 (
@@ -842,7 +894,7 @@ class RenderElementTests(TestCase):
 
         return d
 
-    def test_noneDoctype(self):
+    def test_noneDoctype(self) -> Deferred[None]:
         """
         L{renderElement} will not write out a doctype if the doctype keyword
         argument is L{None}.
@@ -851,7 +903,7 @@ class RenderElementTests(TestCase):
 
         d = self.request.notifyFinish()
 
-        def check(_):
+        def check(_: object) -> None:
             self.assertEqual(b"".join(self.request.written), b"<p>Hello, world.</p>")
 
         d.addCallback(check)

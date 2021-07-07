@@ -6,7 +6,7 @@
 Tools for saving and loading log events in a structured format.
 """
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 from json import dumps, loads
 from uuid import UUID
 from typing import Any, AnyStr, Dict, IO, Iterable, Optional, Union, cast
