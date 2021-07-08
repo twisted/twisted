@@ -13,7 +13,7 @@ Outcomes
 By the end of a Twisted release we'll have:
 
 - Wheel and sdist package published on `PyPI Twisted project <https://pypi.org/project/Twisted/>`_.
-- Updated documentation (API & howtos) on `Twisted Read The Docs <https://twisted.readthedocs.io/en/latest/>`_
+- Updated documentation (API & howtos) on `Twisted Read The Docs <https://https://docs.twistedmatrix.com/>`_
 - Announcement email sent to Twisted main list
 - A `GitHub Release <https://github.com/twisted/twisted/releases>`_ with the associated tag in our Git repository
 
@@ -69,19 +69,22 @@ To release Twisted, we
 Prepare for a release
 ---------------------
 
-#. Check for any ​regressions using `Trac regression report <https://twistedmatrix.com/trac/report/26>`_
+#. Check for any regressions using `Trac regression report <https://twistedmatrix.com/trac/report/26>`_
 
-#. Any regression should be fixed and merged trunk before making the release branch
+#. Any regression should be fixed and merged into trunk before making the release branch
 
 #. Choose a version number.
+   $RELEASE will be something like 21.7.0 for a major release.
+   $RELEASE will be something like 21.7.1 for a bugfix release.
 
 #. File a ticket in Trac called "Release $RELEASE" and assign it to yourself.
 
-#. Make a branch for the release and include the ticket number in the name (4290 is Trac ticket ID):
+#. Make a branch for the release.
+   It's very important to use `release-$RELEASE-$TRAC_ID` as the branch name (4290 is Trac ticket ID, 21.7.0 is the release number) as this is used as a hint for CI:
 
    - ``git fetch origin``
    - ``git checkout origin/trunk``
-   - ``git checkout -b release-$RELEASE-4290``
+   - ``git checkout -b release-21.7.0-4290``
 
 
 How to do a release candidate
@@ -91,6 +94,10 @@ How to do a release candidate
 Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
+#. Check that all the CI tests on the main branch (trunk) pass.
+   Failing tests on the main branch should be considered release blocker.
+   They should be fixed in separate ticket/PR.
+   The release can continue once the main branch is green again.
 #. In your Git repo, fetch and check out the new release branch.
 #. Run ``python -m incremental.update Twisted --rc``
 #. Commit the changes made by Incremental.
@@ -99,13 +106,21 @@ Prepare the branch
 #. Bump copyright dates in ``LICENSE``, ``src/twisted/copyright.py``, and ``README.rst`` if required
 #. Push the changes up to GitHub and create a new release PR.
 #. The GitHub PR is dedicated to the final release and the same PR is used to release the candidate and final version.
+#. Wait for all the PR checks to pass.
+#. If a check fails investigate it.
+   If is just a flaky tests, retry the run.
+   Any serious error should be considered a blocker and should be
+   fixed in a separate ticket/PR.
+   Avoid making non-release changes (even minor one) as part of the release branch.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
+#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo.
 #. Read the Docs hooks will publish a new version of the docs.
+#. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
+
 
 Announce
 ~~~~~~~~
