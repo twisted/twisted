@@ -1243,7 +1243,7 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 405)
         self.assertTrue(req.responseHeaders.hasHeader(b"allow"))
         raw_header = req.responseHeaders.getRawHeaders(b"allow")[0]
-        allowed = sorted([h.strip() for h in raw_header.split(b",")])
+        allowed = sorted(h.strip() for h in raw_header.split(b","))
         self.assertEqual([b"GET", b"HEAD", b"HEH"], allowed)
 
     def testImplicitHead(self):
