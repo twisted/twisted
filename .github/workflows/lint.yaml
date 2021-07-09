@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [ trunk ]
 
-
-concurrency:
-  group: lint-${{ github.ref }}
-  cancel-in-progress: true
-
-
 jobs:
   lint:
     runs-on: ubuntu-20.04

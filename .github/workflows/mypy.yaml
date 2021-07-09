@@ -14,12 +14,6 @@ on:
   pull_request:
     branches: [ trunk ]
 
-
-concurrency:
-  group: mypy-${{ github.ref }}
-  cancel-in-progress: true
-
-
 jobs:
   test_run:
     runs-on: ubuntu-latest

@@ -11,11 +11,6 @@ on:
     branches: [ trunk ]
 
 
-concurrency:
-  group: test-${{ github.ref }}
-  cancel-in-progress: true
-
-
 defaults:
   run:
     shell: bash
