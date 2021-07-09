@@ -21,7 +21,6 @@ from twisted.internet.posixbase import (
     _ContinuousPolling,
 )
 from twisted.python.log import callWithLogger
-from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -268,8 +267,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def crash(self):
         super().crash()
         self._asyncioEventloop.stop()
-
-    seconds = staticmethod(runtimeSeconds)
 
     def _onTimer(self):
         self._scheduledAt = None
