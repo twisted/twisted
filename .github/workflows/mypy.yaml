@@ -17,6 +17,8 @@ on:
 jobs:
   test_run:
     runs-on: ubuntu-latest
+    env:
+      TOXENV: "mypy"
 
     steps:
     - uses: actions/checkout@v2
@@ -29,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox
-        tox -e mypy --notest
+        tox --notest
 
     # You can test your matrix by printing the current Python version
     - name: Display Python information
@@ -44,4 +46,4 @@ jobs:
 
     - name: Test with mypy
       run: |
-        tox -q -e mypy
+        tox --skip-pkg-install

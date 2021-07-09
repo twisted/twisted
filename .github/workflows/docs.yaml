@@ -43,8 +43,8 @@ jobs:
 
     - name: Check the narrative documentation
       run: |
-        tox -q -e narrativedocs
+        tox --skip-pkg-install -e narrativedocs
 
     - name: Check the API documentation
       run: |
-        tox -q -e apidocs
+        tox --skip-pkg-install -e apidocs

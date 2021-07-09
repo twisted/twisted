@@ -104,10 +104,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox coverage coveralls
+        tox --notest
 
     - name: Test
       run: |
-        tox ${{ matrix.trial-target }}
+        tox --skip-pkg-install ${{ matrix.trial-target }}
 
     - name: Prepare coverage
       if: always() && contains(matrix['tox-env'], 'withcov')
@@ -140,6 +141,8 @@ jobs:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
     name: Check release and publish on twisted-* tag
     runs-on: ubuntu-20.04
+    env:
+      TOXENV: release-prepare
     steps:
     - uses: actions/checkout@v2
 
@@ -148,13 +151,16 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Test
+    - uses: twisted/python-info-action@v1
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox pep517
-        rm -rf dist/*
-        tox -e release-prepare
+        tox --notest
 
-    - uses: twisted/python-info-action@v1
+    - name: Test
+      run: |
+        rm -rf dist/*
+        tox --skip-pkg-install
 
     - name: Display structure of files to be pushed
       run: ls -R dist/
