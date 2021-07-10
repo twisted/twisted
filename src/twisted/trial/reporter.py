@@ -14,6 +14,7 @@ import os
 import time
 import warnings
 import unittest as pyunit
+import importlib
 
 from collections import OrderedDict
 
@@ -29,6 +30,13 @@ try:
     from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
+
+try:
+    importlib.import_module("contextvars")
+except ModuleNotFoundError:
+    _cvarFrame = ("run", "defer")  # defer._NoContext.run
+else:
+    _cvarFrame = ("run", "__init__")  # contextvars.Context.run
 
 
 def _makeTodo(value):
@@ -527,7 +535,7 @@ class Reporter(TestResult):
 
         asyncShimCvarCase = [
             ("_inlineCallbacks", "defer"),
-            ("run", "defer"),  # defer._NoContext.run
+            _cvarFrame,
             ("_runCorofnWithWarningsSuppressed", "_asynctest"),
         ]
 
@@ -555,7 +563,7 @@ class Reporter(TestResult):
 
         asyncFailureShimCvarCase = [
             ("_inlineCallbacks", "defer"),
-            ("run", "defer"),
+            _cvarFrame,
             ("throwExceptionIntoGenerator", "failure"),
             ("_runCorofnWithWarningsSuppressed", "_asynctest"),
             ("_runCallbacks", "defer"),
