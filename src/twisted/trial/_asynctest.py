@@ -102,33 +102,6 @@ class TestCase(SynchronousTestCase):
     def _run(self, methodName, result):
         from twisted.internet import reactor
 
-        timeout = self.getTimeout()
-
-        def onTimeout(d):
-            e = defer.TimeoutError(
-                f"{self!r} ({methodName}) still running at {timeout} secs"
-            )
-            f = failure.Failure(e)
-            # try to errback the deferred that the test returns (for no gorram
-            # reason) (see issue1005 and test_errorPropagation in
-            # test_deferred)
-            try:
-                d.errback(f)
-            except defer.AlreadyCalledError:
-                # if the deferred has been called already but the *back chain
-                # is still unfinished, crash the reactor and report timeout
-                # error ourself.
-                reactor.crash()
-                self._timedOut = True  # see self._wait
-                todo = self.getTodo()
-                if todo is not None and todo.expected(f):
-                    result.addExpectedFailure(self, f, todo)
-                else:
-                    result.addError(self, f)
-
-        onTimeout = utils.suppressWarnings(
-            onTimeout, util.suppress(category=DeprecationWarning)
-        )
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
@@ -138,10 +111,21 @@ class TestCase(SynchronousTestCase):
             )
             return defer.fail(exc)
 
-        d = defer.Deferred.fromCoroutine(self._runCorofnWithWarningsSuppressed(method))
-        call = reactor.callLater(timeout, onTimeout, d)
-        d.addBoth(lambda x: call.active() and call.cancel() or x)
-        return d
+        def _cancelledToTimedOutError(value, timeout):
+            if isinstance(value, failure.Failure):
+                value.trap(defer.CancelledError)
+                raise defer.TimeoutError(
+                    f"{self!r} ({methodName}) still running at {timeout} secs"
+                )
+            return value
+
+        return defer.Deferred.fromCoroutine(
+            self._runCorofnWithWarningsSuppressed(method)
+        ).addTimeout(
+            timeout=self.getTimeout(),
+            clock=reactor,
+            onTimeoutCancel=_cancelledToTimedOutError,
+        )
 
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)

@@ -220,7 +220,8 @@ class TimeoutTests(TestTester):
         result = self.runTest("test_errorPropagation")
         self.assertFalse(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
-        self._wasTimeout(detests.TimeoutTests.timedOut)
+        error = detests.TimeoutTests.timedOut
+        self.assertEqual(error.check(defer.CancelledError), defer.CancelledError)
 
     def test_classTimeout(self):
         loader = pyunit.TestLoader()
