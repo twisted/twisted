@@ -35,7 +35,7 @@ try:
 except ModuleNotFoundError:
     _cvarFrame = ("run", "defer")  # defer._NoContext.run
 else:
-    _cvarFrame = ("run", Context.run.__module__)
+    _cvarFrame = ("run", getattr(Context.run, "__module__", None))
 
 
 def _makeTodo(value):
