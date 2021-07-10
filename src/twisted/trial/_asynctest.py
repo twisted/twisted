@@ -32,7 +32,7 @@ _wait_is_running: List[None] = []
 async def _maybeCoroutine(*args, **kw):
     try:  # simulate `async def _maybeCoroutine(func, /, *args, **kwargs):`
         func, *args = args
-    except ValueError:
+    except ValueError:  # pragma: no cover
         raise TypeError(
             "_maybeCoroutine() missing 1 required positional argument: 'func'"
         ) from None
