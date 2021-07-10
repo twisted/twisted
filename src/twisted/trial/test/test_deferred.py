@@ -223,6 +223,27 @@ class TimeoutTests(TestTester):
         error = detests.TimeoutTests.timedOut
         self.assertEqual(error.check(defer.CancelledError), defer.CancelledError)
 
+    def test_cancelSuppression(self):
+        result = self.runTest("test_cancelSuppression")
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        e = result.errors[0][1]
+        self._wasTimeout(e)
+        self.assertEqual(
+            e.getErrorMessage(),
+            "<twisted.trial.test.detests.TimeoutTests "
+            "testMethod=test_cancelSuppression> "
+            "(test_cancelSuppression) ignored timeout at 0.1 secs",
+        )
+
+    def test_cancelReplacement(self):
+        result = self.runTest("test_cancelReplacement")
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        e = result.errors[0][1]
+        e.check(detests.TimeoutTests.MyError)
+        self.assertEqual(e.getErrorMessage(), "replaced error")
+
     def test_classTimeout(self):
         loader = pyunit.TestLoader()
         suite = loader.loadTestsFromTestCase(detests.TestClassTimeoutAttribute)

@@ -117,7 +117,9 @@ class TestCase(SynchronousTestCase):
                 raise defer.TimeoutError(
                     f"{self!r} ({methodName}) still running at {timeout} secs"
                 )
-            return value
+            raise defer.TimeoutError(
+                f"{self!r} ({methodName}) ignored timeout at {timeout} secs"
+            )
 
         return defer.Deferred.fromCoroutine(
             self._runCorofnWithWarningsSuppressed(method)

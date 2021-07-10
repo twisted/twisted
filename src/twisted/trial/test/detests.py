@@ -7,7 +7,7 @@ Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 
 
 from twisted.trial import unittest
-from twisted.internet import defer, threads, reactor
+from twisted.internet import defer, threads, reactor, task
 from twisted.trial.util import suppress as SUPPRESS
 from twisted.python.util import runWithWarningsSuppressed
 
@@ -214,6 +214,32 @@ class TimeoutTests(unittest.TestCase):
         return d
 
     test_errorPropagation.timeout = 0.1  # type: ignore[attr-defined]
+
+    async def test_cancelSuppression(self):
+        async def sleep(delay):
+            await task.deferLater(clock=reactor, delay=delay)
+
+        try:
+            await sleep(0.2)
+        except defer.CancelledError:
+            await sleep(0.1)
+
+    test_cancelSuppression.timeout = 0.1  # type: ignore[attr-defined]
+
+    class MyError(Exception):
+        pass
+
+    async def test_cancelReplacement(self):
+        async def sleep(delay):
+            await task.deferLater(clock=reactor, delay=delay)
+
+        try:
+            await sleep(0.2)
+        except defer.CancelledError:
+            await sleep(0.1)
+            raise self.MyError("replaced error")
+
+    test_cancelReplacement.timeout = 0.1  # type: ignore[attr-defined]
 
     def test_calledButNeverCallback(self):
         d = defer.Deferred()
