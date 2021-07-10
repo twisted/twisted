@@ -133,6 +133,15 @@ class DeferredTests(TestTester):
         self.assertEqual(result.testsRun, 1)
         self.assertTrue(detests.DeferredTests.touched)
 
+    def test_passCoroutineFunction(self):
+        """
+        The body of an async def test gets run.
+        """
+        result = self.runTest("test_passCoroutineFunction")
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertTrue(detests.DeferredTests.touched)
+
     def test_fail(self):
         result = self.runTest("test_fail")
         self.assertFalse(result.wasSuccessful())
