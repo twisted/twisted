@@ -14,7 +14,6 @@ import os
 import time
 import warnings
 import unittest as pyunit
-import importlib
 
 from collections import OrderedDict
 
@@ -32,11 +31,11 @@ except ImportError:
     TestProtocolClient = None
 
 try:
-    importlib.import_module("contextvars")
+    from contextvars import Context
 except ModuleNotFoundError:
     _cvarFrame = ("run", "defer")  # defer._NoContext.run
 else:
-    _cvarFrame = ("run", "__init__")  # contextvars.Context.run
+    _cvarFrame = ("run", Context.run.__module__)
 
 
 def _makeTodo(value):
