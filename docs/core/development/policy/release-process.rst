@@ -118,7 +118,9 @@ Prepare the branch
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo.
-#. Read the Docs hooks will publish a new version of the docs.
+*. You can check the status of the automatic upload via `GitHub Action <https://github.com/twisted/twisted/actions/workflows/test.yaml?query=event%3Apush>`_
+#. Read the Docs hooks not have version for the release candidate.
+   Use the Read the Docs published for the pull request.
 #. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
 
 
@@ -129,36 +131,48 @@ Announce
 
 #. Announce the release candidate on
 
-   - the twisted-python mailing list by sending the content of latest release NEWS
-   - on IRC in the ``#twisted-dev`` topic by sending the version number
+   - the twisted-python mailing list by sending the an email with the subject: Twisted $RELEASE Pre-Release Announcement
+   - on IRC in the ``#twisted-dev`` topic by sending the version number or pip install command
 
 The release candidate announcement might mention the important changes since the last release, and ask readers to test this release candidate.
 
-Here's what the $RELEASErc1 release announcement might look like::
+Here's what the $RELEASE release candidate announcement might look like::
 
-    Live from PyCon Atlanta, I'm pleased to herald the approaching
-    footsteps of the $API release.
+   On behalf of the Twisted contributors I announce the release candidate of Twisted $RELEASE
 
-    Wheels for Twisted $RELEASE release candidate are now available on PyPI.
+   Short summary of the release.
+   For example:
+   Python 3.5 is no longer a supported platform.
+   The minimum supported platform is Python 3.6.7.
 
-    Highlights include:
 
-     * Improved documentation, including "Twisted Web in 60 seconds"
+   The notable changes are:
 
-     * Faster Perspective Broker applications
+   * Mention the main new features.
+   * As well as important bug fixes
+   * Or deprecation/removals
 
-     * A new Windows installer that ships without zope.interface
+   The release and NEWS file is available for review at
 
-     * Twisted no longer supports Python 2.3
+      https://github.com/twisted/twisted/pull/PRID/files
 
-     * Over one hundred closed tickets
+   Release candidate documentation is available at
 
-    For more information, see the NEWS file.
+      https://twisted--PRID.org.readthedocs.build/en/PRID/
 
-    Please download the tarballs and test them as much as possible.
+   Wheels for the release candidate are available on PyPI
 
-    Thanks,
-    jml
+      https://pypi.org/project/Twisted/$RELEASErc1
+
+      python -m pip install Twisted==$RELEASErc1
+
+   Please test it and report any issues.
+   If nothing comes up in one week,
+   $RELEASE will be released based on the latest release candidate.
+
+   Many thanks to everyone who had a part in Twisted
+   the supporters of the Twisted Software Foundation,
+   the developers, and all the people testing and building great things with Twisted!
 
 A week is a generally good length of time to wait before doing the final release.
 
@@ -174,7 +188,7 @@ Prepare the branch
 #. Run ``python -m incremental.update Twisted --newversion $RELEASE``
 #. Manually update the release date if necessary.
 #. Commit and push.
-#. Submit the ticket for review
+#. Submit the ticket for the final review
 #. Pause until the ticket is reviewed and accepted.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
 #. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
@@ -192,10 +206,9 @@ Announce
 
 #. Announce the release
 
-   - Send a text version of the announcement to: twisted-python@twistedmatrix.com, python-announce-list@python.org, twisted-web@twistedmatrix.com
-   - ​http://labs.twistedmatrix.com (Post a web version of the announcements, with links instead of literal URLs)
-   - Twitter, if you feel like it
-   - ``#twisted`` topic on IRC (you'll need ops)
+   - Send a text version of the announcement to: twisted-python@twistedmatrix.com
+   - Twitter, TikTok, Instagram, Snapchat if you feel like it :)
+   - ``#twisted`` message on IRC
 
 
 Post release
