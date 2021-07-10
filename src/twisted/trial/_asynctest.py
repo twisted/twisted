@@ -99,7 +99,6 @@ class TestCase(SynchronousTestCase):
             v = method()
             return (await v) if isinstance(v, Awaitable) else v
 
-
     def _run(self, methodName, result):
         from twisted.internet import reactor
 
@@ -139,7 +138,7 @@ class TestCase(SynchronousTestCase):
             )
             return defer.fail(exc)
 
-        d = defer.ensureDeferred(self._runCorofnWithWarningsSuppressed)
+        d = defer.Deferred.fromCoroutine(self._runCorofnWithWarningsSuppressed(method))
         call = reactor.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d
@@ -230,7 +229,7 @@ class TestCase(SynchronousTestCase):
                 result.addError(self, f)
                 self._passed = False
 
-        return defer.ensureDeferred(deferRunCleanups())
+        return defer.Deferred.fromCoroutine(deferRunCleanups())
 
     def _cleanUp(self, result):
         try:
