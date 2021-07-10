@@ -1433,7 +1433,7 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.fail("this should never be reached")
+                self.fail("this should never be reached")  # pragma: no cover
                 yield
 
         testCase = AsyncGeneratorTestCase("test_async_generator")
@@ -1507,7 +1507,7 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.fail("this should never be reached")
+                self.fail("this should never be reached")  # pragma: no cover
                 yield
 
         testCase = AsyncGeneratorSynchronousTestCase("test_async_generator")
