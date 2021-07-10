@@ -522,6 +522,19 @@ class Reporter(TestResult):
         if [frame0, frame1] == asyncCase:
             return frames[2:]
 
+        if len(frames) < 3:
+            return frames
+
+        asyncShimCvarCase = [
+            ("_inlineCallbacks", "defer"),
+            ("run", "defer"),  # defer._NoContext.run
+            ("_runCorofnWithWarningsSuppressed", "_asynctest"),
+        ]
+
+        frame2 = frameInfo(frames[2])
+        if [frame0, frame1, frame2] == asyncShimCvarCase:
+            return frames[3:]
+
         if len(frames) < 4:
             return frames
 
@@ -536,6 +549,21 @@ class Reporter(TestResult):
         frame3 = frameInfo(frames[3])
         if [frame0, frame1, frame2, frame3] == asyncFailureCase:
             return frames[4:]
+
+        if len(frames) < 5:
+            return frames
+
+        asyncFailureShimCvarCase = [
+            ("_inlineCallbacks", "defer"),
+            ("run", "defer"),
+            ("throwExceptionIntoGenerator", "failure"),
+            ("_runCorofnWithWarningsSuppressed", "_asynctest"),
+            ("_runCallbacks", "defer"),
+        ]
+
+        frame4 = frameInfo(frames[4])
+        if [frame0, frame1, frame2, frame3, frame4] == asyncFailureShimCvarCase:
+            return frames[5:]
 
         return frames
 
