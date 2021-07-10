@@ -94,6 +94,12 @@ class TestCase(SynchronousTestCase):
 
     failUnlessFailure = assertFailure
 
+    async def _runCorofnWithWarningsSuppressed(self, method):
+        with utils.suppressWarningsCM(self._getSuppress()):
+            v = method()
+            return (await v) if isinstance(v, Awaitable) else v
+
+
     def _run(self, methodName, result):
         from twisted.internet import reactor
 
@@ -133,10 +139,7 @@ class TestCase(SynchronousTestCase):
             )
             return defer.fail(exc)
 
-        def runMethod():
-            return defer.ensureDeferred(_maybeCoroutine(method))
-
-        d = utils.runWithWarningsSuppressed(self._getSuppress(), runMethod)
+        d = defer.ensureDeferred(self._runCorofnWithWarningsSuppressed)
         call = reactor.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d

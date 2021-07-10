@@ -9,6 +9,7 @@ Utility methods.
 
 import warnings
 import sys
+import contextlib
 from functools import wraps
 
 from twisted.internet import protocol, defer
@@ -189,6 +190,17 @@ def _resetWarningFilters(passthrough, addedFilters):
         except ValueError:
             pass
     return passthrough
+
+
+@contextlib.contextmanager
+def suppressWarningsCM(supressedWarnings):
+    for args, kwargs in supressedWarnings:
+        warnings.filterwarnings(*args, **kwargs)
+    addedFilters = warnings.filters[: len(supressedWarnings)]
+    try:
+        yield
+    finally:
+        _resetWarningFilters(None, addedFilters)
 
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
