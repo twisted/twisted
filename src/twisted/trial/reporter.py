@@ -9,6 +9,8 @@ Defines classes that handle the results of tests.
 """
 
 
+import importlib
+import pathlib
 import sys
 import os
 import time
@@ -30,12 +32,23 @@ try:
 except ImportError:
     TestProtocolClient = None
 
-try:
-    from contextvars import Context
-except ModuleNotFoundError:
-    _cvarFrame = ("run", "defer")  # defer._NoContext.run
-else:
-    _cvarFrame = ("run", getattr(Context.run, "__module__", None))
+
+def _getCvarFrame():
+    try:
+        from contextvars import Context
+    except ModuleNotFoundError:
+        return ("run", "defer")  # defer._NoContext.run
+
+    try:
+        _cvar_mod = Context.run.__module__
+    except AttributeError:
+        return None  # cpython 3.7 Context.run is a builtin
+
+    # pypy3.7 or https://pypi.org/project/contextvars
+    return ("run", pathlib.Path(importlib.import_module(_cvar_mod).__file__).stem)
+
+
+_cvarFrame = _getCvarFrame()
 
 
 def _makeTodo(value):
