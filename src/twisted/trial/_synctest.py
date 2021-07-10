@@ -1355,6 +1355,15 @@ class SynchronousTestCase(_Assertions):
             )
             result.addError(self, failure.Failure(exc))
             return True
+
+        if inspect.isasyncgenfunction(method):
+            exc = TypeError(
+                "{!r} is an async generator function and therefore will never run".format(
+                    method
+                )
+            )
+            result.addError(self, failure.Failure(exc))
+            return True
         try:
             with suppressWarningsCM(suppress):
                 method()

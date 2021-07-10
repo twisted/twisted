@@ -111,6 +111,14 @@ class TestCase(SynchronousTestCase):
             )
             return defer.fail(exc)
 
+        if inspect.isasyncgenfunction(method):
+            exc = TypeError(
+                "{!r} is an async generator function and therefore will never run".format(
+                    method
+                )
+            )
+            return defer.fail(exc)
+
         def _cancelledToTimedOutError(value, timeout):
             if isinstance(value, failure.Failure):
                 value.trap(defer.CancelledError)
