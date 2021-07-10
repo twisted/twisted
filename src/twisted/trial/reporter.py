@@ -497,6 +497,48 @@ class Reporter(TestResult):
             BrokenTestCaseWarning,
         )
 
+    def _trimRunnerFrames(self, frames):
+        def frameInfo(f):
+            return f[0], os.path.splitext(os.path.basename(f[1]))[0]
+
+        syncCase = [("_run", "_synctest")]
+
+        if len(frames) < 1:
+            return frames
+
+        frame0 = frameInfo(frames[0])
+        if [frame0] == syncCase:
+            return frames[1:]
+
+        if len(frames) < 2:
+            return frames
+
+        asyncCase = [
+            ("_inlineCallbacks", "defer"),
+            ("_runCorofnWithWarningsSuppressed", "_asynctest"),
+        ]
+
+        frame1 = frameInfo(frames[1])
+        if [frame0, frame1] == asyncCase:
+            return frames[2:]
+
+        if len(frames) < 4:
+            return frames
+
+        asyncFailureCase = [
+            ("_inlineCallbacks", "defer"),
+            ("throwExceptionIntoGenerator", "failure"),
+            ("_runCorofnWithWarningsSuppressed", "_asynctest"),
+            ("_runCallbacks", "defer"),
+        ]
+
+        frame2 = frameInfo(frames[2])
+        frame3 = frameInfo(frames[3])
+        if [frame0, frame1, frame2, frame3] == asyncFailureCase:
+            return frames[4:]
+
+        return frames
+
     def _trimFrames(self, frames):
         """
         Trim frames to remove internal paths.
@@ -504,28 +546,28 @@ class Reporter(TestResult):
         When a C{SynchronousTestCase} method fails synchronously, the stack
         looks like this:
          - [0]: C{SynchronousTestCase._run}
-         - [1]: C{util.runWithWarningsSuppressed}
-         - [2:-2]: code in the test method which failed
+         - [1:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a C{TestCase} method fails synchronously, the stack looks like
         this:
-         - [0]: C{defer.maybeDeferred}
-         - [1]: C{utils.runWithWarningsSuppressed}
-         - [2]: C{utils.runWithWarningsSuppressed}
-         - [3:-2]: code in the test method which failed
+         - [0]: C{defer._inlineCallbacks}
+         - [1]: C{TestCase._runCorofnWithWarningsSuppressed}
+         - [2:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a method fails inside a C{Deferred} (i.e., when the test method
         returns a C{Deferred}, and that C{Deferred}'s errback fires), the stack
         captured inside the resulting C{Failure} looks like this:
-         - [0]: C{defer.Deferred._runCallbacks}
-         - [1:-2]: code in the testmethod which failed
+         - [0]: C{defer._inlineCallbacks}
+         - [1]: C{defer.throwExceptionIntoGenerator}
+         - [2]: C{TestCase._runCorofnWithWarningsSuppressed}
+         - [3]: C{defer._runCallbacks}
+         - [4:-2]: code in the testmethod which failed
          - [-1]: C{_synctest.fail}
 
-        As a result, we want to trim either [maybeDeferred, runWWS, runWWS] or
-        [Deferred._runCallbacks] or [SynchronousTestCase._run, runWWS] from the
-        front, and trim the [unittest.fail] from the end.
+        As a result, we want to trim those frames from the front,
+        and trim the [unittest.fail] from the end.
 
         There is also another case, when the test method is badly defined and
         contains extra arguments.
@@ -537,35 +579,7 @@ class Reporter(TestResult):
 
         @return: The C{list} of frames to display.
         """
-        newFrames = list(frames)
-
-        if len(frames) < 2:
-            return newFrames
-
-        firstMethod = newFrames[0][0]
-        firstFile = os.path.splitext(os.path.basename(newFrames[0][1]))[0]
-
-        secondMethod = newFrames[1][0]
-        secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
-
-        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
-        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
-
-        twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
-
-        # On PY3, we have an extra frame which is reraising the exception
-        for frame in newFrames:
-            frameFile = os.path.splitext(os.path.basename(frame[1]))[0]
-            if frameFile == "compat" and frame[0] == "reraise":
-                # If it's in the compat module and is reraise, BLAM IT
-                newFrames.pop(newFrames.index(frame))
-
-        if twoFrames == syncCase:
-            newFrames = newFrames[2:]
-        elif twoFrames == asyncCase:
-            newFrames = newFrames[3:]
-        elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
-            newFrames = newFrames[1:]
+        newFrames = self._trimRunnerFrames(list(frames))
 
         if not newFrames:
             # The method fails before getting called, probably an argument
@@ -577,7 +591,7 @@ class Reporter(TestResult):
             last[0].startswith("fail")
             and os.path.splitext(os.path.basename(last[1]))[0] == "_synctest"
         ):
-            newFrames = newFrames[:-1]
+            return newFrames[:-1]
 
         return newFrames
 

@@ -1356,7 +1356,7 @@ class SynchronousTestCase(_Assertions):
             result.addError(self, failure.Failure(exc))
             return True
         try:
-            with supressWarningsCM(supress):
+            with suppressWarningsCM(suppress):
                 method()
         except SkipTest as e:
             result.addSkip(self, self._getSkipReason(method, e))
