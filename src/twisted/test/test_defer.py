@@ -1516,6 +1516,23 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual([], localz)
         self.assertEqual([], globalz)
 
+    def test_errbackAwaitTwiceNoDebug(self) -> None:
+        defer.setDebugging(False)
+        d: Deferred[None] = Deferred()
+
+        class MyError(Exception):
+            pass
+
+        async def c() -> None:
+            for _ in range(2):
+                with self.assertRaises(MyError):
+                    await d
+
+        d2 = Deferred.fromCoroutine(c())
+        d.errback(MyError())
+        self.assertIsNone(d._debugInfo)
+        self.assertIs(self.successResultOf(d2), None)
+
     def test_errbackWithNoArgs(self) -> None:
         """
         C{Deferred.errback()} creates a failure from the current Python

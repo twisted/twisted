@@ -1,0 +1,1 @@
+avoid AssertionError in deferred awaited twice when debugging is disabled
