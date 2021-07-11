@@ -216,6 +216,7 @@ class TimeoutTests(unittest.TestCase):
     test_errorPropagation.timeout = 0.1  # type: ignore[attr-defined]
 
     async def test_cancelSuppression(self):
+        """Test case that ignores its timeout"""
         async def sleep(delay):
             await task.deferLater(clock=reactor, delay=delay)
 
@@ -230,6 +231,7 @@ class TimeoutTests(unittest.TestCase):
         pass
 
     async def test_cancelReplacement(self):
+        """Test case that replaces its CancelledError"""
         async def sleep(delay):
             await task.deferLater(clock=reactor, delay=delay)
 
