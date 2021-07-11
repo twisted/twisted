@@ -2667,6 +2667,9 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         self.assertEqual(self.statused, None)
         self.assertEqual(self.failure.value.args, (b"Could not open mailbox",))
 
+    async def aloopback(self):
+        return await self.loopback()
+
     async def testFullAppend(self):
         infile = util.sibpath(__file__, "rfc822.message")
         SimpleServer.theAccount.addMailbox("root/subthing")
@@ -7118,9 +7121,6 @@ class TLSTests(IMAP4HelperMixin, TestCase):
 
     def loopback(self):
         return loopback.loopbackTCP(self.server, self.client, noisy=False)
-
-    async def aloopback(self):
-        return await self.loopback()
 
     def testAPileOfThings(self):
         SimpleServer.theAccount.addMailbox(b"inbox")
