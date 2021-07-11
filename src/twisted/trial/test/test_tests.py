@@ -1428,12 +1428,12 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
             A fake TestCase for testing purposes.
             """
 
-            async def test_async_generator(self):
+            async def test_async_generator(self):  # pragma: no cover
                 """
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.fail("this should never be reached")  # pragma: no cover
+                self.fail("this should never be reached")
                 yield
 
         testCase = AsyncGeneratorTestCase("test_async_generator")
@@ -1502,12 +1502,12 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
             A fake SynchronousTestCase for testing purposes.
             """
 
-            async def test_async_generator(self):
+            async def test_async_generator(self):  # pragma: no cover
                 """
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.fail("this should never be reached")  # pragma: no cover
+                self.fail("this should never be reached")
                 yield
 
         testCase = AsyncGeneratorSynchronousTestCase("test_async_generator")
