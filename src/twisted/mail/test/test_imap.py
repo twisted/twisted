@@ -1905,7 +1905,7 @@ class IMAP4HelperMixin:
                 self._cbStopClient(None)
         except Exception:
             self._ebGeneral(failure.Failure())
-            raise
+            raise  # pragma: no cover
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
