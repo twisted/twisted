@@ -336,26 +336,24 @@ class CheckersMixin:
         which are expected to be unauthorized.
     """
 
-    @defer.inlineCallbacks
-    def test_positive(self):
+    async def test_positive(self):
         """
         The given credentials are accepted by all the checkers, and give
         the expected C{avatarID}s
         """
         for chk in self.getCheckers():
             for (cred, avatarId) in self.getGoodCredentials():
-                r = yield chk.requestAvatarId(cred)
+                r = await chk.requestAvatarId(cred)
                 self.assertEqual(r, avatarId)
 
-    @defer.inlineCallbacks
-    def test_negative(self):
+    async def test_negative(self):
         """
         The given credentials are rejected by all the checkers.
         """
         for chk in self.getCheckers():
             for cred in self.getBadCredentials():
-                d = chk.requestAvatarId(cred)
-                yield self.assertFailure(d, error.UnauthorizedLogin)
+                with self.raises(error.UnauthorizedLogin):
+                    await chk.requestAvatarId(cred)
 
 
 class HashlessFilePasswordDBMixin:

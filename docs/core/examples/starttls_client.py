@@ -16,19 +16,18 @@ class StartTLSClient(LineReceiver):
             self.transport.loseConnection()
 
 
-@defer.inlineCallbacks
-def main(reactor):
+async def main(reactor):
     factory = protocol.Factory.forProtocol(StartTLSClient)
     certData = getModule(__name__).filePath.sibling("server.pem").getContent()
     factory.options = ssl.optionsForClientTLS(
         "example.com", ssl.PrivateCertificate.loadPEM(certData)
     )
     endpoint = endpoints.HostnameEndpoint(reactor, "localhost", 8000)
-    startTLSClient = yield endpoint.connect(factory)
+    startTLSClient = await endpoint.connect(factory)
 
     done = defer.Deferred()
     startTLSClient.connectionLost = lambda reason: done.callback(None)
-    yield done
+    await done
 
 
 if __name__ == "__main__":

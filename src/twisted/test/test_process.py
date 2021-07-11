@@ -2454,8 +2454,7 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
     Check the flags passed to CreateProcess.
     """
 
-    @defer.inlineCallbacks
-    def test_flags(self):
+    async def test_flags(self):
         r"""
         Verify that the flags passed to win32process.CreateProcess() prevent a
         new console window from being created. Use the following script
@@ -2532,7 +2531,7 @@ class Win32CreateProcessFlagsTests(unittest.TestCase):
         comspec = str(os.environ["COMSPEC"])
         cmd = [comspec, "/c", exe, scriptPath.path]
         _dumbwin32proc.Process(reactor, processProto, None, cmd, {}, None)
-        yield d
+        await d
         self.assertEqual(flags, [_dumbwin32proc.win32process.CREATE_NO_WINDOW])
 
 

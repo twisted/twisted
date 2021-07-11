@@ -307,29 +307,27 @@ class ManholeLoopbackMixin:
 
         return partialLine.addCallback(gotPartialLine).addCallback(gotClearedLine)
 
-    @defer.inlineCallbacks
-    def test_controlD(self):
+    async def test_controlD(self):
         """
         A CTRL+D in the middle of a line doesn't close a connection,
         but at the beginning of a line it does.
         """
         self._testwrite(b"1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        await self.recvlineClient.expect(br"\+ 1")
         self._assertBuffer([b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_D + b" + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        await self.recvlineClient.expect(br"\+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
         self._testwrite(b"\n")
-        yield self.recvlineClient.expect(b"3\n>>> ")
+        await self.recvlineClient.expect(b"3\n>>> ")
 
         self._testwrite(manhole.CTRL_D)
-        d = self.recvlineClient.onDisconnection
-        yield self.assertFailure(d, error.ConnectionDone)
+        with self.assertRaises(error.ConnectionDone):
+            await self.recvlineClient.onDisconnection
 
-    @defer.inlineCallbacks
-    def test_ControlL(self):
+    async def test_ControlL(self):
         """
         CTRL+L is generally used as a redraw-screen command in terminal
         applications.  Manhole doesn't currently respect this usage of it,
@@ -339,11 +337,11 @@ class ManholeLoopbackMixin:
         # Start off with a newline so that when we clear the display we can
         # tell by looking for the missing first empty prompt line.
         self._testwrite(b"\n1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        await self.recvlineClient.expect(br"\+ 1")
         self._assertBuffer([b">>> ", b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_L + b" + 1")
-        yield self.recvlineClient.expect(br"1 \+ 1 \+ 1")
+        await self.recvlineClient.expect(br"1 \+ 1 \+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
     def test_controlA(self):
@@ -372,8 +370,7 @@ class ManholeLoopbackMixin:
 
         return d.addCallback(cb)
 
-    @defer.inlineCallbacks
-    def test_deferred(self):
+    async def test_deferred(self):
         """
         When a deferred is returned to the manhole REPL, it is displayed with
         a sequence number, and when the deferred fires, the result is printed.
@@ -384,12 +381,12 @@ class ManholeLoopbackMixin:
             b"d\n"
         )
 
-        yield self.recvlineClient.expect(b"<Deferred #0>")
+        await self.recvlineClient.expect(b"<Deferred #0>")
 
         self._testwrite(b"c = reactor.callLater(0.1, d.callback, 'Hi!')\n")
-        yield self.recvlineClient.expect(b">>> ")
+        await self.recvlineClient.expect(b">>> ")
 
-        yield self.recvlineClient.expect(b"Deferred #0 called back: 'Hi!'\n>>> ")
+        await self.recvlineClient.expect(b"Deferred #0 called back: 'Hi!'\n>>> ")
         self._assertBuffer(
             [
                 b">>> from twisted.internet import defer, reactor",
