@@ -352,7 +352,7 @@ class CheckersMixin:
         """
         for chk in self.getCheckers():
             for cred in self.getBadCredentials():
-                with self.raises(error.UnauthorizedLogin):
+                with self.assertRaises(error.UnauthorizedLogin):
                     await chk.requestAvatarId(cred)
 
 
