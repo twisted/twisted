@@ -54,11 +54,12 @@ try:
 
     _contextvarsSupport = True
 
-except ImportError:
+except ModuleNotFoundError:
     _contextvarsSupport = False
 
     class _NoContext:
         @staticmethod
+        @_extraneous
         def run(f: Callable[..., object], *args: object, **kwargs: object) -> object:
             return f(*args, **kwargs)
 
@@ -68,6 +69,16 @@ except ImportError:
 
 else:
     _copy_context = __copy_context  # type: ignore[assignment]
+
+    from contextvars import Context as __Context
+
+    # only pypy3.7+ and the py3.6- contextvars.Context.run has a __code__
+    # object, because on cPython 3.7+ it's a builtin and doesn't appear
+    # in Tracebacks anyway.
+    try:
+        _extraneous(__Context.run)
+    except AttributeError:
+        pass
 
 log = Logger()
 
