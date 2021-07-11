@@ -268,7 +268,7 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         bads = result.failures + result.errors
         self.assertEqual(len(bads), 1)
         self.assertEqual(bads[0][0], test)
-        return result._trimFrames(bads[0][1].frames)
+        return reporter._trimFrames(bads[0][1].frames)
 
     def checkFrames(self, observedFrames, expectedFrames):
         for observed, expected in zip(observedFrames, expectedFrames):
@@ -304,12 +304,10 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         self.checkFrames(frames, [("_later", "twisted/trial/test/erroneous")])
 
     def test_noFrames(self):
-        result = reporter.Reporter(None)
-        self.assertEqual([], result._trimFrames([]))
+        self.assertEqual([], reporter._trimFrames([]))
 
     def test_oneFrame(self):
-        result = reporter.Reporter(None)
-        self.assertEqual(["fake frame"], result._trimFrames(["fake frame"]))
+        self.assertEqual(["fake frame"], reporter._trimFrames(["fake frame"]))
 
     def test_exception(self):
         """
