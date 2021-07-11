@@ -29,18 +29,6 @@ from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 _wait_is_running: List[None] = []
 
 
-async def _maybeCoroutine(*args, **kw):
-    try:  # simulate `async def _maybeCoroutine(func, /, *args, **kwargs):`
-        func, *args = args
-    except ValueError:  # pragma: no cover
-        raise TypeError(
-            "_maybeCoroutine() missing 1 required positional argument: 'func'"
-        ) from None
-
-    v = func(*args, **kw)
-    return (await v) if isinstance(v, Awaitable) else v
-
-
 @implementer(itrial.ITestCase)
 class TestCase(SynchronousTestCase):
     """
@@ -215,7 +203,9 @@ class TestCase(SynchronousTestCase):
             failures = []
             for func, args, kwargs in self._cleanups[::-1]:
                 try:
-                    await _maybeCoroutine(func, *args, **kwargs)
+                    aw = func(*args, **kwargs)
+                    if isinstance(aw, Awaitable):
+                        await aw
                 except Exception:
                     failures.append(failure.Failure())
 
