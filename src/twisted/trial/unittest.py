@@ -15,6 +15,7 @@ from twisted.trial._synctest import (
     PyUnitResultAdapter,
     Todo,
     makeTodo,
+    mark,
 )
 from twisted.trial._asynctest import TestCase
 from twisted.trial._asyncrunner import TestSuite, TestDecorator, decorate
@@ -35,4 +36,5 @@ __all__ = [
     "TestDecorator",
     "TestSuite",
     "Todo",
+    "mark",
 ]
