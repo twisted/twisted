@@ -965,8 +965,8 @@ class Deferred(Awaitable[_DeferredResultT]):
         if isinstance(result, Failure):
             # Clear the failure on debugInfo so it doesn't raise "unhandled
             # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
+            if self._debugInfo is not None:
+                self._debugInfo.failResult = None
             result.value.__failure__ = result
             raise result.value
         else:
