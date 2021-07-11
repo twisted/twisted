@@ -104,7 +104,7 @@ def _trimRunnerFrames(frames):
 def _trimFrames(frames):
     """
     Trim frames to remove internal paths.
-    
+
     TODO: https://twistedmatrix.com/trac/ticket/10220
 
     When a C{SynchronousTestCase} method fails synchronously, the stack
