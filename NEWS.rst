@@ -9,14 +9,14 @@ Twisted 21.7.0.rc1 (2021-07-10)
 Features
 --------
 
-- support py3.10a5 (by fixing twisted.trial.unittest.TestCase.flushWarnings) (#10111)
+- support py3.10b3 (by fixing twisted.trial.unittest.TestCase.flushWarnings) (#10111)
 
 
 Bugfixes
 --------
 
 - twisted.internet.process can now pause and resume producing in python 3 (#9933)
-- When installing Twisted it now requires a minimum Python 3.5.4 version to match the version used with automated testing. This is the minimum Python version that we know that Twisted works with. (#10098)
+- When installing Twisted it now requires a minimum Python 3.6.7 version to match the version used with automated testing. This is the minimum Python version that we know that Twisted works with. (#10098)
 - twisted.internet.asyncioreactor.AsyncioSelectorReactor will no longer raise a TypeError like "SelectorEventLoop required, instead got: <uvloop.Loop ...>" (broken since 21.2.0). (#10106)
 - twisted.web.template.flatten and flattenString will no longer raise RecursionError if a large number of synchronous Deferreds are included in a document. (#10125)
 - Fix type hint for http.Request.uri (from str to bytes). (#10139)
