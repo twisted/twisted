@@ -91,6 +91,9 @@ How to do a release candidate
 -----------------------------
 
 
+This section described the happy path in which no defect or regressions are found during the release process.
+
+
 Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
@@ -122,6 +125,12 @@ Prepare the branch
 #. Read the Docs hooks not have version for the release candidate.
    Use the Read the Docs published for the pull request.
 #. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
+#. Most probably there will be some minor comments received via email or GitHub regarding the final content of the release notes.
+   Is ok to make those changes as part of the release branch.
+   No need for a new ticket or separate pull request.
+   These changes will be reviewed as part of the final release review process.
+#. While the final public release is not made and the release tag created
+   the release branch will not be kept up to date with trunk.
 
 
 Announce
@@ -214,20 +223,28 @@ Announce
 Post release
 ~~~~~~~~~~~~
 
-#. Run ``python -m incremental.update Twisted --post`` to add a `post` postfix.
+#. Run ``python -m incremental.update Twisted --post`` to add a `post` version number.
 
 #. Commit the post0 update change.
+
+#. Update the trunk into the release branch, resolving any possible conflicts.
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 
 
-When things go wrong
---------------------
+Release candidate fixes
+-----------------------
 
-If you discover a showstopper bug during the release process, you have three options.
+This section described the steps to follow when after a release candidate is published, critical or regression defects are found.
 
-1. Abort the release, make a new point release (e.g. abort 10.0.0, make 10.0.1 after the bug is fixed)
-2. Abort the release, make a new release candidate (e.g. abort 10.0.0, make 10.0.0pre3 after the bug is fixed)
+If a defect is found after the final release is published, check the next section: `Bug fix releases`.
+
+1. Pause the release process.
+2. Separate tickets should be files for each defect.
+3. The defect should be fixed, reviewed and merged in trunk.
+4. On the release branch, cherry-pick the merges from trunk that merges the fixes.
+5. Follow the same steps as for any release candidate, with the exception that a new branch is not created.
+   Use the same `python -m incremental.update Twisted --rc` command to increment the release candidate version.
 
 Don't delete a tag that was already pushed for a release.
 Create a new tag with incremented version.
@@ -241,7 +258,7 @@ This section goes over doing these "bugfix" releases.
 
 1. Ensure all bugfixes are in trunk.
 
-2. Make a branch off the affected version.
+2. Make a branch off the affected released version (not from trunk HEAD).
 
 3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
 
@@ -249,3 +266,4 @@ This section goes over doing these "bugfix" releases.
 
    - Instead of just ``--rc`` when running the change-versions script, add the patch flag, making it ``--patch --rc``.
    - Instead of waiting a week, a shorter pause is acceptable for a patch release.
+     You can do the release as soon as you get the confirmation from the original bug reports that the release candidate fixes the issues.
