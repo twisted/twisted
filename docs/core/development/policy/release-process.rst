@@ -121,7 +121,7 @@ Prepare the branch
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo.
-*. You can check the status of the automatic upload via `GitHub Action <https://github.com/twisted/twisted/actions/workflows/test.yaml?query=event%3Apush>`_
+#. You can check the status of the automatic upload via `GitHub Action <https://github.com/twisted/twisted/actions/workflows/test.yaml?query=event%3Apush>`_
 #. Read the Docs hooks not have version for the release candidate.
    Use the Read the Docs published for the pull request.
 #. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
