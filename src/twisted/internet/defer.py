@@ -1751,14 +1751,14 @@ def _inlineCallbacks(
 
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
-            def gotResult(r: object, d: Deferred) -> None:
+            def gotResult(r: object) -> None:
                 if waiting[0]:
                     waiting[0] = False
                     waiting[1] = r
                 else:
                     current_context.run(_inlineCallbacks, r, gen, status)
 
-            result.addBoth(gotResult, result)
+            result.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
