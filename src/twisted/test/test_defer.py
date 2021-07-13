@@ -30,6 +30,7 @@ from typing import (
 )
 
 from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
+from unittest import mock
 
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -1517,6 +1518,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual([], globalz)
 
     def test_errbackAwaitTwiceNoDebug(self) -> None:
+        """
+        test that awaiting a failed Deferred clears its result
+        https://twistedmatrix.com/trac/ticket/10222
+        """
         defer.setDebugging(False)
         d: Deferred[None] = Deferred()
 
@@ -1528,11 +1533,31 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
                 await d
 
             self.assertIsNone(await d)
+            return mock.sentinel.done
 
         d2 = Deferred.fromCoroutine(c())
         d.errback(MyError())
         self.assertIsNone(d._debugInfo)
-        self.assertIs(self.successResultOf(d2), None)
+        self.assertIs(self.successResultOf(d2), mock.sentinel.done)
+
+    def test_callbackAwaitTwiceNoDebug(self) -> None:
+        """
+        test that awaiting a done Deferred clears its result
+        https://twistedmatrix.com/trac/ticket/10222
+        """
+
+        defer.setDebugging(False)
+        d: Deferred[object] = Deferred()
+
+        async def c() -> None:
+            self.assertIs(await d, mock.sentinel.result)
+            self.assertIsNone(await d)
+            return mock.sentinel.done
+
+        d2 = Deferred.fromCoroutine(c())
+        d.callback(mock.sentinel.result)
+        self.assertIsNone(d._debugInfo)
+        self.assertIs(self.successResultOf(d2), mock.sentinel.done)
 
     def test_errbackWithNoArgs(self) -> None:
         """

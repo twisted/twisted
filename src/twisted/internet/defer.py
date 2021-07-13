@@ -1756,11 +1756,6 @@ def _inlineCallbacks(
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    # https://twistedmatrix.com/trac/ticket/10222
-                    # clear our result so if the next call to _inlineCallbacks
-                    # calls `await d` before returning d will return None.
-                    d.result = None
-
                     current_context.run(_inlineCallbacks, r, gen, status)
 
             result.addBoth(gotResult, result)
