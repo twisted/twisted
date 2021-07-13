@@ -346,15 +346,15 @@ class DebugInfo:
 
 
 @attr.s(frozen=True, slots=True, auto_attribs=True)
-class _Outcome(Generic[_T]):
-    _result: "_T | Failure"
+class _Outcome:
+    _result: object
 
     @_extraneous
-    def unwrap(self) -> _T:
+    def unwrap(self) -> object:
         result = self._result
         if isinstance(result, Failure):
             result.raiseException()
-        return result  # type: ignore[return-value]
+        return result
 
 
 class Deferred(Awaitable[_DeferredResultT]):
