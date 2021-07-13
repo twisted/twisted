@@ -939,6 +939,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     __repr__ = __str__
 
+    @_extraneous
     def __iter__(
         self,
     ) -> "Generator[Deferred[_DeferredResultT], _DeferredResultT, _DeferredResultT]":
