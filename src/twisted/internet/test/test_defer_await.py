@@ -7,7 +7,6 @@ Tests for C{await} support in Deferreds.
 """
 
 import types
-from unittest import skip
 
 from twisted.python.failure import Failure
 from twisted.internet.defer import (
@@ -113,7 +112,6 @@ class AwaitTests(TestCase):
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
 
-    @skip("frame counting broken")
     def test_synchronousDeferredFailureTraceback(self):
         """
         When a Deferred is awaited upon that has already failed with a Failure

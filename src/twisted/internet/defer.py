@@ -345,6 +345,18 @@ class DebugInfo:
             log.failure(format, self.failResult, debugInfo=debugInfo)
 
 
+@attr.s(frozen=True, slots=True, auto_attribs=True)
+class _Outcome(Generic[_T]):
+    _result: "_T | Failure"
+
+    @_extraneous
+    def unwrap(self) -> _T:
+        result = self._result
+        if isinstance(result, Failure):
+            result.raiseException()
+        return result  # type: ignore[return-value]
+
+
 class Deferred(Awaitable[_DeferredResultT]):
     """
     This is a callback which will be put off until later.
@@ -943,7 +955,11 @@ class Deferred(Awaitable[_DeferredResultT]):
     def __iter__(
         self,
     ) -> "Generator[Deferred[_DeferredResultT], _DeferredResultT, _DeferredResultT]":
-        return (yield self)
+        # Wrap failures in an _Outcome object here to avoid buggy .throw()
+        #   https://bugs.python.org/issue29587
+        #   https://bugs.python.org/issue29590
+        # https://github.com/python-trio/trio/blob/ab75cd12a4db68e2fbb2e58f46900ebaa582aab2/trio/_core/_run.py#L2160-L2166
+        return (yield self.addBoth(_Outcome)).unwrap()  # type: ignore[no-any-return,attr-defined,arg-type]
 
     if TYPE_CHECKING:
         #     Callable[[], Generator[Any, None, _DeferredResultT]]
