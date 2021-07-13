@@ -969,14 +969,17 @@ class Deferred(Awaitable[_DeferredResultT]):
             self.result = None
             raise StopIteration(result)
 
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _DeferredResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _DeferredResultT]:
-        return self.__iter__()  # type: ignore[return-value]
+    if TYPE_CHECKING:
+        #     Callable[[], Generator[Any, None, _DeferredResultT]]
+        #     See: https://github.com/python/typeshed/issues/5125
+        #     When the typeshed patch is included in a mypy release,
+        #     this method can be replaced by `__await__ = __iter__`.
+        def __await__(self) -> Generator[Any, None, _DeferredResultT]:
+            return self.__iter__()  # type: ignore[return-value]
+
+    else:
+        # but we can still save a frame at runtime
+        __await__ = __iter__
 
     __next__ = send
 
