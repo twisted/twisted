@@ -1599,8 +1599,8 @@ class _CancellationStatus:
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[_T], object, None],
-        Coroutine[Deferred[_T], object, None],
+        Generator[Deferred[_T], object, _T],
+        Coroutine[Deferred[_T], object, _T],
     ],
     status: _CancellationStatus,
 ) -> None:

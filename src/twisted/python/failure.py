@@ -18,10 +18,15 @@ import sys
 import linecache
 import inspect
 import opcode
+import types
+
 from inspect import getmro
+from io import StringIO
+from typing import List, TypeVar
 
 from twisted.python import reflect
-from io import StringIO
+
+import typing_extensions
 
 count = 0
 traceupLength = 4
@@ -177,10 +182,19 @@ class _Code:
         self.co_filename = filename
 
 
-_inlineCallbacksExtraneous = []
+_inlineCallbacksExtraneous: List[types.CodeType] = []
 
 
-def _extraneous(f):
+class _HasCode(typing_extensions.Protocol):
+    @property
+    def __code__(self) -> types.CodeType:
+        ...
+
+
+_T_hascode = TypeVar("_T_hascode", bound=_HasCode)
+
+
+def _extraneous(f: _T_hascode) -> _T_hascode:
     """
     Mark the given callable as extraneous to inlineCallbacks exception
     reporting; don't show these functions.
