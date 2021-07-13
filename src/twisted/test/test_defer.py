@@ -1528,7 +1528,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         class MyError(Exception):
             pass
 
-        async def c() -> None:
+        async def c() -> object:
             with self.assertRaises(MyError):
                 await d
 
@@ -1549,7 +1549,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         defer.setDebugging(False)
         d: Deferred[object] = Deferred()
 
-        async def c() -> None:
+        async def c() -> object:
             self.assertIs(await d, mock.sentinel.result)
             self.assertIsNone(await d)
             return mock.sentinel.done
