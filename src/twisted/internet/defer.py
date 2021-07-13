@@ -14,7 +14,7 @@ from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
 import traceback
-from types import GeneratorType, MappingProxyType, TracebackType
+from types import GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -939,48 +939,10 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred[_DeferredResultT]":
-        return self
-
-    def close(self) -> None:
-        self.result = None
-
-    @_extraneous
-    def throw(
-        self, typ: Type[BaseException], value: BaseException, tb: TracebackType
-    ) -> NoReturn:
-        # https://twistedmatrix.com/trac/ticket/10222
-        # clear our result so if this Deferred is awaited again we return
-        # None
-        self.close()
-        raise value.with_traceback(tb)
-
-    @_extraneous
-    def send(self, value: object = None) -> "Deferred[_DeferredResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
-
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            if self._debugInfo is not None:
-                self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            # https://twistedmatrix.com/trac/ticket/10222
-            # clear our result so if this Deferred is awaited again we return
-            # None
-            self.close()
-            raise result.value
-        else:
-            # https://twistedmatrix.com/trac/ticket/10222
-            # clear our result so if this Deferred is awaited again we return
-            # None
-            self.close()
-            raise StopIteration(result)
+    def __iter__(
+        self,
+    ) -> "Generator[Deferred[_DeferredResultT], _DeferredResultT, _DeferredResultT]":
+        return (yield self)
 
     if TYPE_CHECKING:
         #     Callable[[], Generator[Any, None, _DeferredResultT]]
@@ -993,8 +955,6 @@ class Deferred(Awaitable[_DeferredResultT]):
     else:
         # but we can still save a frame at runtime
         __await__ = __iter__
-
-    __next__ = send
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_DeferredResultT]":
         """
