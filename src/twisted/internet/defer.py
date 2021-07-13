@@ -14,7 +14,7 @@ from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
 import traceback
-from types import GeneratorType, MappingProxyType
+from types import GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -942,6 +942,19 @@ class Deferred(Awaitable[_DeferredResultT]):
     def __iter__(self) -> "Deferred[_DeferredResultT]":
         return self
 
+    def close(self) -> None:
+        self.result = None
+
+    @_extraneous
+    def throw(
+        self, typ: Type[BaseException], value: BaseException, tb: TracebackType
+    ) -> NoReturn:
+        # https://twistedmatrix.com/trac/ticket/10222
+        # clear our result so if this Deferred is awaited again we return
+        # None
+        self.close()
+        raise value.with_traceback(tb)
+
     @_extraneous
     def send(self, value: object = None) -> "Deferred[_DeferredResultT]":
         if self.paused:
@@ -960,13 +973,13 @@ class Deferred(Awaitable[_DeferredResultT]):
             # https://twistedmatrix.com/trac/ticket/10222
             # clear our result so if this Deferred is awaited again we return
             # None
-            self.result = None
+            self.close()
             raise result.value
         else:
             # https://twistedmatrix.com/trac/ticket/10222
             # clear our result so if this Deferred is awaited again we return
             # None
-            self.result = None
+            self.close()
             raise StopIteration(result)
 
     if TYPE_CHECKING:
