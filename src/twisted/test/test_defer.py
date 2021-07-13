@@ -1524,9 +1524,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             pass
 
         async def c() -> None:
-            for _ in range(2):
-                with self.assertRaises(MyError):
-                    await d
+            with self.assertRaises(MyError):
+                await d
+
+            self.assertIsNone(await d)
 
         d2 = Deferred.fromCoroutine(c())
         d.errback(MyError())

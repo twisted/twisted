@@ -957,8 +957,16 @@ class Deferred(Awaitable[_DeferredResultT]):
             if self._debugInfo is not None:
                 self._debugInfo.failResult = None
             result.value.__failure__ = result
+            # https://twistedmatrix.com/trac/ticket/10222
+            # clear our result so if this Deferred is awaited again we return
+            # None
+            self.result = None
             raise result.value
         else:
+            # https://twistedmatrix.com/trac/ticket/10222
+            # clear our result so if this Deferred is awaited again we return
+            # None
+            self.result = None
             raise StopIteration(result)
 
     # For PEP-492 support (async/await)
@@ -1743,14 +1751,19 @@ def _inlineCallbacks(
 
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
-            def gotResult(r: object) -> None:
+            def gotResult(r: object, d: Deferred) -> None:
                 if waiting[0]:
                     waiting[0] = False
                     waiting[1] = r
                 else:
+                    # https://twistedmatrix.com/trac/ticket/10222
+                    # clear our result so if the next call to _inlineCallbacks
+                    # calls `await d` before returning d will return None.
+                    d.result = None
+
                     current_context.run(_inlineCallbacks, r, gen, status)
 
-            result.addBoth(gotResult)
+            result.addBoth(gotResult, result)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
