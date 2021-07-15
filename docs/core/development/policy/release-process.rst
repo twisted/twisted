@@ -13,7 +13,7 @@ Outcomes
 By the end of a Twisted release we'll have:
 
 - Wheel and sdist package published on `PyPI Twisted project <https://pypi.org/project/Twisted/>`_.
-- Updated documentation (API & howtos) on `Twisted Read The Docs <https://https://docs.twistedmatrix.com/>`_
+- Updated documentation (API & howtos) on `Twisted Read The Docs <https://docs.twistedmatrix.com/>`_
 - Announcement email sent to Twisted main list
 - A `GitHub Release <https://github.com/twisted/twisted/releases>`_ with the associated tag in our Git repository
 
@@ -127,6 +127,8 @@ Prepare the branch
 #. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
 #. Most probably there will be some minor comments received via email or GitHub regarding the final content of the release notes.
    Is ok to make those changes as part of the release branch.
+   It is ok to update the text of the candidate release notes,
+   in the final NEWS file the release candidate version is removed and replaced with the final version.
    No need for a new ticket or separate pull request.
    These changes will be reviewed as part of the final release review process.
 #. While the final public release is not made and the release tag created
@@ -195,9 +197,10 @@ Prepare the branch
 
 #. Have the release branch, previously used to generate a release candidate, checked out
 #. Run ``python -m incremental.update Twisted --newversion $RELEASE``
-#. Manually update the release date if necessary.
+#. Manually update the release version and date inside the NEWS file.
+   The release candidate will be removed from the final NEWS file.
 #. Commit and push.
-#. Submit the ticket for the final review
+#. Submit the ticket for the final review.
 #. Pause until the ticket is reviewed and accepted.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
 #. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
