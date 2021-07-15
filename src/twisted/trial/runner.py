@@ -125,7 +125,7 @@ def filenameToModule(fn):
     return ret
 
 
-def _importFromFile(fn, moduleName=None):
+def _importFromFile(fn, *, moduleName):
     fn = _resolveDirectory(fn)
     if not moduleName:
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
