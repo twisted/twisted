@@ -98,23 +98,17 @@ class FileTests(packages.SysPathManglingTest):
         L{runner.filenameToModule} returns a module object loosely
         resembling the module defined by that file anyway.
         """
-        # "test_sample" isn't actually the name of this module.  However,
-        # filenameToModule can't seem to figure that out.  So clean up this
-        # misnamed module.  It would be better if this weren't necessary
-        # and filenameToModule either didn't exist or added a correctly
-        # named module to sys.modules.
-        self.addCleanup(sys.modules.pop, "test_sample", None)
 
         self.mangleSysPath(self.oldPath)
         sample1 = runner.filenameToModule(
             os.path.join(self.parent, "goodpackage", "test_sample.py")
         )
+        self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         from goodpackage import test_sample as sample2  # type: ignore[import]
 
-        self.assertEqual(
-            os.path.splitext(sample2.__file__)[0], os.path.splitext(sample1.__file__)[0]
-        )
+        self.assertIsNot(sample1, sample2)
+        self.assertEqual(sample1.__spec__, sample2.__spec__)
 
     def test_packageInPath(self):
         """
@@ -122,9 +116,8 @@ class FileTests(packages.SysPathManglingTest):
         properly import and return that package.
         """
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
-        import goodpackage
 
-        self.assertEqual(goodpackage, package1)
+        self.assertIs(package1, sys.modules["goodpackage"])
 
     def test_packageNotInPath(self):
         """
@@ -133,16 +126,12 @@ class FileTests(packages.SysPathManglingTest):
         module object loosely resembling the package defined by that
         directory anyway.
         """
-        # "__init__" isn't actually the name of the package!  However,
-        # filenameToModule is pretty stupid and decides that is its name
-        # after all.  Make sure it gets cleaned up.  See the comment in
-        # test_moduleNotInPath for possible courses of action related to
-        # this.
-        self.addCleanup(sys.modules.pop, "__init__")
-
         self.mangleSysPath(self.oldPath)
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
+        self.assertEqual(package1.__name__, "goodpackage")
         self.mangleSysPath(self.newPath)
+
+        self.cleanUpModules()
         import goodpackage
 
         self.assertEqual(

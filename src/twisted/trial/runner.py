@@ -102,16 +102,18 @@ def filenameToModule(fn):
     """
     if not os.path.exists(fn):
         raise ValueError(f"{fn!r} doesn't exist")
+
+    moduleName = reflect.filenameToModuleName(fn)
     try:
-        ret = reflect.namedAny(reflect.filenameToModuleName(fn))
+        ret = reflect.namedAny(moduleName)
     except (ValueError, AttributeError):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # >=3.7 has __file__ attribute as None, previously __file__ was not present
     if getattr(ret, "__file__", None) is None:
         # This isn't a Python module in a package, so import it from a file
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + ".py"
@@ -119,7 +121,7 @@ def filenameToModule(fn):
     same = getattr(os.path, "samefile", samefile)
     if os.path.isfile(fn) and not same(fn, retFile):
         del sys.modules[ret.__name__]
-        ret = _importFromFile(fn)
+        ret = _importFromFile(fn, moduleName=moduleName)
     return ret
 
 
