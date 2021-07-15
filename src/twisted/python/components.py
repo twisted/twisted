@@ -337,8 +337,9 @@ def proxyForInterface(iface, originalAttribute="original"):
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
     proxy = type("(Proxy for {})".format(reflect.qual(iface)), (object,), contents)
+    # The following type-ignore is for mypy-zope issue #50
     # mypy-zope declarations.classImplements only works when passing
-    # a concrete class type
+    # a statically declared class type
     declarations.classImplements(proxy, iface)  # type: ignore[misc]
     return proxy
 

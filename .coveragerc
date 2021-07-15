@@ -15,6 +15,6 @@ source=
 precision = 2
 ignore_errors = True
 exclude_lines =
-    if TYPE_CHECKING
+    if (typing\.)?TYPE_CHECKING
     \s*\.\.\.$
     raise NotImplementedError

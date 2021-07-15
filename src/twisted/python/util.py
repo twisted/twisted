@@ -6,6 +6,7 @@
 import errno
 import os
 import sys
+import typing
 import warnings
 
 try:
@@ -27,6 +28,7 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
+from numbers import Real
 from typing import (
     Callable,
     ClassVar,
@@ -34,8 +36,13 @@ from typing import (
     MutableMapping,
     Sequence,
     Union,
+    List,
+    Optional,
+    Iterable,
+    Iterator,
     Tuple,
     cast,
+    overload,
 )
 
 from incremental import Version
@@ -50,6 +57,10 @@ deprecatedModuleAttribute(
     "twisted.python.util",
     "OrderedDict",
 )
+
+# Generic type variables for use in this module's declarations.
+T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
 
 class InsensitiveDict(MutableMapping):
@@ -220,10 +231,10 @@ class InsensitiveDict(MutableMapping):
             return NotImplemented
 
 
-def uniquify(lst):
+def uniquify(lst: Iterable[T]) -> List[T]:
     """
-    Make the elements of a list unique by inserting them into a dictionary.
-    This must not change the order of the input lst.
+    Make the elements of a list unique by inserting them into a set.
+    This must not change the order of the input list.
     """
     seen = set()
     result = []
@@ -232,6 +243,16 @@ def uniquify(lst):
             result.append(k)
         seen.add(k)
     return result
+
+
+@overload
+def padTo(n: int, seq: Sequence[T], default: U) -> List[Union[T, U]]:
+    ...
+
+
+@overload
+def padTo(n: int, seq: Sequence[T]) -> List[Optional[T]]:
+    ...
 
 
 def padTo(n, seq, default=None):
@@ -546,18 +567,28 @@ class IntervalDifferential:
         self.intervals = intervals[:]
         self.default = default
 
-    def __iter__(self):
+    def __iter__(self) -> "_IntervalDifferentialIterator":
         return _IntervalDifferentialIterator(self.intervals, self.default)
 
 
-class _IntervalDifferentialIterator:
+class _IntervalDifferentialIterator(Iterator[Tuple[Real, Optional[int]]]):
     def __init__(self, i, d):
+
+        # Note that we're using list as a "mutable tuple" here; the
+        # first and third element of each entry change as we
+        # execute. The actual type of each entry is [float|int, Real, int]
+
+        # However, mypy doesn't understand non-uniform lists,
+        # so it can't properly typecheck this variable.
+        # Also note that mypy doesn't correctly handle the types from
+        # numbers.* yet, at least in version 0.812.
+        # (See mypy issue #3186, #10311, etc)
 
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
 
-    def __next__(self):
+    def __next__(self) -> Tuple[Real, Optional[int]]:
         if not self.intervals:
             return (self.default, None)
         last, index = self.intervals[0][0], self.intervals[0][2]
@@ -583,9 +614,9 @@ class _IntervalDifferentialIterator:
             if self.intervals[i][1] == interval:
                 index = self.intervals[i][2]
                 del self.intervals[i]
-                for i in self.intervals:
-                    if i[2] > index:
-                        i[2] -= 1
+                for entry in self.intervals:
+                    if entry[2] > index:
+                        entry[2] -= 1
                 return
         raise ValueError("Specified interval not in IntervalDifferential")
 
@@ -798,7 +829,7 @@ def mergeFunctionMetadata(f, g):
     return g
 
 
-def nameToLabel(mname):
+def nameToLabel(mname: str) -> str:
     """
     Convert a string like a variable name into a slightly more human-friendly
     string with spaces and capitalized letters.
