@@ -24,6 +24,9 @@ Prerequisites
 To release Twisted, you will need:
 
 - Commit privileges to Twisted GitHub repository.
+- Membership to `Twisted Read The Docs project <https://readthedocs.org/projects/twisted/>`_.
+  `Trac Ticket #10228 <https://twistedmatrix.com/trac/ticket/10228>`_
+  aims to automate the RTD update so that extra membership is not required.
 
 
 Version numbers
@@ -233,6 +236,10 @@ Post release
 #. Update the trunk into the release branch, resolving any possible conflicts.
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
+
+#. Update the default version on Read The Docs, after the RTD finalized the build for the new tag.
+   Go to RTD `Admin - Advanced Settings <https://readthedocs.org/dashboard/twisted/advanced/>`_
+   and update the default version to point to the latest release tag.
 
 
 Release candidate fixes
