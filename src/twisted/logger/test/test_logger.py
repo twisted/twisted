@@ -71,7 +71,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
+        self.assertEqual(repr(log), f"<Logger {repr(namespace)}>")
 
     def test_namespaceDefault(self) -> None:
         """
