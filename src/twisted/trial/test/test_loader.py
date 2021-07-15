@@ -103,6 +103,8 @@ class FileTests(packages.SysPathManglingTest):
         sample1 = runner.filenameToModule(
             os.path.join(self.parent, "goodpackage", "test_sample.py")
         )
+        self.assertEqual(sample1.__name__, "goodpackage.test_sample")
+
         self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         from goodpackage import test_sample as sample2  # type: ignore[import]
@@ -129,14 +131,13 @@ class FileTests(packages.SysPathManglingTest):
         self.mangleSysPath(self.oldPath)
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
         self.assertEqual(package1.__name__, "goodpackage")
+
         self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         import goodpackage
 
-        self.assertEqual(
-            os.path.splitext(goodpackage.__file__)[0],
-            os.path.splitext(package1.__file__)[0],
-        )
+        self.assertIsNot(package1, goodpackage)
+        self.assertEqual(package1.__spec__, goodpackage.__spec__)
 
     def test_directoryNotPackage(self):
         """
