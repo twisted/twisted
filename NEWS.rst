@@ -9,7 +9,10 @@ Twisted 21.7.0.rc1 (2021-07-10)
 Features
 --------
 
-- support py3.10b3 (by fixing twisted.trial.unittest.TestCase.flushWarnings) (#10111)
+- Python 3.10b3 is now supported (#10224)
+- Type hinting was added to twisted.internet.defer, making this is the first release
+  of Twisted where you might reasonably be able to use mypy without your own custom
+  stub files (#10017) 
 
 
 Bugfixes
@@ -32,7 +35,7 @@ Bugfixes
 - twisted.words.protocols.irc.ctcpExtract was updated to work with PYPY 3.7.4. (#10189)
 - twisted.conch.ssh.transport.SSHServerTransport and twisted.conch.ssh.transport.SSHClientTransport no longer use the hardcoded
   SHA1 digest for non-group key exchanges. (#10203)
-- haproxy transport wrapper now returns hosts of type str for getPeer() and getHost(), as specified by IPv4Address and IPv6Address documentation. Previously it was returning bytes for the host.``` (#10211)
+- haproxy transport wrapper now returns hosts of type str for getPeer() and getHost(), as specified by IPv4Address and IPv6Address documentation. Previously it was returning bytes for the host. (#10211)
 
 
 Improved Documentation
