@@ -100,8 +100,20 @@ def filenameToModule(fn):
     @return: A module object.
     @raise ValueError: If C{fn} does not exist.
     """
+    oldFn = fn
+
+    if (3, 8) <= sys.version_info < (3, 10) and not os.path.isabs(fn):
+        # module.__spec__.__file__ is supposed to be absolute in py3.8+
+        # importlib.util.spec_from_file_location does this automatically from
+        # 3.10+
+        # This was backported to 3.8 and 3.9, but then reverted in 3.8.11 and
+        # 3.9.6
+        # See https://twistedmatrix.com/trac/ticket/10230
+        # and https://bugs.python.org/issue44070
+        fn = os.path.join(os.getcwd(), fn)
+
     if not os.path.exists(fn):
-        raise ValueError(f"{fn!r} doesn't exist")
+        raise ValueError(f"{oldFn!r} doesn't exist")
 
     moduleName = reflect.filenameToModuleName(fn)
     try:
