@@ -129,9 +129,8 @@ class FileTests(packages.SysPathManglingTest):
         self.mangleSysPath(self.oldPath)
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
         self.assertEqual(package1.__name__, "goodpackage")
-        self.mangleSysPath(self.newPath)
-
         self.cleanUpModules()
+        self.mangleSysPath(self.newPath)
         import goodpackage
 
         self.assertEqual(
