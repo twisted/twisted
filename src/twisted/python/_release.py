@@ -581,6 +581,14 @@ class CheckNewsfragmentScript:
                 self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
+        if branch == "pre-commit-ci-update-config":
+            if newsfragments:
+                self._print("No newsfragments should be on the autoupdate branch.")
+                sys.exit(1)
+            else:
+                self._print("Autoupdate branch with no newsfragments, all good.")
+                sys.exit(0)
+
         for change in newsfragments:
             self._print("Found " + change)
             sys.exit(0)
