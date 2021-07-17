@@ -658,7 +658,7 @@ class MultiWrapper:
         @rtype: L{bytes}
         @return: A string containing a list of the message receivers.
         """
-        return "<GroupWrapper {!r}>".format(map(str, self.objs))
+        return f"<GroupWrapper {map(str, self.objs)!r}>"
 
 
 @implementer(IAlias)
@@ -699,7 +699,7 @@ class AliasGroup(AliasBase):
                 try:
                     f = open(addr[1:])
                 except BaseException:
-                    log.err("Invalid filename in alias file {!r}".format(addr[1:]))
+                    log.err(f"Invalid filename in alias file {addr[1:]!r}")
                 else:
                     with f:
                         addr = " ".join([l.strip() for l in f])

@@ -183,7 +183,7 @@ def jsonFileLogObserver(
     @return: A file log observer.
     """
     return FileLogObserver(
-        outFile, lambda event: "{}{}\n".format(recordSeparator, eventAsJSON(event))
+        outFile, lambda event: f"{recordSeparator}{eventAsJSON(event)}\n"
     )
 
 

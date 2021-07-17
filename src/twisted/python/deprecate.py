@@ -172,9 +172,9 @@ def _getDeprecationDocstring(version, replacement=None):
     @return: a string like "Deprecated in Twisted 27.2.0; please use
         twisted.timestream.tachyon.flux instead."
     """
-    doc = "Deprecated in {}".format(getVersionString(version))
+    doc = f"Deprecated in {getVersionString(version)}"
     if replacement:
-        doc = "{}; {}".format(doc, _getReplacementString(replacement))
+        doc = f"{doc}; {_getReplacementString(replacement)}"
     return doc + "."
 
 
@@ -448,7 +448,7 @@ class _ModuleProxy:
         representation of the wrapped module object.
         """
         state = _InternalState(self)
-        return "<{} module={!r}>".format(type(self).__name__, state._module)
+        return f"<{type(self).__name__} module={state._module!r}>"
 
     def __setattr__(self, name, value):
         """
@@ -783,7 +783,7 @@ def deprecatedKeywordParameter(
 
     def wrapper(wrappee: _Tc) -> _Tc:
         warningString = _getDeprecationWarningString(
-            "The {!r} parameter to {}".format(name, _fullyQualifiedName(wrappee)),
+            f"The {name!r} parameter to {_fullyQualifiedName(wrappee)}",
             version,
             replacement=replacement,
         )
