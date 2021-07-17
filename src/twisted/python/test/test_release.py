@@ -1080,7 +1080,7 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
     def test_preCommitAutoupdate(self):
         """
-        Running it on an autoupdate branch returns green if there is no
+        Running it on the autoupdate branch returns green if there is no
         newsfragments even if there are changes.
         """
         runCommand(
@@ -1103,7 +1103,7 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
     def test_preCommitAutoupdateWithNewsfragments(self):
         """
-        Running it on a release branch returns red if there are new
+        Running it on the autoupdate branch returns red if there are new
         newsfragments.
         """
         runCommand(
