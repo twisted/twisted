@@ -1775,7 +1775,7 @@ def _selectCiphers(wantedCiphers, availableCiphers):
 
     @rtype: L{tuple} of L{OpenSSLCipher}
     """
-    return tuple([cipher for cipher in wantedCiphers if cipher in availableCiphers])
+    return tuple(cipher for cipher in wantedCiphers if cipher in availableCiphers)
 
 
 @implementer(IAcceptableCiphers)
