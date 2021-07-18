@@ -49,7 +49,7 @@ def showFiles(result, fileListProtocol):
         print(
             "    {}: {} bytes, {}".format(file["filename"], file["size"], file["date"])
         )
-    print("Total: {} files".format(len(fileListProtocol.files)))
+    print(f"Total: {len(fileListProtocol.files)} files")
 
 
 def showBuffer(result, bufferProtocol):

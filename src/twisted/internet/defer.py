@@ -930,7 +930,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
+            result = f" waiting on Deferred at 0x{id(self._chainedTo):x}"
         elif result is _NO_RESULT:
             result = ""
         else:

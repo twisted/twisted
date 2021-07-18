@@ -71,10 +71,10 @@ def format_frames(frames, write, detail="default"):
             w(" [ Locals ]\n")
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
             w(" ( Globals )\n")
             for name, val in globalVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
 
 
 # slyphon: i have a need to check for this value in trial
@@ -713,7 +713,7 @@ class Failure(BaseException):
 
         # Postamble, if any
         if not detail == "brief":
-            w("{}: {}\n".format(reflect.qual(self.type), reflect.safe_str(self.value)))
+            w(f"{reflect.qual(self.type)}: {reflect.safe_str(self.value)}\n")
 
         # Chaining
         if isinstance(self.value, Failure):
