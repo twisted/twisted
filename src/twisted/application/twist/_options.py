@@ -65,7 +65,7 @@ class TwistOptions(Options):
         self.longdesc = ""
 
     def getSynopsis(self) -> str:
-        return "{} plugin [plugin_options]".format(Options.getSynopsis(self))
+        return f"{Options.getSynopsis(self)} plugin [plugin_options]"
 
     def opt_version(self) -> "typing.NoReturn":
         """

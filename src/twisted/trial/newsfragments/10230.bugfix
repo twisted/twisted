@@ -1,0 +1,1 @@
+trial.runner.filenameToModule now sets the correct module.__name__ and sys.modules key

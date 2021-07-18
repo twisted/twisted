@@ -34,7 +34,7 @@ def run():
     try:
         opts.parseOptions()
     except usage.UsageError as message:
-        print("{}: {}".format(sys.argv[0], message))
+        print(f"{sys.argv[0]}: {message}")
         return
 
     positioningReceiver = PositioningReceiver()

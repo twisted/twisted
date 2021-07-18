@@ -449,11 +449,11 @@ class SSHUserAuthClient(service.SSHService):
                 return len(self.preferredOrder)
 
         canContinue = sorted(
-            [
+            (
                 meth
                 for meth in canContinue.split(b",")
                 if meth not in self.authenticatedWith
-            ],
+            ),
             key=orderByPreference,
         )
 
