@@ -285,7 +285,6 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
@@ -448,7 +447,6 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
