@@ -290,7 +290,7 @@ class ConnectionPool:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            raise excValue.with_traceback(excTraceback)
+            raise
 
     def runInteraction(self, interaction, *args, **kw):
         """
@@ -453,7 +453,7 @@ class ConnectionPool:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            raise excValue.with_traceback(excTraceback)
+            raise
 
     def _runQuery(self, trans, *args, **kw):
         trans.execute(*args, **kw)
