@@ -1,1 +1,1 @@
-Fix type annotations for inlineCallbacks.
+twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoidtyping errors when it is used on a function which returns a non-None result.
