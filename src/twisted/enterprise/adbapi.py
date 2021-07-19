@@ -7,7 +7,6 @@ An asynchronous mapping to U{DB-API
 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-import sys
 
 from twisted.internet import threads
 from twisted.python import reflect, log
