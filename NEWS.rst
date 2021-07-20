@@ -3,8 +3,8 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 21.7.0 (2021-07-17)
-===========================
+Twisted 21.7.0.rc1 (2021-07-10)
+===============================
 
 Features
 --------
@@ -12,7 +12,7 @@ Features
 - Python 3.10b3 is now supported (#10224)
 - Type hinting was added to twisted.internet.defer, making this is the first release
   of Twisted where you might reasonably be able to use mypy without your own custom
-  stub files (#10017)
+  stub files (#10017) 
 
 
 Bugfixes
