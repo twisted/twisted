@@ -10,7 +10,7 @@ Bugfixes
 --------
 
 - twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
-- trial.runner.filenameToModule now sets the correct module.__name__ and sys.modules key (#10230)
+- trial.runner.filenameToModule now sets the correct `module.__name__` and `sys.modules` key (#10230)
 
 
 Twisted 21.7.0.rc1 (2021-07-10)
