@@ -3,6 +3,16 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 21.7.0.rc2 (2021-07-20)
+===============================
+
+Bugfixes
+--------
+
+- twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
+- trial.runner.filenameToModule now sets the correct module.__name__ and sys.modules key (#10230)
+
+
 Twisted 21.7.0.rc1 (2021-07-10)
 ===============================
 
@@ -12,7 +22,7 @@ Features
 - Python 3.10b3 is now supported (#10224)
 - Type hinting was added to twisted.internet.defer, making this is the first release
   of Twisted where you might reasonably be able to use mypy without your own custom
-  stub files (#10017) 
+  stub files (#10017)
 
 
 Bugfixes
