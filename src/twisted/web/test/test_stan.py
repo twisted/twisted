@@ -123,7 +123,7 @@ class TagTests(TestCase):
             DeprecationWarning,
             "Cloning a Tag which contains a generator is unsafe, "
             "since the generator can be consumed only once; "
-            "this is deprecated since Twisted 21.7.0 and will raise "
+            "this is deprecated since Twisted 21.7.0.rc1 and will raise "
             "an exception in the future",
             sys.modules[Tag.__module__].__file__,
             tag.clone,
@@ -146,7 +146,7 @@ class TagTests(TestCase):
                 DeprecationWarning,
                 "Cloning a Tag which contains a coroutine is unsafe, "
                 "since the coroutine can run only once; "
-                "this is deprecated since Twisted 21.7.0 and will raise "
+                "this is deprecated since Twisted 21.7.0.rc1 and will raise "
                 "an exception in the future",
                 sys.modules[Tag.__module__].__file__,
                 tag.clone,
