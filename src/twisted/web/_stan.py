@@ -225,7 +225,7 @@ class Tag:
             warn(
                 "Cloning a Tag which contains a generator is unsafe, "
                 "since the generator can be consumed only once; "
-                "this is deprecated since Twisted 21.7.0.rc1 and will raise "
+                "this is deprecated since Twisted 21.7.0.rc2 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )
@@ -234,7 +234,7 @@ class Tag:
             warn(
                 "Cloning a Tag which contains a coroutine is unsafe, "
                 "since the coroutine can run only once; "
-                "this is deprecated since Twisted 21.7.0.rc1 and will raise "
+                "this is deprecated since Twisted 21.7.0.rc2 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )
