@@ -1235,4 +1235,4 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         return self.sendShort(b"QUIT", None)
 
 
-__all__ = []  # type: List[str]
+__all__: List[str] = []

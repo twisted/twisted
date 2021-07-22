@@ -178,8 +178,8 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
-    requiredInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
-    skippedReactors = {}  # type: Dict[str, str]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
+    skippedReactors: Dict[str, str] = {}
 
     def setUp(self):
         """
@@ -336,9 +336,7 @@ class ReactorBuilder:
         timedOutCall = reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
-            raise TestTimeoutError(
-                "reactor still running after {} seconds".format(timeout)
-            )
+            raise TestTimeoutError(f"reactor still running after {timeout} seconds")
         else:
             timedOutCall.cancel()
 
@@ -350,9 +348,9 @@ class ReactorBuilder:
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes = (
-            {}
-        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]
+        classes: Dict[
+            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
+        ] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")

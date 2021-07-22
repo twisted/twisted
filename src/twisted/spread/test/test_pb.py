@@ -280,7 +280,7 @@ class SimpleFactoryCopy(pb.Copyable):
     @type allIDs: C{dict}
     """
 
-    allIDs = {}  # type: Dict[int, 'SimpleFactoryCopy']
+    allIDs: Dict[int, "SimpleFactoryCopy"] = {}
 
     def __init__(self, id):
         self.id = id
@@ -294,13 +294,9 @@ def createFactoryCopy(state):
     """
     stateId = state.get("id", None)
     if stateId is None:
-        raise RuntimeError(
-            "factory copy state has no 'id' member {}".format(repr(state))
-        )
+        raise RuntimeError(f"factory copy state has no 'id' member {repr(state)}")
     if stateId not in SimpleFactoryCopy.allIDs:
-        raise RuntimeError(
-            "factory class has no ID: {}".format(SimpleFactoryCopy.allIDs)
-        )
+        raise RuntimeError(f"factory class has no ID: {SimpleFactoryCopy.allIDs}")
     inst = SimpleFactoryCopy.allIDs[stateId]
     if not inst:
         raise RuntimeError("factory method found no object with id")
@@ -670,7 +666,7 @@ class BrokerTests(unittest.TestCase):
             pass
 
     def thunkErrorBad(self, error):
-        self.fail("This should cause a return value, not {}".format(error))
+        self.fail(f"This should cause a return value, not {error}")
 
     def thunkResultGood(self, result):
         self.thunkResult = result
@@ -679,7 +675,7 @@ class BrokerTests(unittest.TestCase):
         pass
 
     def thunkResultBad(self, result):
-        self.fail("This should cause an error, not {}".format(result))
+        self.fail(f"This should cause an error, not {result}")
 
     def test_reference(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -742,9 +738,7 @@ class BrokerTests(unittest.TestCase):
             pump.pump()
         expected = pb.MAX_BROKER_REFS - 1
         self.assertTrue(s.transport.closed, "transport was not closed")
-        self.assertEqual(
-            len(l), expected, "expected {} got {}".format(expected, len(l))
-        )
+        self.assertEqual(len(l), expected, f"expected {expected} got {len(l)}")
 
     def test_copy(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -934,7 +928,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(
             self.thunkResult,
             ID,
-            "ID not correct on factory object {}".format(self.thunkResult),
+            f"ID not correct on factory object {self.thunkResult}",
         )
 
 
@@ -1110,7 +1104,7 @@ class DisconnectionTests(unittest.TestCase):
     """
 
     def error(self, *args):
-        raise RuntimeError("I shouldn't have been called: {}".format(args))
+        raise RuntimeError(f"I shouldn't have been called: {args}")
 
     def gotDisconnected(self):
         """

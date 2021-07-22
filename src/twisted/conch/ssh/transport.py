@@ -34,7 +34,7 @@ from twisted.logger import Logger
 # from twisted.python.compat import nativeString
 
 from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs, int_from_bytes
+from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs
 
 
 def _mpFromBytes(data):
@@ -48,7 +48,7 @@ def _mpFromBytes(data):
     @rtype: L{bytes}
     @return: The given data encoded as an SSH multiple-precision integer.
     """
-    return MP(int_from_bytes(data, "big"))
+    return MP(int.from_bytes(data, "big"))
 
 
 class _MACParams(tuple):
@@ -631,7 +631,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString("bad packet length {}".format(packetLen)),
+                networkString(f"bad packet length {packetLen}"),
             )
             return
         if len(self.buf) < packetLen + 4 + ms:
@@ -733,7 +733,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, "ssh_{}".format(messageType), None)
+            f = getattr(self, f"ssh_{messageType}", None)
             if f is not None:
                 f(payload)
             else:
@@ -846,7 +846,7 @@ class SSHTransportBase(protocol.Protocol):
             compSC,
             langCS,
             langSC,
-        ) = [s.split(b",") for s in strings]
+        ) = (s.split(b",") for s in strings)
         # These are the server directions
         outs = [encSC, macSC, compSC]
         ins = [encCS, macSC, compCS]
@@ -1292,7 +1292,7 @@ class SSHTransportBase(protocol.Protocol):
             )
         else:
             raise UnsupportedAlgorithm(
-                "Cannot encode elliptic curve public key for {!r}".format(self.kexAlg)
+                f"Cannot encode elliptic curve public key for {self.kexAlg!r}"
             )
 
     def _generateECSharedSecret(self, ecPriv, theirECPubBytes):
@@ -1454,7 +1454,7 @@ class SSHServerTransport(SSHTransportBase):
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -1857,7 +1857,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = self._finishEphemeralDH(f)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))

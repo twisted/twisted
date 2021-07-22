@@ -76,7 +76,7 @@ def passivemode_msg(protocol, host="127.0.0.1", port=12345):
     @param port: the port
     @return: the passive mode message
     """
-    msg = "227 Entering Passive Mode ({}).".format(ftp.encodeHostPort(host, port))
+    msg = f"227 Entering Passive Mode ({ftp.encodeHostPort(host, port)})."
     return msg.encode(protocol._encoding)
 
 
@@ -1063,7 +1063,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         d.addCallback(loggedIn)
 
-        self._download("{} something".format(command), chainDeferred=d)
+        self._download(f"{command} something", chainDeferred=d)
 
         def checkDownload(download):
             self.assertEqual(expectedOutput, download)
@@ -1534,7 +1534,7 @@ class FTPFileListingTests(TestCase):
 
         def check(fileOther):
             ((file,), other) = fileOther
-            self.assertFalse(other, "unexpect unparsable lines: {}".format(repr(other)))
+            self.assertFalse(other, f"unexpect unparsable lines: {repr(other)}")
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
             self.assertTrue(file["owner"] == "root", "misparsed fileitem")
@@ -3827,6 +3827,6 @@ class FTPResponseCodeTests(TestCase):
                 self.assertNotIn(
                     value,
                     seenValues,
-                    "Duplicate code {!r} with value {!r}".format(key, value),
+                    f"Duplicate code {key!r} with value {value!r}",
                 )
                 seenValues.add(value)

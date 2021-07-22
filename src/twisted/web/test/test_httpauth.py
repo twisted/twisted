@@ -60,9 +60,7 @@ class BasicAuthTestsMixin:
         L{basic.BasicCredentialFactory.decode} along with a response value.
         Override this in a subclass.
         """
-        raise NotImplementedError(
-            "{!r} did not implement makeRequest".format(self.__class__)
-        )
+        raise NotImplementedError(f"{self.__class__!r} did not implement makeRequest")
 
     def test_interface(self):
         """

@@ -488,7 +488,7 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output = []  # type: List[bytes]
+        output: List[bytes] = []
 
         def connectionMade(self):
             self.factory.input = []
@@ -637,7 +637,7 @@ class POP3ClientModuleStructureTests(TestCase):
             if not pc == "POP3Client":
                 self.assertTrue(
                     hasattr(twisted.mail.pop3, pc),
-                    "{} not in {}".format(pc, twisted.mail.pop3),
+                    f"{pc} not in {twisted.mail.pop3}",
                 )
             else:
                 self.assertTrue(hasattr(twisted.mail.pop3, "AdvancedPOP3Client"))

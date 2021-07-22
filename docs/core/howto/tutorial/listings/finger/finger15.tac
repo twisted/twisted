@@ -41,9 +41,9 @@ class FingerResource(resource.Resource):
         username = cgi.escape(username)
         if messagevalue is not None:
             messagevalue = cgi.escape(messagevalue)
-            text = "<h1>{}</h1><p>{}</p>".format(username, messagevalue)
+            text = f"<h1>{username}</h1><p>{messagevalue}</p>"
         else:
-            text = "<h1>{}</h1><p>No such user</p>".format(username)
+            text = f"<h1>{username}</h1><p>No such user</p>"
         text = text.encode("ascii")
         return static.Data(text, "text/html")
 

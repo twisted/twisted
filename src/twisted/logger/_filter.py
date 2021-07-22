@@ -11,7 +11,7 @@ from typing import Dict, Iterable
 
 from zope.interface import Interface, implementer
 
-from constantly import NamedConstant, Names
+from constantly import NamedConstant, Names  # type: ignore[import]
 
 from ._interfaces import ILogObserver, LogEvent
 from ._levels import InvalidLogLevelError, LogLevel
@@ -84,7 +84,7 @@ def shouldLogEvent(predicates: Iterable[ILogFilterPredicate], event: LogEvent) -
             return False
         if result == PredicateResult.maybe:
             continue
-        raise TypeError("Invalid predicate result: {!r}".format(result))
+        raise TypeError(f"Invalid predicate result: {result!r}")
     return True
 
 
@@ -138,7 +138,7 @@ class LogLevelFilterPredicate:
         """
         @param defaultLogLevel: The default minimum log level.
         """
-        self._logLevelsByNamespace = {}  # type: Dict[str, NamedConstant]
+        self._logLevelsByNamespace: Dict[str, NamedConstant] = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
 

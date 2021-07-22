@@ -11,7 +11,7 @@ Tests for L{twisted.conch.manhole}.
 import traceback
 from typing import Optional
 
-ssh = None  # type: Optional[bool]
+ssh: Optional[bool] = None
 
 from twisted.trial import unittest
 from twisted.internet import error, defer

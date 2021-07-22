@@ -7,7 +7,7 @@ Test cases for L{twisted.logger._filter}.
 
 from typing import Iterable, List, Tuple, Union, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -61,12 +61,12 @@ class FilteringLogObserverTests(unittest.TestCase):
 
         @return: event numbers or 2-tuple of lists of event numbers.
         """
-        events = [
+        events: List[LogEvent] = [
             dict(count=0),
             dict(count=1),
             dict(count=2),
             dict(count=3),
-        ]  # type: List[LogEvent]
+        ]
 
         class Filters:
             @staticmethod
@@ -134,8 +134,8 @@ class FilteringLogObserverTests(unittest.TestCase):
                 return None
 
         predicates = (getattr(Filters, f) for f in filters)
-        eventsSeen = []  # type: List[LogEvent]
-        eventsNotSeen = []  # type: List[LogEvent]
+        eventsSeen: List[LogEvent] = []
+        eventsNotSeen: List[LogEvent] = []
         trackingObserver = cast(ILogObserver, eventsSeen.append)
 
         if other:
@@ -205,10 +205,10 @@ class FilteringLogObserverTests(unittest.TestCase):
         """
         Test filtering results from each predicate type.
         """
-        e = dict(obj=object())  # type: LogEvent
+        e: LogEvent = dict(obj=object())
 
         def callWithPredicateResult(result: NamedConstant) -> List[LogEvent]:
-            seen = []  # type: List[LogEvent]
+            seen: List[LogEvent] = []
             observer = FilteringLogObserver(
                 cast(ILogObserver, lambda e: seen.append(e)),
                 (cast(ILogFilterPredicate, lambda e: result),),
@@ -224,7 +224,7 @@ class FilteringLogObserverTests(unittest.TestCase):
         """
         Tracing keeps track of forwarding through the filtering observer.
         """
-        event = dict(log_trace=[])  # type: LogEvent
+        event: LogEvent = dict(log_trace=[])
 
         oYes = cast(ILogObserver, lambda e: None)
         oNo = cast(ILogObserver, lambda e: None)
@@ -375,7 +375,7 @@ class LogLevelFilterPredicateTests(unittest.TestCase):
         def checkPredicate(
             namespace: str, level: NamedConstant, expectedResult: NamedConstant
         ) -> None:
-            event = dict(log_namespace=namespace, log_level=level)  # type: LogEvent
+            event: LogEvent = dict(log_namespace=namespace, log_level=level)
             self.assertEqual(expectedResult, predicate(event))
 
         checkPredicate("", LogLevel.debug, PredicateResult.no)

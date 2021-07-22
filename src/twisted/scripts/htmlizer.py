@@ -63,7 +63,7 @@ def run():
     with open(filename + ".html", "wb") as output:
         outHeader = header % {
             "title": filename,
-            "generator": "htmlizer/{}".format(copyright.longversion),
+            "generator": f"htmlizer/{copyright.longversion}",
             "alternate": alternateLink % {"source": filename},
             "stylesheet": stylesheet,
         }

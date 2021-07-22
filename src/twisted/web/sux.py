@@ -49,8 +49,8 @@ def unionlist(*args):
 def zipfndict(*args, **kw):
     default = kw.get("default", nop)
     d = {}
-    for key in unionlist(*[fndict.keys() for fndict in args]):
-        d[key] = tuple([x.get(key, default) for x in args])
+    for key in unionlist(*(fndict.keys() for fndict in args)):
+        d[key] = tuple(x.get(key, default) for x in args)
     return d
 
 
@@ -76,7 +76,7 @@ class ParseError(Exception):
         self.message = message
 
     def __str__(self) -> str:
-        return "{}:{}:{}: {}".format(self.filename, self.line, self.col, self.message)
+        return f"{self.filename}:{self.line}:{self.col}: {self.message}"
 
 
 class XMLParser(Protocol):
@@ -113,10 +113,10 @@ class XMLParser(Protocol):
         stateTable = getattr(self.__class__, "__stateTable", None)
         if stateTable is None:
             stateTable = self.__class__.__stateTable = zipfndict(
-                *[
+                *(
                     prefixedMethodObjDict(self, prefix)
                     for prefix in ("begin_", "do_", "end_")
-                ]
+                )
             )
         return stateTable
 
@@ -211,7 +211,7 @@ class XMLParser(Protocol):
             if self.beExtremelyLenient:
                 self._leadingBodyData = byte
                 return "bodydata"
-            self._parseError("First char of document [{!r}] wasn't <".format(byte))
+            self._parseError(f"First char of document [{byte!r}] wasn't <")
         return "tagstart"
 
     def begin_comment(self, byte):
@@ -389,9 +389,7 @@ class XMLParser(Protocol):
             # something is really broken. let's leave this attribute where it
             # is and move on to the next thing
             return
-        self._parseError(
-            "Invalid attribute name: {!r} {!r}".format(self.attrname, byte)
-        )
+        self._parseError(f"Invalid attribute name: {self.attrname!r} {byte!r}")
 
     def do_beforeattrval(self, byte):
         if byte in "\"'":

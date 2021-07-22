@@ -40,9 +40,9 @@ class BaseLogFile:
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):
-            self.defaultMode = stat.S_IMODE(
+            self.defaultMode: Optional[int] = stat.S_IMODE(
                 os.stat(self.path)[stat.ST_MODE]
-            )  # type: Optional[int]
+            )
         else:
             self.defaultMode = defaultMode
         self._openFile()
@@ -275,7 +275,7 @@ class DailyLogFile(BaseLogFile):
         """Given a unix time, return a LogReader for an old log file."""
         if self.toDate(identifier) == self.lastDate:
             return self.getCurrentLog()
-        filename = "{}.{}".format(self.path, self.suffix(identifier))
+        filename = f"{self.path}.{self.suffix(identifier)}"
         if not os.path.exists(filename):
             raise ValueError("no such logfile exists")
         return LogReader(filename)
@@ -296,7 +296,7 @@ class DailyLogFile(BaseLogFile):
         """
         if not (os.access(self.directory, os.W_OK) and os.access(self.path, os.W_OK)):
             return
-        newpath = "{}.{}".format(self.path, self.suffix(self.lastDate))
+        newpath = f"{self.path}.{self.suffix(self.lastDate)}"
         if os.path.exists(newpath):
             return
         self._file.close()
