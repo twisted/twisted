@@ -305,7 +305,9 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             C{False} otherwise.
         @rtype: L{bool}
         """
-        return _hmacedString(self._hostSalt, hostname) == self._hostHash
+        return hmac.compare_digest(
+            _hmacedString(self._hostSalt, hostname), self._hostHash
+        )
 
     def toString(self):
         """
