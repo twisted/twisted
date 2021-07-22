@@ -269,7 +269,7 @@ class PythonAttribute:
         self.pythonValue = pythonValue
 
     def __repr__(self) -> str:
-        return "PythonAttribute<{!r}>".format(self.name)
+        return f"PythonAttribute<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -331,7 +331,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         Return a string representation including the module name.
         """
-        return "PythonModule<{!r}>".format(self.name)
+        return f"PythonModule<{self.name!r}>"
 
     def isLoaded(self):
         """
@@ -455,7 +455,7 @@ class PathEntry(_ModuleIteratorHelper):
         return self
 
     def __repr__(self) -> str:
-        return "PathEntry<{!r}>".format(self.filePath)
+        return f"PathEntry<{self.filePath!r}>"
 
     def _packagePaths(self):
         yield self.filePath
@@ -481,7 +481,7 @@ class IPathImportMapper(Interface):
 
 @implementer(IPathImportMapper)
 class _DefaultMapImpl:
-    """ Wrapper for the default importer, i.e. None.  """
+    """Wrapper for the default importer, i.e. None."""
 
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
@@ -492,7 +492,7 @@ _theDefaultMapper = _DefaultMapImpl()
 
 @implementer(IPathImportMapper)
 class _ZipMapImpl:
-    """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+    """IPathImportMapper implementation for zipimport.ZipImporter."""
 
     def __init__(self, importer):
         self.importer = importer
@@ -738,7 +738,7 @@ class PythonPath:
         """
         Display my sysPath and moduleDict in a string representation.
         """
-        return "PythonPath({!r},{!r})".format(self.sysPath, self.moduleDict)
+        return f"PythonPath({self.sysPath!r},{self.moduleDict!r})"
 
     def iterModules(self):
         """

@@ -10,7 +10,7 @@ from collections.abc import Mapping as MappingABC
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
@@ -253,7 +253,7 @@ def _formatEvent(event: LogEvent) -> str:
         elif isinstance(format, bytes):
             format = format.decode("utf-8")
         else:
-            raise TypeError("Log format must be str, not {!r}".format(format))
+            raise TypeError(f"Log format must be str, not {format!r}")
 
         return formatWithCall(format, event)
 

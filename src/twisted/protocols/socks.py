@@ -132,7 +132,7 @@ class SOCKSv4(protocol.Protocol):
         @param version: The SOCKS protocol version number.
 
         @type code: L{int}
-        @param code: The comand code. 1 means establish a TCP/IP stream
+        @param code: The command code. 1 means establish a TCP/IP stream
             connection, and 2 means establish a TCP/IP port binding.
 
         @type port: L{int}
@@ -149,7 +149,7 @@ class SOCKSv4(protocol.Protocol):
             d = self.listenClass(0, SOCKSv4IncomingFactory, self, server)
             d.addCallback(lambda x, self=self: self.makeReply(90, 0, x[1], x[0]))
         else:
-            raise RuntimeError("Bad Connect Code: {}".format(code))
+            raise RuntimeError(f"Bad Connect Code: {code}")
         assert self.buf == b"", "hmm, still stuff in buffer... %s" % repr(self.buf)
 
     def connectionLost(self, reason):

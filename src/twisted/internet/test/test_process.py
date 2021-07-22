@@ -301,7 +301,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 msg("childConnectionLost(%d)" % (fd,))
 
             def processExited(self, reason):
-                msg("processExited({!r})".format(reason))
+                msg(f"processExited({reason!r})")
                 # Protect the Deferred from the failure so that it follows
                 # the callback chain.  This doesn't use the errback chain
                 # because it wants to make sure reason is a Failure.  An
@@ -310,7 +310,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 exited.callback([reason])
 
             def processEnded(self, reason):
-                msg("processEnded({!r})".format(reason))
+                msg(f"processEnded({reason!r})")
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
@@ -534,7 +534,7 @@ sys.stdout.flush()""".format(
 
         @param which: Either C{b"uid"} or C{b"gid"}.
         """
-        program = ["import os", "raise SystemExit(os.get{}() != 1)".format(which)]
+        program = ["import os", f"raise SystemExit(os.get{which}() != 1)"]
 
         container = []
 
@@ -700,10 +700,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 lost.append(childFD)
 
             def processExited(self, reason):
-                msg("processExited({!r})".format(reason))
+                msg(f"processExited({reason!r})")
 
             def processEnded(self, reason):
-                msg("processEnded({!r})".format(reason))
+                msg(f"processEnded({reason!r})")
                 ended.callback([reason])
 
         reactor = self.buildReactor()
@@ -752,7 +752,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                     allLost.callback(None)
 
             def processExited(self, reason):
-                msg("processExited({!r})".format(reason))
+                msg(f"processExited({reason!r})")
                 # See test_processExitedWithSignal
                 exited.callback([reason])
                 self.transport.loseConnection()
@@ -777,7 +777,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def cbExited(args):
             (failure,) = args
             failure.trap(ProcessDone)
-            msg("cbExited; lost = {}".format(lost))
+            msg(f"cbExited; lost = {lost}")
             self.assertEqual(lost, [])
             return allLost
 
@@ -841,6 +841,26 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             d.addErrback(err)
 
         reactor.callWhenRunning(start)
+        self.runReactor(reactor)
+
+    def test_pauseAndResumeProducing(self):
+        """
+        Pause producing and then resume producing.
+        """
+
+        def pauseAndResume(reactor):
+            try:
+                protocol = ProcessProtocol()
+                transport = reactor.spawnProcess(
+                    protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+                )
+                transport.pauseProducing()
+                transport.resumeProducing()
+            finally:
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        reactor.callWhenRunning(pauseAndResume, reactor)
         self.runReactor(reactor)
 
     def test_processCommandLineArguments(self):

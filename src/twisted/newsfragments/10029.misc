@@ -1,2 +1,0 @@
-twisted.internet.iocpreactor.iocpsupport was moved to a separate package.
-With this change the main Twisted package is a OS independent wheel.

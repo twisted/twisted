@@ -126,11 +126,11 @@ class Referenceable(Serializable):
 
         method = getattr(self, "remote_%s" % message, None)
         if method is None:
-            raise NoSuchMethod("No such method: remote_{}".format(message))
+            raise NoSuchMethod(f"No such method: remote_{message}")
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("{} didn't accept {} and {}".format(method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, self.perspective)
 
@@ -231,7 +231,7 @@ class ViewPoint(Referenceable):
         try:
             state = method(*(self.perspective,) + args, **kw)
         except TypeError:
-            log.msg("{} didn't accept {} and {}".format(method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
@@ -438,7 +438,7 @@ class RemoteCache(RemoteCopy, Serializable):
         try:
             state = method(*args, **kw)
         except TypeError:
-            log.msg("{} didn't accept {} and {}".format(method, args, kw))
+            log.msg(f"{method} didn't accept {args} and {kw}")
             raise
         return broker.serialize(state, None, method, args, kw)
 
@@ -571,7 +571,7 @@ class RemoteCacheMethod:
         """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
-            from pb import ProtocolError
+            from pb import ProtocolError  # type: ignore[import]
 
             raise ProtocolError(
                 "You can't call a cached method when the object hasn't been given to the peer yet."

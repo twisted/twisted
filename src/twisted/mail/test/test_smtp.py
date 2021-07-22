@@ -361,8 +361,8 @@ class DummyESMTP(DummyProto, smtp.ESMTP):
 
 
 class AnotherTestCase:
-    serverClass = None  # type: Optional[Type[protocol.Protocol]]
-    clientClass = None  # type: Optional[Type[smtp.SMTPClient]]
+    serverClass: Optional[Type[protocol.Protocol]] = None
+    clientClass: Optional[Type[smtp.SMTPClient]] = None
 
     messages = [
         (
@@ -408,11 +408,11 @@ To: foo
         ),
     ]
 
-    data = [
+    data: List[Tuple[bytes, bytes, Any, Any]] = [
         (b"", b"220.*\r\n$", None, None),
         (b"HELO foo.com\r\n", b"250.*\r\n$", None, None),
         (b"RSET\r\n", b"250.*\r\n$", None, None),
-    ]  # type: List[Tuple[bytes, bytes, Any, Any]]
+    ]
     for helo_, from_, to_, realfrom, realto, msg in messages:
         data.append((b"MAIL FROM:<" + from_ + b">\r\n", b"250.*\r\n", None, None))
         for rcpt in to_:

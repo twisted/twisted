@@ -78,7 +78,7 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return "{}.M{}P{}Q{}.{}".format(seconds, microseconds, self.p, self.n, self.s)
+        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
@@ -256,7 +256,7 @@ class AbstractMaildirDomain:
         filename = os.path.join(dir, "tmp", fname)
         fp = open(filename, "w")
         return MaildirMessage(
-            "{}@{}".format(name, domain), fp, filename, os.path.join(dir, "new", fname)
+            f"{name}@{domain}", fp, filename, os.path.join(dir, "new", fname)
         )
 
     def willRelay(self, user, protocol):

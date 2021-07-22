@@ -2,12 +2,19 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
+__all__ = [
+    "seconds",
+    "shortPythonVersion",
+    "Platform",
+    "platform",
+    "platformType",
+]
 import os
 import sys
-import time
-from typing import Callable, Dict, Optional
+from typing import Optional
 import warnings
+
+from time import time as seconds
 
 
 def shortPythonVersion() -> str:
@@ -26,19 +33,13 @@ knownPlatforms = {
 }
 
 
-_timeFunctions = {
-    #'win32': time.clock,
-    "win32": time.time,
-}  # type: Dict[Optional[str], Callable]
-
-
 class Platform:
     """
     Gives us information about the platform we're running on.
     """
 
-    type = knownPlatforms.get(os.name)  # type: Optional[str]
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    type: Optional[str] = knownPlatforms.get(os.name)
+    seconds = staticmethod(seconds)
     _platform = sys.platform
 
     def __init__(
@@ -46,7 +47,6 @@ class Platform:
     ) -> None:
         if name is not None:
             self.type = knownPlatforms.get(name)
-            self.seconds = _timeFunctions.get(self.type, time.time)
         if platform is not None:
             self._platform = platform
 
@@ -203,4 +203,3 @@ class Platform:
 
 platform = Platform()
 platformType = platform.getType()
-seconds = platform.seconds

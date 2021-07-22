@@ -265,7 +265,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         parts = line.split()
         code = parts[0]
         if code != b"+OK":
-            raise AssertionError("code is: {} , parts is: {} ".format(code, parts))
+            raise AssertionError(f"code is: {code} , parts is: {parts} ")
         self.lines = []
         self.retr(1)
 
@@ -1599,7 +1599,7 @@ class POP3ClientDeprecationTests(unittest.TestCase):
         self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]["message"],
-            "twisted.mail.pop3client was deprecated in Twisted NEXT. "
+            "twisted.mail.pop3client was deprecated in Twisted 21.2.0. "
             "Use twisted.mail.pop3 instead.",
         )
         self.assertEqual(len(warningsShown), 1)

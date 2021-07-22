@@ -360,7 +360,7 @@ class ThrottlingTests(unittest.TestCase):
         This is a flaky test.
         """
         server = Server()
-        c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
+        c1, c2, c3, c4 = (SimpleProtocol() for i in range(4))
         tServer = policies.ThrottlingFactory(server, 2)
         wrapTServer = WrappingFactory(tServer)
         wrapTServer.deferred = defer.Deferred()

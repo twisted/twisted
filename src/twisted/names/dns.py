@@ -470,7 +470,7 @@ class IEncodableRecord(IEncodable, IRecord):
     """
     Interface for DNS records that can be encoded and decoded.
 
-    @since: Twisted NEXT
+    @since: Twisted 21.2.0
     """
 
 
@@ -478,7 +478,7 @@ class IEncodableRecord(IEncodable, IRecord):
 class Charstr:
     def __init__(self, string=b""):
         if not isinstance(string, bytes):
-            raise ValueError("{!r} is not a byte string".format(string))
+            raise ValueError(f"{string!r} is not a byte string")
         self.string = string
 
     def encode(self, strio, compDict=None):
@@ -683,10 +683,10 @@ class Query:
             self.type, EXT_QUERIES.get(self.type, "UNKNOWN (%d)" % self.type)
         )
         c = QUERY_CLASSES.get(self.cls, "UNKNOWN (%d)" % self.cls)
-        return "<Query {} {} {}>".format(self.name, t, c)
+        return f"<Query {self.name} {t} {c}>"
 
     def __repr__(self) -> str:
-        return "Query({!r}, {!r}, {!r})".format(self.name.name, self.type, self.cls)
+        return f"Query({self.name.name!r}, {self.type!r}, {self.cls!r})"
 
 
 @implementer(IEncodable)
@@ -1076,7 +1076,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("name", "name", "%s"), "ttl")
     compareAttributes = ("name", "ttl")
 
-    TYPE = None  # type: Optional[int]
+    TYPE: Optional[int] = None
     name = None
 
     def __init__(self, name=b"", ttl=None):
@@ -1243,7 +1243,7 @@ class Record_A(tputil.FancyEqMixin):
         return hash(self.address)
 
     def __str__(self) -> str:
-        return "<A address={} ttl={}>".format(self.dottedQuad(), self.ttl)
+        return f"<A address={self.dottedQuad()} ttl={self.ttl}>"
 
     __repr__ = __str__
 
@@ -2360,7 +2360,7 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
         defaultValue = signature.parameters[name].default
         fieldValue = getattr(obj, name, defaultValue)
         if (name in alwaysShow) or (fieldValue != defaultValue):
-            displayableArgs.append(" {}={!r}".format(name, fieldValue))
+            displayableArgs.append(f" {name}={fieldValue!r}")
 
     return displayableArgs
 
@@ -2410,7 +2410,7 @@ def _compactRepr(
     for name in sectionNames:
         section = getattr(obj, name, [])
         if section:
-            out.append(" {}={!r}".format(name, section))
+            out.append(f" {name}={section!r}")
 
     out.append(">")
 

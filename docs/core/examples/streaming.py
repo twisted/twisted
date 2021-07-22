@@ -40,7 +40,7 @@ class Producer:
         likely), so set a flag that causes production to pause temporarily.
         """
         self._paused = True
-        print("Pausing connection from {}".format(self._proto.transport.getPeer()))
+        print(f"Pausing connection from {self._proto.transport.getPeer()}")
 
     def resumeProducing(self):
         """
@@ -54,7 +54,7 @@ class Producer:
 
         while not self._paused and self._produced < self._goal:
             next_int = randrange(0, 10000)
-            line = "{}".format(next_int)
+            line = f"{next_int}"
             self._proto.sendLine(line.encode("ascii"))
             self._produced += 1
 
@@ -79,7 +79,7 @@ class ServeRandom(LineReceiver):
         Once the connection is made we ask the client how many random integers
         the producer should return.
         """
-        print("Connection made from {}".format(self.transport.getPeer()))
+        print(f"Connection made from {self.transport.getPeer()}")
         self.sendLine(b"How many random integers do you want?")
 
     def lineReceived(self, line):
@@ -88,13 +88,13 @@ class ServeRandom(LineReceiver):
         tells the producer to start generating the data.
         """
         count = int(line.strip())
-        print("Client requested {} random integers!".format(count))
+        print(f"Client requested {count} random integers!")
         producer = Producer(self, count)
         self.transport.registerProducer(producer, True)
         producer.resumeProducing()
 
     def connectionLost(self, reason):
-        print("Connection lost from {}".format(self.transport.getPeer()))
+        print(f"Connection lost from {self.transport.getPeer()}")
 
 
 startLogging(stdout)

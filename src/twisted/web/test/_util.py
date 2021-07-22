@@ -6,13 +6,15 @@ General helpers for L{twisted.web} unit tests.
 """
 
 
-from twisted.internet.defer import succeed
+from typing import Type
+
+from twisted.internet.defer import Deferred, succeed
 from twisted.web import server
-from twisted.trial.unittest import TestCase
-from twisted.python.failure import Failure
+from twisted.trial.unittest import SynchronousTestCase
 
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
+from twisted.web.template import Flattenable
 
 
 def _render(resource, request):
@@ -27,23 +29,27 @@ def _render(resource, request):
         else:
             return request.notifyFinish()
     else:
-        raise ValueError("Unexpected return value: {!r}".format(result))
+        raise ValueError(f"Unexpected return value: {result!r}")
 
 
-class FlattenTestCase(TestCase):
+class FlattenTestCase(SynchronousTestCase):
     """
     A test case that assists with testing L{twisted.web._flatten}.
     """
 
-    def assertFlattensTo(self, root, target):
+    def assertFlattensTo(self, root: Flattenable, target: bytes) -> Deferred[bytes]:
         """
         Assert that a root element, when flattened, is equal to a string.
         """
-        d = flattenString(None, root)
-        d.addCallback(lambda s: self.assertEqual(s, target))
+
+        def check(result: bytes) -> bytes:
+            return self.assertEqual(result, target)  # type: ignore[no-any-return]
+
+        d: Deferred[bytes] = flattenString(None, root)
+        d.addCallback(check)
         return d
 
-    def assertFlattensImmediately(self, root, target):
+    def assertFlattensImmediately(self, root: Flattenable, target: bytes) -> bytes:
         """
         Assert that a root element, when flattened, is equal to a string, and
         performs no asynchronus Deferred anything.
@@ -56,25 +62,14 @@ class FlattenTestCase(TestCase):
             L{target}.
         @rtype: L{bytes}
         """
-        results = []
-        it = self.assertFlattensTo(root, target)
-        it.addBoth(results.append)
-        # Do our best to clean it up if something goes wrong.
-        self.addCleanup(it.cancel)
-        if not results:
-            self.fail("Rendering did not complete immediately.")
-        result = results[0]
-        if isinstance(result, Failure):
-            result.raiseException()
-        return results[0]
+        return self.successResultOf(self.assertFlattensTo(root, target))  # type: ignore[no-any-return]
 
-    def assertFlatteningRaises(self, root, exn):
+    def assertFlatteningRaises(self, root: Flattenable, exn: Type[Exception]) -> None:
         """
         Assert flattening a root element raises a particular exception.
         """
-        d = self.assertFailure(self.assertFlattensTo(root, b""), FlattenerError)
-        d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
-        return d
+        failure = self.failureResultOf(self.assertFlattensTo(root, b""), FlattenerError)
+        self.assertIsInstance(failure.value._exception, exn)
 
 
 def assertIsFilesystemTemporary(case, fileObj):

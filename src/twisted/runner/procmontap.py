@@ -57,7 +57,7 @@ class Options(usage.Options):
         ],
     ]
 
-    optFlags = []  # type: List[Sequence[str]]
+    optFlags: List[Sequence[str]] = []
 
     longdesc = """\
 procmon runs processes, monitors their progress, and restarts them when they

@@ -61,7 +61,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.rawDataInFn = None
 
     def _initializeStream(self):
-        """ Sets up XML Parser. """
+        """Sets up XML Parser."""
         self.stream = domish.elementStream()
         self.stream.DocumentStartEvent = self.onDocumentStart
         self.stream.ElementEvent = self.onElement
@@ -135,11 +135,11 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.transport.loseConnection()
 
     def setDispatchFn(self, fn):
-        """ Set another function to handle elements. """
+        """Set another function to handle elements."""
         self.stream.ElementEvent = fn
 
     def resetDispatchFn(self):
-        """ Set the default function (C{onElement}) to handle elements. """
+        """Set the default function (C{onElement}) to handle elements."""
         self.stream.ElementEvent = self.onElement
 
     def send(self, obj):
@@ -259,7 +259,7 @@ class XmlStreamFactory(XmlStreamFactoryMixin, protocol.ReconnectingClientFactory
     Factory for XmlStream protocol objects as a reconnection client.
     """
 
-    protocol = XmlStream  # type: Type[protocol.Protocol]
+    protocol: "Type[protocol.Protocol]" = XmlStream
 
     def buildProtocol(self, addr):
         """

@@ -61,7 +61,7 @@ class Sensitive:
             return anObject
 
 
-_modDictIDMap = {}  # type:Dict[int, ModuleType]
+_modDictIDMap: Dict[int, ModuleType] = {}
 
 
 def latestFunction(oldFunc):
@@ -118,9 +118,7 @@ def __injectedgetattr__(self, name):
     if name == "__del__":
         raise AttributeError("Without this, Python segfaults.")
     updateInstance(self)
-    log.msg(
-        "(rebuilding stale {} instance ({}))".format(reflect.qual(self.__class__), name)
-    )
+    log.msg(f"(rebuilding stale {reflect.qual(self.__class__)} instance ({name}))")
     result = getattr(self, name)
     return result
 
@@ -136,7 +134,7 @@ def rebuild(module, doLog=1):
         if not module.ALLOW_TWISTED_REBUILD:
             raise RuntimeError("I am not allowed to be rebuilt.")
     if doLog:
-        log.msg("Rebuilding {}...".format(str(module.__name__)))
+        log.msg(f"Rebuilding {str(module.__name__)}...")
 
     # Safely handle adapter re-registration
     from twisted.python import components
@@ -150,7 +148,7 @@ def rebuild(module, doLog=1):
     functions = {}
     values = {}
     if doLog:
-        log.msg("  (scanning {}): ".format(str(module.__name__)))
+        log.msg(f"  (scanning {str(module.__name__)}): ")
     for k, v in d.items():
         if issubclass(type(v), types.FunctionType):
             if v.__globals__ is module.__dict__:
@@ -174,7 +172,7 @@ def rebuild(module, doLog=1):
 
     if doLog:
         log.msg("")
-        log.msg("  (reload   {})".format(str(module.__name__)))
+        log.msg(f"  (reload   {str(module.__name__)})")
 
     # Boom.
     reload(module)
@@ -182,13 +180,11 @@ def rebuild(module, doLog=1):
     linecache.clearcache()
 
     if doLog:
-        log.msg("  (cleaning {}): ".format(str(module.__name__)))
+        log.msg(f"  (cleaning {str(module.__name__)}): ")
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
-            log.msg(
-                "WARNING: class {} not replaced by reload!".format(reflect.qual(clazz))
-            )
+            log.msg(f"WARNING: class {reflect.qual(clazz)} not replaced by reload!")
         else:
             if doLog:
                 log.logfile.write("x")
@@ -213,7 +209,7 @@ def rebuild(module, doLog=1):
                     r.__class__ = ga
     if doLog:
         log.msg("")
-        log.msg("  (fixing   {}): ".format(str(module.__name__)))
+        log.msg(f"  (fixing   {str(module.__name__)}): ")
     modcount = 0
     for mk, mod in sys.modules.items():
         modcount = modcount + 1
@@ -251,5 +247,5 @@ def rebuild(module, doLog=1):
     components.ALLOW_DUPLICATES = False
     if doLog:
         log.msg("")
-        log.msg("   Rebuilt {}.".format(str(module.__name__)))
+        log.msg(f"   Rebuilt {str(module.__name__)}.")
     return module

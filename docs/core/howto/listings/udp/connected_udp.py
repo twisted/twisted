@@ -12,7 +12,7 @@ class Helloer(DatagramProtocol):
         self.transport.write(b"hello")  # no need for address
 
     def datagramReceived(self, data, addr):
-        print("received {!r} from {}".format(data, addr))
+        print(f"received {data!r} from {addr}")
 
     # Possibly invoked if there is no server listening on the
     # address to which we are sending.

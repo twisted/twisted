@@ -280,7 +280,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadEmptyInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadEmptyInput_1(self, res):
-        expected = "readinput ok{}".format(os.linesep)
+        expected = f"readinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -305,7 +305,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadInput_1(self, res):
-        expected = "readinput ok{}".format(os.linesep)
+        expected = f"readinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -329,7 +329,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadAllInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadAllInput_1(self, res):
-        expected = "readallinput ok{}".format(os.linesep)
+        expected = f"readallinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -376,8 +376,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         """
         cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi?param=1234" % (portnum,)
-        url = url.encode("ascii")
+        url = b"http://localhost:%d/cgi?param=1234" % (portnum,)
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
@@ -385,7 +384,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         return d
 
     def _test_urlParameters_1(self, res):
-        expected = "1234{}".format(os.linesep)
+        expected = f"1234{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 

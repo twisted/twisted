@@ -129,7 +129,7 @@ class NetstringPerformanceTester(PerformanceTester):
 
     headers = ["Chunk size", "Number of chunks", "Total size", "Time to receive"]
     lineFormat = "| %%%dd | %%%dd | %%%dd | %%%d.4f |\n" % tuple(
-        [len(header) for header in headers]
+        len(header) for header in headers
     )
 
     def __init__(self, filename):
@@ -206,7 +206,7 @@ class NetstringPerformanceTester(PerformanceTester):
     def receiveData(self, chunk, numberOfChunks, dataSize):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
-        dr("{}:".format(dataSize).encode("ascii"))
+        dr(f"{dataSize}:".encode("ascii"))
         for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)

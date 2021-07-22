@@ -19,7 +19,7 @@ import socket
 from unicodedata import normalize
 import warnings
 
-from constantly import NamedConstant, Names
+from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
 from zope.interface import implementer, directlyProvides, provider
@@ -74,7 +74,7 @@ try:
         CertificateOptions,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError
+    from OpenSSL.SSL import Error as SSLError  # type: ignore[import]
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -840,7 +840,7 @@ class HostnameEndpoint:
             # constructor, which is already a native string.
             host = self._hostStr
         elif isIPv6Address(self._hostStr):
-            host = "[{}]".format(self._hostStr)
+            host = f"[{self._hostStr}]"
         else:
             # Convert the bytes representation to a native string to ensure
             # that we display the punycoded version of the hostname, which is
@@ -935,7 +935,7 @@ class HostnameEndpoint:
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(ValueError("invalid hostname: {}".format(self._hostStr)))
+            return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
 
         d = Deferred()
         addresses = []
@@ -960,9 +960,7 @@ class HostnameEndpoint:
 
         d.addErrback(
             lambda ignored: defer.fail(
-                error.DNSLookupError(
-                    "Couldn't find the hostname '{}'".format(self._hostStr)
-                )
+                error.DNSLookupError(f"Couldn't find the hostname '{self._hostStr}'")
             )
         )
 
@@ -1022,7 +1020,7 @@ class HostnameEndpoint:
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    "no results for hostname lookup: {}".format(self._hostStr)
+                    f"no results for hostname lookup: {self._hostStr}"
                 )
             iterEndpoints = iter(endpoints)
             pending = []
@@ -1715,7 +1713,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '{}'".format(endpointType))
+    raise ValueError(f"Unknown endpoint type: '{endpointType}'")
 
 
 def serverFromString(reactor, description):
@@ -2226,7 +2224,7 @@ def _parseClientTLS(
     privateKey=None,
     trustRoots=None,
     endpoint=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Internal method to construct an endpoint from string parameters.

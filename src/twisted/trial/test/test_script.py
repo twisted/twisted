@@ -202,9 +202,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(filename)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual(
-                "File {!r} doesn't exist\n".format(filename), buffy.getvalue()
-            )
+            self.assertEqual(f"File {filename!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -227,9 +225,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         try:
             self.config.opt_testmodule(moduleName)
             self.assertEqual(0, len(self.config["tests"]))
-            self.assertEqual(
-                "File {!r} doesn't exist\n".format(moduleName), buffy.getvalue()
-            )
+            self.assertEqual(f"File {moduleName!r} doesn't exist\n", buffy.getvalue())
         finally:
             sys.stderr = stderr
 
@@ -307,7 +303,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         for filename in ["test_script.py", "twisted/trial/test/test_script.py"]:
             self.assertTrue(
                 trial.isTestFile(filename),
-                "{!r} should be a test file".format(filename),
+                f"{filename!r} should be a test file",
             )
         for filename in [
             "twisted/trial/test/moduletest.py",
@@ -316,7 +312,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         ]:
             self.assertFalse(
                 trial.isTestFile(filename),
-                "{!r} should *not* be a test file".format(filename),
+                f"{filename!r} should *not* be a test file",
             )
 
 
@@ -806,7 +802,7 @@ class OrderTests(unittest.TestCase):
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_toptobottom_temp import test_missing
+        from twisted_toptobottom_temp import test_missing  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_toptobottom_temp")
         self.addCleanup(sys.modules.pop, test_missing.__name__)
@@ -859,7 +855,7 @@ class HelpOrderTests(unittest.TestCase):
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "{}.*{}".format(re.escape(orderName), re.escape(orderDesc)),
+                f"{re.escape(orderName)}.*{re.escape(orderDesc)}",
                 output,
             )
 

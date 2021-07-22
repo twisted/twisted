@@ -37,7 +37,7 @@ class Twist:
         try:
             options.parseOptions(argv[1:])
         except UsageError as e:
-            exit(ExitStatus.EX_USAGE, "Error: {}\n\n{}".format(e, options))
+            exit(ExitStatus.EX_USAGE, f"Error: {e}\n\n{options}")
 
         return options
 

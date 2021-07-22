@@ -32,7 +32,7 @@ from twisted.trial.unittest import SkipTest
 
 
 def _has_ipv6():
-    """ Returns True if the system can bind an IPv6 address."""
+    """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
 
@@ -89,7 +89,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         loggedMessages = self.observe()
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = "(UDP Port {} Closed)".format(p.getHost().port)
+        expectedMessage = f"(UDP Port {p.getHost().port} Closed)"
 
         def stopReactor(ignored):
             reactor.stop()

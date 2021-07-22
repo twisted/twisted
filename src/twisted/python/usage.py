@@ -53,13 +53,11 @@ class CoerceParameter:
         returned value.
         """
         if value is None:
-            raise UsageError(
-                "Parameter '{}' requires an argument.".format(parameterName)
-            )
+            raise UsageError(f"Parameter '{parameterName}' requires an argument.")
         try:
             value = self.coerce(value)
         except ValueError as e:
-            raise UsageError("Parameter type enforcement failed: {}".format(e))
+            raise UsageError(f"Parameter type enforcement failed: {e}")
 
         self.options.opts[parameterName] = value
 
@@ -151,9 +149,9 @@ class Options(dict):
     or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
-    subCommand = None  # type: Optional[str]
-    defaultSubCommand = None  # type: Optional[str]
-    parent = None  # type: Optional[Options]
+    subCommand: Optional[str] = None
+    defaultSubCommand: Optional[str] = None
+    parent: "Optional[Options]" = None
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
@@ -248,7 +246,7 @@ class Options(dict):
             if optMangled not in self.synonyms:
                 optMangled = opt.replace("-", "_")
                 if optMangled not in self.synonyms:
-                    raise UsageError("No such option '{}'".format(opt))
+                    raise UsageError(f"No such option '{opt}'")
 
             optMangled = self.synonyms[optMangled]
             if isinstance(self._dispatch[optMangled], CoerceParameter):
@@ -570,7 +568,7 @@ class Completer:
     subclasses for specific completion functionality.
     """
 
-    _descr = None  # type: Optional[str]
+    _descr: Optional[str] = None
 
     def __init__(self, descr=None, repeat=False):
         """
@@ -616,8 +614,8 @@ class Completer:
             C{twisted.python.usage._ZSH}
         """
         if shellType == _ZSH:
-            return "{}:{}:".format(self._repeatFlag, self._description(optName))
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+            return f"{self._repeatFlag}:{self._description(optName)}:"
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteFiles(Completer):
@@ -631,9 +629,9 @@ class CompleteFiles(Completer):
 
     def _description(self, optName):
         if self._descr is not None:
-            return "{} ({})".format(self._descr, self._globPattern)
+            return f"{self._descr} ({self._globPattern})"
         else:
-            return "{} ({})".format(optName, self._globPattern)
+            return f"{optName} ({self._globPattern})"
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
@@ -642,7 +640,7 @@ class CompleteFiles(Completer):
                 self._description(optName),
                 self._globPattern,
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteDirs(Completer):
@@ -655,7 +653,7 @@ class CompleteDirs(Completer):
             return "{}:{}:_directories".format(
                 self._repeatFlag, self._description(optName)
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteList(Completer):
@@ -676,7 +674,7 @@ class CompleteList(Completer):
                     self._items,
                 ),
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteMultiList(Completer):
@@ -696,7 +694,7 @@ class CompleteMultiList(Completer):
                 self._description(optName),
                 " ".join(self._items),
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteUsernames(Completer):
@@ -706,8 +704,8 @@ class CompleteUsernames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_users".format(self._repeatFlag, self._description(optName))
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+            return f"{self._repeatFlag}:{self._description(optName)}:_users"
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteGroups(Completer):
@@ -719,8 +717,8 @@ class CompleteGroups(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_groups".format(self._repeatFlag, self._description(optName))
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+            return f"{self._repeatFlag}:{self._description(optName)}:_groups"
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteHostnames(Completer):
@@ -730,8 +728,8 @@ class CompleteHostnames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_hosts".format(self._repeatFlag, self._description(optName))
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+            return f"{self._repeatFlag}:{self._description(optName)}:_hosts"
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteUserAtHost(Completer):
@@ -758,7 +756,7 @@ class CompleteUserAtHost(Completer):
                 '_alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]"'
                 " && ret=0 fi}" % (self._repeatFlag, self._description(optName))
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class CompleteNetInterfaces(Completer):
@@ -772,7 +770,7 @@ class CompleteNetInterfaces(Completer):
                 self._repeatFlag,
                 self._description(optName),
             )
-        raise NotImplementedError("Unknown shellType {!r}".format(shellType))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class Completions:
@@ -955,17 +953,17 @@ def docMakeChunks(optList, width=80):
         ) is not None:
             d = opt["dispatch"]
             if isinstance(d, CoerceParameter) and d.doc:
-                doc = "{}. {}".format(doc, d.doc)
+                doc = f"{doc}. {d.doc}"
 
         if doc:
             column2_l = textwrap.wrap(doc, colWidth2)
         else:
             column2_l = [""]
 
-        optLines.append("{}{}\n".format(column1, column2_l.pop(0)))
+        optLines.append(f"{column1}{column2_l.pop(0)}\n")
 
         for line in column2_l:
-            optLines.append("{}{}\n".format(colFiller1, line))
+            optLines.append(f"{colFiller1}{line}\n")
 
         optChunks.append("".join(optLines))
 
@@ -1007,7 +1005,7 @@ def portCoerce(value):
     """
     value = int(value)
     if value < 0 or value > 65535:
-        raise ValueError("Port number not in range: {}".format(value))
+        raise ValueError(f"Port number not in range: {value}")
     return value
 
 

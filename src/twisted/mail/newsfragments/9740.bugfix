@@ -1,1 +1,0 @@
-twisted.mail.smtp.ESMTPSender no longer forces TLSv1.0 when used without explicit context factory.

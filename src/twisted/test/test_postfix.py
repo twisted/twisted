@@ -40,13 +40,13 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
 
 
 class PostfixTCPMapServerTestCase:
-    data = {
+    data: Dict[bytes, bytes] = {
         # 'key': 'value',
-    }  # type: Dict[bytes, bytes]
+    }
 
-    chat = [
+    chat: List[Tuple[bytes, bytes]] = [
         # (input, expected_output),
-    ]  # type: List[Tuple[bytes, bytes]]
+    ]
 
     def test_chat(self):
         """

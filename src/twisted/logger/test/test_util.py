@@ -25,7 +25,7 @@ class UtilTests(unittest.TestCase):
         """
         publisher = LogPublisher()
 
-        event = dict(log_trace=[])  # type: LogEvent
+        event: LogEvent = dict(log_trace=[])
 
         @implementer(ILogObserver)
         def o1(e: LogEvent) -> None:
@@ -64,7 +64,7 @@ class UtilTests(unittest.TestCase):
         """
         Format trace as string.
         """
-        event = dict(log_trace=[])  # type: LogEvent
+        event: LogEvent = dict(log_trace=[])
 
         @implementer(ILogObserver)
         def o1(e: LogEvent) -> None:

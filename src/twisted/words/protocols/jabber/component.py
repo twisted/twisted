@@ -380,7 +380,7 @@ class Router:
         """
         destination = JID(stanza["to"])
 
-        log.msg("Routing to {}: {!r}".format(destination.full(), stanza.toXml()))
+        log.msg(f"Routing to {destination.full()}: {stanza.toXml()!r}")
 
         if destination.host in self.routes:
             self.routes[destination.host].send(stanza)

@@ -414,7 +414,7 @@ else:
             width,
             height,
             *a,
-            **kw
+            **kw,
         ):
             self.protocolFactory = protocolFactory
             self.protocolArgs = protocolArgs

@@ -13,13 +13,14 @@ import socket
 import sys
 import os
 import struct
-from typing import Optional
+from typing import Optional, Callable, List, ClassVar
 
 import attr
 
 from zope.interface import Interface, implementer
+import typing_extensions
 
-from twisted.logger import Logger
+from twisted.logger import Logger, ILogObserver, LogEvent
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     ITCPTransport,
@@ -750,7 +751,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
+        s = f"<{self.__class__} to {self.addr} at {id(self):x}>"
         return s
 
 
@@ -798,7 +799,7 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.hostname)
+        self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
             self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
@@ -934,8 +935,13 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
+class _HasClose(typing_extensions.Protocol):
+    def close(self) -> object:
+        ...
+
+
 @implementer(_IFileDescriptorReservation)
-@attr.s
+@attr.s(auto_attribs=True)
 class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
@@ -946,10 +952,10 @@ class _FileDescriptorReservation:
         returns an object with a C{close} method.
     """
 
-    _log = Logger()
+    _log: ClassVar[Logger] = Logger()
 
-    _fileFactory = attr.ib()
-    _fileDescriptor = attr.ib(init=False, default=None)
+    _fileFactory: Callable[[], _HasClose]
+    _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
 
     def available(self):
         """
@@ -1085,7 +1091,7 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
@@ -1099,9 +1105,9 @@ class _BuffersLogs:
     @type _observer: L{twisted.logger.ILogObserver}.
     """
 
-    _namespace = attr.ib()
-    _observer = attr.ib()
-    _logs = attr.ib(default=attr.Factory(list))
+    _namespace: str
+    _observer: ILogObserver
+    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
@@ -1246,7 +1252,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # An externally initialized socket that we will use, rather than creating
     # our own.
@@ -1442,7 +1448,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -1493,7 +1499,7 @@ class Connector(base.BaseConnector):
             try:
                 port = socket.getservbyname(port, "tcp")
             except OSError as e:
-                raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
+                raise error.ServiceNameUnknownError(string=f"{e} ({port!r})")
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address

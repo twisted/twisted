@@ -61,7 +61,7 @@ class ConchTestRealm:
             self.avatar = ConchTestAvatar()
             return interfaces[0], self.avatar, self.avatar.logout
         raise UnauthorizedLogin(
-            "Only {!r} may log in, not {!r}".format(self.expectedAvatarID, avatarID)
+            f"Only {self.expectedAvatarID!r} may log in, not {avatarID!r}"
         )
 
 
@@ -388,7 +388,7 @@ if cryptography is not None and pyasn1 is not None:
                 return
             if not hasattr(self, "expectedLoseConnection"):
                 raise unittest.FailTest(
-                    "unexpectedly lost connection {}\n{}".format(self, reason)
+                    f"unexpectedly lost connection {self}\n{reason}"
                 )
             self.done = 1
 
@@ -409,7 +409,7 @@ if cryptography is not None and pyasn1 is not None:
             self.loseConnection()
 
         def receiveUnimplemented(self, seqID):
-            raise unittest.FailTest("got unimplemented: seqid {}".format(seqID))
+            raise unittest.FailTest(f"got unimplemented: seqid {seqID}")
 
     class ConchTestServer(ConchTestBase, transport.SSHServerTransport):
         def connectionLost(self, reason):
@@ -507,7 +507,7 @@ if cryptography is not None and pyasn1 is not None:
             if dataType == connection.EXTENDED_DATA_STDERR:
                 self.receivedExt.append(data)
             else:
-                log.msg("Unrecognized extended data: {!r}".format(dataType))
+                log.msg(f"Unrecognized extended data: {dataType!r}")
 
         def request_exit_status(self, status):
             [self.status] = struct.unpack(">L", status)
@@ -913,6 +913,21 @@ class SSHFactoryTests(unittest.TestCase):
 
         self.assertIn(b"diffie-hellman-group-exchange-sha1", p2.supportedKeyExchanges)
         self.assertIn(b"diffie-hellman-group-exchange-sha256", p2.supportedKeyExchanges)
+
+    def test_buildProtocolKexECDSA(self):
+        """
+        ECDSA key exchanges are listed with 256 having a higher priority among ECDSA.
+        """
+        f2 = self.makeSSHFactory()
+
+        p2 = f2.buildProtocol(None)
+
+        # The list might contain other algorightm.
+        # For this test just check the order for ECDSA KEX.
+        self.assertIn(
+            b"ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521",
+            b",".join(p2.supportedKeyExchanges),
+        )
 
 
 class MPTests(unittest.TestCase):
