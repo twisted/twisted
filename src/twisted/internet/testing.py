@@ -18,6 +18,7 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
+    IProtocol,
     ITransport,
     IConsumer,
     IPushProducer,
@@ -298,6 +299,8 @@ class StringTransportWithDisconnection(StringTransport):
     A L{StringTransport} which on disconnection will trigger the connection
     lost on the attached protocol.
     """
+
+    protocol: IProtocol
 
     def loseConnection(self):
         if self.connected:

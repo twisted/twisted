@@ -847,12 +847,12 @@ class Process(_BaseProcess):
             self.pipes[childFD].loseConnection()
 
     def pauseProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.stopReading()
 
     def resumeProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.startReading()
 

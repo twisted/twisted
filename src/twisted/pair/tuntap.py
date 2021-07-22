@@ -16,7 +16,7 @@ import warnings
 from typing import Tuple
 
 from collections import namedtuple
-from constantly import Flags, FlagConstant
+from constantly import Flags, FlagConstant  # type: ignore[import]
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.util import FancyEqMixin, FancyStrMixin

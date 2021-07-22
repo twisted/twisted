@@ -22,7 +22,7 @@ from twisted.internet.posixbase import _NO_FILEDESC
 
 from twisted.python import log
 
-from CoreFoundation import (
+from CoreFoundation import (  # type: ignore[import]
     CFRunLoopAddSource,
     CFRunLoopRemoveSource,
     CFRunLoopGetMain,
@@ -36,7 +36,7 @@ from CoreFoundation import (
     CFAbsoluteTimeGetCurrent,
 )
 
-from CFNetwork import (
+from CFNetwork import (  # type: ignore[import]
     CFSocketCreateWithNative,
     CFSocketSetSocketFlags,
     CFSocketEnableCallBacks,

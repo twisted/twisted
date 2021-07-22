@@ -186,7 +186,7 @@ class _CommandDispatcherMixin:
         method = _getMethod("unknown")
         if method is None:
             raise UnhandledCommand(
-                "No handler for {!r} could be found".format(_getMethodName(commandName))
+                f"No handler for {_getMethodName(commandName)!r} could be found"
             )
         return method(commandName, *args)
 
@@ -365,7 +365,7 @@ class IRC(protocol.Protocol):
         tagStrings = []
         for tag, value in tags.items():
             if value:
-                tagStrings.append("{}={}".format(tag, self._escapeTagValue(value)))
+                tagStrings.append(f"{tag}={self._escapeTagValue(value)}")
             else:
                 tagStrings.append(tag)
         return ";".join(tagStrings)
@@ -476,7 +476,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendCommand("PRIVMSG", (recip, ":{}".format(lowQuote(message))), sender)
+        self.sendCommand("PRIVMSG", (recip, f":{lowQuote(message)}"), sender)
 
     def notice(self, sender, recip, message):
         """
@@ -546,7 +546,7 @@ class IRC(protocol.Protocol):
                     % (self.hostname, RPL_TOPIC, user, channel, lowQuote(topic))
                 )
         else:
-            self.sendLine(":{} TOPIC {} :{}".format(author, channel, lowQuote(topic)))
+            self.sendLine(f":{author} TOPIC {channel} :{lowQuote(topic)}")
 
     def topicAuthor(self, user, channel, author, date):
         """
@@ -2294,7 +2294,7 @@ class IRCClient(basic.LineReceiver):
             self.ctcpMakeReply(nick, [("CLIENTINFO", " ".join(names))])
         else:
             args = data.split()
-            method = getattr(self, "ctcpQuery_{}".format(args[0]), None)
+            method = getattr(self, f"ctcpQuery_{args[0]}", None)
             if not method:
                 self.ctcpMakeReply(
                     nick,
@@ -3183,7 +3183,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
     def __str__(self) -> str:
         if not self.connected:
-            return "<Unconnected DccFileReceive object at {:x}>".format(id(self))
+            return f"<Unconnected DccFileReceive object at {id(self):x}>"
         transport = self.transport
         assert transport is not None
         from_ = str(transport.getPeer())
@@ -3194,7 +3194,7 @@ class DccFileReceive(DccFileReceiveBasic):
         return s
 
     def __repr__(self) -> str:
-        s = "<{} at {:x}: GET {}>".format(self.__class__, id(self), self.filename)
+        s = f"<{self.__class__} at {id(self):x}: GET {self.filename}>"
         return s
 
 
@@ -3678,10 +3678,10 @@ def ctcpExtract(message):
             normal_messages.append(messages.pop(0))
         odd = not odd
 
-    extended_messages[:] = filter(None, extended_messages)
-    normal_messages[:] = filter(None, normal_messages)
+    extended_messages[:] = list(filter(None, extended_messages))
+    normal_messages[:] = list(filter(None, normal_messages))
 
-    extended_messages[:] = map(ctcpDequote, extended_messages)
+    extended_messages[:] = list(map(ctcpDequote, extended_messages))
     for i in range(len(extended_messages)):
         m = extended_messages[i].split(SPC, 1)
         tag = m[0]
@@ -3711,7 +3711,7 @@ for k, v in mQuoteTable.items():
     mDequoteTable[v[-1]] = k
 del k, v
 
-mEscape_re = re.compile("{}.".format(re.escape(M_QUOTE)), re.DOTALL)
+mEscape_re = re.compile(f"{re.escape(M_QUOTE)}.", re.DOTALL)
 
 
 def lowQuote(s):
@@ -3741,7 +3741,7 @@ xDequoteTable = {}
 for k, v in xQuoteTable.items():
     xDequoteTable[v[-1]] = k
 
-xEscape_re = re.compile("{}.".format(re.escape(X_QUOTE)), re.DOTALL)
+xEscape_re = re.compile(f"{re.escape(X_QUOTE)}.", re.DOTALL)
 
 
 def ctcpQuote(s):

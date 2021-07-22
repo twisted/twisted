@@ -8,7 +8,7 @@ Test cases for L{twisted.logger._io}.
 import sys
 from typing import List, Optional
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 
@@ -67,7 +67,7 @@ class LoggingFileTests(unittest.TestCase):
         deprecatedClass = "twisted.logger._io.LoggingFile.softspace"
         self.assertEqual(
             warningsShown[0]["message"],
-            "%s was deprecated in Twisted NEXT" % (deprecatedClass),
+            "%s was deprecated in Twisted 21.2.0" % (deprecatedClass),
         )
 
     def test_readOnlyAttributes(self) -> None:

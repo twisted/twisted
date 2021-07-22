@@ -99,7 +99,7 @@ from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL  # type: ignore[import]
 except ImportError:
     useSSL = False
 else:

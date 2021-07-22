@@ -17,7 +17,7 @@ from zope.interface import directlyProvides, providedBy
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
-from twisted.internet import error
+from twisted.internet import error, interfaces
 from twisted.internet.interfaces import ILoggingContext
 from twisted.python import log
 
@@ -49,7 +49,9 @@ class ProtocolWrapper(Protocol):
 
     disconnecting = 0
 
-    def __init__(self, factory, wrappedProtocol):
+    def __init__(
+        self, factory: "WrappingFactory", wrappedProtocol: interfaces.IProtocol
+    ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
 

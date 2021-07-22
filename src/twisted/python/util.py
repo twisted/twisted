@@ -186,7 +186,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
@@ -386,7 +386,7 @@ def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
+        result = f"[{doneChar * done}{currentChar}{undoneChar * toDo}]"
         if force:
             last[0] = result
             return result
@@ -424,7 +424,7 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
+        print(f"method {frame.f_code.co_name} of {k} at {id(se)}")
     else:
         print(
             "function %s in %s, line %s"
@@ -620,10 +620,10 @@ class FancyStrMixin:
         #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(" {}={!r}".format(attr, getattr(self, attr)))
+                r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
                 attr = cast(Tuple[str, Callable], attr)
-                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
+                r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
                 attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
