@@ -51,14 +51,13 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
     ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]],
     ['dereference', 1]]
 
-The C{set} builtin and the C{sets.Set} class are serialized to the same
-thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
-that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set}.
-
-The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
+The Python 2.x C{sets.Set} and C{sets.ImmutableSet} classes are
+serialized to the same thing as the builtin C{set} and C{frozenset}
+classes.  (This is only relevant if you are communicating with a
+version of jelly running on an older version of Python.)
 
 @author: Glyph Lefkowitz
+
 """
 
 # System Imports
@@ -81,23 +80,6 @@ from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
-
-
-_SetTypes = [set]
-_ImmutableSetTypes = [frozenset]
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    try:
-        import sets as _sets
-    except ImportError:
-        # sets module is deprecated in Python 2.6, and gone in
-        # Python 3
-        _sets = None
-    else:
-        _SetTypes.append(_sets.Set)
-        _ImmutableSetTypes.append(_sets.ImmutableSet)
-
 
 DictTypes = (dict,)
 
@@ -551,9 +533,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType in _SetTypes:
+                elif objType is set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType in _ImmutableSetTypes:
+                elif objType is frozenset:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__).encode("utf-8")
@@ -889,7 +871,7 @@ class _Unjellier:
         return self._genericUnjelly(clz, rest[1])
 
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable("Unpersistable data: {}".format(rest[0]))
+        return Unpersistable(f"Unpersistable data: {rest[0]}")
 
     def _unjelly_method(self, rest):
         """

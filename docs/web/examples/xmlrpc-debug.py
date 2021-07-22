@@ -17,7 +17,7 @@ from twisted.internet import reactor
 
 
 class DebuggingQueryFactory(QueryFactory):
-    """ Print the server's raw responses before continuing with parsing. """
+    """Print the server's raw responses before continuing with parsing."""
 
     def parseResponse(self, contents):
         print(contents)  # show the raw XML-RPC string

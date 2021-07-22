@@ -94,7 +94,7 @@ class ConnectError(Exception):
         if self.osError:
             s = f"{s}: {self.osError}"
         if self.args[0]:
-            s = "{}: {}".format(s, self.args[0])
+            s = f"{s}: {self.args[0]}"
         s = "%s." % s
         return s
 
