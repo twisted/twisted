@@ -1648,9 +1648,9 @@ def _inlineCallbacks(
     # Get the current contextvars Context object.
     current_context = _copy_context()
 
+    finalOutcome = None
+
     while 1:
-        should_callback = False
-        callback_val = None
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, Failure)
@@ -1663,8 +1663,9 @@ def _inlineCallbacks(
                 result = current_context.run(gen.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            should_callback = True
-            callback_val = getattr(e, "value", None)
+            finalOutcome = e.value
+            break
+
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
@@ -1737,14 +1738,10 @@ def _inlineCallbacks(
                     lineno,
                 )
 
-            should_callback = True
-            callback_val = e.value
+            finalOutcome = e.value
+            break
         except BaseException:
             status.deferred.errback()
-            return
-
-        if should_callback:
-            status.deferred.callback(callback_val)
             return
 
         if isinstance(result, Deferred):
@@ -1772,6 +1769,8 @@ def _inlineCallbacks(
 
             waiting[0] = True
             waiting[1] = None
+
+    status.deferred.callback(finalOutcome)
 
 
 def _cancellableInlineCallbacks(
