@@ -508,7 +508,7 @@ class DatagramPort(_UNIXPort, udp.Port):
             return f"<{protocolName} (not listening)>"
 
     def _bindSocket(self):
-        log.msg("{} starting on {}".format(self.protocol.__class__, repr(self.port)))
+        log.msg(f"{self.protocol.__class__} starting on {repr(self.port)}")
         try:
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:

@@ -300,7 +300,7 @@ class FailureTests(SynchronousTestCase):
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += f'  File "{filename}", line {lineno}, in {method}\n'
-            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,

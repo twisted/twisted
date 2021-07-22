@@ -41,11 +41,11 @@ def formatTrace(trace: LogTrace) -> str:
 
             else:
                 if not lineage:
-                    result.append("{}\n".format(formatWithName(parent)))
+                    result.append(f"{formatWithName(parent)}\n")
 
                 lineage.append(parent)
 
         result.append("  " * len(lineage))
-        result.append("-> {}\n".format(formatWithName(child)))
+        result.append(f"-> {formatWithName(child)}\n")
 
     return "".join(result)
