@@ -415,7 +415,7 @@ class MessageSet:
         return ",".join(p)
 
     def __repr__(self) -> str:
-        return "<MessageSet {}>".format(str(self))
+        return f"<MessageSet {str(self)}>"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
@@ -964,7 +964,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             size = int(line[1:-1])
         except ValueError:
-            raise IllegalClientResponse("Bad literal size: {!r}".format(line[1:-1]))
+            raise IllegalClientResponse(f"Bad literal size: {line[1:-1]!r}")
 
         return self._fileLiteral(size)
 
@@ -1395,7 +1395,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_DELETE = auth_DELETE
 
     def do_RENAME(self, tag, oldname, newname):
-        oldname, newname = [_parseMbox(n) for n in (oldname, newname)]
+        oldname, newname = (_parseMbox(n) for n in (oldname, newname))
         if oldname.lower() == "inbox" or newname.lower() == "inbox":
             self.sendNegativeResponse(
                 tag, b"You cannot rename the inbox, or rename another mailbox to inbox."
@@ -3430,9 +3430,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         try:
             names = b" ".join(self._statusNames[name] for name in names)
         except KeyError:
-            raise ValueError(
-                "Unknown names: {!r}".format(set(names) - set(self._statusNames))
-            )
+            raise ValueError(f"Unknown names: {set(names) - set(self._statusNames)!r}")
 
         args = b"".join([preparedMailbox, b" (", names, b")"])
         resp = (b"STATUS",)
@@ -4594,7 +4592,7 @@ def Or(*args):
     elif len(args) == 2:
         return "(OR %s %s)" % args
     else:
-        return "(OR {} {})".format(args[0], Or(*args[1:]))
+        return f"(OR {args[0]} {Or(*args[1:])})"
 
 
 def Not(query):

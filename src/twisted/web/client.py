@@ -42,7 +42,7 @@ from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
 
 
 def urlunparse(parts):
-    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    result = _urlunparse(tuple(p.decode("charmap") for p in parts))
     return result.encode("charmap")
 
 
@@ -1502,9 +1502,7 @@ class _AgentBase:
         the request.
         """
         if not isinstance(method, bytes):
-            raise TypeError(
-                "method={!r} is {}, but must be bytes".format(method, type(method))
-            )
+            raise TypeError(f"method={method!r} is {type(method)}, but must be bytes")
 
         method = _ensureValidMethod(method)
 

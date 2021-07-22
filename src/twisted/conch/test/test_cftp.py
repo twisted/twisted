@@ -608,7 +608,7 @@ class StdioClientTests(TestCase):
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
                 line = line.strip().split(" ", 1)
-                actualTransfer.append("{} {}".format(line[0], line[1].strip()))
+                actualTransfer.append(f"{line[0]} {line[1].strip()}")
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 

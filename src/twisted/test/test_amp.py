@@ -1392,7 +1392,7 @@ class AMPTests(TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x{:x}>".format(id(a)))
+        self.assertEqual(repr(a), f"<AMP at 0x{id(a):x}>")
 
     @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):
