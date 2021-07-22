@@ -77,7 +77,7 @@ class Options(usage.Options):
                 port = int(address[1])
             except ValueError:
                 raise usage.UsageError(
-                    "Specify an integer port number, not {!r}".format(address[1])
+                    f"Specify an integer port number, not {address[1]!r}"
                 )
             address = (address[0], port)
         self.secondaries.append((address, [args[1]]))
