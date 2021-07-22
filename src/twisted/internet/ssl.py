@@ -157,7 +157,7 @@ class ClientContextFactory:
 
 @implementer_only(
     interfaces.ISSLTransport,
-    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport],
+    *(i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport),
 )
 class Client(tcp.Client):
     """

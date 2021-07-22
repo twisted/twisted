@@ -94,7 +94,7 @@ class FileTransferBase(protocol.Protocol):
             for i in range(extendedCount):
                 (extendedType, data) = getNS(data)
                 (extendedData, data) = getNS(data)
-                attrs["ext_{}".format(nativeString(extendedType))] = extendedData
+                attrs[f"ext_{nativeString(extendedType)}"] = extendedData
         return attrs, data
 
     def _packAttributes(self, attrs):
