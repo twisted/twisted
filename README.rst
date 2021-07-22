@@ -44,7 +44,8 @@ This documentation contains how-tos, code examples, and an API reference.
 
 Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
+There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web),
+on `irc.libera.chat <https://web.libera.chat/>_`.
 
 
 Unit Tests

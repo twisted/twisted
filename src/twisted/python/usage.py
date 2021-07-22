@@ -535,7 +535,7 @@ class Options(dict):
         if not (getattr(self, "longdesc", None) is None):
             longdesc = cast(str, self.longdesc)  # type: ignore[attr-defined]
         else:
-            import __main__  # type: ignore[import]
+            import __main__
 
             if getattr(__main__, "__doc__", None):
                 longdesc = __main__.__doc__
@@ -614,7 +614,7 @@ class Completer:
             C{twisted.python.usage._ZSH}
         """
         if shellType == _ZSH:
-            return "{}:{}:".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -704,7 +704,7 @@ class CompleteUsernames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_users".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_users"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -717,7 +717,7 @@ class CompleteGroups(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_groups".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_groups"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -728,7 +728,7 @@ class CompleteHostnames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_hosts".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_hosts"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -960,7 +960,7 @@ def docMakeChunks(optList, width=80):
         else:
             column2_l = [""]
 
-        optLines.append("{}{}\n".format(column1, column2_l.pop(0)))
+        optLines.append(f"{column1}{column2_l.pop(0)}\n")
 
         for line in column2_l:
             optLines.append(f"{colFiller1}{line}\n")

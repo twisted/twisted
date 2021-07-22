@@ -660,9 +660,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
             self.assertIs(warning["category"], DeprecationWarning)
             if "toTuple" in warning["message"]:
                 foundToTuple = True
-        self.assertTrue(
-            foundToTuple, "no tuple deprecation found:{}".format(repr(warnings))
-        )
+        self.assertTrue(foundToTuple, f"no tuple deprecation found:{repr(warnings)}")
 
     def test_processes(self):
         """

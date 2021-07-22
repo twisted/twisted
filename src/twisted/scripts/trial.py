@@ -640,13 +640,13 @@ def run():
     try:
         config.parseOptions()
     except usage.error as ue:
-        raise SystemExit("{}: {}".format(sys.argv[0], ue))
+        raise SystemExit(f"{sys.argv[0]}: {ue}")
     _initialDebugSetup(config)
 
     try:
         trialRunner = _makeRunner(config)
     except _DebuggerNotFound as e:
-        raise SystemExit("{}: {}".format(sys.argv[0], str(e)))
+        raise SystemExit(f"{sys.argv[0]}: {str(e)}")
 
     suite = _getSuite(config)
     if config["until-failure"]:

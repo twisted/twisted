@@ -751,7 +751,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
+        s = f"<{self.__class__} to {self.addr} at {id(self):x}>"
         return s
 
 
