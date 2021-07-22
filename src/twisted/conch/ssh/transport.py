@@ -267,7 +267,7 @@ class SSHCiphers:
             return mac == b""
         data = struct.pack(">L", seqid) + data
         outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
-        return mac == outer
+        return hmac.compare_digest(mac, outer)
 
 
 def _getSupportedCiphers():
