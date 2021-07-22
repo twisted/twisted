@@ -78,7 +78,7 @@ try:
         DiffieHellmanParameters,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3
+    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3  # type: ignore[import]
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -3282,7 +3282,7 @@ class ServerStringTests(unittest.TestCase):
         fakeEndpoint = endpoints.serverFromString(
             notAReactor, "fake:hello:world:yes=no:up=down"
         )
-        from twisted.plugins.fakeendpoint import fake
+        from twisted.plugins.fakeendpoint import fake  # type: ignore[import]
 
         self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, "hello", "world"))

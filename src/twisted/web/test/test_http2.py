@@ -35,12 +35,12 @@ try:
 
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
-    import h2
-    import h2.errors
-    import h2.exceptions
-    import hyperframe
-    import priority
-    from hpack.hpack import Encoder, Decoder
+    import h2  # type: ignore[import]
+    import h2.errors  # type: ignore[import]
+    import h2.exceptions  # type: ignore[import]
+    import hyperframe  # type: ignore[import]
+    import priority  # type: ignore[import]
+    from hpack.hpack import Encoder, Decoder  # type: ignore[import]
 except ImportError:
     skipH2 = "HTTP/2 support not enabled"
 
@@ -2289,7 +2289,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # frame instead. This needs to be very long to actually force the
         # WINDOW_UPDATE frames out.
         frameData = [b"\x00" * (2 ** 14)] * 4
-        bodyLength = "{}".format(sum(len(data) for data in frameData))
+        bodyLength = f"{sum(len(data) for data in frameData)}"
         headers = self.postRequestHeaders[:-1] + [("content-length", bodyLength)]
         frames = buildRequestFrames(
             headers=headers, data=frameData, frameFactory=frameFactory

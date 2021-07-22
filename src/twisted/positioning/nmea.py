@@ -25,7 +25,7 @@ import datetime
 from functools import reduce
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant
+from constantly import Values, ValueConstant  # type: ignore[import]
 
 from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
@@ -482,7 +482,7 @@ class NMEAAdapter:
 
         left, right = nmeaCoordinate.split(".")
 
-        degrees, minutes = int(left[:-2]), float("{}.{}".format(left[-2:], right))
+        degrees, minutes = int(left[:-2]), float(f"{left[-2:]}.{right}")
         angle = degrees + minutes / 60
         coordinate = base.Coordinate(angle, coordinateType)
         self._sentenceData[coordinateName] = coordinate
@@ -668,10 +668,10 @@ class NMEAAdapter:
 
         keys = "satellitePRN", "azimuth", "elevation", "signalToNoiseRatio"
         for index in range(4):
-            prn, azimuth, elevation, snr = [
+            prn, azimuth, elevation, snr = (
                 getattr(self.currentSentence, attr)
                 for attr in ("%s_%i" % (key, index) for key in keys)
-            ]
+            )
 
             if prn is None or snr is None:
                 # The peephole optimizer optimizes the jump away, meaning that
@@ -888,10 +888,10 @@ class NMEAAdapter:
             # nothing new to combine here.
             return
 
-        date, time = [
+        date, time = (
             self._sentenceData.get(key) or self._state.get(key)
             for key in ("_date", "_time")
-        ]
+        )
 
         if date is None or time is None:
             return

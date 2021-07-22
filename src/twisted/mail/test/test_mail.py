@@ -2352,7 +2352,7 @@ class DummyQueue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "{}_{}".format(time.time(), id(self))
+        fname = f"{time.time()}_{id(self)}"
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
         finalFilename = os.path.join(self.directory, fname + "-D")

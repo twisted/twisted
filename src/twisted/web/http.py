@@ -25,8 +25,12 @@ also useful for HTTP clients (such as the chunked encoding parser).
     pre-condition (for example, the condition represented by an I{If-None-Match}
     header is present in the request) has failed.  This should typically
     indicate that the server has not taken the requested action.
-"""
 
+@var maxChunkSizeLineLength: Maximum allowable length of the CRLF-terminated
+    line that indicates the size of a chunk and the extensions associated with
+    it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
+    This limits how much data may be buffered when decoding the line.
+"""
 
 __all__ = [
     "SWITCHING",
@@ -403,7 +407,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
+    return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -1782,6 +1786,9 @@ class _IdentityTransferDecoder:
             raise _DataLoss()
 
 
+maxChunkSizeLineLength = 1024
+
+
 class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
@@ -1819,6 +1826,17 @@ class _ChunkedTransferDecoder:
         read. For C{'BODY'}, the contents of a chunk are being read. For
         C{'FINISHED'}, the last chunk has been completely read and no more
         input is valid.
+
+    @ivar _buffer: Accumulated received data for the current state. At each
+        state transition this is truncated at the front so that index 0 is
+        where the next state shall begin.
+
+    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
+        the buffer at which search for CRLF should resume. Resuming the search
+        at this position avoids doing quadratic work if the chunk length line
+        arrives over many calls to C{dataReceived}.
+
+        Not used in any other state.
     """
 
     state = "CHUNK_LENGTH"
@@ -1841,10 +1859,23 @@ class _ChunkedTransferDecoder:
             C{self._buffer}.  C{False} when more data is required.
 
         @raises _MalformedChunkedDataError: when the chunk size cannot be
-            decoded.
+            decoded or the length of the line exceeds L{maxChunkSizeLineLength}.
         """
         eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex >= maxChunkSizeLineLength or (
+            eolIndex == -1 and len(self._buffer) > maxChunkSizeLineLength
+        ):
+            raise _MalformedChunkedDataError(
+                "Chunk size line exceeds maximum of {} bytes.".format(
+                    maxChunkSizeLineLength
+                )
+            )
+
         if eolIndex == -1:
+            # Restart the search upon receipt of more data at the start of the
+            # new data, minus one in case the last character of the buffer is
+            # CR.
             self._start = len(self._buffer) - 1
             return False
 
@@ -3068,8 +3099,8 @@ class HTTPFactory(protocol.ServerFactory):
         support writing to L{twisted.python.log} which, unfortunately, works
         with native strings.
 
-    @ivar _reactor: An L{IReactorTime} provider used to compute logging
-        timestamps.
+    @ivar reactor: An L{IReactorTime} provider used to manage connection
+        timeouts and compute logging timestamps.
     """
 
     # We need to ignore the mypy error here, because
@@ -3099,12 +3130,13 @@ class HTTPFactory(protocol.ServerFactory):
             the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to manage connection
-            timeouts and compute logging timestamps.
+        @param reactor: An L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps. Defaults to the global
+            reactor.
         """
         if not reactor:
             from twisted.internet import reactor
-        self._reactor = reactor
+        self.reactor = reactor
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3122,8 +3154,8 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString(self._reactor.seconds())
-        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
+        self._logDateTime = datetimeToLogString(self.reactor.seconds())
+        self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -3133,7 +3165,7 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self._reactor.callLater
+        p.callLater = self.reactor.callLater
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there

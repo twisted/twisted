@@ -22,7 +22,7 @@ from twisted.python import failure
 from twisted.trial.unittest import SynchronousTestCase
 
 
-from cython_test_exception_raiser import raiser
+from cython_test_exception_raiser import raiser  # type: ignore[import]
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -300,7 +300,7 @@ class FailureTests(SynchronousTestCase):
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += f'  File "{filename}", line {lineno}, in {method}\n'
-            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,

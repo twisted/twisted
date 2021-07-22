@@ -42,7 +42,7 @@ from twisted.internet.test.connectionmixins import (
 )
 
 try:
-    from OpenSSL.crypto import FILETYPE_PEM
+    from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
 except ImportError:
     FILETYPE_PEM = None
 else:
