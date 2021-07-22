@@ -1503,9 +1503,7 @@ class AssertionNamesTests(unittest.SynchronousTestCase):
                 self.assertTrue(hasattr(self, name + "s"), f"{name} but no {name}s")
                 self.assertEqual(value, getattr(self, name + "s"))
             if name.endswith("Equals"):
-                self.assertTrue(
-                    hasattr(self, name[:-1]), "{} but no {}".format(name, name[:-1])
-                )
+                self.assertTrue(hasattr(self, name[:-1]), f"{name} but no {name[:-1]}")
                 self.assertEqual(value, getattr(self, name[:-1]))
 
 

@@ -871,7 +871,7 @@ class _Unjellier:
         return self._genericUnjelly(clz, rest[1])
 
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable("Unpersistable data: {}".format(rest[0]))
+        return Unpersistable(f"Unpersistable data: {rest[0]}")
 
     def _unjelly_method(self, rest):
         """

@@ -391,10 +391,10 @@ class ZshTests(unittest.TestCase):
             optParameters = [["param", "p", None, "A param"]]
 
             def opt_flag(self):
-                """ junk description """
+                """junk description"""
 
             def opt_param(self, param):
-                """ junk description """
+                """junk description"""
 
         opts = Options()
         argGen = _shellcomp.ZshArgumentsGenerator(opts, "ace", None)

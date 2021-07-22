@@ -516,17 +516,17 @@ class Permissions(FancyEqMixin):
     compareAttributes = ("user", "group", "other")
 
     def __init__(self, statModeInt):
-        self.user, self.group, self.other = [
-            RWX(*[statModeInt & bit > 0 for bit in bitGroup])
+        self.user, self.group, self.other = (
+            RWX(*(statModeInt & bit > 0 for bit in bitGroup))
             for bitGroup in [
                 [S_IRUSR, S_IWUSR, S_IXUSR],
                 [S_IRGRP, S_IWGRP, S_IXGRP],
                 [S_IROTH, S_IWOTH, S_IXOTH],
             ]
-        ]
+        )
 
     def __repr__(self) -> str:
-        return "[{} | {} | {}]".format(str(self.user), str(self.group), str(self.other))
+        return f"[{str(self.user)} | {str(self.group)} | {str(self.other)}]"
 
     def shorthand(self):
         """

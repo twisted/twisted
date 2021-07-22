@@ -326,7 +326,7 @@ class PathModificationTests(TwistedModulesTestCase):
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            networkString("__path__.append({})\n".format(repr(moddir2)))
+            networkString(f"__path__.append({repr(moddir2)})\n")
         )
         # Cut here
         self._setupSysPath()
