@@ -13,7 +13,7 @@ class MulticastPingPong(DatagramProtocol):
         self.transport.joinGroup("228.0.0.5")
 
     def datagramReceived(self, datagram, address):
-        print("Datagram {} received from {}".format(repr(datagram), repr(address)))
+        print(f"Datagram {repr(datagram)} received from {repr(address)}")
         if datagram == b"Client: Ping" or datagram == "Client: Ping":
             # Rather than replying to the group multicast address, we send the
             # reply directly (unicast) to the originating port:
