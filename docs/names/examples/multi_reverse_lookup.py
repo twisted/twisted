@@ -40,7 +40,7 @@ def reverseNameFromIPv6Address(address):
     """
     # Expand addresses that are in compressed format eg ::1
     fullHex = "".join(
-        "{:02x}".format(ord(c)) for c in socket.inet_pton(socket.AF_INET6, address)
+        f"{ord(c):02x}" for c in socket.inet_pton(socket.AF_INET6, address)
     )
     tokens = list(reversed(fullHex)) + ["ip6", "arpa", ""]
     return ".".join(tokens)
@@ -66,7 +66,7 @@ def printResult(result):
     answers, authority, additional = result
     if answers:
         sys.stdout.write(
-            ", ".join("{} IN {}".format(a.name.name, a.payload) for a in answers) + "\n"
+            ", ".join(f"{a.name.name} IN {a.payload}" for a in answers) + "\n"
         )
 
 
@@ -76,7 +76,7 @@ def printSummary(results):
     """
     statuses = zip(*results)[0]
     sys.stdout.write(
-        "{} responses to {} queries".format(statuses.count(True), len(statuses)) + "\n"
+        f"{statuses.count(True)} responses to {len(statuses)} queries" + "\n"
     )
 
 
@@ -86,7 +86,7 @@ def main(reactor, *argv):
         options.parseOptions(argv)
     except usage.UsageError as errortext:
         sys.stderr.write(str(options) + "\n")
-        sys.stderr.write("ERROR: {}\n".format(errortext))
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
     pending = []

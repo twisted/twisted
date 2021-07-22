@@ -29,7 +29,7 @@ except ImportError:
     TLSMemoryBIOFactory = None
     # Either pyOpenSSL isn't installed, or it is too old for this code to work.
     # The reactor won't provide IReactorSSL.
-    _extraInterfaces = ()  # type: Tuple[Type[interfaces.IReactorSSL], ...]
+    _extraInterfaces: Tuple[Type[interfaces.IReactorSSL], ...] = ()
     warnings.warn(
         "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
         "It is missing, so the reactor will not support SSL APIs."
@@ -274,7 +274,6 @@ class IOCPReactor(
                 "Custom child file descriptor mappings are unsupported on "
                 "this platform."
             )
-        args, env = self._checkProcessArgs(args, env)
         return Process(self, processProtocol, executable, args, env, path)
 
     def removeAll(self):

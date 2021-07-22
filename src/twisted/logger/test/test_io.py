@@ -8,7 +8,7 @@ Test cases for L{twisted.logger._io}.
 import sys
 from typing import List, Optional
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from zope.interface import implementer
 
@@ -34,8 +34,8 @@ class TestLoggingFile(LoggingFile):
         encoding: Optional[str] = None,
     ) -> None:
         super().__init__(logger=logger, level=level, encoding=encoding)
-        self.events = []  # type: List[LogEvent]
-        self.messages = []  # type: List[str]
+        self.events: List[LogEvent] = []
+        self.messages: List[str] = []
 
     def __call__(self, event: LogEvent) -> None:
         self.events.append(event)
@@ -67,7 +67,7 @@ class LoggingFileTests(unittest.TestCase):
         deprecatedClass = "twisted.logger._io.LoggingFile.softspace"
         self.assertEqual(
             warningsShown[0]["message"],
-            "%s was deprecated in Twisted NEXT" % (deprecatedClass),
+            "%s was deprecated in Twisted 21.2.0" % (deprecatedClass),
         )
 
     def test_readOnlyAttributes(self) -> None:
@@ -278,7 +278,7 @@ class LoggingFileTests(unittest.TestCase):
         # TestLoggingFile we will create, but that takes the Logger as an
         # argument, so we'll use an array to indirectly reference the
         # TestLoggingFile.
-        loggingFiles = []  # type: List[TestLoggingFile]
+        loggingFiles: List[TestLoggingFile] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:

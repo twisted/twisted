@@ -9,7 +9,7 @@ PID file.
 import errno
 from os import getpid, kill, name as SYSTEM_NAME
 from types import TracebackType
-from typing import Optional, Type, cast
+from typing import Optional, Type
 
 from zope.interface import Interface, implementer
 
@@ -104,7 +104,7 @@ class PIDFile:
 
         @return: Formatted PID file contents.
         """
-        return "{}\n".format(int(pid)).encode("utf-8")
+        return f"{int(pid)}\n".encode("utf-8")
 
     def __init__(self, filePath: FilePath) -> None:
         """
@@ -127,7 +127,7 @@ class PIDFile:
             return int(pidString)
         except ValueError:
             raise InvalidPIDFileError(
-                "non-integer PID value in PID file: {!r}".format(pidString)
+                f"non-integer PID value in PID file: {pidString!r}"
             )
 
     def _write(self, pid: int) -> None:
@@ -155,9 +155,7 @@ class PIDFile:
         if SYSTEM_NAME == "posix":
             return self._pidIsRunningPOSIX(pid)
         else:
-            raise NotImplementedError(
-                "isRunning is not implemented on {}".format(SYSTEM_NAME)
-            )
+            raise NotImplementedError(f"isRunning is not implemented on {SYSTEM_NAME}")
 
     @staticmethod
     def _pidIsRunningPOSIX(pid: int) -> bool:
@@ -193,7 +191,7 @@ class PIDFile:
             if self.isRunning():
                 raise AlreadyRunningError()
         except StalePIDFileError:
-            cast(Logger, self._log).info("Replacing stale PID file: {log_source}")
+            self._log.info("Replacing stale PID file: {log_source}")
         self.writeRunningPID()
         return self
 

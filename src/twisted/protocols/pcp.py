@@ -92,7 +92,7 @@ class BasicProducerConsumerProxy:
             self.consumer.unregisterProducer()
 
     def __repr__(self) -> str:
-        return "<{}@{:x} around {}>".format(self.__class__, id(self), self.consumer)
+        return f"<{self.__class__}@{id(self):x} around {self.consumer}>"
 
 
 class ProducerConsumerProxy(BasicProducerConsumerProxy):
@@ -141,7 +141,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             self.outstandingPull = not bytesSent
 
         if self.producer is not None:
-            bytesBuffered = sum([len(s) for s in self._buffer])
+            bytesBuffered = sum(len(s) for s in self._buffer)
             # TODO: You can see here the potential for high and low
             # watermarks, where bufferSize would be the high mark when we
             # ask the upstream producer to pause, and we wouldn't have
@@ -181,7 +181,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
                 self._buffer.append(data[bytesSent:])
 
         if (self.producer is not None) and self.producerIsStreaming:
-            bytesBuffered = sum([len(s) for s in self._buffer])
+            bytesBuffered = sum(len(s) for s in self._buffer)
             if bytesBuffered >= self.bufferSize:
 
                 self.producer.pauseProducing()

@@ -165,7 +165,7 @@ class Via:
         rport=_absent,
         branch=None,
         maddr=None,
-        **kw
+        **kw,
     ):
         """
         Set parameters of this Via header. All arguments correspond to
@@ -236,24 +236,24 @@ class Via:
         """
         Serialize this header for use in a request or response.
         """
-        s = "SIP/2.0/{} {}:{}".format(self.transport, self.host, self.port)
+        s = f"SIP/2.0/{self.transport} {self.host}:{self.port}"
         if self.hidden:
             s += ";hidden"
         for n in "ttl", "branch", "maddr", "received":
             value = getattr(self, n)
             if value is not None:
-                s += ";{}={}".format(n, value)
+                s += f";{n}={value}"
         if self.rportRequested:
             s += ";rport"
         elif self.rportValue is not None:
-            s += ";rport={}".format(self.rport)
+            s += f";rport={self.rport}"
 
         etc = sorted(self.otherParams.items())
         for k, v in etc:
             if v is None:
                 s += ";" + k
             else:
-                s += ";{}={}".format(k, v)
+                s += f";{k}={v}"
         return s
 
 
@@ -271,7 +271,7 @@ def parseViaHeader(value):
     result = {}
     pname, pversion, transport = protocolinfo.split("/")
     if pname != "SIP" or pversion != "2.0":
-        raise ValueError("wrong protocol or version: {!r}".format(value))
+        raise ValueError(f"wrong protocol or version: {value!r}")
     result["transport"] = transport
     if ":" in by:
         host, port = by.split(":")
@@ -340,7 +340,7 @@ class URL:
             self.headers = headers
 
     def toString(self) -> str:
-        l = []  # type: List[str]
+        l: List[str] = []
         w = l.append
         w("sip:")
         if self.username != None:
@@ -356,7 +356,7 @@ class URL:
         for n in ("transport", "ttl", "maddr", "method", "tag"):
             v = getattr(self, n)
             if v != None:
-                w(";{}={}".format(n, v))
+                w(f";{n}={v}")
         for v in self.other:
             w(";%s" % v)
         if self.headers:
@@ -364,7 +364,7 @@ class URL:
             w(
                 "&".join(
                     [
-                        ("{}={}".format(specialCases.get(h) or dashCapitalize(h), v))
+                        (f"{specialCases.get(h) or dashCapitalize(h)}={v}")
                         for (h, v) in self.headers.items()
                     ]
                 )
@@ -530,7 +530,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "{}: {}\r\n".format(specialCases.get(n) or dashCapitalize(n), v)
+                s += f"{specialCases.get(n) or dashCapitalize(n)}: {v}\r\n"
         s += "\r\n"
         s += self.body
         return s
@@ -557,7 +557,7 @@ class Request(Message):
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
 
     def _getHeaderLine(self):
-        return "{} {} SIP/2.0".format(self.method, self.uri.toString())
+        return f"{self.method} {self.uri.toString()} SIP/2.0"
 
 
 class Response(Message):
@@ -576,7 +576,7 @@ class Response(Message):
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
     def _getHeaderLine(self):
-        return "SIP/2.0 {} {}".format(self.code, self.phrase)
+        return f"SIP/2.0 {self.code} {self.phrase}"
 
 
 class MessagesParser(basic.LineReceiver):
@@ -764,7 +764,7 @@ class Base(protocol.DatagramProtocol):
         for m in self.messages:
             self._fixupNAT(m, addr)
             if self.debug:
-                log.msg("Received {!r} from {!r}".format(m.toString(), addr))
+                log.msg(f"Received {m.toString()!r} from {addr!r}")
             if isinstance(m, Request):
                 self.handle_request(m, addr)
             else:
@@ -818,7 +818,7 @@ class Base(protocol.DatagramProtocol):
         if destURL.transport not in ("udp", None):
             raise RuntimeError("only UDP currently supported")
         if self.debug:
-            log.msg("Sending {!r} to {!r}".format(message.toString(), destURL))
+            log.msg(f"Sending {message.toString()!r} to {destURL!r}")
         data = message.toString()
         if isinstance(data, str):
             data = data.encode("utf-8")
@@ -1057,7 +1057,7 @@ class RegisterProxy(Proxy):
 
     registry = None  # Should implement IRegistry
 
-    authorizers = {}  # type: Dict[str, IAuthorizer]
+    authorizers: Dict[str, IAuthorizer] = {}
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)
@@ -1094,9 +1094,9 @@ class RegisterProxy(Proxy):
         for scheme, auth in self.authorizers.items():
             chal = auth.getChallenge((host, port))
             if chal is None:
-                value = '{} realm="{}"'.format(scheme.title(), self.host)
+                value = f'{scheme.title()} realm="{self.host}"'
             else:
-                value = '{} {},realm="{}"'.format(scheme.title(), chal, self.host)
+                value = f'{scheme.title()} {chal},realm="{self.host}"'
             m.headers.setdefault("www-authenticate", []).append(value)
         self.deliverResponse(m)
 
@@ -1243,9 +1243,7 @@ class InMemoryRegistry:
             dc.reset(3600)
         else:
             dc = reactor.callLater(3600, self._expireRegistration, logicalURL.username)
-        log.msg(
-            "Registered {} at {}".format(logicalURL.toString(), physicalURL.toString())
-        )
+        log.msg(f"Registered {logicalURL.toString()} at {physicalURL.toString()}")
         self.users[logicalURL.username] = (dc, physicalURL)
         return defer.succeed(Registration(int(dc.getTime() - time.time()), physicalURL))
 

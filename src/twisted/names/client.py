@@ -155,7 +155,7 @@ class Resolver(common.ResolverBase):
             with resolvConf:
                 mtime = os.fstat(resolvConf.fileno()).st_mtime
                 if mtime != self._lastResolvTime:
-                    log.msg("{} changed, reparsing".format(self.resolv))
+                    log.msg(f"{self.resolv} changed, reparsing")
                     self._lastResolvTime = mtime
                     self.parseConfig(resolvConf)
 
@@ -171,7 +171,7 @@ class Resolver(common.ResolverBase):
             if L.startswith(b"nameserver"):
                 resolver = (nativeString(L.split()[1]), dns.PORT)
                 servers.append(resolver)
-                log.msg("Resolver added {!r} to server list".format(resolver))
+                log.msg(f"Resolver added {resolver!r} to server list")
             elif L.startswith(b"domain"):
                 try:
                     self.domain = L.split()[1]

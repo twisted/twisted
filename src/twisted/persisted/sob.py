@@ -59,11 +59,11 @@ class Persistent:
             finalname = filename
             filename = finalname + "-2"
         elif tag:
-            filename = "{}-{}-2.{}".format(self.name, tag, ext)
-            finalname = "{}-{}.{}".format(self.name, tag, ext)
+            filename = f"{self.name}-{tag}-2.{ext}"
+            finalname = f"{self.name}-{tag}.{ext}"
         else:
-            filename = "{}-2.{}".format(self.name, ext)
-            finalname = "{}.{}".format(self.name, ext)
+            filename = f"{self.name}-2.{ext}"
+            finalname = f"{self.name}.{ext}"
         return finalname, filename
 
     def _saveTemp(self, filename, dumpFunc):

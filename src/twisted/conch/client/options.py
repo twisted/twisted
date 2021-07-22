@@ -11,7 +11,7 @@ from typing import List, Optional, Union
 
 class ConchOptions(usage.Options):
 
-    optParameters = [
+    optParameters: List[List[Optional[Union[str, int]]]] = [
         ["user", "l", None, "Log in using this user name."],
         ["identity", "i", None],
         ["ciphers", "c", None],
@@ -22,7 +22,7 @@ class ConchOptions(usage.Options):
         ["known-hosts", "", None, "File to check for host keys"],
         ["user-authentications", "", None, "Types of user authentications to use."],
         ["logfile", "", None, "File to log to, or - for stdout"],
-    ]  # type: List[List[Optional[Union[str, int]]]]
+    ]
 
     optFlags = [
         ["version", "V", "Display version number only."],
@@ -39,13 +39,15 @@ class ConchOptions(usage.Options):
         optActions={
             "user": usage.CompleteUsernames(),
             "ciphers": usage.CompleteMultiList(
-                SSHCiphers.cipherMap.keys(), descr="ciphers to choose from"
+                [v.decode() for v in SSHCiphers.cipherMap.keys()],
+                descr="ciphers to choose from",
             ),
             "macs": usage.CompleteMultiList(
-                SSHCiphers.macMap.keys(), descr="macs to choose from"
+                [v.decode() for v in SSHCiphers.macMap.keys()],
+                descr="macs to choose from",
             ),
             "host-key-algorithms": usage.CompleteMultiList(
-                SSHClientTransport.supportedPublicKeys,
+                [v.decode() for v in SSHClientTransport.supportedPublicKeys],
                 descr="host key algorithms to choose from",
             ),
             # "user-authentications": usage.CompleteMultiList(?

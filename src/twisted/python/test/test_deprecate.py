@@ -133,9 +133,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
-        self.assertEqual(
-            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
-        )
+        self.assertEqual(repr(proxy), f"<{type(proxy).__name__} module={realModule!r}>")
 
 
 class DeprecatedAttributeTests(SynchronousTestCase):
@@ -307,7 +305,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module
+        from package import module  # type: ignore[import]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -377,6 +375,29 @@ def callTestFunction():
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 """
         )
+        self.package.child("pep626.py").setContent(
+            b"""
+"A module string"
+
+from twisted.python import deprecate
+
+def noop():
+    pass
+
+def testFunction(a=1, b=1):
+    "A doc string"
+    if a:
+        if b:
+            noop()
+        else:
+            pass
+
+def callTestFunction():
+    b = testFunction()
+    if b is None:
+        deprecate.warnAboutFunction(testFunction, "A Warning String")
+"""
+        )
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)
@@ -414,7 +435,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module
+        from twisted_private_helper import module  # type: ignore[import]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -425,6 +446,26 @@ def callTestFunction():
         # Line number 9 is the last line in the testFunction in the helper
         # module.
         self.assertEqual(warningsShown[0]["lineno"], 9)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
+
+    def test_warningLineNumberDisFindlinestarts(self):
+        """
+        L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
+        number of a line within the implementation handling the case in which
+        dis.findlinestarts returns the lines in random order.
+        """
+        from twisted_private_helper import pep626
+
+        pep626.callTestFunction()
+        warningsShown = self.flushWarnings()
+        self.assertSamePath(
+            FilePath(warningsShown[0]["filename"].encode("utf-8")),
+            self.package.sibling(b"twisted_private_helper").child(b"pep626.py"),
+        )
+        # Line number 15 is the last line in the testFunction in the helper
+        # module.
+        self.assertEqual(warningsShown[0]["lineno"], 15)
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
         self.assertEqual(len(warningsShown), 1)
 
@@ -440,7 +481,7 @@ def callTestFunction():
         """
         self.assertTrue(
             normcase(first.path) == normcase(second.path),
-            "{!r} != {!r}".format(first, second),
+            f"{first!r} != {second!r}",
         )
 
     def test_renamedFile(self):
@@ -465,7 +506,7 @@ def callTestFunction():
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -530,7 +571,7 @@ def callTestFunction():
             msg.endswith(
                 "module.py:9: DeprecationWarning: A Warning String\n" "  return a\n"
             ),
-            "Unexpected warning string: {!r}".format(msg),
+            f"Unexpected warning string: {msg!r}",
         )
 
 

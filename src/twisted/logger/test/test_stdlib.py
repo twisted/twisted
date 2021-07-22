@@ -284,7 +284,7 @@ class BufferedHandler(py_logging.Handler):
         Initialize this L{BufferedHandler}.
         """
         py_logging.Handler.__init__(self)
-        self.records = []  # type: List[LogRecord]
+        self.records: List[LogRecord] = []
 
     def emit(self, record: LogRecord) -> None:
         """

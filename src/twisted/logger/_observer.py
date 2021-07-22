@@ -40,7 +40,7 @@ class LogPublisher:
         @param observer: An L{ILogObserver} to add.
         """
         if not callable(observer):
-            raise TypeError("Observer is not callable: {!r}".format(observer))
+            raise TypeError(f"Observer is not callable: {observer!r}")
         if observer not in self._observers:
             self._observers.append(observer)
 
@@ -60,7 +60,7 @@ class LogPublisher:
         Forward events to contained observers.
         """
         if "log_trace" not in event:
-            trace = None  # type: Optional[Callable[[ILogObserver], None]]
+            trace: Optional[Callable[[ILogObserver], None]] = None
 
         else:
 
@@ -101,7 +101,7 @@ class LogPublisher:
         @return: A L{Logger} without the given observer.
         """
         errorPublisher = LogPublisher(
-            *[obs for obs in self._observers if obs is not observer]
+            *(obs for obs in self._observers if obs is not observer)
         )
         return Logger(observer=errorPublisher)
 

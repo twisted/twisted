@@ -1,1 +1,0 @@
-twisted.python.filepath.FilePath.statinfo was deprecated in Twisted 15.0.0 and has now been removed.

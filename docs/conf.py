@@ -182,12 +182,12 @@ _git_reference = subprocess.run(
 ).stdout
 
 
-print("== Environment dump for {} ===".format(_git_reference))
+print(f"== Environment dump for {_git_reference} ===")
 pprint(dict(os.environ))
 print("======")
 
 # Base url for API docs
-api_base_url = "/documents/{}/api/".format(release)
+api_base_url = f"/documents/{release}/api/"
 if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/
@@ -216,7 +216,6 @@ if os.environ.get("READTHEDOCS", "") == "True":
 _source_root = pathlib.Path(__file__).parent.parent / "src"
 pydoctor_args = [
     "--quiet",
-    "--make-html",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     "--project-name=Twisted",
     "--project-url=https://twistedmatrix.com/",
@@ -237,6 +236,8 @@ pydoctor_args = [
     str(_source_root / "twisted"),
 ]
 
+pydoctor_url_path = "/en/{rtd_version}/api/"
+
 traclinks_base_url = "https://twistedmatrix.com/trac"
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
@@ -245,7 +246,6 @@ traclinks_base_url = "https://twistedmatrix.com/trac"
 intersphinx_mapping = {
     "py3": ("https://docs.python.org/3", None),
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
-    "api": (api_base_url, "../apidocs/objects.inv"),
 }
 # How long to cache remote inventories. Positive is a number of days,
 # negative means infinite. The default is 5 days, which should be fine

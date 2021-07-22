@@ -228,7 +228,7 @@ class _CommandChannel(SSHChannel):
         coreDumped, data = bool(ord(data[0:1])), data[1:]
         errorMessage, data = getNS(data)
         languageTag, data = getNS(data)
-        signalName = "SIG{}".format(nativeString(shortSignalName))
+        signalName = f"SIG{nativeString(shortSignalName)}"
         signalID = getattr(signal, signalName, -1)
         self._log.info(
             "Process exited with signal {shortSignalName!r};"

@@ -320,7 +320,7 @@ class BufferedConsumerTests(unittest.TestCase):
         self.assertFalse(self.parentProducer.resumed)
 
     def testTriggerPause(self):
-        """Make sure I say \"when.\""""
+        """Make sure I say \"when.\" """
 
         # Pause the proxy so data sent to it builds up in its buffer.
         self.proxy.pauseProducing()

@@ -398,7 +398,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Inverse query from {!r}".format(address))
+        self._verboseLog(f"Inverse query from {address!r}")
 
     def handleStatus(self, message, protocol, address):
         """
@@ -425,7 +425,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Status request from {!r}".format(address))
+        self._verboseLog(f"Status request from {address!r}")
 
     def handleNotify(self, message, protocol, address):
         """
@@ -452,7 +452,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Notify message from {!r}".format(address))
+        self._verboseLog(f"Notify message from {address!r}")
 
     def handleOther(self, message, protocol, address):
         """
@@ -523,13 +523,9 @@ class DNSServerFactory(protocol.ServerFactory):
                     [dns.QUERY_TYPES.get(q.type, "UNKNOWN") for q in message.queries]
                 )
             if not len(s):
-                log.msg(
-                    "Empty query from {!r}".format(address or proto.transport.getPeer())
-                )
+                log.msg(f"Empty query from {address or proto.transport.getPeer()!r}")
             else:
-                log.msg(
-                    "{} query from {!r}".format(s, address or proto.transport.getPeer())
-                )
+                log.msg(f"{s} query from {address or proto.transport.getPeer()!r}")
 
         if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED

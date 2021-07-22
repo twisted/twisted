@@ -9,11 +9,11 @@ Twisted application runner.
 from sys import stderr
 from signal import SIGTERM
 from os import kill
-from typing import Any, TextIO, Callable, Mapping, cast
+from typing import Any, TextIO, Callable, Mapping
 
 from attr import attrib, attrs, Factory
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
@@ -115,7 +115,7 @@ class Runner:
                 return  # type: ignore[unreachable]
 
             self.startLogging()
-            cast(Logger, self._log).info("Terminating process: {pid}", pid=pid)
+            self._log.info("Terminating process: {pid}", pid=pid)
 
             kill(pid, SIGTERM)
 
@@ -148,7 +148,7 @@ class Runner:
         """
         self._reactor.callWhenRunning(self.whenRunning)
 
-        cast(Logger, self._log).info("Starting reactor...")
+        self._log.info("Starting reactor...")
         self._reactor.run()
 
     def whenRunning(self) -> None:

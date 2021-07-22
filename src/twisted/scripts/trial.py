@@ -45,7 +45,7 @@ def _parseLocalVariables(line):
     start = line.find(paren) + len(paren)
     end = line.rfind(paren)
     if start == -1 or end == -1:
-        raise ValueError("{!r} not a valid local variable declaration".format(line))
+        raise ValueError(f"{line!r} not a valid local variable declaration")
     items = line[start:end].split(";")
     localVars = {}
     for item in items:
@@ -53,9 +53,7 @@ def _parseLocalVariables(line):
             continue
         split = item.split(":")
         if len(split) != 2:
-            raise ValueError(
-                "{!r} contains invalid declaration {!r}".format(line, item)
-            )
+            raise ValueError(f"{line!r} contains invalid declaration {item!r}")
         localVars[split[0].strip()] = split[1].strip()
     return localVars
 
@@ -262,7 +260,7 @@ class _BasicOptions:
         """
         coverdir = "coverage"
         result = FilePath(self["temp-directory"]).child(coverdir)
-        print("Setting coverage directory to {}.".format(result.path))
+        print(f"Setting coverage directory to {result.path}.")
         return result
 
     # TODO: Some of the opt_* methods on this class have docstrings and some do
@@ -299,7 +297,7 @@ class _BasicOptions:
         # a list of files to Trial with the general expectation of "these files,
         # whatever they are, will get tested"
         if not os.path.isfile(filename):
-            sys.stderr.write("File {!r} doesn't exist\n".format(filename))
+            sys.stderr.write(f"File {filename!r} doesn't exist\n")
             return
         filename = os.path.abspath(filename)
         if isTestFile(filename):
@@ -399,7 +397,7 @@ class _BasicOptions:
 
     def _loadReporterByName(self, name):
         for p in plugin.getPlugins(itrial.IReporter):
-            qual = "{}.{}".format(p.module, p.klass)
+            qual = f"{p.module}.{p.klass}"
             if p.longOpt == name:
                 return reflect.namedAny(qual)
         raise usage.UsageError(
@@ -505,10 +503,10 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
         for option in self._workerFlags:
             if self.get(option) is not None:
                 if self[option]:
-                    args.append("--{}".format(option))
+                    args.append(f"--{option}")
         for option in self._workerParameters:
             if self.get(option) is not None:
-                args.extend(["--{}".format(option), str(self[option])])
+                args.extend([f"--{option}", str(self[option])])
         return args
 
     def postOptions(self):
@@ -623,7 +621,7 @@ def _makeRunner(config):
                     args["debugger"] = reflect.namedAny(debugger)
                 except reflect.ModuleNotFound:
                     raise _DebuggerNotFound(
-                        "{!r} debugger could not be found.".format(debugger)
+                        f"{debugger!r} debugger could not be found."
                     )
             else:
                 args["debugger"] = _wrappedPdb()
@@ -642,13 +640,13 @@ def run():
     try:
         config.parseOptions()
     except usage.error as ue:
-        raise SystemExit("{}: {}".format(sys.argv[0], ue))
+        raise SystemExit(f"{sys.argv[0]}: {ue}")
     _initialDebugSetup(config)
 
     try:
         trialRunner = _makeRunner(config)
     except _DebuggerNotFound as e:
-        raise SystemExit("{}: {}".format(sys.argv[0], str(e)))
+        raise SystemExit(f"{sys.argv[0]}: {str(e)}")
 
     suite = _getSuite(config)
     if config["until-failure"]:

@@ -392,7 +392,7 @@ class DeprecationTests(TestCase):
     """
 
     def helper(self, test, obj):
-        new_path = "twisted.internet.testing.{}".format(obj.__name__)
+        new_path = f"twisted.internet.testing.{obj.__name__}"
         warnings = self.flushWarnings([test])
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(1, len(warnings))

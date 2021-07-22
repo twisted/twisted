@@ -45,7 +45,7 @@ class SimpleConfFile:
     """
 
     commentChar = "#"
-    defaultFilename = None  # type: Optional[str]
+    defaultFilename: Optional[str] = None
 
     def parseFile(self, file=None):
         """
@@ -160,9 +160,7 @@ class InetdConf(SimpleConfFile):
                 port = int(serviceName)
                 serviceName = "unknown"
             except BaseException:
-                raise UnknownService(
-                    "Unknown service: {} ({})".format(serviceName, protocol)
-                )
+                raise UnknownService(f"Unknown service: {serviceName} ({protocol})")
 
         self.services.append(
             InetdService(
@@ -197,7 +195,7 @@ class ServicesConf(SimpleConfFile):
             port = int(port)
         except BaseException:
             raise InvalidServicesConfError(
-                "Invalid port/protocol: {}".format(repr(portAndProtocol))
+                f"Invalid port/protocol: {repr(portAndProtocol)}"
             )
 
         self.services[(name, protocol)] = port

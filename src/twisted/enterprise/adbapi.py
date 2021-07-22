@@ -7,10 +7,9 @@ An asynchronous mapping to U{DB-API
 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-import sys
 
 from twisted.internet import threads
-from twisted.python import reflect, log, compat
+from twisted.python import reflect, log
 
 
 class ConnectionLost(Exception):
@@ -215,7 +214,7 @@ class ConnectionPool:
         self.connkw = connkw
 
         for arg in self.CP_ARGS:
-            cpArg = "cp_{}".format(arg)
+            cpArg = f"cp_{arg}"
             if cpArg in connkw:
                 setattr(self, arg, connkw[cpArg])
                 del connkw[cpArg]
@@ -285,12 +284,11 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def runInteraction(self, interaction, *args, **kw):
         """
@@ -409,7 +407,7 @@ class ConnectionPool:
         conn = self.connections.get(tid)
         if conn is None:
             if self.noisy:
-                log.msg("adbapi connecting: {}".format(self.dbapiName))
+                log.msg(f"adbapi connecting: {self.dbapiName}")
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
             if self.openfun is not None:
                 self.openfun(conn)
@@ -433,7 +431,7 @@ class ConnectionPool:
 
     def _close(self, conn):
         if self.noisy:
-            log.msg("adbapi closing: {}".format(self.dbapiName))
+            log.msg(f"adbapi closing: {self.dbapiName}")
         try:
             conn.close()
         except BaseException:
@@ -448,12 +446,11 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def _runQuery(self, trans, *args, **kw):
         trans.execute(*args, **kw)

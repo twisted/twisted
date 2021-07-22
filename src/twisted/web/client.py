@@ -42,7 +42,7 @@ from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
 
 
 def urlunparse(parts):
-    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    result = _urlunparse(tuple(p.decode("charmap") for p in parts))
     return result.encode("charmap")
 
 
@@ -392,7 +392,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
     def __repr__(self) -> str:
-        return "<{}: {}>".format(self.__class__.__name__, self.url)
+        return f"<{self.__class__.__name__}: {self.url}>"
 
     def setURL(self, url):
         _ensureValidURI(url.strip())
@@ -852,7 +852,7 @@ from twisted.web._newclient import (
 
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL  # type: ignore[import]
 except ImportError:
     SSL = None
 else:
@@ -1502,9 +1502,7 @@ class _AgentBase:
         the request.
         """
         if not isinstance(method, bytes):
-            raise TypeError(
-                "method={!r} is {}, but must be bytes".format(method, type(method))
-            )
+            raise TypeError(f"method={method!r} is {type(method)}, but must be bytes")
 
         method = _ensureValidMethod(method)
 
@@ -1610,7 +1608,7 @@ class _StandardEndpointFactory:
             )
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: {!r}".format(uri.scheme))
+            raise SchemeNotSupported(f"Unsupported scheme: {uri.scheme!r}")
 
 
 @implementer(IAgent)

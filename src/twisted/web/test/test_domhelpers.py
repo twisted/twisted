@@ -20,7 +20,7 @@ class DOMHelpersTestsMixin:
     subclass.
     """
 
-    dom = None  # type: Optional[Any]
+    dom: Optional[Any] = None
 
     def test_getElementsByTagName(self):
         doc1 = self.dom.parseString("<foo/>")

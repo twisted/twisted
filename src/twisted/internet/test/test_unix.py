@@ -100,9 +100,7 @@ class UNIXCreator(EndpointCreator):
     Create UNIX socket end points.
     """
 
-    requiredInterfaces = (
-        interfaces.IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (interfaces.IReactorUNIX,)
 
     def server(self, reactor):
         """
@@ -203,9 +201,7 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(
-                    Exception("Received bytes ({!r}) before descriptor.".format(data))
-                )
+                Failure(Exception(f"Received bytes ({data!r}) before descriptor."))
             )
             self.waiting = None
 
@@ -729,10 +725,10 @@ class SocketUNIXMixin:
     UNIX ports.
     """
 
-    requiredInterfaces = (
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (
         IReactorUNIX,
         IReactorSocket,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    )
 
     def getListeningPort(self, reactor, factory):
         """
@@ -801,19 +797,19 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces = (IReactorUNIX,)  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "{} starting on {!r}".format(factory, nativeString(port.getHost().name))
+        return f"{factory} starting on {nativeString(port.getHost().name)!r}"
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port {} Closed)".format(nativeString(port.getHost().name))
+        return f"(UNIX Port {nativeString(port.getHost().name)} Closed)"
 
 
 class UNIXPortTestsBuilder(

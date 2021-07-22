@@ -44,7 +44,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """
@@ -81,9 +81,9 @@ class Port(abstract.FileHandle):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<{} not connected>".format(self.protocol.__class__)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """
