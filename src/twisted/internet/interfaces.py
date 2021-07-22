@@ -2825,7 +2825,7 @@ class IAsyncWriter(Interface):
         """
         @return: the underlying file handle
         """
-        
+
     def write(offset: int, data: bytes) -> "Deferred":
         """
         Write to the file.
