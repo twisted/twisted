@@ -854,7 +854,7 @@ from twisted.web._newclient import (
 try:
     from OpenSSL import SSL
 except ImportError:
-    SSL = None # type: ignore[assignment]
+    SSL = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import (
         CertificateOptions,

@@ -2213,7 +2213,9 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":
+    def serverConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given server protocol.
 
@@ -2235,7 +2237,9 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":
+    def clientConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given client protocol.
 
