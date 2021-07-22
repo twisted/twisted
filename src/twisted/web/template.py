@@ -299,7 +299,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         if ns != TEMPLATE_NAMESPACE and ns is not None:
             prefix = self.prefixMap[ns]
             if prefix is not None:
-                name = "{}:{}".format(self.prefixMap[ns], name)
+                name = f"{self.prefixMap[ns]}:{name}"
         el = Tag(
             name,
             attributes=OrderedDict(

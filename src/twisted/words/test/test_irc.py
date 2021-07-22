@@ -1364,7 +1364,7 @@ class ClientImplementationTests(IRCTestCase):
             self.assertEqual(method, "modeChanged")
             self.assertEqual(data["user"], "Wolf!~wolf@yok.utu.fi")
             self.assertEqual(data["channel"], target)
-            results[n] = tuple([data[key] for key in ("set", "modes", "args")])
+            results[n] = tuple(data[key] for key in ("set", "modes", "args"))
         return results
 
     def _checkModeChange(self, expected, target=None):

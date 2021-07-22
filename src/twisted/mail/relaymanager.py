@@ -468,7 +468,7 @@ class Queue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
+        fname = f"{os.getpid()}_{time.time()}_{self.n}_{id(self)}"
         self.n = self.n + 1
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")

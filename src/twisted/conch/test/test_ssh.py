@@ -914,6 +914,21 @@ class SSHFactoryTests(unittest.TestCase):
         self.assertIn(b"diffie-hellman-group-exchange-sha1", p2.supportedKeyExchanges)
         self.assertIn(b"diffie-hellman-group-exchange-sha256", p2.supportedKeyExchanges)
 
+    def test_buildProtocolKexECDSA(self):
+        """
+        ECDSA key exchanges are listed with 256 having a higher priority among ECDSA.
+        """
+        f2 = self.makeSSHFactory()
+
+        p2 = f2.buildProtocol(None)
+
+        # The list might contain other algorightm.
+        # For this test just check the order for ECDSA KEX.
+        self.assertIn(
+            b"ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521",
+            b",".join(p2.supportedKeyExchanges),
+        )
+
 
 class MPTests(unittest.TestCase):
     """

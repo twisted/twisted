@@ -321,7 +321,7 @@ class Versioned:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
                 dct[
-                    "{}.persistenceVersion".format(reflect.qual(base))
+                    f"{reflect.qual(base)}.persistenceVersion"
                 ] = base.persistenceVersion
         return dct
 

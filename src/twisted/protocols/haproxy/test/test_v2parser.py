@@ -15,13 +15,13 @@ V2_SIGNATURE = b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
 
 
 def _makeHeaderIPv6(
-    sig=V2_SIGNATURE,
-    verCom=b"\x21",
-    famProto=b"\x21",
-    addrLength=b"\x00\x24",
-    addrs=((b"\x00" * 15) + b"\x01") * 2,
-    ports=b"\x1F\x90\x22\xB8",
-):
+    sig: bytes = V2_SIGNATURE,
+    verCom: bytes = b"\x21",
+    famProto: bytes = b"\x21",
+    addrLength: bytes = b"\x00\x24",
+    addrs: bytes = ((b"\x00" * 15) + b"\x01") * 2,
+    ports: bytes = b"\x1F\x90\x22\xB8",
+) -> bytes:
     """
     Construct a version 2 IPv6 header with custom bytes.
 
@@ -53,13 +53,13 @@ def _makeHeaderIPv6(
 
 
 def _makeHeaderIPv4(
-    sig=V2_SIGNATURE,
-    verCom=b"\x21",
-    famProto=b"\x11",
-    addrLength=b"\x00\x0C",
-    addrs=b"\x7F\x00\x00\x01\x7F\x00\x00\x01",
-    ports=b"\x1F\x90\x22\xB8",
-):
+    sig: bytes = V2_SIGNATURE,
+    verCom: bytes = b"\x21",
+    famProto: bytes = b"\x11",
+    addrLength: bytes = b"\x00\x0C",
+    addrs: bytes = b"\x7F\x00\x00\x01\x7F\x00\x00\x01",
+    ports: bytes = b"\x1F\x90\x22\xB8",
+) -> bytes:
     """
     Construct a version 2 IPv4 header with custom bytes.
 
@@ -91,17 +91,17 @@ def _makeHeaderIPv4(
 
 
 def _makeHeaderUnix(
-    sig=V2_SIGNATURE,
-    verCom=b"\x21",
-    famProto=b"\x31",
-    addrLength=b"\x00\xD8",
-    addrs=(
+    sig: bytes = V2_SIGNATURE,
+    verCom: bytes = b"\x21",
+    famProto: bytes = b"\x31",
+    addrLength: bytes = b"\x00\xD8",
+    addrs: bytes = (
         b"\x2F\x68\x6F\x6D\x65\x2F\x74\x65\x73\x74\x73\x2F"
         b"\x6D\x79\x73\x6F\x63\x6B\x65\x74\x73\x2F\x73\x6F"
         b"\x63\x6B" + (b"\x00" * 82)
     )
     * 2,
-):
+) -> bytes:
     """
     Construct a version 2 IPv4 header with custom bytes.
 
@@ -133,28 +133,28 @@ class V2ParserTests(unittest.TestCase):
     Test L{twisted.protocols.haproxy.V2Parser} behaviour.
     """
 
-    def test_happyPathIPv4(self):
+    def test_happyPathIPv4(self) -> None:
         """
         Test if a well formed IPv4 header is parsed without error.
         """
         header = _makeHeaderIPv4()
         self.assertTrue(_v2parser.V2Parser.parse(header))
 
-    def test_happyPathIPv6(self):
+    def test_happyPathIPv6(self) -> None:
         """
         Test if a well formed IPv6 header is parsed without error.
         """
         header = _makeHeaderIPv6()
         self.assertTrue(_v2parser.V2Parser.parse(header))
 
-    def test_happyPathUnix(self):
+    def test_happyPathUnix(self) -> None:
         """
         Test if a well formed UNIX header is parsed without error.
         """
         header = _makeHeaderUnix()
         self.assertTrue(_v2parser.V2Parser.parse(header))
 
-    def test_invalidSignature(self):
+    def test_invalidSignature(self) -> None:
         """
         Test if an invalid signature block raises InvalidProxyError.
         """
@@ -165,7 +165,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
-    def test_invalidVersion(self):
+    def test_invalidVersion(self) -> None:
         """
         Test if an invalid version raises InvalidProxyError.
         """
@@ -176,7 +176,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
-    def test_invalidCommand(self):
+    def test_invalidCommand(self) -> None:
         """
         Test if an invalid command raises InvalidProxyError.
         """
@@ -187,7 +187,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
-    def test_invalidFamily(self):
+    def test_invalidFamily(self) -> None:
         """
         Test if an invalid family raises InvalidProxyError.
         """
@@ -198,7 +198,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
-    def test_invalidProto(self):
+    def test_invalidProto(self) -> None:
         """
         Test if an invalid protocol raises InvalidProxyError.
         """
@@ -209,7 +209,7 @@ class V2ParserTests(unittest.TestCase):
             header,
         )
 
-    def test_localCommandIpv4(self):
+    def test_localCommandIpv4(self) -> None:
         """
         Test that local does not return endpoint data for IPv4 connections.
         """
@@ -218,7 +218,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_localCommandIpv6(self):
+    def test_localCommandIpv6(self) -> None:
         """
         Test that local does not return endpoint data for IPv6 connections.
         """
@@ -227,7 +227,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_localCommandUnix(self):
+    def test_localCommandUnix(self) -> None:
         """
         Test that local does not return endpoint data for UNIX connections.
         """
@@ -236,7 +236,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_proxyCommandIpv4(self):
+    def test_proxyCommandIpv4(self) -> None:
         """
         Test that proxy returns endpoint data for IPv4 connections.
         """
@@ -247,7 +247,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info.destination)
         self.assertIsInstance(info.destination, address.IPv4Address)
 
-    def test_proxyCommandIpv6(self):
+    def test_proxyCommandIpv6(self) -> None:
         """
         Test that proxy returns endpoint data for IPv6 connections.
         """
@@ -258,7 +258,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info.destination)
         self.assertIsInstance(info.destination, address.IPv6Address)
 
-    def test_proxyCommandUnix(self):
+    def test_proxyCommandUnix(self) -> None:
         """
         Test that proxy returns endpoint data for UNIX connections.
         """
@@ -269,7 +269,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info.destination)
         self.assertIsInstance(info.destination, address.UNIXAddress)
 
-    def test_unspecFamilyIpv4(self):
+    def test_unspecFamilyIpv4(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for IPv4 connections.
         """
@@ -278,7 +278,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_unspecFamilyIpv6(self):
+    def test_unspecFamilyIpv6(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for IPv6 connections.
         """
@@ -287,7 +287,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_unspecFamilyUnix(self):
+    def test_unspecFamilyUnix(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for UNIX connections.
         """
@@ -296,7 +296,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_unspecProtoIpv4(self):
+    def test_unspecProtoIpv4(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for IPv4 connections.
         """
@@ -305,7 +305,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_unspecProtoIpv6(self):
+    def test_unspecProtoIpv6(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for IPv6 connections.
         """
@@ -314,7 +314,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_unspecProtoUnix(self):
+    def test_unspecProtoUnix(self) -> None:
         """
         Test that UNSPEC does not return endpoint data for UNIX connections.
         """
@@ -323,7 +323,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertFalse(info.source)
         self.assertFalse(info.destination)
 
-    def test_overflowIpv4(self):
+    def test_overflowIpv4(self) -> None:
         """
         Test that overflow bits are preserved during feed parsing for IPv4.
         """
@@ -334,7 +334,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info)
         self.assertEqual(overflow, testValue)
 
-    def test_overflowIpv6(self):
+    def test_overflowIpv6(self) -> None:
         """
         Test that overflow bits are preserved during feed parsing for IPv6.
         """
@@ -345,7 +345,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info)
         self.assertEqual(overflow, testValue)
 
-    def test_overflowUnix(self):
+    def test_overflowUnix(self) -> None:
         """
         Test that overflow bits are preserved during feed parsing for Unix.
         """
@@ -356,7 +356,7 @@ class V2ParserTests(unittest.TestCase):
         self.assertTrue(info)
         self.assertEqual(overflow, testValue)
 
-    def test_segmentTooSmall(self):
+    def test_segmentTooSmall(self) -> None:
         """
         Test that an initial payload of less than 16 bytes fails.
         """
