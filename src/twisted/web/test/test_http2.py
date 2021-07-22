@@ -2289,7 +2289,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # frame instead. This needs to be very long to actually force the
         # WINDOW_UPDATE frames out.
         frameData = [b"\x00" * (2 ** 14)] * 4
-        bodyLength = "{}".format(sum(len(data) for data in frameData))
+        bodyLength = f"{sum(len(data) for data in frameData)}"
         headers = self.postRequestHeaders[:-1] + [("content-length", bodyLength)]
         frames = buildRequestFrames(
             headers=headers, data=frameData, frameFactory=frameFactory

@@ -336,7 +336,7 @@ def proxyForInterface(iface, originalAttribute="original"):
     contents: Dict[str, object] = {"__init__": __init__}
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
-    proxy = type("(Proxy for {})".format(reflect.qual(iface)), (object,), contents)
+    proxy = type(f"(Proxy for {reflect.qual(iface)})", (object,), contents)
     # mypy-zope declarations.classImplements only works when passing
     # a concrete class type
     declarations.classImplements(proxy, iface)  # type: ignore[misc]

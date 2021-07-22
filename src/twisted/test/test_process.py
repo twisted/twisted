@@ -350,7 +350,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             )
         if os.WTERMSIG(v.status) != signalValue:
             return self.deferred.errback(
-                ValueError("SIG{}: {}".format(self.signal, os.WTERMSIG(v.status)))
+                ValueError(f"SIG{self.signal}: {os.WTERMSIG(v.status)}")
             )
         self.deferred.callback(None)
 
