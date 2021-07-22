@@ -855,7 +855,7 @@ class HelpOrderTests(unittest.TestCase):
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "{}.*{}".format(re.escape(orderName), re.escape(orderDesc)),
+                f"{re.escape(orderName)}.*{re.escape(orderDesc)}",
                 output,
             )
 

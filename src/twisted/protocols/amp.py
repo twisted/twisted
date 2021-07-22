@@ -699,7 +699,7 @@ class AmpBox(dict):
         proto.sendBox(self)
 
     def __repr__(self) -> str:
-        return "AmpBox({})".format(dict.__repr__(self))
+        return f"AmpBox({dict.__repr__(self)})"
 
 
 # amp.Box => AmpBox
@@ -2568,7 +2568,7 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
             innerRepr = f" inner {self.innerProtocol!r}"
         else:
             innerRepr = ""
-        return "<{}{} at 0x{:x}>".format(self.__class__.__name__, innerRepr, id(self))
+        return f"<{self.__class__.__name__}{innerRepr} at 0x{id(self):x}>"
 
     def makeConnection(self, transport):
         """

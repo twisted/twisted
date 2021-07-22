@@ -470,7 +470,7 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
-            log.msg("got {} stderr data".format(len(data)))
+            log.msg(f"got {len(data)} stderr data")
             if ioType(sys.stderr) == str:
                 sys.stderr.buffer.write(data)
             else:
