@@ -1,2 +1,0 @@
-twisted.web.http.Request.getRequestHostname now supports IPv6 literal hostnames
-in HTTP host headers.

@@ -803,13 +803,13 @@ class UNIXPortTestsMixin:
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "{} starting on {!r}".format(factory, nativeString(port.getHost().name))
+        return f"{factory} starting on {nativeString(port.getHost().name)!r}"
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port {} Closed)".format(nativeString(port.getHost().name))
+        return f"(UNIX Port {nativeString(port.getHost().name)} Closed)"
 
 
 class UNIXPortTestsBuilder(

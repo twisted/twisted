@@ -71,7 +71,7 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
         ).addCallback(self.__checkSuccess).addErrback(self.__checkFailure)
 
     def __checkSuccess(self, pageData):
-        msg = "Success: got {} bytes.".format(len(pageData))
+        msg = f"Success: got {len(pageData)} bytes."
         self.sendLine(msg.encode("ascii"))
 
     def __checkFailure(self, failure):

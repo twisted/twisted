@@ -44,7 +44,8 @@ This documentation contains how-tos, code examples, and an API reference.
 
 Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
+There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web),
+on `irc.libera.chat <https://web.libera.chat/>_`.
 
 
 Unit Tests
@@ -85,7 +86,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2020 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

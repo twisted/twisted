@@ -108,7 +108,7 @@ class Request(Copyable, http.Request, components.Componentized):
     site = None
     appRootURL = None
     prepath: Optional[List[bytes]] = None
-    postpath: Optional[bytes] = None
+    postpath: Optional[List[bytes]] = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None
@@ -686,12 +686,23 @@ class Session(components.Componentized):
     This utility class contains no functionality, but is used to
     represent a session.
 
+    @ivar site: The L{Site} that generated the session.
+    @type site: L{Site}
+
     @ivar uid: A unique identifier for the session.
     @type uid: L{bytes}
 
     @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
         expiration.
-    @ivar sessionTimeout: timeout of a session, in seconds.
+
+    @ivar sessionTimeout: Time after last modification the session will expire,
+        in seconds.
+    @type sessionTimeout: L{float}
+
+    @ivar lastModified: Time the C{touch()} method was last called (or time the
+        session was created). A UNIX timestamp as returned by
+        L{IReactorTime.seconds()}.
+    @type lastModified L{float}
     """
 
     sessionTimeout = 900
@@ -701,11 +712,14 @@ class Session(components.Componentized):
     def __init__(self, site, uid, reactor=None):
         """
         Initialize a session with a unique ID for that session.
+
+        @param reactor: L{IReactorTime} used to schedule expiration of the
+            session. If C{None}, the reactor associated with I{site} is used.
         """
-        components.Componentized.__init__(self)
+        super().__init__()
 
         if reactor is None:
-            from twisted.internet import reactor
+            reactor = site.reactor
         self._reactor = reactor
 
         self.site = site
@@ -743,7 +757,7 @@ class Session(components.Componentized):
 
     def touch(self):
         """
-        Notify session modification.
+        Mark the session as modified, which resets expiration timer.
         """
         self.lastModified = self._reactor.seconds()
         if self._expireCall is not None:
@@ -758,13 +772,24 @@ class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 
-    @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
+
     @ivar displayTracebacks: If set, unhandled exceptions raised during
         rendering are returned to the client as HTML. Default to C{False}.
+
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
-    @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
+
+    @ivar sessions: Mapping of session IDs to objects returned by
+        C{sessionFactory}.
+    @type sessions: L{dict} mapping L{bytes} to L{Session} given the default
+        C{sessionFactory}
+
+    @ivar counter: The number of sessions that have been generated.
+    @type counter: L{int}
+
+    @ivar sessionCheckTime: Deprecated and unused. See
+        L{Session.sessionTimeout} instead.
     """
 
     counter = 0
@@ -785,7 +810,7 @@ class Site(http.HTTPFactory):
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
-        http.HTTPFactory.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.sessions = {}
         self.resource = resource
         if requestFactory is not None:
@@ -832,7 +857,7 @@ class Site(http.HTTPFactory):
         """
         Generate a channel attached to this site.
         """
-        channel = http.HTTPFactory.buildProtocol(self, addr)
+        channel = super().buildProtocol(addr)
         channel.requestFactory = self.requestFactory
         channel.site = self
         return channel

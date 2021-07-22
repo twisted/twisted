@@ -55,7 +55,7 @@ APIs listed above.
 
 
 # System imports
-from OpenSSL import SSL
+from OpenSSL import SSL  # type: ignore[import]
 
 from zope.interface import implementer, implementer_only, implementedBy
 
@@ -157,7 +157,7 @@ class ClientContextFactory:
 
 @implementer_only(
     interfaces.ISSLTransport,
-    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport],
+    *(i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport),
 )
 class Client(tcp.Client):
     """

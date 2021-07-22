@@ -43,8 +43,8 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        from win32api import OpenProcess
-        import pywintypes
+        from win32api import OpenProcess  # type: ignore[import]
+        import pywintypes  # type: ignore[import]
     except ImportError:
         kill = None  # type: ignore[assignment,misc]
     else:

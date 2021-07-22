@@ -513,9 +513,7 @@ class File(resource.Resource, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = networkString(
-            "{:x}{:x}".format(int(time.time() * 1000000), os.getpid())
-        )
+        boundary = networkString(f"{int(time.time() * 1000000):x}{os.getpid():x}")
         if self.type:
             contentType = self.type
         else:
@@ -555,9 +553,7 @@ class File(resource.Resource, filepath.FilePath):
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
             b"content-type",
-            networkString(
-                'multipart/byteranges; boundary="{}"'.format(nativeString(boundary))
-            ),
+            networkString(f'multipart/byteranges; boundary="{nativeString(boundary)}"'),
         )
         request.setHeader(
             b"content-length", b"%d" % (contentLength + len(finalBoundary),)

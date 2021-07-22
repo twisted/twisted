@@ -481,7 +481,7 @@ class IPathImportMapper(Interface):
 
 @implementer(IPathImportMapper)
 class _DefaultMapImpl:
-    """ Wrapper for the default importer, i.e. None.  """
+    """Wrapper for the default importer, i.e. None."""
 
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
@@ -492,7 +492,7 @@ _theDefaultMapper = _DefaultMapImpl()
 
 @implementer(IPathImportMapper)
 class _ZipMapImpl:
-    """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+    """IPathImportMapper implementation for zipimport.ZipImporter."""
 
     def __init__(self, importer):
         self.importer = importer

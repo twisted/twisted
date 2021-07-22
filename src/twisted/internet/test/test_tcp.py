@@ -14,7 +14,7 @@ import os
 import socket
 
 from functools import wraps
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, List, Callable, ClassVar
 from unittest import skipIf
 
 import attr
@@ -95,7 +95,7 @@ from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL  # type: ignore[import]
 except ImportError:
     useSSL = False
 else:
@@ -109,7 +109,7 @@ try:
     s.bind(("::1", 0))
 except OSError as e:
     ipv6Skip = True
-    ipv6SkipReason = str(e)
+    ipv6SkipReason = f"IPv6 not available. {e}"
 else:
     ipv6Skip = False
     ipv6SkipReason = ""
@@ -964,7 +964,7 @@ class _IExhaustsFileDescriptors(Interface):
 
 
 @implementer(_IExhaustsFileDescriptors)
-@attr.s
+@attr.s(auto_attribs=True)
 class _ExhaustsFileDescriptors:
     """
     A class that triggers C{EMFILE} by creating as many file
@@ -977,10 +977,14 @@ class _ExhaustsFileDescriptors:
         for passing to L{os.close}.
     """
 
-    _log = Logger()
-    _fileDescriptorFactory = attr.ib(default=lambda: os.dup(0), repr=False)
-    _close = attr.ib(default=os.close, repr=False)
-    _fileDescriptors = attr.ib(default=attr.Factory(list), init=False, repr=False)
+    _log: ClassVar[Logger] = Logger()
+    _fileDescriptorFactory: Callable[[], int] = attr.ib(
+        default=lambda: os.dup(0), repr=False
+    )
+    _close: Callable[[int], None] = attr.ib(default=os.close, repr=False)
+    _fileDescriptors: List[int] = attr.ib(
+        default=attr.Factory(list), init=False, repr=False
+    )
 
     def exhaust(self):
         """

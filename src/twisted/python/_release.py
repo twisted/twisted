@@ -304,7 +304,7 @@ class APIBuilder:
             intersphinxes.append(intersphinx)
 
         # Super awful monkeypatch that will selectively use our templates.
-        from pydoctor.templatewriter import util
+        from pydoctor.templatewriter import util  # type: ignore[import]
 
         originalTemplatefile = util.templatefile
 
@@ -320,7 +320,7 @@ class APIBuilder:
         monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
         monkeyPatch.patch()
 
-        from pydoctor.driver import main
+        from pydoctor.driver import main  # type: ignore[import]
 
         args = [
             "--project-name",
@@ -483,7 +483,7 @@ class BuildAPIDocsScript:
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",
-            "http://twistedmatrix.com/",
+            "https://twistedmatrix.com/",
             sourceURL,
             projectRoot.child("twisted"),
             output,

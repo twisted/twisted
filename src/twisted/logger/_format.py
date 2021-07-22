@@ -10,7 +10,7 @@ from collections.abc import Mapping as MappingABC
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr

@@ -96,7 +96,7 @@ Prepare the branch
 #. Commit the changes made by Incremental.
 #. Run ``tox -e towncrier``.
 #. Commit the changes made by towncrier - this automatically removes the newsfragment files.
-#. Bump copyright dates in ``LICENSE``, ``twisted/copyright.py``, and ``README.rst`` if required
+#. Bump copyright dates in ``LICENSE``, ``src/twisted/copyright.py``, and ``README.rst`` if required
 #. Push the changes up to GitHub and create a new release PR.
 #. The GitHub PR is dedicated to the final release and the same PR is used to release the candidate and final version.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
@@ -156,7 +156,9 @@ Prepare the branch
 ~~~~~~~~~~~~~~~~~~
 
 #. Have the release branch, previously used to generate a release candidate, checked out
-#. Manually update the version and realease date. Commit and push.
+#. Run ``python -m incremental.update Twisted --newversion $RELEASE``
+#. Manually update the release date if necessary.
+#. Commit and push.
 #. Submit the ticket for review
 #. Pause until the ticket is reviewed and accepted.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
@@ -175,7 +177,7 @@ Announce
 
 #. Announce the release
 
-   - Send a text version of the announcement to: twisted-python@twistedmatrix.com, python-announce-list@python.org, python-list@python.org, twisted-web@twistedmatrix.com
+   - Send a text version of the announcement to: twisted-python@twistedmatrix.com, python-announce-list@python.org, twisted-web@twistedmatrix.com
    - ​http://labs.twistedmatrix.com (Post a web version of the announcements, with links instead of literal URLs)
    - Twitter, if you feel like it
    - ``#twisted`` topic on IRC (you'll need ops)
@@ -184,9 +186,9 @@ Announce
 Post release
 ~~~~~~~~~~~~
 
-#. Run ``python -m incremental Twisted --dev`` to add a `dev0` postfix.
+#. Run ``python -m incremental.update Twisted --post`` to add a `post` postfix.
 
-#. Commit the dev0 update change.
+#. Commit the post0 update change.
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 

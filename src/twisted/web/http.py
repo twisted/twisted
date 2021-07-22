@@ -25,8 +25,12 @@ also useful for HTTP clients (such as the chunked encoding parser).
     pre-condition (for example, the condition represented by an I{If-None-Match}
     header is present in the request) has failed.  This should typically
     indicate that the server has not taken the requested action.
-"""
 
+@var maxChunkSizeLineLength: Maximum allowable length of the CRLF-terminated
+    line that indicates the size of a chunk and the extensions associated with
+    it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
+    This limits how much data may be buffered when decoding the line.
+"""
 
 __all__ = [
     "SWITCHING",
@@ -100,8 +104,6 @@ import cgi
 import math
 import os
 import re
-
-# system imports
 import tempfile
 import time
 import warnings
@@ -111,10 +113,10 @@ from urllib.parse import (
     urlparse as _urlparse,
     unquote_to_bytes as unquote,
 )
+from typing import Callable
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-# twisted imports
 from incremental import Version
 from twisted.logger import Logger
 from twisted.internet import address, interfaces, protocol
@@ -405,7 +407,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
+    return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -783,9 +785,9 @@ class Request:
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method: bytes = b"(no method yet)"
-    clientproto: bytes = b"(no clientproto yet)"
-    uri = "(no uri yet)"
+    method = b"(no method yet)"
+    clientproto = b"(no clientproto yet)"
+    uri = b"(no uri yet)"
     startedWriting = 0
     chunked = 0
     sentLength = 0  # content-length of response, or total bytes sent via chunking
@@ -1703,7 +1705,7 @@ class PotentialDataLoss(Exception):
 
 class _MalformedChunkedDataError(Exception):
     """
-    C{_ChunkedTranferDecoder} raises L{_MalformedChunkedDataError} from its
+    C{_ChunkedTransferDecoder} raises L{_MalformedChunkedDataError} from its
     C{dataReceived} method when it encounters malformed data. This exception
     indicates a client-side error. If this exception is raised, the connection
     should be dropped with a 400 error.
@@ -1784,10 +1786,13 @@ class _IdentityTransferDecoder:
             raise _DataLoss()
 
 
+maxChunkSizeLineLength = 1024
+
+
 class _ChunkedTransferDecoder:
     """
-    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
-    section 3.6.1.  This protocol can interpret the contents of a request or
+    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
+    section 4.1.  This protocol can interpret the contents of a request or
     response body which uses the I{chunked} Transfer-Encoding.  It cannot
     interpret any of the rest of the HTTP protocol.
 
@@ -1803,7 +1808,7 @@ class _ChunkedTransferDecoder:
     noticed. -exarkun
 
     @ivar dataCallback: A one-argument callable which will be invoked each
-        time application data is received.
+        time application data is received. This callback is not reentrant.
 
     @ivar finishCallback: A one-argument callable which will be invoked when
         the terminal chunk is received.  It will be invoked with all bytes
@@ -1821,77 +1826,164 @@ class _ChunkedTransferDecoder:
         read. For C{'BODY'}, the contents of a chunk are being read. For
         C{'FINISHED'}, the last chunk has been completely read and no more
         input is valid.
+
+    @ivar _buffer: Accumulated received data for the current state. At each
+        state transition this is truncated at the front so that index 0 is
+        where the next state shall begin.
+
+    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
+        the buffer at which search for CRLF should resume. Resuming the search
+        at this position avoids doing quadratic work if the chunk length line
+        arrives over many calls to C{dataReceived}.
+
+        Not used in any other state.
     """
 
     state = "CHUNK_LENGTH"
 
-    def __init__(self, dataCallback, finishCallback):
+    def __init__(
+        self,
+        dataCallback: Callable[[bytes], None],
+        finishCallback: Callable[[bytes], None],
+    ) -> None:
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
-        self._buffer = b""
+        self._buffer = bytearray()
+        self._start = 0
 
-    def _dataReceived_CHUNK_LENGTH(self, data):
-        if b"\r\n" in data:
-            line, rest = data.split(b"\r\n", 1)
-            parts = line.split(b";")
-            try:
-                self.length = int(parts[0], 16)
-            except ValueError:
-                raise _MalformedChunkedDataError("Chunk-size must be an integer.")
-            if self.length == 0:
-                self.state = "TRAILER"
-            else:
-                self.state = "BODY"
-            return rest
+    def _dataReceived_CHUNK_LENGTH(self) -> bool:
+        """
+        Read the chunk size line, ignoring any extensions.
+
+        @returns: C{True} once the line has been read and removed from
+            C{self._buffer}.  C{False} when more data is required.
+
+        @raises _MalformedChunkedDataError: when the chunk size cannot be
+            decoded or the length of the line exceeds L{maxChunkSizeLineLength}.
+        """
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex >= maxChunkSizeLineLength or (
+            eolIndex == -1 and len(self._buffer) > maxChunkSizeLineLength
+        ):
+            raise _MalformedChunkedDataError(
+                "Chunk size line exceeds maximum of {} bytes.".format(
+                    maxChunkSizeLineLength
+                )
+            )
+
+        if eolIndex == -1:
+            # Restart the search upon receipt of more data at the start of the
+            # new data, minus one in case the last character of the buffer is
+            # CR.
+            self._start = len(self._buffer) - 1
+            return False
+
+        endOfLengthIndex = self._buffer.find(b";", 0, eolIndex)
+        if endOfLengthIndex == -1:
+            endOfLengthIndex = eolIndex
+        try:
+            length = int(self._buffer[0:endOfLengthIndex], 16)
+        except ValueError:
+            raise _MalformedChunkedDataError("Chunk-size must be an integer.")
+
+        if length < 0:
+            raise _MalformedChunkedDataError("Chunk-size must not be negative.")
+        elif length == 0:
+            self.state = "TRAILER"
         else:
-            self._buffer = data
-            return b""
+            self.state = "BODY"
 
-    def _dataReceived_CRLF(self, data):
-        if data.startswith(b"\r\n"):
-            self.state = "CHUNK_LENGTH"
-            return data[2:]
-        else:
-            self._buffer = data
-            return b""
+        self.length = length
+        del self._buffer[0 : eolIndex + 2]
+        self._start = 0
+        return True
 
-    def _dataReceived_TRAILER(self, data):
-        if data.startswith(b"\r\n"):
-            data = data[2:]
-            self.state = "FINISHED"
-            self.finishCallback(data)
-        else:
-            self._buffer = data
-        return b""
+    def _dataReceived_CRLF(self) -> bool:
+        """
+        Await the carriage return and line feed characters that are the end of
+        chunk marker that follow the chunk data.
 
-    def _dataReceived_BODY(self, data):
-        if len(data) >= self.length:
-            chunk, data = data[: self.length], data[self.length :]
-            self.dataCallback(chunk)
+        @returns: C{True} when the CRLF have been read, otherwise C{False}.
+
+        @raises _MalformedChunkedDataError: when anything other than CRLF are
+            received.
+        """
+        if len(self._buffer) < 2:
+            return False
+
+        if not self._buffer.startswith(b"\r\n"):
+            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+
+        self.state = "CHUNK_LENGTH"
+        del self._buffer[0:2]
+        return True
+
+    def _dataReceived_TRAILER(self) -> bool:
+        """
+        Await the carriage return and line feed characters that follow the
+        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
+        state C{'FINISHED'}.
+
+        @returns: C{False}, as there is either insufficient data to continue,
+            or no data remains.
+
+        @raises _MalformedChunkedDataError: when anything other than CRLF is
+            received.
+        """
+        if len(self._buffer) < 2:
+            return False
+
+        if not self._buffer.startswith(b"\r\n"):
+            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+
+        data = memoryview(self._buffer)[2:].tobytes()
+        del self._buffer[:]
+        self.state = "FINISHED"
+        self.finishCallback(data)
+        return False
+
+    def _dataReceived_BODY(self) -> bool:
+        """
+        Deliver any available chunk data to the C{dataCallback}. When all the
+        remaining data for the chunk arrives, switch to state C{'CRLF'}.
+
+        @returns: C{True} to continue processing of any buffered data.
+        """
+        if len(self._buffer) >= self.length:
+            chunk = memoryview(self._buffer)[: self.length].tobytes()
+            del self._buffer[: self.length]
             self.state = "CRLF"
-            return data
-        elif len(data) < self.length:
-            self.length -= len(data)
-            self.dataCallback(data)
-            return b""
+            self.dataCallback(chunk)
+        else:
+            chunk = bytes(self._buffer)
+            self.length -= len(chunk)
+            del self._buffer[:]
+            self.dataCallback(chunk)
+        return True
 
-    def _dataReceived_FINISHED(self, data):
+    def _dataReceived_FINISHED(self) -> bool:
+        """
+        Once C{finishCallback} has been invoked receipt of additional data
+        raises L{RuntimeError} because it represents a programming error in
+        the caller.
+        """
         raise RuntimeError(
             "_ChunkedTransferDecoder.dataReceived called after last "
             "chunk was processed"
         )
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Interpret data from a request or response body which uses the
         I{chunked} Transfer-Encoding.
         """
-        data = self._buffer + data
-        self._buffer = b""
-        while data:
-            data = getattr(self, f"_dataReceived_{self.state}")(data)
+        self._buffer += data
+        goOn = True
+        while goOn and self._buffer:
+            goOn = getattr(self, "_dataReceived_" + self.state)()
 
-    def noMoreData(self):
+    def noMoreData(self) -> None:
         """
         Verify that all data has been received.  If it has not been, raise
         L{_DataLoss}.
@@ -3007,8 +3099,8 @@ class HTTPFactory(protocol.ServerFactory):
         support writing to L{twisted.python.log} which, unfortunately, works
         with native strings.
 
-    @ivar _reactor: An L{IReactorTime} provider used to compute logging
-        timestamps.
+    @ivar reactor: An L{IReactorTime} provider used to manage connection
+        timeouts and compute logging timestamps.
     """
 
     # We need to ignore the mypy error here, because
@@ -3038,12 +3130,13 @@ class HTTPFactory(protocol.ServerFactory):
             the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to manage connection
-            timeouts and compute logging timestamps.
+        @param reactor: An L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps. Defaults to the global
+            reactor.
         """
         if not reactor:
             from twisted.internet import reactor
-        self._reactor = reactor
+        self.reactor = reactor
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3061,8 +3154,8 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString(self._reactor.seconds())
-        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
+        self._logDateTime = datetimeToLogString(self.reactor.seconds())
+        self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -3072,7 +3165,7 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self._reactor.callLater
+        p.callLater = self.reactor.callLater
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
