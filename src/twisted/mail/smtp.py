@@ -320,9 +320,7 @@ class Address:
                     # Now in domain
                     domain = [b""]
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] != b".":
-                raise AddressError(
-                    "Parse error at {!r} of {!r}".format(atl[0], (addr, atl))
-                )
+                raise AddressError(f"Parse error at {atl[0]!r} of {(addr, atl)!r}")
             else:
                 if not domain:
                     local.append(atl[0])

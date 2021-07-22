@@ -503,7 +503,7 @@ class PermissionsTests(BytesTestCase):
                 return (statModeInt & getattr(stat, f"S_I{what}{who}")) > 0
 
             return filepath.RWX(
-                *[getPermissionBit(what, who) for what in ("R", "W", "X")]
+                *(getPermissionBit(what, who) for what in ("R", "W", "X"))
             )
 
         for u in range(0, 8):

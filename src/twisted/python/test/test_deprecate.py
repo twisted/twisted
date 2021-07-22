@@ -133,9 +133,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
-        self.assertEqual(
-            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
-        )
+        self.assertEqual(repr(proxy), f"<{type(proxy).__name__} module={realModule!r}>")
 
 
 class DeprecatedAttributeTests(SynchronousTestCase):
