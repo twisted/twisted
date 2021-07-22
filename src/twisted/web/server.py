@@ -17,6 +17,7 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
+import time
 from html import escape
 from typing import List, Optional
 from urllib.parse import quote as _quote
@@ -745,7 +746,7 @@ class Session(components.Componentized):
         """
         Notify session modification.
         """
-        self.lastModified = self._reactor.seconds()
+        self.lastModified = time.time()
         if self._expireCall is not None:
             self._expireCall.reset(self.sessionTimeout)
 
