@@ -321,7 +321,7 @@ class _Box(ContainerWidget):
             wants.append(hint[self.variableDimension])
 
         length = (width, height)[self.variableDimension]
-        totalWant = sum([w for w in wants if w is not None])
+        totalWant = sum(w for w in wants if w is not None)
         if greedy:
             leftForGreedy = int((length - totalWant) / greedy)
 

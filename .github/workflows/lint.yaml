@@ -9,8 +9,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-20.04
-    env:
-      TOXENV: "lint, newsfragment"
 
     steps:
     - uses: actions/checkout@v2
@@ -26,9 +24,21 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox
-        tox --notest
 
     - name: Lint
       run: |
         python --version
-        tox -q
+        tox -e lint
+
+    - name: Revert merge commit for a release branch
+      if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
+      env:
+        BRANCH_SHA: ${{ github.event.after }}
+        BRANCH_NAME: ${{ github.head_ref }}
+      run: |
+        git checkout -b $BRANCH_NAME
+        git reset --hard $BRANCH_SHA
+
+    - name: Newsfragment
+      run: |
+        tox -q -e newsfragment

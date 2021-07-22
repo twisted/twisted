@@ -11,7 +11,6 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-
 import re
 import os
 
@@ -47,7 +46,7 @@ deprecatedModuleAttribute(
 try:
     WindowsError: OSError = WindowsError
 except NameError:
-    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
+    WindowsError = FakeWindowsError
 
 deprecatedModuleAttribute(
     Version("Twisted", 21, 2, 0),

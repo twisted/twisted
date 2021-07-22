@@ -930,7 +930,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
+            result = f" waiting on Deferred at 0x{id(self._chainedTo):x}"
         elif result is _NO_RESULT:
             result = ""
         else:
@@ -1058,7 +1058,11 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     @classmethod
     def fromCoroutine(
-        cls, coro: Coroutine["Deferred[_T]", object, _T]
+        cls,
+        coro: Union[
+            Coroutine["Deferred[_T]", Any, _T],
+            Generator["Deferred[_T]", Any, _T],
+        ],
     ) -> "Deferred[_T]":
         """
         Schedule the execution of a coroutine that awaits on L{Deferred}s,
@@ -1095,14 +1099,19 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
-        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
+        # type note: Subclass of "Generator[Deferred[_T], object, _T]" and "GeneratorType" cannot exist
+        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):  # type: ignore[unreachable]
             raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
 
 
 def ensureDeferred(
-    coro: Union[Coroutine["Deferred[_T]", object, "_T"], Deferred[_T]]
+    coro: Union[
+        Coroutine[Deferred[_T], Any, _T],
+        Generator[Deferred[_T], Any, _T],
+        Deferred[_T],
+    ]
 ) -> Deferred[_T]:
     """
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
@@ -1169,6 +1178,10 @@ class FirstError(Exception):
         return -1
 
 
+_DeferredListSingleResultT = Tuple[_DeferredResultT, int]
+_DeferredListResultItemT = Tuple[bool, _DeferredResultT]
+_DeferredListResultListT = List[_DeferredListResultItemT]
+
 if TYPE_CHECKING:
 
     # The result type is different depending on whether fireOnOneCallback
@@ -1178,34 +1191,36 @@ if TYPE_CHECKING:
 
     @overload
     def _DeferredList(
-        deferredList: Iterable[Deferred[_T]],
+        deferredList: Iterable[Deferred[_DeferredResultT]],
         fireOnOneCallback: Literal[True],
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[Tuple[_T, int]]:
+    ) -> Deferred[_DeferredListSingleResultT]:
         ...
 
     @overload
     def _DeferredList(
-        deferredList: Iterable[Deferred[_T]],
+        deferredList: Iterable[Deferred[_DeferredResultT]],
         fireOnOneCallback: Literal[False] = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[List[Tuple[bool, _T]]]:
+    ) -> Deferred[_DeferredListResultListT]:
         ...
 
     def _DeferredList(
-        deferredList: Iterable[Deferred[_T]],
+        deferredList: Iterable[Deferred[_DeferredResultT]],
         fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[Any]:
+    ) -> Union[
+        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
+    ]:
         ...
 
     DeferredList = _DeferredList
 
 
-class DeferredList(Deferred[List[Tuple[bool, _DeferredResultT]]]):  # type: ignore[no-redef]
+class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef]
     """
     L{DeferredList} is a tool for collecting the results of several Deferreds.
 
@@ -1266,7 +1281,10 @@ class DeferredList(Deferred[List[Tuple[bool, _DeferredResultT]]]):  # type: igno
         """
         self._deferredList = list(deferredList)
 
-        self.resultList: List[Optional[Tuple[bool, _DeferredResultT]]] = [None] * len(
+        # Note this contains optional result values as the DeferredList is
+        # processing its results, even though the callback result will not,
+        # which is why we aren't using _DeferredListResultListT here.
+        self.resultList: List[Optional[_DeferredListResultItemT]] = [None] * len(
             self._deferredList
         )
         """
@@ -1314,11 +1332,10 @@ class DeferredList(Deferred[List[Tuple[bool, _DeferredResultT]]]):  # type: igno
                 assert isinstance(result, Failure)
                 self.errback(Failure(FirstError(result, index)))
             elif self.finishedCount == len(self.resultList):
-                # All the None values have been replaced by results, so we can
-                # safely cast away the Optional[].
-                self.callback(
-                    cast(List[Tuple[bool, _DeferredResultT]], self.resultList)
-                )
+                # At this point, None values in self.resultList have been
+                # replaced by result values, so we cast it to
+                # _DeferredListResultListT to match the callback result type.
+                self.callback(cast(_DeferredListResultListT, self.resultList))
 
         if succeeded == FAILURE and self.consumeErrors:
             return None
@@ -1346,10 +1363,12 @@ class DeferredList(Deferred[List[Tuple[bool, _DeferredResultT]]]):  # type: igno
 
 
 def _parseDeferredListResult(
-    resultList: List[Tuple[bool, _T]], fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT], fireOnOneErrback: bool = False
 ) -> List[_T]:
     if __debug__:
-        for success, value in resultList:
+        for result in resultList:
+            assert result is not None
+            success, value = result
             assert success
     return [x[1] for x in resultList]
 
@@ -1809,8 +1828,8 @@ class _InternalInlineCallbacksCancelledError(Exception):
 # type note: "..." is used here because we don't have a better way to express
 #     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
-    f: Callable[..., Generator[Deferred[object], object, None]]
-) -> Callable[..., Deferred[object]]:
+    f: Callable[..., Generator[Deferred[object], object, _T]]
+) -> Callable[..., Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::

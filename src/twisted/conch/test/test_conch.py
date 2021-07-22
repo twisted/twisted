@@ -57,7 +57,7 @@ else:
 
 
 def _has_ipv6():
-    """ Returns True if the system can bind an IPv6 address."""
+    """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
 

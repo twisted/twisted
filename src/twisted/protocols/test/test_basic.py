@@ -544,7 +544,7 @@ class TestMixin:
     MAX_LENGTH = 50
     closed = 0
 
-    def connectionLost(self, reason: Failure = connectionDone):
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
         self.closed = 1
 
 
