@@ -1,2 +1,1 @@
-avoid AssertionError in deferred awaited twice when debugging is disabled
-always clear the result of awaited Deferreds
+always consume the result of awaited Deferreds
