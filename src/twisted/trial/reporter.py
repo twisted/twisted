@@ -26,7 +26,7 @@ from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
 try:
-    from subunit import TestProtocolClient
+    from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
 
@@ -890,7 +890,7 @@ class _Win32Colorizer:
     """
 
     def __init__(self, stream):
-        from win32console import (
+        from win32console import (  # type: ignore[import]
             GetStdHandle,
             STD_OUTPUT_HANDLE,
             FOREGROUND_RED,
@@ -926,7 +926,7 @@ class _Win32Colorizer:
             screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes
+        import pywintypes  # type: ignore[import]
 
         try:
             screenBuffer.SetConsoleTextAttribute(
@@ -1203,9 +1203,9 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                    self._write(f"{self.indent * indentLevel}{seg}\n")
             else:
-                self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                self._write(f"{self.indent * indentLevel}{seg}\n")
             indentLevel += 1
         self._lastTest = segments
 

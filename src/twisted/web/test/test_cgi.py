@@ -376,8 +376,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         """
         cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi?param=1234" % (portnum,)
-        url = url.encode("ascii")
+        url = b"http://localhost:%d/cgi?param=1234" % (portnum,)
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)

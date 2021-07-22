@@ -53,7 +53,7 @@ from weakref import WeakKeyDictionary
 from zope.interface import implementer
 
 # Win32 imports
-from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
+from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect  # type: ignore[import]
 
 try:
     # WSAEnumNetworkEvents was added in pywin32 215
@@ -70,10 +70,10 @@ except ImportError:
         return {FD_READ}
 
 
-from win32event import CreateEvent, MsgWaitForMultipleObjects
+from win32event import CreateEvent, MsgWaitForMultipleObjects  # type: ignore[import]
 from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
-import win32gui
+import win32gui  # type: ignore[import]
 
 # Twisted imports
 from twisted.internet import posixbase

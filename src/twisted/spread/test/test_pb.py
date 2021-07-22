@@ -294,9 +294,7 @@ def createFactoryCopy(state):
     """
     stateId = state.get("id", None)
     if stateId is None:
-        raise RuntimeError(
-            "factory copy state has no 'id' member {}".format(repr(state))
-        )
+        raise RuntimeError(f"factory copy state has no 'id' member {repr(state)}")
     if stateId not in SimpleFactoryCopy.allIDs:
         raise RuntimeError(f"factory class has no ID: {SimpleFactoryCopy.allIDs}")
     inst = SimpleFactoryCopy.allIDs[stateId]
@@ -740,9 +738,7 @@ class BrokerTests(unittest.TestCase):
             pump.pump()
         expected = pb.MAX_BROKER_REFS - 1
         self.assertTrue(s.transport.closed, "transport was not closed")
-        self.assertEqual(
-            len(l), expected, "expected {} got {}".format(expected, len(l))
-        )
+        self.assertEqual(len(l), expected, f"expected {expected} got {len(l)}")
 
     def test_copy(self):
         c, s, pump = connectedServerAndClient(test=self)

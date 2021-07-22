@@ -37,13 +37,13 @@ from twisted.python import runtime
 try:
     if not hasattr(sys, "frozen"):
         # Don't want to check this for py2exe
-        import pygtk
+        import pygtk  # type: ignore[import]
 
         pygtk.require("2.0")
 except (ImportError, AttributeError):
     pass  # maybe we're using pygtk before this hack existed.
 
-import gobject
+import gobject  # type: ignore[import]
 
 if hasattr(gobject, "threads_init"):
     # recent versions of python-gtk expose this. python-gtk=2.4.1
@@ -70,7 +70,7 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
     def __init__(self, useGtk=True):
         _gtk = None
         if useGtk is True:
-            import gtk as _gtk
+            import gtk as _gtk  # type: ignore[import]
 
         _glibbase.GlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 

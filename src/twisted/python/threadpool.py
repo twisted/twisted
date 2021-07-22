@@ -168,7 +168,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-{}-{}".format(self.name or id(self), self.workers)
+        return f"PoolThread-{self.name or id(self)}-{self.workers}"
 
     def stopAWorker(self):
         """

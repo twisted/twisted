@@ -274,7 +274,6 @@ class IOCPReactor(
                 "Custom child file descriptor mappings are unsupported on "
                 "this platform."
             )
-        args, env = self._checkProcessArgs(args, env)
         return Process(self, processProtocol, executable, args, env, path)
 
     def removeAll(self):

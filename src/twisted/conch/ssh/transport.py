@@ -846,7 +846,7 @@ class SSHTransportBase(protocol.Protocol):
             compSC,
             langCS,
             langSC,
-        ) = [s.split(b",") for s in strings]
+        ) = (s.split(b",") for s in strings)
         # These are the server directions
         outs = [encSC, macSC, compSC]
         ins = [encCS, macSC, compCS]
@@ -1454,7 +1454,7 @@ class SSHServerTransport(SSHTransportBase):
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -1857,7 +1857,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = self._finishEphemeralDH(f)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
