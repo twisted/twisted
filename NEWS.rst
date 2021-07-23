@@ -10,11 +10,12 @@ Twisted 21.7.0.rc3 (2021-07-23)
 Bugfixes
 --------
 
-- The automated release process was updated to generate and release wheel files
-  to PyPy (#10236)
 - The changes to ``DelayedCall.__repr__`` and ``LoopingCall.__repr__`` from
   21.7.0.rc1 were reverted as the wrong assumption that ``__qualname__`` is
   available on all the supported Python versions.
+  (#10235)
+- The automated release process was updated to generate and release wheel files
+  to PyPy (#10236)
 
 
 Twisted 21.7.0.rc2 (2021-07-20)
