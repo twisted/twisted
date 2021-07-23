@@ -100,10 +100,17 @@ jobs:
         sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
         ip a
 
-    - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox coverage coveralls
+
+    - name: Runner info
+      uses: twisted/python-info-action@v1
+
+    - name: Tox info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/${{ env.TOXENV }}/*/python
 
     - name: Test
       run: |
@@ -140,6 +147,8 @@ jobs:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
     name: Check release and publish on twisted-* tag
     runs-on: ubuntu-20.04
+    env:
+      TOXENV: "release-prepare"
     steps:
     - uses: actions/checkout@v2
 
@@ -148,13 +157,23 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Test
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox pep517
         rm -rf dist/*
-        tox -e release-prepare
+        tox --notest -e ${TOXENV}
 
-    - uses: twisted/python-info-action@v1
+    - name: Runner info
+      uses: twisted/python-info-action@v1
+
+    - name: Tox info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/${{ env.TOXENV }}/*/python
+
+    - name: Prepare release
+      run: |
+        tox -e ${TOXENV}
 
     - name: Display structure of files to be pushed
       run: ls -R dist/

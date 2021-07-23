@@ -41,6 +41,19 @@ jobs:
 
         tox --notest -e narrativedocs,apidocs
 
+    - name: Runner info
+      uses: twisted/python-info-action@v1
+
+    - name: Tox narrativedocs info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/narrativedocs/*/python
+
+    - name: Tox apidocs info
+      uses: twisted/python-info-action@v1
+      with:
+        python-path: .tox/apidocs/*/python
+
     - name: Check the narrative documentation
       run: |
         tox -q -e narrativedocs
