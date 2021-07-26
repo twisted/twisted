@@ -192,26 +192,26 @@ def _resetWarningFilters(passthrough, addedFilters):
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
     """
-    Run the function C{f}, but with some warnings suppressed.
+    Run the function I{f}, but with some warnings suppressed.
 
-    This calls C{warnings.filterwarnings} to add warning filters before
-    invoking L{f}. If L{f} returns a L{Deferred} then the added filters are
+    This calls L{warnings.filterwarnings} to add warning filters before
+    invoking I{f}. If I{f} returns a L{Deferred} then the added filters are
     removed once the deferred fires. Otherwise they are removed immediately.
 
     Note that the list of warning filters is a process-wide resource, so
     calling this function will affect all threads.
 
     @param suppressedWarnings:
-        A list of arguments to pass to C{warnings.filterwarnings}, a sequence
+        A list of arguments to pass to L{warnings.filterwarnings}, a sequence
         of (args, kwargs) 2-tuples.
 
-    @param f: A callable, which may return a C{Deferred}.
+    @param f: A callable, which may return a L{Deferred}.
 
-    @param a: Positional arguments passed to L{f}
+    @param a: Positional arguments passed to I{f}
 
-    @param kw: Keyword arguments passed to L{f}
+    @param kw: Keyword arguments passed to I{f}
 
-    @returns: The return value of L{f}
+    @returns: The return value of I{f}
     """
     for args, kwargs in suppressedWarnings:
         warnings.filterwarnings(*args, **kwargs)
