@@ -94,7 +94,7 @@ How to do a release candidate
 -----------------------------
 
 
-This section described the happy path in which no defect or regressions are found during the release process.
+This section described the required to create the first release candidate.
 
 
 Prepare the branch
@@ -129,8 +129,8 @@ Prepare the branch
    Use the Read the Docs published for the pull request.
 #. The review for the PR will be requested after the files are on PyPI so that a full review and manual test can be done.
 #. Most probably there will be some minor comments received via email or GitHub regarding the final content of the release notes.
-   Is ok to make those changes as part of the release branch.
-   It is ok to update the text of the candidate release notes,
+   It's OK to make those changes as part of the release branch.
+   It's OK to update the text of the candidate release notes,
    in the final NEWS file the release candidate version is removed and replaced with the final version.
    No need for a new ticket or separate pull request.
    These changes will be reviewed as part of the final release review process.
@@ -201,7 +201,8 @@ Prepare the branch
 #. Have the release branch, previously used to generate a release candidate, checked out
 #. Run ``python -m incremental.update Twisted --newversion $RELEASE``
 #. Manually update the release version and date inside the NEWS file.
-   The release candidate will be removed from the final NEWS file.
+   The release candidate notes will be removed from the final NEWS file.
+   Manually move all the release notes from the release candidates to the notes for the final version.
 #. Commit and push.
 #. Submit the ticket for the final review.
 #. Pause until the ticket is reviewed and accepted.
@@ -211,7 +212,8 @@ Prepare the branch
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is not checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo. PyPI is the only canonical source for Twisted packages.
-#. Read the Docs hooks will publish a new version of the docs.
+#. Read the Docs hooks will publish a new version of the docs for the tag.
+#. Manually update the Read The Docs settings so that the default version is the newly created tag.
 
 
 Announce
@@ -252,7 +254,7 @@ If a defect is found after the final release is published, check the next sectio
 1. Pause the release process.
 2. Separate tickets should be files for each defect.
 3. The defect should be fixed, reviewed and merged in trunk.
-4. On the release branch, cherry-pick the merges from trunk that merges the fixes.
+4. On the release branch, cherry-pick the merges from trunk that merges the fixes `git cherry-pick -m 1 TRUNK_MERGE_SHA`.
 5. Follow the same steps as for any release candidate, with the exception that a new branch is not created.
    Use the same `python -m incremental.update Twisted --rc` command to increment the release candidate version.
 
