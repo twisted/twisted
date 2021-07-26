@@ -344,7 +344,7 @@ def domainString(domain):
     if not isinstance(domain, bytes):
         raise TypeError(
             "Expected {} or {} but found {!r} of type {}".format(
-                type(b"").__name__, type("").__name__, domain, type(domain)
+                bytes.__name__, str.__name__, domain, type(domain)
             )
         )
     return domain
