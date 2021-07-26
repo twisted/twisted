@@ -25,7 +25,7 @@ Bugfixes
   available on all the supported Python versions.
   (#10235)
 - The automated release process was updated to generate and release wheel files
-  to PyPy (#10236)
+  to PyPI (#10236)
 - twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
 - trial.runner.filenameToModule now sets the correct ``module.__name__`` and ``sys.modules`` key (#10230)
 - twisted.internet.process can now pause and resume producing in python 3 (#9933)
