@@ -4,32 +4,9 @@ http://twistedmatrix.com/trac/ticket/<number>
 .. towncrier release notes start
 
 
-Twisted 21.7.0.rc3 (2021-07-23)
-===============================
+Twisted 21.7.0 (2021-07-26)
+===========================
 
-Bugfixes
---------
-
-- The changes to ``DelayedCall.__repr__`` and ``LoopingCall.__repr__`` from
-  21.7.0.rc1 were reverted as the wrong assumption that ``__qualname__`` is
-  available on all the supported Python versions.
-  (#10235)
-- The automated release process was updated to generate and release wheel files
-  to PyPy (#10236)
-
-
-Twisted 21.7.0.rc2 (2021-07-20)
-===============================
-
-Bugfixes
---------
-
-- twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
-- trial.runner.filenameToModule now sets the correct ``module.__name__`` and ``sys.modules`` key (#10230)
-
-
-Twisted 21.7.0.rc1 (2021-07-10)
-===============================
 
 Features
 --------
@@ -43,6 +20,14 @@ Features
 Bugfixes
 --------
 
+- The changes to ``DelayedCall.__repr__`` and ``LoopingCall.__repr__`` from
+  21.7.0.rc1 were reverted as the wrong assumption that ``__qualname__`` is
+  available on all the supported Python versions.
+  (#10235)
+- The automated release process was updated to generate and release wheel files
+  to PyPy (#10236)
+- twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
+- trial.runner.filenameToModule now sets the correct ``module.__name__`` and ``sys.modules`` key (#10230)
 - twisted.internet.process can now pause and resume producing in python 3 (#9933)
 - When installing Twisted it now requires a minimum Python 3.6.7 version to match the version used with automated testing. This is the minimum Python version that we know that Twisted works with. (#10098)
 - twisted.internet.asyncioreactor.AsyncioSelectorReactor will no longer raise a TypeError like "SelectorEventLoop required, instead got: <uvloop.Loop ...>" (broken since 21.2.0). (#10106)
