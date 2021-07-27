@@ -171,6 +171,8 @@ jobs:
 
   lint:
     runs-on: ubuntu-20.04
+    env:
+      TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
     - uses: actions/checkout@v2
@@ -190,7 +192,7 @@ jobs:
     - name: Lint
       run: |
         python --version
-        tox -e lint,apidocs,narrativedocs,mypy
+        tox --parallel -e lint,apidocs,narrativedocs,mypy
 
     - name: Revert merge commit for a release branch
       if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
