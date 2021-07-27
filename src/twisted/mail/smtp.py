@@ -17,7 +17,7 @@ import os
 import random
 import binascii
 import warnings
-from typing import Type
+from typing import Optional, Type
 
 from email.utils import parseaddr
 
@@ -36,6 +36,7 @@ from twisted.internet._idna import _idnaText
 from twisted.python import log
 from twisted.python import util
 from twisted.python.compat import networkString, nativeString, iterbytes
+from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 
 from twisted.mail.interfaces import (
@@ -961,6 +962,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.code = -1
         self.log = util.LineLog(logsize)
 
+        # the reason we were unable to successfully send the message, if any.
+        self.failureReason: Optional[Failure] = None
+
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance
         if self.debug:
@@ -979,6 +983,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         """
         We are no longer connected
         """
+        self.failureReason = reason
         self.setTimeout(None)
         self.mailFile = None
 
@@ -1933,8 +1938,19 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self._processConnectionError(connector, err)
 
     def _processConnectionError(self, connector, err):
+        # If the initial connection succeeded, but there was a later error
+        # (such as TLS validation failure), we're more interested in that than
+        # "Connection was closed cleanly" or whatever.
+        if self.currentProtocol and self.currentProtocol.failureReason:
+            err = self.currentProtocol.failureReason
+
         self.currentProtocol = None
-        if (self.retries < 0) and (not self.sendFinished):
+        if self.sendFinished:
+            # we already completed the send, and the deferred has been called.
+            # There is nothing more we can do.
+            return
+
+        if self.retries < 0:
             log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
 
             # Rewind the file in case part of it was read while attempting to
@@ -1942,12 +1958,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
             self.file.seek(0, 0)
             connector.connect()
             self.retries += 1
-        elif not self.sendFinished:
-            # If we were unable to communicate with the SMTP server a ConnectionDone will be
-            # returned. We want a more clear error message for debugging
-            if err.check(error.ConnectionDone):
-                err.value = SMTPConnectError(-1, "Unable to connect to server.")
-            self.result.errback(err.value)
+            return
+
+        # do our best to wrap the error into something more meaningful.
+        exn = SMTPConnectError(
+            -1, "Unable to connect to SMTP server: " + str(err.value)
+        )
+        exn.__cause__ = err.value
+        self.result.errback(exn)
 
     def buildProtocol(self, addr):
         p = self.protocol(self.domain, self.nEmails * 2 + 2)
