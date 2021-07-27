@@ -33,7 +33,7 @@ intersphinxURLs = [
     "https://hyperlink.readthedocs.io/en/stable/objects.inv",
     "https://twisted.github.io/constantly/docs/objects.inv",
     "https://twisted.github.io/incremental/docs/objects.inv",
-    "https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "https://priority.readthedocs.io/en/stable/objects.inv",
     "https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "https://automat.readthedocs.io/en/latest/objects.inv",
