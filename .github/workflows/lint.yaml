@@ -28,7 +28,7 @@ jobs:
     - name: Lint
       run: |
         python --version
-        tox -e lint
+        tox -e lint,apidocs,narrativedocs,mypy
 
     - name: Revert merge commit for a release branch
       if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
