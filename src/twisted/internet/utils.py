@@ -211,7 +211,10 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
 
     @param kw: Keyword arguments passed to I{f}
 
-    @returns: The return value of I{f}
+    @return: The result of C{f(*a, **kw)}
+
+    @seealso: L{twisted.python.util.runWithWarningsSuppressed}
+        functions similarly, but doesn't handled L{Deferred}s.
     """
     for args, kwargs in suppressedWarnings:
         warnings.filterwarnings(*args, **kwargs)
