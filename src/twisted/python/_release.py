@@ -337,6 +337,7 @@ class APIBuilder:
             outputPath.path,
             "--quiet",
             "--make-html",
+            "--warnings-as-errors",
         ] + intersphinxes
         args.append(packagePath.path)
         main(args)
