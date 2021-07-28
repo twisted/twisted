@@ -54,7 +54,7 @@ else:
     skip = "Release toolchain only supported on POSIX."
 
 # This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
-PRECOMMIT_CI_ENVIRON = {"GITHUB_ACTOR": "pre-commit-ci[bot]"}
+PRECOMMIT_CI_ENVIRON = {"GITHUB_HEAD_REF": "pre-commit-ci-update-config"}
 
 
 class ExternalTempdirTestCase(TestCase):
