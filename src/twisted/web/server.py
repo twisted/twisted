@@ -702,7 +702,7 @@ class Session(components.Componentized):
     @ivar lastModified: Time the C{touch()} method was last called (or time the
         session was created). A UNIX timestamp as returned by
         L{IReactorTime.seconds()}.
-    @type lastModified L{float}
+    @type lastModified: L{float}
     """
 
     sessionTimeout = 900
