@@ -53,6 +53,9 @@ if sys.platform != "win32":
 else:
     skip = "Release toolchain only supported on POSIX."
 
+# This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
+PRECOMMIT_CI_ENVIRON = {"GITHUB_ACTOR": "pre-commit-ci[bot]"}
+
 
 class ExternalTempdirTestCase(TestCase):
     """
@@ -1094,12 +1097,15 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
 
         logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
 
         with self.assertRaises(SystemExit) as e:
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (0,))
-        self.assertEqual(logs[-1], "Autoupdate branch with no newsfragments, all good.")
+        self.assertEqual(
+            logs[-1], "Autoupdated branch with no newsfragments, all good."
+        )
 
     def test_preCommitAutoupdateWithNewsfragments(self):
         """
@@ -1122,13 +1128,14 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
         runCommand(["git", "commit", "-m", "fragment"], cwd=self.repo.path)
 
         logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
 
         with self.assertRaises(SystemExit) as e:
             CheckNewsfragmentScript(logs.append).main([self.repo.path])
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(
-            logs[-1], "No newsfragments should be on the autoupdate branch."
+            logs[-1], "No newsfragments should be present on an autoupdated branch."
         )
 
     def test_onlyQuotes(self):
