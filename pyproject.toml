@@ -34,6 +34,10 @@ build-backend = "setuptools.build_meta"
         path = "names"
         name = "Names"
 
+    [[tool.towncrier.section]]
+        path = "trial"
+        name = "Trial"
+
     [[tool.towncrier.type]]
         directory = "feature"
         name = "Features"
