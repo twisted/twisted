@@ -54,7 +54,9 @@ else:
     skip = "Release toolchain only supported on POSIX."
 
 # This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
-PRECOMMIT_CI_ENVIRON = {"GITHUB_ACTOR": "pre-commit-ci[bot]"}
+PRECOMMIT_CI_ENVIRON = {"GITHUB_HEAD_REF": "pre-commit-ci-update-config"}
+# This should match the GHA environment for non pre-commit.ci PRs.
+GENERIC_CI_ENVIRON = {"GITHUB_HEAD_REF": "1234-some-branch-name"}
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -965,6 +967,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         runCommand(["git", "clone", self.origin.path, self.repo.path])
         _gitConfig(self.repo)
+        # Inject a rigged environment to have full control over the test execution.
+        self.patch(os, "environ", GENERIC_CI_ENVIRON)
 
     def test_noArgs(self):
         """
