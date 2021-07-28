@@ -456,7 +456,7 @@ class Reporter(TestResult):
         @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(""))
+        assert isinstance(s, str)
         if args:
             self._stream.write(s % args)
         else:

@@ -1,1 +1,0 @@
-When installing Twisted it now requires a minimum Python 3.5.4 version to match the version used with automated testing. This is the minimum Python version that we know that Twisted works with. 
