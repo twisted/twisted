@@ -193,7 +193,7 @@ def _resetWarningFilters(passthrough, addedFilters):
 
 
 @contextlib.contextmanager
-def suppressWarningsCM(supressedWarnings):
+def suppressedWarnings(supressedWarnings):
     for args, kwargs in supressedWarnings:
         warnings.filterwarnings(*args, **kwargs)
     addedFilters = warnings.filters[: len(supressedWarnings)]

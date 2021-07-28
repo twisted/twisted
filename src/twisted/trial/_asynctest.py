@@ -83,7 +83,7 @@ class TestCase(SynchronousTestCase):
     failUnlessFailure = assertFailure
 
     async def _runCorofnWithWarningsSuppressed(self, method):
-        with utils.suppressWarningsCM(self._getSuppress()):
+        with utils.suppressedWarnings(self._getSuppress()):
             v = method()
             return (await v) if isinstance(v, Awaitable) else v
 

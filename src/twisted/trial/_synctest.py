@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
-from twisted.internet.utils import suppressWarningsCM
+from twisted.internet.utils import suppressedWarnings
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
     getDeprecationWarningString,
@@ -1365,7 +1365,7 @@ class SynchronousTestCase(_Assertions):
             result.addError(self, failure.Failure(exc))
             return True
         try:
-            with suppressWarningsCM(suppress):
+            with suppressedWarnings(suppress):
                 method()
         except SkipTest as e:
             result.addSkip(self, self._getSkipReason(method, e))
