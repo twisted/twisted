@@ -53,6 +53,9 @@ if sys.platform != "win32":
 else:
     skip = "Release toolchain only supported on POSIX."
 
+# This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
+PRECOMMIT_CI_ENVIRON = {"GITHUB_ACTOR": "pre-commit-ci[bot]"}
+
 
 class ExternalTempdirTestCase(TestCase):
     """
@@ -1077,6 +1080,63 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No newsfragments should be on the release branch.")
+
+    def test_preCommitAutoupdate(self):
+        """
+        Running it on the autoupdate branch returns green if there is no
+        newsfragments even if there are changes.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1], "Autoupdated branch with no newsfragments, all good."
+        )
+
+    def test_preCommitAutoupdateWithNewsfragments(self):
+        """
+        Running it on the autoupdate branch returns red if there are new
+        newsfragments.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(
+            logs[-1], "No newsfragments should be present on an autoupdated branch."
+        )
 
     def test_onlyQuotes(self):
         """

@@ -582,6 +582,17 @@ class CheckNewsfragmentScript:
                 self._print("Release branch with no newsfragments, all good.")
                 sys.exit(0)
 
+        if os.environ.get("GITHUB_ACTOR", "") == "pre-commit-ci[bot]":
+            # The run was triggered by pre-commit.ci.
+            if newsfragments:
+                self._print(
+                    "No newsfragments should be present on an autoupdated branch."
+                )
+                sys.exit(1)
+            else:
+                self._print("Autoupdated branch with no newsfragments, all good.")
+                sys.exit(0)
+
         for change in newsfragments:
             self._print("Found " + change)
             sys.exit(0)
