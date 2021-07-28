@@ -25,15 +25,11 @@ def unparseEndpoint(args: Tuple[object, ...], kwargs: Mapping[str, object]) -> s
     Un-parse the already-parsed args and kwargs back into endpoint syntax.
 
     @param args: C{:}-separated arguments
-    @type args: L{tuple} of native L{str}
 
     @param kwargs: C{:} and then C{=}-separated keyword arguments
 
-    @type kwargs: L{Mapping[str, str]}
-
     @return: a string equivalent to the original format which this was parsed
         as.
-    @rtype: native L{str}
     """
 
     description = ":".join(
