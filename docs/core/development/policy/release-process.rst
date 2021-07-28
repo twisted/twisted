@@ -239,10 +239,9 @@ Post release
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 
-*. Manually trigger the generation of the release version documentation.
+#. Manually trigger the generation of the release version documentation.
    Go to Read The Docs -> Twisted -> Versions page and search the release tag.
    Click "Activate" and on the next page check "Active" then press "Save" button.
-   https://readthedocs.org/projects/twisted/versions/?version_filter=RELEASE-VERSION
 
 #. To update the Read The Docs `stable documentation <https://docs.twistedmatrix.com/en/stable/>`_ checkout the `stable` branch and rebase it to latest release tag::
 
