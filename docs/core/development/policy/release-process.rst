@@ -13,7 +13,7 @@ Outcomes
 By the end of a Twisted release we'll have:
 
 - Wheel and sdist package published on `PyPI Twisted project <https://pypi.org/project/Twisted/>`_.
-- Updated documentation (API & howtos) on `Twisted Read The Docs <https://docs.twistedmatrix.com/>`_
+- Updated documentation (API & howtos) on `Twisted Read The Docs <https://docs.twistedmatrix.com/>`_ for `stable` and `$RELEASE` versions.
 - Announcement email sent to Twisted main list
 - A `GitHub Release <https://github.com/twisted/twisted/releases>`_ with the associated tag in our Git repository
 
@@ -212,8 +212,8 @@ Prepare the branch
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is not checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo. PyPI is the only canonical source for Twisted packages.
-#. Read the Docs hooks will publish a new version of the docs for the tag.
-#. Manually update the Read The Docs settings so that the default version is the newly created tag.
+#. Read the Docs hooks will not publish a new version of the docs for the tag.
+   See post-release information.
 
 
 Announce
@@ -239,9 +239,15 @@ Post release
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 
-#. Update the default version on Read The Docs, after the RTD finalized the build for the new tag.
-   Go to RTD `Admin - Advanced Settings <https://readthedocs.org/dashboard/twisted/advanced/>`_
-   and update the default version to point to the latest release tag.
+*. Manually trigger the generation of the release version documentation.
+   Go to Read The Docs -> Twisted -> Versions page and search the release tag.
+   Click "Activate" and on the next page check "Active" then press "Save" button.
+   https://readthedocs.org/projects/twisted/versions/?version_filter=RELEASE-VERSION
+
+#. To update the Read The Docs `stable documentation <https://docs.twistedmatrix.com/en/stable/>`_ checkout the `stable` branch and rebase it to latest release tag::
+
+      git checkout -b stable origin/stable
+      git reset --hard twisted-$RELEASE
 
 
 Release candidate fixes
