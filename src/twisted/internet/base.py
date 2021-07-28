@@ -260,10 +260,7 @@ class DelayedCall:
             if self.kw:
                 L.append(
                     ", ".join(
-                        [
-                            "{}={}".format(k, reflect.safe_repr(v))
-                            for (k, v) in self.kw.items()
-                        ]
+                        [f"{k}={reflect.safe_repr(v)}" for (k, v) in self.kw.items()]
                     )
                 )
             L.append(")")

@@ -278,7 +278,7 @@ class DigestMD5:
             # TODO - add error checking
             raise
 
-        nc = networkString("{:08x}".format(1))  # TODO: support subsequent auth.
+        nc = networkString(f"{1:08x}")  # TODO: support subsequent auth.
         cnonce = self._gen_nonce()
         qop = b"auth"
 

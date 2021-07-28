@@ -1395,9 +1395,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         d: Deferred[str] = Deferred()
         d.callback("orange")
-        self.assertEqual(
-            repr(d), "<Deferred at 0x{:x} current result: 'orange'>".format(id(d))
-        )
+        self.assertEqual(repr(d), f"<Deferred at 0x{id(d):x} current result: 'orange'>")
 
     def test_reprWithChaining(self) -> None:
         """
@@ -1410,7 +1408,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b.chainDeferred(a)
         self.assertEqual(
             repr(a),
-            "<Deferred at 0x{:x} waiting on Deferred at 0x{:x}>".format(id(a), id(b)),
+            f"<Deferred at 0x{id(a):x} waiting on Deferred at 0x{id(b):x}>",
         )
 
     def test_boundedStackDepth(self) -> None:
@@ -1646,7 +1644,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = Failure()
 
         error = defer.FirstError(f, 3)
-        self.assertEqual(repr(error), "FirstError[#3, {}]".format(repr(exc)))
+        self.assertEqual(repr(error), f"FirstError[#3, {repr(exc)}]")
 
     def test_str(self) -> None:
         """
@@ -1660,7 +1658,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = Failure()
 
         error = defer.FirstError(f, 5)
-        self.assertEqual(str(error), "FirstError[#5, {}]".format(str(f)))
+        self.assertEqual(str(error), f"FirstError[#5, {str(f)}]")
 
     def test_comparison(self) -> None:
         """
