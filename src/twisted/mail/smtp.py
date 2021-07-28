@@ -29,7 +29,6 @@ from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol
 from twisted.internet import defer
-from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.internet._idna import _idnaText
