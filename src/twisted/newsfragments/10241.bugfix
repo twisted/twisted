@@ -1,0 +1,2 @@
+Fix the use of incorrect variable in the SSHServerTransport.ssh_KEXINIT.
+macSC--> should be (macCS)
