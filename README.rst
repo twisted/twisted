@@ -1,6 +1,10 @@
 Twisted
 =======
 
+.. image:: https://badges.gitter.im/twisted/twisted.svg
+   :alt: Join the chat at https://gitter.im/twisted/twisted
+   :target: https://gitter.im/twisted/twisted?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 |pypi|_
 |circleci|_
 |mypy|_
