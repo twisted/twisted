@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   testing:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     env:
       TOXENV: "${{ matrix.tox-env }}"
       # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
@@ -33,6 +33,7 @@ jobs:
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-beta.4]
+        os: ["ubuntu-20.04", "windows-2019"]
         tox-env: ['alldeps-withcov-posix']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
