@@ -31,7 +31,7 @@ class _BaseURLPathTests:
         """
         self.assertEqual(type(self.path.__str__()), str)
 
-    def test_mutabilityWithText(self, stringType=type("")):
+    def test_mutabilityWithText(self, stringType=str):
         """
         Setting attributes on L{urlpath.URLPath} should change the value
         returned by L{str}.
