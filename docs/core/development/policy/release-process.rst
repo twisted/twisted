@@ -24,9 +24,22 @@ Prerequisites
 To release Twisted, you will need:
 
 - Commit privileges to Twisted GitHub repository.
-- Membership to `Twisted Read The Docs project <https://readthedocs.org/projects/twisted/>`_.
-  `Trac Ticket #10228 <https://twistedmatrix.com/trac/ticket/10228>`_
-  aims to automate the RTD update so that extra membership is not required.
+
+
+Dependencies
+------------
+
+Below is the list of moving parts and web services used by the release process.
+For day to day operation, you should not need management access to them.
+If things go wrong, you should be aware of them and get administration access.
+
+* Release tag is automatically created via the GitHub Release GUI.
+* PyPi file publishing is done via GitHub Actions workflow when a tag is created.
+  Any Twisted contributor in GitHub should have access to modify the workflow.
+* docs.twistedmatrix.com is a CNAME and you will need access to Twisted DNS server to modify it.
+* Documentation is published via `Read The Docs Twisted project <https://readthedocs.org/dashboard/twisted/edit/>`_.
+  There is an `automated rule <https://readthedocs.org/dashboard/twisted/rules/regex/1057/>` to activate the documentation for every tag matching ``^twisted-\d+\.\d+\.\d+$`` (release candidates are excluded)
+  From RTD `Advanced Settings <https://readthedocs.org/dashboard/twisted/advanced/>`_ the branch named `stable` is configured as the default branch.
 
 
 Version numbers
@@ -212,8 +225,7 @@ Prepare the branch
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is not checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo. PyPI is the only canonical source for Twisted packages.
-#. Read the Docs hooks will not publish a new version of the docs for the tag.
-   See post-release information.
+#. Read the Docs hooks will publish a new version of the docs for the tag.
 
 
 Announce
@@ -239,11 +251,8 @@ Post release
 
 #. Merge the release branch into trunk, closing the release ticket at the same time.
 
-#. Manually trigger the generation of the release version documentation.
-   Go to Read The Docs -> Twisted -> Versions page and search the release tag.
-   Click "Activate" and on the next page check "Active" then press "Save" button.
-
-#. To update the Read The Docs `stable documentation <https://docs.twistedmatrix.com/en/stable/>`_ checkout the `stable` branch and rebase it to latest release tag::
+#. To update the Read The Docs `stable documentation <https://docs.twistedmatrix.com/en/stable/>`_ checkout the `stable` branch and rebase it to latest release tag.
+   `Trac Ticket #10228 <https://twistedmatrix.com/trac/ticket/10228>`_ aims to automate the RTD update::
 
       git checkout -b stable origin/stable
       git reset --hard twisted-$RELEASE
