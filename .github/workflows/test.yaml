@@ -119,7 +119,7 @@ jobs:
         tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: always() && !cancelled() && contains(matrix['tox-env'], 'withcov')
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
@@ -129,7 +129,7 @@ jobs:
         python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v1
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: always() && !cancelled() && contains(matrix['tox-env'], 'withcov')
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -137,7 +137,7 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: always() && !cancelled() && contains(matrix['tox-env'], 'withcov')
       continue-on-error: true
       run: |
         python -m coveralls -v
