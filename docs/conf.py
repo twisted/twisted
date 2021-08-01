@@ -120,7 +120,8 @@ html_static_path = ["_static"]
 # or fully qualified paths (eg. https://...)
 html_js_files = [
     "js/custom.js",
-    'https://sidecar.gitter.im/dist/sidecar.v1.js" async defer hack="',
+    # Here we have a Sphinx HTML injection hack to make the JS script load without blocking.
+    'https://sidecar.gitter.im/dist/sidecar.v1.js" defer hack="',
 ]
 
 # Output file base name for HTML help builder.
