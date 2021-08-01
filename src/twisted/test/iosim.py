@@ -10,7 +10,7 @@ Utilities and helpers for simulating a network
 import itertools
 
 try:
-    from OpenSSL.SSL import Error as NativeOpenSSLError  # type: ignore[import]
+    from OpenSSL.SSL import Error as NativeOpenSSLError
 except ImportError:
     pass
 

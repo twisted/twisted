@@ -78,7 +78,12 @@ try:
         DiffieHellmanParameters,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3  # type: ignore[import]
+    from OpenSSL.SSL import (
+        Context as ContextType,
+        SSLv23_METHOD,
+        TLSv1_METHOD,
+        OP_NO_SSLv3,
+    )
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())

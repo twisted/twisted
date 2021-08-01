@@ -852,9 +852,9 @@ from twisted.web._newclient import (
 
 
 try:
-    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL import SSL
 except ImportError:
-    SSL = None
+    SSL = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import (
         CertificateOptions,
@@ -877,7 +877,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
+        @wraps(decoratee)  # type: ignore[unreachable]
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
