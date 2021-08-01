@@ -119,8 +119,8 @@ html_static_path = ["_static"]
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
 html_js_files = [
-    "https://sidecar.gitter.im/dist/sidecar.v1.js",
     "js/custom.js",
+    'https://sidecar.gitter.im/dist/sidecar.v1.js" async defer hack="',
 ]
 
 # Output file base name for HTML help builder.
