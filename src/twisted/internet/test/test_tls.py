@@ -42,9 +42,9 @@ from twisted.internet.test.connectionmixins import (
 )
 
 try:
-    from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
+    from OpenSSL.crypto import FILETYPE_PEM
 except ImportError:
-    FILETYPE_PEM = None
+    FILETYPE_PEM = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import PrivateCertificate, KeyPair
     from twisted.internet.ssl import ClientContextFactory
