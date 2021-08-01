@@ -40,6 +40,7 @@ If things go wrong, you should be aware of them and get administration access.
 * Documentation is published via `Read The Docs Twisted project <https://readthedocs.org/dashboard/twisted/edit/>`_.
   There is an `automated rule <https://readthedocs.org/dashboard/twisted/rules/regex/1057/>` to activate the documentation for every tag matching ``^twisted-\d+\.\d+\.\d+$`` (release candidates are excluded)
   From RTD `Advanced Settings <https://readthedocs.org/dashboard/twisted/advanced/>`_ the branch named `stable` is configured as the default branch.
+  There is also a "active" documentation version for the branch named `stable`.
 
 
 Version numbers
@@ -249,13 +250,10 @@ Post release
 
 #. Update the trunk into the release branch, resolving any possible conflicts.
 
-#. Merge the release branch into trunk, closing the release ticket at the same time.
+#. No need to request another review.
 
-#. To update the Read The Docs `stable documentation <https://docs.twistedmatrix.com/en/stable/>`_ checkout the `stable` branch and rebase it to latest release tag.
-   `Trac Ticket #10228 <https://twistedmatrix.com/trac/ticket/10228>`_ aims to automate the RTD update::
-
-      git checkout -b stable origin/stable
-      git reset --hard twisted-$RELEASE
+#. Merge the release branch into trunk (via GitHub PR UI),
+   closing the release ticket at the same time.
 
 
 Release candidate fixes
@@ -293,3 +291,7 @@ This section goes over doing these "bugfix" releases.
    - Instead of just ``--rc`` when running the change-versions script, add the patch flag, making it ``--patch --rc``.
    - Instead of waiting a week, a shorter pause is acceptable for a patch release.
      You can do the release as soon as you get the confirmation from the original bug reports that the release candidate fixes the issues.
+
+5. If you are doing a security release for an older release,
+   the automated release will overwrite the `stable` branch and consider it as the latest release.
+   You will need to manually reset/rebase the `stable` branch to point to the actual latest release.
