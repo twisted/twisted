@@ -231,14 +231,28 @@ class DelayedCall:
         """
         if self._repr is not None:
             return self._repr
+        if hasattr(self, "func"):
+            # This code should be replaced by a utility function in reflect;
+            # see ticket #6066:
+            func = getattr(self.func, "__qualname__", None)
+            if func is None:
+                func = getattr(self.func, "__name__", None)
+                if func is not None:
+                    imClass = getattr(self.func, "im_class", None)
+                    if imClass is not None:
+                        func = f"{imClass}.{func}"
+            if func is None:
+                func = reflect.safe_repr(self.func)
+        else:
+            func = None
 
         now = self.seconds()
         L = [
             "<DelayedCall 0x%x [%ss] called=%s cancelled=%s"
             % (id(self), self.time - now, self.called, self.cancelled)
         ]
-        if hasattr(self, "func"):
-            L.extend((" ", self.func.__qualname__, "("))
+        if func is not None:
+            L.extend((" ", func, "("))
             if self.args:
                 L.append(", ".join([reflect.safe_repr(e) for e in self.args]))
                 if self.kw:
@@ -246,10 +260,7 @@ class DelayedCall:
             if self.kw:
                 L.append(
                     ", ".join(
-                        [
-                            "{}={}".format(k, reflect.safe_repr(v))
-                            for (k, v) in self.kw.items()
-                        ]
+                        [f"{k}={reflect.safe_repr(v)}" for (k, v) in self.kw.items()]
                     )
                 )
             L.append(")")

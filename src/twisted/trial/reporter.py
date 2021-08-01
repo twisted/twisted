@@ -457,7 +457,7 @@ class Reporter(TestResult):
         @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(""))
+        assert isinstance(s, str)
         if args:
             self._stream.write(s % args)
         else:
@@ -1203,9 +1203,9 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                    self._write(f"{self.indent * indentLevel}{seg}\n")
             else:
-                self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                self._write(f"{self.indent * indentLevel}{seg}\n")
             indentLevel += 1
         self._lastTest = segments
 

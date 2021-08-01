@@ -364,7 +364,7 @@ class URL:
             w(
                 "&".join(
                     [
-                        ("{}={}".format(specialCases.get(h) or dashCapitalize(h), v))
+                        (f"{specialCases.get(h) or dashCapitalize(h)}={v}")
                         for (h, v) in self.headers.items()
                     ]
                 )
@@ -530,7 +530,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "{}: {}\r\n".format(specialCases.get(n) or dashCapitalize(n), v)
+                s += f"{specialCases.get(n) or dashCapitalize(n)}: {v}\r\n"
         s += "\r\n"
         s += self.body
         return s

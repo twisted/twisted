@@ -42,7 +42,7 @@ from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
 
 
 def urlunparse(parts):
-    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    result = _urlunparse(tuple(p.decode("charmap") for p in parts))
     return result.encode("charmap")
 
 
@@ -852,9 +852,9 @@ from twisted.web._newclient import (
 
 
 try:
-    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL import SSL
 except ImportError:
-    SSL = None
+    SSL = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import (
         CertificateOptions,
@@ -877,7 +877,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
+        @wraps(decoratee)  # type: ignore[unreachable]
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
@@ -1502,9 +1502,7 @@ class _AgentBase:
         the request.
         """
         if not isinstance(method, bytes):
-            raise TypeError(
-                "method={!r} is {}, but must be bytes".format(method, type(method))
-            )
+            raise TypeError(f"method={method!r} is {type(method)}, but must be bytes")
 
         method = _ensureValidMethod(method)
 

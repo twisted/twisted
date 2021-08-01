@@ -43,8 +43,8 @@ if requireModule("OpenSSL"):
 
     from twisted.internet import ssl
 
-    from OpenSSL import SSL  # type: ignore[import]
-    from OpenSSL.crypto import get_elliptic_curves  # type: ignore[import]
+    from OpenSSL import SSL
+    from OpenSSL.crypto import get_elliptic_curves
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
 
@@ -68,7 +68,7 @@ if requireModule("OpenSSL"):
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.set_alpn_select_callback(lambda c: None)
+        ctx.set_alpn_select_callback(lambda c: None)  # type: ignore[misc,arg-type]
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
 else:
