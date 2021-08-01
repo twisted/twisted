@@ -213,4 +213,4 @@ jobs:
     needs: [testing, StaticChecks, pypi-publish]
     steps:
     - name: note that all tests succeeded
-      run: echo "�""
+      run: echo "�"
