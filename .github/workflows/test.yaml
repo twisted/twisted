@@ -11,6 +11,15 @@ on:
     branches: [ trunk ]
 
 
+# Only have a run a single parallel for each branch.
+# Runs for trunk are queues.
+# Older runs for non-trunk branches are cancelled and the jobs are executed
+# only for the latest push to the branch.
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: ${{ github.head_ref != 'refs/heads/trunk' }}
+
+
 defaults:
   run:
     shell: bash
