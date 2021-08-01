@@ -115,6 +115,14 @@ html_theme_path = ["_themes"]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_js_files = [
+    "https://sidecar.gitter.im/dist/sidecar.v1.js",
+    "js/custom.js",
+]
+
 # Output file base name for HTML help builder.
 htmlhelp_basename = "Twisteddoc"
 
