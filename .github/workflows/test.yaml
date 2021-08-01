@@ -212,15 +212,27 @@ jobs:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
     - name: Update stable branch - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
+      #if: startsWith(github.ref, 'refs/tags/twisted-')
+      env:
+        STABLE_BRANCH: test-stable-update
       run: |
-          if [[ $GITUB_REF =~ '.*twisted-\d+\.\d+\.\d+' ]]; then
+          #if [[ $GITUB_REF =~ '.*twisted-\d+\.\d+\.\d+' ]]; then
+            echo "Pushing current tag to stable branch..."
             git config --global user.name '$GITHUB_ACTOR'
             git config --global user.email '$GITHUB_ACTOR@users.noreply.github.com'
-            git push origin stable
-          else
-            echo "Stable branch not updated for release candidates"
-          fi
+
+            echo '::group::git fetch'
+            git fetch origin
+            echo '::endgroup::'
+
+            git log -1
+            git checkout -b $STABLE_BRANCH origin/$STABLE_BRANCH
+            git reset --hard $GITHUB_SHA
+            git push --force
+            echo "Done"
+          #else
+          #  echo "Stable branch not updated for release candidates"
+          #fi
 
 
   all-successful:
