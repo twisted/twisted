@@ -7,6 +7,7 @@ Tests for large portions of L{twisted.mail}.
 
 import io
 import os
+import glob
 import sys
 import textwrap
 import errno
@@ -263,6 +264,63 @@ class FileMessageTests(TestCase):
         self.fp.connectionLost()
         self.assertFalse(os.path.exists(self.name))
         self.assertFalse(os.path.exists(self.final))
+
+
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirMessageTests(TestCase):
+    def setUp(self):
+        self.name = "maildirMessage.testFile"
+        self.final = "final.maildirMessage.testFile"
+        self.address = b"user@example.com"
+        self.f = open(self.name, "wb")
+        self.fp = mail.maildir.MaildirMessage(
+            self.address, self.f, self.name, self.final
+        )
+
+    def _finalName(self):
+        return glob.glob(f"{self.final},S=[0-9]*")[0]
+
+    def tearDown(self):
+        try:
+            self.f.close()
+        except BaseException:
+            pass
+        try:
+            os.remove(self.name)
+        except BaseException:
+            pass
+        try:
+            os.remove(self._finalName())
+        except BaseException:
+            pass
+
+    def testFinalName(self):
+        return self.fp.eomReceived().addCallback(self._cbFinalName)
+
+    def _cbFinalName(self, result):
+        self.assertEqual(result, f"{self.final},S={os.path.getsize(result)}")
+        self.assertTrue(self.f.closed)
+        self.assertFalse(os.path.exists(self.name))
+
+    def testContents(self):
+        contents = b"first line\nsecond line\nthird line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        return self.fp.eomReceived().addCallback(self._cbTestContents, contents)
+
+    def _cbTestContents(self, result, contents):
+        with open(result, "rb") as f:
+            self.assertEqual(
+                f.read(), b"Delivered-To: %s\n%s" % (self.address, contents)
+            )
+
+    def testInterrupted(self):
+        contents = b"first line\nsecond line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        self.fp.connectionLost()
+        self.assertFalse(os.path.exists(self.name))
+        self.assertRaises(IndexError, self._finalName)
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
