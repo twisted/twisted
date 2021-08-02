@@ -223,7 +223,7 @@ class FileMessageTests(TestCase):
     def setUp(self):
         self.name = "fileMessage.testFile"
         self.final = "final.fileMessage.testFile"
-        self.f = open(self.name, "w")
+        self.f = open(self.name, "wb")
         self.fp = mail.mail.FileMessage(self.f, self.name, self.final)
 
     def tearDown(self):
@@ -248,18 +248,16 @@ class FileMessageTests(TestCase):
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testContents(self):
-        contents = "first line\nsecond line\nthird line\n"
+        contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        with open(self.final) as f:
+        with open(self.final, "rb") as f:
             self.assertEqual(f.read(), contents)
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testInterrupted(self):
-        contents = "first line\nsecond line\n"
+        contents = b"first line\nsecond line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.connectionLost()
