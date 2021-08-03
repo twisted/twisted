@@ -709,7 +709,7 @@ class TLSTests(TestCase, LoopbackMixin):
         )
         self.addCleanup(connector.disconnect)
 
-        def checkVerifyFailedMessage(e: smtp.SMTPConnectError):
+        def checkVerifyFailedMessage(e: smtp.SMTPConnectError) -> None:
             # check that the SMTPConnectError has a message relating to the TLS error
             self.assertIn("certificate verify failed", str(e))
 
