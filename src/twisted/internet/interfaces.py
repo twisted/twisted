@@ -27,15 +27,12 @@ if TYPE_CHECKING:
     from socket import AddressFamily
 
     try:
-        from OpenSSL.SSL import (  # type: ignore[import]
-            Connection as _OpenSSLConnection,
-            Context as _OpenSSLContext,
+        from OpenSSL.SSL import (
+            Connection as OpenSSLConnection,
+            Context as OpenSSLContext,
         )
     except ImportError:
-        OpenSSLConnection = OpenSSLContext = object
-    else:
-        OpenSSLConnection = _OpenSSLConnection
-        OpenSSLContext = _OpenSSLContext
+        OpenSSLConnection = OpenSSLContext = object  # type: ignore[misc,assignment]
 
     from twisted.internet.abstract import FileDescriptor
     from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
@@ -2216,7 +2213,9 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def serverConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given server protocol.
 
@@ -2238,7 +2237,9 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def clientConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given client protocol.
 
@@ -2279,7 +2280,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> "OpenSSLContext":  # type: ignore[valid-type]
+    def getContext() -> "OpenSSLContext":
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection

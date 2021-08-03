@@ -115,6 +115,15 @@ html_theme_path = ["_themes"]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_js_files = [
+    "js/custom.js",
+    # Here we have a Sphinx HTML injection hack to make the JS script load without blocking.
+    'https://sidecar.gitter.im/dist/sidecar.v1.js" defer hack="',
+]
+
 # Output file base name for HTML help builder.
 htmlhelp_basename = "Twisteddoc"
 
