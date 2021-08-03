@@ -111,7 +111,7 @@ from io import BytesIO
 from urllib.parse import (
     ParseResultBytes,
     urlparse as _urlparse,
-    unquote_to_bytes as unquote,
+    parse_qs,
 )
 from typing import Callable
 
@@ -261,31 +261,6 @@ def urlparse(url):
         query = query.encode("ascii")
         fragment = fragment.encode("ascii")
     return ParseResultBytes(scheme, netloc, path, params, query, fragment)
-
-
-def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
-    """
-    Like C{cgi.parse_qs}, but with support for parsing byte strings on Python 3.
-
-    @type qs: C{bytes}
-    """
-    d = {}
-    items = [s2 for s1 in qs.split(b"&") for s2 in s1.split(b";")]
-    for item in items:
-        try:
-            k, v = item.split(b"=", 1)
-        except ValueError:
-            if strict_parsing:
-                raise
-            continue
-        if v or keep_blank_values:
-            k = unquote(k.replace(b"+", b" "))
-            v = unquote(v.replace(b"+", b" "))
-            if k in d:
-                d[k].append(v)
-            else:
-                d[k] = [v]
-    return d
 
 
 def datetimeToString(msSinceEpoch=None):

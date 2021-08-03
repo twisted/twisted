@@ -19,7 +19,7 @@ import os
 import re
 from html import escape
 from typing import List, Optional
-from urllib.parse import quote as _quote
+from urllib.parse import quote as _quote, unquote_to_bytes as _unquote_to_bytes
 
 import zlib
 from binascii import hexlify
@@ -31,7 +31,6 @@ from twisted.spread.pb import Copyable, ViewPoint
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.web import iweb, http, util
-from twisted.web.http import unquote
 from twisted.python import reflect, failure, components
 from twisted import copyright
 from twisted.web import resource
@@ -213,7 +212,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         # Resource Identification
         self.prepath = []
-        self.postpath = list(map(unquote, self.path[1:].split(b"/")))
+        self.postpath = [_unquote_to_bytes(v) for v in self.path[1:].split(b"/")]
 
         # Short-circuit for requests whose path is '*'.
         if self.path == b"*":
