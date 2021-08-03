@@ -10,7 +10,7 @@ Tests for L{twisted.protocols.amp}.
 import datetime
 import decimal
 from unittest import skipIf
-from typing import Dict, Type
+from typing import Dict, Optional, Type
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
@@ -88,10 +88,10 @@ class TestProto(protocol.Protocol):
 
 
 class SimpleSymmetricProtocol(amp.AMP):
-    def sendHello(self, text):
+    def sendHello(self, text: bytes) -> Optional[defer.Deferred]:
         return self.callRemoteString(b"hello", hello=text)
 
-    def amp_HELLO(self, box):
+    def amp_HELLO(self, box: amp.AmpBox) -> amp.AmpBox:
         return amp.Box(hello=box[b"hello"])
 
 

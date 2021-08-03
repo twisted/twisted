@@ -201,7 +201,8 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, overload
+from typing_extensions import Literal
 import warnings
 
 from zope.interface import Interface, implementer
@@ -608,7 +609,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -657,7 +658,7 @@ class AmpBox(dict):
         newBox.update(self)
         return newBox
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """
         Convert me into a wire-encoded string.
 
@@ -665,7 +666,7 @@ class AmpBox(dict):
             module docstring.
         """
         i = sorted(self.items())
-        L = []
+        L: List[bytes] = []
         w = L.append
         for k, v in i:
             if type(k) == str:
@@ -785,8 +786,8 @@ class BoxDispatcher:
     @type boxSender: L{IBoxSender}
     """
 
-    _failAllReason = None
-    _outstandingRequests = None
+    _failAllReason: Optional[Failure] = None
+    _outstandingRequests: Optional[Dict[bytes, Deferred]] = None
     _counter = 0
     boxSender = None
 
@@ -822,7 +823,7 @@ class BoxDispatcher:
         for key, value in OR:
             value.errback(reason)
 
-    def _nextTag(self):
+    def _nextTag(self) -> bytes:
         """
         Generate protocol-local serial numbers for _ask keys.
 
@@ -831,7 +832,27 @@ class BoxDispatcher:
         self._counter += 1
         return b"%x" % (self._counter,)
 
-    def _sendBoxCommand(self, command, box, requiresAnswer=True):
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: Literal[True] = True
+    ) -> Deferred:
+        ...
+
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: Literal[False]
+    ) -> None:
+        ...
+
+    @overload
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
+    ) -> Optional[Deferred]:
+        ...
+
+    def _sendBoxCommand(
+        self, command: bytes, box: AmpBox, requiresAnswer: bool = True
+    ) -> Optional[Deferred]:
         """
         Send a command across the wire with the given C{amp.Box}.
 
@@ -868,13 +889,29 @@ class BoxDispatcher:
         if requiresAnswer:
             box[ASK] = tag
         box._sendTo(self.boxSender)
+
+        result = None
         if requiresAnswer:
+            assert self._outstandingRequests is not None
             result = self._outstandingRequests[tag] = Deferred()
-        else:
-            result = None
+
         return result
 
-    def callRemoteString(self, command, requiresAnswer=True, **kw):
+    @overload
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: Literal[True] = True, **kw: bytes
+    ) -> Deferred:
+        ...
+
+    @overload
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: Literal[False], **kw: bytes
+    ) -> None:
+        ...
+
+    def callRemoteString(
+        self, command: bytes, requiresAnswer: bool = True, **kw: bytes
+    ) -> Optional[Deferred]:
         """
         This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
@@ -2270,8 +2307,8 @@ class BinaryBoxProtocol(
     _justStartedTLS = False
     _startingTLSBuffer = None
     _locked = False
-    _currentKey = None
-    _currentBox = None
+    _currentKey: Optional[bytes] = None
+    _currentBox: Optional[AmpBox] = None
 
     _keyLengthLimitExceeded = False
 
@@ -2398,7 +2435,7 @@ class BinaryBoxProtocol(
         self._currentBox = AmpBox()
         return self.proto_key(string)
 
-    def proto_key(self, string):
+    def proto_key(self, string: bytes) -> str:
         """
         String received in the 'key' state.  If the key is empty, a complete
         box has been received.
@@ -2412,10 +2449,12 @@ class BinaryBoxProtocol(
             self._currentBox = None
             return "init"
 
-    def proto_value(self, string):
+    def proto_value(self, string: bytes) -> str:
         """
         String received in the 'value' state.
         """
+        assert self._currentBox is not None
+        assert self._currentKey is not None
         self._currentBox[self._currentKey] = string
         self._currentKey = None
         self.MAX_LENGTH = self._MAX_KEY_LENGTH
