@@ -85,6 +85,7 @@ recursive-include docs *.txt
 recursive-include docs *.users
 recursive-include docs *.xml
 recursive-include docs Makefile
+recursive-include docs/_static/js *.js
 prune docs/_build
 
 # Don't have the real old historic docs

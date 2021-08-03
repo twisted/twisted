@@ -37,7 +37,7 @@ transports, such as UNIX sockets and stdio.
 """
 
 
-from OpenSSL.SSL import Error, ZeroReturnError, WantReadError  # type: ignore[import]
+from OpenSSL.SSL import Error, ZeroReturnError, WantReadError
 from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 
 try:

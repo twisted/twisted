@@ -74,7 +74,7 @@ try:
         CertificateOptions,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError  # type: ignore[import]
+    from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
