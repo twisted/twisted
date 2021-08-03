@@ -3,7 +3,9 @@
 #
 
 """
-Tests for L{twisted.trial.util}
+Tests for using the stdlib unittest skipIf decorator with trial TestCase.
+
+For other skip tests, check the `test_tests.py` and `skipping.py` files.
 """
 
 from twisted.trial.unittest import TestCase
@@ -60,33 +62,4 @@ class SkipDecoratorUsedOnMethods(TestCase):
 
     @skipIf(False, "")
     def test_shouldShouldRunWithSkipIfFalseEmptyReason(self):
-        self.assertTrue(True, "Test should run and not be skipped")
-
-
-class SkipAttributeOnClass(TestCase):
-    """
-    All tests should be skipped because skip attribute is set on
-    this class.
-    """
-
-    skip = "'skip' attribute set on this class, so skip all tests"
-
-    def test_one(self):
-        raise Exception("Test should skip and never reach here")
-
-    def test_two(self):
-        raise Exception("Test should skip and never reach here")
-
-
-class SkipAttributeOnMethods(TestCase):
-    """
-    Only methods where @skipIf decorator is used should be skipped.
-    """
-
-    def test_one(self):
-        raise Exception("Should never reach here")
-
-    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
-
-    def test_shouldNotSkip(self):
         self.assertTrue(True, "Test should run and not be skipped")

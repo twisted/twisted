@@ -16,18 +16,51 @@ from twisted.trial.unittest import SynchronousTestCase, TestCase, SkipTest, Fail
 
 
 class SkippingMixin:
+    """
+    Tests that are skipped at the method level.
+
+    Make sure the docstring of each tests will start with the skip reason,
+    as this is use in the test assertion.
+    """
+
+    def test_no_skip(self):
+        """
+        This is a test that is not skipped.
+        here to make sure that the whole class is not skipped.
+        """
+
     def test_skip1(self):
-        raise SkipTest("skip1")
+        """
+        The skip1 reason.
+
+        The test is skipped when SkipTest is raised inside.
+        """
+        raise SkipTest("The skip1 reason.")
 
     def test_skip2(self):
+        """
+        skip2-reason
+
+        If executed, this test will fail, but is skipped via the skip
+        attribute.
+        """
         raise RuntimeError("I should not get raised")
 
-    test_skip2.skip = "skip2"  # type: ignore[attr-defined]
+    test_skip2.skip = "skip2-reason"  # type: ignore[attr-defined]
 
-    def test_skip3(self):
-        self.fail("I should not fail")
+    def test_no_skip_empty_attribute(self):
+        """
+        This test is not skipepd as the skip attribute is the empty string.
+        """
 
-    test_skip3.skip = "skip3"  # type: ignore[attr-defined]
+    test_no_skip_empty_attribute.skip = ""  # type: ignore[attr-defined]
+
+    def test_no_skip_none_attribute(self):
+        """
+        This test is not skipepd as the skip attribute is None.
+        """
+
+    test_no_skip_empty_attribute.skip = None  # type: ignore[attr-defined]
 
 
 class SynchronousSkipping(SkippingMixin, SynchronousTestCase):
