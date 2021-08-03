@@ -709,16 +709,13 @@ class TLSTests(TestCase, LoopbackMixin):
         )
         self.addCleanup(connector.disconnect)
 
-        def errback(f):
-            # check that we got an exception with a plausible error code.
-            f.trap(smtp.SMTPConnectError)
-            self.assertIn("certificate verify failed", str(f.value))
+        def checkVerifyFailedMessage(e: smtp.SMTPConnectError):
+            # check that the SMTPConnectError has a message relating to the TLS error
+            self.assertIn("certificate verify failed", str(e))
 
-        def callback(_res):
-            raise Exception("ESMTPSenderFactory unexpectedly completed")
-
-        sentDeferred.addCallbacks(callback, errback)
-        return sentDeferred
+        return self.assertFailure(sentDeferred, smtp.SMTPConnectError).addCallback(
+            checkVerifyFailedMessage
+        )
 
 
 class EmptyLineTests(TestCase):
