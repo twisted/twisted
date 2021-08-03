@@ -93,15 +93,15 @@ class _CharacterAttributes(_textattributes.CharacterAttributesMixin):
     indexing-syntax (C{obj['abc']}) after accessing a factory attribute, for
     example::
 
-        attributes.bold['Some text']
+        attributes.bold[b'Some text']
 
     These can be nested to mix attributes::
 
-        attributes.bold[attributes.underline['Some text']]
+        attributes.bold[attributes.underline[b'Some text']]
 
     And multiple values can be passed::
 
-        attributes.normal[attributes.bold['Some'], ' text']
+        attributes.normal[attributes.bold[b'Some'], b' text']
 
     Non-color attributes can be accessed by attribute name, available
     attributes are:
@@ -155,7 +155,7 @@ def assembleFormattedText(formatted):
 
         from twisted.conch.insults.text import attributes as A
         assembleFormattedText(
-            A.normal[A.bold['Time: '], A.fg.lightRed['Now!']])
+            A.normal[A.bold[b'Time: '], A.fg.lightRed[b'Now!']])
 
     Would produce "Time: " in bold formatting, followed by "Now!" with a
     foreground color of light red and without any additional formatting.

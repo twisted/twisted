@@ -18,7 +18,7 @@ from incremental import Version
 
 from twisted.internet import defer, protocol, reactor
 from twisted.python import _textattributes
-from twisted.python.compat import iterbytes
+from twisted.python.compat import iterbytes, intToBytes
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.conch.insults import insults
 from twisted.logger import Logger
@@ -102,8 +102,8 @@ class _FormattingState(_textattributes._FormattingStateMixin):
         if self.background != BLACK:
             attrs.append(BACKGROUND + self.background)
         if attrs:
-            return "\x1b[" + ";".join(map(str, attrs)) + "m"
-        return ""
+            return b"\x1b[" + b";".join(map(intToBytes, attrs)) + b"m"
+        return b""
 
 
 CharacterAttribute = _FormattingState
@@ -124,31 +124,30 @@ class TerminalBuffer(protocol.Protocol):
     """
 
     for keyID in (
-        b"UP_ARROW",
-        b"DOWN_ARROW",
-        b"RIGHT_ARROW",
-        b"LEFT_ARROW",
-        b"HOME",
-        b"INSERT",
-        b"DELETE",
-        b"END",
-        b"PGUP",
-        b"PGDN",
-        b"F1",
-        b"F2",
-        b"F3",
-        b"F4",
-        b"F5",
-        b"F6",
-        b"F7",
-        b"F8",
-        b"F9",
-        b"F10",
-        b"F11",
-        b"F12",
+        "UP_ARROW",
+        "DOWN_ARROW",
+        "RIGHT_ARROW",
+        "LEFT_ARROW",
+        "HOME",
+        "INSERT",
+        "DELETE",
+        "END",
+        "PGUP",
+        "PGDN",
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7",
+        "F8",
+        "F9",
+        "F10",
+        "F11",
+        "F12",
     ):
-        execBytes = keyID + b" = object()"
-        execStr = execBytes.decode("ascii")
+        execStr = keyID + " = object()"
         exec(execStr)
 
     TAB = b"\t"

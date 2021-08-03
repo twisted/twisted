@@ -23,6 +23,10 @@ Serializing a formatting structure is done with L{flatten}.
 
 from typing import ClassVar, List, Sequence
 from twisted.python.util import FancyEqMixin
+from twisted.python.compat import unicode
+
+import sys
+import warnings
 
 
 class _Attribute(FancyEqMixin):
@@ -46,7 +50,16 @@ class _Attribute(FancyEqMixin):
         return f"<{type(self).__name__} {vars(self)!r}>"
 
     def __getitem__(self, item):
-        assert isinstance(item, (list, tuple, _Attribute, str))
+        if isinstance(item, unicode):
+            warnings.warn(
+                "Calling _Attribute.__getitem__ with a unicode/str"
+                " object instead of a bytes object is deprecated"
+                " since Twisted NEXT",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            item = item.encode(sys.getdefaultencoding())
+        assert isinstance(item, (list, tuple, _Attribute, bytes))
         if isinstance(item, (list, tuple)):
             self.children.extend(item)
         else:
@@ -57,16 +70,16 @@ class _Attribute(FancyEqMixin):
         """
         Serialize the text attribute and its children.
 
-        @param write: C{callable}, taking one C{str} argument, called to output
-            a single text attribute at a time.
+        @param write: C{callable}, taking one C{str} argument, called
+            to output a single text attribute at a time.
 
-        @param attrs: A formatting state instance used to determine how to
-            serialize the attribute children.
+        @param attrs: A formatting state instance used to determine
+            how to serialize the attribute children.
 
         @type attributeRenderer: C{str}
-        @param attributeRenderer: Name of the method on I{attrs} that should be
-            called to render the attributes during serialization. Defaults to
-            C{'toVT102'}.
+        @param attributeRenderer: Name of the method on I{attrs} that
+            should be called to render the attributes during
+            serialization.  Defaults to C{'toVT102'}.
         """
         if attrs is None:
             attrs = DefaultFormattingState()
@@ -238,12 +251,15 @@ class DefaultFormattingState(FancyEqMixin):
         @return: A string containing VT102 control sequences that mimic this
             formatting state.
         """
-        return ""
+        return b""
 
 
 class _FormattingStateMixin(DefaultFormattingState):
     """
     Mixin for the formatting state/attributes of a single character.
+
+    Implementers must ensure their C{__init__} method can be called
+    with no arguments.
     """
 
     def copy(self):
@@ -297,7 +313,7 @@ def flatten(output, attrs, attributeRenderer="toVT102"):
     """
     flattened: List[str] = []
     output.serialize(flattened.append, attrs, attributeRenderer)
-    return "".join(flattened)
+    return b"".join(flattened)
 
 
 __all__ = ["flatten", "DefaultFormattingState", "CharacterAttributesMixin"]

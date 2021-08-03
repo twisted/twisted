@@ -1,0 +1,1 @@
+twisted.python._textattributes now works on Python 3.  As a consequence, twisted.conch.insults.text has deprecated non-byte strings in formatting constructs (e.g., A.bg.bold["foo"] must now be A.bg.bold[b"foo"]).
