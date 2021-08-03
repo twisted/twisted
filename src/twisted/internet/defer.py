@@ -69,6 +69,16 @@ except ImportError:
 else:
     _copy_context = __copy_context  # type: ignore[assignment]
 
+current_async_library_cvar = None
+if _contextvarsSupport:
+    try:
+        import sniffio
+
+        current_async_library_cvar = sniffio.current_async_library_cvar
+    except ImportError:
+        pass
+
+
 log = Logger()
 
 
@@ -1647,6 +1657,8 @@ def _inlineCallbacks(
 
     # Get the current contextvars Context object.
     current_context = _copy_context()
+    if current_async_library_cvar is not None:
+        current_context.run(current_async_library_cvar.set, "twisted")
 
     while 1:
         try:

@@ -24,7 +24,30 @@ from twisted.python.log import callWithLogger
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
 
-from asyncio import get_event_loop, AbstractEventLoop
+from asyncio import get_event_loop, tasks, AbstractEventLoop
+
+try:
+    from contextvars import copy_context
+
+    _contextvarsSupport = True
+except ImportError:
+    _contextvarsSupport = False
+
+current_async_library_cvar = None
+if _contextvarsSupport:
+    try:
+        import sniffio
+
+        current_async_library_cvar = sniffio.current_async_library_cvar
+    except ImportError:
+        pass
+
+
+def sniffioTaskFactory(loop, coro):
+    current_context = copy_context()
+    current_context.run(current_async_library_cvar.set, None)
+
+    return current_context.run(tasks.Task, coro=coro, loop=loop)
 
 
 @implementer(IReactorFDSet)
@@ -50,6 +73,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
             _eventloop: AbstractEventLoop = get_event_loop()
+            if current_async_library_cvar is not None:
+                _eventloop.set_task_factory(factory=sniffioTaskFactory)
         else:
             _eventloop = eventloop
 

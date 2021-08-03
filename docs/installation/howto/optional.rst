@@ -53,6 +53,7 @@ The following optional dependencies are supported:
 
 * **contextvars** - the `contextvars`_ backport package to provide contextvars support for Python versions before 3.7.
 
+* **sniffio** - the `sniffio`_ package provides an interface to identify the event loop processing the active coroutine (Twisted vs. Trio etc).
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
@@ -75,3 +76,4 @@ The following optional dependencies are supported:
 .. _h2: https://pypi.python.org/pypi/h2
 .. _priority: https://pypi.python.org/pypi/priority
 .. _contextvars: https://pypi.org/project/contextvars/
+.. _sniffio: https://pypi.org/project/sniffio
