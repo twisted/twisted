@@ -295,7 +295,7 @@ class FakeTransport:
     dataString = b""
     calls = 0
 
-    def writeToChild(self, fd, data):
+    def write(self, data):
         self.dataString += data
 
     def loseConnection(self):
@@ -321,22 +321,8 @@ class LocalWorkerTests(TestCase):
         worker = LocalWorker(*args, **kwargs)
         worker.makeConnection(FakeTransport())
         self.addCleanup(worker._testLog.close)
-        self.addCleanup(worker._outLog.close)
         self.addCleanup(worker._errLog.close)
         return worker
-
-    def test_childDataReceived(self):
-        """
-        L{LocalWorker.childDataReceived} forwards the received data to linked
-        L{AMP} protocol if the right file descriptor, otherwise forwards to
-        C{ProcessProtocol.childDataReceived}.
-        """
-        localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
-        localWorker._outLog = BytesIO()
-        localWorker.childDataReceived(4, b"foo")
-        localWorker.childDataReceived(1, b"bar")
-        self.assertEqual(b"foo", localWorker._ampProtocol.dataString)
-        self.assertEqual(b"bar", localWorker._outLog.getvalue())
 
     def test_unicodeLogFileUTF8(self):
         """
@@ -356,7 +342,6 @@ class LocalWorkerTests(TestCase):
 
         worker = LocalWorker(amp, tempDir.path, "test.log")
         worker.makeConnection(FakeTransport())
-        self.addCleanup(worker._outLog.close)
         self.addCleanup(worker._errLog.close)
 
         try:
@@ -371,14 +356,12 @@ class LocalWorkerTests(TestCase):
 
     def test_outReceived(self):
         """
-        L{LocalWorker.outReceived} logs the output into its C{_outLog} log
-        file.
+        L{LocalWorker.outReceived} forward the data to the AMP protocol.
         """
         localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
-        localWorker._outLog = BytesIO()
-        data = b"The quick brown fox jumps over the lazy dog"
+        data = b"AMP Box Data"
         localWorker.outReceived(data)
-        self.assertEqual(data, localWorker._outLog.getvalue())
+        self.assertEqual(data, localWorker._ampProtocol.dataString)
 
     def test_errReceived(self):
         """
@@ -431,7 +414,6 @@ class LocalWorkerTests(TestCase):
 
         localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
         localWorker.connectionLost(None)
-        self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
         self.assertTrue(localWorker._testLog.closed)
 
@@ -446,7 +428,6 @@ class LocalWorkerTests(TestCase):
         localWorker = LocalWorker(protocol, ".", "test.log")
         localWorker.makeConnection(transport)
         localWorker.processEnded(Failure(CONNECTION_DONE))
-        self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
         self.assertTrue(localWorker._testLog.closed)
         self.assertIdentical(None, protocol.transport)

@@ -17,7 +17,7 @@ defaults:
 
 
 jobs:
-  testing:
+  ubuntu_trial:
     runs-on: ubuntu-20.04
     env:
       TOXENV: "${{ matrix.tox-env }}"
@@ -172,6 +172,48 @@ jobs:
     - name: Newsfragment
       run: |
         tox -q -e newsfragment
+
+  win_disttrial:
+    runs-on: windows-2019
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Get pip cache dir
+      id: pip-cache
+      shell: bash
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: pip cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - uses: twisted/python-info-action@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox coverage codecov coveralls
+
+    - name: Test
+      run: python -m tox -e alldeps-withcov-windows
+
+    - name: Publish coverage
+      run: |
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m codecov
+        python -m coveralls
 
 
   # Used for various release automation.
