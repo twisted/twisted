@@ -31,7 +31,7 @@ from twisted.internet.interfaces import (
     IListeningPort,
     IReactorFDSet,
 )
-from twisted.internet.abstract import isIPv6Address, _dataMustBeBytes
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
 from twisted.internet import protocol, error, address, task
@@ -232,7 +232,6 @@ class StringTransport:
 
     # ITransport
     def write(self, data):
-        _dataMustBeBytes(data)
         self.io.write(data)
 
     def writeSequence(self, data):

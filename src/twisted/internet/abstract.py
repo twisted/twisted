@@ -7,8 +7,10 @@ Support for generic select()able objects.
 """
 
 
+import array
+import mmap
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from zope.interface import implementer
 
@@ -18,9 +20,7 @@ from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
 
-def _dataMustBeBytes(obj):
-    if not isinstance(obj, bytes):  # no, really, I mean it
-        raise TypeError("Data must be bytes")
+ReadableBuffer = Union[bytes, bytearray, memoryview, array.array, mmap.mmap]
 
 
 # Python 3.4+ can join bytes and memoryviews; using a
@@ -68,9 +68,9 @@ class _ConsumerMixin:
 
     """
 
-    producer = None
-    producerPaused = False
-    streamingProducer = False
+    producer: Union[interfaces.IPullProducer, interfaces.IPushProducer, None] = None
+    producerPaused: bool = False
+    streamingProducer: bool = False
 
     def startWriting(self):
         """
@@ -186,7 +186,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer: List[bytes] = []
+        self._tempDataBuffer: List[ReadableBuffer] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):
@@ -207,7 +207,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> None:
+    def writeSomeData(self, data: ReadableBuffer) -> None:
         """
         Write as much as possible of the given data, immediately.
 
@@ -344,7 +344,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.producerPaused = True
                 self.producer.pauseProducing()
 
-    def write(self, data: bytes) -> None:
+    def write(self, data: ReadableBuffer) -> None:
         """Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
@@ -352,7 +352,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        _dataMustBeBytes(data)
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -361,7 +360,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self._maybePauseProducer()
             self.startWriting()
 
-    def writeSequence(self, iovec: Iterable[bytes]) -> None:
+    def writeSequence(self, iovec: Iterable[ReadableBuffer]) -> None:
         """
         Reliably write a sequence of data.
 
@@ -377,8 +376,6 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         streaming producer is registered, it will be paused until the buffered
         data is written to the underlying file descriptor.
         """
-        for i in iovec:
-            _dataMustBeBytes(i)
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

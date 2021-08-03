@@ -1,0 +1,1 @@
+FileDescriptor.write now supports byte-like objects
