@@ -220,7 +220,7 @@ def _fork(d: Deferred[T]) -> Deferred[T]:
 
 
 def _flattenElement(
-    request: Optional[IRequest],
+    request: IRequest,
     root: Flattenable,
     write: Callable[[bytes], object],
     slotData: List[Optional[Mapping[str, Flattenable]]],
@@ -365,7 +365,7 @@ def _flattenElement(
 
 
 async def _flattenTree(
-    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+    request: IRequest, root: Flattenable, write: Callable[[bytes], object]
 ) -> None:
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
@@ -407,7 +407,7 @@ async def _flattenTree(
 
 
 def flatten(
-    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+    request: IRequest, root: Flattenable, write: Callable[[bytes], object]
 ) -> Deferred[None]:
     """
     Incrementally write out a string representation of C{root} using C{write}.
@@ -434,7 +434,7 @@ def flatten(
     return ensureDeferred(_flattenTree(request, root, write))
 
 
-def flattenString(request: Optional[IRequest], root: Flattenable) -> Deferred[bytes]:
+def flattenString(request: IRequest, root: Flattenable) -> Deferred[bytes]:
     """
     Collate a string representation of C{root} into a single string.
 

@@ -45,7 +45,7 @@ class FlattenTestCase(SynchronousTestCase):
         def check(result: bytes) -> bytes:
             return self.assertEqual(result, target)  # type: ignore[no-any-return]
 
-        d: Deferred[bytes] = flattenString(None, root)
+        d: Deferred[bytes] = flattenString(None, root)  # type: ignore[arg-type]
         d.addCallback(check)
         return d
 

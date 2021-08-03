@@ -160,7 +160,7 @@ class Element:
 
     def lookupRenderMethod(
         self, name: str
-    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
+    ) -> Callable[[IRequest, "Tag"], "Flattenable"]:
         """
         Look up and return the named render method.
         """

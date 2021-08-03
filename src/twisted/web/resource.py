@@ -25,8 +25,10 @@ from twisted.python.compat import nativeString
 from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
 
+from twisted.web._flatten import Flattenable
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
+from twisted.web.iweb import IRequest
 
 
 class IResource(Interface):
@@ -72,7 +74,7 @@ class IResource(Interface):
         @type path: C{bytes}
         """
 
-    def render(request):
+    def render(request: IRequest) -> Flattenable:
         """
         Render a request. This is called on the leaf resource for a request.
 

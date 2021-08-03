@@ -13,6 +13,7 @@ from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
 from typing import Callable, Dict, List, NoReturn, Optional, cast
+from unittest.mock import sentinel
 
 from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
@@ -306,7 +307,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "foo-->bar",
             "----------------",
         ]:
-            d = flattenString(None, Comment(c))
+            d = flattenString(sentinel.request, Comment(c))
             d.addCallback(verifyComment)
             results.append(d)
         return gatherResults(results)
@@ -578,7 +579,7 @@ class FlattenerErrorTests(SynchronousTestCase):
             def render(self, request: Optional[IRequest]) -> Flattenable:
                 return failing
 
-        flattening = flattenString(None, [NotActuallyRenderable()])
+        flattening = flattenString(sentinel.request, [NotActuallyRenderable()])
         self.assertNoResult(flattening)
         exc = RuntimeError("example")
         failing.errback(exc)
@@ -623,7 +624,7 @@ class FlattenerErrorTests(SynchronousTestCase):
             err = failure
 
         d: Deferred[object] = Deferred(checkCancel)
-        flattening = flattenString(None, d)
+        flattening = flattenString(sentinel.request, d)
         self.assertNoResult(flattening)
         d.addErrback(saveErr)
 
