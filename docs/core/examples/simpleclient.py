@@ -30,8 +30,8 @@ class EchoClient:
 
     def connectionMade(self):
         """
-        Part of IProtocol interface, but not used for non inheritance
-        base implementations.
+        Part of IProtocol interface, but not used for non-inheritance
+        based implementations.
         """
 
     def dataReceived(self, data):
