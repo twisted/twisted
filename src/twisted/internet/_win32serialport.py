@@ -10,7 +10,7 @@ Requires PySerial and pywin32.
 """
 
 
-import win32event
+import win32event  # type: ignore[import]
 import win32file  # type: ignore[import]
 
 # system imports
