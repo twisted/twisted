@@ -3665,8 +3665,6 @@ async def sleep(delay: float) -> None:
     await deferLater(reactor, delay)
 
 
-
-
 class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
     async def doNothingReturnValue(self) -> Literal["noNothingReturn"]:
         """
