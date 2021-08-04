@@ -21,6 +21,7 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NoReturn,
     Optional,
     Tuple,
     Type,
@@ -29,6 +30,7 @@ from typing import (
     Union,
     cast,
 )
+from typing_extensions import Literal
 
 from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
 
@@ -3568,7 +3570,7 @@ class FirstException(Exception):
 
 class InlineCallbacksExceptionContextTests(unittest.TestCase):
     @defer.inlineCallbacks
-    def doNothingReturnValue(self) -> Generator[Any, Any, None]:
+    def doNothingReturnValue(self) -> Generator[Any, Any, Literal["doNothingReturn"]]:
         """
         L{defer.inlineCallbacks}-decorated function that returns using _DefGen_Return.
         """
@@ -3576,12 +3578,15 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         defer.returnValue("doNothingReturnValue")
 
     @defer.inlineCallbacks
-    def doNothingReturn(self) -> Generator[Any, Any, Any]:
+    def doNothingReturn(self) -> Generator[Any, Any, Literal["doNothingReturn"]]:
         """
         L{defer.inlineCallbacks}-decorated function that returns using StopIteration.
         """
         yield None
         return "doNothingReturn"
+
+    def doNothings(self) -> List[Callable[[], Deferred[Literal["doNothingReturn"]]]]:
+        return [self.doNothingReturn, self.doNothingReturnValue]
 
     @defer.inlineCallbacks
     def doNothingRaise(self) -> Generator[Any, Any, None]:
@@ -3597,7 +3602,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         there should not be any exception context if there wasn't any to begin
         with.
         """
-        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+        for doNothing in self.doNothings():
             yield doNothing()
             # There were never any exceptions that this function was aware of
             # (_DefGen_Return and StopIteration are implementation details
@@ -3614,7 +3619,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         an exception handler, maintain the previous exception context during the
         callback.
         """
-        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+        for doNothing in self.doNothings():
             try:
                 raise FirstException("foo")
             except FirstException as ex:
@@ -3662,11 +3667,11 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
 async def sleep(delay: float) -> None:
     from twisted.internet import reactor
 
-    await deferLater(reactor, delay)
+    await deferLater(reactor, delay)  # type: ignore[arg-type]
 
 
 class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
-    async def doNothingReturnValue(self) -> Literal["noNothingReturn"]:
+    async def doNothingReturnValue(self) -> Literal["doNothingReturn"]:
         """
         async function that returns using _DefGen_Return.
         """
@@ -3680,6 +3685,11 @@ class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
         await sleep(0.01)
         return "doNothingReturn"
 
+    def doNothings(
+        self,
+    ) -> List[Callable[[], Coroutine[Any, Any, Literal["doNothingReturn"]]]]:
+        return [self.doNothingReturn, self.doNothingReturnValue]
+
     async def doNothingRaise(self) -> NoReturn:
         await sleep(0.01)
         raise ErrbackException("Errback exception")
@@ -3691,7 +3701,7 @@ class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
         there should not be any exception context if there wasn't any to begin
         with.
         """
-        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+        for doNothing in self.doNothings():
             await doNothing()
             # There were never any exceptions that this function was aware of
             # (_DefGen_Return and StopIteration are implementation details
@@ -3706,7 +3716,7 @@ class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
         an exception handler, maintain the previous exception context during the
         callback.
         """
-        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+        for doNothing in self.doNothings():
             try:
                 raise FirstException("foo")
             except FirstException as ex:
@@ -3722,7 +3732,7 @@ class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
             self.assertEqual(sys.exc_info(), (None, None, None))
 
     @ensuringDeferred
-    async def test_errbackExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
+    async def test_errbackExceptionChain(self) -> None:
         """
         When an async function raises an exception
         while handling another exception, the context chain should look like
@@ -3737,8 +3747,8 @@ class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
             self.assertEqual("Errback exception", str(e))
             self.assertEqual("The first exception", str(e.__context__))
 
-    @defer.inlineCallbacks
-    def test_errbackNoExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
+    @ensuringDeferred
+    async def test_errbackNoExceptionChain(self) -> None:
         """
         When an async function raises an exception
         there should be no previous exception in the context when there was
