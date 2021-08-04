@@ -33,7 +33,7 @@ intersphinxURLs = [
     "https://hyperlink.readthedocs.io/en/stable/objects.inv",
     "https://twisted.github.io/constantly/docs/objects.inv",
     "https://twisted.github.io/incremental/docs/objects.inv",
-    "https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "https://priority.readthedocs.io/en/stable/objects.inv",
     "https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "https://automat.readthedocs.io/en/latest/objects.inv",
@@ -337,6 +337,7 @@ class APIBuilder:
             outputPath.path,
             "--quiet",
             "--make-html",
+            "--warnings-as-errors",
         ] + intersphinxes
         args.append(packagePath.path)
         main(args)
@@ -579,6 +580,17 @@ class CheckNewsfragmentScript:
                 sys.exit(1)
             else:
                 self._print("Release branch with no newsfragments, all good.")
+                sys.exit(0)
+
+        if os.environ.get("GITHUB_HEAD_REF", "") == "pre-commit-ci-update-config":
+            # The run was triggered by pre-commit.ci.
+            if newsfragments:
+                self._print(
+                    "No newsfragments should be present on an autoupdated branch."
+                )
+                sys.exit(1)
+            else:
+                self._print("Autoupdated branch with no newsfragments, all good.")
                 sys.exit(0)
 
         for change in newsfragments:

@@ -115,6 +115,15 @@ html_theme_path = ["_themes"]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_js_files = [
+    "js/custom.js",
+    # Here we have a Sphinx HTML injection hack to make the JS script load without blocking.
+    'https://sidecar.gitter.im/dist/sidecar.v1.js" defer hack="',
+]
+
 # Output file base name for HTML help builder.
 htmlhelp_basename = "Twisteddoc"
 
@@ -227,7 +236,7 @@ pydoctor_args = [
     "--intersphinx=https://hyperlink.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://twisted.github.io/constantly/docs/objects.inv",
     "--intersphinx=https://twisted.github.io/incremental/docs/objects.inv",
-    "--intersphinx=https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "--intersphinx=https://priority.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "--intersphinx=https://automat.readthedocs.io/en/latest/objects.inv",

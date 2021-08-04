@@ -293,9 +293,21 @@ class LoopingCall:
         self.call = self.clock.callLater(howLong(), self)
 
     def __repr__(self) -> str:
+        # This code should be replaced by a utility function in reflect;
+        # see ticket #6066:
+        func = getattr(self.f, "__qualname__", None)
+        if func is None:
+            func = getattr(self.f, "__name__", None)
+            if func is not None:
+                imClass = getattr(self.f, "im_class", None)
+                if imClass is not None:
+                    func = f"{imClass}.{func}"
+        if func is None:
+            func = reflect.safe_repr(self.f)
+
         return "LoopingCall<{!r}>({}, *{}, **{})".format(
             self.interval,
-            self.f.__qualname__,
+            func,
             reflect.safe_repr(self.a),
             reflect.safe_repr(self.kw),
         )
