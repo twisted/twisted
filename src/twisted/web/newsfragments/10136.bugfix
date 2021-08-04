@@ -1,1 +1,0 @@
-The type hint of twisted.web.server.Request.postpath is now correctly listed as Optional[List[bytes]]. This was incorrect in Twisted v21.2.0.
