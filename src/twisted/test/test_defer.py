@@ -48,7 +48,7 @@ from twisted.internet.defer import (
     DeferredSemaphore,
     DeferredQueue,
 )
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, deferLater
 
 
 if TYPE_CHECKING:
@@ -3558,6 +3558,14 @@ class CoroutineContextVarsTests(unittest.TestCase):
         self.assertEqual(self.successResultOf(d), True)
 
 
+class ErrbackException(Exception):
+    pass
+
+
+class FirstException(Exception):
+    pass
+
+
 class InlineCallbacksExceptionContextTests(unittest.TestCase):
     @defer.inlineCallbacks
     def doNothingReturnValue(self) -> Generator[Any, Any, None]:
@@ -3578,7 +3586,7 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
     @defer.inlineCallbacks
     def doNothingRaise(self) -> Generator[Any, Any, None]:
         yield None
-        raise Exception("Errback exception")
+        raise ErrbackException("Errback exception")
 
     @defer.inlineCallbacks
     def test_exceptionContextEmtpyInCallback(
@@ -3589,11 +3597,11 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         there should not be any exception context if there wasn't any to begin
         with.
         """
-        for do_nothing in (self.doNothingReturn, self.doNothingReturnValue):
-            yield do_nothing()
+        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+            yield doNothing()
             # There were never any exceptions that this function was aware of
             # (_DefGen_Return and StopIteration are implementation details
-            #  of 'do_nothing' and shouldn't leak into the exc_info of the
+            #  of 'doNothing' and shouldn't leak into the exc_info of the
             #  caller)
             self.assertEqual(sys.exc_info(), (None, None, None))
 
@@ -3606,12 +3614,12 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         an exception handler, maintain the previous exception context during the
         callback.
         """
-        for do_nothing in (self.doNothingReturn, self.doNothingReturnValue):
+        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
             try:
-                raise Exception("foo")
-            except Exception as ex:
+                raise FirstException("foo")
+            except FirstException as ex:
                 prev_exc_info = sys.exc_info()
-                yield do_nothing()
+                yield doNothing()
                 # The exception context didn't change from before
                 self.assertEqual(sys.exc_info(), prev_exc_info)
                 # There was no previous exception in the context while the exception
@@ -3630,10 +3638,10 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         """
         try:
             try:
-                raise Exception("The first exception")
-            except Exception:
+                raise FirstException("The first exception")
+            except FirstException:
                 yield self.doNothingRaise()
-        except Exception as e:
+        except ErrbackException as e:
             self.assertEqual("Errback exception", str(e))
             self.assertEqual("The first exception", str(e.__context__))
 
@@ -3646,6 +3654,100 @@ class InlineCallbacksExceptionContextTests(unittest.TestCase):
         """
         try:
             yield self.doNothingRaise()
-        except Exception as e:
+        except ErrbackException as e:
+            self.assertEqual("Errback exception", str(e))
+            self.assertEqual(e.__context__, None)
+
+
+async def sleep(delay: float) -> None:
+    from twisted.internet import reactor
+
+    await deferLater(reactor, delay)
+
+
+
+
+class InlineCallbacksExceptionAwaitContextTests(unittest.TestCase):
+    async def doNothingReturnValue(self) -> Literal["noNothingReturn"]:
+        """
+        async function that returns using _DefGen_Return.
+        """
+        await sleep(0.01)
+        defer.returnValue("doNothingReturnValue")
+
+    async def doNothingReturn(self) -> Literal["doNothingReturn"]:
+        """
+        decorated function that returns using StopIteration.
+        """
+        await sleep(0.01)
+        return "doNothingReturn"
+
+    async def doNothingRaise(self) -> NoReturn:
+        await sleep(0.01)
+        raise ErrbackException("Errback exception")
+
+    @ensuringDeferred
+    async def test_exceptionContextEmtpyInCallback(self) -> None:
+        """
+        When in the callbacks of an async function
+        there should not be any exception context if there wasn't any to begin
+        with.
+        """
+        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+            await doNothing()
+            # There were never any exceptions that this function was aware of
+            # (_DefGen_Return and StopIteration are implementation details
+            #  of 'doNothing' and shouldn't leak into the exc_info of the
+            #  caller)
+            self.assertEqual(sys.exc_info(), (None, None, None))
+
+    @ensuringDeferred
+    async def test_inlineCallbacksPreservesPreviousExceptionContext(self) -> None:
+        """
+        When an async function is called inside of
+        an exception handler, maintain the previous exception context during the
+        callback.
+        """
+        for doNothing in (self.doNothingReturn, self.doNothingReturnValue):
+            try:
+                raise FirstException("foo")
+            except FirstException as ex:
+                prev_exc_info = sys.exc_info()
+                await doNothing()
+                # The exception context didn't change from before
+                self.assertEqual(sys.exc_info(), prev_exc_info)
+                # There was no previous exception in the context while the exception
+                # was raised
+                self.assertEqual(ex.__context__, None)
+
+            # We're outside of the exception context now
+            self.assertEqual(sys.exc_info(), (None, None, None))
+
+    @ensuringDeferred
+    async def test_errbackExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
+        """
+        When an async function raises an exception
+        while handling another exception, the context chain should look like
+        "first exception -> errback exception".
+        """
+        try:
+            try:
+                raise FirstException("The first exception")
+            except FirstException:
+                await self.doNothingRaise()
+        except ErrbackException as e:
+            self.assertEqual("Errback exception", str(e))
+            self.assertEqual("The first exception", str(e.__context__))
+
+    @defer.inlineCallbacks
+    def test_errbackNoExceptionChain(self) -> Generator[Deferred[Any], Any, None]:
+        """
+        When an async function raises an exception
+        there should be no previous exception in the context when there was
+        no exception being handled at the time.
+        """
+        try:
+            await self.doNothingRaise()
+        except ErrbackException as e:
             self.assertEqual("Errback exception", str(e))
             self.assertEqual(e.__context__, None)
