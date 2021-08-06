@@ -173,6 +173,26 @@ jobs:
       run: |
         tox -q -e newsfragment
 
+  cryptography-main:
+    runs-on: ubuntu-latest
+    name: "pyca/cryptography main"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - uses: actions-rs/toolchain@v1.0.7
+        with:
+          profile: minimal
+          toolchain: "stable"
+          override: true
+          default: true
+      - run: 'pip install ".[all_non_platform]"'
+      - run: pip install git+https://github.com/pyca/cryptography.git
+      - run: python -m twisted.trial src/twisted
+
+
 
   # Used for various release automation.
   # This is also executed for each PR to exercise the release as much
