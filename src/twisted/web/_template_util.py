@@ -5,11 +5,11 @@
 twisted.web.util and twisted.web.template merged to avoid cyclic deps
 """
 
+import io
 import linecache
 import warnings
 from collections import OrderedDict
 from html import escape
-from io import StringIO
 from typing import (
     IO,
     Any,
@@ -664,7 +664,7 @@ class XMLString:
 
     def __init__(self, s: Union[str, bytes]):
         """
-        Run the parser on a L{StringIO} copy of the string.
+        Run the parser on a L{io.StringIO} copy of the string.
 
         @param s: The string from which to load the XML.
         @type s: L{str}, or a UTF-8 encoded L{bytes}.
@@ -672,7 +672,7 @@ class XMLString:
         if not isinstance(s, str):
             s = s.decode("utf8")
 
-        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(StringIO(s))
+        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(io.StringIO(s))
         """The loaded document."""
 
     def load(self) -> List["Flattenable"]:
