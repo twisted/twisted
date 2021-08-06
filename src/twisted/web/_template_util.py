@@ -34,7 +34,7 @@ from twisted.python import urlpath
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import fullyQualifiedName
-from twisted.web import resource, server
+from twisted.web import resource
 from twisted.web._element import Element, renderer
 from twisted.web._flatten import Flattenable, flatten, flattenString
 from twisted.web._stan import CDATA, Comment, Tag, slot
@@ -344,184 +344,6 @@ class _StackElement(Element):
         ]
 
 
-@implementer(ITemplateLoader)
-class XMLString:
-    """
-    An L{ITemplateLoader} that loads and parses XML from a string.
-    """
-
-    def __init__(self, s: Union[str, bytes]):
-        """
-        Run the parser on a L{StringIO} copy of the string.
-
-        @param s: The string from which to load the XML.
-        @type s: L{str}, or a UTF-8 encoded L{bytes}.
-        """
-        if not isinstance(s, str):
-            s = s.decode("utf8")
-
-        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(StringIO(s))
-        """The loaded document."""
-
-    def load(self) -> List["Flattenable"]:
-        """
-        Return the document.
-
-        @return: the loaded document.
-        """
-        return self._loadedTemplate
-
-
-class FailureElement(Element):
-    """
-    L{FailureElement} is an L{IRenderable} which can render detailed information
-    about a L{Failure<twisted.python.failure.Failure>}.
-
-    @ivar failure: The L{Failure<twisted.python.failure.Failure>} instance which
-        will be rendered.
-
-    @since: 12.1
-    """
-
-    loader = XMLString(
-        """
-<div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
-  <style type="text/css">
-    div.error {
-      color: red;
-      font-family: Verdana, Arial, helvetica, sans-serif;
-      font-weight: bold;
-    }
-
-    div {
-      font-family: Verdana, Arial, helvetica, sans-serif;
-    }
-
-    div.stackTrace {
-    }
-
-    div.frame {
-      padding: 1em;
-      background: white;
-      border-bottom: thin black dashed;
-    }
-
-    div.frame:first-child {
-      padding: 1em;
-      background: white;
-      border-top: thin black dashed;
-      border-bottom: thin black dashed;
-    }
-
-    div.location {
-    }
-
-    span.function {
-      font-weight: bold;
-      font-family: "Courier New", courier, monospace;
-    }
-
-    div.snippet {
-      margin-bottom: 0.5em;
-      margin-left: 1em;
-      background: #FFFFDD;
-    }
-
-    div.snippetHighlightLine {
-      color: red;
-    }
-
-    span.code {
-      font-family: "Courier New", courier, monospace;
-    }
-  </style>
-
-  <div class="error">
-    <span t:render="type" />: <span t:render="value" />
-  </div>
-  <div class="stackTrace" t:render="traceback">
-    <div class="frame" t:render="frames">
-      <div class="location">
-        <span t:render="filename" />:<span t:render="lineNumber" /> in
-        <span class="function" t:render="function" />
-      </div>
-      <div class="snippet" t:render="source">
-        <div t:render="sourceLines">
-          <span class="lineno" t:render="lineNumber" />
-          <code class="code" t:render="sourceLine" />
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="error">
-    <span t:render="type" />: <span t:render="value" />
-  </div>
-</div>
-"""
-    )
-
-    def __init__(self, failure, loader=None):
-        Element.__init__(self, loader)
-        self.failure = failure
-
-    @renderer
-    def type(self, request, tag):
-        """
-        Render the exception type as a child of C{tag}.
-        """
-        return tag(fullyQualifiedName(self.failure.type))
-
-    @renderer
-    def value(self, request, tag):
-        """
-        Render the exception value as a child of C{tag}.
-        """
-        return tag(str(self.failure.value).encode("utf8"))
-
-    @renderer
-    def traceback(self, request, tag):
-        """
-        Render all the frames in the wrapped
-        L{Failure<twisted.python.failure.Failure>}'s traceback stack, replacing
-        C{tag}.
-        """
-        return _StackElement(TagLoader(tag), self.failure.frames)
-
-
-def formatFailure(myFailure):
-    """
-    Construct an HTML representation of the given failure.
-
-    Consider using L{FailureElement} instead.
-
-    @type myFailure: L{Failure<twisted.python.failure.Failure>}
-
-    @rtype: L{bytes}
-    @return: A string containing the HTML representation of the given failure.
-    """
-    result = []
-    flattenString(None, FailureElement(myFailure)).addBoth(result.append)
-    if isinstance(result[0], bytes):
-        # Ensure the result string is all ASCII, for compatibility with the
-        # default encoding expected by browsers.
-        return result[0].decode("utf-8").encode("ascii", "xmlcharrefreplace")
-    result[0].raiseException()
-
-
-TEMPLATE_NAMESPACE = "http://twistedmatrix.com/ns/twisted.web.template/0.1"
-
-# Go read the definition of NOT_DONE_YET. For lulz. This is totally
-# equivalent. And this turns out to be necessary, because trying to import
-# NOT_DONE_YET in this module causes a circular import which we cannot escape
-# from. From which we cannot escape. Etc. glyph is okay with this solution for
-# now, and so am I, as long as this comment stays to explain to future
-# maintainers what it means. ~ C.
-#
-# See http://twistedmatrix.com/trac/ticket/5557 for progress on fixing this.
-NOT_DONE_YET = 1
-_moduleLog = Logger()
-
-
 class _NSContext:
     """
     A mapping from XML namespaces onto their prefixes in the document.
@@ -557,6 +379,9 @@ class _NSContext:
         Proxy through to getting the prefix for the namespace.
         """
         return self.nss.__getitem__(k)
+
+
+TEMPLATE_NAMESPACE = "http://twistedmatrix.com/ns/twisted.web.template/0.1"
 
 
 class _ToStan(handler.ContentHandler, handler.EntityResolver):
@@ -832,6 +657,182 @@ def _flatsaxParse(fl: Union[FilePath, IO[AnyStr], str]) -> List["Flattenable"]:
 
 
 @implementer(ITemplateLoader)
+class XMLString:
+    """
+    An L{ITemplateLoader} that loads and parses XML from a string.
+    """
+
+    def __init__(self, s: Union[str, bytes]):
+        """
+        Run the parser on a L{StringIO} copy of the string.
+
+        @param s: The string from which to load the XML.
+        @type s: L{str}, or a UTF-8 encoded L{bytes}.
+        """
+        if not isinstance(s, str):
+            s = s.decode("utf8")
+
+        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(StringIO(s))
+        """The loaded document."""
+
+    def load(self) -> List["Flattenable"]:
+        """
+        Return the document.
+
+        @return: the loaded document.
+        """
+        return self._loadedTemplate
+
+
+class FailureElement(Element):
+    """
+    L{FailureElement} is an L{IRenderable} which can render detailed information
+    about a L{Failure<twisted.python.failure.Failure>}.
+
+    @ivar failure: The L{Failure<twisted.python.failure.Failure>} instance which
+        will be rendered.
+
+    @since: 12.1
+    """
+
+    loader = XMLString(
+        """
+<div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
+  <style type="text/css">
+    div.error {
+      color: red;
+      font-family: Verdana, Arial, helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    div {
+      font-family: Verdana, Arial, helvetica, sans-serif;
+    }
+
+    div.stackTrace {
+    }
+
+    div.frame {
+      padding: 1em;
+      background: white;
+      border-bottom: thin black dashed;
+    }
+
+    div.frame:first-child {
+      padding: 1em;
+      background: white;
+      border-top: thin black dashed;
+      border-bottom: thin black dashed;
+    }
+
+    div.location {
+    }
+
+    span.function {
+      font-weight: bold;
+      font-family: "Courier New", courier, monospace;
+    }
+
+    div.snippet {
+      margin-bottom: 0.5em;
+      margin-left: 1em;
+      background: #FFFFDD;
+    }
+
+    div.snippetHighlightLine {
+      color: red;
+    }
+
+    span.code {
+      font-family: "Courier New", courier, monospace;
+    }
+  </style>
+
+  <div class="error">
+    <span t:render="type" />: <span t:render="value" />
+  </div>
+  <div class="stackTrace" t:render="traceback">
+    <div class="frame" t:render="frames">
+      <div class="location">
+        <span t:render="filename" />:<span t:render="lineNumber" /> in
+        <span class="function" t:render="function" />
+      </div>
+      <div class="snippet" t:render="source">
+        <div t:render="sourceLines">
+          <span class="lineno" t:render="lineNumber" />
+          <code class="code" t:render="sourceLine" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="error">
+    <span t:render="type" />: <span t:render="value" />
+  </div>
+</div>
+"""
+    )
+
+    def __init__(self, failure, loader=None):
+        Element.__init__(self, loader)
+        self.failure = failure
+
+    @renderer
+    def type(self, request, tag):
+        """
+        Render the exception type as a child of C{tag}.
+        """
+        return tag(fullyQualifiedName(self.failure.type))
+
+    @renderer
+    def value(self, request, tag):
+        """
+        Render the exception value as a child of C{tag}.
+        """
+        return tag(str(self.failure.value).encode("utf8"))
+
+    @renderer
+    def traceback(self, request, tag):
+        """
+        Render all the frames in the wrapped
+        L{Failure<twisted.python.failure.Failure>}'s traceback stack, replacing
+        C{tag}.
+        """
+        return _StackElement(TagLoader(tag), self.failure.frames)
+
+
+def formatFailure(myFailure):
+    """
+    Construct an HTML representation of the given failure.
+
+    Consider using L{FailureElement} instead.
+
+    @type myFailure: L{Failure<twisted.python.failure.Failure>}
+
+    @rtype: L{bytes}
+    @return: A string containing the HTML representation of the given failure.
+    """
+    result = []
+    flattenString(None, FailureElement(myFailure)).addBoth(result.append)
+    if isinstance(result[0], bytes):
+        # Ensure the result string is all ASCII, for compatibility with the
+        # default encoding expected by browsers.
+        return result[0].decode("utf-8").encode("ascii", "xmlcharrefreplace")
+    result[0].raiseException()
+
+
+# Go read the definition of NOT_DONE_YET. For lulz. This is totally
+# equivalent. And this turns out to be necessary, because trying to import
+# NOT_DONE_YET in this module causes a circular import which we cannot escape
+# from. From which we cannot escape. Etc. glyph is okay with this solution for
+# now, and so am I, as long as this comment stays to explain to future
+# maintainers what it means. ~ C.
+#
+# See http://twistedmatrix.com/trac/ticket/5557 for progress on fixing this.
+NOT_DONE_YET = 1
+_moduleLog = Logger()
+
+
+@implementer(ITemplateLoader)
 class TagLoader:
     """
     An L{ITemplateLoader} that loads an existing flattenable object.
@@ -1089,7 +1090,7 @@ def renderElement(
         _moduleLog.failure(
             "An error occurred while rendering the response.", failure=failure
         )
-        site: Optional["server.Site"] = getattr(request, "site", None)
+        site = getattr(request, "site", None)
         if site is not None and site.displayTracebacks:
             assert _failElement is not None
             return flatten(request, _failElement(failure), request.write)
