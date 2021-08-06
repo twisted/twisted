@@ -8,7 +8,7 @@ to load code.
 
 import sys
 from types import ModuleType
-from typing import List, Iterable, Tuple
+from typing import Iterable, List, Tuple
 
 from twisted.python.filepath import FilePath
 

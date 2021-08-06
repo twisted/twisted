@@ -11,12 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
 import pathlib
 import subprocess
-from pprint import pprint
+import sys
 from datetime import date
+from pprint import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -48,7 +48,6 @@ except ImportError:
 extensions.append("traclinks")
 
 from twisted import version as twisted_version_object
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

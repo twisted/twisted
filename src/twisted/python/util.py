@@ -19,7 +19,7 @@ else:
     pwd = _pwd
 
 try:
-    from os import setgroups as _setgroups, getgroups as _getgroups
+    from os import getgroups as _getgroups, setgroups as _setgroups
 except ImportError:
     setgroups = None
     getgroups = None
@@ -27,22 +27,22 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
 from typing import (
     Callable,
     ClassVar,
     Mapping,
     MutableMapping,
     Sequence,
-    Union,
     Tuple,
+    Union,
     cast,
 )
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 
-# For backwards compatibility, some things import this, so just link it
-from collections import OrderedDict
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),

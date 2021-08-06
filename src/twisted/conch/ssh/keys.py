@@ -26,10 +26,13 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from pyasn1.codec.ber import decoder as berDecoder  # type: ignore[import]
-from pyasn1.codec.ber import encoder as berEncoder
+from pyasn1.codec.ber import (  # type: ignore[import]
+    decoder as berDecoder,
+    encoder as berEncoder,
+)
 from pyasn1.error import PyAsn1Error  # type: ignore[import]
 from pyasn1.type import univ  # type: ignore[import]
+
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
@@ -40,13 +43,13 @@ from twisted.python.deprecate import _mutuallyExclusiveArguments
 try:
 
     from cryptography.hazmat.primitives.asymmetric.utils import (
-        encode_dss_signature,
         decode_dss_signature,
+        encode_dss_signature,
     )
 except ImportError:
     from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]
-        encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature,
+        encode_rfc6979_signature as encode_dss_signature,
     )
 
 

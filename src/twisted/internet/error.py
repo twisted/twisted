@@ -8,8 +8,9 @@ Exceptions and errors for use in twisted.internet modules.
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
+
+from twisted.python import deprecate
 
 
 class BindError(Exception):

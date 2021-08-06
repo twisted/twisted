@@ -9,20 +9,11 @@ Support for creating mail servers with twistd.
 
 import os
 
-from twisted.mail import mail
-from twisted.mail import maildir
-from twisted.mail import relay
-from twisted.mail import relaymanager
-from twisted.mail import alias
-
-from twisted.internet import endpoints
-
-from twisted.python import usage
-
-from twisted.cred import checkers
-from twisted.cred import strcred
-
 from twisted.application import internet
+from twisted.cred import checkers, strcred
+from twisted.internet import endpoints
+from twisted.mail import alias, mail, maildir, relay, relaymanager
+from twisted.python import usage
 
 
 class Options(usage.Options, strcred.AuthOptionMixin):

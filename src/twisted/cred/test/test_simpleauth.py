@@ -6,11 +6,13 @@ Tests for basic constructs of L{twisted.cred.credentials}.
 """
 
 
-from twisted.trial.unittest import TestCase
-from twisted.cred.credentials import UsernamePassword, IUsernamePassword
-from twisted.cred.credentials import IUsernameHashedPassword
-
+from twisted.cred.credentials import (
+    IUsernameHashedPassword,
+    IUsernamePassword,
+    UsernamePassword,
+)
 from twisted.cred.test.test_cred import _uhpVersion
+from twisted.trial.unittest import TestCase
 
 
 class UsernamePasswordTests(TestCase):

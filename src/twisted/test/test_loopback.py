@@ -8,13 +8,12 @@ Test case for L{twisted.protocols.loopback}.
 
 from zope.interface import implementer
 
-from twisted.trial import unittest
-from twisted.protocols import basic, loopback
-from twisted.internet import defer
-from twisted.internet.protocol import Protocol
+from twisted.internet import defer, interfaces, reactor
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IAddress, IPushProducer, IPullProducer
-from twisted.internet import reactor, interfaces
+from twisted.internet.interfaces import IAddress, IPullProducer, IPushProducer
+from twisted.internet.protocol import Protocol
+from twisted.protocols import basic, loopback
+from twisted.trial import unittest
 
 
 class SimpleProtocol(basic.LineReceiver):

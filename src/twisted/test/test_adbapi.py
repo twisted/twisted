@@ -5,17 +5,20 @@
 Tests for twisted.enterprise.adbapi.
 """
 
-from twisted.trial import unittest
-
 import os
 import stat
 from typing import Dict, Optional
 
-from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
-from twisted.enterprise.adbapi import Connection, Transaction
-from twisted.internet import reactor, defer, interfaces
+from twisted.enterprise.adbapi import (
+    Connection,
+    ConnectionLost,
+    ConnectionPool,
+    Transaction,
+)
+from twisted.internet import defer, interfaces, reactor
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 simple_table_schema = """
 CREATE TABLE simple (

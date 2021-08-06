@@ -21,7 +21,7 @@ Maintainer: Jonathan Lange
 
 from random import randrange
 
-from twisted.internet import utils, interfaces
+from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock

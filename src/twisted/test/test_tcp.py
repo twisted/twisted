@@ -6,27 +6,26 @@ Tests for implementations of L{IReactorTCP}.
 """
 
 
-import socket
-import random
 import errno
-import hamcrest
+import random
+import socket
 from functools import wraps
 from typing import Callable, Optional
 from unittest import skipIf
 
 from zope.interface import implementer
 
-from twisted.trial.unittest import TestCase, SkipTest
+import hamcrest
 
-from twisted.python.log import msg, err
-from twisted.internet import protocol, reactor, defer, interfaces
-from twisted.internet import error
+from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.internet.protocol import Protocol
 from twisted.protocols import policies
+from twisted.python.log import err, msg
 from twisted.python.runtime import platform
 from twisted.test.proto_helpers import AccumulatingProtocol
+from twisted.trial.unittest import SkipTest, TestCase
 
 
 def loopUntil(predicate, interval=0):

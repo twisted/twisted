@@ -20,8 +20,8 @@ An example session (assuming the server is running):
 
 """
 
-from twisted.web import soap, server
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
+from twisted.web import server, soap
 
 
 class Example(soap.SOAPPublisher):

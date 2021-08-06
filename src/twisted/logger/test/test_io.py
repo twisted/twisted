@@ -8,12 +8,11 @@ Test cases for L{twisted.logger._io}.
 import sys
 from typing import List, Optional
 
-from constantly import NamedConstant  # type: ignore[import]
-
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.trial import unittest
 from .._interfaces import ILogObserver, LogEvent
 from .._io import LoggingFile
 from .._levels import LogLevel

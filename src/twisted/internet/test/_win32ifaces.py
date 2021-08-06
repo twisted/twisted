@@ -5,19 +5,19 @@
 Windows implementation of local network interface enumeration.
 """
 
-from socket import socket, AF_INET6, SOCK_STREAM
 from ctypes import (  # type: ignore[attr-defined]
-    WinDLL,
-    byref,
-    create_string_buffer,
-    create_unicode_buffer,
-    c_int,
-    c_void_p,
     POINTER,
     Structure,
+    WinDLL,
+    byref,
+    c_int,
+    c_void_p,
     cast,
+    create_string_buffer,
+    create_unicode_buffer,
     wstring_at,
 )
+from socket import AF_INET6, SOCK_STREAM, socket
 
 WS2_32 = WinDLL("ws2_32")
 

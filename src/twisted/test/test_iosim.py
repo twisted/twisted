@@ -10,7 +10,6 @@ from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.protocol import Protocol
-
 from twisted.test.iosim import FakeTransport, connect
 from twisted.trial.unittest import TestCase
 

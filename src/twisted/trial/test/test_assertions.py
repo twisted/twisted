@@ -13,20 +13,21 @@ demonstrated to work earlier in the file are used by those later in the file
 """
 
 
-import warnings
 import unittest as pyunit
+import warnings
 
-from twisted.python.util import FancyEqMixin
+from incremental import Version, getVersionString
+
+from twisted.internet.defer import Deferred, fail, succeed
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.failure import Failure
 from twisted.python.reflect import (
-    prefixedMethods,
     accumulateMethods,
     fullyQualifiedName,
+    prefixedMethods,
 )
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from incremental import Version, getVersionString
-from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
 from twisted.trial import unittest
-from twisted.internet.defer import Deferred, fail, succeed
 
 
 class MockEquality(FancyEqMixin):

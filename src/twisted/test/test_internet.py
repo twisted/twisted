@@ -11,12 +11,11 @@ import sys
 import time
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
-from twisted.internet import reactor, protocol, error, abstract, defer
-from twisted.internet import interfaces, base
+from twisted.internet import abstract, base, defer, error, interfaces, protocol, reactor
 from twisted.internet.defer import Deferred, passthru
 from twisted.internet.tcp import Connector
 from twisted.python import util
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet import ssl as _ssl

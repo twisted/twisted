@@ -2,8 +2,8 @@
 # See LICENSE for details.
 
 from twisted.cred import credentials, error
-from twisted.words import tap
 from twisted.trial import unittest
+from twisted.words import tap
 
 
 class WordsTapTests(unittest.TestCase):

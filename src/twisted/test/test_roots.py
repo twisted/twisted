@@ -2,8 +2,8 @@
 # See LICENSE for details.
 
 
-from twisted.trial import unittest
 from twisted.python import roots
+from twisted.trial import unittest
 
 
 class RootsTests(unittest.TestCase):

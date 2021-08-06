@@ -1,8 +1,8 @@
-from calculus.remote_1 import RemoteCalculationFactory
 from calculus.client_2 import RemoteCalculationClient
+from calculus.remote_1 import RemoteCalculationFactory
 
+from twisted.internet import protocol, reactor
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol
 
 
 class RemoteRunCalculationTestCase(unittest.TestCase):

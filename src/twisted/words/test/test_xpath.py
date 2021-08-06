@@ -3,7 +3,6 @@
 
 
 from twisted.trial import unittest
-
 from twisted.words.xish import xpath
 from twisted.words.xish.domish import Element
 from twisted.words.xish.xpath import XPathQuery

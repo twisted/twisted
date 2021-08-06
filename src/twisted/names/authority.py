@@ -10,8 +10,8 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns, error, common
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
 from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath

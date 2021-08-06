@@ -40,15 +40,14 @@ __all__ = [
 ]
 
 import warnings
-
 from collections import OrderedDict
 from io import StringIO
 from typing import (
+    IO,
     Any,
     AnyStr,
     Callable,
     Dict,
-    IO,
     List,
     Mapping,
     Optional,
@@ -56,18 +55,17 @@ from typing import (
     Union,
     cast,
 )
+from xml.sax import handler, make_parser
+from xml.sax.xmlreader import Locator
 
 from zope.interface import implementer
 
-from xml.sax import make_parser, handler
-from xml.sax.xmlreader import Locator
-
 from twisted.internet.defer import Deferred
+from twisted.logger import Logger
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.web._stan import Tag, slot, Comment, CDATA, CharRef
+from twisted.web._stan import CDATA, CharRef, Comment, Tag, slot
 from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
-from twisted.logger import Logger
 
 TEMPLATE_NAMESPACE = "http://twistedmatrix.com/ns/twisted.web.template/0.1"
 
@@ -700,6 +698,6 @@ def renderElement(
     return NOT_DONE_YET
 
 
+import twisted.web.util
 from twisted.web._element import Element, renderer
 from twisted.web._flatten import Flattenable, flatten, flattenString
-import twisted.web.util
