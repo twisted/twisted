@@ -19,9 +19,11 @@ __all__ = [
     "_SourceFragmentElement",
     "_SourceLineElement",
     "_StackElement",
+    "_PRE",
 ]
 
 from ._template_util import (
+    _PRE,
     ChildRedirector,
     DeferredResource,
     FailureElement,
