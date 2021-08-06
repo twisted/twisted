@@ -5,6 +5,11 @@ repos:
       - id: pyupgrade
         args: ["--py36-plus"]
 
+  - repo: https://github.com/pycqa/isort
+    rev: 5.9.3
+    hooks:
+      - id: isort
+
   - repo: https://github.com/psf/black
     rev: 21.7b0
     hooks:
@@ -27,8 +32,3 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: mixed-line-ending
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.9.3
-    hooks:
-      - id: isort
