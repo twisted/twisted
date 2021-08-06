@@ -56,7 +56,7 @@ def _PRE(text):
     return f"<pre>{escape(text)}</pre>"
 
 
-def redirectTo(URL: bytes, request) -> bytes:
+def redirectTo(URL: bytes, request: IRequest) -> bytes:
     """
     Generate a redirect to the given location.
 
@@ -167,7 +167,7 @@ class ParentRedirect(resource.Resource):
 
     isLeaf = 1
 
-    def render(self, request) -> bytes:
+    def render(self, request: IRequest) -> bytes:
         """
         Respond to all requests by redirecting to nearest directory.
         """

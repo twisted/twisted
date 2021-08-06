@@ -14,6 +14,11 @@ __all__ = [
     "DeferredResource",
     "FailureElement",
     "formatFailure",
+    # publicized by unit tests:
+    "_FrameElement",
+    "_SourceFragmentElement",
+    "_SourceLineElement",
+    "_StackElement",
 ]
 
 from ._template_util import (
@@ -22,6 +27,10 @@ from ._template_util import (
     FailureElement,
     ParentRedirect,
     Redirect,
+    _FrameElement,
+    _SourceFragmentElement,
+    _SourceLineElement,
+    _StackElement,
     formatFailure,
     redirectTo,
 )
