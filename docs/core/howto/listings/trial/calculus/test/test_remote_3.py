@@ -11,7 +11,7 @@ class RemoteCalculationTestCase(unittest.TestCase):
         self.proto.makeConnection(self.tr)
 
     def _test(self, operation, a, b, expected):
-        self.proto.dataReceived(f"{operation} {a} {b}\r\n".encode("utf-8"))
+        self.proto.dataReceived(f"{operation} {a} {b}\r\n".encode())
         self.assertEqual(int(self.tr.value()), expected)
 
     def test_add(self):

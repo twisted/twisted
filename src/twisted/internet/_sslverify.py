@@ -11,7 +11,7 @@ from hashlib import md5
 
 from zope.interface import Interface, implementer
 
-from OpenSSL import SSL, crypto  # type: ignore[import]
+from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
 
 import attr

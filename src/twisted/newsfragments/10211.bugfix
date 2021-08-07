@@ -1,1 +1,0 @@
-haproxy transport wrapper now returns hosts of type str for getPeer() and getHost(), as specified by IPv4Address and IPv6Address documentation. Previously it was returning bytes for the host.``` 
