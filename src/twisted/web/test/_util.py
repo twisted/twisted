@@ -7,6 +7,7 @@ General helpers for L{twisted.web} unit tests.
 
 
 from typing import Type
+from unittest.mock import sentinel
 
 from twisted.internet.defer import Deferred, succeed
 from twisted.web import server
@@ -45,7 +46,7 @@ class FlattenTestCase(SynchronousTestCase):
         def check(result: bytes) -> bytes:
             return self.assertEqual(result, target)  # type: ignore[no-any-return]
 
-        d: Deferred[bytes] = flattenString(None, root)
+        d: Deferred[bytes] = flattenString(sentinel.request, root)
         d.addCallback(check)
         return d
 

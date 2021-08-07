@@ -1,0 +1,1 @@
+The request argument to twisted.web.iweb.IRenderable.render() is no longer typed as optional.

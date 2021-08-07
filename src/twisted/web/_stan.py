@@ -23,13 +23,13 @@ cumbersome.
 
 
 from inspect import isgenerator, iscoroutine
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 from warnings import warn
 
 import attr
 
 if TYPE_CHECKING:
-    from twisted.web.template import Flattenable
+    from ._flatten import Flattenable
 
 
 @attr.s(hash=False, eq=False, auto_attribs=True)

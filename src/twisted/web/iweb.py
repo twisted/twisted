@@ -513,7 +513,7 @@ class IRenderable(Interface):
 
     def lookupRenderMethod(
         name: str,
-    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
+    ) -> Callable[[IRequest, "Tag"], "Flattenable"]:
         """
         Look up and return the render method associated with the given name.
 
@@ -525,7 +525,7 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request: Optional[IRequest]) -> "Flattenable":
+    def render(request: IRequest) -> "Flattenable":
         """
         Get the document for this L{IRenderable}.
 

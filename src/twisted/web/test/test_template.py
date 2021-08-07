@@ -8,6 +8,7 @@ Tests for L{twisted.web.template}
 
 from io import StringIO
 from typing import List, Optional
+from unittest.mock import sentinel
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -154,7 +155,7 @@ class ElementTests(TestCase):
                 return "bar"
 
         foo = ElementWithRenderMethod().lookupRenderMethod("foo")
-        self.assertEqual(foo(None, tags.br), "bar")
+        self.assertEqual(foo(sentinel.request, tags.br), "bar")
 
     def test_render(self) -> None:
         """
