@@ -5,7 +5,7 @@
 This module contains interfaces defined for the L{twisted.conch} package.
 """
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 
 class IConchUser(Interface):

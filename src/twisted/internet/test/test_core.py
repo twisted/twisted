@@ -6,13 +6,13 @@ Tests for implementations of L{IReactorCore}.
 """
 
 
+import inspect
 import signal
 import time
-import inspect
 
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 

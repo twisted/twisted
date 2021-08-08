@@ -7,8 +7,9 @@ Tests for twisted.internet.glibbase.
 
 
 import sys
-from twisted.trial.unittest import TestCase
+
 from twisted.internet._glibbase import ensureNotImported
+from twisted.trial.unittest import TestCase
 
 
 class EnsureNotImportedTests(TestCase):

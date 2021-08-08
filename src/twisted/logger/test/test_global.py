@@ -6,13 +6,12 @@ Test cases for L{twisted.logger._global}.
 """
 
 import io
-from typing import Any, IO, List, Optional, TextIO, Tuple, Type, cast
+from typing import IO, Any, List, Optional, TextIO, Tuple, Type, cast
 
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
 from .._file import textFileLogObserver
-from .._global import LogBeginner, MORE_THAN_ONCE_WARNING
+from .._global import MORE_THAN_ONCE_WARNING, LogBeginner
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import LogLevel
 from .._logger import Logger

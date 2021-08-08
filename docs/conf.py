@@ -11,12 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
 import pathlib
 import subprocess
-from pprint import pprint
+import sys
 from datetime import date
+from pprint import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -48,7 +48,6 @@ except ImportError:
 extensions.append("traclinks")
 
 from twisted import version as twisted_version_object
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -234,8 +233,8 @@ pydoctor_args = [
     "--intersphinx=https://cryptography.io/en/latest/objects.inv",
     "--intersphinx=https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "--intersphinx=https://twisted.github.io/constantly/docs/objects.inv",
-    "--intersphinx=https://twisted.github.io/incremental/docs/objects.inv",
+    "--intersphinx=https://twisted.org/constantly/docs/objects.inv",
+    "--intersphinx=https://twisted.org/incremental/docs/objects.inv",
     "--intersphinx=https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "--intersphinx=https://priority.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",

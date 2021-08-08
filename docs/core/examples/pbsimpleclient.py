@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.spread import pb
 from twisted.internet import reactor
 from twisted.python import util
+from twisted.spread import pb
 
 factory = pb.PBClientFactory()
 reactor.connectTCP("localhost", 8789, factory)

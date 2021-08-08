@@ -1,4 +1,5 @@
 from sys import stdout
+
 from twisted.python import log
 
 log.discardLogs()

@@ -27,15 +27,17 @@ from zope.interface import implementer
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
+    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
     from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT  # type: ignore[attr-defined]
     from errno import (  # type: ignore[attr-defined]
         WSAECONNREFUSED,
         WSAECONNRESET,
+        WSAEINTR,
+        WSAEMSGSIZE,
         WSAENETRESET,
+        WSAENOPROTOOPT as ENOPROTOOPT,
+        WSAETIMEDOUT,
     )
-    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAENOPROTOOPT as ENOPROTOOPT  # type: ignore[attr-defined]
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
@@ -47,16 +49,14 @@ if platformType == "win32":
     EAGAIN = WSAEWOULDBLOCK
     EINTR = WSAEINTR
 else:
-    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
-    from errno import ENOPROTOOPT
+    from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOPROTOOPT, EWOULDBLOCK
 
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
 # Twisted Imports
-from twisted.internet import base, defer, address
-from twisted.python import log, failure
-from twisted.internet import abstract, error, interfaces
+from twisted.internet import abstract, address, base, defer, error, interfaces
+from twisted.python import failure, log
 
 
 @implementer(

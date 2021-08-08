@@ -13,12 +13,12 @@ from twisted.trial.unittest import TestCase
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
     from twisted.python.constants import (
+        FlagConstant,
+        Flags,
         NamedConstant,
         Names,
         ValueConstant,
         Values,
-        FlagConstant,
-        Flags,
     )
 
 

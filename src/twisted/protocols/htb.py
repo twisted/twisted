@@ -21,7 +21,8 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 # the same true of os.times?
 from time import time
 from typing import Optional
-from zope.interface import implementer, Interface
+
+from zope.interface import Interface, implementer
 
 from twisted.protocols import pcp
 

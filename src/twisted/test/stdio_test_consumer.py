@@ -11,9 +11,9 @@ that process transports implement IConsumer properly.
 
 import sys
 
-from twisted.python import log, reflect
-from twisted.internet import stdio, protocol
+from twisted.internet import protocol, stdio
 from twisted.protocols import basic
+from twisted.python import log, reflect
 
 
 def failed(err):
