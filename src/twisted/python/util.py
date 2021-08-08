@@ -935,8 +935,9 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
     Unlike L{twisted.internet.utils.runWithWarningsSuppressed}, it has no
     special support for L{twisted.internet.defer.Deferred}.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-        Must be a sequence of 2-tuples (args, kwargs).
+    @param suppressedWarnings: A list of arguments to pass to
+        L{warnings.filterwarnings}.  Must be a sequence of 2-tuples (args,
+        kwargs).
 
     @param f: A callable.
 
