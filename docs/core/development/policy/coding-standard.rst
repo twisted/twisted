@@ -273,7 +273,7 @@ For example:
 
 Docstrings are written in epytext format; more documentation is available in the `Epytext Markup Language documentation <http://epydoc.sourceforge.net/manual-epytext.html>`_.
 
-When you are referring to a type, you should use `L{}`, whether it's in the stdlib , in Twisted or somewhere else.
+When you are referring to a type, class, method, function or attribute, you should use `L{}`, whether it's in the stdlib, in Twisted or somewhere else.
 
 `NoneType` is an exception and we are referring it just as `L{None}`.
 
