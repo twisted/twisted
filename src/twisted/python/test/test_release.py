@@ -738,9 +738,12 @@ class SphinxBuilderTests(TestCase):
         """
         Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
         """
-        self.createFakeSphinxProject()
-        self.builder.build(self.sphinxDir)
-        self.verifyBuilt()
+        try:
+            self.createFakeSphinxProject()
+            self.builder.build(self.sphinxDir)
+            self.verifyBuilt()
+        except CalledProcessError as e:
+            raise Exception(f"{e.stdout} {e.stderr}") from e
 
     def test_main(self):
         """
