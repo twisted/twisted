@@ -13,7 +13,7 @@ parameters:
   - '3.7'
   - '3.8'
   - '3.9'
-  - '3.10rc1'
+  - '3.10.0-rc.1'
 
 - name: windowsReactor
   type: string
