@@ -749,9 +749,12 @@ class SphinxBuilderTests(TestCase):
         """
         Creates and builds a fake Sphinx project as if via the command line.
         """
-        self.createFakeSphinxProject()
-        self.builder.main([self.sphinxDir.parent().path])
-        self.verifyBuilt()
+        try:
+            self.createFakeSphinxProject()
+            self.builder.main([self.sphinxDir.parent().path])
+            self.verifyBuilt()
+        except CalledProcessError as e:
+            raise Exception(f"{e.stdout} {e.stderr}") from e
 
     def test_warningsAreErrors(self):
         """
