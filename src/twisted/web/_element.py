@@ -4,11 +4,15 @@
 
 
 from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union, overload
+
 from zope.interface import implementer
 
+from twisted.web.error import (
+    MissingRenderMethod,
+    MissingTemplateLoader,
+    UnexposedMethodError,
+)
 from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
-from twisted.web.error import MissingRenderMethod, UnexposedMethodError
-from twisted.web.error import MissingTemplateLoader
 
 if TYPE_CHECKING:
     from twisted.web.template import Flattenable, Tag

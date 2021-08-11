@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.internet import defer, protocol, reactor
 from twisted.conch import error
 from twisted.conch.ssh import transport
+from twisted.internet import defer, protocol, reactor
 
 
 class SSHClientFactory(protocol.ClientFactory):

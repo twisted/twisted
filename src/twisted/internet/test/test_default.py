@@ -8,13 +8,14 @@ Tests for L{twisted.internet.default}.
 
 import select
 import sys
-from twisted.trial.unittest import SynchronousTestCase
-from twisted.python.runtime import Platform
-from twisted.python.reflect import requireModule
+
 from twisted.internet import default
 from twisted.internet.default import _getInstallFunction, install
-from twisted.internet.test.test_main import NoReactor
 from twisted.internet.interfaces import IReactorCore
+from twisted.internet.test.test_main import NoReactor
+from twisted.python.reflect import requireModule
+from twisted.python.runtime import Platform
+from twisted.trial.unittest import SynchronousTestCase
 
 unix = Platform("posix", "other")
 linux = Platform("posix", "linux2")

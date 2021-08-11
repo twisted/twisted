@@ -13,18 +13,18 @@ from typing import Optional
 
 ssh: Optional[bool] = None
 
-from twisted.trial import unittest
-from twisted.internet import error, defer
-from twisted.test.proto_helpers import StringTransport
-from twisted.conch.test.test_recvline import (
-    _TelnetMixin,
-    _SSHMixin,
-    _StdioMixin,
-    stdio,
-    ssh,
-)
 from twisted.conch import manhole
 from twisted.conch.insults import insults
+from twisted.conch.test.test_recvline import (
+    _SSHMixin,
+    _StdioMixin,
+    _TelnetMixin,
+    ssh,
+    stdio,
+)
+from twisted.internet import defer, error
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 def determineDefaultFunctionName():

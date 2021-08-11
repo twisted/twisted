@@ -10,15 +10,15 @@ import os
 import weakref
 from collections import deque
 
-from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
     accumulateMethods,
-    prefixedMethods,
-    prefixedMethodNames,
     addMethodNamesToDict,
     fullyQualifiedName,
+    prefixedMethodNames,
+    prefixedMethods,
 )
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
 class Base:

@@ -9,10 +9,10 @@ not an example showing the best way to integrate Twisted with pygame).
 from twisted.internet import _threadedselect
 
 _threadedselect.install()
-from twisted.internet import reactor
-
 import pygame
 from pygame.locals import *
+
+from twisted.internet import reactor
 
 try:
     import pygame.fastevent as eventmodule

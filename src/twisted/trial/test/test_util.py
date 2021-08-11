@@ -13,18 +13,17 @@ from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python import filepath
-from twisted.internet.interfaces import IProcessTransport
 from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
+from twisted.python import filepath
 from twisted.python.failure import Failure
-
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial import util
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial.util import (
     DirtyReactorAggregateError,
     _Janitor,
-    excInfoOrFailureToExcInfo,
     acquireAttribute,
+    excInfoOrFailureToExcInfo,
 )
 
 

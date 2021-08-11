@@ -26,17 +26,15 @@ from typing import (
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python import reflect
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.failure import Failure
 from incremental import Version
 
 from twisted.internet.base import DelayedCall
 from twisted.internet.defer import Deferred, ensureDeferred, maybeDeferred
-from twisted.internet.interfaces import IDelayedCall, IReactorCore, IReactorTime
 from twisted.internet.error import ReactorNotRunning
-
+from twisted.internet.interfaces import IDelayedCall, IReactorCore, IReactorTime
+from twisted.python import log, reflect
+from twisted.python.deprecate import _getDeprecationWarningString
+from twisted.python.failure import Failure
 
 _T = TypeVar("_T")
 

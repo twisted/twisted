@@ -19,7 +19,7 @@ else:
     pwd = _pwd
 
 try:
-    from os import setgroups as _setgroups, getgroups as _getgroups
+    from os import getgroups as _getgroups, setgroups as _setgroups
 except ImportError:
     setgroups = None
     getgroups = None
@@ -27,22 +27,22 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
 from typing import (
     Callable,
     ClassVar,
     Mapping,
     MutableMapping,
     Sequence,
-    Union,
     Tuple,
+    Union,
     cast,
 )
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 
-# For backwards compatibility, some things import this, so just link it
-from collections import OrderedDict
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
@@ -935,8 +935,9 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
     Unlike L{twisted.internet.utils.runWithWarningsSuppressed}, it has no
     special support for L{twisted.internet.defer.Deferred}.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-        Must be a sequence of 2-tuples (args, kwargs).
+    @param suppressedWarnings: A list of arguments to pass to
+        L{warnings.filterwarnings}.  Must be a sequence of 2-tuples (args,
+        kwargs).
 
     @param f: A callable.
 

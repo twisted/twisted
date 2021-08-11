@@ -1,7 +1,7 @@
-from twisted.web import soap, xmlrpc, resource, server
-from twisted.internet import endpoints
-
 import os
+
+from twisted.internet import endpoints
+from twisted.web import resource, server, soap, xmlrpc
 
 
 def getQuote():
