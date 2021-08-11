@@ -16,8 +16,8 @@ on:
 # Older runs for non-trunk branches are cancelled and the jobs are executed
 # only for the latest push to the branch.
 concurrency:
-  group: ${{ github.head_ref }}
-  cancel-in-progress: ${{ github.head_ref != 'refs/heads/trunk' }}
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/trunk' }}
 
 
 defaults:
