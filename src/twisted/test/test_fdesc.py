@@ -5,8 +5,9 @@
 Tests for L{twisted.internet.fdesc}.
 """
 
-import os, sys
 import errno
+import os
+import sys
 
 try:
     import fcntl
@@ -208,7 +209,7 @@ except OSError as e:
     if e.errno == errno.EBADF:
         os._exit(0)
     os._exit(5)
-except:
+except BaseException:
     os._exit(10)
 else:
     os._exit(20)
@@ -222,7 +223,7 @@ else:
                     sys.executable,
                     [sys.executable, "-c", self.program % (fObj.fileno(),)],
                 )
-            except:
+            except BaseException:
                 import traceback
 
                 traceback.print_exc()

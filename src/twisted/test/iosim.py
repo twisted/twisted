@@ -14,15 +14,14 @@ try:
 except ImportError:
     pass
 
-from zope.interface import implementer, directlyProvides
-from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.error import ConnectionRefusedError
+from zope.interface import directlyProvides, implementer
 
-from twisted.python.failure import Failure
-from twisted.internet import error
-from twisted.internet import interfaces
+from twisted.internet import error, interfaces
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
+from twisted.internet.error import ConnectionRefusedError
+from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.testing import MemoryReactorClock
+from twisted.python.failure import Failure
 
 
 class TLSNegotiation:
@@ -33,7 +32,7 @@ class TLSNegotiation:
         self.readyToSend = connectState
 
     def __repr__(self) -> str:
-        return "TLSNegotiation(%r)" % (self.obj,)
+        return f"TLSNegotiation({self.obj!r})"
 
     def pretendToVerify(self, other, tpt):
         # Set the transport problems list here?  disconnections?
@@ -99,7 +98,7 @@ class FakeTransport:
         self.peerAddress = peerAddress
 
     def __repr__(self) -> str:
-        return "FakeTransport<%s,%s,%s>" % (
+        return "FakeTransport<{},{},{}>".format(
             self.isServer and "S" or "C",
             self.serial,
             self.protocol.__class__.__name__,

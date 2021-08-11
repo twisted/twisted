@@ -7,12 +7,12 @@ Tests for L{twisted.pair.tuntap}.
 
 
 import os
-import struct
 import socket
-from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT, ENODEV
-from random import randrange
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
+from random import randrange
 from signal import SIGINT
 
 from twisted.python.reflect import ObjectNotFound, namedAny
@@ -27,21 +27,22 @@ else:
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import IListeningPort
-from twisted.internet.protocol import DatagramProtocol
-from twisted.pair.rawudp import RawUDPProtocol
-from twisted.pair.ip import IPProtocol
+from twisted.internet.error import CannotListenError
+from twisted.internet.interfaces import IAddress, IListeningPort, IReactorFDSet
+from twisted.internet.protocol import (
+    AbstractDatagramProtocol,
+    DatagramProtocol,
+    Factory,
+)
+from twisted.internet.task import Clock
 from twisted.pair.ethernet import EthernetProtocol
-
-from twisted.python.reflect import fullyQualifiedName
+from twisted.pair.ip import IPProtocol
+from twisted.pair.raw import IRawPacketProtocol
+from twisted.pair.rawudp import RawUDPProtocol
 from twisted.python.compat import iterbytes
 from twisted.python.log import addObserver, removeObserver, textFromEventDict
-from twisted.internet.interfaces import IAddress, IReactorFDSet
-from twisted.internet.protocol import AbstractDatagramProtocol, Factory
-from twisted.internet.task import Clock
+from twisted.python.reflect import fullyQualifiedName
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
-from twisted.internet.error import CannotListenError
-from twisted.pair.raw import IRawPacketProtocol
 
 # Let the module-scope testing subclass of this still be defined (and then not
 # used) in case we can't import from twisted.pair.testing due to platform
@@ -54,24 +55,23 @@ _IInputOutputSystem = Interface
 
 if not platformSkip:
     from twisted.pair.testing import (
-        _PI_SIZE,
-        Tunnel,
-        MemoryIOSystem,
-        _IPv4,
         _H,
+        _PI_SIZE,
+        MemoryIOSystem,
+        Tunnel,
         _ethernet,
         _ip,
+        _IPv4,
         _udp,
     )
-
     from twisted.pair.tuntap import (
-        _TUNSETIFF,
         _IFNAMSIZ,
-        _RealSystem,
-        _IInputOutputSystem,
-        TunnelFlags,
+        _TUNSETIFF,
         TunnelAddress,
+        TunnelFlags,
         TuntapPort,
+        _IInputOutputSystem,
+        _RealSystem,
     )
 else:
     skip = platformSkip
@@ -447,7 +447,7 @@ class TunnelDeviceTestsMixin:
             for j in range(100):
                 try:
                     packet = self.system.read(self.fileno, 1024)
-                except EnvironmentError as e:
+                except OSError as e:
                     if e.errno in (EAGAIN, EWOULDBLOCK):
                         break
                     raise
@@ -591,7 +591,7 @@ class TestRealSystem(_RealSystem):
         platform support for tuntap devices are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).open(filename, *args, **kwargs)
+            return super().open(filename, *args, **kwargs)
         except OSError as e:
             # The device file may simply be missing.  The device file may also
             # exist but be unsupported by the kernel.
@@ -606,8 +606,8 @@ class TestRealSystem(_RealSystem):
         do not have them are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).ioctl(*args, **kwargs)
-        except IOError as e:
+            return super().ioctl(*args, **kwargs)
+        except OSError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
             raise
@@ -1135,7 +1135,7 @@ class TunnelTestsMixin:
         self.port.startListening()
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " listening on %s/%s>" % (
+        expected = " listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.system.getTunnel(self.port).name,
         )
@@ -1148,7 +1148,7 @@ class TunnelTestsMixin:
         """
         self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-        expected = " not listening on %s/%s>" % (
+        expected = " not listening on {}/{}>".format(
             self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.name,
         )
@@ -1328,7 +1328,8 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    factory.protocol = IPRecordingProtocol
+    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
+    factory.protocol = IPRecordingProtocol  # type: ignore[assignment]
     helper = TunHelper(None, None)
 
 
@@ -1350,7 +1351,8 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
     """
 
     factory = Factory()
-    factory.protocol = EthernetRecordingProtocol
+    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
+    factory.protocol = EthernetRecordingProtocol  # type: ignore[assignment]
     helper = TapHelper(None, None, pi=False)
 
 

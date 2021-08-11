@@ -12,8 +12,9 @@ test is over.
 """
 
 from zope.interface import implementer
-from twisted.trial.itrial import IReporter
+
 from twisted.python.components import proxyForInterface
+from twisted.trial.itrial import IReporter
 
 
 @implementer(IReporter)
@@ -23,7 +24,7 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
     """
 
     def __init__(self, original):
-        super(DistReporter, self).__init__(original)
+        super().__init__(original)
         self.running = {}
 
     def startTest(self, test):

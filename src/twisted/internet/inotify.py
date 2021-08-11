@@ -43,8 +43,7 @@ import struct
 
 from twisted.internet import fdesc
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import log, _inotify
-
+from twisted.python import _inotify, log
 
 # from /usr/src/linux/include/linux/inotify.h
 
@@ -379,7 +378,7 @@ class INotify(FileDescriptor):
         path = path.asBytesMode()
         wd = self._isWatched(path)
         if wd is None:
-            raise KeyError("%r is not watched" % (path,))
+            raise KeyError(f"{path!r} is not watched")
         else:
             self._rmWatch(wd)
 

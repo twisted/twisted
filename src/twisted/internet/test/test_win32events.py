@@ -6,18 +6,17 @@ Tests for implementations of L{IReactorWin32Events}.
 """
 
 try:
-    import win32event
+    import win32event  # type: ignore[import]
 except ImportError:
     win32event = None
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.failure import Failure
-from twisted.python.threadable import isInIOThread
-from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReactorWin32Events
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadable import getThreadID
+from twisted.python.failure import Failure
+from twisted.python.threadable import getThreadID, isInIOThread
 
 
 class Listener:

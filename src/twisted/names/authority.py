@@ -10,8 +10,8 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns, error, common
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
 from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
@@ -44,7 +44,7 @@ def getSerial(filename="/tmp/twisted-names.serial"):
     finally:
         os.umask(o)
 
-    with open(filename, "r") as serialFile:
+    with open(filename) as serialFile:
         lastSerial, zoneID = serialFile.readline().split()
 
     zoneID = (lastSerial == serial) and (int(zoneID) + 1) or 0
@@ -412,11 +412,11 @@ class BindAuthority(FileAuthority):
             domain = domain + b"." + owner[:-1]
         else:
             domain = domain[:-1]
-        f = getattr(self, "class_%s" % (cls,), None)
+        f = getattr(self, f"class_{cls}", None)
         if f:
             f(ttl, type, domain, rdata)
         else:
-            raise NotImplementedError("Record class %r not supported" % (cls,))
+            raise NotImplementedError(f"Record class {cls!r} not supported")
 
     def class_IN(self, ttl, type, domain, rdata):
         """
@@ -432,9 +432,9 @@ class BindAuthority(FileAuthority):
         @type domain: bytes
 
         @param rdata:
-        @type rdate: bytes
+        @type rdata: bytes
         """
-        record = getattr(dns, "Record_%s" % (nativeString(type),), None)
+        record = getattr(dns, f"Record_{nativeString(type)}", None)
         if record:
             r = record(*rdata)
             r.ttl = ttl
@@ -444,7 +444,7 @@ class BindAuthority(FileAuthority):
                 self.soa = (domain, r)
         else:
             raise NotImplementedError(
-                "Record type %r not supported" % (nativeString(type),)
+                f"Record type {nativeString(type)!r} not supported"
             )
 
     def parseRecordLine(self, origin, ttl, line):
@@ -462,8 +462,8 @@ class BindAuthority(FileAuthority):
         @param line: zone file line to parse; split by word
         @type line: L{list} of L{bytes}
         """
-        queryClasses = set(qc.encode("ascii") for qc in dns.QUERY_CLASSES.values())
-        queryTypes = set(qt.encode("ascii") for qt in dns.QUERY_TYPES.values())
+        queryClasses = {qc.encode("ascii") for qc in dns.QUERY_CLASSES.values()}
+        queryTypes = {qt.encode("ascii") for qt in dns.QUERY_TYPES.values()}
 
         markers = queryClasses | queryTypes
 

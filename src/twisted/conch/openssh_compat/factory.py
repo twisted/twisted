@@ -7,13 +7,12 @@ Factory for reading openssh configuration files: public keys, private keys, and
 moduli file.
 """
 
-import os
 import errno
+import os
 
-from twisted.python.util import runAsEffectiveUser
-
-from twisted.conch.ssh import keys, factory, common
 from twisted.conch.openssh_compat import primes
+from twisted.conch.ssh import common, factory, keys
+from twisted.python.util import runAsEffectiveUser
 
 
 class OpenSSHFactory(factory.SSHFactory):
@@ -50,7 +49,7 @@ class OpenSSHFactory(factory.SSHFactory):
                 fullPath = os.path.join(self.dataRoot, filename)
                 try:
                     key = keys.Key.fromFile(fullPath)
-                except IOError as e:
+                except OSError as e:
                     if e.errno == errno.EACCES:
                         # Not allowed, let's switch to root
                         key = runAsEffectiveUser(0, 0, keys.Key.fromFile, fullPath)
@@ -70,5 +69,5 @@ class OpenSSHFactory(factory.SSHFactory):
     def getPrimes(self):
         try:
             return primes.parseModuliFile(self.moduliRoot + "/moduli")
-        except IOError:
+        except OSError:
             return None

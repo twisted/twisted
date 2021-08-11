@@ -18,8 +18,8 @@ for name in gireactor._PYGTK_MODULES:
         sys.exit(0)
 
 try:
-    import gobject
+    import gobject  # type: ignore[import]
 except ImportError:
     sys.stdout.write("success")
 else:
-    sys.stdout.write("failure: %s was imported" % (gobject.__path__,))
+    sys.stdout.write(f"failure: {gobject.__path__} was imported")

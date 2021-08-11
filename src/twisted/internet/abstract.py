@@ -7,15 +7,21 @@ Support for generic select()able objects.
 """
 
 
-from socket import AF_INET, AF_INET6, inet_pton, error
-from typing import List, Sequence
+from socket import AF_INET, AF_INET6, inet_pton
+from typing import Iterable, List, Optional
 
 from zope.interface import implementer
 
+from twisted.internet import interfaces, main
+from twisted.python import failure, reflect
+
 # Twisted Imports
 from twisted.python.compat import lazyByteSlice
-from twisted.python import reflect, failure
-from twisted.internet import interfaces, main
+
+
+def _dataMustBeBytes(obj):
+    if not isinstance(obj, bytes):  # no, really, I mean it
+        raise TypeError("Data must be bytes")
 
 
 # Python 3.4+ can join bytes and memoryviews; using a
@@ -122,7 +128,7 @@ class _LogOwner:
     transport's log prefix.
     """
 
-    def _getLogPrefix(self, applicationObject) -> str:
+    def _getLogPrefix(self, applicationObject: object) -> str:
         """
         Determine the log prefix to use for messages related to
         C{applicationObject}, which may or may not be an
@@ -169,7 +175,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: interfaces.IReactorFDSet = None):
+    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -181,7 +187,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer = []  # type: List[bytes]
+        self._tempDataBuffer: List[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):
@@ -202,7 +208,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes):
+    def writeSomeData(self, data: bytes) -> None:
         """
         Write as much as possible of the given data, immediately.
 
@@ -302,7 +308,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # in current code should never be called
         self.connectionLost(reason)
 
-    def readConnectionLost(self, reason: failure.Failure):
+    def readConnectionLost(self, reason: failure.Failure) -> None:
         # override in subclasses
         self.connectionLost(reason)
 
@@ -339,7 +345,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.producerPaused = True
                 self.producer.pauseProducing()
 
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> None:
         """Reliably write some data.
 
         The data is buffered until the underlying file descriptor is ready
@@ -347,8 +353,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         buffer and this descriptor has a registered streaming producer, its
         C{pauseProducing()} method will be called.
         """
-        if isinstance(data, str):  # no, really, I mean it
-            raise TypeError("Data must not be string")
+        _dataMustBeBytes(data)
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -357,7 +362,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             self._maybePauseProducer()
             self.startWriting()
 
-    def writeSequence(self, iovec: Sequence[bytes]):
+    def writeSequence(self, iovec: Iterable[bytes]) -> None:
         """
         Reliably write a sequence of data.
 
@@ -374,8 +379,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         data is written to the underlying file descriptor.
         """
         for i in iovec:
-            if isinstance(i, str):  # no, really, I mean it
-                raise TypeError("Data must not be string")
+            _dataMustBeBytes(i)
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
@@ -480,26 +484,22 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         return -1
 
 
-def isIPAddress(addr, family: int = AF_INET) -> bool:
+def isIPAddress(addr: str, family: int = AF_INET) -> bool:
     """
     Determine whether the given string represents an IP address of the given
     family; by default, an IPv4 address.
 
-    @type addr: C{str}
     @param addr: A string which may or may not be the decimal dotted
         representation of an IPv4 address.
-
     @param family: The address family to test for; one of the C{AF_*} constants
         from the L{socket} module.  (This parameter has only been available
         since Twisted 17.1.0; previously L{isIPAddress} could only test for IPv4
         addresses.)
-    @type family: C{int}
 
-    @rtype: C{bool}
     @return: C{True} if C{addr} represents an IPv4 address, C{False} otherwise.
     """
-    if isinstance(addr, bytes):
-        try:
+    if isinstance(addr, bytes):  # type: ignore[unreachable]
+        try:  # type: ignore[unreachable]
             addr = addr.decode("ascii")
         except UnicodeDecodeError:
             return False
@@ -514,12 +514,12 @@ def isIPAddress(addr, family: int = AF_INET) -> bool:
         if addr.count(".") != 3:
             return False
     else:
-        raise ValueError("unknown address family {!r}".format(family))
+        raise ValueError(f"unknown address family {family!r}")
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.
         inet_pton(family, addr)
-    except (ValueError, error):
+    except (ValueError, OSError):
         return False
     return True
 

@@ -8,8 +8,9 @@ Exceptions and errors for use in twisted.internet modules.
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
+
+from twisted.python import deprecate
 
 
 class BindError(Exception):
@@ -18,7 +19,7 @@ class BindError(Exception):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -42,7 +43,9 @@ class CannotListenError(BindError):
 
     def __str__(self) -> str:
         iface = self.interface or "any"
-        return "Couldn't listen on %s:%s: %s." % (iface, self.port, self.socketError)
+        return "Couldn't listen on {}:{}: {}.".format(
+            iface, self.port, self.socketError
+        )
 
 
 class MulticastJoinError(Exception):
@@ -57,7 +60,7 @@ class MessageLengthError(Exception):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -68,7 +71,7 @@ class DNSLookupError(IOError):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -90,9 +93,9 @@ class ConnectError(Exception):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.osError:
-            s = "%s: %s" % (s, self.osError)
+            s = f"{s}: {self.osError}"
         if self.args[0]:
-            s = "%s: %s" % (s, self.args[0])
+            s = f"{s}: {self.args[0]}"
         s = "%s." % s
         return s
 
@@ -158,8 +161,8 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]  # noqa
-        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]  # noqa
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]
 except ImportError:
     errnoMapping = {}
 
@@ -221,7 +224,7 @@ class ConnectionDone(ConnectionClosed):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -253,7 +256,7 @@ class AlreadyCalled(ValueError):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -264,7 +267,7 @@ class AlreadyCancelled(ValueError):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -317,7 +320,7 @@ class ProcessTerminated(ConnectionLost):
     def __init__(self, exitCode=None, signal=None, status=None):
         """
         @param exitCode: The exit status of the process.  This is roughly like
-            the value you might pass to L{os.exit}.  This is L{None} if the
+            the value you might pass to L{os._exit}.  This is L{None} if the
             process exited due to a signal.
         @type exitCode: L{int} or L{None}
 
@@ -356,7 +359,7 @@ class NotConnectingError(RuntimeError):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 
@@ -367,7 +370,7 @@ class NotListeningError(RuntimeError):
     def __str__(self) -> str:
         s = self.MESSAGE
         if self.args:
-            s = "%s: %s" % (s, " ".join(self.args))
+            s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
 

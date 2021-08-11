@@ -6,7 +6,7 @@
 Base classes for Instance Messenger clients.
 """
 
-from twisted.words.im.locals import OFFLINE, ONLINE, AWAY
+from twisted.words.im.locals import AWAY, OFFLINE, ONLINE
 
 
 class ContactsList:
@@ -62,7 +62,7 @@ class ContactsList:
         @param client: The client being added to your list of account clients.
         @type client: L{IClient<interfaces.IClient>} provider
         """
-        if not client in self.clients:
+        if client not in self.clients:
             self.clients.append(client)
 
     def unregisterAccountClient(self, client):
@@ -209,7 +209,7 @@ class GroupConversation:
         """
         Send text to the group.
 
-        @param: The text to be sent.
+        @param text: The text to be sent.
         @type text: C{str}
         """
         self.group.sendGroupMessage(text, None)
@@ -259,7 +259,7 @@ class GroupConversation:
         @param member: The person joining the group conversation.
         @type member: C{str}
         """
-        if not member in self.members:
+        if member not in self.members:
             self.members.append(member)
 
     def memberChangedNick(self, oldnick, newnick):
@@ -331,7 +331,7 @@ class ChatUI:
         @type client: L{IClient<interfaces.IClient>} provider
         @param client: The client account for the person who has just signed on.
 
-        @rtype client: L{IClient<interfaces.IClient>} provider
+        @rtype: L{IClient<interfaces.IClient>} provider
         @return: The client, so that it may be used in a callback chain.
         """
         self.onlineClients.append(client)
@@ -367,7 +367,7 @@ class ChatUI:
         @param person: The person whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}
@@ -396,7 +396,7 @@ class ChatUI:
         @param group: The group whose conversation window we want to get.
 
         @type Class: L{IConversation<interfaces.IConversation>} implementor
-        @param: The kind of conversation window we want. If the conversation
+        @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
         @type stayHidden: C{bool}

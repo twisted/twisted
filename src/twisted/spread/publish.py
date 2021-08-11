@@ -14,7 +14,7 @@ Future Plans: None known.
 import time
 
 from twisted.internet import defer
-from twisted.spread import banana, jelly, flavors
+from twisted.spread import banana, flavors, jelly
 
 
 class Publishable(flavors.Cacheable):
@@ -65,7 +65,7 @@ class RemotePublished(flavors.RemoteCache):
     _wasCleanWhenLoaded = 0
 
     def getFileName(self, ext="pub"):
-        return "%s-%s-%s.%s" % (
+        return "{}-{}-{}.{}".format(
             self.service,
             self.perspective,
             str(self.publishedID),
@@ -78,7 +78,7 @@ class RemotePublished(flavors.RemoteCache):
         try:
             with open(self.getFileName(), "rb") as dataFile:
                 data = dataFile.read()
-        except IOError:
+        except OSError:
             recent = 0
         else:
             newself = jelly.unjelly(banana.decode(data))

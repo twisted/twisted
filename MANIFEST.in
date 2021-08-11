@@ -17,19 +17,19 @@ recursive-include docs README
 include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
-exclude pyproject.toml
 exclude codecov.yml
-exclude appveyor.yml
 exclude .coveralls.yml
-exclude .circleci
 exclude .git-blame-ignore-revs
+exclude .readthedocs.yml
+exclude .pre-commit-config.yaml
 recursive-exclude .circleci *
 exclude azure-pipelines
 recursive-exclude azure-pipelines *
 prune bin
 prune admin
-prune .travis
 prune .github
+prune docs/_build
+
 
 # Include marker indicating that we ship type annotations (PEP 561)
 include src/twisted/py.typed
@@ -85,6 +85,8 @@ recursive-include docs *.txt
 recursive-include docs *.users
 recursive-include docs *.xml
 recursive-include docs Makefile
+recursive-include docs/_static/js *.js
+prune docs/_build
 
 # Don't have the real old historic docs
 exclude docs/historic/2003

@@ -8,9 +8,9 @@ Implementation of an L{IWorker} based on native threads and queues.
 
 
 from zope.interface import implementer
-from ._ithreads import IExclusiveWorker
-from ._convenience import Quit
 
+from ._convenience import Quit
+from ._ithreads import IExclusiveWorker
 
 _stop = object()
 
@@ -37,7 +37,7 @@ class ThreadWorker:
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
             C{startThread}.
-        @param queue: L{Queue}
+        @type queue: L{Queue}
         """
         self._q = queue
         self._hasQuit = Quit()

@@ -9,13 +9,12 @@ import pwd
 import sys
 import traceback
 
-from twisted.python import log, logfile, usage
-from twisted.python.util import switchUID, uidFromString, gidFromString, untilConcludes
+from twisted import copyright, logger
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
-from twisted import copyright, logger
+from twisted.python import log, logfile, usage
 from twisted.python.runtime import platformType
-
+from twisted.python.util import gidFromString, switchUID, uidFromString, untilConcludes
 
 if platformType == "win32":
     raise ImportError("_twistd_unix doesn't work on Windows.")
@@ -74,9 +73,7 @@ class ServerOptions(app.ServerOptions):
         """
         Print version information and exit.
         """
-        print(
-            "twistd (the Twisted daemon) {}".format(copyright.version), file=self.stdout
-        )
+        print(f"twistd (the Twisted daemon) {copyright.version}", file=self.stdout)
         print(copyright.copyright, file=self.stdout)
         sys.exit()
 
@@ -94,13 +91,13 @@ def checkPID(pidfile):
             with open(pidfile) as f:
                 pid = int(f.read())
         except ValueError:
-            sys.exit("Pidfile {} contains non-numeric value".format(pidfile))
+            sys.exit(f"Pidfile {pidfile} contains non-numeric value")
         try:
             os.kill(pid, 0)
         except OSError as why:
             if why.errno == errno.ESRCH:
                 # The pid doesn't exist.
-                log.msg("Removing stale pidfile {}".format(pidfile), isError=True)
+                log.msg(f"Removing stale pidfile {pidfile}", isError=True)
                 os.remove(pidfile)
             else:
                 sys.exit(
@@ -233,7 +230,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
             -1
         ]
         # remove the trailing newline
-        formattedMessage = "1 {}".format(exceptionLine.strip())
+        formattedMessage = f"1 {exceptionLine.strip()}"
         # On Python 3, encode the message the same way Python 2's
         # format_exception_only does
         formattedMessage = formattedMessage.encode("ascii", "backslashreplace")
@@ -288,7 +285,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 log.msg("Warning: No permission to delete pid file")
             else:
                 log.err(e, "Failed to unlink PID file:")
-        except:
+        except BaseException:
             log.err(None, "Failed to unlink PID file:")
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
@@ -413,7 +410,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         if uid is not None or gid is not None:
             extra = euid and "e" or ""
-            desc = "{}uid/{}gid {}/{}".format(extra, extra, uid, gid)
+            desc = f"{extra}uid/{extra}gid {uid}/{gid}"
             try:
                 switchUID(uid, gid, euid)
             except OSError as e:
@@ -423,7 +420,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 )
                 sys.exit(1)
             else:
-                log.msg("set {}".format(desc))
+                log.msg(f"set {desc}")
 
     def startApplication(self, application):
         """

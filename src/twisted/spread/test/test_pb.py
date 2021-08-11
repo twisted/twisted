@@ -18,23 +18,22 @@ import sys
 import time
 import weakref
 from collections import deque
-
 from io import BytesIO as StringIO
 from typing import Dict
-from zope.interface import implementer, Interface
 
-from twisted.trial import unittest
-from twisted.spread import pb, util, publish, jelly
-from twisted.internet import protocol, main, reactor, address
-from twisted.internet.error import ConnectionRefusedError
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, portal
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.internet import address, main, protocol, reactor
 from twisted.internet.defer import Deferred, gatherResults, succeed
+from twisted.internet.error import ConnectionRefusedError
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
 from twisted.python.compat import iterbytes
-from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
-from twisted.cred import portal, checkers, credentials
-
+from twisted.spread import jelly, pb, publish, util
 from twisted.test.proto_helpers import _FakeConnector
+from twisted.trial import unittest
 
 
 class Dummy(pb.Viewable):
@@ -220,14 +219,14 @@ class _ReconnectingFakeConnector(_FakeConnector):
         @param state: The state instance
         @type state: L{_ReconnectingFakeConnectorState}
         """
-        super(_ReconnectingFakeConnector, self).__init__(address)
+        super().__init__(address)
         self._state = state
 
     def connect(self):
         """
         A C{connect} implementation that calls C{reconnectCallback}
         """
-        super(_ReconnectingFakeConnector, self).connect()
+        super().connect()
         self._state.notifyAll()
 
 
@@ -280,7 +279,7 @@ class SimpleFactoryCopy(pb.Copyable):
     @type allIDs: C{dict}
     """
 
-    allIDs = {}  # type: Dict[int, 'SimpleFactoryCopy']
+    allIDs: Dict[int, "SimpleFactoryCopy"] = {}
 
     def __init__(self, id):
         self.id = id
@@ -294,9 +293,9 @@ def createFactoryCopy(state):
     """
     stateId = state.get("id", None)
     if stateId is None:
-        raise RuntimeError("factory copy state has no 'id' member %s" % (repr(state),))
-    if not stateId in SimpleFactoryCopy.allIDs:
-        raise RuntimeError("factory class has no ID: %s" % (SimpleFactoryCopy.allIDs,))
+        raise RuntimeError(f"factory copy state has no 'id' member {repr(state)}")
+    if stateId not in SimpleFactoryCopy.allIDs:
+        raise RuntimeError(f"factory class has no ID: {SimpleFactoryCopy.allIDs}")
     inst = SimpleFactoryCopy.allIDs[stateId]
     if not inst:
         raise RuntimeError("factory method found no object with id")
@@ -666,7 +665,7 @@ class BrokerTests(unittest.TestCase):
             pass
 
     def thunkErrorBad(self, error):
-        self.fail("This should cause a return value, not %s" % (error,))
+        self.fail(f"This should cause a return value, not {error}")
 
     def thunkResultGood(self, result):
         self.thunkResult = result
@@ -675,7 +674,7 @@ class BrokerTests(unittest.TestCase):
         pass
 
     def thunkResultBad(self, result):
-        self.fail("This should cause an error, not %s" % (result,))
+        self.fail(f"This should cause an error, not {result}")
 
     def test_reference(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -738,7 +737,7 @@ class BrokerTests(unittest.TestCase):
             pump.pump()
         expected = pb.MAX_BROKER_REFS - 1
         self.assertTrue(s.transport.closed, "transport was not closed")
-        self.assertEqual(len(l), expected, "expected %s got %s" % (expected, len(l)))
+        self.assertEqual(len(l), expected, f"expected {expected} got {len(l)}")
 
     def test_copy(self):
         c, s, pump = connectedServerAndClient(test=self)
@@ -928,7 +927,7 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(
             self.thunkResult,
             ID,
-            "ID not correct on factory object %s" % (self.thunkResult,),
+            f"ID not correct on factory object {self.thunkResult}",
         )
 
 
@@ -1104,7 +1103,7 @@ class DisconnectionTests(unittest.TestCase):
     """
 
     def error(self, *args):
-        raise RuntimeError("I shouldn't have been called: %s" % (args,))
+        raise RuntimeError(f"I shouldn't have been called: {args}")
 
     def gotDisconnected(self):
         """

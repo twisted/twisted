@@ -8,16 +8,17 @@ Tests for L{twisted.python._tzhelper}.
 from os import environ
 
 try:
-    from time import tzset
+    from time import tzset as _tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment,misc]
+    tzset = None
+else:
+    tzset = _tzset
 
-from twisted.python._tzhelper import FixedOffsetTimeZone
-from twisted.trial.unittest import TestCase, SkipTest
 from datetime import timedelta
-
 from time import mktime as mktime_real
 
+from twisted.python._tzhelper import FixedOffsetTimeZone
+from twisted.trial.unittest import SkipTest, TestCase
 
 # On some rare platforms (FreeBSD 8?  I was not able to reproduce
 # on FreeBSD 9) 'mktime' seems to always fail once tzset() has been
@@ -39,7 +40,7 @@ def mktime(t9):
     try:
         return mktime_real(t9)
     except OverflowError:
-        raise SkipTest("Platform cannot construct time zone for {0!r}".format(t9))
+        raise SkipTest(f"Platform cannot construct time zone for {t9!r}")
 
 
 def setTZ(name):
@@ -98,8 +99,8 @@ class FixedOffsetTimeZoneTests(TestCase):
             tzDST = FixedOffsetTimeZone.fromLocalTimeStamp(localDST)
             tzSTD = FixedOffsetTimeZone.fromLocalTimeStamp(localSTD)
 
-            self.assertEqual(tzDST.tzname(localDST), "UTC{0}".format(expectedOffsetDST))
-            self.assertEqual(tzSTD.tzname(localSTD), "UTC{0}".format(expectedOffsetSTD))
+            self.assertEqual(tzDST.tzname(localDST), f"UTC{expectedOffsetDST}")
+            self.assertEqual(tzSTD.tzname(localSTD), f"UTC{expectedOffsetSTD}")
 
             self.assertEqual(tzDST.dst(localDST), timedelta(0))
             self.assertEqual(tzSTD.dst(localSTD), timedelta(0))

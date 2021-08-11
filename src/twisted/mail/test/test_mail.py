@@ -5,21 +5,23 @@
 Tests for large portions of L{twisted.mail}.
 """
 
-import os
-import errno
-import shutil
-import pickle
-import StringIO
 import email.message
 import email.parser
-import tempfile
+import errno
+import io
+import os
+import pickle
+import shutil
 import signal
+import sys
+import tempfile
+import textwrap
 import time
 from hashlib import md5
 from unittest import skipIf
 
-from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
+from zope.interface.verify import verifyClass
 
 import twisted.cred.checkers
 import twisted.cred.credentials
@@ -30,20 +32,19 @@ import twisted.mail.maildir
 import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-
 from twisted import cred, mail
 from twisted.internet import address, defer, interfaces, protocol, reactor, task
 from twisted.internet.defer import Deferred
 from twisted.internet.error import (
-    DNSLookupError,
     CannotListenError,
+    DNSLookupError,
     ProcessDone,
     ProcessTerminated,
 )
 from twisted.mail import pop3, smtp
 from twisted.mail.relaymanager import _AttemptManager
 from twisted.names import dns
-from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
+from twisted.names.dns import Record_CNAME, Record_MX, RRHeader
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
 from twisted.python.filepath import FilePath
@@ -58,8 +59,9 @@ from twisted.trial.unittest import TestCase
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class DomainWithDefaultsTests(TestCase):
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testMethods(self):
-        d = dict([(x, x + 10) for x in range(10)])
+        d = {x: x + 10 for x in range(10)}
         d = mail.mail.DomainWithDefaultDict(d, "Default")
 
         self.assertEqual(len(d), 10)
@@ -226,15 +228,15 @@ class FileMessageTests(TestCase):
     def tearDown(self):
         try:
             self.f.close()
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.name)
-        except:
+        except BaseException:
             pass
         try:
             os.remove(self.final)
-        except:
+        except BaseException:
             pass
 
     def testFinalName(self):
@@ -245,6 +247,7 @@ class FileMessageTests(TestCase):
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testContents(self):
         contents = "first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
@@ -253,6 +256,7 @@ class FileMessageTests(TestCase):
         with open(self.final) as f:
             self.assertEqual(f.read(), contents)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testInterrupted(self):
         contents = "first line\nsecond line\n"
         for line in contents.splitlines():
@@ -315,6 +319,7 @@ class StringListMailboxTests(TestCase):
         mailbox = mail.maildir.StringListMailbox(["a", "abc", "ab"])
         self.assertEqual(mailbox.listMessages(), [1, 3, 2])
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_getMessage(self):
         """
         L{StringListMailbox.getMessage} returns a file-like object from which
@@ -324,6 +329,7 @@ class StringListMailboxTests(TestCase):
         mailbox = mail.maildir.StringListMailbox(["foo", "real contents"])
         self.assertEqual(mailbox.getMessage(1).read(), "real contents")
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_getUidl(self):
         """
         L{StringListMailbox.getUidl} returns a unique identifier for the
@@ -467,6 +473,7 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
             )
             mbox.AppendFactory._openstate = open
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_append(self):
         """
         L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
@@ -511,6 +518,7 @@ class MaildirAppendFileTests(TestCase, _AppendTestMixin):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_append(self):
         """
         L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
@@ -586,6 +594,7 @@ class MaildirTests(TestCase):
 
         self.assertTrue(firstName < secondName)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_mailbox(self):
         """
         Exercise the methods of L{IMailbox} as implemented by
@@ -664,6 +673,7 @@ class MaildirDirdbmDomainTests(TestCase):
         """
         shutil.rmtree(self.P)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_addUser(self):
         """
         L{MaildirDirdbmDomain.addUser} accepts a user and password
@@ -692,6 +702,7 @@ class MaildirDirdbmDomainTests(TestCase):
             cred.credentials.IUsernamePassword in creds[0].credentialInterfaces
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_requestAvatar(self):
         """
         L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError}
@@ -716,6 +727,7 @@ class MaildirDirdbmDomainTests(TestCase):
 
         t[2]()
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_requestAvatarId(self):
         """
         L{DirdbmDatabase.requestAvatarId} raises L{UnauthorizedLogin} if
@@ -732,6 +744,7 @@ class MaildirDirdbmDomainTests(TestCase):
         creds = cred.credentials.UsernamePassword("user", "password")
         self.assertEqual(database.requestAvatarId(creds), "user")
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_userDirectory(self):
         """
         L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
@@ -801,7 +814,7 @@ class ServiceDomainTests(TestCase):
 
         self.tmpdir = self.mktemp()
         domain = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
-        domain.addUser("user", "password")
+        domain.addUser(b"user", b"password")
         self.S.addDomain("test.domain", domain)
 
     def tearDown(self):
@@ -818,18 +831,20 @@ class ServiceDomainTests(TestCase):
         self.S.addDomain("example.com", domain)
         self.assertIdentical(domain.aliasGroup, aliases)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testReceivedHeader(self):
         hdr = self.D.receivedHeader(
             ("remotehost", "123.232.101.234"),
             smtp.Address("<someguy@someplace>"),
             ["user@host.name"],
         )
-        fp = StringIO.StringIO(hdr)
+        fp = io.BytesIO(hdr)
         emailParser = email.parser.Parser()
         m = emailParser.parse(fp)
         self.assertEqual(len(m.items()), 1)
         self.assertIn("Received", m)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testValidateTo(self):
         user = smtp.User("user@test.domain", "helo", None, "wherever@whatever")
         return defer.maybeDeferred(self.D.validateTo, user).addCallback(
@@ -873,7 +888,7 @@ class VirtualPOP3Tests(TestCase):
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
-        self.D.addUser("user", "password")
+        self.D.addUser(b"user", b"password")
         self.S.addDomain("test.domain", self.D)
 
         portal = cred.portal.Portal(self.D)
@@ -887,6 +902,7 @@ class VirtualPOP3Tests(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticateAPOP(self):
         resp = md5(self.P.magic + "password").hexdigest()
         return self.P.authenticateUserAPOP("user", resp).addCallback(
@@ -899,18 +915,21 @@ class VirtualPOP3Tests(TestCase):
         self.assertTrue(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticateIncorrectUserAPOP(self):
         resp = md5(self.P.magic + "password").hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP("resu", resp), cred.error.UnauthorizedLogin
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticateIncorrectResponseAPOP(self):
         resp = md5("wrong digest").hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP("user", resp), cred.error.UnauthorizedLogin
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticatePASS(self):
         return self.P.authenticateUserPASS("user", "password").addCallback(
             self._cbAuthenticatePASS
@@ -922,12 +941,14 @@ class VirtualPOP3Tests(TestCase):
         self.assertTrue(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticateBadUserPASS(self):
         return self.assertFailure(
             self.P.authenticateUserPASS("resu", "password"),
             cred.error.UnauthorizedLogin,
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testAuthenticateBadPasswordPASS(self):
         return self.assertFailure(
             self.P.authenticateUserPASS("user", "wrong password"),
@@ -942,6 +963,7 @@ class empty(smtp.User):
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class RelayTests(TestCase):
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testExists(self):
         service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
@@ -985,7 +1007,7 @@ class RelayerTests(TestCase):
         self.messageFiles = []
         for i in range(10):
             name = os.path.join(self.tmpdir, "body-%d" % (i,))
-            with open(name + "-H", "w") as f:
+            with open(name + "-H", "wb") as f:
                 pickle.dump(["from-%d" % (i,), "to-%d" % (i,)], f)
 
             f = open(name + "-D", "w")
@@ -1079,13 +1101,14 @@ class DirectoryQueueTests(TestCase):
             hdrF, msgF = self.queue.createNewMessage()
             with hdrF:
                 pickle.dump(["header", m], hdrF)
-            msgF.lineReceived("body: %d" % (m,))
+            msgF.lineReceived(b"body: %d" % (m,))
             msgF.eomReceived()
         self.queue.readDirectory()
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testWaiting(self):
         self.assertTrue(self.queue.hasWaiting())
         self.assertEqual(len(self.queue.getWaiting()), 25)
@@ -1097,6 +1120,7 @@ class DirectoryQueueTests(TestCase):
         self.queue.setWaiting(waiting[0])
         self.assertEqual(len(self.queue.getWaiting()), 25)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testRelaying(self):
         for m in self.queue.getWaiting():
             self.queue.setRelaying(m)
@@ -1111,6 +1135,7 @@ class DirectoryQueueTests(TestCase):
         self.assertEqual(len(self.queue.getWaiting()), 1)
         self.assertEqual(len(self.queue.getRelayed()), 24)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testDone(self):
         msg = self.queue.getWaiting()[0]
         self.queue.setRelaying(msg)
@@ -1133,9 +1158,7 @@ class DirectoryQueueTests(TestCase):
             self.assertEqual(envelopes.pop(0), ["header", i])
 
 
-from twisted.names import server
-from twisted.names import client
-from twisted.names import common
+from twisted.names import client, common, server
 
 
 class TestAuthority(common.ResolverBase):
@@ -1178,7 +1201,7 @@ def tearDownDNS(self):
     dl.append(defer.maybeDeferred(self.udpPort.stopListening))
     try:
         self.resolver._parseCall.cancel()
-    except:
+    except BaseException:
         pass
     return defer.DeferredList(dl)
 
@@ -1205,6 +1228,7 @@ class MXTests(TestCase):
             mail.relaymanager.MXCalculator(self.resolver).clock, reactor
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testSimpleSuccess(self):
         self.auth.addresses["test.domain"] = ["the.email.test.domain"]
         return self.mx.getMX("test.domain").addCallback(self._cbSimpleSuccess)
@@ -1573,6 +1597,7 @@ class MXTests(TestCase):
         self.assertFailure(d, twisted.mail.relaymanager.CanonicalNameLoop)
         return d
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testManyRecords(self):
         self.auth.addresses["test.domain"] = [
             "mx1.test.domain",
@@ -1634,6 +1659,7 @@ class LiveFireExerciseTests(TestCase):
                 shutil.rmtree(d)
         return tearDownDNS(self)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testLocalDelivery(self):
         service = mail.mail.MailService()
         service.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
@@ -1677,6 +1703,7 @@ class LiveFireExerciseTests(TestCase):
         done.addCallback(finished)
         return done
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testRelayDelivery(self):
         # Here is the service we will connect to and send mail from
         insServ = mail.mail.MailService()
@@ -1755,19 +1782,6 @@ class LiveFireExerciseTests(TestCase):
         return done
 
 
-aliasFile = StringIO.StringIO(
-    """\
-# Here's a comment
-   # woop another one
-testuser:                   address1,address2, address3,
-    continuation@address, |/bin/process/this
-
-usertwo:thisaddress,thataddress, lastaddress
-lastuser:       :/includable, /filename, |/program, address
-"""
-)
-
-
 class LineBufferMessage:
     def __init__(self):
         self.lines = []
@@ -1789,9 +1803,6 @@ class LineBufferMessage:
 class AliasTests(TestCase):
     lines = ["First line", "Next line", "", "After a blank line", "Last line"]
 
-    def setUp(self):
-        aliasFile.seek(0)
-
     def testHandle(self):
         result = {}
         lines = [
@@ -1812,9 +1823,25 @@ class AliasTests(TestCase):
             result["multiuser"], ["first@host", "second@host", "last@anotherhost"]
         )
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testFileLoader(self):
         domains = {"": object()}
-        result = mail.alias.loadAliasFile(domains, fp=aliasFile)
+        result = mail.alias.loadAliasFile(
+            domains,
+            fp=io.BytesIO(
+                textwrap.dedent(
+                    """\
+                    # Here's a comment
+                       # woop another one
+                    testuser:                   address1,address2, address3,
+                        continuation@address, |/bin/process/this
+
+                    usertwo:thisaddress,thataddress, lastaddress
+                    lastuser:       :/includable, /filename, |/program, address
+                    """
+                ).encode()
+            ),
+        )
 
         self.assertEqual(len(result), 3)
 
@@ -1857,6 +1884,7 @@ class AliasTests(TestCase):
             self.assertFalse(m.lost)
             self.assertEqual(self.lines, m.lines)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testFileAlias(self):
         tmpfile = self.mktemp()
         a = mail.alias.FileAlias(tmpfile, None, None)
@@ -2051,6 +2079,7 @@ class ProcessAliasTests(TestCase):
         """
         smtp.DNSNAME = self.DNSNAME
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_processAlias(self):
         """
         Standard call to C{mail.alias.ProcessAlias}: check that the specified
@@ -2147,6 +2176,7 @@ done"""
         """
         return self._terminationTest(self.signalStatus(signal.SIGHUP))
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_aliasResolution(self):
         """
         Check that the C{resolve} method of alias processors produce the correct
@@ -2211,6 +2241,7 @@ done"""
         expected.sort()
         self.assertEqual(r3, expected)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_cyclicAlias(self):
         """
         Check that a cycle in alias resolution is correctly handled.
@@ -2248,7 +2279,7 @@ class TestDomain:
             return lambda: mail.alias.AddressAlias(user, None, None)
         try:
             a = self.aliases[user]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.aliases, memo)
@@ -2318,7 +2349,7 @@ class DummyQueue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s" % (time.time(), id(self))
+        fname = f"{time.time()}_{id(self)}"
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
         finalFilename = os.path.join(self.directory, fname + "-D")
@@ -2432,10 +2463,10 @@ class _AttemptManagerTests(TestCase):
         self.noisyAttemptMgr.manager.managed["noisyRelayer"] = [noisyBaseName]
         self.quietAttemptMgr.manager.managed["quietRelayer"] = [quietBaseName]
 
-        with open(self.noisyMessage + "-H", "w") as envelope:
+        with open(self.noisyMessage + "-H", "wb") as envelope:
             pickle.dump(["from-noisy@domain", "to-noisy@domain"], envelope)
 
-        with open(self.quietMessage + "-H", "w") as envelope:
+        with open(self.quietMessage + "-H", "wb") as envelope:
             pickle.dump(["from-quiet@domain", "to-quiet@domain"], envelope)
 
     def tearDown(self):
@@ -2508,6 +2539,7 @@ class _AttemptManagerTests(TestCase):
         self.quietAttemptMgr.notifySuccess("quietRelayer", self.quietMessage)
         self.assertFalse(self.eventLog)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_notifyFailureNoisy(self):
         """
         For an attempt manager with the noisy flag set, notifyFailure should
@@ -2516,6 +2548,7 @@ class _AttemptManagerTests(TestCase):
         self.noisyAttemptMgr.notifyFailure("noisyRelayer", self.noisyMessage)
         self.assertTrue(self.eventLog)
 
+    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def test_notifyFailureQuiet(self):
         """
         For an attempt manager with the noisy flag not set, notifyFailure

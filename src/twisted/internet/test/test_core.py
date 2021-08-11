@@ -6,15 +6,13 @@ Tests for implementations of L{IReactorCore}.
 """
 
 
-__metaclass__ = type
-
+import inspect
 import signal
 import time
-import inspect
 
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.test.reactormixins import ReactorBuilder
 
 
@@ -36,7 +34,7 @@ class ObjectModelIntegrationMixin:
         mro = inspect.getmro(type(instance))
         for subclass in mro:
             self.assertTrue(
-                issubclass(subclass, object), "%r is not new-style" % (subclass,)
+                issubclass(subclass, object), f"{subclass!r} is not new-style"
             )
 
 

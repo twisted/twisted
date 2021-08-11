@@ -10,13 +10,14 @@ Generic positioning base classes.
 
 from functools import partial
 from operator import attrgetter
-from zope.interface import implementer
-from constantly import Names, NamedConstant
 from typing import ClassVar, Sequence
 
-from twisted.python.util import FancyEqMixin
-from twisted.positioning import ipositioning
+from zope.interface import implementer
 
+from constantly import NamedConstant, Names  # type: ignore[import]
+
+from twisted.positioning import ipositioning
+from twisted.python.util import FancyEqMixin
 
 MPS_PER_KNOT = 0.5144444444444444
 MPS_PER_KPH = 0.27777777777777777
@@ -149,10 +150,10 @@ class Angle(FancyEqMixin):
         Angles.HEADING: "Heading",
     }
 
-    compareAttributes = (
+    compareAttributes: ClassVar[Sequence[str]] = (
         "angleType",
         "inDecimalDegrees",
-    )  # type: ClassVar[Sequence[str]]
+    )
 
     def __init__(self, angle=None, angleType=None):
         """
@@ -312,7 +313,7 @@ class Heading(Angle):
         @type angleValue: C{float}
         @param variationValue: The value of the variation of this heading.
         @type variationValue: C{float}
-        @return A C{Heading } with the given values.
+        @return: A L{Heading} with the given values.
         """
         variation = Angle(variationValue, Angles.VARIATION)
         return cls(angleValue, variation)
@@ -362,7 +363,7 @@ class Heading(Angle):
         else:
             variationRepr = repr(self.variation)
 
-        return "<%s (%s, %s)>" % (
+        return "<{} ({}, {})>".format(
             self._angleTypeNameRepr,
             self._angleValueRepr,
             variationRepr,
@@ -482,7 +483,7 @@ class Altitude(FancyEqMixin):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Altitude (%s m)>" % (self._altitude,)
+        return f"<Altitude ({self._altitude} m)>"
 
 
 class _BaseSpeed(FancyEqMixin):
@@ -549,7 +550,7 @@ class _BaseSpeed(FancyEqMixin):
         @rtype: C{str}
         """
         speedValue = round(self.inMetersPerSecond, 2)
-        return "<%s (%s m/s)>" % (self.__class__.__name__, speedValue)
+        return f"<{self.__class__.__name__} ({speedValue} m/s)>"
 
 
 class Speed(_BaseSpeed):
@@ -568,7 +569,7 @@ class Speed(_BaseSpeed):
         @raises ValueError: Raised if C{speed} is negative.
         """
         if speed < 0:
-            raise ValueError("negative speed: %r" % (speed,))
+            raise ValueError(f"negative speed: {speed!r}")
 
         _BaseSpeed.__init__(self, speed)
 
@@ -846,7 +847,7 @@ class PositioningBeacon:
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Beacon ({s.identifier})>".format(s=self)
+        return f"<Beacon ({self.identifier})>"
 
 
 class Satellite(PositioningBeacon):

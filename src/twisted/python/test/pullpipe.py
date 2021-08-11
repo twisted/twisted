@@ -2,15 +2,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys
 import os
 import socket
+import sys
 from struct import unpack
+from typing import Tuple
 
 from twisted.python.sendmsg import recvmsg
 
 
-def recvfd(socketfd):
+def recvfd(socketfd: int) -> Tuple[int, bytes]:
     """
     Receive a file descriptor from a L{sendmsg} message on the given C{AF_UNIX}
     socket.

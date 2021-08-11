@@ -11,12 +11,12 @@ Basic credential checkers
 
 import os
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import Attribute, Interface, implementer
 
-from twisted.logger import Logger
+from twisted.cred import credentials, error
 from twisted.internet import defer
+from twisted.logger import Logger
 from twisted.python import failure
-from twisted.cred import error, credentials
 
 
 class ICredentialsChecker(Interface):
@@ -25,10 +25,8 @@ class ICredentialsChecker(Interface):
     """
 
     credentialInterfaces = Attribute(
-        (
-            "A list of sub-interfaces of L{ICredentials} which specifies which I "
-            "may check."
-        )
+        "A list of sub-interfaces of L{ICredentials} which specifies which I "
+        "may check."
     )
 
     def requestAvatarId(credentials):
@@ -269,7 +267,7 @@ class FilePasswordDB:
                         yield parts[self.ufield], parts[self.pfield]
                     else:
                         yield parts[self.ufield].lower(), parts[self.pfield]
-        except IOError as e:
+        except OSError as e:
             self._log.error("Unable to load credentials db: {e!r}", e=e)
             raise error.UnauthorizedLogin()
 

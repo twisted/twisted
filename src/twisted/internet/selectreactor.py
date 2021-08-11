@@ -7,18 +7,16 @@ Select reactor
 """
 
 
-from time import sleep
 import select
-import socket
 import sys
-from errno import EINTR, EBADF
-
+from errno import EBADF, EINTR
+from time import sleep
 from typing import Type
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 from twisted.python.runtime import platformType
 
@@ -50,13 +48,13 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase = object  # type: Type[object]
+    _extraBase: Type[object] = object
 else:
     _extraBase = _ThreadedWin32EventsMixin
 
 
 @implementer(IReactorFDSet)
-class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]  # noqa
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 
@@ -110,7 +108,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
             log.err()
             self._preenDescriptors()
             return
-        except (select.error, socket.error, IOError) as se:
+        except OSError as se:
             # select(2) encountered an error, perhaps while calling the fileno()
             # method of a socket.  (Python 2.6 socket.error is an IOError
             # subclass, but on Python 2.5 and earlier it is not.)
@@ -148,7 +146,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
     def _doReadOrWrite(self, selectable, method):
         try:
             why = getattr(selectable, method)()
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

@@ -14,22 +14,17 @@ import inspect
 import random
 import socket
 import struct
-from itertools import chain
-
 from io import BytesIO
+from itertools import chain
 from typing import Optional, SupportsInt, Union
 
-from zope.interface import implementer, Interface, Attribute
-
+from zope.interface import Attribute, Interface, implementer
 
 # Twisted imports
-from twisted.internet import protocol, defer
+from twisted.internet import defer, protocol
 from twisted.internet.error import CannotListenError
-from twisted.python import log, failure
-from twisted.python import util as tputil
-from twisted.python import randbytes
-from twisted.python.compat import comparable, cmp, nativeString
-
+from twisted.python import failure, log, randbytes, util as tputil
+from twisted.python.compat import cmp, comparable, nativeString
 
 __all__ = [
     "IEncodable",
@@ -168,7 +163,7 @@ def _nicebyteslist(list):
     @param list: The list of bytes to represent.
     @rtype: L{str}
     """
-    return "[%s]" % (", ".join([_nicebytes(b) for b in list]),)
+    return "[{}]".format(", ".join([_nicebytes(b) for b in list]))
 
 
 def randomSource():
@@ -260,13 +255,13 @@ EXT_QUERIES = {
     ALL_RECORDS: "ALL_RECORDS",
 }
 
-REV_TYPES = dict([(v, k) for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())])
+REV_TYPES = {v: k for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())}
 
 IN, CS, CH, HS = range(1, 5)
 ANY = 255
 
 QUERY_CLASSES = {IN: "IN", CS: "CS", CH: "CH", HS: "HS", ANY: "ANY"}
-REV_CLASSES = dict([(v, k) for (k, v) in QUERY_CLASSES.items()])
+REV_CLASSES = {v: k for (k, v) in QUERY_CLASSES.items()}
 
 
 # Opcodes
@@ -293,8 +288,11 @@ class IRecord(Interface):
 
 # Backwards compatibility aliases - these should be deprecated or something I
 # suppose. -exarkun
-from twisted.names.error import DomainError, AuthoritativeDomainError
-from twisted.names.error import DNSQueryTimeoutError
+from twisted.names.error import (
+    AuthoritativeDomainError,
+    DNSQueryTimeoutError,
+    DomainError,
+)
 
 
 def _nameToLabels(name):
@@ -344,7 +342,7 @@ def domainString(domain):
     if not isinstance(domain, bytes):
         raise TypeError(
             "Expected {} or {} but found {!r} of type {}".format(
-                type(b"").__name__, type("").__name__, domain, type(domain)
+                bytes.__name__, str.__name__, domain, type(domain)
             )
         )
     return domain
@@ -470,7 +468,7 @@ class IEncodableRecord(IEncodable, IRecord):
     """
     Interface for DNS records that can be encoded and decoded.
 
-    @since: Twisted NEXT
+    @since: Twisted 21.2.0
     """
 
 
@@ -478,7 +476,7 @@ class IEncodableRecord(IEncodable, IRecord):
 class Charstr:
     def __init__(self, string=b""):
         if not isinstance(string, bytes):
-            raise ValueError("%r is not a byte string" % (string,))
+            raise ValueError(f"{string!r} is not a byte string")
         self.string = string
 
     def encode(self, strio, compDict=None):
@@ -683,10 +681,10 @@ class Query:
             self.type, EXT_QUERIES.get(self.type, "UNKNOWN (%d)" % self.type)
         )
         c = QUERY_CLASSES.get(self.cls, "UNKNOWN (%d)" % self.cls)
-        return "<Query %s %s %s>" % (self.name, t, c)
+        return f"<Query {self.name} {t} {c}>"
 
     def __repr__(self) -> str:
-        return "Query(%r, %r, %r)" % (self.name.name, self.type, self.cls)
+        return f"Query({self.name.name!r}, {self.type!r}, {self.cls!r})"
 
 
 @implementer(IEncodable)
@@ -741,7 +739,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
     ):
         """
         @type udpPayloadSize: L{int}
-        @param payload: The number of octets of the largest UDP
+        @param udpPayloadSize: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
 
@@ -799,7 +797,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Encode this L{_OPTHeader} instance to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this L{_OPTHeader}
             will be written to this file.
 
@@ -825,7 +823,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Decode bytes into an L{_OPTHeader} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTHeader} is decoded.
 
@@ -909,7 +907,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Encode this L{_OPTVariableOption} to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this
             L{_OPTVariableOption} will be written to this file.
 
@@ -924,7 +922,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
         """
         Decode bytes into an L{_OPTVariableOption} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTVariableOption} is decoded.
 
@@ -1076,7 +1074,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("name", "name", "%s"), "ttl")
     compareAttributes = ("name", "ttl")
 
-    TYPE = None  # type: Optional[int]
+    TYPE: Optional[int] = None
     name = None
 
     def __init__(self, name=b"", ttl=None):
@@ -1243,7 +1241,7 @@ class Record_A(tputil.FancyEqMixin):
         return hash(self.address)
 
     def __str__(self) -> str:
-        return "<A address=%s ttl=%s>" % (self.dottedQuad(), self.ttl)
+        return f"<A address={self.dottedQuad()} ttl={self.ttl}>"
 
     __repr__ = __str__
 
@@ -2360,7 +2358,7 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
         defaultValue = signature.parameters[name].default
         fieldValue = getattr(obj, name, defaultValue)
         if (name in alwaysShow) or (fieldValue != defaultValue):
-            displayableArgs.append(" %s=%r" % (name, fieldValue))
+            displayableArgs.append(f" {name}={fieldValue!r}")
 
     return displayableArgs
 
@@ -2405,12 +2403,12 @@ def _compactRepr(
     out = ["<", obj.__class__.__name__] + displayableArgs
 
     if setFlags:
-        out.append(" flags=%s" % (",".join(setFlags),))
+        out.append(" flags={}".format(",".join(setFlags)))
 
     for name in sectionNames:
         section = getattr(obj, name, [])
         if section:
-            out.append(" %s=%r" % (name, section))
+            out.append(f" {name}={section!r}")
 
     out.append(">")
 
@@ -2725,7 +2723,7 @@ class Message(tputil.FancyEqMixin):
 
         @return: An object which implements L{IRecord} or L{None} if none
             can be found for the given type.
-        @rtype: L{types.ClassType}
+        @rtype: C{Type[IRecord]}
         """
         return self._recordTypes.get(type, UnknownRecord)
 
@@ -3156,7 +3154,7 @@ class DNSMixin:
 
         try:
             writeMessage(m)
-        except:
+        except BaseException:
             return defer.fail()
 
         resultDeferred = defer.Deferred()
@@ -3220,7 +3218,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
             return
-        except:
+        except BaseException:
             # Nothing should trigger this, but since we're potentially
             # invoking a lot of different decoding methods, we might as well
             # be extra cautious.  Anything that triggers this is itself
@@ -3235,7 +3233,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             # XXX we shouldn't need this hack of catching exception on callback()
             try:
                 d.callback(m)
-            except:
+            except BaseException:
                 log.err()
         else:
             if m.id not in self.resends:
@@ -3334,7 +3332,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
                     # XXX we shouldn't need this hack
                     try:
                         d.callback(m)
-                    except:
+                    except BaseException:
                         log.err()
 
                 self.buffer = self.buffer[self.length :]

@@ -19,7 +19,7 @@ Introduction
 There is frequently a need for programs to parse a UNIX-like
 command line program: options preceded by ``-`` or
 ``--`` , sometimes followed by a parameter, followed by
-a list of arguments. The :api:`twisted.python.usage <twisted.python.usage>` provides a class,
+a list of arguments. The :py:mod:`twisted.python.usage` provides a class,
 ``Options`` , to facilitate such parsing.
 
     
@@ -27,7 +27,7 @@ a list of arguments. The :api:`twisted.python.usage <twisted.python.usage>` prov
 
 While Python has the ``getopt`` module for doing
 this, it provides a very low level of abstraction for options.
-Twisted has a higher level of abstraction, in the class :api:`twisted.python.usage.Options <twisted.python.usage.Options>` . It uses
+Twisted has a higher level of abstraction, in the class :py:class:`twisted.python.usage.Options` . It uses
 Python's reflection facilities to provide an easy to use yet
 flexible interface to the command line. While most command line
 processors either force the application writer to write their own
@@ -41,7 +41,7 @@ programmer to decide how much control they want.
 
 
 The ``Options`` class is used by subclassing. Since
-a lot of time it will be used in the :api:`twisted.tap <twisted.tap>` package, where the local
+a lot of time it will be used in the :py:mod:`twisted.tap` package, where the local
 conventions require the specific options parsing class to also
 be called ``Options`` , it is usually imported with
 
@@ -348,7 +348,7 @@ verbosity to -3.
     
 
 
-The :api:`twisted.python.usage.Options <usage.Options>` 
+The :py:class:`usage.Options <twisted.python.usage.Options>` 
 class knows that these are
 parameter-less options, since the methods do not receive an
 argument. Here is an example for a method with a parameter:

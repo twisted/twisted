@@ -10,9 +10,10 @@ with it some bytes of overhead.  Check to make sure this overhead is not
 costing you more bandwidth than you are saving by limiting the rate!
 """
 
-from twisted.protocols import htb
 # for picklability
 import shaper
+
+from twisted.protocols import htb
 
 serverFilter = htb.HierarchicalBucketFilter()
 serverBucket = htb.Bucket()
@@ -24,29 +25,34 @@ serverBucket.rate = 20000
 serverFilter.buckets[None] = serverBucket
 
 # Web service is also limited per-host:
+
+
 class WebClientBucket(htb.Bucket):
     # Your first 10k is free
     maxburst = 10000
     # One kB/s thereafter.
     rate = 1000
 
+
 webFilter = htb.FilterByHost(serverFilter)
 webFilter.bucketFactory = shaper.WebClientBucket
 
-servertype = "web" # "chargen"
+servertype = "web"  # "chargen"
 
 if servertype == "web":
     from twisted.web import server, static
+
     site = server.Site(static.File("/var/www"))
     site.protocol = htb.ShapedProtocolFactory(site.protocol, webFilter)
 elif servertype == "chargen":
-    from twisted.protocols import wire
     from twisted.internet import protocol
+    from twisted.protocols import wire
 
     site = protocol.ServerFactory()
     site.protocol = htb.ShapedProtocolFactory(wire.Chargen, webFilter)
-    #site.protocol = wire.Chargen
+    # site.protocol = wire.Chargen
 
 from twisted.internet import reactor
+
 reactor.listenTCP(8000, site)
 reactor.run()

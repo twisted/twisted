@@ -5,21 +5,20 @@
 Tools for automated testing of L{twisted.pair}-based applications.
 """
 
-import struct
 import socket
-from errno import EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINTR, EINVAL, ENOBUFS, ENOSYS, EPERM, EWOULDBLOCK
 from functools import wraps
 
 from zope.interface import implementer
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.ethernet import EthernetProtocol
-from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
-from twisted.pair.tuntap import _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelFlags
+from twisted.pair.rawudp import RawUDPProtocol
+from twisted.pair.tuntap import _IFNAMSIZ, _TUNSETIFF, TunnelFlags, _IInputOutputSystem
 from twisted.python.compat import nativeString
-
 
 # The number of bytes in the "protocol information" header that may be present
 # on datagrams read from a tunnel device.  This is two bytes of flags followed
@@ -276,10 +275,10 @@ class Tunnel:
         """
         if self.pendingSignals:
             self.pendingSignals.popleft()
-            raise IOError(EINTR, "Interrupted system call")
+            raise OSError(EINTR, "Interrupted system call")
 
         if len(datagram) > self.SEND_BUFFER_SIZE:
-            raise IOError(ENOBUFS, "No buffer space available")
+            raise OSError(ENOBUFS, "No buffer space available")
 
         self.writeBuffer.append(datagram)
         return len(datagram)
@@ -300,7 +299,7 @@ def _privileged(original):
     @wraps(original)
     def permissionChecker(self, *args, **kwargs):
         if original.__name__ not in self.permissions:
-            raise IOError(EPERM, "Operation not permitted")
+            raise OSError(EPERM, "Operation not permitted")
         return original(self, *args, **kwargs)
 
     return permissionChecker
@@ -328,7 +327,7 @@ class MemoryIOSystem:
     def __init__(self):
         self._devices = {}
         self._openFiles = {}
-        self.permissions = set(["open", "ioctl"])
+        self.permissions = {"open", "ioctl"}
 
     def getTunnel(self, port):
         """
@@ -434,10 +433,10 @@ class MemoryIOSystem:
         try:
             tunnel = self._openFiles[fd]
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
         if request != _TUNSETIFF:
-            raise IOError(EINVAL, "Request or args is not valid.")
+            raise OSError(EINVAL, "Request or args is not valid.")
 
         name, mode = struct.unpack("%dsH" % (_IFNAMSIZ,), args)
         tunnel.tunnelMode = mode

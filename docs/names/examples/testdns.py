@@ -48,7 +48,7 @@ def printResults(results, domainname):
     """
     Print the formatted results for each DNS record type.
     """
-    sys.stdout.write("# Domain Summary for %r\n" % (domainname,))
+    sys.stdout.write(f"# Domain Summary for {domainname!r}\n")
     sys.stdout.write("\n\n".join(results) + "\n")
 
 
@@ -60,7 +60,7 @@ def printError(failure, domainname):
     failure.trap(defer.FirstError)
     failure = failure.value.subFailure
     failure.trap(error.DNSNameError)
-    sys.stderr.write("ERROR: domain name not found %r\n" % (domainname,))
+    sys.stderr.write(f"ERROR: domain name not found {domainname!r}\n")
 
 
 def main(reactor, *argv):
@@ -69,7 +69,7 @@ def main(reactor, *argv):
         options.parseOptions(argv)
     except usage.UsageError as errortext:
         sys.stderr.write(str(options) + "\n")
-        sys.stderr.write("ERROR: %s\n" % (errortext,))
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
     domainname = options["domainname"]

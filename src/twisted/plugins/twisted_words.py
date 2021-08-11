@@ -3,11 +3,9 @@
 
 from zope.interface import provider
 
-from twisted.plugin import IPlugin
-
 from twisted.application.service import ServiceMaker
+from twisted.plugin import IPlugin
 from twisted.words import iwords
-
 
 NewTwistedWords = ServiceMaker(
     "New Twisted Words", "twisted.words.tap", "A modern words server", "words"

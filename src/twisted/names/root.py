@@ -13,9 +13,9 @@ todo::
     documentation
 """
 
-from twisted.python.failure import Failure
 from twisted.internet import defer
-from twisted.names import dns, common, error
+from twisted.names import common, dns, error
+from twisted.python.failure import Failure
 
 
 class _DummyController:
@@ -216,6 +216,7 @@ class Resolver(common.ResolverBase):
                     )
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
+
                     def cbResolved(results):
                         answers, authority, additional = results
                         answers.insert(0, previous)

@@ -9,10 +9,10 @@ L{IReactorProcess} implementations.
 
 from typing import Optional
 
-from twisted.python.reflect import qual
 from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
 from twisted.python.log import err
+from twisted.python.reflect import qual
 
 _missingProcessExited = (
     "Since Twisted 8.2, IProcessProtocol.processExited "
@@ -21,8 +21,8 @@ _missingProcessExited = (
 
 
 class BaseProcess:
-    pid = None  # type: Optional[int]
-    status = None  # type: Optional[int]
+    pid: Optional[int] = None
+    status: Optional[int] = None
     lostProcess = 0
     proto = None
 

@@ -6,26 +6,42 @@ Tests for the flattening portion of L{twisted.web.template}, implemented in
 L{twisted.web._flatten}.
 """
 
+import re
 import sys
 import traceback
-
-from xml.etree.ElementTree import XML
-
 from collections import OrderedDict
+from textwrap import dedent
+from types import FunctionType
+from typing import Callable, Dict, List, NoReturn, Optional, cast
+from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
 
-from twisted.trial.unittest import TestCase
+from twisted.internet.defer import (
+    CancelledError,
+    Deferred,
+    gatherResults,
+    passthru,
+    succeed,
+)
+from twisted.python.failure import Failure
 from twisted.test.testutils import XMLAssertionMixin
-
-from twisted.internet.defer import passthru, succeed, gatherResults
-
-from twisted.web.iweb import IRenderable
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-
-from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
-from twisted.web.template import Element, renderer, TagLoader, flattenString
-
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
+from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
+from twisted.web.template import (
+    CDATA,
+    CharRef,
+    Comment,
+    Element,
+    Flattenable,
+    Tag,
+    TagLoader,
+    flattenString,
+    renderer,
+    slot,
+    tags,
+)
 from twisted.web.test._util import FlattenTestCase
 
 
@@ -34,39 +50,35 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     Tests for flattening various things.
     """
 
-    def test_nestedTags(self):
+    def test_nestedTags(self) -> None:
         """
         Test that nested tags flatten correctly.
         """
-        return self.assertFlattensTo(
+        self.assertFlattensImmediately(
             tags.html(tags.body("42"), hi="there"),
             b'<html hi="there"><body>42</body></html>',
         )
 
-    def test_serializeString(self):
+    def test_serializeString(self) -> None:
         """
         Test that strings will be flattened and escaped correctly.
         """
-        return gatherResults(
-            [
-                self.assertFlattensTo("one", b"one"),
-                self.assertFlattensTo("<abc&&>123", b"&lt;abc&amp;&amp;&gt;123"),
-            ]
-        )
+        self.assertFlattensImmediately("one", b"one"),
+        self.assertFlattensImmediately("<abc&&>123", b"&lt;abc&amp;&amp;&gt;123"),
 
-    def test_serializeSelfClosingTags(self):
+    def test_serializeSelfClosingTags(self) -> None:
         """
         The serialized form of a self-closing tag is C{'<tagName />'}.
         """
-        return self.assertFlattensTo(tags.img(), b"<img />")
+        self.assertFlattensImmediately(tags.img(), b"<img />")
 
-    def test_serializeAttribute(self):
+    def test_serializeAttribute(self) -> None:
         """
         The serialized form of attribute I{a} with value I{b} is C{'a="b"'}.
         """
         self.assertFlattensImmediately(tags.img(src="foo"), b'<img src="foo" />')
 
-    def test_serializedMultipleAttributes(self):
+    def test_serializedMultipleAttributes(self) -> None:
         """
         Multiple attributes are separated by a single space in their serialized
         form.
@@ -75,7 +87,11 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         tag.attributes = OrderedDict([("src", "foo"), ("name", "bar")])
         self.assertFlattensImmediately(tag, b'<img src="foo" name="bar" />')
 
-    def checkAttributeSanitization(self, wrapData, wrapTag):
+    def checkAttributeSanitization(
+        self,
+        wrapData: Callable[[str], Flattenable],
+        wrapTag: Callable[[Tag], Flattenable],
+    ) -> None:
         """
         Common implementation of L{test_serializedAttributeWithSanitization}
         and L{test_serializedDeferredAttributeWithSanitization},
@@ -83,19 +99,16 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         @param wrapData: A 1-argument callable that wraps around the
             attribute's value so other tests can customize it.
-        @param wrapData: callable taking L{bytes} and returning something
-            flattenable
 
         @param wrapTag: A 1-argument callable that wraps around the outer tag
             so other tests can customize it.
-        @type wrapTag: callable taking L{Tag} and returning L{Tag}.
         """
         self.assertFlattensImmediately(
             wrapTag(tags.img(src=wrapData('<>&"'))),
             b'<img src="&lt;&gt;&amp;&quot;" />',
         )
 
-    def test_serializedAttributeWithSanitization(self):
+    def test_serializedAttributeWithSanitization(self) -> None:
         """
         Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
         C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
@@ -103,7 +116,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.checkAttributeSanitization(passthru, passthru)
 
-    def test_serializedDeferredAttributeWithSanitization(self):
+    def test_serializedDeferredAttributeWithSanitization(self) -> None:
         """
         Like L{test_serializedAttributeWithSanitization}, but when the contents
         of the attribute are in a L{Deferred
@@ -111,17 +124,22 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.checkAttributeSanitization(succeed, passthru)
 
-    def test_serializedAttributeWithSlotWithSanitization(self):
+    def test_serializedAttributeWithSlotWithSanitization(self) -> None:
         """
         Like L{test_serializedAttributeWithSanitization} but with a slot.
         """
         toss = []
-        self.checkAttributeSanitization(
-            lambda value: toss.append(value) or slot("stuff"),
-            lambda tag: tag.fillSlots(stuff=toss.pop()),
-        )
 
-    def test_serializedAttributeWithTransparentTag(self):
+        def insertSlot(value: str) -> Flattenable:
+            toss.append(value)
+            return slot("stuff")
+
+        def fillSlot(tag: Tag) -> Tag:
+            return tag.fillSlots(stuff=toss.pop())
+
+        self.checkAttributeSanitization(insertSlot, fillSlot)
+
+    def test_serializedAttributeWithTransparentTag(self) -> None:
         """
         Attribute values which are supplied via the value of a C{t:transparent}
         tag have the same substitution rules to them as values supplied
@@ -129,28 +147,33 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.checkAttributeSanitization(tags.transparent, passthru)
 
-    def test_serializedAttributeWithTransparentTagWithRenderer(self):
+    def test_serializedAttributeWithTransparentTagWithRenderer(self) -> None:
         """
         Like L{test_serializedAttributeWithTransparentTag}, but when the
         attribute is rendered by a renderer on an element.
         """
 
         class WithRenderer(Element):
-            def __init__(self, value, loader):
+            def __init__(self, value: str, loader: Optional[ITemplateLoader]):
                 self.value = value
-                super(WithRenderer, self).__init__(loader)
+                super().__init__(loader)
 
             @renderer
-            def stuff(self, request, tag):
+            def stuff(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
                 return self.value
 
         toss = []
-        self.checkAttributeSanitization(
-            lambda value: toss.append(value) or tags.transparent(render="stuff"),
-            lambda tag: WithRenderer(toss.pop(), TagLoader(tag)),
-        )
 
-    def test_serializedAttributeWithRenderable(self):
+        def insertRenderer(value: str) -> Flattenable:
+            toss.append(value)
+            return tags.transparent(render="stuff")
+
+        def render(tag: Tag) -> Flattenable:
+            return WithRenderer(toss.pop(), TagLoader(tag))
+
+        self.checkAttributeSanitization(insertRenderer, render)
+
+    def test_serializedAttributeWithRenderable(self) -> None:
         """
         Like L{test_serializedAttributeWithTransparentTag}, but when the
         attribute is a provider of L{IRenderable} rather than a transparent
@@ -159,22 +182,29 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         @implementer(IRenderable)
         class Arbitrary:
-            def __init__(self, value):
+            def __init__(self, value: Flattenable):
                 self.value = value
 
-            def render(self, request):
+            def render(self, request: Optional[IRequest]) -> Flattenable:
                 return self.value
+
+            def lookupRenderMethod(
+                self, name: str
+            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
+                raise NotImplementedError("Unexpected call")
 
         self.checkAttributeSanitization(Arbitrary, passthru)
 
-    def checkTagAttributeSerialization(self, wrapTag):
+    def checkTagAttributeSerialization(
+        self, wrapTag: Callable[[Tag], Flattenable]
+    ) -> None:
         """
         Common implementation of L{test_serializedAttributeWithTag} and
         L{test_serializedAttributeWithDeferredTag}.
 
         @param wrapTag: A 1-argument callable that wraps around the attribute's
             value so other tests can customize it.
-        @param wrapTag: callable taking L{Tag} and returning something
+        @type wrapTag: callable taking L{Tag} and returning something
             flattenable
         """
         innerTag = tags.a('<>&"')
@@ -191,7 +221,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         # as a tag*.
         self.assertXMLEqual(XML(outer).attrib["src"], inner)
 
-    def test_serializedAttributeWithTag(self):
+    def test_serializedAttributeWithTag(self) -> None:
         """
         L{Tag} objects which are serialized within the context of an attribute
         are serialized such that the text content of the attribute may be
@@ -199,14 +229,14 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.checkTagAttributeSerialization(passthru)
 
-    def test_serializedAttributeWithDeferredTag(self):
+    def test_serializedAttributeWithDeferredTag(self) -> None:
         """
         Like L{test_serializedAttributeWithTag}, but when the L{Tag} is in a
         L{Deferred <twisted.internet.defer.Deferred>}.
         """
         self.checkTagAttributeSerialization(succeed)
 
-    def test_serializedAttributeWithTagWithAttribute(self):
+    def test_serializedAttributeWithTagWithAttribute(self) -> None:
         """
         Similar to L{test_serializedAttributeWithTag}, but for the additional
         complexity where the tag which is the attribute value itself has an
@@ -224,13 +254,13 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             XML(flattened).attrib["src"], b'<a href="&lt;&gt;&amp;&quot;"></a>'
         )
 
-    def test_serializeComment(self):
+    def test_serializeComment(self) -> None:
         """
         Test that comments are correctly flattened and escaped.
         """
-        return (self.assertFlattensTo(Comment("foo bar"), b"<!--foo bar-->"),)
+        self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_commentEscaping(self):
+    def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
         so that the result is a legal SGML and XML comment.
@@ -245,17 +275,18 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         @see: U{http://www.w3.org/TR/REC-xml/#sec-comments}
         """
 
-        def verifyComment(c):
+        def verifyComment(c: bytes) -> None:
             self.assertTrue(
                 c.startswith(b"<!--"),
-                "%r does not start with the comment prefix" % (c,),
+                f"{c!r} does not start with the comment prefix",
             )
             self.assertTrue(
-                c.endswith(b"-->"), "%r does not end with the comment suffix" % (c,)
+                c.endswith(b"-->"),
+                f"{c!r} does not end with the comment suffix",
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(c) >= 7, "%r is too short to be a legal comment" % (c,))
+            self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
             self.assertNotIn(b"--", content)
             self.assertNotIn(b">", content)
@@ -276,73 +307,61 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             results.append(d)
         return gatherResults(results)
 
-    def test_serializeCDATA(self):
+    def test_serializeCDATA(self) -> None:
         """
         Test that CDATA is correctly flattened and escaped.
         """
-        return gatherResults(
-            [
-                self.assertFlattensTo(CDATA("foo bar"), b"<![CDATA[foo bar]]>"),
-                self.assertFlattensTo(
-                    CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>"
-                ),
-            ]
+        self.assertFlattensImmediately(CDATA("foo bar"), b"<![CDATA[foo bar]]>"),
+        self.assertFlattensImmediately(
+            CDATA("foo ]]> bar"), b"<![CDATA[foo ]]]]><![CDATA[> bar]]>"
         )
 
-    def test_serializeUnicode(self):
+    def test_serializeUnicode(self) -> None:
         """
         Test that unicode is encoded correctly in the appropriate places, and
         raises an error when it occurs in inappropriate place.
         """
         snowman = "\N{SNOWMAN}"
-        return gatherResults(
-            [
-                self.assertFlattensTo(snowman, b"\xe2\x98\x83"),
-                self.assertFlattensTo(tags.p(snowman), b"<p>\xe2\x98\x83</p>"),
-                self.assertFlattensTo(Comment(snowman), b"<!--\xe2\x98\x83-->"),
-                self.assertFlattensTo(CDATA(snowman), b"<![CDATA[\xe2\x98\x83]]>"),
-                self.assertFlatteningRaises(Tag(snowman), UnicodeEncodeError),
-                self.assertFlatteningRaises(
-                    Tag("p", attributes={snowman: ""}), UnicodeEncodeError
-                ),
-            ]
+        self.assertFlattensImmediately(snowman, b"\xe2\x98\x83")
+        self.assertFlattensImmediately(tags.p(snowman), b"<p>\xe2\x98\x83</p>")
+        self.assertFlattensImmediately(Comment(snowman), b"<!--\xe2\x98\x83-->")
+        self.assertFlattensImmediately(CDATA(snowman), b"<![CDATA[\xe2\x98\x83]]>")
+        self.assertFlatteningRaises(Tag(snowman), UnicodeEncodeError)
+        self.assertFlatteningRaises(
+            Tag("p", attributes={snowman: ""}), UnicodeEncodeError
         )
 
-    def test_serializeCharRef(self):
+    def test_serializeCharRef(self) -> None:
         """
         A character reference is flattened to a string using the I{&#NNNN;}
         syntax.
         """
         ref = CharRef(ord("\N{SNOWMAN}"))
-        return self.assertFlattensTo(ref, b"&#9731;")
+        self.assertFlattensImmediately(ref, b"&#9731;")
 
-    def test_serializeDeferred(self):
+    def test_serializeDeferred(self) -> None:
         """
         Test that a deferred is substituted with the current value in the
         callback chain when flattened.
         """
-        return self.assertFlattensTo(succeed("two"), b"two")
+        self.assertFlattensImmediately(succeed("two"), b"two")
 
-    def test_serializeSameDeferredTwice(self):
+    def test_serializeSameDeferredTwice(self) -> None:
         """
         Test that the same deferred can be flattened twice.
         """
         d = succeed("three")
-        return gatherResults(
-            [
-                self.assertFlattensTo(d, b"three"),
-                self.assertFlattensTo(d, b"three"),
-            ]
-        )
+        self.assertFlattensImmediately(d, b"three")
+        self.assertFlattensImmediately(d, b"three")
 
-    def test_serializeCoroutine(self):
+    def test_serializeCoroutine(self) -> None:
         """
         Test that a coroutine returning a value is substituted with the that
         value when flattened.
         """
         from textwrap import dedent
 
-        namespace = {}
+        namespace: Dict[str, FunctionType] = {}
         exec(
             dedent(
                 """
@@ -354,9 +373,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         )
         coro = namespace["coro"]
 
-        return self.assertFlattensTo(coro("four"), b"four")
+        self.assertFlattensImmediately(coro("four"), b"four")
 
-    def test_serializeCoroutineWithAwait(self):
+    def test_serializeCoroutineWithAwait(self) -> None:
         """
         Test that a coroutine returning an awaited deferred value is
         substituted with that value when flattened.
@@ -375,16 +394,16 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         )
         coro = namespace["coro"]
 
-        return self.assertFlattensTo(coro("four"), b"four")
+        self.assertFlattensImmediately(coro("four"), b"four")
 
-    def test_serializeIRenderable(self):
+    def test_serializeIRenderable(self) -> None:
         """
         Test that flattening respects all of the IRenderable interface.
         """
 
         @implementer(IRenderable)
         class FakeElement:
-            def render(ign, ored):
+            def render(ign, ored: object) -> Tag:
                 return tags.p(
                     "hello, ",
                     tags.transparent(render="test"),
@@ -392,44 +411,46 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
                     tags.transparent(render="test"),
                 )
 
-            def lookupRenderMethod(ign, name):
+            def lookupRenderMethod(
+                ign, name: str
+            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
                 self.assertEqual(name, "test")
                 return lambda ign, node: node("world")
 
-        return gatherResults(
-            [
-                self.assertFlattensTo(FakeElement(), b"<p>hello, world - world</p>"),
-            ]
-        )
+        self.assertFlattensImmediately(FakeElement(), b"<p>hello, world - world</p>")
 
-    def test_serializeSlots(self):
+    def test_serializeMissingRenderFactory(self) -> None:
+        """
+        Test that flattening a tag with a C{render} attribute when no render
+        factory is available in the context raises an exception.
+        """
+
+        self.assertFlatteningRaises(tags.transparent(render="test"), ValueError)
+
+    def test_serializeSlots(self) -> None:
         """
         Test that flattening a slot will use the slot value from the tag.
         """
         t1 = tags.p(slot("test"))
         t2 = t1.clone()
         t2.fillSlots(test="hello, world")
-        return gatherResults(
-            [
-                self.assertFlatteningRaises(t1, UnfilledSlot),
-                self.assertFlattensTo(t2, b"<p>hello, world</p>"),
-            ]
-        )
+        self.assertFlatteningRaises(t1, UnfilledSlot)
+        self.assertFlattensImmediately(t2, b"<p>hello, world</p>")
 
-    def test_serializeDeferredSlots(self):
+    def test_serializeDeferredSlots(self) -> None:
         """
         Test that a slot with a deferred as its value will be flattened using
         the value from the deferred.
         """
         t = tags.p(slot("test"))
         t.fillSlots(test=succeed(tags.em("four>")))
-        return self.assertFlattensTo(t, b"<p><em>four&gt;</em></p>")
+        self.assertFlattensImmediately(t, b"<p><em>four&gt;</em></p>")
 
-    def test_unknownTypeRaises(self):
+    def test_unknownTypeRaises(self) -> None:
         """
         Test that flattening an unknown type of thing raises an exception.
         """
-        return self.assertFlatteningRaises(None, UnsupportedType)
+        self.assertFlatteningRaises(None, UnsupportedType)  # type: ignore[arg-type]
 
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
@@ -443,12 +464,12 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 HERE = (lambda: None).__code__.co_filename
 
 
-class FlattenerErrorTests(TestCase):
+class FlattenerErrorTests(SynchronousTestCase):
     """
     Tests for L{FlattenerError}.
     """
 
-    def test_renderable(self):
+    def test_renderable(self) -> None:
         """
         If a L{FlattenerError} is created with an L{IRenderable} provider root,
         the repr of that object is included in the string representation of the
@@ -456,7 +477,7 @@ class FlattenerErrorTests(TestCase):
         """
 
         @implementer(IRenderable)
-        class Renderable:
+        class Renderable:  # type: ignore[misc]
             def __repr__(self) -> str:
                 return "renderable repr"
 
@@ -467,7 +488,7 @@ class FlattenerErrorTests(TestCase):
             "RuntimeError: reason\n",
         )
 
-    def test_tag(self):
+    def test_tag(self) -> None:
         """
         If a L{FlattenerError} is created with a L{Tag} instance with source
         location information, the source location is included in the string
@@ -482,7 +503,7 @@ class FlattenerErrorTests(TestCase):
             "RuntimeError: reason\n",
         )
 
-    def test_tagWithoutLocation(self):
+    def test_tagWithoutLocation(self) -> None:
         """
         If a L{FlattenerError} is created with a L{Tag} instance without source
         location information, only the tagName is included in the string
@@ -493,17 +514,17 @@ class FlattenerErrorTests(TestCase):
             "Exception while flattening:\n" "  Tag <span>\n" "RuntimeError: reason\n",
         )
 
-    def test_traceback(self):
+    def test_traceback(self) -> None:
         """
         If a L{FlattenerError} is created with traceback frames, they are
         included in the string representation of the exception.
         """
         # Try to be realistic in creating the data passed in for the traceback
         # frames.
-        def f():
+        def f() -> None:
             g()
 
-        def g():
+        def g() -> NoReturn:
             raise RuntimeError("reason")
 
         try:
@@ -530,3 +551,89 @@ class FlattenerErrorTests(TestCase):
                 g.__code__.co_firstlineno + 1,
             ),
         )
+
+    def test_asynchronousFlattenError(self) -> None:
+        """
+        When flattening a renderer which raises an exception asynchronously,
+        the error is reported when it occurs.
+        """
+        failing: Deferred[object] = Deferred()
+
+        @implementer(IRenderable)
+        class NotActuallyRenderable:
+            "No methods provided; this will fail"
+
+            def __repr__(self) -> str:
+                return "<unrenderable>"
+
+            def lookupRenderMethod(
+                self, name: str
+            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
+                ...
+
+            def render(self, request: Optional[IRequest]) -> Flattenable:
+                return failing
+
+        flattening = flattenString(None, [NotActuallyRenderable()])
+        self.assertNoResult(flattening)
+        exc = RuntimeError("example")
+        failing.errback(exc)
+        failure = self.failureResultOf(flattening, FlattenerError)
+        self.assertRegex(
+            str(failure.value),
+            re.compile(
+                dedent(
+                    """\
+                    Exception while flattening:
+                      \\[<unrenderable>\\]
+                      <unrenderable>
+                      .*
+                      File ".*", line \\d*, in _flattenTree
+                        element = await element
+                    RuntimeError: example
+                    """
+                ),
+                flags=re.MULTILINE,
+            ),
+        )
+        # The original exception is unmodified and will be logged separately if
+        # unhandled.
+        self.failureResultOf(failing, RuntimeError)
+
+    def test_cancel(self) -> None:
+        """
+        The flattening of a Deferred can be cancelled.
+        """
+        cancelCount = 0
+        cancelArg = None
+
+        def checkCancel(cancelled: Deferred[object]) -> None:
+            nonlocal cancelArg, cancelCount
+            cancelArg = cancelled
+            cancelCount += 1
+
+        err = None
+
+        def saveErr(failure: Failure) -> None:
+            nonlocal err
+            err = failure
+
+        d: Deferred[object] = Deferred(checkCancel)
+        flattening = flattenString(None, d)
+        self.assertNoResult(flattening)
+        d.addErrback(saveErr)
+
+        flattening.cancel()
+
+        # Check whether we got an orderly cancellation.
+        # Do this first to get more meaningful reporting if something crashed.
+        failure = self.failureResultOf(flattening, FlattenerError)
+
+        self.assertEqual(cancelCount, 1)
+        self.assertIs(cancelArg, d)
+
+        self.assertIsInstance(err, Failure)
+        self.assertIsInstance(cast(Failure, err).value, CancelledError)
+
+        exc = failure.value.args[0]
+        self.assertIsInstance(exc, CancelledError)

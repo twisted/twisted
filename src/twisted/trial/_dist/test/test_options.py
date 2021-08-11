@@ -5,10 +5,12 @@
 Tests for distributed trial's options management.
 """
 
-import os, sys, gc
+import gc
+import os
+import sys
 
-from twisted.trial.unittest import TestCase
 from twisted.trial._dist.options import WorkerOptions
+from twisted.trial.unittest import TestCase
 
 
 class WorkerOptionsTests(TestCase):

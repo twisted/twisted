@@ -12,19 +12,19 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import nativeString
-
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib
 from urllib.parse import urlparse
-from xmlrpc.client import Fault, Binary, Boolean, DateTime
+from xmlrpc.client import Binary, Boolean, DateTime, Fault
+
+from twisted.internet import defer, error, protocol
+from twisted.logger import Logger
+from twisted.python import failure, reflect
+from twisted.python.compat import nativeString
 
 # Sibling Imports
-from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor, error
-from twisted.python import reflect, failure
-from twisted.logger import Logger
+from twisted.web import http, resource, server
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001
@@ -142,7 +142,7 @@ class XMLRPC(resource.Resource):
                 request.content.read(), use_datetime=self.useDateTime
             )
         except Exception as e:
-            f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
+            f = Fault(self.FAILURE, f"Can't deserialize input: {e}")
             self._cbRender(f, request)
         else:
             try:
@@ -177,7 +177,7 @@ class XMLRPC(resource.Resource):
                     result, methodresponse=True, allow_none=self.allowNone
                 )
             except Exception as e:
-                f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
+                f = Fault(self.FAILURE, f"Can't serialize output: {e}")
                 content = xmlrpclib.dumps(
                     f, methodresponse=True, allow_none=self.allowNone
                 )
@@ -293,7 +293,7 @@ class XMLRPCIntrospection(XMLRPC):
         method = self._xmlrpc_parent.lookupProcedure(method)
         return getattr(method, "help", None) or getattr(method, "__doc__", None) or ""
 
-    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined] # noqa
+    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined]
 
     def xmlrpc_methodSignature(self, method):
         """
@@ -317,8 +317,8 @@ def addIntrospection(xmlrpc):
     """
     Add Introspection support to an XMLRPC server.
 
-    @param parent: the XMLRPC server to add Introspection support to.
-    @type parent: L{XMLRPC}
+    @param xmlrpc: the XMLRPC server to add Introspection support to.
+    @type xmlrpc: L{XMLRPC}
     """
     xmlrpc.putSubHandler("system", XMLRPCIntrospection(xmlrpc))
 
@@ -450,7 +450,7 @@ class QueryFactory(protocol.ClientFactory):
             return
         try:
             response = xmlrpclib.loads(contents, use_datetime=self.useDateTime)[0][0]
-        except:
+        except BaseException:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
         else:
@@ -527,7 +527,7 @@ class Proxy:
         allowNone=False,
         useDateTime=False,
         connectTimeout=30.0,
-        reactor=reactor,
+        reactor=None,
     ):
         """
         @param url: The URL to which to post method calls.  Calls will be made
@@ -537,6 +537,9 @@ class Proxy:
         @type url: L{bytes}
 
         """
+        if reactor is None:
+            from twisted.internet import reactor
+
         scheme, netloc, path, params, query, fragment = urlparse(url)
         netlocParts = netloc.split(b"@")
         if len(netlocParts) == 2:
@@ -544,7 +547,7 @@ class Proxy:
             self.user = userpass.pop(0)
             try:
                 self.password = userpass.pop(0)
-            except:
+            except BaseException:
                 self.password = None
         else:
             self.user = self.password = None
@@ -552,7 +555,7 @@ class Proxy:
         self.host = hostport.pop(0)
         try:
             self.port = int(hostport.pop(0))
-        except:
+        except BaseException:
             self.port = None
         self.path = path
         if self.path in [b"", None]:

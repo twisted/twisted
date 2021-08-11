@@ -5,16 +5,15 @@
 Abstract file handle class
 """
 
-from twisted.internet import main, error, interfaces
-from twisted.internet.abstract import _ConsumerMixin, _LogOwner
-from twisted.python import failure
-
-from zope.interface import implementer
 import errno
 
-from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
+from zope.interface import implementer
+
+from twisted.internet import error, interfaces, main
+from twisted.internet.abstract import _ConsumerMixin, _dataMustBeBytes, _LogOwner
 from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF, ERROR_IO_PENDING
+from twisted.python import failure
 
 
 @implementer(
@@ -259,8 +258,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
         The data is buffered until his file descriptor is ready for writing.
         """
-        if isinstance(data, str):  # no, really, I mean it
-            raise TypeError("Data must not be string")
+        _dataMustBeBytes(data)
         if not self.connected or self._writeDisconnected:
             return
         if data:
@@ -274,8 +272,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
 
     def writeSequence(self, iovec):
         for i in iovec:
-            if isinstance(i, str):  # no, really, I mean it
-                raise TypeError("Data must not be string")
+            _dataMustBeBytes(i)
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)

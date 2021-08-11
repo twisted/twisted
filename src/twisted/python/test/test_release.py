@@ -9,80 +9,50 @@ only ever performed on Linux.
 """
 
 
-import glob
 import functools
+import glob
 import operator
 import os
-import sys
-import textwrap
-import tempfile
 import shutil
-
+import sys
+import tempfile
+import textwrap
 from io import BytesIO, StringIO
-
-from twisted.trial.unittest import TestCase, FailTest, SkipTest
-
-from twisted.python.procutils import which
-from twisted.python import release
-from twisted.python.filepath import FilePath
+from subprocess import CalledProcessError
+from unittest import skipIf
 
 from incremental import Version
 
-from subprocess import CalledProcessError
-
+from twisted.python import release
 from twisted.python._release import (
-    findTwistedProjects,
-    replaceInFile,
-    Project,
-    filePathDelta,
     APIBuilder,
     BuildAPIDocsScript,
     CheckNewsfragmentScript,
-    runCommand,
-    NotWorkingDirectory,
-    SphinxBuilder,
     GitCommand,
-    getRepositoryCommand,
     IVCSCommand,
+    NotWorkingDirectory,
+    Project,
+    SphinxBuilder,
+    filePathDelta,
+    findTwistedProjects,
+    getRepositoryCommand,
+    replaceInFile,
+    runCommand,
 )
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
+from twisted.trial.unittest import FailTest, SkipTest, TestCase
 
-if os.name != "posix":
+if sys.platform != "win32":
+    skip = None
+else:
     skip = "Release toolchain only supported on POSIX."
-else:
-    skip = ""
 
-testingSphinxConf = "master_doc = 'index'\n"
-
-try:
-    import pydoctor.driver
-
-    # it might not be installed, or it might use syntax not available in
-    # this version of Python.
-except (ImportError, SyntaxError):
-    pydoctorSkip = "Pydoctor is not present."
-else:
-    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        pydoctorSkip = "Pydoctor is too old."
-    else:
-        pydoctorSkip = skip
-
-
-if not skip and which("sphinx-build"):
-    sphinxSkip = None
-else:
-    sphinxSkip = "Sphinx not available."
-
-
-if not skip and which("git"):
-    gitVersion = runCommand(["git", "--version"]).split(b" ")[2].split(b".")
-
-    # We want git 2.0 or above.
-    if int(gitVersion[0]) >= 2:
-        gitSkip = skip
-    else:
-        gitSkip = "old git is present"
-else:
-    gitSkip = "git is not present."
+# This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
+PRECOMMIT_CI_ENVIRON = {"GITHUB_HEAD_REF": "pre-commit-ci-update-config"}
+# This should match the GHA environment for non pre-commit.ci PRs.
+GENERIC_CI_ENVIRON = {"GITHUB_HEAD_REF": "1234-some-branch-name"}
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -95,7 +65,7 @@ class ExternalTempdirTestCase(TestCase):
         """
         Make our own directory.
         """
-        newDir = tempfile.mkdtemp(dir="/tmp/")
+        newDir = tempfile.mkdtemp(dir=tempfile.gettempdir())
         self.addCleanup(shutil.rmtree, newDir)
         return newDir
 
@@ -187,7 +157,7 @@ class StructureAssertingMixin:
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x].replace("\n", os.linesep).encode("utf-8"))
+                child.setContent(dirDict[x].replace("\n", os.linesep).encode())
 
     def assertStructure(self, root, dirDict):
         """
@@ -206,14 +176,14 @@ class StructureAssertingMixin:
             if callable(expectation):
                 self.assertTrue(expectation(child))
             elif isinstance(expectation, dict):
-                self.assertTrue(child.isdir(), "{} is not a dir!".format(child.path))
+                self.assertTrue(child.isdir(), f"{child.path} is not a dir!")
                 self.assertStructure(child, expectation)
             else:
-                actual = child.getContent().decode("utf-8").replace(os.linesep, "\n")
+                actual = child.getContent().decode().replace(os.linesep, "\n")
                 self.assertEqual(actual, expectation)
             children.remove(pathSegment)
         if children:
-            self.fail("There were extra children in %s: %s" % (root.path, children))
+            self.fail(f"There were extra children in {root.path}: {children}")
 
 
 class ProjectTests(ExternalTempdirTestCase):
@@ -254,7 +224,7 @@ class ProjectTests(ExternalTempdirTestCase):
                 directory.createDirectory()
             directory.child("__init__.py").setContent(b"")
         directory.child("newsfragments").createDirectory()
-        directory.child("_version.py").setContent(genVersion(*version).encode("utf-8"))
+        directory.child("_version.py").setContent(genVersion(*version).encode())
         return Project(directory)
 
     def makeProjects(self, *versions):
@@ -408,13 +378,14 @@ class DoNotFailTests(TestCase):
             self.assertIsInstance(e, FailTest)
 
 
+pydoctor = requireModule("pydoctor")
+
+
+@skipIf(pydoctor is None, "Pydoctor is not present.")
 class APIBuilderTests(ExternalTempdirTestCase):
     """
     Tests for L{APIBuilder}.
     """
-
-    if pydoctorSkip:
-        skip = pydoctorSkip
 
     @doNotFailOnNetworkError
     def test_build(self):
@@ -438,7 +409,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "def foo():\n"
             "    '{}'\n"
             "def _bar():\n"
-            "    '{}'".format(docstring, privateDocstring).encode("utf-8")
+            "    '{}'".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -449,39 +420,36 @@ class APIBuilderTests(ExternalTempdirTestCase):
         indexPath = outputPath.child("index.html")
 
         self.assertTrue(
-            indexPath.exists(), "API index %r did not exist." % (outputPath.path,)
+            indexPath.exists(), f"API index {outputPath.path!r} did not exist."
         )
         self.assertIn(
-            '<a href="%s">%s</a>' % (projectURL, projectName),
-            indexPath.getContent(),
+            f'<a href="{projectURL}">{projectName}</a>',
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
-            quuxPath.getContent(),
+            f'<a href="{sourceURL}/{packageName}/__init__.py">(source)</a>',
+            quuxPath.getContent().decode(),
         )
         self.assertIn(
             '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
         )
-        self.assertIn(privateDocstring, quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
-        # There should also be a page for the foo function in quux.
-        self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
-
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     @doNotFailOnNetworkError
     def test_buildWithPolicy(self):
@@ -497,9 +465,11 @@ class APIBuilderTests(ExternalTempdirTestCase):
         packagePath = projectRoot.child("twisted")
         packagePath.makedirs()
         packagePath.child("__init__.py").setContent(
-            "def foo():\n" "    '{}'\n".format(docstring).encode("utf-8")
+            "def foo():\n" "    '{}'\n".format(docstring).encode()
         )
-        packagePath.child("_version.py").setContent(genVersion("twisted", 1, 0, 0))
+        packagePath.child("_version.py").setContent(
+            genVersion("twisted", 1, 0, 0).encode()
+        )
         outputPath = FilePath(self.mktemp())
 
         script = BuildAPIDocsScript()
@@ -507,30 +477,30 @@ class APIBuilderTests(ExternalTempdirTestCase):
 
         indexPath = outputPath.child("index.html")
         self.assertTrue(
-            indexPath.exists(), "API index {} did not exist.".format(outputPath.path)
+            indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
-            b'<a href="http://twistedmatrix.com/">Twisted</a>',
-            indexPath.getContent(),
+            '<a href="https://twistedmatrix.com/">Twisted</a>',
+            indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
 
         twistedPath = outputPath.child("twisted.html")
         self.assertTrue(
             twistedPath.exists(),
-            "Package documentation file {!r} did not exist.".format(twistedPath.path),
+            f"Package documentation file {twistedPath.path!r} did not exist.",
         )
         self.assertIn(
             docstring,
-            twistedPath.getContent(),
+            twistedPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         # Here we check that it figured out the correct version based on the
         # source code.
         self.assertIn(
-            b'<a href="https://github.com/twisted/twisted/tree/'
-            b'twisted-1.0.0/src/twisted">View Source</a>',
-            twistedPath.getContent(),
+            '<a href="https://github.com/twisted/twisted/tree/'
+            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
+            twistedPath.getContent().decode(),
         )
 
         self.assertEqual(stdout.getvalue(), b"")
@@ -567,7 +537,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
             "class Baz:\n"
             "    pass"
-            "".format(docstring, privateDocstring).encode("utf-8")
+            "".format(docstring, privateDocstring).encode()
         )
 
         outputPath = FilePath(self.mktemp())
@@ -578,35 +548,29 @@ class APIBuilderTests(ExternalTempdirTestCase):
         quuxPath = outputPath.child("quux.html")
         self.assertTrue(
             quuxPath.exists(),
-            "Package documentation file %r did not exist." % (quuxPath.path,),
+            f"Package documentation file {quuxPath.path!r} did not exist.",
         )
 
         self.assertIn(
             docstring,
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
             "Docstring not in package documentation file.",
         )
         self.assertIn(
             "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.getContent(),
+            quuxPath.getContent().decode(),
         )
-        self.assertIn("_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent())
-        self.assertIn(privateDocstring, quuxPath.getContent())
-
-        # There should also be a page for the foo function in quux.
-        self.assertTrue(quuxPath.sibling("quux.foo.html").exists())
-
         self.assertIn(
-            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.sibling("quux.foo.html").getContent(),
+            "_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent().decode()
         )
+        self.assertIn(privateDocstring, quuxPath.getContent().decode())
 
         self.assertIn(
             "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
-            quuxPath.sibling("quux.Baz.html").getContent(),
+            quuxPath.sibling("quux.Baz.html").getContent().decode(),
         )
 
-        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), b"")
 
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
@@ -673,6 +637,7 @@ class FilePathDeltaTests(TestCase):
         )
 
 
+@skipIf(not which("sphinx-build"), "Sphinx not available.")
 class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
@@ -691,8 +656,6 @@ class SphinxBuilderTests(TestCase):
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
-
-    skip = sphinxSkip
 
     confContent = """\
                   source_suffix = '.rst'
@@ -732,8 +695,8 @@ class SphinxBuilderTests(TestCase):
         files.  This includes a single source file ('index.rst') and the
         smallest 'conf.py' file possible in order to find that source file.
         """
-        self.sourceDir.child("conf.py").setContent(self.confContent.encode("utf-8"))
-        self.sourceDir.child("index.rst").setContent(self.indexContent.encode("utf-8"))
+        self.sourceDir.child("conf.py").setContent(self.confContent.encode())
+        self.sourceDir.child("index.rst").setContent(self.indexContent.encode())
 
     def verifyFileExists(self, fileDir, fileName):
         """
@@ -747,8 +710,7 @@ class SphinxBuilderTests(TestCase):
             C{fileDir}.
         @type fileName: L{str}
 
-        @raise: L{FailTest <twisted.trial.unittest.FailTest>} if
-            C{fileDir.child(fileName)}:
+        @raise FailTest: If C{fileDir.child(fileName)}:
 
                 1. Does not exist.
 
@@ -920,8 +882,6 @@ class GitCommandTest(CommandsTestMixin, ExternalTempdirTestCase):
     """
 
     createCommand = GitCommand
-    if gitSkip:
-        skip = gitSkip
 
     def makeRepository(self, root):
         """
@@ -954,8 +914,6 @@ class RepositoryCommandDetectionTest(ExternalTempdirTestCase):
     Test the L{getRepositoryCommand} to access the right set of VCS commands
     depending on the repository manipulated.
     """
-
-    skip = gitSkip
 
     def setUp(self):
         self.repos = FilePath(self.mktemp())
@@ -993,8 +951,6 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
     L{CheckNewsfragmentScript}.
     """
 
-    skip = gitSkip
-
     def setUp(self):
         self.origin = FilePath(self.mktemp())
         _gitInit(self.origin)
@@ -1007,6 +963,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         runCommand(["git", "clone", self.origin.path, self.repo.path])
         _gitConfig(self.repo)
+        # Inject a rigged environment to have full control over the test execution.
+        self.patch(os, "environ", GENERIC_CI_ENVIRON)
 
     def test_noArgs(self):
         """
@@ -1122,6 +1080,63 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No newsfragments should be on the release branch.")
+
+    def test_preCommitAutoupdate(self):
+        """
+        Running it on the autoupdate branch returns green if there is no
+        newsfragments even if there are changes.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1], "Autoupdated branch with no newsfragments, all good."
+        )
+
+    def test_preCommitAutoupdateWithNewsfragments(self):
+        """
+        Running it on the autoupdate branch returns red if there are new
+        newsfragments.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(
+            logs[-1], "No newsfragments should be present on an autoupdated branch."
+        )
 
     def test_onlyQuotes(self):
         """

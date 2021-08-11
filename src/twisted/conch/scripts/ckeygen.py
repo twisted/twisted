@@ -13,9 +13,9 @@ import socket
 import sys
 from functools import wraps
 from imp import reload
+
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-
 
 if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
     try:
@@ -118,7 +118,7 @@ def enumrepresentation(options):
         return options
     else:
         raise keys.BadFingerPrintFormat(
-            "Unsupported fingerprint format: %s" % (options["format"],)
+            "Unsupported fingerprint format: {}".format(options["format"])
         )
 
 
@@ -240,9 +240,9 @@ def changePassPhrase(options):
         except keys.BadKeyError:
             sys.exit("Could not change passphrase: old passphrase error")
         except keys.EncryptedKeyError as e:
-            sys.exit("Could not change passphrase: %s" % (e,))
+            sys.exit(f"Could not change passphrase: {e}")
     except keys.BadKeyError as e:
-        sys.exit("Could not change passphrase: %s" % (e,))
+        sys.exit(f"Could not change passphrase: {e}")
 
     if not options.get("newpass"):
         while 1:
@@ -263,12 +263,12 @@ def changePassPhrase(options):
             passphrase=options["newpass"],
         )
     except Exception as e:
-        sys.exit("Could not change passphrase: %s" % (e,))
+        sys.exit(f"Could not change passphrase: {e}")
 
     try:
         keys.Key.fromString(newkeydata, passphrase=options["newpass"])
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
-        sys.exit("Could not change passphrase: %s" % (e,))
+        sys.exit(f"Could not change passphrase: {e}")
 
     with open(options["filename"], "wb") as fd:
         fd.write(newkeydata)
@@ -312,15 +312,15 @@ def _saveKey(key, options):
     KeyTypeMapping = {"EC": "ecdsa", "Ed25519": "ed25519", "RSA": "rsa", "DSA": "dsa"}
     keyTypeName = KeyTypeMapping[key.type()]
     if not options["filename"]:
-        defaultPath = os.path.expanduser("~/.ssh/id_%s" % (keyTypeName,))
+        defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         newPath = _inputSaveFile(
-            "Enter file in which to save the key (%s): " % (defaultPath,)
+            f"Enter file in which to save the key ({defaultPath}): "
         )
 
         options["filename"] = newPath.strip() or defaultPath
 
     if os.path.exists(options["filename"]):
-        print("%s already exists." % (options["filename"],))
+        print("{} already exists.".format(options["filename"]))
         yn = input("Overwrite (y/n)? ")
         if yn[0].lower() != "y":
             sys.exit()
@@ -339,7 +339,7 @@ def _saveKey(key, options):
     if options.get("private-key-subtype") is None:
         options["private-key-subtype"] = _defaultPrivateKeySubtype(key.type())
 
-    comment = "%s@%s" % (getpass.getuser(), socket.gethostname())
+    comment = f"{getpass.getuser()}@{socket.gethostname()}"
 
     filepath.FilePath(options["filename"]).setContent(
         key.toString(
@@ -355,9 +355,9 @@ def _saveKey(key, options):
     )
     options = enumrepresentation(options)
 
-    print("Your identification has been saved in %s" % (options["filename"],))
-    print("Your public key has been saved in %s.pub" % (options["filename"],))
-    print("The key fingerprint in %s is:" % (options["format"],))
+    print("Your identification has been saved in {}".format(options["filename"]))
+    print("Your public key has been saved in {}.pub".format(options["filename"]))
+    print("The key fingerprint in {} is:".format(options["format"]))
     print(key.fingerprint(options["format"]))
 
 

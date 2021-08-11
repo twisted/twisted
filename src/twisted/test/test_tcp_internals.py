@@ -17,26 +17,25 @@ except ImportError:
 
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
-
-from twisted.python import log
+from twisted.internet import interfaces, reactor
+from twisted.internet.defer import gatherResults, maybeDeferred
+from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.internet.tcp import (
     _ACCEPT_ERRORS,
-    ECONNABORTED,
-    EPERM,
-    ENOMEM,
-    ENFILE,
     EAGAIN,
-    EMFILE,
-    ENOBUFS,
+    ECONNABORTED,
     EINPROGRESS,
+    EMFILE,
+    ENFILE,
+    ENOBUFS,
+    ENOMEM,
+    EPERM,
     EWOULDBLOCK,
     Port,
 )
-from twisted.internet.protocol import Protocol, ServerFactory
+from twisted.python import log
 from twisted.python.runtime import platform
-from twisted.internet.defer import maybeDeferred, gatherResults
-from twisted.internet import reactor, interfaces
+from twisted.trial.unittest import TestCase
 
 
 @skipIf(
@@ -113,7 +112,7 @@ class PlatformAssumptionsTests(TestCase):
         for i in range(self.socketLimit):
             try:
                 self.socket()
-            except socket.error as e:
+            except OSError as e:
                 if e.args[0] in (EMFILE, ENOBUFS):
                     # The desired state has been achieved.
                     break
@@ -180,7 +179,7 @@ class SelectReactorTests(TestCase):
             """
 
             def accept(self):
-                raise socket.error(socketErrorNumber, os.strerror(socketErrorNumber))
+                raise OSError(socketErrorNumber, os.strerror(socketErrorNumber))
 
         factory = ServerFactory()
         port = self.port(0, factory, interface="127.0.0.1")
@@ -325,7 +324,7 @@ class SelectReactorTests(TestCase):
                 acceptCalls[0] += 1
                 if acceptCalls[0] > maximumNumberOfAccepts:
                     self.fail("Maximum number of accept calls exceeded.")
-                raise socket.error(EPERM, os.strerror(EPERM))
+                raise OSError(EPERM, os.strerror(EPERM))
 
         # Verify that FakeSocketWithAcceptLimit.accept() fails the
         # test if the number of accept calls exceeds the maximum.
@@ -368,7 +367,7 @@ class SelectReactorTests(TestCase):
             """
 
             def accept(oself):
-                raise socket.error(unknownAcceptError, "unknown socket error message")
+                raise OSError(unknownAcceptError, "unknown socket error message")
 
         factory = ServerFactory()
         port = self.port(0, factory, interface="127.0.0.1")

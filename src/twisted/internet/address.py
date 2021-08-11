@@ -6,19 +6,22 @@ Address objects for network connections.
 """
 
 
-import attr
 import os
-import warnings
+from typing import Optional, Union
+from warnings import warn
 
 from zope.interface import implementer
+
+import attr
+from typing_extensions import Literal
+
 from twisted.internet.interfaces import IAddress
-from twisted.python.filepath import _asFilesystemBytes
-from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.filepath import _asFilesystemBytes, _coerceToFilesystemEncoding
 from twisted.python.runtime import platform
 
 
 @implementer(IAddress)
-@attr.s(hash=True)
+@attr.s(hash=True, auto_attribs=True)
 class IPv4Address:
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
@@ -34,13 +37,15 @@ class IPv4Address:
     @type port: C{int}
     """
 
-    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
-    host = attr.ib()
-    port = attr.ib()
+    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+        validator=attr.validators.in_(["TCP", "UDP"])
+    )
+    host: str
+    port: int
 
 
 @implementer(IAddress)
-@attr.s(hash=True)
+@attr.s(hash=True, auto_attribs=True)
 class IPv6Address:
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
@@ -64,11 +69,13 @@ class IPv6Address:
     @type scopeID: L{int} or L{str}
     """
 
-    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
-    host = attr.ib()
-    port = attr.ib()
-    flowInfo = attr.ib(default=0)
-    scopeID = attr.ib(default=0)
+    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+        validator=attr.validators.in_(["TCP", "UDP"])
+    )
+    host: str
+    port: int
+    flowInfo: int = 0
+    scopeID: Union[str, int] = 0
 
 
 @implementer(IAddress)
@@ -78,7 +85,7 @@ class _ProcessAddress:
     """
 
 
-@attr.s(hash=True)
+@attr.s(hash=True, auto_attribs=True)
 @implementer(IAddress)
 class HostnameAddress:
     """
@@ -91,11 +98,11 @@ class HostnameAddress:
     @type port: L{int}
     """
 
-    hostname = attr.ib()
-    port = attr.ib()
+    hostname: bytes
+    port: int
 
 
-@attr.s(hash=False, repr=False, eq=False)
+@attr.s(hash=False, repr=False, eq=False, auto_attribs=True)
 @implementer(IAddress)
 class UNIXAddress:
     """
@@ -105,9 +112,9 @@ class UNIXAddress:
     @type name: C{bytes}
     """
 
-    name = attr.ib(
+    name: Optional[bytes] = attr.ib(
         converter=attr.converters.optional(_asFilesystemBytes)
-    )  # type: bytes
+    )
 
     if getattr(os.path, "samefile", None) is not None:
 
@@ -142,7 +149,7 @@ class UNIXAddress:
         name = self.name
         if name:
             name = _coerceToFilesystemEncoding("", self.name)
-        return "UNIXAddress(%r)" % (name,)
+        return f"UNIXAddress({name!r})"
 
     def __hash__(self):
         if self.name is None:
@@ -163,7 +170,7 @@ class _ServerFactoryIPv4Address(IPv4Address):
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn(
+            warn(
                 "IPv4Address.__getitem__ is deprecated.  " "Use attributes instead.",
                 category=DeprecationWarning,
                 stacklevel=2,

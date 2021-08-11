@@ -15,26 +15,24 @@ import binascii
 import hmac
 import struct
 import zlib
-
 from hashlib import md5, sha1, sha256, sha384, sha512
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from twisted import __version__ as twisted_version
-from twisted.internet import protocol, defer
+from twisted.conch.ssh import _kex, address, keys
+from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
+from twisted.internet import defer, protocol
+from twisted.logger import Logger
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, networkString
-from twisted.logger import Logger
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
-
-from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs, int_from_bytes
 
 
 def _mpFromBytes(data):
@@ -48,7 +46,7 @@ def _mpFromBytes(data):
     @rtype: L{bytes}
     @return: The given data encoded as an SSH multiple-precision integer.
     """
-    return MP(int_from_bytes(data, "big"))
+    return MP(int.from_bytes(data, "big"))
 
 
 class _MACParams(tuple):
@@ -267,7 +265,7 @@ class SSHCiphers:
             return mac == b""
         data = struct.pack(">L", seqid) + data
         outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
-        return mac == outer
+        return hmac.compare_digest(mac, outer)
 
 
 def _getSupportedCiphers():
@@ -631,7 +629,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576:  # 1024 ** 2
             self.sendDisconnect(
                 DISCONNECT_PROTOCOL_ERROR,
-                networkString("bad packet length {}".format(packetLen)),
+                networkString(f"bad packet length {packetLen}"),
             )
             return
         if len(self.buf) < packetLen + 4 + ms:
@@ -733,7 +731,7 @@ class SSHTransportBase(protocol.Protocol):
         """
         if messageNum < 50 and messageNum in messages:
             messageType = messages[messageNum][4:]
-            f = getattr(self, "ssh_%s" % (messageType,), None)
+            f = getattr(self, f"ssh_{messageType}", None)
             if f is not None:
                 f(payload)
             else:
@@ -846,7 +844,7 @@ class SSHTransportBase(protocol.Protocol):
             compSC,
             langCS,
             langSC,
-        ) = [s.split(b",") for s in strings]
+        ) = (s.split(b",") for s in strings)
         # These are the server directions
         outs = [encSC, macSC, compSC]
         ins = [encCS, macSC, compCS]
@@ -1263,7 +1261,9 @@ class SSHTransportBase(protocol.Protocol):
             return x25519.X25519PrivateKey.generate()
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve private key for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve private key for {!r}".format(
+                    self.kexAlg
+                )
             )
 
     def _encodeECPublicKey(self, ecPub):
@@ -1290,7 +1290,7 @@ class SSHTransportBase(protocol.Protocol):
             )
         else:
             raise UnsupportedAlgorithm(
-                "Cannot encode elliptic curve public key for %r" % (self.kexAlg,)
+                f"Cannot encode elliptic curve public key for {self.kexAlg!r}"
             )
 
     def _generateECSharedSecret(self, ecPriv, theirECPubBytes):
@@ -1322,7 +1322,9 @@ class SSHTransportBase(protocol.Protocol):
             sharedSecret = ecPriv.exchange(theirECPub)
         else:
             raise UnsupportedAlgorithm(
-                "Cannot generate elliptic curve shared secret for %r" % (self.kexAlg,)
+                "Cannot generate elliptic curve shared secret for {!r}".format(
+                    self.kexAlg
+                )
             )
 
         return _mpFromBytes(sharedSecret)
@@ -1450,7 +1452,7 @@ class SSHServerTransport(SSHTransportBase):
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -1846,14 +1848,14 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = self._finishEphemeralDH(f)
-        h = sha1()
+        h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
@@ -1906,7 +1908,7 @@ class SSHClientTransport(SSHTransportBase):
         @param pubKey: the public key blob for the server's public key.
         @type pubKey: L{str}
         @param f: the server's Diffie-Hellman public key.
-        @type f: L{long}
+        @type f: L{int}
         @param signature: the server's signature, verifying that it has the
             correct private key.
         @type signature: L{str}

@@ -7,19 +7,14 @@ Mail protocol support.
 """
 
 
-from twisted.mail import pop3
-from twisted.mail import smtp
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.copyright import longversion
-from twisted.python import log
+from zope.interface import implementer
 
+from twisted.copyright import longversion
 from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
 from twisted.cred.error import UnauthorizedLogin
-
-from twisted.mail import relay
-
-from zope.interface import implementer
+from twisted.internet import defer, protocol
+from twisted.mail import pop3, relay, smtp
+from twisted.python import log
 
 
 @implementer(smtp.IMessageDelivery)
@@ -37,7 +32,7 @@ class DomainDeliveryBase:
     """
 
     service = None
-    protocolName = b"not-implemented-protocol"  # type: bytes
+    protocolName: bytes = b"not-implemented-protocol"
 
     def __init__(self, service, user, host=smtp.DNSNAME):
         """
@@ -195,7 +190,7 @@ class SMTPFactory(smtp.SMTPFactory):
         @rtype: L{SMTP}
         @return: An SMTP protocol.
         """
-        log.msg("Connection from %s" % (addr,))
+        log.msg(f"Connection from {addr}")
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.service = self.service
         p.portal = self.portal

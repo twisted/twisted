@@ -11,10 +11,12 @@ Usage:
 import sys
 
 from twisted.internet import reactor
-from twisted.web.client import getPage
 from twisted.python.util import println
+from twisted.web.client import getPage
 
-getPage(sys.argv[1]).addCallbacks(
-    callback=lambda value:(println(value),reactor.stop()),
-    errback=lambda error:(println("an error occurred", error),reactor.stop()))
+url = sys.argv[1].encode("ascii")
+getPage(url).addCallbacks(
+    callback=lambda value: (println(value), reactor.stop()),
+    errback=lambda error: (println("an error occurred", error), reactor.stop()),
+)
 reactor.run()

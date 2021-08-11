@@ -6,7 +6,6 @@ Tests for L{twisted.words.protocols.jabber.jid}.
 """
 
 from twisted.trial import unittest
-
 from twisted.words.protocols.jabber import jid
 
 

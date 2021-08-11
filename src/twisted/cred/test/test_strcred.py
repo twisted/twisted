@@ -10,17 +10,17 @@ import os
 from io import StringIO
 from typing import Sequence, Type
 from unittest import skipIf
+
 from zope.interface import Interface
 
 from twisted import plugin
-from twisted.trial.unittest import TestCase
-from twisted.cred import credentials, checkers, error, strcred
-from twisted.plugins import cred_file, cred_anonymous, cred_unix
+from twisted.cred import checkers, credentials, error, strcred
+from twisted.plugins import cred_anonymous, cred_file, cred_unix
 from twisted.python import usage
-from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
-
+from twisted.trial.unittest import TestCase
 
 crypt = requireModule("crypt")
 pwd = requireModule("pwd")
@@ -290,6 +290,8 @@ class CryptTests(TestCase):
         for salt in (None, "ab"):
             try:
                 cryptedCorrect = crypt.crypt(password, salt)
+                if isinstance(cryptedCorrect, bytes):
+                    cryptedCorrect = cryptedCorrect.decode("utf-8")
             except TypeError:
                 # Older Python versions would throw a TypeError if
                 # a value of None was is used for the salt.
@@ -309,6 +311,8 @@ class CryptTests(TestCase):
                 continue
             password = "interesting password xyz"
             crypted = crypt.crypt(password, cryptMethod)
+            if isinstance(crypted, bytes):
+                crypted = crypted.decode("utf-8")
             incorrectCrypted = crypted + "blahfooincorrect"
             result = cred_unix.verifyCryptedPassword(crypted, password)
             self.assertTrue(result)
@@ -560,7 +564,7 @@ class OptionsSupportsAllInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
-    supportedInterfaces = []  # type: Sequence[Type[Interface]]
+    supportedInterfaces: Sequence[Type[Interface]] = []
 
 
 class LimitingInterfacesTests(TestCase):

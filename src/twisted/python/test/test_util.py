@@ -12,13 +12,12 @@ import os.path
 import shutil
 import sys
 import warnings
-
 from typing import Iterable, Mapping, MutableMapping, Sequence
 from unittest import skipIf
 
 try:
-    import pwd as _pwd
     import grp as _grp
+    import pwd as _pwd
 except ImportError:
     pwd = None
     grp = None
@@ -26,18 +25,16 @@ else:
     pwd = _pwd
     grp = _grp
 
-from twisted.trial.unittest import TestCase, FailTest
-from twisted.trial.util import suppress as SUPPRESS
-
-from twisted.python import util
-from twisted.python.filepath import FilePath
 from twisted.internet import reactor
-from twisted.internet.interfaces import IReactorProcess
-from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
+from twisted.internet.interfaces import IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
+from twisted.python import util
+from twisted.python.filepath import FilePath
 from twisted.test.test_process import MockOS
-
+from twisted.trial.unittest import FailTest, TestCase
+from twisted.trial.util import suppress as SUPPRESS
 
 pyExe = FilePath(sys.executable)._asBytesPath()
 
@@ -109,7 +106,7 @@ class NameToLabelTests(TestCase):
         ]
         for inp, out in nameData:
             got = util.nameToLabel(inp)
-            self.assertEqual(got, out, "nameToLabel(%r) == %r != %r" % (inp, got, out))
+            self.assertEqual(got, out, f"nameToLabel({inp!r}) == {got!r} != {out!r}")
 
 
 class UntilConcludesTests(TestCase):

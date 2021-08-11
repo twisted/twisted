@@ -29,7 +29,7 @@ adaptee
 
 
 
-:api:`twisted.python.components.Adapter <Adapter>` 
+:py:class:`Adapter <twisted.python.components.Adapter>` 
 
 
 
@@ -41,12 +41,12 @@ adaptee
 
 
 
-:api:`twisted.application.service.Application <Application>` 
+:py:func:`Application <twisted.application.service.Application>` 
 
 
 
   
-  A :api:`twisted.application.service.Application <twisted.application.service.Application>` .  There are
+  A :py:func:`twisted.application.service.Application` .  There are
   HOWTOs on :doc:`creating and manipulating <basics>` them as a
   system-administrator, as well as :doc:`using <application>` them in
   your code.
@@ -68,24 +68,24 @@ Avatar
 
 
 
-:api:`twisted.spread.banana.Banana <Banana>` 
+:py:class:`Banana <twisted.spread.banana.Banana>` 
 
 
 
   
   The low-level data marshalling layer of :ref:`Twisted Spread <core-howto-glossary-spread>` .
-  See :api:`twisted.spread.banana <twisted.spread.banana>` .
+  See :py:mod:`twisted.spread.banana` .
 
 .. _core-howto-glossary-broker:
 
 
 
-:api:`twisted.spread.pb.Broker <Broker>` 
+:py:class:`Broker <twisted.spread.pb.Broker>` 
 
 
 
   
-  A :api:`twisted.spread.pb.Broker <twisted.spread.pb.Broker>` , the object request
+  A :py:class:`twisted.spread.pb.Broker` , the object request
   broker for :ref:`Twisted Spread <core-howto-glossary-spread>` .
 
 .. _core-howto-glossary-cache:
@@ -110,13 +110,13 @@ component
 
 
   
-  A special kind of (persistent) :api:`twisted.python.components.Adapter <Adapter>` that works with a :api:`twisted.python.components.Componentized <twisted.python.components.Componentized>` .  See also :doc:`Interfaces and Adapters <components>` .
+  A special kind of (persistent) :py:class:`Adapter <twisted.python.components.Adapter>` that works with a :py:class:`twisted.python.components.Componentized` .  See also :doc:`Interfaces and Adapters <components>` .
 
 .. _core-howto-glossary-componentized:
 
 
 
-:api:`twisted.python.components.Componentized <Componentized>` 
+:py:class:`Componentized <twisted.python.components.Componentized>` 
 
 
 
@@ -124,14 +124,14 @@ component
   A Componentized object is a collection of information, separated
   into domain-specific or role-specific instances, that all stick
   together and refer to each other.
-  Each object is an :api:`twisted.python.components.Adapter <Adapter>` , which, in the
+  Each object is an :py:class:`Adapter <twisted.python.components.Adapter>` , which, in the
   context of Componentized, we call "components" .  See also :doc:`Interfaces and Adapters <components>` .
 
 .. _core-howto-glossary-conch:
 
 
 
-:api:`twisted.conch <conch>` 
+:py:mod:`conch <twisted.conch>` 
 
 
 
@@ -147,8 +147,8 @@ Connector
 
   
   Object used to interface between client connections and protocols, usually
-  used with a :api:`twisted.internet.protocol.ClientFactory <twisted.internet.protocol.ClientFactory>` 
-  to give you control over how a client connection reconnects.  See :api:`twisted.internet.interfaces.IConnector <twisted.internet.interfaces.IConnector>` and :doc:`Writing Clients <clients>` .
+  used with a :py:class:`twisted.internet.protocol.ClientFactory` 
+  to give you control over how a client connection reconnects.  See :py:class:`twisted.internet.interfaces.IConnector` and :doc:`Writing Clients <clients>` .
 
 .. _core-howto-glossary-consumer:
 
@@ -160,7 +160,7 @@ Consumer
 
   
   An object that consumes data from a :ref:`Producer <core-howto-glossary-producer>` .  See 
-  :api:`twisted.internet.interfaces.IConsumer <twisted.internet.interfaces.IConsumer>` .
+  :py:class:`twisted.internet.interfaces.IConsumer` .
 
 .. _core-howto-glossary-cred:
 
@@ -171,7 +171,7 @@ Cred
 
 
   
-  Twisted's authentication API, :api:`twisted.cred <twisted.cred>` .  See 
+  Twisted's authentication API, :py:mod:`twisted.cred` .  See 
   :doc:`Introduction to Twisted Cred <cred>` and 
   :doc:`Twisted Cred usage <pb-cred>` .
 
@@ -197,7 +197,7 @@ credential checker
 
   
   Where authentication actually happens.  See 
-  :api:`twisted.cred.checkers.ICredentialsChecker <ICredentialsChecker>` .
+  :py:class:`ICredentialsChecker <twisted.cred.checkers.ICredentialsChecker>` .
 
 .. _core-howto-glossary-cvstoys:
 
@@ -225,12 +225,12 @@ Daemon
 
 
 
-:api:`twisted.internet.defer.Deferred <Deferred>` 
+:py:class:`Deferred <twisted.internet.defer.Deferred>` 
 
 
 
   
-  An instance of :api:`twisted.internet.defer.Deferred <twisted.internet.defer.Deferred>` , an
+  An instance of :py:class:`twisted.internet.defer.Deferred` , an
   abstraction for handling chains of callbacks and error handlers
   ("errbacks" ).
   See the :doc:`Deferring Execution <defer>` HOWTO.
@@ -244,7 +244,7 @@ Enterprise
 
 
   
-  Twisted's RDBMS support.  It contains :api:`twisted.enterprise.adbapi <twisted.enterprise.adbapi>` for asynchronous access to any
+  Twisted's RDBMS support.  It contains :py:mod:`twisted.enterprise.adbapi` for asynchronous access to any
   standard DB-API 2.0 module. See :doc:`Introduction to Twisted Enterprise <rdbms>` for more details.
 
 .. _core-howto-glossary-errback:
@@ -263,13 +263,13 @@ errback
 
 
 
-:api:`twisted.internet.protocol.Factory <Factory>` 
+:py:class:`Factory <twisted.internet.protocol.Factory>` 
 
 
 
   
   In general, an object that constructs other objects.  In Twisted, a Factory
-  usually refers to a :api:`twisted.internet.protocol.Factory <twisted.internet.protocol.Factory>` , which constructs
+  usually refers to a :py:class:`twisted.internet.protocol.Factory` , which constructs
   :ref:`Protocol <core-howto-glossary-protocol>` instances for incoming or outgoing
   connections.  See :doc:`Writing Servers <servers>` and :doc:`Writing Clients <clients>` .
 
@@ -277,7 +277,7 @@ errback
 
 
 
-:api:`twisted.python.failure.Failure <Failure>` 
+:py:class:`Failure <twisted.python.failure.Failure>` 
 
 
 
@@ -308,7 +308,7 @@ Instance Messenger
   Instance Messenger is a multi-protocol chat program that comes with
   Twisted.  It can communicate via TOC with the AOL servers, via IRC, as well as
   via :ref:`PB <core-howto-glossary-perspectivebroker>` with 
-  :ref:`Twisted Words <core-howto-glossary-words>` .  See :api:`twisted.words.im <twisted.words.im>` .
+  :ref:`Twisted Words <core-howto-glossary-words>` .  See :py:mod:`twisted.words.im` .
 
 .. _core-howto-glossary-interface:
 
@@ -320,8 +320,8 @@ Interface
 
   
   A class that defines and documents methods that a class conforming to that
-  interface needs to have.  A collection of core :api:`twisted.internet <twisted.internet>` interfaces can
-  be found in :api:`twisted.internet.interfaces <twisted.internet.interfaces>` .  See also :doc:`Interfaces and Adapters <components>` .
+  interface needs to have.  A collection of core :py:mod:`twisted.internet` interfaces can
+  be found in :py:mod:`twisted.internet.interfaces` .  See also :doc:`Interfaces and Adapters <components>` .
 
 .. _core-howto-glossary-jelly:
 
@@ -335,7 +335,7 @@ Jelly
   The serialization layer for :ref:`Twisted Spread <core-howto-glossary-spread>` , although it
   can be used separately from Twisted Spread as well.  It is similar in purpose
   to Python's standard ``pickle`` module, but is more
-  network-friendly, and depends on a separate marshaller (:ref:`Banana <core-howto-glossary-banana>` , in most cases).  See :api:`twisted.spread.jelly <twisted.spread.jelly>` .
+  network-friendly, and depends on a separate marshaller (:ref:`Banana <core-howto-glossary-banana>` , in most cases).  See :py:mod:`twisted.spread.jelly` .
 
 .. _core-howto-glossary-manhole:
 
@@ -358,7 +358,7 @@ Microdom
 
   
   A partial DOM implementation using :ref:`SUX <core-howto-glossary-sux>` .  It is simple and
-  pythonic, rather than strictly standards-compliant.  See :api:`twisted.web.microdom <twisted.web.microdom>` .
+  pythonic, rather than strictly standards-compliant.  See :py:mod:`twisted.web.microdom` .
 
 .. _core-howto-glossary-names:
 
@@ -368,7 +368,7 @@ Names
 
 
 
-  Twisted's DNS server, found in :api:`twisted.names <twisted.names>` .
+  Twisted's DNS server, found in :py:mod:`twisted.names` .
 
 .. _core-howto-glossary-nevow:
 
@@ -402,7 +402,7 @@ Perspective Broker
   
   The high-level object layer of Twisted :ref:`Spread <core-howto-glossary-spread>` ,
   implementing semantics for method calling and object copying, caching, and
-  referencing.  See :api:`twisted.spread.pb <twisted.spread.pb>` .
+  referencing.  See :py:mod:`twisted.spread.pb` .
 
 .. _core-howto-glossary-portal:
 
@@ -427,20 +427,20 @@ Producer
   
   An object that generates data a chunk at a time, usually to be processed by a
   :ref:`Consumer <core-howto-glossary-consumer>` .  See 
-  :api:`twisted.internet.interfaces.IProducer <twisted.internet.interfaces.IProducer>` .
+  :py:class:`twisted.internet.interfaces.IProducer` .
 
 .. _core-howto-glossary-protocol:
 
 
 
-:api:`twisted.internet.protocol.Protocol <Protocol>` 
+:py:class:`Protocol <twisted.internet.protocol.Protocol>` 
 
 
 
   
   In general each network connection has its own Protocol instance to manage
   connection-specific state.  There is a collection of standard
-  protocol implementations in :api:`twisted.protocols <twisted.protocols>` .  See
+  protocol implementations in :py:mod:`twisted.protocols` .  See
   also :doc:`Writing Servers <servers>` and :doc:`Writing Clients <clients>` .
 
 .. _core-howto-glossary-psu:
@@ -486,18 +486,18 @@ realm
   
   (in :ref:`Twisted Cred <core-howto-glossary-cred>` ) stores :ref:`avatars <core-howto-glossary-avatar>` 
   and perhaps general business logic.  See 
-  :api:`twisted.cred.portal.IRealm <IRealm>` .
+  :py:class:`IRealm <twisted.cred.portal.IRealm>` .
 
 .. _core-howto-glossary-resource:
 
 
 
-:api:`twisted.web.resource.Resource <Resource>` 
+:py:class:`Resource <twisted.web.resource.Resource>` 
 
 
 
   
-  A :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` , which are served
+  A :py:class:`twisted.web.resource.Resource` , which are served
   by Twisted Web.  Resources can be as simple as a static file on disk, or they
   can have dynamically generated content.
 
@@ -510,7 +510,7 @@ Service
 
 
   
-  A :api:`twisted.application.service.Service <twisted.application.service.Service>` .  See :doc:`Application howto <application>` for a description of how they
+  A :py:class:`twisted.application.service.Service` .  See :doc:`Application howto <application>` for a description of how they
   relate to :ref:`Applications <core-howto-glossary-application>` .
 
 .. _core-howto-glossary-spread:
@@ -534,7 +534,7 @@ SUX
 
 
   *S* mall *U* ncomplicated *X* ML, Twisted's simple XML
-  parser written in pure Python.  See :api:`twisted.web.sux <twisted.web.sux>` .
+  parser written in pure Python.  See :py:mod:`twisted.web.sux` .
 
 .. _core-howto-glossary-tac:
 
@@ -567,7 +567,7 @@ Trial
 
 
 
-  :api:`twisted.trial <twisted.trial>` , Twisted's unit-testing framework,
+  :py:mod:`twisted.trial` , Twisted's unit-testing framework,
   based on the ``unittest`` standard library module.  See also :doc:`Writing tests for Twisted code <testing>` .
 
 .. _core-howto-glossary-twistedmatrixlaboratories:
@@ -598,11 +598,11 @@ Twisted Reality
 
 
 
-:api:`twisted.python.usage <usage>` 
+:py:mod:`usage <twisted.python.usage>` 
 
 
 
-  The :api:`twisted.python.usage <twisted.python.usage>` module, a replacement for
+  The :py:mod:`twisted.python.usage` module, a replacement for
   the standard ``getopt`` module for parsing command-lines which is much
   easier to work with.  See :doc:`Parsing command-lines <options>` .
 
@@ -615,7 +615,7 @@ Words
 
 
   Twisted Words is a multi-protocol chat server that uses the :ref:`Perspective Broker <core-howto-glossary-perspectivebroker>` protocol as its native
-  communication style.  See :api:`twisted.words <twisted.words>` .
+  communication style.  See :py:mod:`twisted.words` .
 
 .. _core-howto-glossary-woven:
 

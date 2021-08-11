@@ -8,24 +8,25 @@ Support for Linux ethernet and IP tunnel devices.
 @see: U{https://en.wikipedia.org/wiki/TUN/TAP}
 """
 
-import os
-import fcntl
 import errno
+import fcntl
+import os
 import struct
 import warnings
+from collections import namedtuple
 from typing import Tuple
 
-from collections import namedtuple
-from constantly import Flags, FlagConstant
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.util import FancyEqMixin, FancyStrMixin
+from constantly import FlagConstant, Flags  # type: ignore[import]
 from incremental import Version
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.internet import abstract, error, task, interfaces, defer
+
+from twisted.internet import abstract, defer, error, interfaces, task
 from twisted.pair import ethernet, raw
+from twisted.python import log
+from twisted.python.deprecate import deprecated
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 
 __all__ = [
     "TunnelFlags",
@@ -243,12 +244,10 @@ class TuntapPort(abstract.FileDescriptor):
         self.maxPacketSize = maxPacketSize
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s (%s)" % (logPrefix, self._mode.name)
+        self.logstr = f"{logPrefix} ({self._mode.name})"
 
     def __repr__(self) -> str:
-        args = (
-            fullyQualifiedName(self.protocol.__class__),
-        )  # type: Tuple[str, ...]  # noqa
+        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:
@@ -298,7 +297,7 @@ class TuntapPort(abstract.FileDescriptor):
             fileno, interface = self._openTunnel(
                 self.interface, self._mode | TunnelFlags.IFF_NO_PI
             )
-        except (IOError, OSError) as e:
+        except OSError as e:
             raise error.CannotListenError(None, self.interface, e)
 
         self.interface = interface
@@ -317,20 +316,20 @@ class TuntapPort(abstract.FileDescriptor):
         while read < self.maxThroughput:
             try:
                 data = self._system.read(self._fileno, self.maxPacketSize)
-            except EnvironmentError as e:
+            except OSError as e:
                 if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EINTR):
                     return
                 else:
                     raise
-            except:
+            except BaseException:
                 raise
             read += len(data)
             # TODO pkt.isPartial()?
             try:
                 self.protocol.datagramReceived(data, partial=0)
-            except:
+            except BaseException:
                 cls = fullyQualifiedName(self.protocol.__class__)
-                log.err(None, "Unhandled exception from %s.datagramReceived" % (cls,))
+                log.err(None, f"Unhandled exception from {cls}.datagramReceived")
 
     def write(self, datagram):
         """
@@ -342,7 +341,7 @@ class TuntapPort(abstract.FileDescriptor):
         """
         try:
             return self._system.write(self._fileno, datagram)
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
             raise
@@ -351,7 +350,7 @@ class TuntapPort(abstract.FileDescriptor):
         """
         Write a datagram constructed from a L{list} of L{bytes}.
 
-        @param datagram: The data that will make up the complete datagram to be
+        @param seq: The data that will make up the complete datagram to be
             written.
         @type seq: L{list} of L{bytes}
         """

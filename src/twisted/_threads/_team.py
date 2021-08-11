@@ -9,6 +9,7 @@ workers.
 
 
 from collections import deque
+
 from zope.interface import implementer
 
 from . import IWorker
@@ -179,7 +180,7 @@ class Team:
         def doWork():
             try:
                 task()
-            except:
+            except BaseException:
                 self._logException()
 
             @self._coordinator.do
@@ -214,6 +215,7 @@ class Team:
         """
         self._quit.set()
         # In case all the workers are idle when we do this.
+
         @self._coordinator.do
         def startFinishing():
             self._shouldQuitCoordinator = True

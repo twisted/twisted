@@ -21,7 +21,7 @@ jobs:
       # Set PYTHONUTF8 environment variable to force UTF-8 mode on Python 3.7+
       # on Windows.
       #
-      # Set PYTHONIOENCODING to force UTF-8 encoding on Python 3.5 and Python 3.6.
+      # Set PYTHONIOENCODING to force UTF-8 encoding on Python 3.6.
       # This allows people with non-ASCII characters in their names to file pull requests
       # and not trigger CI errors.
       PYTHONUTF8: 1
@@ -32,4 +32,3 @@ jobs:
         platform: windows
         pythonVersion: ${{ pyver.value }}
         windowsReactor: ${{ parameters.reactor }}
-        allowFailure: ${{ eq(pyver.value, '3.8') }}

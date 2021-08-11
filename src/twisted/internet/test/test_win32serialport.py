@@ -9,19 +9,19 @@ import os
 import shutil
 import tempfile
 
-from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
+from twisted.internet.test.test_serialport import DoNothing
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.internet.test.test_serialport import DoNothing
-
+from twisted.trial import unittest
 
 testingForced = "TWISTED_FORCE_SERIAL_TESTS" in os.environ
 
 
 try:
+    import serial  # type: ignore[import]
+
     from twisted.internet import serialport
-    import serial
 except ImportError:
     if testingForced:
         raise
@@ -34,7 +34,7 @@ if serialport is not None:
 
     class RegularFileSerial(serial.Serial):
         def __init__(self, *args, **kwargs):
-            super(RegularFileSerial, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self.captured_args = args
             self.captured_kwargs = kwargs
 
@@ -56,7 +56,7 @@ if serialport is not None:
             self.comstat = serial.win32.COMSTAT
             self.comstat.cbInQue = cbInQue
 
-            super(RegularFileSerialPort, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def _clearCommError(self):
             return True, self.comstat

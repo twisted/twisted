@@ -5,7 +5,6 @@
 Tests for L{twisted.python._pydoctor}.
 """
 from twisted.python.reflect import requireModule
-
 from twisted.trial.unittest import TestCase
 
 model = requireModule("pydoctor.model")
@@ -43,13 +42,11 @@ class TwistedSystemTests(TestCase):
         twistedPackage = model.Package(
             system=sut,
             name="twisted",
-            docstring="ignored",
             parent=None,
         )
         twistedTestPackage = model.Package(
             system=sut,
             name="test",
-            docstring="ignored",
             parent=twistedPackage,
         )
 
@@ -65,19 +62,16 @@ class TwistedSystemTests(TestCase):
         twistedPackage = model.Package(
             system=sut,
             name="twisted",
-            docstring="ignored",
             parent=None,
         )
         twistedTestPackage = model.Package(
             system=sut,
             name="test",
-            docstring="ignored",
             parent=twistedPackage,
         )
         twistedProtoHelpersModule = model.Module(
             system=sut,
             name="proto_helpers",
-            docstring="ignored",
             parent=twistedTestPackage,
         )
 
@@ -93,19 +87,16 @@ class TwistedSystemTests(TestCase):
         twistedPackage = model.Package(
             system=sut,
             name="twisted",
-            docstring="ignored",
             parent=None,
         )
         twistedTestPackage = model.Package(
             system=sut,
             name="test",
-            docstring="ignored",
             parent=twistedPackage,
         )
         twistedAnyTestModule = model.Module(
             system=sut,
             name="other_child",
-            docstring="ignored",
             parent=twistedTestPackage,
         )
 
@@ -122,25 +113,21 @@ class TwistedSystemTests(TestCase):
         twistedPackage = model.Package(
             system=sut,
             name="twisted",
-            docstring="ignored",
             parent=None,
         )
         twistedSubProjectPackage = model.Package(
             system=sut,
             name="subproject",
-            docstring="ignored",
             parent=twistedPackage,
         )
         twistedSubProjectModule = model.Module(
             system=sut,
             name="other_child",
-            docstring="ignored",
             parent=twistedSubProjectPackage,
         )
         twistedPrivateModule = model.Module(
             system=sut,
             name="_private_child",
-            docstring="ignored",
             parent=twistedSubProjectPackage,
         )
 

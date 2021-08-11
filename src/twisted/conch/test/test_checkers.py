@@ -14,35 +14,33 @@ else:
     cryptSkip = ""
 
 import os
-
 from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import util
-from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
-from twisted.trial.unittest import TestCase
-from twisted.python.filepath import FilePath
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.credentials import (
-    UsernamePassword,
+    ISSHPrivateKey,
     IUsernamePassword,
     SSHPrivateKey,
-    ISSHPrivateKey,
+    UsernamePassword,
 )
-from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.python import util
+from twisted.python.failure import Failure
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.test_process import MockOS
-
+from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
     dependencySkip = ""
-    from twisted.conch.ssh import keys
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
+    from twisted.conch.ssh import keys
     from twisted.conch.test import keydata
 else:
     dependencySkip = "can't run without cryptography and PyASN1"
@@ -74,7 +72,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, salt)
         self.assertTrue(
             checkers.verifyCryptedPassword(crypted, password),
-            "%r supposed to be valid encrypted password for %r" % (crypted, password),
+            "{!r} supposed to be valid encrypted password for {!r}".format(
+                crypted, password
+            ),
         )
 
     def test_verifyCryptedPasswordMD5(self):
@@ -87,7 +87,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, salt)
         self.assertTrue(
             checkers.verifyCryptedPassword(crypted, password),
-            "%r supposed to be valid encrypted password for %s" % (crypted, password),
+            "{!r} supposed to be valid encrypted password for {}".format(
+                crypted, password
+            ),
         )
 
     def test_refuteCryptedPassword(self):
@@ -100,7 +102,9 @@ class HelperTests(TestCase):
         crypted = crypt.crypt(password, password)
         self.assertFalse(
             checkers.verifyCryptedPassword(crypted, wrong),
-            "%r not supposed to be valid encrypted password for %s" % (crypted, wrong),
+            "{!r} not supposed to be valid encrypted password for {}".format(
+                crypted, wrong
+            ),
         )
 
     def test_pwdGetByName(self):
@@ -791,7 +795,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         self.assertEqual(self.expectedKeys, list(keydb.getAuthorizedKeys(b"alice")))
 
 
-_KeyDB = namedtuple("KeyDB", ["getAuthorizedKeys"])
+_KeyDB = namedtuple("_KeyDB", ["getAuthorizedKeys"])
 
 
 class _DummyException(Exception):

@@ -11,23 +11,20 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-from twisted.python.compat import nativeString
-from twisted.python.filepath import FilePath
-
-from twisted.conch.error import ConchError
-from twisted.conch.ssh import common, keys, userauth
-from twisted.internet import defer, protocol, reactor
-
-from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-
-from twisted.conch.client import agent
-
 import contextlib
 import getpass
 import io
 import os
 import sys
 from base64 import decodebytes
+
+from twisted.conch.client import agent
+from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import common, keys, userauth
+from twisted.internet import defer, protocol, reactor
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -106,7 +103,7 @@ def isInKnownHosts(host, pubKey, options):
     kh_file = options["known-hosts"] or _KNOWN_HOSTS
     try:
         known_hosts = open(os.path.expanduser(kh_file), "rb")
-    except IOError:
+    except OSError:
         return 0
     with known_hosts:
         for line in known_hosts.readlines():
@@ -120,7 +117,7 @@ def isInKnownHosts(host, pubKey, options):
                 continue
             try:
                 decodedKey = decodebytes(encodedKey)
-            except:
+            except BaseException:
                 continue
             if decodedKey == pubKey:
                 return 1
@@ -200,7 +197,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             try:
                 p = getpass.getpass(prompt)
                 return p
-            except (KeyboardInterrupt, IOError):
+            except (KeyboardInterrupt, OSError):
                 print()
                 raise ConchError("PEBKAC")
 
@@ -208,7 +205,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if prompt:
             prompt = nativeString(prompt)
         else:
-            prompt = "%s@%s's password: " % (
+            prompt = "{}@{}'s password: ".format(
                 nativeString(self.user),
                 self.transport.transport.getPeer().host,
             )

@@ -5,31 +5,35 @@
 TCP support for IOCP reactor
 """
 
-import socket, operator, errno, struct
+import errno
+import socket
+import struct
+from typing import Optional
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import interfaces, error, address, main, defer
-from twisted.internet.protocol import Protocol
+from twisted.internet import address, defer, error, interfaces, main
 from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_NETWORK_UNREACHABLE,
+    SO_UPDATE_ACCEPT_CONTEXT,
+    SO_UPDATE_CONNECT_CONTEXT,
+)
+from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
+from twisted.internet.protocol import Protocol
 from twisted.internet.tcp import (
-    _SocketCloser,
     Connector as TCPConnector,
     _AbortingMixin,
     _BaseBaseClient,
     _BaseTCPClient,
-    _resolveIPv6,
     _getsockname,
+    _resolveIPv6,
+    _SocketCloser,
 )
-from twisted.python import log, failure, reflect
-
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
-from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import SO_UPDATE_CONNECT_CONTEXT
-from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
+from twisted.python import failure, log, reflect
 
 try:
     from twisted.internet._newtls import startTLS as __startTLS
@@ -41,8 +45,8 @@ else:
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
-    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]  # noqa
-    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]  # noqa
+    ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,  # type: ignore[attr-defined]
+    ERROR_NETWORK_UNREACHABLE: errno.WSAENETUNREACH,  # type: ignore[attr-defined]
 }
 
 
@@ -96,13 +100,13 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
@@ -112,7 +116,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
@@ -137,17 +141,13 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        )
+        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
@@ -358,8 +358,8 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.clientAddr.host)
-        self.repstr = "<%s #%s on %s>" % (
+        self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             self.serverAddr.port,
@@ -408,7 +408,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber: Optional[int] = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
@@ -428,13 +428,13 @@ class Port(_SocketCloser, _LogOwner):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -448,7 +448,7 @@ class Port(_SocketCloser, _LogOwner):
             else:
                 addr = (self.interface, self.port)
             skt.bind(addr)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         self.addrLen = _iocp.maxAddrLen(skt.fileno())
@@ -491,7 +491,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -513,7 +513,7 @@ class Port(_SocketCloser, _LogOwner):
 
         try:
             self.factory.doStop()
-        except:
+        except BaseException:
             self.disconnecting = False
             if d is not None:
                 d.errback(failure.Failure())
@@ -556,6 +556,11 @@ class Port(_SocketCloser, _LogOwner):
             )
             return False
         else:
+            # Inherit the properties from the listening port socket as
+            # documented in the `Remarks` section of AcceptEx.
+            # https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-acceptex
+            # In this way we can call getsockname and getpeername on the
+            # accepted socket.
             evt.newskt.setsockopt(
                 socket.SOL_SOCKET,
                 SO_UPDATE_ACCEPT_CONTEXT,

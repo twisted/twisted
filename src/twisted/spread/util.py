@@ -8,13 +8,12 @@
 Utility classes for spread.
 """
 
-from twisted.internet import defer
+from zope.interface import implementer
+
+from twisted.internet import defer, interfaces
+from twisted.protocols import basic
 from twisted.python.failure import Failure
 from twisted.spread import pb
-from twisted.protocols import basic
-from twisted.internet import interfaces
-
-from zope.interface import implementer
 
 
 class LocalMethod:
@@ -48,7 +47,7 @@ class LocalAsRemote:
         try:
             method = getattr(self, "async_" + name)
             return defer.succeed(method(*args, **kw))
-        except:
+        except BaseException:
             f = Failure()
             if self.reportAllTracebacks:
                 f.printTraceback()

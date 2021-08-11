@@ -5,23 +5,21 @@
 Test cases for L{twisted.logger._legacy}.
 """
 
-from time import time
 import logging as py_logging
+from time import time
+from typing import List, cast
 
+from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
-
-from twisted.python import context
-from twisted.python import log as legacyLog
+from twisted.python import context, log as legacyLog
 from twisted.python.failure import Failure
-
-from .._levels import LogLevel
-from .._observer import ILogObserver
+from twisted.trial import unittest
 from .._format import formatEvent
-from .._legacy import LegacyLogObserverWrapper
-from .._legacy import publishToNewObserver
+from .._interfaces import ILogObserver, LogEvent
+from .._legacy import LegacyLogObserverWrapper, publishToNewObserver
+from .._levels import LogLevel
 
 
 class LegacyLogObserverWrapperTests(unittest.TestCase):
@@ -29,59 +27,58 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
     Tests for L{LegacyLogObserverWrapper}.
     """
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{LegacyLogObserverWrapper} is an L{ILogObserver}.
         """
-        legacyObserver = lambda e: None
+        legacyObserver = cast(legacyLog.ILogObserver, lambda e: None)
         observer = LegacyLogObserverWrapper(legacyObserver)
         try:
             verifyObject(ILogObserver, observer)
         except BrokenMethodImplementation as e:
             self.fail(e)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         L{LegacyLogObserverWrapper} returns the expected string.
         """
 
+        @implementer(legacyLog.ILogObserver)
         class LegacyObserver:
             def __repr__(self) -> str:
                 return "<Legacy Observer>"
 
-            def __call__(self):
+            def __call__(self, eventDict: legacyLog.EventDict) -> None:
                 return
 
         observer = LegacyLogObserverWrapper(LegacyObserver())
 
         self.assertEqual(repr(observer), "LegacyLogObserverWrapper(<Legacy Observer>)")
 
-    def observe(self, event):
+    def observe(self, event: LogEvent) -> LogEvent:
         """
         Send an event to a wrapped legacy observer and capture the event as
         seen by that observer.
 
         @param event: an event
-        @type event: L{dict}
 
         @return: the event as observed by the legacy wrapper
         """
-        events = []
+        events: List[LogEvent] = []
 
-        legacyObserver = lambda e: events.append(e)
+        legacyObserver = cast(legacyLog.ILogObserver, lambda e: events.append(e))
         observer = LegacyLogObserverWrapper(legacyObserver)
         observer(event)
         self.assertEqual(len(events), 1)
 
         return events[0]
 
-    def forwardAndVerify(self, event):
+    def forwardAndVerify(self, event: LogEvent) -> LogEvent:
         """
         Send an event to a wrapped legacy observer and verify that its data is
         preserved.
 
         @param event: an event
-        @type event: L{dict}
 
         @return: the event as observed by the legacy wrapper
         """
@@ -99,14 +96,14 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
         return observed
 
-    def test_forward(self):
+    def test_forward(self) -> None:
         """
         Basic forwarding: event keys as observed by a legacy observer are the
         same.
         """
         self.forwardAndVerify(dict(foo=1, bar=2))
 
-    def test_time(self):
+    def test_time(self) -> None:
         """
         The new-style C{"log_time"} key is copied to the old-style C{"time"}
         key.
@@ -115,7 +112,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_time=stamp))
         self.assertEqual(event["time"], stamp)
 
-    def test_timeAlreadySet(self):
+    def test_timeAlreadySet(self) -> None:
         """
         The new-style C{"log_time"} key does not step on a pre-existing
         old-style C{"time"} key.
@@ -124,7 +121,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_time=stamp + 1, time=stamp))
         self.assertEqual(event["time"], stamp)
 
-    def test_system(self):
+    def test_system(self) -> None:
         """
         The new-style C{"log_system"} key is copied to the old-style
         C{"system"} key.
@@ -132,7 +129,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_system="foo"))
         self.assertEqual(event["system"], "foo")
 
-    def test_systemAlreadySet(self):
+    def test_systemAlreadySet(self) -> None:
         """
         The new-style C{"log_system"} key does not step on a pre-existing
         old-style C{"system"} key.
@@ -140,7 +137,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_system="foo", system="bar"))
         self.assertEqual(event["system"], "bar")
 
-    def test_noSystem(self):
+    def test_noSystem(self) -> None:
         """
         If the new-style C{"log_system"} key is absent, the old-style
         C{"system"} key is set to C{"-"}.
@@ -150,7 +147,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         observed = self.observe(dict(event))
         self.assertEqual(observed["system"], "-")
 
-    def test_levelNotChange(self):
+    def test_levelNotChange(self) -> None:
         """
         If explicitly set, the C{isError} key will be preserved when forwarding
         from a new-style logging emitter to a legacy logging observer,
@@ -161,7 +158,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         self.forwardAndVerify(dict(log_level=LogLevel.error, isError=0))
         self.forwardAndVerify(dict(log_level=LogLevel.critical, isError=0))
 
-    def test_pythonLogLevelNotSet(self):
+    def test_pythonLogLevelNotSet(self) -> None:
         """
         The new-style C{"log_level"} key is not translated to the old-style
         C{"logLevel"} key.
@@ -173,7 +170,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_level=LogLevel.info))
         self.assertNotIn("logLevel", event)
 
-    def test_stringPythonLogLevel(self):
+    def test_stringPythonLogLevel(self) -> None:
         """
         If a stdlib log level was provided as a string (eg. C{"WARNING"}) in
         the legacy "logLevel" key, it does not get converted to a number.
@@ -187,7 +184,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         )
         self.assertEqual(event["logLevel"], "WARNING")
 
-    def test_message(self):
+    def test_message(self) -> None:
         """
         The old-style C{"message"} key is added, even if no new-style
         C{"log_format"} is given, as it is required, but may be empty.
@@ -195,14 +192,14 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict())
         self.assertEqual(event["message"], ())  # "message" is a tuple
 
-    def test_messageAlreadySet(self):
+    def test_messageAlreadySet(self) -> None:
         """
         The old-style C{"message"} key is not modified if it already exists.
         """
         event = self.forwardAndVerify(dict(message=("foo", "bar")))
         self.assertEqual(event["message"], ("foo", "bar"))
 
-    def test_format(self):
+    def test_format(self) -> None:
         """
         Formatting is translated such that text is rendered correctly, even
         though old-style logging doesn't use PEP 3101 formatting.
@@ -210,7 +207,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_format="Hello, {who}!", who="world"))
         self.assertEqual(legacyLog.textFromEventDict(event), "Hello, world!")
 
-    def test_formatMessage(self):
+    def test_formatMessage(self) -> None:
         """
         Using the message key, which is special in old-style, works for
         new-style formatting.
@@ -220,7 +217,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         )
         self.assertEqual(legacyLog.textFromEventDict(event), "Hello, world!")
 
-    def test_formatAlreadySet(self):
+    def test_formatAlreadySet(self) -> None:
         """
         Formatting is not altered if the old-style C{"format"} key already
         exists.
@@ -228,22 +225,20 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.forwardAndVerify(dict(log_format="Hello!", format="Howdy!"))
         self.assertEqual(legacyLog.textFromEventDict(event), "Howdy!")
 
-    def eventWithFailure(self, **values):
+    def eventWithFailure(self, **values: object) -> LogEvent:
         """
         Create a new-style event with a captured failure.
 
         @param values: Additional values to include in the event.
-        @type values: L{dict}
 
         @return: the new event
-        @rtype: L{dict}
         """
         failure = Failure(RuntimeError("nyargh!"))
         return self.forwardAndVerify(
             dict(log_failure=failure, log_format="oopsie...", **values)
         )
 
-    def test_failure(self):
+    def test_failure(self) -> None:
         """
         Captured failures in the new style set the old-style C{"failure"},
         C{"isError"}, and C{"why"} keys.
@@ -253,7 +248,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         self.assertTrue(event["isError"])
         self.assertEqual(event["why"], "oopsie...")
 
-    def test_failureAlreadySet(self):
+    def test_failureAlreadySet(self) -> None:
         """
         Captured failures in the new style do not step on a pre-existing
         old-style C{"failure"} key.
@@ -262,7 +257,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.eventWithFailure(failure=failure)
         self.assertIs(event["failure"], failure)
 
-    def test_isErrorAlreadySet(self):
+    def test_isErrorAlreadySet(self) -> None:
         """
         Captured failures in the new style do not step on a pre-existing
         old-style C{"isError"} key.
@@ -270,7 +265,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         event = self.eventWithFailure(isError=0)
         self.assertEqual(event["isError"], 0)
 
-    def test_whyAlreadySet(self):
+    def test_whyAlreadySet(self) -> None:
         """
         Captured failures in the new style do not step on a pre-existing
         old-style C{"failure"} key.
@@ -284,19 +279,16 @@ class PublishToNewObserverTests(unittest.TestCase):
     Tests for L{publishToNewObserver}.
     """
 
-    def setUp(self):
-        self.events = []
-        self.observer = self.events.append
+    def setUp(self) -> None:
+        self.events: List[LogEvent] = []
+        self.observer = cast(ILogObserver, self.events.append)
 
-    def legacyEvent(self, *message, **values):
+    def legacyEvent(self, *message: str, **values: object) -> legacyLog.EventDict:
         """
         Return a basic old-style event as would be created by L{legacyLog.msg}.
 
         @param message: a message event value in the legacy event format
-        @type message: L{tuple} of L{bytes}
-
         @param values: additional event values in the legacy event format
-        @type event: L{dict}
 
         @return: a legacy event
         """
@@ -308,7 +300,7 @@ class PublishToNewObserverTests(unittest.TestCase):
             event["isError"] = 0
         return event
 
-    def test_observed(self):
+    def test_observed(self) -> None:
         """
         The observer is called exactly once.
         """
@@ -317,7 +309,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(len(self.events), 1)
 
-    def test_time(self):
+    def test_time(self) -> None:
         """
         The old-style C{"time"} key is copied to the new-style C{"log_time"}
         key.
@@ -327,13 +319,13 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_time"], self.events[0]["time"])
 
-    def test_message(self):
+    def test_message(self) -> None:
         """
         A published old-style event should format as text in the same way as
         the given C{textFromEventDict} callable would format it.
         """
 
-        def textFromEventDict(event):
+        def textFromEventDict(event: LogEvent) -> str:
             return "".join(reversed(" ".join(event["message"])))
 
         event = self.legacyEvent("Hello,", "world!")
@@ -342,7 +334,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         publishToNewObserver(self.observer, event, textFromEventDict)
         self.assertEqual(formatEvent(self.events[0]), text)
 
-    def test_defaultLogLevel(self):
+    def test_defaultLogLevel(self) -> None:
         """
         Published event should have log level of L{LogLevel.info}.
         """
@@ -351,7 +343,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_level"], LogLevel.info)
 
-    def test_isError(self):
+    def test_isError(self) -> None:
         """
         If C{"isError"} is set to C{1} (true) on the legacy event, the
         C{"log_level"} key should get set to L{LogLevel.critical}.
@@ -361,7 +353,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_level"], LogLevel.critical)
 
-    def test_stdlibLogLevel(self):
+    def test_stdlibLogLevel(self) -> None:
         """
         If the old-style C{"logLevel"} key is set to a standard library logging
         level, using a predefined (L{int}) constant, the new-style
@@ -374,7 +366,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_level"], LogLevel.warn)
 
-    def test_stdlibLogLevelWithString(self):
+    def test_stdlibLogLevelWithString(self) -> None:
         """
         If the old-style C{"logLevel"} key is set to a standard library logging
         level, using a string value, the new-style C{"log_level"} key should
@@ -387,7 +379,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_level"], LogLevel.warn)
 
-    def test_stdlibLogLevelWithGarbage(self):
+    def test_stdlibLogLevelWithGarbage(self) -> None:
         """
         If the old-style C{"logLevel"} key is set to a standard library logging
         level, using an unknown value, the new-style C{"log_level"} key should
@@ -400,7 +392,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertNotIn("log_level", self.events[0])
 
-    def test_defaultNamespace(self):
+    def test_defaultNamespace(self) -> None:
         """
         Published event should have a namespace of C{"log_legacy"} to indicate
         that it was forwarded from legacy logging.
@@ -410,7 +402,7 @@ class PublishToNewObserverTests(unittest.TestCase):
         )
         self.assertEqual(self.events[0]["log_namespace"], "log_legacy")
 
-    def test_system(self):
+    def test_system(self) -> None:
         """
         The old-style C{"system"} key is copied to the new-style
         C{"log_system"} key.

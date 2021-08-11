@@ -1,11 +1,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-from twisted.trial import unittest
-
 from twisted.internet import protocol
 from twisted.pair import rawudp
+
+#
+from twisted.trial import unittest
 
 
 class MyProtocol(protocol.DatagramProtocol):
@@ -17,8 +17,12 @@ class MyProtocol(protocol.DatagramProtocol):
         assert self.expecting, "Got a packet when not expecting anymore."
         expectData, expectHost, expectPort = self.expecting.pop(0)
 
-        assert expectData == data, "Expected data %r, got %r" % (expectData, data)
-        assert expectHost == host, "Expected host %r, got %r" % (expectHost, host)
+        assert expectData == data, "Expected data {!r}, got {!r}".format(
+            expectData, data
+        )
+        assert expectHost == host, "Expected host {!r}, got {!r}".format(
+            expectHost, host
+        )
         assert expectPort == port, "Expected port %d=0x%04x, got %d=0x%04x" % (
             expectPort,
             expectPort,

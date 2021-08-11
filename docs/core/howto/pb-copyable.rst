@@ -19,8 +19,8 @@ Overview
 
 This chapter focuses on how to use PB to pass complex types (specifically
 class instances) to and from a remote process. The first section is on
-simply copying the contents of an object to a remote process (:api:`twisted.spread.pb.Copyable <pb.Copyable>` ). The second covers how
-to copy those contents once, then update them later when they change (:api:`twisted.spread.pb.Cacheable <Cacheable>` ).
+simply copying the contents of an object to a remote process (:py:class:`pb.Copyable <twisted.spread.pb.Copyable>` ). The second covers how
+to copy those contents once, then update them later when they change (:py:class:`Cacheable <twisted.spread.pb.Cacheable>` ).
 
 
 
@@ -33,10 +33,10 @@ Motivation
 
 From the :doc:`previous chapter <pb-usage>` , you've seen how to
 pass basic types to a remote process, by using them in the arguments or
-return values of a :api:`twisted.spread.pb.RemoteReference.callRemote <callRemote>` function. However,
+return values of a :py:meth:`callRemote <twisted.spread.pb.RemoteReference.callRemote>` function. However,
 if you've experimented with it, you may have discovered problems when trying
 to pass anything more complicated than a primitive int/list/dict/string
-type, or another :api:`twisted.spread.pb.Referenceable <pb.Referenceable>` object. At some point you want
+type, or another :py:class:`pb.Referenceable <twisted.spread.pb.Referenceable>` object. At some point you want
 to pass entire objects between processes, instead of having to reduce them
 down to dictionaries on one end and then re-instantiating them on the
 other.
@@ -74,7 +74,7 @@ code doesn't work, as will be explained below.
 If you try to run this, you might hope that a suitable remote end which
 implements the ``remote_sendPond`` method would see that method get
 invoked with an instance from the ``LilyPond`` class. But instead,
-you'll encounter the dreaded :api:`twisted.spread.jelly.InsecureJelly <InsecureJelly>` exception. This is
+you'll encounter the dreaded :py:class:`InsecureJelly <twisted.spread.jelly.InsecureJelly>` exception. This is
 Twisted's way of telling you that you've violated a security restriction,
 and that the receiving end refuses to accept your object.
 
@@ -171,7 +171,7 @@ contents of the object.
 
 
 PB lets you specify the mapping from remote class names to local classes
-with the :api:`twisted.spread.jelly.setUnjellyableForClass <setUnjellyableForClass>` function  [#]_ .
+with the :py:func:`setUnjellyableForClass <twisted.spread.jelly.setUnjellyableForClass>` function  [#]_ .
 
 
 This function takes a remote/sender class reference (either the
@@ -231,8 +231,8 @@ one side to the other?
 The sending side has a class called ``LilyPond`` . To make this
 eligible for transport through ``callRemote`` (either as an
 argument, a return value, or something referenced by either of those [like a
-dictionary value]), it must inherit from one of the four :api:`twisted.spread.pb.Serializable <Serializable>` classes. In this section,
-we focus on :api:`twisted.spread.pb.Copyable <Copyable>` .
+dictionary value]), it must inherit from one of the four :py:class:`Serializable <twisted.spread.pb.Serializable>` classes. In this section,
+we focus on :py:class:`Copyable <twisted.spread.pb.Copyable>` .
 The copyable subclass of ``LilyPond`` is called 
 ``CopyPond`` . We create an instance of it and send it through 
 ``callRemote`` as an argument to the receiver's 
@@ -240,8 +240,8 @@ The copyable subclass of ``LilyPond`` is called
 ("jelly" ) that object as an instance with a class name of"copy_sender.CopyPond" and some chunk of data that represents the
 object's state. ``pond.__class__.__module__`` and 
 ``pond.__class__.__name__`` are used to derive the class name
-string. The object's :api:`twisted.spread.flavors.Copyable.getStateToCopy <getStateToCopy>` method is
-used to get the state: this is provided by :api:`twisted.spread.pb.Copyable <pb.Copyable>` , and the default just retrieves 
+string. The object's :py:meth:`getStateToCopy <twisted.spread.pb.Copyable.getStateToCopy>` method is
+used to get the state: this is provided by :py:class:`pb.Copyable <twisted.spread.pb.Copyable>` , and the default just retrieves 
 ``self.__dict__`` . This works just like the optional 
 ``__getstate__`` method used by ``pickle`` . The pair of
 name and state are sent over the wire to the receiver.
@@ -255,7 +255,7 @@ from the sender's ``LilyPond`` class (with a fully-qualified name
 of ``copy_sender.LilyPond`` ), which specifies how we expect it to
 behave. We trust that this is the same ``LilyPond`` class as the
 sender used. (At the very least, we hope ours will be able to accept a state
-created by theirs). It also inherits from :api:`twisted.spread.pb.RemoteCopy <pb.RemoteCopy>` , which is a requirement for all
+created by theirs). It also inherits from :py:class:`pb.RemoteCopy <twisted.spread.pb.RemoteCopy>` , which is a requirement for all
 classes that act in this local-representative role (those which are given to
 the second argument of ``setUnjellyableForClass`` ). 
 ``RemoteCopy`` provides the methods that tell the Jelly layer how
@@ -276,7 +276,7 @@ is transmitted when the sender serializes the remote object.
 When the receiver unserializes ("unjellies" ) the object, it will
 create an instance of the local ``ReceiverPond`` class, and hand
 the transmitted state (usually in the form of a dictionary) to that object's 
-:api:`twisted.spread.flavors.RemoteCopy.setCopyableState <setCopyableState>` method.
+:py:meth:`setCopyableState <twisted.spread.pb.RemoteCopy.setCopyableState>` method.
 This acts just like the ``__setstate__`` method that 
 ``pickle`` uses when unserializing an object. 
 ``getStateToCopy`` /``setCopyableState`` are distinct from 
@@ -450,23 +450,23 @@ Things To Watch Out For
   this right, especially when both the sending and the receiving classes are
   defined together, with the ``setUnjellyableForClass`` immediately
   following them.
-- The class that is sent must inherit from :api:`twisted.spread.pb.Copyable <pb.Copyable>` . The class that is registered to
-  receive it must inherit from :api:`twisted.spread.pb.RemoteCopy <pb.RemoteCopy>`  [#]_ . 
+- The class that is sent must inherit from :py:class:`pb.Copyable <twisted.spread.pb.Copyable>` . The class that is registered to
+  receive it must inherit from :py:class:`pb.RemoteCopy <twisted.spread.pb.RemoteCopy>`  [#]_ . 
 - The same class can be used to send and receive. Just have it inherit
   from both ``pb.Copyable`` and ``pb.RemoteCopy`` . This
   will also make it possible to send the same class symmetrically back and
   forth over the wire. But don't get confused about when it is coming (and
   using ``setCopyableState`` ) versus when it is going (using
   ``getStateToCopy`` ).
-- :api:`twisted.spread.jelly.InsecureJelly <InsecureJelly>` 
+- :py:class:`InsecureJelly <twisted.spread.jelly.InsecureJelly>` 
   exceptions are raised by the receiving end. They will be delivered
   asynchronously to an ``errback`` handler. If you do not add one
   to the ``Deferred`` returned by ``callRemote`` , then you
   will never receive notification of the problem. 
-- The class that is derived from :api:`twisted.spread.pb.RemoteCopy <pb.RemoteCopy>` will be created using a
+- The class that is derived from :py:class:`pb.RemoteCopy <twisted.spread.pb.RemoteCopy>` will be created using a
   constructor ``__init__`` method that takes no arguments. All
   setup must be performed in the ``setCopyableState`` method. As
-  the docstring on :api:`twisted.spread.pb.RemoteCopy <RemoteCopy>` says, don't implement a
+  the docstring on :py:class:`RemoteCopy <twisted.spread.pb.RemoteCopy>` says, don't implement a
   constructor that requires arguments in a subclass of
   ``RemoteCopy`` .
 
@@ -498,7 +498,7 @@ More Information
 - ``pb.Copyable`` is mostly implemented
   in ``twisted.spread.flavors`` , and the docstrings there are
   the best source of additional information.
-- ``Copyable`` is also used in :api:`twisted.web.distrib <twisted.web.distrib>` to deliver HTTP requests to other
+- ``Copyable`` is also used in :py:mod:`twisted.web.distrib` to deliver HTTP requests to other
   programs for rendering, allowing subtrees of URL space to be delegated to
   multiple programs (on multiple machines).
 
@@ -518,17 +518,17 @@ slow. "big" means it takes a lot of data (storage, network bandwidth,
 processing) to represent its state. "slow" means that state doesn't
 change very frequently. It may be more efficient to send the full state only
 once, the first time it is needed, then afterwards only send the differences
-or changes in state whenever it is modified. The :api:`twisted.spread.pb.Cacheable <pb.Cacheable>` class provides a framework to
+or changes in state whenever it is modified. The :py:class:`pb.Cacheable <twisted.spread.pb.Cacheable>` class provides a framework to
 implement this.
 
 
 
 
-:api:`twisted.spread.pb.Cacheable <pb.Cacheable>` is derived
-from :api:`twisted.spread.pb.Copyable <pb.Copyable>` , so it is
+:py:class:`pb.Cacheable <twisted.spread.pb.Cacheable>` is derived
+from :py:class:`pb.Copyable <twisted.spread.pb.Copyable>` , so it is
 based upon the idea of an object's state being captured on the sending side,
 and then turned into a new object on the receiving side. This is extended to
-have an object "publishing" on the sending side (derived from :api:`twisted.spread.pb.Cacheable <pb.Cacheable>` ), matched with one"observing" on the receiving side (derived from :api:`twisted.spread.pb.RemoteCache <pb.RemoteCache>` ).
+have an object "publishing" on the sending side (derived from :py:class:`pb.Cacheable <twisted.spread.pb.Cacheable>` ), matched with one"observing" on the receiving side (derived from :py:class:`pb.RemoteCache <twisted.spread.pb.RemoteCache>` ).
 
 
 
@@ -542,8 +542,8 @@ attribute is changed [#]_ .
 
 
 You derive your sender-side class from ``pb.Cacheable`` , and you
-add two methods: :api:`twisted.spread.flavors.Cacheable.getStateToCacheAndObserveFor <getStateToCacheAndObserveFor>` 
-and :api:`twisted.spread.flavors.Cacheable.stoppedObserving <stoppedObserving>` . The first
+add two methods: :py:meth:`getStateToCacheAndObserveFor <twisted.spread.pb.Cacheable.getStateToCacheAndObserveFor>`
+and :py:meth:`stoppedObserving <twisted.spread.pb.Cacheable.stoppedObserving>` . The first
 is called when a remote caching reference is first created, and retrieves
 the data with which the cache is first filled. It also provides an
 object called the "observer"  [#]_ that points at that receiver-side cache. Every time the state of the object
@@ -554,7 +554,7 @@ remote cache goes away, so that you can stop sending updates.
 
 
 
-On the receiver end, you make your cache class inherit from :api:`twisted.spread.pb.RemoteCache <pb.RemoteCache>` , and implement the 
+On the receiver end, you make your cache class inherit from :py:class:`pb.RemoteCache <twisted.spread.pb.RemoteCache>` , and implement the 
 ``setCopyableState`` as you would for a ``pb.RemoteCopy`` 
 object. In addition, you must implement methods to receive the updates sent
 to the observer by the ``pb.Cacheable`` : these methods should have
@@ -590,7 +590,7 @@ reference goes away, the ``pb.RemoteCache`` object can be freed.
 Just before it dies, it tells the sender side it no longer cares about the
 original object. When *that* reference count goes to zero, the
 Observer goes away and the ``pb.Cacheable`` object can stop
-announcing every change that takes place. The :api:`twisted.spread.flavors.Cacheable.stoppedObserving <stoppedObserving>` method is
+announcing every change that takes place. The :py:meth:`stoppedObserving <twisted.spread.pb.Cacheable.stoppedObserving>` method is
 used to tell the ``pb.Cacheable`` that the Observer has gone
 away.
 
@@ -747,9 +747,9 @@ More Information
 
 
 - The best source for information comes from the docstrings
-  in :api:`twisted.spread.flavors <twisted.spread.flavors>` ,
+  in :py:mod:`twisted.spread.flavors` ,
   where ``pb.Cacheable`` is implemented.
-- The :api:`twisted.spread.publish <spread.publish>` module also
+- The :py:mod:`spread.publish <twisted.spread.publish>` module also
   uses ``Cacheable`` , and might be a source of further
   information.
 
@@ -773,11 +773,11 @@ More Information
        unserialized into a local object of type B. It is these objects "B" 
        that are the "Unjellyable"  second argument of the 
        ``setUnjellyableForClass``  function.
-       In particular, "unjellyable"  does *not*  mean "cannot be jellied" . :api:`twisted.spread.jelly.Unpersistable <Unpersistable>`  means "not persistable" , but "unjelly" , "unserialize" , and "unpickle" 
+       In particular, "unjellyable"  does *not*  mean "cannot be jellied" . :py:class:`Unpersistable <twisted.spread.jelly.Unpersistable>`  means "not persistable" , but "unjelly" , "unserialize" , and "unpickle" 
        mean to reverse the operations of "jellying" , "serializing" , and
        "pickling" .
-.. [#] :api:`twisted.spread.pb.RemoteCopy <pb.RemoteCopy>`  is actually defined
-         in :api:`twisted.spread.flavors <twisted.spread.flavors>` , but
+.. [#] :py:class:`pb.RemoteCopy <twisted.spread.pb.RemoteCopy>`  is actually defined
+         in :py:mod:`twisted.spread.flavors` , but
          ``pb.RemoteCopy``  is the preferred way to access it
 .. [#] Of course you could be clever and
        add a hook to ``__setattr__`` , along with magical change-announcing
@@ -785,12 +785,12 @@ More Information
        normal "="  set operations. The semi-magical "property attributes" 
        that were introduced in Python 2.2 could be useful too. The result might be
        hard to maintain or extend, though.
-.. [#] This is actually a :api:`twisted.spread.pb.RemoteCacheObserver <RemoteCacheObserver>` , but it isn't very
+.. [#] This is actually a :py:class:`RemoteCacheObserver <twisted.spread.pb.RemoteCacheObserver>` , but it isn't very
        useful to subclass or modify, so simply treat it as a little demon that sits
        in your ``pb.Cacheable``  class and helps you distribute change
        notifications. The only useful thing to do with it is to run its 
        ``callRemote``  method, which acts just like a normal 
        ``pb.Referenceable`` 's method of the same name.
 .. [#] This applies to
-         multiple references through the same :api:`twisted.spread.pb.Broker <Broker>` . If you've managed to make multiple
+         multiple references through the same :py:class:`Broker <twisted.spread.pb.Broker>` . If you've managed to make multiple
          TCP connections to the same program, you deserve whatever you get.

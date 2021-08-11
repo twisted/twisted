@@ -9,7 +9,7 @@ The purpose of this module is mock process creation for the PID test.
 CreateProcess(...) will spawn a process, and always return a PID of 42.
 """
 
-import win32process
+import win32process  # type: ignore[import]
 
 GetExitCodeProcess = win32process.GetExitCodeProcess
 STARTUPINFO = win32process.STARTUPINFO

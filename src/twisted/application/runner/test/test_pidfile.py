@@ -5,33 +5,30 @@
 Tests for L{twisted.application.runner._pidfile}.
 """
 
-from functools import wraps
 import errno
+from functools import wraps
 from os import getpid, name as SYSTEM_NAME
-from io import BytesIO
+from typing import Any, Callable, Optional
 
-from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.filepath import IFilePath
+import twisted.trial.unittest
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
+from twisted.trial.unittest import SkipTest
 from ...runner import _pidfile
 from .._pidfile import (
-    IPIDFile,
-    PIDFile,
-    NonePIDFile,
     AlreadyRunningError,
     InvalidPIDFileError,
-    StalePIDFileError,
+    IPIDFile,
+    NonePIDFile,
     NoPIDFound,
+    PIDFile,
+    StalePIDFileError,
 )
 
-import twisted.trial.unittest
-from twisted.trial.unittest import SkipTest
 
-
-def ifPlatformSupported(f):
+def ifPlatformSupported(f: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator for tests that are not expected to work on all platforms.
 
@@ -45,13 +42,12 @@ def ifPlatformSupported(f):
     exception but it gets NotImplementedError instead.)
 
     @param f: The test method to decorate.
-    @type f: method
 
     @return: The wrapped callable.
     """
 
     @wraps(f)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         supported = platform.getType() == "posix"
 
         if supported:
@@ -75,128 +71,130 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
     Tests for L{PIDFile}.
     """
 
-    def test_interface(self):
+    def filePath(self, content: Optional[bytes] = None) -> FilePath:
+        filePath = FilePath(self.mktemp())
+        if content is not None:
+            filePath.setContent(content)
+        return filePath
+
+    def test_interface(self) -> None:
         """
         L{PIDFile} conforms to L{IPIDFile}.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         verifyObject(IPIDFile, pidFile)
 
-    def test_formatWithPID(self):
+    def test_formatWithPID(self) -> None:
         """
         L{PIDFile._format} returns the expected format when given a PID.
         """
         self.assertEqual(PIDFile._format(pid=1337), b"1337\n")
 
-    def test_readWithPID(self):
+    def test_readWithPID(self) -> None:
         """
         L{PIDFile.read} returns the PID from the given file path.
         """
         pid = 1337
 
-        pidFile = PIDFile(DummyFilePath(PIDFile._format(pid=pid)))
+        pidFile = PIDFile(self.filePath(PIDFile._format(pid=pid)))
 
         self.assertEqual(pid, pidFile.read())
 
-    def test_readEmptyPID(self):
+    def test_readEmptyPID(self) -> None:
         """
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
         pidValue = b""
-        pidFile = PIDFile(DummyFilePath(b""))
+        pidFile = PIDFile(self.filePath(b""))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(
-            str(e), "non-integer PID value in PID file: {!r}".format(pidValue)
-        )
+        self.assertEqual(str(e), f"non-integer PID value in PID file: {pidValue!r}")
 
-    def test_readWithBogusPID(self):
+    def test_readWithBogusPID(self) -> None:
         """
         L{PIDFile.read} raises L{InvalidPIDFileError} when given an empty file
         path.
         """
         pidValue = b"$foo!"
-        pidFile = PIDFile(DummyFilePath(pidValue))
+        pidFile = PIDFile(self.filePath(pidValue))
 
         e = self.assertRaises(InvalidPIDFileError, pidFile.read)
-        self.assertEqual(
-            str(e), "non-integer PID value in PID file: {!r}".format(pidValue)
-        )
+        self.assertEqual(str(e), f"non-integer PID value in PID file: {pidValue!r}")
 
-    def test_readDoesntExist(self):
+    def test_readDoesntExist(self) -> None:
         """
         L{PIDFile.read} raises L{NoPIDFound} when given a non-existing file
         path.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
 
         e = self.assertRaises(NoPIDFound, pidFile.read)
         self.assertEqual(str(e), "PID file does not exist")
 
-    def test_readOpenRaisesOSErrorNotENOENT(self):
+    def test_readOpenRaisesOSErrorNotENOENT(self) -> None:
         """
         L{PIDFile.read} re-raises L{OSError} if the associated C{errno} is
         anything other than L{errno.ENOENT}.
         """
 
-        def oops(mode="r"):
+        def oops(mode: str = "r") -> FilePath:
             raise OSError(errno.EIO, "I/O error")
 
-        self.patch(DummyFilePath, "open", oops)
+        self.patch(FilePath, "open", oops)
 
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
 
         error = self.assertRaises(OSError, pidFile.read)
         self.assertEqual(error.errno, errno.EIO)
 
-    def test_writePID(self):
+    def test_writePID(self) -> None:
         """
         L{PIDFile._write} stores the given PID.
         """
         pid = 1995
 
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(pid)
 
         self.assertEqual(pidFile.read(), pid)
 
-    def test_writePIDInvalid(self):
+    def test_writePIDInvalid(self) -> None:
         """
         L{PIDFile._write} raises L{ValueError} when given an invalid PID.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
 
         self.assertRaises(ValueError, pidFile._write, "burp")
 
-    def test_writeRunningPID(self):
+    def test_writeRunningPID(self) -> None:
         """
         L{PIDFile.writeRunningPID} stores the PID for the current process.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile.writeRunningPID()
 
         self.assertEqual(pidFile.read(), getpid())
 
-    def test_remove(self):
+    def test_remove(self) -> None:
         """
         L{PIDFile.remove} removes the PID file.
         """
-        pidFile = PIDFile(DummyFilePath(b""))
+        pidFile = PIDFile(self.filePath(b""))
         self.assertTrue(pidFile.filePath.exists())
 
         pidFile.remove()
         self.assertFalse(pidFile.filePath.exists())
 
     @ifPlatformSupported
-    def test_isRunningDoesExist(self):
+    def test_isRunningDoesExist(self) -> None:
         """
         L{PIDFile.isRunning} returns true for a process that does exist.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1337)
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             return  # Don't actually kill anything
 
         self.patch(_pidfile, "kill", kill)
@@ -204,7 +202,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
     @ifPlatformSupported
-    def test_isRunningThis(self):
+    def test_isRunningThis(self) -> None:
         """
         L{PIDFile.isRunning} returns true for this process (which is running).
 
@@ -212,21 +210,21 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         that it actually invokes the C{kill} system call, which is useful for
         testing of our chosen method for probing the existence of a process.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile.writeRunningPID()
 
         self.assertTrue(pidFile.isRunning())
 
     @ifPlatformSupported
-    def test_isRunningDoesNotExist(self):
+    def test_isRunningDoesNotExist(self) -> None:
         """
         L{PIDFile.isRunning} raises L{StalePIDFileError} for a process that
         does not exist (errno=ESRCH).
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1337)
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             raise OSError(errno.ESRCH, "No such process")
 
         self.patch(_pidfile, "kill", kill)
@@ -234,15 +232,15 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertRaises(StalePIDFileError, pidFile.isRunning)
 
     @ifPlatformSupported
-    def test_isRunningNotAllowed(self):
+    def test_isRunningNotAllowed(self) -> None:
         """
         L{PIDFile.isRunning} returns true for a process that we are not allowed
         to kill (errno=EPERM).
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1337)
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             raise OSError(errno.EPERM, "Operation not permitted")
 
         self.patch(_pidfile, "kill", kill)
@@ -250,7 +248,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertTrue(pidFile.isRunning())
 
     @ifPlatformSupported
-    def test_isRunningInit(self):
+    def test_isRunningInit(self) -> None:
         """
         L{PIDFile.isRunning} returns true for a process that we are not allowed
         to kill (errno=EPERM).
@@ -267,41 +265,41 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         if SYSTEM_NAME != "posix":
             raise SkipTest("This test assumes POSIX")
 
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1)  # PID 1 is init on POSIX systems
 
         self.assertTrue(pidFile.isRunning())
 
     @ifPlatformSupported
-    def test_isRunningUnknownErrno(self):
+    def test_isRunningUnknownErrno(self) -> None:
         """
         L{PIDFile.isRunning} re-raises L{OSError} if the attached C{errno}
         value from L{os.kill} is not an expected one.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile.writeRunningPID()
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             raise OSError(errno.EEXIST, "File exists")
 
         self.patch(_pidfile, "kill", kill)
 
         self.assertRaises(OSError, pidFile.isRunning)
 
-    def test_isRunningNoPIDFile(self):
+    def test_isRunningNoPIDFile(self) -> None:
         """
         L{PIDFile.isRunning} returns false if the PID file doesn't exist.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
 
         self.assertFalse(pidFile.isRunning())
 
-    def test_contextManager(self):
+    def test_contextManager(self) -> None:
         """
         When used as a context manager, a L{PIDFile} will store the current pid
         on entry, then removes the PID file on exit.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         self.assertFalse(pidFile.filePath.exists())
 
         with pidFile:
@@ -311,16 +309,16 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         self.assertFalse(pidFile.filePath.exists())
 
     @ifPlatformSupported
-    def test_contextManagerDoesntExist(self):
+    def test_contextManagerDoesntExist(self) -> None:
         """
         When used as a context manager, a L{PIDFile} will replace the
         underlying PIDFile rather than raising L{AlreadyRunningError} if the
         contained PID file exists but refers to a non-running PID.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1337)
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             raise OSError(errno.ESRCH, "No such process")
 
         self.patch(_pidfile, "kill", kill)
@@ -332,16 +330,16 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
             self.assertEqual(pidFile.read(), getpid())
 
     @ifPlatformSupported
-    def test_contextManagerAlreadyRunning(self):
+    def test_contextManagerAlreadyRunning(self) -> None:
         """
         When used as a context manager, a L{PIDFile} will raise
         L{AlreadyRunningError} if the there is already a running process with
         the contained PID.
         """
-        pidFile = PIDFile(DummyFilePath())
+        pidFile = PIDFile(self.filePath())
         pidFile._write(1337)
 
-        def kill(pid, signal):
+        def kill(pid: int, signal: int) -> None:
             return  # Don't actually kill anything
 
         self.patch(_pidfile, "kill", kill)
@@ -356,14 +354,14 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
     Tests for L{NonePIDFile}.
     """
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{NonePIDFile} conforms to L{IPIDFile}.
         """
         pidFile = NonePIDFile()
         verifyObject(IPIDFile, pidFile)
 
-    def test_read(self):
+    def test_read(self) -> None:
         """
         L{NonePIDFile.read} raises L{NoPIDFound}.
         """
@@ -372,7 +370,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         e = self.assertRaises(NoPIDFound, pidFile.read)
         self.assertEqual(str(e), "PID file does not exist")
 
-    def test_write(self):
+    def test_write(self) -> None:
         """
         L{NonePIDFile._write} raises L{OSError} with an errno of L{errno.EPERM}.
         """
@@ -381,7 +379,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         error = self.assertRaises(OSError, pidFile._write, 0)
         self.assertEqual(error.errno, errno.EPERM)
 
-    def test_writeRunningPID(self):
+    def test_writeRunningPID(self) -> None:
         """
         L{NonePIDFile.writeRunningPID} raises L{OSError} with an errno of
         L{errno.EPERM}.
@@ -391,7 +389,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         error = self.assertRaises(OSError, pidFile.writeRunningPID)
         self.assertEqual(error.errno, errno.EPERM)
 
-    def test_remove(self):
+    def test_remove(self) -> None:
         """
         L{NonePIDFile.remove} raises L{OSError} with an errno of L{errno.EPERM}.
         """
@@ -400,7 +398,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
         error = self.assertRaises(OSError, pidFile.remove)
         self.assertEqual(error.errno, errno.ENOENT)
 
-    def test_isRunning(self):
+    def test_isRunning(self) -> None:
         """
         L{NonePIDFile.isRunning} returns L{False}.
         """
@@ -408,7 +406,7 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
         self.assertEqual(pidFile.isRunning(), False)
 
-    def test_contextManager(self):
+    def test_contextManager(self) -> None:
         """
         When used as a context manager, a L{NonePIDFile} doesn't raise, despite
         not existing.
@@ -417,83 +415,3 @@ class NonePIDFileTests(twisted.trial.unittest.TestCase):
 
         with pidFile:
             pass
-
-
-@implementer(IFilePath)
-class DummyFilePath:
-    """
-    In-memory L{IFilePath}.
-    """
-
-    def __init__(self, content=None):
-        self.setContent(content)
-
-    def open(self, mode="r"):
-        if not self._exists:
-            raise OSError(errno.ENOENT, "No such file or directory")
-        return BytesIO(self.getContent())
-
-    def setContent(self, content):
-        self._exists = content is not None
-        self._content = content
-
-    def getContent(self):
-        return self._content
-
-    def remove(self):
-        self.setContent(None)
-
-    def exists(self):
-        return self._exists
-
-    def sep(self):
-        # IFilePath.sep
-        raise NotImplementedError("Unimplemented: DummyFilePath.sep")
-
-    def child(self, name):
-        # IFilePath.child
-        raise NotImplementedError("Unimplemented: DummyFilePath.child")
-
-    def changed(self):
-        # IFilePath.changed
-        raise NotImplementedError("Unimplemented: DummyFilePath.changed")
-
-    def getsize(self):
-        # IFilePath.getsize
-        raise NotImplementedError("Unimplemented: DummyFilePath.getsize")
-
-    def getModificationTime(self):
-        # IFilePath.getModificationTime
-        raise NotImplementedError("Unimplemented: DummyFilePath.getModificationTime")
-
-    def getStatusChangeTime(self):
-        # IFilePath.getStatusChangeTime
-        raise NotImplementedError("Unimplemented: DummyFilePath.getStatusChangeTime")
-
-    def getAccessTime(self):
-        # IFilePath.getAccessTime
-        raise NotImplementedError("Unimplemented: DummyFilePath.getAccessTime")
-
-    def isdir(self):
-        # IFilePath.isdir
-        raise NotImplementedError("Unimplemented: DummyFilePath.isdir")
-
-    def isfile(self):
-        # IFilePath.isfile
-        raise NotImplementedError("Unimplemented: DummyFilePath.isfile")
-
-    def children(self):
-        # IFilePath.children
-        raise NotImplementedError("Unimplemented: DummyFilePath.children")
-
-    def basename(self):
-        # IFilePath.basename
-        raise NotImplementedError("Unimplemented: DummyFilePath.basename")
-
-    def parent(self):
-        # IFilePath.parent
-        raise NotImplementedError("Unimplemented: DummyFilePath.parent")
-
-    def sibling(self, name):
-        # IFilePath.sibling
-        raise NotImplementedError("Unimplemented: DummyFilePath.sibling")

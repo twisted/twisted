@@ -11,13 +11,13 @@ import copyreg as copy_reg
 import inspect
 import pickle
 import types
-from typing import Dict
-from twisted.python.compat import _PYPY
-from twisted.python import log, reflect
 from io import StringIO as _cStringIO
+from typing import Dict
 
+from twisted.python import log, reflect
+from twisted.python.compat import _PYPY
 
-oldModules = {}  # type: Dict[str, types.ModuleType]
+oldModules: Dict[str, types.ModuleType] = {}
 
 
 _UniversalPicklingError = pickle.PicklingError
@@ -37,7 +37,7 @@ def _methodFunction(classObject, methodName):
     it's on and a method name.
 
     @param classObject: A class to retrieve the method's function from.
-    @type classObject: L{type} or L{types.ClassType}
+    @type classObject: L{type}
 
     @param methodName: The name of the method whose function to retrieve.
     @type methodName: native L{str}
@@ -60,7 +60,7 @@ def unpickleMethod(im_name, im_self, im_class):
     @type im_self: L{object}
 
     @param im_class: The class where the method was declared.
-    @type im_class: L{types.ClassType} or L{type} or L{None}
+    @type im_class: L{type} or L{None}
     """
     if im_self is None:
         return getattr(im_class, im_name)
@@ -97,7 +97,7 @@ def _pickleFunction(f):
     @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == "<lambda>":
-        raise _UniversalPicklingError("Cannot pickle lambda function: {}".format(f))
+        raise _UniversalPicklingError(f"Cannot pickle lambda function: {f}")
     return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
 
 
@@ -148,7 +148,7 @@ def pickleStringO(stringo):
     on Python 2.
 
     @param stringo: The string output to pickle.
-    @type stringo: L{cStringIO.OutputType}
+    @type stringo: C{cStringIO.OutputType}
     """
     "support function for copy_reg to pickle StringIO.OutputTypes"
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
@@ -167,7 +167,7 @@ def unpickleStringO(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can write bytes to.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO()
     x.write(val)
@@ -183,7 +183,7 @@ def pickleStringI(stringi):
     on Python 2.
 
     @param stringi: The string input to pickle.
-    @type stringi: L{cStringIO.InputType}
+    @type stringi: C{cStringIO.InputType}
 
     @return: a 2-tuple of (C{unpickleStringI}, (bytes, pointer))
     @rtype: 2-tuple of (function, (bytes, int))
@@ -206,7 +206,7 @@ def unpickleStringI(val, sek):
     @type sek: L{int}
 
     @return: a file-like object which you can read bytes from.
-    @rtype: L{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
+    @rtype: C{cStringIO.OutputType} on Python 2, L{io.StringIO} on Python 3.
     """
     x = _cStringIO(val)
     x.seek(sek)
@@ -233,7 +233,7 @@ class Ephemeral:
 
             if getattr(gc, "get_referrers", None):
                 for r in gc.get_referrers(self):
-                    log.msg(" referred to by %s" % (r,))
+                    log.msg(f" referred to by {r}")
         return None
 
     def __setstate__(self, state):
@@ -241,7 +241,7 @@ class Ephemeral:
         self.__class__ = Ephemeral
 
 
-versionedsToUpgrade = {}  # type: Dict[int, 'Versioned']
+versionedsToUpgrade: Dict[int, "Versioned"] = {}
 upgraded = {}
 
 
@@ -321,7 +321,7 @@ class Versioned:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
                 dct[
-                    "{}.persistenceVersion".format(reflect.qual(base))
+                    f"{reflect.qual(base)}.persistenceVersion"
                 ] = base.persistenceVersion
         return dct
 
@@ -386,5 +386,7 @@ class Versioned:
                     method(self)
                 else:
                     log.msg(
-                        "Warning: cannot upgrade %s to version %s" % (base, persistVers)
+                        "Warning: cannot upgrade {} to version {}".format(
+                            base, persistVers
+                        )
                     )

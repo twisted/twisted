@@ -1,0 +1,245 @@
+# Try to get a short workflow name and a job name that start with Python
+# version to make it easier to check the status inside GitHub UI.
+name: CI
+
+on:
+  push:
+    branches: [ trunk ]
+    tags:
+      - twisted-*
+  pull_request:
+    branches: [ trunk ]
+
+
+defaults:
+  run:
+    shell: bash
+
+
+jobs:
+  testing:
+    runs-on: ubuntu-20.04
+    env:
+      TOXENV: "${{ matrix.tox-env }}"
+      # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
+      TRIAL_ARGS: "-j 4"
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run on the minimum micro Python version that we can get on CI.
+        # When updating the minimum Python version here, also update the
+        # `python_requires` from `setup.cfg`.
+        # Run on latest minor release of each major python version.
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-beta.4]
+        tox-env: ['alldeps-withcov-posix']
+        # By default, tests are executed without disabling IPv6.
+        noipv6: ['']
+        # Tests are executed with the default target which is the full test suite.
+        trial-target: ['']
+
+        include:
+
+          # `nodeps` is created to make sure we don't have import errors in the
+          # runtime and production code.
+          # The minimum supported Python version should be used to maximize
+          # coverage of code that otherwise depends on backports.
+          # Distributed test run is disabled here so that we also have
+          # end to end functional test usage for non-distributed trial runs.
+          - python-version: 3.6.7
+            tox-env: nodeps-withcov-posix
+          # `noipv6` is created to make sure all is OK on an OS which doesn't
+          # have IPv6 available.
+          # Any supported Python version is OK for this job.
+          - python-version: 3.6
+            tox-env: alldeps-withcov-posix
+            noipv6: -noipv6
+          # On PYPY coverage is very slow (5min vs 30min) as there is no C
+          # extension.
+          # There is very little PYPY specific code so there is not much to
+          # gain from reporting coverage.
+          - python-version: pypy-3.6
+            tox-env: alldeps-nocov-posix
+          - python-version: pypy-3.7
+            tox-env: alldeps-nocov-posix
+          # We still run some tests with coverage
+          - python-version: pypy-3.7
+            tox-env: alldeps-withcov-posix
+            trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
+
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: pip cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
+          'setup.cfg', 'tox.ini') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - name: Disable IPv6
+      if: matrix.noipv6
+      run: |
+        sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+        sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+        ip a
+
+    - uses: twisted/python-info-action@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox coverage coveralls
+
+    - name: Test
+      run: |
+        tox ${{ matrix.trial-target }}
+
+    - name: Prepare coverage
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report --skip-covered
+
+    - uses: codecov/codecov-action@v1
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      with:
+        files: coverage.xml
+        name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        fail_ci_if_error: true
+        functionalities: gcov,search
+
+    - name: Publish to Coveralls
+      if: always() && contains(matrix['tox-env'], 'withcov')
+      continue-on-error: true
+      run: |
+        python -m coveralls -v
+      env:
+        COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
+
+  static-checks:
+    runs-on: ubuntu-20.04
+    env:
+      TOX_PARALLEL_NO_SPINNER: 1
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        # Need history on all branches for newsfragment to work.
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+
+    - name: Run the checks
+      run: |
+        python --version
+        tox --parallel -e lint,apidocs,narrativedocs,mypy
+
+    - name: Revert merge commit for a release branch
+      if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
+      env:
+        BRANCH_SHA: ${{ github.event.after }}
+        BRANCH_NAME: ${{ github.head_ref }}
+      run: |
+        git checkout -b $BRANCH_NAME
+        git reset --hard $BRANCH_SHA
+
+    - name: Newsfragment
+      run: |
+        tox -q -e newsfragment
+
+
+  # Used for various release automation.
+  # This is also executed for each PR to exercise the release as much
+  # as possible and reduce the possibility of finding bugs in the release
+  # process late in the release cycle,
+  # The files are published only when a tag is created.
+  release-publish:
+    name: Check release and publish on twisted-* tag
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Test
+      run: |
+        python -m pip install --upgrade pip tox pep517
+        rm -rf dist/*
+        tox -e release-prepare
+
+    - uses: twisted/python-info-action@v1
+
+    - name: Files to be pushed to PyPi
+      run: ls -R dist/
+
+    - name: Check matched tag version and branch version - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+
+    - name: Publish to PyPI - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+
+    - name: Update stable branch - on stable tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      env:
+        STABLE_BRANCH: stable
+        STABLE_REF_RE: '.*twisted-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$'
+      run: |
+          if [[ $GITUB_REF =~ $STABLE_REF_RE ]]; then
+            echo "Pushing current tag to stable branch..."
+            git config --global user.name '$GITHUB_ACTOR'
+            git config --global user.email '$GITHUB_ACTOR@users.noreply.github.com'
+
+            echo '::group::git fetch'
+            git fetch origin
+            echo '::endgroup::'
+
+            git log -1
+            git checkout -b $STABLE_BRANCH origin/$STABLE_BRANCH
+            git reset --hard $GITHUB_SHA
+            git push --force
+            echo "Done"
+          else
+            echo "Branch not updated for not stable releases: $GITUB_REF"
+          fi
+
+
+  all-successful:
+    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    runs-on: ubuntu-latest
+    needs: [testing, static-checks, release-publish]
+    steps:
+    - name: note that all tests succeeded
+      run: echo "🎉"

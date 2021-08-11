@@ -26,28 +26,36 @@ Various other classes in this module support this usage:
     response.
 """
 
-__metaclass__ = type
-
 import re
 
 from zope.interface import implementer
 
+from twisted.internet.defer import (
+    CancelledError,
+    Deferred,
+    fail,
+    maybeDeferred,
+    succeed,
+)
+from twisted.internet.error import ConnectionDone
+from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
+from twisted.protocols.basic import LineReceiver
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import IConsumer, IPushProducer
-from twisted.internet.error import ConnectionDone
-from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
-from twisted.internet.defer import CancelledError
-from twisted.internet.protocol import Protocol
-from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
+from twisted.python.reflect import fullyQualifiedName
+from twisted.web.http import (
+    NO_CONTENT,
+    NOT_MODIFIED,
+    PotentialDataLoss,
+    _ChunkedTransferDecoder,
+    _DataLoss,
+    _IdentityTransferDecoder,
+)
 from twisted.web.http_headers import Headers
-from twisted.web.http import NO_CONTENT, NOT_MODIFIED
-from twisted.web.http import _DataLoss, PotentialDataLoss
-from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
-from twisted.logger import Logger
+from twisted.web.iweb import UNKNOWN_LENGTH, IClientRequest, IResponse
 
 # States HTTPParser can be in
 STATUS = "STATUS"
@@ -184,7 +192,7 @@ def _callAppFunction(function):
     """
     try:
         function()
-    except:
+    except BaseException:
         _moduleLog.failure(
             "Unexpected exception from {name}", name=fullyQualifiedName(function)
         )
@@ -229,18 +237,16 @@ class HTTPParser(LineReceiver):
     # HTTP headers delimited by \n instead of \r\n.
     delimiter = b"\n"
 
-    CONNECTION_CONTROL_HEADERS = set(
-        [
-            b"content-length",
-            b"connection",
-            b"keep-alive",
-            b"te",
-            b"trailers",
-            b"transfer-encoding",
-            b"upgrade",
-            b"proxy-connection",
-        ]
-    )
+    CONNECTION_CONTROL_HEADERS = {
+        b"content-length",
+        b"connection",
+        b"keep-alive",
+        b"te",
+        b"trailers",
+        b"transfer-encoding",
+        b"upgrade",
+        b"proxy-connection",
+    }
 
     def connectionMade(self):
         self.headers = Headers()
@@ -355,7 +361,7 @@ class HTTPClientParser(HTTPParser):
     @ivar _everReceivedData: C{True} if any bytes have been received.
     """
 
-    NO_BODY_CODES = set([NO_CONTENT, NOT_MODIFIED])
+    NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
     _transferDecoders = {
         b"chunked": _ChunkedTransferDecoder,
@@ -547,7 +553,7 @@ class HTTPClientParser(HTTPParser):
                     )
                 else:
                     self.response._bodyDataFinished()
-            except:
+            except BaseException:
                 # Handle exceptions from both the except suites and the else
                 # suite.  Those functions really shouldn't raise exceptions,
                 # but maybe there's some buggy application code somewhere
@@ -611,7 +617,7 @@ def _ensureValidMethod(method):
     """
     if _VALID_METHOD.match(method):
         return method
-    raise ValueError("Invalid method {!r}".format(method))
+    raise ValueError(f"Invalid method {method!r}")
 
 
 _VALID_URI = re.compile(br"\A[\x21-\x7e]+\Z")
@@ -637,7 +643,7 @@ def _ensureValidURI(uri):
     """
     if _VALID_URI.match(uri):
         return uri
-    raise ValueError("Invalid URI {!r}".format(uri))
+    raise ValueError(f"Invalid URI {uri!r}")
 
 
 @implementer(IClientRequest)
@@ -846,7 +852,7 @@ class Request:
                     state[0] = 2
                     try:
                         encoder._noMoreWritesExpected()
-                    except:
+                    except BaseException:
                         # Fail the overall writeTo Deferred - something the
                         # producer did was wrong.
                         ultimate.errback()
@@ -1033,9 +1039,7 @@ def makeStatefulDispatcher(name, template):
     def dispatcher(self, *args, **kwargs):
         func = getattr(self, "_" + name + "_" + self._state, None)
         if func is None:
-            raise RuntimeError(
-                "%r has no %s method in state %s" % (self, name, self._state)
-            )
+            raise RuntimeError(f"{self!r} has no {name} method in state {self._state}")
         return func(*args, **kwargs)
 
     dispatcher.__doc__ = template.__doc__
@@ -1597,7 +1601,7 @@ class HTTP11ClientProtocol(Protocol):
             # added back to connection pool before we finish the request.
             try:
                 self._quiescentCallback(self)
-            except:
+            except BaseException:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
                 self._log.failure("")
@@ -1645,7 +1649,7 @@ class HTTP11ClientProtocol(Protocol):
         """
         try:
             self._parser.dataReceived(bytes)
-        except:
+        except BaseException:
             self._giveUp(Failure())
 
     def connectionLost(self, reason):

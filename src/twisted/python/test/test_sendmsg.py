@@ -5,13 +5,13 @@
 Tests for L{twisted.python.sendmsg}.
 """
 
+import errno
 import os
 import sys
-import errno
 import warnings
-from os import pipe, read, close, pathsep
+from os import close, pathsep, pipe, read
+from socket import AF_INET, AF_INET6, SOL_SOCKET, error, socket
 from struct import pack
-from socket import SOL_SOCKET, AF_INET, AF_INET6, socket, error
 
 try:
     from socket import AF_UNIX, socketpair
@@ -28,7 +28,6 @@ from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
 from twisted.trial.unittest import TestCase
 
 if platform.isLinux():
@@ -42,8 +41,7 @@ else:
 
 
 try:
-    from twisted.python.sendmsg import sendmsg, recvmsg
-    from twisted.python.sendmsg import SCM_RIGHTS, getSocketFamily
+    from twisted.python.sendmsg import SCM_RIGHTS, getSocketFamily, recvmsg, sendmsg
 except ImportError:
     doImportSkip = True
     importSkipReason = "Platform doesn't support sendmsg."
@@ -79,7 +77,7 @@ class _FDHolder:
         If C{self._fd} is unclosed, raise a warning.
         """
         if self._fd:
-            warnings.warn("FD %s was not closed!" % (self._fd,), ResourceWarning)
+            warnings.warn(f"FD {self._fd} was not closed!", ResourceWarning)
             self.close()
 
     def __enter__(self):
@@ -265,7 +263,7 @@ class SendmsgTests(TestCase):
         for i in range(8 * 1024):
             try:
                 sendmsg(self.input, b"x" * 1024, flags=MSG_DONTWAIT)
-            except error as e:
+            except OSError as e:
                 self.assertEqual(e.args[0], errno.EAGAIN)
                 break
         else:

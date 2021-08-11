@@ -6,8 +6,6 @@ An implementation of
 U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-3333/>}.
 """
 
-__metaclass__ = type
-
 from collections.abc import Sequence
 from sys import exc_info
 from warnings import warn
@@ -15,12 +13,11 @@ from warnings import warn
 from zope.interface import implementer
 
 from twisted.internet.threads import blockingCallFromThread
+from twisted.logger import Logger
 from twisted.python.failure import Failure
+from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import INTERNAL_SERVER_ERROR
-from twisted.logger import Logger
-
 
 # PEP-3333 -- which has superseded PEP-333 -- states that, in both Python 2
 # and Python 3, text strings MUST be represented using the platform's native
@@ -365,7 +362,9 @@ class _WSGIResponse:
         # on both Python 2 and Python 3.
         if not isinstance(status, str):
             raise TypeError(
-                "status must be str, not %r (%s)" % (status, type(status).__name__)
+                "status must be str, not {!r} ({})".format(
+                    status, type(status).__name__
+                )
             )
 
         # PEP-3333 mandates that headers should be a plain list, but in
@@ -405,16 +404,14 @@ class _WSGIResponse:
 
             # However, the sequence MUST contain only 2 elements.
             if len(header) != 2:
-                raise TypeError("header must be a (str, str) tuple, not %r" % (header,))
+                raise TypeError(f"header must be a (str, str) tuple, not {header!r}")
 
             # Both elements MUST be native strings. Non-native strings will be
             # rejected by the underlying HTTP machinery in any case, but we
             # reject them here in order to provide a more informative error.
             for elem in header:
                 if not isinstance(elem, str):
-                    raise TypeError(
-                        "header must be (str, str) tuple, not %r" % (header,)
-                    )
+                    raise TypeError(f"header must be (str, str) tuple, not {header!r}")
 
         self.status = status
         self.headers = headers
@@ -508,7 +505,7 @@ class _WSGIResponse:
             close = getattr(appIterator, "close", None)
             if close is not None:
                 close()
-        except:
+        except BaseException:
 
             def wsgiError(started, type, value, traceback):
                 self._log.failure(

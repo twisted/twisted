@@ -12,21 +12,20 @@ Maintainer: Itamar Shtull-Trauring
 
 
 import os
-import stat
 import socket
+import stat
 import struct
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
+from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
 from typing import Optional, Type
-from zope.interface import implementer, implementer_only, implementedBy
 
-from twisted.internet import main, base, tcp, udp, error, interfaces
-from twisted.internet import protocol, address
+from zope.interface import implementedBy, implementer, implementer_only
+
+from twisted.internet import address, base, error, interfaces, main, protocol, tcp, udp
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import lockfile, log, reflect, failure
+from twisted.python import failure, lockfile, log, reflect
+from twisted.python.compat import lazyByteSlice
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
-from twisted.python.compat import lazyByteSlice
-
 
 try:
     from twisted.python import sendmsg as _sendmsg
@@ -67,7 +66,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase = None  # type: Optional[Type[FileDescriptor]]
+    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):
@@ -133,7 +132,7 @@ class _SendmsgMixin:
                         data[index : index + 1],
                         _ancillaryDescriptor(fd),
                     )
-                except socket.error as se:
+                except OSError as se:
                     if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                         return index
                     else:
@@ -167,7 +166,7 @@ class _SendmsgMixin:
             data, ancillary, flags = untilConcludes(
                 sendmsg.recvmsg, self.socket, self.bufferSize
             )
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -277,12 +276,12 @@ class Server(_SendmsgMixin, tcp.Server):
         # FIXME: is this a suitable sessionno?
         sessionno = 0
         self = cls(skt, proto, skt.getpeername(), None, sessionno, reactor)
-        self.repstr = "<%s #%s on %s>" % (
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             skt.getsockname(),
         )
-        self.logstr = "%s,%s,%s" % (
+        self.logstr = "{},{},{}".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             skt.getsockname(),
@@ -359,12 +358,12 @@ class Port(_UNIXPort, tcp.Port):
     def __repr__(self) -> str:
         factoryName = reflect.qual(self.factory.__class__)
         if hasattr(self, "socket"):
-            return "<%s on %r>" % (
+            return "<{} on {!r}>".format(
                 factoryName,
                 _coerceToFilesystemEncoding("", self.port),
             )
         else:
-            return "<%s (not listening)>" % (factoryName,)
+            return f"<{factoryName} (not listening)>"
 
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
@@ -398,7 +397,7 @@ class Port(_UNIXPort, tcp.Port):
                         # exception that actually propagates.
                         if stat.S_ISSOCK(os.stat(self.port).st_mode):
                             os.remove(self.port)
-                    except:
+                    except BaseException:
                         pass
 
         self.factory.doStart()
@@ -410,7 +409,7 @@ class Port(_UNIXPort, tcp.Port):
             else:
                 skt = self.createInternetSocket()
                 skt.bind(self.port)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(None, self.port, le)
         else:
             if _inFilesystemNamespace(self.port):
@@ -503,17 +502,17 @@ class DatagramPort(_UNIXPort, udp.Port):
             self.protocol.__class__,
         )
         if hasattr(self, "socket"):
-            return "<%s on %r>" % (protocolName, self.port)
+            return f"<{protocolName} on {self.port!r}>"
         else:
-            return "<%s (not listening)>" % (protocolName,)
+            return f"<{protocolName} (not listening)>"
 
     def _bindSocket(self):
-        log.msg("%s starting on %s" % (self.protocol.__class__, repr(self.port)))
+        log.msg(f"{self.protocol.__class__} starting on {repr(self.port)}")
         try:
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:
                 skt.bind(self.port)
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(None, self.port, le)
         if self.port and _inFilesystemNamespace(self.port):
             # Make the socket readable and writable to the world.
@@ -526,7 +525,7 @@ class DatagramPort(_UNIXPort, udp.Port):
         """Write a datagram."""
         try:
             return self.socket.sendto(datagram, address)
-        except socket.error as se:
+        except OSError as se:
             no = se.args[0]
             if no == EINTR:
                 return self.write(datagram, address)
@@ -586,7 +585,7 @@ class ConnectedDatagramPort(DatagramPort):
             self._bindSocket()
             self.socket.connect(self.remoteaddr)
             self._connectToProtocol()
-        except:
+        except BaseException:
             self.connectionFailed(failure.Failure())
 
     def connectionFailed(self, reason):
@@ -610,7 +609,7 @@ class ConnectedDatagramPort(DatagramPort):
                 data, addr = self.socket.recvfrom(self.maxPacketSize)
                 read += len(data)
                 self.protocol.datagramReceived(data)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
@@ -618,7 +617,7 @@ class ConnectedDatagramPort(DatagramPort):
                     self.protocol.connectionRefused()
                 else:
                     raise
-            except:
+            except BaseException:
                 log.deferr()
 
     def write(self, data):
@@ -627,7 +626,7 @@ class ConnectedDatagramPort(DatagramPort):
         """
         try:
             return self.socket.send(data)
-        except socket.error as se:
+        except OSError as se:
             no = se.args[0]
             if no == EINTR:
                 return self.write(data)

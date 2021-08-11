@@ -3,34 +3,30 @@
 # See LICENSE for details.
 
 """
-http://isometri.cc/strips/gates_in_the_head
+Windows Process Management, used with reactor.spawnProcess
 """
 
 
 import os
 import sys
 
-# Win32 imports
-import win32api
-import win32con
-import win32event
-import win32file
-import win32pipe
-import win32process
-import win32security
-
-import pywintypes
-
 from zope.interface import implementer
-from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.win32 import quoteArguments
+import pywintypes  # type: ignore[import]
 
-from twisted.internet import error
+# Win32 imports
+import win32api  # type: ignore[import]
+import win32con  # type: ignore[import]
+import win32event  # type: ignore[import]
+import win32file  # type: ignore[import]
+import win32pipe  # type: ignore[import]
+import win32process  # type: ignore[import]
+import win32security  # type: ignore[import]
 
-from twisted.internet import _pollingfile
+from twisted.internet import _pollingfile, error
 from twisted.internet._baseprocess import BaseProcess
-
+from twisted.internet.interfaces import IConsumer, IProcessTransport, IProducer
+from twisted.python.win32 import quoteArguments
 
 # Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
@@ -79,7 +75,7 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    with open(filename, "rU") as f:
+    with open(filename) as f:
         if f.read(2) == "#!":
             exe = f.readline(1024).strip("\n")
             return exe
@@ -284,7 +280,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Write data to the process' stdin.
 
-        @type data: C{list} of C{bytes}
+        @type seq: C{list} of C{bytes}
         """
         self.stdin.writeSequence(seq)
 
@@ -398,4 +394,4 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         """
         Return a string representation of the process.
         """
-        return "<%s pid=%s>" % (self.__class__.__name__, self.pid)
+        return f"<{self.__class__.__name__} pid={self.pid}>"
