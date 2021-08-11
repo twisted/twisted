@@ -7,14 +7,13 @@
 *Real* reloading support for Python.
 """
 
-# System Imports
-import sys
-import types
-import time
 import linecache
 
+# System Imports
+import sys
+import time
+import types
 from imp import reload
-
 from types import ModuleType
 from typing import Dict
 

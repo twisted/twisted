@@ -12,34 +12,32 @@ from io import BytesIO
 from socket import AF_INET, AF_INET6
 from typing import Any, Callable
 
-from zope.interface import implementer, implementedBy
+from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
 
-from twisted.python import failure
+from twisted.internet import address, error, protocol, task
+from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
+from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import (
-    IProtocol,
-    ITransport,
-    IConsumer,
-    IPushProducer,
-    IConnector,
-    IReactorCore,
-    IReactorTCP,
-    IReactorSSL,
-    IReactorUNIX,
-    IReactorSocket,
-    IListeningPort,
-    IReactorFDSet,
-)
-from twisted.internet.abstract import isIPv6Address, _dataMustBeBytes
 from twisted.internet.error import UnsupportedAddressFamily
-from twisted.protocols import basic
-from twisted.internet import protocol, error, address, task
-
+from twisted.internet.interfaces import (
+    IConnector,
+    IConsumer,
+    IListeningPort,
+    IProtocol,
+    IPushProducer,
+    IReactorCore,
+    IReactorFDSet,
+    IReactorSocket,
+    IReactorSSL,
+    IReactorTCP,
+    IReactorUNIX,
+    ITransport,
+)
 from twisted.internet.task import Clock
-from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
 from twisted.logger import ILogObserver
-
+from twisted.protocols import basic
+from twisted.python import failure
 
 __all__ = [
     "AccumulatingProtocol",

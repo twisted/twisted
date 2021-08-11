@@ -8,31 +8,29 @@ Test HTTP/2 support.
 
 import itertools
 
-from zope.interface import providedBy, directlyProvides
+from zope.interface import directlyProvides, providedBy
 
-from twisted.internet import defer, reactor, task, error
+from twisted.internet import defer, error, reactor, task
+from twisted.internet.address import IPv4Address
+from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.python import failure
 from twisted.python.compat import iterbytes
-from twisted.internet.testing import StringTransport, MemoryReactorClock
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.web.test.test_http import (
-    DummyHTTPHandler,
-    DummyHTTPHandlerProxy,
     DelayedHTTPHandler,
     DelayedHTTPHandlerProxy,
+    DummyHTTPHandler,
+    DummyHTTPHandlerProxy,
     DummyPullProducerHandlerProxy,
-    _makeRequestProxyFactory,
     _IDeprecatedHTTPChannelToRequestInterfaceProxy,
+    _makeRequestProxyFactory,
 )
-from twisted.internet.address import IPv4Address
 
 skipH2 = None
 
 try:
-    from twisted.web._http2 import H2Connection
-
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
     import h2  # type: ignore[import]
@@ -40,7 +38,9 @@ try:
     import h2.exceptions  # type: ignore[import]
     import hyperframe  # type: ignore[import]
     import priority  # type: ignore[import]
-    from hpack.hpack import Encoder, Decoder  # type: ignore[import]
+    from hpack.hpack import Decoder, Encoder  # type: ignore[import]
+
+    from twisted.web._http2 import H2Connection
 except ImportError:
     skipH2 = "HTTP/2 support not enabled"
 

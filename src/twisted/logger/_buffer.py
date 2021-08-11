@@ -13,7 +13,6 @@ from zope.interface import implementer
 
 from ._interfaces import ILogObserver, LogEvent
 
-
 _DEFAULT_BUFFER_MAXIMUM = 64 * 1024
 
 

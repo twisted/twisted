@@ -24,20 +24,20 @@ but may have a small impact on users who subclass and override methods.
 
 import sys
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
 from twisted.python import log, reflect
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import cmp, comparable
 from .jelly import (
-    setUnjellyableForClass,
-    setUnjellyableForClassTree,
-    setUnjellyableFactoryForClass,
-    unjellyableRegistry,
     Jellyable,
     Unjellyable,
-    setInstanceState,
-    getInstanceState,
     _createBlank,
+    getInstanceState,
+    setInstanceState,
+    setUnjellyableFactoryForClass,
+    setUnjellyableForClass,
+    setUnjellyableForClassTree,
+    unjellyableRegistry,
 )
 
 # compatibility

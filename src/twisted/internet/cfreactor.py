@@ -16,40 +16,36 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.posixbase import PosixReactorBase, _Waker
-from twisted.internet.posixbase import _NO_FILEDESC
-
-from twisted.python import log
-
+from CFNetwork import (  # type: ignore[import]
+    CFSocketCreateRunLoopSource,
+    CFSocketCreateWithNative,
+    CFSocketDisableCallBacks,
+    CFSocketEnableCallBacks,
+    CFSocketInvalidate,
+    CFSocketSetSocketFlags,
+    kCFSocketAutomaticallyReenableReadCallBack,
+    kCFSocketAutomaticallyReenableWriteCallBack,
+    kCFSocketConnectCallBack,
+    kCFSocketReadCallBack,
+    kCFSocketWriteCallBack,
+)
 from CoreFoundation import (  # type: ignore[import]
+    CFAbsoluteTimeGetCurrent,
     CFRunLoopAddSource,
-    CFRunLoopRemoveSource,
+    CFRunLoopAddTimer,
     CFRunLoopGetMain,
+    CFRunLoopRemoveSource,
     CFRunLoopRun,
     CFRunLoopStop,
     CFRunLoopTimerCreate,
-    CFRunLoopAddTimer,
     CFRunLoopTimerInvalidate,
     kCFAllocatorDefault,
     kCFRunLoopCommonModes,
-    CFAbsoluteTimeGetCurrent,
 )
 
-from CFNetwork import (  # type: ignore[import]
-    CFSocketCreateWithNative,
-    CFSocketSetSocketFlags,
-    CFSocketEnableCallBacks,
-    CFSocketCreateRunLoopSource,
-    CFSocketDisableCallBacks,
-    CFSocketInvalidate,
-    kCFSocketWriteCallBack,
-    kCFSocketReadCallBack,
-    kCFSocketConnectCallBack,
-    kCFSocketAutomaticallyReenableReadCallBack,
-    kCFSocketAutomaticallyReenableWriteCallBack,
-)
-
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase, _Waker
+from twisted.python import log
 
 _READ = 0
 _WRITE = 1

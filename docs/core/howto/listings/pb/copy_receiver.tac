@@ -18,12 +18,12 @@ if __name__ == "__main__":
     print(__doc__)
     sys.exit(1)
 
-from twisted.application import service, internet
-from twisted.internet import reactor
-from twisted.spread import pb
-from copy_sender import LilyPond, CopyPond
+from copy_sender import CopyPond, LilyPond
 
+from twisted.application import internet, service
+from twisted.internet import reactor
 from twisted.python import log
+from twisted.spread import pb
 
 # log.startLogging(sys.stdout)
 

@@ -5,23 +5,22 @@
 Tests for L{twisted.application.twist._options}.
 """
 
-from sys import stdout, stderr
+from sys import stderr, stdout
 from typing import Callable, Dict, List, Optional, TextIO, Tuple
 
-from ...reactors import NoSuchReactor
+import twisted.trial.unittest
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
     FileLogObserver,
     LogLevel,
-    textFileLogObserver,
     jsonFileLogObserver,
+    textFileLogObserver,
 )
 from twisted.python.usage import UsageError
 from twisted.test.proto_helpers import MemoryReactor
-import twisted.trial.unittest
-
+from ...reactors import NoSuchReactor
 from ...runner._exit import ExitStatus
 from ...runner.test.test_runner import DummyExit
 from ...service import ServiceMaker

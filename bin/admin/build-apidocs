@@ -13,6 +13,7 @@
 #
 
 import sys
+
 from twisted.python._release import BuildAPIDocsScript
 
 BuildAPIDocsScript().main(sys.argv[1:])

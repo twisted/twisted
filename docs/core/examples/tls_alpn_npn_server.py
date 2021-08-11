@@ -36,11 +36,10 @@ directory.
 
 from OpenSSL import crypto
 
-from twisted.internet.endpoints import SSL4ServerEndpoint
-from twisted.internet.protocol import Protocol, Factory
 from twisted.internet import reactor, ssl
+from twisted.internet.endpoints import SSL4ServerEndpoint
+from twisted.internet.protocol import Factory, Protocol
 from twisted.python.filepath import FilePath
-
 
 # The list of protocols we'd be prepared to speak after the TLS negotiation is
 # complete.

@@ -5,7 +5,6 @@
 Tests for L{twisted.python._pydoctor}.
 """
 from twisted.python.reflect import requireModule
-
 from twisted.trial.unittest import TestCase
 
 model = requireModule("pydoctor.model")

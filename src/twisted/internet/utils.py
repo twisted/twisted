@@ -7,14 +7,13 @@ Utility methods.
 """
 
 
-import warnings
 import sys
+import warnings
 from functools import wraps
-
-from twisted.internet import protocol, defer
-from twisted.python import failure
-
 from io import BytesIO
+
+from twisted.internet import defer, protocol
+from twisted.python import failure
 
 
 def _callProtocolWithDeferred(
@@ -192,11 +191,30 @@ def _resetWarningFilters(passthrough, addedFilters):
 
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
-    """Run the function C{f}, but with some warnings suppressed.
+    """
+    Run the function I{f}, but with some warnings suppressed.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-                               Must be a sequence of 2-tuples (args, kwargs).
-    @param f: A callable, followed by its arguments and keyword arguments
+    This calls L{warnings.filterwarnings} to add warning filters before
+    invoking I{f}. If I{f} returns a L{Deferred} then the added filters are
+    removed once the deferred fires. Otherwise they are removed immediately.
+
+    Note that the list of warning filters is a process-wide resource, so
+    calling this function will affect all threads.
+
+    @param suppressedWarnings:
+        A list of arguments to pass to L{warnings.filterwarnings}, a sequence
+        of (args, kwargs) 2-tuples.
+
+    @param f: A callable, which may return a L{Deferred}.
+
+    @param a: Positional arguments passed to I{f}
+
+    @param kw: Keyword arguments passed to I{f}
+
+    @return: The result of C{f(*a, **kw)}
+
+    @seealso: L{twisted.python.util.runWithWarningsSuppressed}
+        functions similarly, but doesn't handled L{Deferred}s.
     """
     for args, kwargs in suppressedWarnings:
         warnings.filterwarnings(*args, **kwargs)

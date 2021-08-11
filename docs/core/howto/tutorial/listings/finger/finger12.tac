@@ -1,6 +1,6 @@
 # But let's try and fix setting away messages, shall we?
 from twisted.application import service, strports
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 
 

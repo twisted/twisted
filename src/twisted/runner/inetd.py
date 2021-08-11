@@ -14,7 +14,7 @@ correctly yet.
 
 import os
 
-from twisted.internet import process, reactor, fdesc
+from twisted.internet import fdesc, process, reactor
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.protocols import wire
 

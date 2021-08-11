@@ -1,1 +1,0 @@
-twisted.web.http's chunked encoding support now rejects chunk sizes that are invalid because they look like negative hexadecimal integers.

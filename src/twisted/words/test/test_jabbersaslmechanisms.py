@@ -6,9 +6,8 @@ Tests for L{twisted.words.protocols.jabber.sasl_mechanisms}.
 """
 
 
-from twisted.trial import unittest
-
 from twisted.python.compat import networkString
+from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
 
 

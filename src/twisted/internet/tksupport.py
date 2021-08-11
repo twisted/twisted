@@ -29,11 +29,10 @@ fix::
 @see: U{Tcl/TkAqua FAQ for more info<http://wiki.tcl.tk/12987>}
 """
 
-from twisted.internet import task
-
-import tkinter.simpledialog as tkSimpleDialog
 import tkinter.messagebox as tkMessageBox
+import tkinter.simpledialog as tkSimpleDialog
 
+from twisted.internet import task
 
 _task = None
 
