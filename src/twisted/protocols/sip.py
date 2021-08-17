@@ -213,7 +213,7 @@ class Via:
         """
         Returns the rport value expected by the old SIP code.
         """
-        if self.rportRequested == True:
+        if self.rportRequested is True:
             return True
         elif self.rportValue is not None:
             return self.rportValue
@@ -780,7 +780,7 @@ class Base(protocol.DatagramProtocol):
             if senderVia.port != srcPort:
                 senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
-        elif senderVia.rport == True:
+        elif senderVia.rport is True:
             senderVia.received = srcHost
             senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()

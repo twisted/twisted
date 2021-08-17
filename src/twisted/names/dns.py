@@ -2396,7 +2396,7 @@ def _compactRepr(
 
     setFlags = []
     for name in flagNames:
-        if name in alwaysShow or getattr(obj, name, False) == True:
+        if name in alwaysShow or getattr(obj, name, False) is True:
             setFlags.append(name)
 
     displayableArgs = _getDisplayableArguments(obj, alwaysShow, fieldNames)
