@@ -116,7 +116,7 @@ jobs:
 
     - name: Test
       run: |
-        tox ${{ matrix.trial-target }}
+        tox --verbose --verbose ${{ matrix.trial-target }}
 
     - name: Prepare coverage
       if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
