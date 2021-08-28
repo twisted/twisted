@@ -23,6 +23,7 @@ jobs:
       py37: "3.7"
       py38: "3.8"
       py39: "3.9"
+      pypy3: "pypy3"
 
 - template: 'windows_test_jobs.yml'
   parameters:
@@ -31,6 +32,7 @@ jobs:
       py37: "3.7"
       py38: "3.8"
       py39: "3.9"
+      pypy3: "pypy3"
     reactor: select
 
 - template: 'windows_test_jobs.yml'
@@ -40,4 +42,5 @@ jobs:
       py37: "3.7"
       py38: "3.8"
       py39: "3.9"
+      pypy3: "pypy3"
     reactor: iocp
