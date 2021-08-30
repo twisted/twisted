@@ -13,20 +13,21 @@ demonstrated to work earlier in the file are used by those later in the file
 """
 
 
-import warnings
 import unittest as pyunit
+import warnings
 
-from twisted.python.util import FancyEqMixin
+from incremental import Version, getVersionString
+
+from twisted.internet.defer import Deferred, fail, succeed
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.failure import Failure
 from twisted.python.reflect import (
-    prefixedMethods,
     accumulateMethods,
     fullyQualifiedName,
+    prefixedMethods,
 )
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from incremental import Version, getVersionString
-from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
 from twisted.trial import unittest
-from twisted.internet.defer import Deferred, fail, succeed
 
 
 class MockEquality(FancyEqMixin):
@@ -36,7 +37,7 @@ class MockEquality(FancyEqMixin):
         self.name = name
 
     def __repr__(self) -> str:
-        return "MockEquality({})".format(self.name)
+        return f"MockEquality({self.name})"
 
 
 class ComparisonError:
@@ -123,9 +124,9 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         @param method: The test method to test.
         """
         for notTrue in [0, 0.0, False, None, (), []]:
-            result = method(notTrue, "failed on {!r}".format(notTrue))
+            result = method(notTrue, f"failed on {notTrue!r}")
             if result != notTrue:
-                self.fail("Did not return argument {!r}".format(notTrue))
+                self.fail(f"Did not return argument {notTrue!r}")
 
     def _assertFalseTrue(self, method):
         """
@@ -135,12 +136,12 @@ class AssertFalseTests(unittest.SynchronousTestCase):
         """
         for true in [1, True, "cat", [1, 2], (3, 4)]:
             try:
-                method(true, "failed on {!r}".format(true))
+                method(true, f"failed on {true!r}")
             except self.failureException as e:
                 self.assertIn(
-                    "failed on {!r}".format(true),
+                    f"failed on {true!r}",
                     str(e),
-                    "Raised incorrect exception on {!r}: {!r}".format(true, e),
+                    f"Raised incorrect exception on {true!r}: {e!r}",
                 )
             else:
                 self.fail(
@@ -201,12 +202,12 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         """
         for notTrue in [0, 0.0, False, None, (), []]:
             try:
-                method(notTrue, "failed on {!r}".format(notTrue))
+                method(notTrue, f"failed on {notTrue!r}")
             except self.failureException as e:
                 self.assertIn(
-                    "failed on {!r}".format(notTrue),
+                    f"failed on {notTrue!r}",
                     str(e),
-                    "Raised incorrect exception on {!r}: {!r}".format(notTrue, e),
+                    f"Raised incorrect exception on {notTrue!r}: {e!r}",
                 )
             else:
                 self.fail(
@@ -224,9 +225,9 @@ class AssertTrueTests(unittest.SynchronousTestCase):
         @param method: The test method to test.
         """
         for true in [1, True, "cat", [1, 2], (3, 4)]:
-            result = method(true, "failed on {!r}".format(true))
+            result = method(true, f"failed on {true!r}")
             if result != true:
-                self.fail("Did not return argument {!r}".format(true))
+                self.fail(f"Did not return argument {true!r}")
 
     def test_assertTrueFalse(self):
         """
@@ -294,12 +295,10 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
                 got = str(ourFailure)
                 expected = str(theirFailure)
                 if expected != got:
-                    self.fail("Expected: {!r}; Got: {!r}".format(expected, got))
+                    self.fail(f"Expected: {expected!r}; Got: {got!r}")
 
         if not raised:
-            self.fail(
-                "Call to assertEqual({!r}, {!r}) didn't fail".format(first, second)
-            )
+            self.fail(f"Call to assertEqual({first!r}, {second!r}) didn't fail")
 
     def test_assertEqual_basic(self):
         self._testEqualPair("cat", "cat")
@@ -393,7 +392,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         )
         self.assertTrue(
             isinstance(x, self.failureException),
-            "Expected {!r} instance to be returned".format(self.failureException),
+            f"Expected {self.failureException!r} instance to be returned",
         )
         try:
             x = self.failUnlessRaises(
@@ -480,7 +479,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             if typeError:
                 errors.append("expected TypeError in exception message")
             if errors:
-                self.fail("; ".join(errors), "message = {}".format(message))
+                self.fail("; ".join(errors), f"message = {message}")
         else:
             self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
 
@@ -697,7 +696,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         A = type("A", (object,), {})
         a = A()
         error = self.assertRaises(self.failureException, self.assertNotIsInstance, a, A)
-        self.assertEqual(str(error), "{!r} is an instance of {}".format(a, A))
+        self.assertEqual(str(error), f"{a!r} is an instance of {A}")
 
     def test_assertNotIsInstanceErrorMultipleClasses(self):
         """
@@ -1203,8 +1202,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
     async def noCurrentResult(self):
         await Deferred()
 
-    async def raisesException(self):
-        raise self.exception
+    async def raisesException(self, exception=None):
+        if exception is None:
+            exception = self.exception
+        raise exception
 
     def test_withoutResult(self):
         """
@@ -1232,14 +1233,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} that has the original failure
         traceback when called with a coroutine with a failure result.
         """
+        exception = Exception("Bad times")
         try:
-            self.successResultOf(self.raisesException())
+            self.successResultOf(self.raisesException(exception))
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Success result expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithoutResult(self):
         """
@@ -1300,14 +1299,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         the L{SynchronousTestCase.failureException} message contains the
         original exception traceback.
         """
+        exception = Exception("Bad times")
         try:
-            self.failureResultOf(self.raisesException(), KeyError)
+            self.failureResultOf(self.raisesException(exception), KeyError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Failure of type (builtins.KeyError) expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
@@ -1338,14 +1335,16 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} message contains the original
         exception traceback in the error message.
         """
-        try:
-            self.failureResultOf(self.raisesException(), KeyError, IOError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
+        exception = Exception("Bad times")
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+        try:
+            self.failureResultOf(self.raisesException(exception), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(
+                "Failure of type (builtins.KeyError or builtins.OSError) expected on",
+                str(e),
+            )
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_successResultOfWithSuccessResult(self):
         """
@@ -1502,14 +1501,10 @@ class AssertionNamesTests(unittest.SynchronousTestCase):
             if not callable(value):
                 continue
             if name.endswith("Equal"):
-                self.assertTrue(
-                    hasattr(self, name + "s"), "{} but no {}s".format(name, name)
-                )
+                self.assertTrue(hasattr(self, name + "s"), f"{name} but no {name}s")
                 self.assertEqual(value, getattr(self, name + "s"))
             if name.endswith("Equals"):
-                self.assertTrue(
-                    hasattr(self, name[:-1]), "{} but no {}".format(name, name[:-1])
-                )
+                self.assertTrue(hasattr(self, name[:-1]), f"{name} but no {name[:-1]}")
                 self.assertEqual(value, getattr(self, name[:-1]))
 
 
@@ -1587,9 +1582,7 @@ class CallDeprecatedTests(unittest.SynchronousTestCase):
         # by callDeprecated.  Flush it now to make sure it did happen and to
         # prevent it from showing up on stdout.
         warningsShown = self.flushWarnings()
-        self.assertEqual(
-            len(warningsShown), 1, "Unexpected warnings: {}".format(warningsShown)
-        )
+        self.assertEqual(len(warningsShown), 1, f"Unexpected warnings: {warningsShown}")
 
     def test_callDeprecationWithMessage(self):
         """

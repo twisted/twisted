@@ -19,11 +19,11 @@ connections, listeners or connectors are added)::
 import errno
 import select
 
-from zope.interface import implementer, declarations, Interface, Attribute
+from zope.interface import Attribute, Interface, declarations, implementer
 
 from twisted.internet import main, posixbase
-from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
-from twisted.python import log, failure
+from twisted.internet.interfaces import IReactorDaemonize, IReactorFDSet
+from twisted.python import failure, log
 
 try:
     # This is to keep mypy from complaining

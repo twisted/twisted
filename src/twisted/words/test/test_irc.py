@@ -11,7 +11,7 @@ import time
 
 from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.test.proto_helpers import StringIOWithoutClosing, StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
@@ -1349,7 +1349,7 @@ class ClientImplementationTests(IRCTestCase):
         """
         if target is None:
             target = "#chan"
-        message = ":Wolf!~wolf@yok.utu.fi MODE {} {} {}\r\n".format(target, msg, args)
+        message = f":Wolf!~wolf@yok.utu.fi MODE {target} {msg} {args}\r\n"
         self.client.dataReceived(message)
 
     def _parseModeChange(self, results, target=None):
@@ -1364,7 +1364,7 @@ class ClientImplementationTests(IRCTestCase):
             self.assertEqual(method, "modeChanged")
             self.assertEqual(data["user"], "Wolf!~wolf@yok.utu.fi")
             self.assertEqual(data["channel"], target)
-            results[n] = tuple([data[key] for key in ("set", "modes", "args")])
+            results[n] = tuple(data[key] for key in ("set", "modes", "args"))
         return results
 
     def _checkModeChange(self, expected, target=None):
@@ -1862,9 +1862,9 @@ class ClientMsgTests(IRCTestCase):
         L{IRCClient.msg} are sent in a single command.
         """
         msg = "barbazbo"
-        maxLen = len("PRIVMSG foo :{}".format(msg)) + 2
+        maxLen = len(f"PRIVMSG foo :{msg}") + 2
         self.client.msg("foo", msg, maxLen)
-        self.assertEqual(self.client.lines, ["PRIVMSG foo :{}".format(msg)])
+        self.assertEqual(self.client.lines, [f"PRIVMSG foo :{msg}"])
         self.client.lines = []
         self.client.msg("foo", msg, maxLen - 1)
         self.assertEqual(2, len(self.client.lines))
@@ -2056,7 +2056,7 @@ class ClientTests(IRCTestCase):
         message = "Sorry, I'm not here."
         self.protocol.away(message)
         expected = [
-            "AWAY :{}".format(message),
+            f"AWAY :{message}",
             "",
         ]
         self.assertEqualBufferValue(self.transport.value().split(b"\r\n"), expected)
@@ -2103,7 +2103,7 @@ class ClientTests(IRCTestCase):
         self.protocol.password = None
         self.protocol.register(username, hostname, servername)
         expected = [
-            "NICK {}".format(username),
+            f"NICK {username}",
             "USER %s %s %s :%s"
             % (username, hostname, servername, self.protocol.realname),
             "",
@@ -2123,8 +2123,8 @@ class ClientTests(IRCTestCase):
         self.protocol.password = "testpass"
         self.protocol.register(username, hostname, servername)
         expected = [
-            "PASS {}".format(self.protocol.password),
-            "NICK {}".format(username),
+            f"PASS {self.protocol.password}",
+            f"NICK {username}",
             "USER %s %s %s :%s"
             % (username, hostname, servername, self.protocol.realname),
             "",
@@ -2145,7 +2145,7 @@ class ClientTests(IRCTestCase):
         self.protocol.register(username, hostname, servername)
         self.protocol.irc_ERR_NICKNAMEINUSE("prefix", ["param"])
         lastLine = self.getLastLine(self.transport)
-        self.assertNotEqual(lastLine, "NICK {}".format(username))
+        self.assertNotEqual(lastLine, f"NICK {username}")
 
         # Keep chaining underscores for each collision
         self.protocol.irc_ERR_NICKNAMEINUSE("prefix", ["param"])
@@ -2175,7 +2175,7 @@ class ClientTests(IRCTestCase):
         self.protocol.irc_RPL_WELCOME("prefix", ["param"])
         self.protocol.setNick(newnick)
         self.assertEqual(self.protocol.nickname, oldnick)
-        self.protocol.irc_NICK("{}!quux@qux".format(oldnick), [newnick])
+        self.protocol.irc_NICK(f"{oldnick}!quux@qux", [newnick])
         self.assertEqual(self.protocol.nickname, newnick)
 
     def test_erroneousNick(self):
@@ -2190,9 +2190,7 @@ class ClientTests(IRCTestCase):
         self.protocol.register(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME("prefix", ["param"])
         lastLine = self.getLastLine(self.transport)
-        self.assertEqual(
-            lastLine, "NICK {}".format(self.protocol.erroneousNickFallback)
-        )
+        self.assertEqual(lastLine, f"NICK {self.protocol.erroneousNickFallback}")
         self.protocol.irc_RPL_WELCOME("prefix", ["param"])
         self.assertEqual(self.protocol._registered, True)
         self.protocol.setNick(self.protocol.erroneousNickFallback)
@@ -2204,7 +2202,7 @@ class ClientTests(IRCTestCase):
         self.protocol.setNick(badnick)
         self.protocol.irc_ERR_ERRONEUSNICKNAME("prefix", ["param"])
         lastLine = self.getLastLine(self.transport)
-        self.assertEqual(lastLine, "NICK {}".format(badnick))
+        self.assertEqual(lastLine, f"NICK {badnick}")
         self.assertEqual(self.protocol.nickname, oldnick)
 
     def test_describe(self):
@@ -2218,8 +2216,8 @@ class ClientTests(IRCTestCase):
         self.protocol.describe(target, action)
         self.protocol.describe(channel, action)
         expected = [
-            "PRIVMSG {} :\01ACTION {}\01".format(target, action),
-            "PRIVMSG {} :\01ACTION {}\01".format(channel, action),
+            f"PRIVMSG {target} :\01ACTION {action}\01",
+            f"PRIVMSG {channel} :\01ACTION {action}\01",
             "",
         ]
         self.assertEqualBufferValue(self.transport.value().split(b"\r\n"), expected)

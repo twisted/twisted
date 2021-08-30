@@ -14,27 +14,25 @@ import os
 import sys
 import tempfile
 import types
+import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
 from typing import Optional, Tuple
 
+# Python 2.7 and higher has skip support built-in
+from unittest import SkipTest
+
+from twisted.internet.defer import ensureDeferred
 from twisted.python import failure, log, monkey
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
     getDeprecationWarningString,
     getVersionString,
     warnAboutFunction,
 )
-from twisted.internet.defer import ensureDeferred
-
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
-
-import unittest as pyunit
-
-# Python 2.7 and higher has skip support built-in
-from unittest import SkipTest
 
 
 class FailTest(AssertionError):
@@ -65,7 +63,7 @@ class Todo:
         self.errors = errors
 
     def __repr__(self) -> str:
-        return "<Todo reason={!r} errors={!r}>".format(self.reason, self.errors)
+        return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
 
     def expected(self, failure):
         """
@@ -438,7 +436,7 @@ class _Assertions(pyunit.TestCase):
         '%r is not %r' % (first, second)
         """
         if first is not second:
-            raise self.failureException(msg or "{!r} is not {!r}".format(first, second))
+            raise self.failureException(msg or f"{first!r} is not {second!r}")
         return first
 
     failUnlessIdentical = assertIs
@@ -454,7 +452,7 @@ class _Assertions(pyunit.TestCase):
         '%r is %r' % (first, second)
         """
         if first is second:
-            raise self.failureException(msg or "{!r} is {!r}".format(first, second))
+            raise self.failureException(msg or f"{first!r} is {second!r}")
         return first
 
     failIfIdentical = assertIsNot
@@ -468,7 +466,7 @@ class _Assertions(pyunit.TestCase):
         '%r == %r' % (first, second)
         """
         if not first != second:
-            raise self.failureException(msg or "{!r} == {!r}".format(first, second))
+            raise self.failureException(msg or f"{first!r} == {second!r}")
         return first
 
     assertNotEquals = assertNotEqual
@@ -486,9 +484,7 @@ class _Assertions(pyunit.TestCase):
                     '%r not in %r' % (first, second)
         """
         if containee not in container:
-            raise self.failureException(
-                msg or "{!r} not in {!r}".format(containee, container)
-            )
+            raise self.failureException(msg or f"{containee!r} not in {container!r}")
         return containee
 
     failUnlessIn = assertIn
@@ -504,9 +500,7 @@ class _Assertions(pyunit.TestCase):
                     '%r in %r' % (first, second)
         """
         if containee in container:
-            raise self.failureException(
-                msg or "{!r} in {!r}".format(containee, container)
-            )
+            raise self.failureException(msg or f"{containee!r} in {container!r}")
         return containee
 
     failIfIn = assertNotIn
@@ -525,7 +519,7 @@ class _Assertions(pyunit.TestCase):
         """
         if round(second - first, places) == 0:
             raise self.failureException(
-                msg or "{!r} == {!r} within {!r} places".format(first, second, places)
+                msg or f"{first!r} == {second!r} within {places!r} places"
             )
         return first
 
@@ -547,7 +541,7 @@ class _Assertions(pyunit.TestCase):
         """
         if round(second - first, places) != 0:
             raise self.failureException(
-                msg or "{!r} != {!r} within {!r} places".format(first, second, places)
+                msg or f"{first!r} != {second!r} within {places!r} places"
             )
         return first
 
@@ -562,7 +556,7 @@ class _Assertions(pyunit.TestCase):
                     '%r ~== %r' % (first, second)
         """
         if abs(first - second) > tolerance:
-            raise self.failureException(msg or "{} ~== {}".format(first, second))
+            raise self.failureException(msg or f"{first} ~== {second}")
         return first
 
     failUnlessApproximates = assertApproximates
@@ -614,7 +608,7 @@ class _Assertions(pyunit.TestCase):
         # Use starts with because of .pyc/.pyo issues.
         self.assertTrue(
             filename.startswith(first.filename),
-            "Warning in {!r}, expected {!r}".format(first.filename, filename),
+            f"Warning in {first.filename!r}, expected {filename!r}",
         )
 
         # It would be nice to be able to check the line number as well, but
@@ -647,9 +641,7 @@ class _Assertions(pyunit.TestCase):
                 suffix = ""
             else:
                 suffix = ": " + message
-            self.fail(
-                "{!r} is not an instance of {}{}".format(instance, classOrTuple, suffix)
-            )
+            self.fail(f"{instance!r} is not an instance of {classOrTuple}{suffix}")
 
     failUnlessIsInstance = assertIsInstance
 
@@ -666,7 +658,7 @@ class _Assertions(pyunit.TestCase):
         @type classOrTuple: class, type, or tuple.
         """
         if isinstance(instance, classOrTuple):
-            self.fail("{!r} is an instance of {}".format(instance, classOrTuple))
+            self.fail(f"{instance!r} is an instance of {classOrTuple}")
 
     failIfIsInstance = assertNotIsInstance
 
@@ -1144,9 +1136,7 @@ class SynchronousTestCase(_Assertions):
                     if not isinstance(
                         aFunction, (types.FunctionType, types.MethodType)
                     ):
-                        raise ValueError(
-                            "{!r} is not a function or method".format(aFunction)
-                        )
+                        raise ValueError(f"{aFunction!r} is not a function or method")
 
                     # inspect.getabsfile(aFunction) sometimes returns a
                     # filename which disagrees with the filename the warning
@@ -1162,10 +1152,11 @@ class SynchronousTestCase(_Assertions):
 
                     if filename != os.path.normcase(aWarning.filename):
                         continue
-                    lineStarts = list(_findlinestarts(aFunction.__code__))
-                    first = lineStarts[0][1]
-                    last = lineStarts[-1][1]
-                    if not (first <= aWarning.lineno <= last):
+                    lineNumbers = [
+                        lineNumber
+                        for _, lineNumber in _findlinestarts(aFunction.__code__)
+                    ]
+                    if not (min(lineNumbers) <= aWarning.lineno <= max(lineNumbers)):
                         continue
                     # The warning points to this function, flush it and move on
                     # to the next warning.
@@ -1211,14 +1202,14 @@ class SynchronousTestCase(_Assertions):
             please-use-something-else message that is standard for Twisted
             deprecations according to the given version and replacement.
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         fqpn = moduleName + "." + name
         module = sys.modules[moduleName]
         attr = getattr(module, name)
         warningsShown = self.flushWarnings([self.getDeprecatedModuleAttribute])
         if len(warningsShown) == 0:
-            self.fail("{} is not deprecated.".format(fqpn))
+            self.fail(f"{fqpn} is not deprecated.")
 
         observedWarning = warningsShown[0]["message"]
         expectedWarning = DEPRECATION_WARNING_FORMAT % {
@@ -1229,7 +1220,7 @@ class SynchronousTestCase(_Assertions):
             expectedWarning = expectedWarning + ": " + message
         self.assert_(
             observedWarning.startswith(expectedWarning),
-            "Expected {!r} to start with {!r}".format(observedWarning, expectedWarning),
+            f"Expected {observedWarning!r} to start with {expectedWarning!r}",
         )
 
         return attr
@@ -1276,7 +1267,7 @@ class SynchronousTestCase(_Assertions):
             [since, replacement] = info
 
         if len(warningsShown) == 0:
-            self.fail("{!r} is not deprecated.".format(f))
+            self.fail(f"{f!r} is not deprecated.")
 
         observedWarning = warningsShown[0]["message"]
         expectedWarning = getDeprecationWarningString(f, since, replacement=replacement)

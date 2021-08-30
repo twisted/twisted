@@ -11,7 +11,6 @@ from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
-
 from .._buffer import LimitedHistoryLogObserver
 from .._interfaces import ILogObserver, LogEvent
 
@@ -42,7 +41,7 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents = []  # type: List[LogEvent]
+        outEvents: List[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events, outEvents)
 
@@ -58,6 +57,6 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents = []  # type: List[LogEvent]
+        outEvents: List[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events[-size:], outEvents)

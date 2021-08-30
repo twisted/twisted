@@ -9,12 +9,15 @@ Maintainer: Paul Swartz
 """
 
 from typing import Dict
+
 from twisted.logger import Logger
 
 
 class SSHService:
-    name = None  # type: bytes  # this is the ssh name for the service
-    protocolMessages = {}  # type: Dict[int, str]  # map #'s -> protocol names
+    # this is the ssh name for the service:
+    name: bytes = None  # type:ignore[assignment]
+
+    protocolMessages: Dict[int, str] = {}  # map #'s -> protocol names
     transport = None  # gets set later
 
     _log = Logger()

@@ -7,10 +7,10 @@ An incremental approach to unzipping files.  This allows you to unzip a little
 bit of a file at a time, which means you can report progress as a file unzips.
 """
 
-import zipfile
 import os.path
-import zlib
 import struct
+import zipfile
+import zlib
 
 
 class ChunkingZipFile(zipfile.ZipFile):

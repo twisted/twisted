@@ -12,7 +12,7 @@ a telnet server instead; see the comments for details.
 Based on an example by Abe Fettig.
 """
 
-from twisted.internet import stdio, reactor
+from twisted.internet import reactor, stdio
 from twisted.protocols import basic
 from twisted.web import client
 
@@ -71,7 +71,7 @@ class WebCheckerCommandProtocol(basic.LineReceiver):
         ).addCallback(self.__checkSuccess).addErrback(self.__checkFailure)
 
     def __checkSuccess(self, pageData):
-        msg = "Success: got {} bytes.".format(len(pageData))
+        msg = f"Success: got {len(pageData)} bytes."
         self.sendLine(msg.encode("ascii"))
 
     def __checkFailure(self, failure):

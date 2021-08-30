@@ -19,7 +19,7 @@ else:
     pwd = _pwd
 
 try:
-    from os import setgroups as _setgroups, getgroups as _getgroups
+    from os import getgroups as _getgroups, setgroups as _setgroups
 except ImportError:
     setgroups = None
     getgroups = None
@@ -27,22 +27,22 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
 from typing import (
     Callable,
     ClassVar,
     Mapping,
     MutableMapping,
     Sequence,
-    Union,
     Tuple,
+    Union,
     cast,
 )
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 
-# For backwards compatibility, some things import this, so just link it
-from collections import OrderedDict
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
@@ -164,7 +164,7 @@ class InsensitiveDict(MutableMapping):
         """
         String representation of the dictionary.
         """
-        items = ", ".join([("{!r}: {!r}".format(k, v)) for k, v in self.items()])
+        items = ", ".join([(f"{k!r}: {v!r}") for k, v in self.items()])
         return "InsensitiveDict({%s})" % items
 
     def iterkeys(self):
@@ -186,7 +186,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
@@ -386,7 +386,7 @@ def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
+        result = f"[{doneChar * done}{currentChar}{undoneChar * toDo}]"
         if force:
             last[0] = result
             return result
@@ -424,7 +424,7 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
+        print(f"method {frame.f_code.co_name} of {k} at {id(se)}")
     else:
         print(
             "function %s in %s, line %s"
@@ -449,12 +449,12 @@ def searchupwards(start, files=[], dirs=[]):
         candidate = join(parents) + os.sep
         allpresent = 1
         for f in files:
-            if not exists("{}{}".format(candidate, f)):
+            if not exists(f"{candidate}{f}"):
                 allpresent = 0
                 break
         if allpresent:
             for d in dirs:
-                if not isdir("{}{}".format(candidate, d)):
+                if not isdir(f"{candidate}{d}"):
                     allpresent = 0
                     break
         if allpresent:
@@ -609,7 +609,9 @@ class FancyStrMixin:
     """
 
     # Override in subclasses:
-    showAttributes = ()  # type: Sequence[Union[str, Tuple[str, str, str], Tuple[str, Callable]]]
+    showAttributes: Sequence[
+        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+    ] = ()
 
     def __str__(self) -> str:
         r = ["<", getattr(self, "fancybasename", self.__class__.__name__)]
@@ -618,10 +620,10 @@ class FancyStrMixin:
         #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(" {}={!r}".format(attr, getattr(self, attr)))
+                r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
                 attr = cast(Tuple[str, Callable], attr)
-                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
+                r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
                 attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
@@ -639,7 +641,7 @@ class FancyEqMixin:
     C{compareAttributes}.
     """
 
-    compareAttributes = ()  # type: ClassVar[Sequence[str]]
+    compareAttributes: ClassVar[Sequence[str]] = ()
 
     def __eq__(self, other: object) -> bool:
         if not self.compareAttributes:
@@ -733,8 +735,8 @@ def switchUID(uid, gid, euid=False):
     if uid is not None:
         if uid == getuid():
             uidText = euid and "euid" or "uid"
-            actionText = "tried to drop privileges and set{} {}".format(uidText, uid)
-            problemText = "{} is already {}".format(uidText, getuid())
+            actionText = f"tried to drop privileges and set{uidText} {uid}"
+            problemText = f"{uidText} is already {getuid()}"
             warnings.warn(
                 "{} but {}; should we be root? Continuing.".format(
                     actionText, problemText
@@ -933,8 +935,9 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
     Unlike L{twisted.internet.utils.runWithWarningsSuppressed}, it has no
     special support for L{twisted.internet.defer.Deferred}.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-        Must be a sequence of 2-tuples (args, kwargs).
+    @param suppressedWarnings: A list of arguments to pass to
+        L{warnings.filterwarnings}.  Must be a sequence of 2-tuples (args,
+        kwargs).
 
     @param f: A callable.
 

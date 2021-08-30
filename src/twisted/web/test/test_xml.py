@@ -9,9 +9,7 @@ Some fairly inadequate testcases for Twisted XML support.
 from io import BytesIO
 
 from twisted.trial.unittest import TestCase
-from twisted.web import sux
-from twisted.web import microdom
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom, sux
 
 
 class Sux0r(sux.XMLParser):
@@ -230,21 +228,13 @@ alert("I hate you");
         # however this assertion tests preserving case for start and
         # end tags while still matching stuff like <bOrk></BoRk>
         self.assertEqual(d.documentElement.toxml(), s)
-        self.assertTrue(
-            d.isEqualToDocument(d2), "{!r} != {!r}".format(d.toxml(), d2.toxml())
-        )
-        self.assertTrue(
-            d2.isEqualToDocument(d3), "{!r} != {!r}".format(d2.toxml(), d3.toxml())
-        )
+        self.assertTrue(d.isEqualToDocument(d2), f"{d.toxml()!r} != {d2.toxml()!r}")
+        self.assertTrue(d2.isEqualToDocument(d3), f"{d2.toxml()!r} != {d3.toxml()!r}")
         # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
         ## XXX THIS TEST IS TURNED OFF UNTIL SOMEONE WHO CARES ABOUT FIXING IT DOES
         # self.assertFalse(d3.isEqualToDocument(d2), "%r == %r" % (d3.toxml(), d2.toxml()))
-        self.assertTrue(
-            d3.isEqualToDocument(d4), "{!r} != {!r}".format(d3.toxml(), d4.toxml())
-        )
-        self.assertTrue(
-            d4.isEqualToDocument(d5), "{!r} != {!r}".format(d4.toxml(), d5.toxml())
-        )
+        self.assertTrue(d3.isEqualToDocument(d4), f"{d3.toxml()!r} != {d4.toxml()!r}")
+        self.assertTrue(d4.isEqualToDocument(d5), f"{d4.toxml()!r} != {d5.toxml()!r}")
 
     def test_differentQuotes(self):
         s = "<test a=\"a\" b='b' />"
@@ -482,9 +472,7 @@ alert("I hate you");
             ("&amp;", "&amp;"),
             ("&hello monkey", "&amp;hello monkey"),
         ]:
-            d = microdom.parseString(
-                "{}<pre>{}</pre>".format(prefix, i), beExtremelyLenient=1
-            )
+            d = microdom.parseString(f"{prefix}<pre>{i}</pre>", beExtremelyLenient=1)
             self.assertEqual(d.documentElement.toxml(), "<pre>%s</pre>" % o)
         # non-space preserving
         d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)

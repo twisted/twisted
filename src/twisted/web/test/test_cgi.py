@@ -5,19 +5,19 @@
 Tests for L{twisted.web.twcgi}.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 from io import BytesIO
 
-from twisted.trial import unittest
-from twisted.internet import address, reactor, interfaces, error
+from twisted.internet import address, error, interfaces, reactor
 from twisted.internet.error import ConnectionLost
-from twisted.python import util, failure, log
-from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, http, twcgi, server, resource, http_headers
+from twisted.python import failure, log, util
+from twisted.trial import unittest
+from twisted.web import client, http, http_headers, resource, server, twcgi
+from twisted.web.http import INTERNAL_SERVER_ERROR, NOT_FOUND
 from twisted.web.test._util import _render
-from twisted.web.test.requesthelper import DummyRequest, DummyChannel
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 DUMMY_CGI = """\
 print("Header: OK")
@@ -280,7 +280,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadEmptyInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadEmptyInput_1(self, res):
-        expected = "readinput ok{}".format(os.linesep)
+        expected = f"readinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -305,7 +305,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadInput_1(self, res):
-        expected = "readinput ok{}".format(os.linesep)
+        expected = f"readinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -329,7 +329,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     test_ReadAllInput.timeout = 5  # type: ignore[attr-defined]
 
     def _test_ReadAllInput_1(self, res):
-        expected = "readallinput ok{}".format(os.linesep)
+        expected = f"readallinput ok{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 
@@ -376,8 +376,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         """
         cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi?param=1234" % (portnum,)
-        url = url.encode("ascii")
+        url = b"http://localhost:%d/cgi?param=1234" % (portnum,)
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
@@ -385,7 +384,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         return d
 
     def _test_urlParameters_1(self, res):
-        expected = "1234{}".format(os.linesep)
+        expected = f"1234{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 

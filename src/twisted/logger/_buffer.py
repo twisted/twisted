@@ -13,7 +13,6 @@ from zope.interface import implementer
 
 from ._interfaces import ILogObserver, LogEvent
 
-
 _DEFAULT_BUFFER_MAXIMUM = 64 * 1024
 
 
@@ -40,7 +39,7 @@ class LimitedHistoryLogObserver:
         @param size: The maximum number of events to buffer.  If L{None}, the
             buffer is unbounded.
         """
-        self._buffer = deque(maxlen=size)  # type: Deque[LogEvent]
+        self._buffer: Deque[LogEvent] = deque(maxlen=size)
 
     def __call__(self, event: LogEvent) -> None:
         self._buffer.append(event)

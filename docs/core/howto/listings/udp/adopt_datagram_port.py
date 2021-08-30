@@ -1,12 +1,12 @@
 import socket
 
-from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
+from twisted.internet.protocol import DatagramProtocol
 
 
 class Echo(DatagramProtocol):
     def datagramReceived(self, data, addr):
-        print("received {!r} from {}".format(data, addr))
+        print(f"received {data!r} from {addr}")
         self.transport.write(data, addr)
 
 

@@ -4,15 +4,14 @@
 
 import sys
 import traceback
-
+import unittest as pyunit
 from unittest import skipIf
+
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
-
-import unittest as pyunit
+from twisted.trial.unittest import PyUnitResultAdapter, SynchronousTestCase
 
 
 class PyUnitTestTests(SynchronousTestCase):
@@ -28,7 +27,7 @@ class PyUnitTestTests(SynchronousTestCase):
         """
         Tests must be callable in order to be used with Python's unittest.py.
         """
-        self.assertTrue(callable(self.test), "{!r} is not callable.".format(self.test))
+        self.assertTrue(callable(self.test), f"{self.test!r} is not callable.")
 
 
 class PyUnitResultTests(SynchronousTestCase):

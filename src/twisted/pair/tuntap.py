@@ -8,24 +8,25 @@ Support for Linux ethernet and IP tunnel devices.
 @see: U{https://en.wikipedia.org/wiki/TUN/TAP}
 """
 
-import os
-import fcntl
 import errno
+import fcntl
+import os
 import struct
 import warnings
+from collections import namedtuple
 from typing import Tuple
 
-from collections import namedtuple
-from constantly import Flags, FlagConstant
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.util import FancyEqMixin, FancyStrMixin
+from constantly import FlagConstant, Flags  # type: ignore[import]
 from incremental import Version
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.internet import abstract, error, task, interfaces, defer
+
+from twisted.internet import abstract, defer, error, interfaces, task
 from twisted.pair import ethernet, raw
+from twisted.python import log
+from twisted.python.deprecate import deprecated
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 
 __all__ = [
     "TunnelFlags",
@@ -243,10 +244,10 @@ class TuntapPort(abstract.FileDescriptor):
         self.maxPacketSize = maxPacketSize
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{} ({})".format(logPrefix, self._mode.name)
+        self.logstr = f"{logPrefix} ({self._mode.name})"
 
     def __repr__(self) -> str:
-        args = (fullyQualifiedName(self.protocol.__class__),)  # type: Tuple[str, ...]
+        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:
@@ -328,9 +329,7 @@ class TuntapPort(abstract.FileDescriptor):
                 self.protocol.datagramReceived(data, partial=0)
             except BaseException:
                 cls = fullyQualifiedName(self.protocol.__class__)
-                log.err(
-                    None, "Unhandled exception from {}.datagramReceived".format(cls)
-                )
+                log.err(None, f"Unhandled exception from {cls}.datagramReceived")
 
     def write(self, datagram):
         """

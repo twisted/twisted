@@ -5,17 +5,20 @@
 Tests for twisted.enterprise.adbapi.
 """
 
-from twisted.trial import unittest
-
 import os
 import stat
 from typing import Dict, Optional
 
-from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
-from twisted.enterprise.adbapi import Connection, Transaction
-from twisted.internet import reactor, defer, interfaces
+from twisted.enterprise.adbapi import (
+    Connection,
+    ConnectionLost,
+    ConnectionPool,
+    Transaction,
+)
+from twisted.internet import defer, interfaces, reactor
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 simple_table_schema = """
 CREATE TABLE simple (
@@ -29,7 +32,7 @@ class ADBAPITestBase:
     Test the asynchronous DB-API code.
     """
 
-    openfun_called = {}  # type: Dict[object, bool]
+    openfun_called: Dict[object, bool] = {}
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
@@ -335,7 +338,7 @@ class DBTestConnector:
     """
 
     # used for creating new test cases
-    TEST_PREFIX = None  # type: Optional[str]
+    TEST_PREFIX: Optional[str] = None
 
     DB_NAME = "twisted_test"
     DB_USER = "twisted_test"
@@ -348,7 +351,7 @@ class DBTestConnector:
     can_rollback = True  # rollback supported
     test_failures = True  # test bad sql?
     escape_slashes = True  # escape \ in sql?
-    good_sql = ConnectionPool.good_sql  # type: Optional[str]
+    good_sql: Optional[str] = ConnectionPool.good_sql
     early_reconnect = True  # cursor() will fail on closed connection
     can_clear = True  # can try to clear out tables when starting
 
@@ -446,7 +449,7 @@ class PyPgSQLConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            from pyPgSQL import PgSQL
+            from pyPgSQL import PgSQL  # type: ignore[import]
         except BaseException:
             return False
         try:
@@ -474,7 +477,7 @@ class PsycopgConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            import psycopg
+            import psycopg  # type: ignore[import]
         except BaseException:
             return False
         try:
@@ -506,7 +509,7 @@ class MySQLConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            import MySQLdb
+            import MySQLdb  # type: ignore[import]
         except BaseException:
             return False
         try:
@@ -545,7 +548,7 @@ class FirebirdConnector(DBTestConnector):
             return False
 
     def startDB(self):
-        import kinterbasdb
+        import kinterbasdb  # type: ignore[import]
 
         self.DB_NAME = os.path.join(self.DB_DIR, DBTestConnector.DB_NAME)
         os.chmod(self.DB_DIR, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)

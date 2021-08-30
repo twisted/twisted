@@ -11,7 +11,6 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-
 from typing import List
 
 from zope.interface import implementer
@@ -21,11 +20,10 @@ from zope.interface import implementer
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
 from twisted.python import failure
-
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
-_wait_is_running = []  # type: List[None]
+_wait_is_running: List[None] = []
 
 
 @implementer(itrial.ITestCase)
@@ -65,7 +63,7 @@ class TestCase(SynchronousTestCase):
 
         def _cb(ignore):
             raise self.failureException(
-                "did not catch an error, instead got {!r}".format(ignore)
+                f"did not catch an error, instead got {ignore!r}"
             )
 
         def _eb(failure):
@@ -88,7 +86,7 @@ class TestCase(SynchronousTestCase):
 
         def onTimeout(d):
             e = defer.TimeoutError(
-                "{!r} ({}) still running at {} secs".format(self, methodName, timeout)
+                f"{self!r} ({methodName}) still running at {timeout} secs"
             )
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram

@@ -23,9 +23,9 @@ from zope.interface import implementer
 from twisted.application import service
 from twisted.internet import defer
 from twisted.python import log
-from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jstrports, xmlstream
 from twisted.words.protocols.jabber.jid import internJID as JID
+from twisted.words.xish import domish
 
 NS_COMPONENT_ACCEPT = "jabber:component:accept"
 
@@ -380,7 +380,7 @@ class Router:
         """
         destination = JID(stanza["to"])
 
-        log.msg("Routing to {}: {!r}".format(destination.full(), stanza.toXml()))
+        log.msg(f"Routing to {destination.full()}: {stanza.toXml()!r}")
 
         if destination.host in self.routes:
             self.routes[destination.host].send(stanza)

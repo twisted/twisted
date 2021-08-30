@@ -1,1 +1,0 @@
-twisted.mail.pop3client has been renamed to twisted.mail._pop3client, since it has always been a private implementation module.

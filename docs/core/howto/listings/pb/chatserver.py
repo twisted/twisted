@@ -5,9 +5,9 @@
 
 from zope.interface import implementer
 
-from twisted.cred import portal, checkers
-from twisted.spread import pb
+from twisted.cred import checkers, portal
 from twisted.internet import reactor
+from twisted.spread import pb
 
 
 class ChatServer:
@@ -61,7 +61,7 @@ class Group(pb.Viewable):
         if not self.allowMattress and "mattress" in message:
             raise ValueError("Don't say that word")
         for user in self.users:
-            user.send("<{}> says: {}".format(from_user.name, message))
+            user.send(f"<{from_user.name}> says: {message}")
 
 
 realm = ChatRealm()

@@ -7,25 +7,25 @@ Tests for L{twisted.conch.client.default}.
 
 
 import sys
-
-from twisted.python.reflect import requireModule
 from unittest import skipIf
-from twisted.trial.unittest import TestCase
-from twisted.python.filepath import FilePath
+
 from twisted.conch.error import ConchError
 from twisted.conch.test import keydata
-from twisted.test.proto_helpers import StringTransport
 from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial.unittest import TestCase
 
 doSkip = False
 skipReason = ""
 
 if requireModule("cryptography") and requireModule("pyasn1"):
+    from twisted.conch.client import default
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient
     from twisted.conch.client.options import ConchOptions
-    from twisted.conch.client import default
     from twisted.conch.ssh.keys import Key
 else:
     doSkip = True
@@ -179,7 +179,7 @@ class SSHUserAuthClientTests(TestCase):
 
         def _getPassword(prompt):
             self.assertEqual(
-                prompt, "Enter passphrase for key '{}': ".format(self.rsaFile.path)
+                prompt, f"Enter passphrase for key '{self.rsaFile.path}': "
             )
             return nativeString(passphrase)
 

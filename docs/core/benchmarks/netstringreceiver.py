@@ -1,14 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import gc
+import math
+import os
+import sys
+import time
+
 from twisted.protocols.test import test_basic
 from twisted.python.compat import range, raw_input
 from twisted.test import proto_helpers
-import math
-import time
-import sys
-import os
-import gc
 
 NETSTRING_POSTFIX = b","
 USAGE = """\
@@ -129,7 +130,7 @@ class NetstringPerformanceTester(PerformanceTester):
 
     headers = ["Chunk size", "Number of chunks", "Total size", "Time to receive"]
     lineFormat = "| %%%dd | %%%dd | %%%dd | %%%d.4f |\n" % tuple(
-        [len(header) for header in headers]
+        len(header) for header in headers
     )
 
     def __init__(self, filename):
@@ -206,7 +207,7 @@ class NetstringPerformanceTester(PerformanceTester):
     def receiveData(self, chunk, numberOfChunks, dataSize):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
-        dr("{}:".format(dataSize).encode("ascii"))
+        dr(f"{dataSize}:".encode("ascii"))
         for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)

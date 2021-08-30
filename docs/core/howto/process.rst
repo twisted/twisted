@@ -20,9 +20,9 @@ Along with connection to servers across the internet, Twisted also
 connects to local processes with much the same API. The API is described in
 more detail in the documentation of:
 
-- :api:`twisted.internet.interfaces.IReactorProcess <twisted.internet.interfaces.IReactorProcess>` 
-- :api:`twisted.internet.interfaces.IProcessTransport <twisted.internet.interfaces.IProcessTransport>` 
-- :api:`twisted.internet.interfaces.IProcessProtocol <twisted.internet.interfaces.IProcessProtocol>` 
+- :py:class:`twisted.internet.interfaces.IReactorProcess` 
+- :py:class:`twisted.internet.interfaces.IProcessTransport` 
+- :py:class:`twisted.internet.interfaces.IProcessProtocol` 
 
 
 
@@ -69,7 +69,7 @@ available on Windows.
 
 
 - ``processProtocol`` should be an instance of a subclass of
-  :api:`twisted.internet.protocol.ProcessProtocol <twisted.internet.protocol.ProcessProtocol>` . The
+  :py:class:`twisted.internet.protocol.ProcessProtocol` . The
   interface is described below.
 - ``executable`` is the full path of the program to run. It
   will be connected to processProtocol.
@@ -114,7 +114,7 @@ environment as a security precaution). The default is to give an empty ``env`` t
 
 
 
-``reactor.spawnProcess`` returns an instance that implements :api:`twisted.internet.interfaces.IProcessTransport <IProcessTransport>`.
+``reactor.spawnProcess`` returns an instance that implements :py:class:`IProcessTransport <twisted.internet.interfaces.IProcessTransport>`.
 
 
 Writing a ProcessProtocol
@@ -268,10 +268,10 @@ These are the methods that you can usefully override in your subclass of
   ``outConnectionLost`` , but for stderr instead of stdout.
 - ``.processExited(status)`` : This is called when the child
   process has been reaped, and receives information about the process' exit
-  status. The status is passed in the form of a :api:`twisted.python.failure.Failure <Failure>` instance, created with a
-  ``.value`` that either holds a :api:`twisted.internet.error.ProcessDone <ProcessDone>` object if the process
+  status. The status is passed in the form of a :py:class:`Failure <twisted.python.failure.Failure>` instance, created with a
+  ``.value`` that either holds a :py:class:`ProcessDone <twisted.internet.error.ProcessDone>` object if the process
   terminated normally (it died of natural causes instead of receiving a
-  signal, and if the exit code was 0), or a :api:`twisted.internet.error.ProcessTerminated <ProcessTerminated>` object (with an
+  signal, and if the exit code was 0), or a :py:class:`ProcessTerminated <twisted.internet.error.ProcessTerminated>` object (with an
   ``.exitCode`` attribute) if something went wrong.
 - ``.processEnded(status)`` : This is called when all the file
   descriptors associated with the child process have been closed and the
@@ -389,7 +389,7 @@ program. In the blocking world, you might use ``commands.getoutput`` from the st
 using that in an event-driven program will cause everything else to stall
 until the command finishes. (in addition, the SIGCHLD handler used by that
 function does not play well with Twisted's own signal handling). For these
-cases, the :api:`twisted.internet.utils.getProcessOutput <twisted.internet.utils.getProcessOutput>` 
+cases, the :py:func:`twisted.internet.utils.getProcessOutput` 
 function can be used. Here is a simple example:
 
 
@@ -401,7 +401,7 @@ function can be used. Here is a simple example:
 .. literalinclude:: listings/process/quotes.py
 
 
-If you only need the final exit code (like ``commands.getstatusoutput(cmd)[0]`` ), the :api:`twisted.internet.utils.getProcessValue <twisted.internet.utils.getProcessValue>` function is
+If you only need the final exit code (like ``commands.getstatusoutput(cmd)[0]`` ), the :py:func:`twisted.internet.utils.getProcessValue` function is
 useful. Here is an example:
 
 

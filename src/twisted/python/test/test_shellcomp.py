@@ -10,10 +10,9 @@ import sys
 from io import BytesIO
 from typing import List, Optional
 
+from twisted.python import _shellcomp, reflect, usage
+from twisted.python.usage import CompleteFiles, CompleteList, Completer, Completions
 from twisted.trial import unittest
-from twisted.python import _shellcomp, usage, reflect
-from twisted.python.usage import Completions, Completer, CompleteFiles
-from twisted.python.usage import CompleteList
 
 
 class ZshScriptTestMeta(type):
@@ -38,7 +37,7 @@ class ZshScriptTestMeta(type):
         return type.__new__(cls, name, bases, attrs)
 
 
-class ZshScriptTestMixin:
+class ZshScriptTestMixin(metaclass=ZshScriptTestMeta):
     """
     Integration test helper to show that C{usage.Options} classes can have zsh
     completion functions generated for them without raising errors.
@@ -55,8 +54,6 @@ class ZshScriptTestMixin:
     subclass which also inherits from this mixin, and contains a C{generateFor}
     list appropriate for the scripts in that package.
     """
-
-    __metaclass__ = ZshScriptTestMeta
 
 
 def test_genZshFunction(self, cmdName, optionsFQPN):
@@ -393,10 +390,10 @@ class ZshTests(unittest.TestCase):
             optParameters = [["param", "p", None, "A param"]]
 
             def opt_flag(self):
-                """ junk description """
+                """junk description"""
 
             def opt_param(self, param):
-                """ junk description """
+                """junk description"""
 
         opts = Options()
         argGen = _shellcomp.ZshArgumentsGenerator(opts, "ace", None)
@@ -461,7 +458,7 @@ class FighterAceOptions(usage.Options):
     Command-line options for an imaginary `Fighter Ace` game
     """
 
-    optFlags = [
+    optFlags: List[List[Optional[str]]] = [
         ["fokker", "f", "Select the Fokker Dr.I as your dogfighter aircraft"],
         ["albatros", "a", "Select the Albatros D-III as your dogfighter aircraft"],
         ["spad", "s", "Select the SPAD S.VII as your dogfighter aircraft"],
@@ -469,12 +466,12 @@ class FighterAceOptions(usage.Options):
         ["physics", "p", "Enable secret Twisted physics engine"],
         ["jam", "j", "Enable a small chance that your machine guns will jam!"],
         ["verbose", "v", "Verbose logging (may be specified more than once)"],
-    ]  # type: List[List[Optional[str]]]
+    ]
 
-    optParameters = [
+    optParameters: List[List[Optional[str]]] = [
         ["pilot-name", None, "What's your name, Ace?", "Manfred von Richthofen"],
         ["detail", "d", "Select the level of rendering detail (1-5)", "3"],
-    ]  # type: List[List[Optional[str]]]
+    ]
 
     subCommands = [
         ["server", None, FighterAceServerOptions, "Start FighterAce game-server."],

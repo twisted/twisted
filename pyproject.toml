@@ -2,7 +2,7 @@
 requires = [
     "setuptools >= 35.0.2",
     "wheel >= 0.29.0",
-    "incremental >= 16.10.1",
+    "incremental >= 21.3.0",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -34,6 +34,10 @@ build-backend = "setuptools.build_meta"
         path = "names"
         name = "Names"
 
+    [[tool.towncrier.section]]
+        path = "trial"
+        name = "Trial"
+
     [[tool.towncrier.type]]
         directory = "feature"
         name = "Features"
@@ -60,17 +64,15 @@ build-backend = "setuptools.build_meta"
         showcontent = false
 
 [tool.black]
-target-version = ['py35', 'py36', 'py37', 'py38']
+target-version = ['py36', 'py37', 'py38']
 
 [tool.isort]
-line_length = 88
+profile = "black"
 sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
 default_section = "THIRDPARTY"
 no_lines_before = "LOCALFOLDER"
 known_first_party = "twisted"
 known_zope = "zope"
 known_openssl = "OpenSSL"
-multi_line_output = 3
-include_trailing_comma = true
 combine_as_imports = true
 skip = "src/twisted/logger/__init__.py,src/twisted/internet/reactor.py"

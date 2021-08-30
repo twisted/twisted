@@ -10,15 +10,13 @@ from collections.abc import Mapping as MappingABC
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
-from constantly import NamedConstant
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
-from twisted.python._tzhelper import FixedOffsetTimeZone
-
-from ._flatten import flatFormat, aFormatter
+from ._flatten import aFormatter, flatFormat
 from ._interfaces import LogEvent
-
 
 timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 
@@ -253,7 +251,7 @@ def _formatEvent(event: LogEvent) -> str:
         elif isinstance(format, bytes):
             format = format.decode("utf-8")
         else:
-            raise TypeError("Log format must be str, not {!r}".format(format))
+            raise TypeError(f"Log format must be str, not {format!r}")
 
         return formatWithCall(format, event)
 

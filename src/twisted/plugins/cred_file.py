@@ -14,9 +14,8 @@ from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.checkers import FilePasswordDB
+from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
 from twisted.cred.strcred import ICheckerFactory
-from twisted.cred.credentials import IUsernamePassword, IUsernameHashedPassword
-
 
 fileCheckerFactoryHelp = """
 This checker expects to receive the location of a file that
@@ -53,7 +52,7 @@ class FileCheckerFactory:
         if not argstring.strip():
             raise ValueError("%r requires a filename" % self.authType)
         elif not FilePath(argstring).isfile():
-            self.errorOutput.write("{}: {}\n".format(invalidFileWarning, argstring))
+            self.errorOutput.write(f"{invalidFileWarning}: {argstring}\n")
         return FilePasswordDB(argstring)
 
 

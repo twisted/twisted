@@ -8,9 +8,9 @@ Implementation module for the I{mailmail} command.
 
 
 import email.utils
+import getpass
 import os
 import sys
-import getpass
 from configparser import ConfigParser
 from io import StringIO
 
@@ -163,13 +163,13 @@ def parseOptions(argv):
             buffer.write(line)
 
     if not requiredHeaders["from"]:
-        buffer.write("From: {}\r\n".format(o.sender))
+        buffer.write(f"From: {o.sender}\r\n")
     if not requiredHeaders["to"]:
         if not o.to:
             raise SystemExit("No recipients specified.")
         buffer.write("To: {}\r\n".format(", ".join(o.to)))
     if not requiredHeaders["date"]:
-        buffer.write("Date: {}\r\n".format(smtp.rfc822date()))
+        buffer.write(f"Date: {smtp.rfc822date()}\r\n")
 
     buffer.write(line)
 

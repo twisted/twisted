@@ -1,8 +1,8 @@
-from calculus.client_3 import RemoteCalculationClient, ClientTimeoutError
+from calculus.client_3 import ClientTimeoutError, RemoteCalculationClient
 
 from twisted.internet import task
-from twisted.trial import unittest
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class ClientCalculationTestCase(unittest.TestCase):
@@ -16,11 +16,9 @@ class ClientCalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         d = getattr(self.proto, operation)(a, b)
-        self.assertEqual(
-            self.tr.value(), "{} {} {}\r\n".format(operation, a, b).encode("utf-8")
-        )
+        self.assertEqual(self.tr.value(), f"{operation} {a} {b}\r\n".encode())
         self.tr.clear()
-        self.proto.dataReceived("{}\r\n".format(expected).encode("utf-8"))
+        self.proto.dataReceived(f"{expected}\r\n".encode())
         self.assertEqual(expected, self.successResultOf(d))
 
     def test_add(self):

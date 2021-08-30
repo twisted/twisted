@@ -8,23 +8,22 @@ Various helpers for tests for connection-oriented transports.
 
 
 import socket
-
 from gc import collect
 from typing import Optional
 from weakref import ref
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import context, log
-from twisted.python.failure import Failure
-from twisted.python.runtime import platform
-from twisted.python.log import ILogContext, msg, err
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.interfaces import IConnector, IReactorFDSet
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
-from twisted.trial.unittest import SkipTest
 from twisted.internet.test.reactormixins import needsRunningReactor
+from twisted.python import context, log
+from twisted.python.failure import Failure
+from twisted.python.log import ILogContext, err, msg
+from twisted.python.runtime import platform
 from twisted.test.test_tcp import ClosingProtocol
+from twisted.trial.unittest import SkipTest
 
 
 def findFreePort(interface="127.0.0.1", family=socket.AF_INET, type=socket.SOCK_STREAM):
@@ -190,7 +189,7 @@ def _getWriters(reactor):
         return reactor.handles
     else:
         # Cannot tell what is going on.
-        raise Exception("Cannot find writers on {!r}".format(reactor))
+        raise Exception(f"Cannot find writers on {reactor!r}")
 
 
 class _AcceptOneClient(ServerFactory):
@@ -243,7 +242,7 @@ class Stop(ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         self.failReason = reason
-        msg("Stop(CF) cCFailed: {}".format(reason.getErrorMessage()))
+        msg(f"Stop(CF) cCFailed: {reason.getErrorMessage()}")
         self.reactor.stop()
 
 
@@ -262,7 +261,7 @@ class ClosingLaterProtocol(ConnectableProtocol):
         msg("ClosingLaterProtocol.connectionMade")
 
     def dataReceived(self, bytes):
-        msg("ClosingLaterProtocol.dataReceived {!r}".format(bytes))
+        msg(f"ClosingLaterProtocol.dataReceived {bytes!r}")
         self.transport.loseConnection()
 
     def connectionLost(self, reason):
@@ -277,7 +276,7 @@ class ConnectionTestsMixin:
     implementations.
     """
 
-    endpoints = None  # type: Optional[EndpointCreator]
+    endpoints: Optional[EndpointCreator] = None
 
     def test_logPrefix(self):
         """
@@ -326,7 +325,7 @@ class ConnectionTestsMixin:
         )
 
         def listening(port):
-            msg("Listening on {!r}".format(port.getHost()))
+            msg(f"Listening on {port.getHost()!r}")
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
@@ -334,13 +333,13 @@ class ConnectionTestsMixin:
             client = endpoint.connect(ClientFactory.forProtocol(protocol))
 
             def write(proto):
-                msg("About to write to {!r}".format(proto))
+                msg(f"About to write to {proto!r}")
                 proto.transport.write(b"x")
 
             client.addCallbacks(write, lostConnectionDeferred.errback)
 
             def disconnected(proto):
-                msg("{!r} disconnected".format(proto))
+                msg(f"{proto!r} disconnected")
                 proto.transport.write(b"some bytes to get lost")
                 proto.transport.writeSequence([b"some", b"more"])
                 finished.append(True)
@@ -374,13 +373,13 @@ class ConnectionTestsMixin:
         )
 
         def listening(port):
-            msg("Listening on {!r}".format(port.getHost()))
+            msg(f"Listening on {port.getHost()!r}")
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             client = endpoint.connect(ClientFactory.forProtocol(lambda: clientProtocol))
 
             def disconnect(proto):
-                msg("About to disconnect {!r}".format(proto))
+                msg(f"About to disconnect {proto!r}")
                 proto.transport.loseConnection()
 
             client.addCallback(disconnect)

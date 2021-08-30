@@ -9,38 +9,35 @@ Tests for the old L{twisted.web.client} APIs, C{getPage} and friends.
 import io
 import os
 from errno import ENOSPC
+from urllib.parse import urljoin, urlparse
 
-from urllib.parse import urlparse, urljoin
-
-from twisted.python.compat import networkString, nativeString
-from twisted.python.reflect import requireModule
-from twisted.trial import unittest, util
-from twisted.web import server, client, error, resource
-from twisted.web.static import Data
-from twisted.web.util import Redirect
-from twisted.internet import address, reactor, defer, interfaces
+from twisted import test
+from twisted.internet import address, defer, interfaces, reactor
 from twisted.internet.protocol import ClientFactory
-from twisted.python.filepath import FilePath
+from twisted.logger import (
+    FilteringLogObserver,
+    Logger,
+    LogLevel,
+    LogLevelFilterPredicate,
+    globalLogPublisher,
+)
 from twisted.protocols.policies import WrappingFactory
+from twisted.python.compat import nativeString, networkString
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import (
+    EventLoggingObserver,
     StringTransport,
     waitUntilAllDisconnected,
-    EventLoggingObserver,
 )
-from twisted import test
-from twisted.logger import (
-    globalLogPublisher,
-    FilteringLogObserver,
-    LogLevelFilterPredicate,
-    LogLevel,
-    Logger,
-)
-
+from twisted.trial import unittest, util
+from twisted.web import client, error, resource, server
+from twisted.web.static import Data
 from twisted.web.test.injectionhelpers import (
     MethodInjectionTestsMixin,
     URIInjectionTestsMixin,
 )
-
+from twisted.web.util import Redirect
 
 ssl = requireModule("twisted.internet.ssl")
 
@@ -508,9 +505,7 @@ class WebClientTests(unittest.TestCase):
         called back with the contents of the page.
         """
         d = client.getPage(self.getURL("host"), timeout=100)
-        d.addCallback(
-            self.assertEqual, networkString("127.0.0.1:{}".format(self.portno))
-        )
+        d.addCallback(self.assertEqual, networkString(f"127.0.0.1:{self.portno}"))
         return d
 
     def test_timeoutTriggering(self):
@@ -903,10 +898,10 @@ class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
         skip = "Reactor doesn't support SSL"
 
     def getHTTPS(self, path):
-        return networkString("https://127.0.0.1:{}/{}".format(self.tlsPortno, path))
+        return networkString(f"https://127.0.0.1:{self.tlsPortno}/{path}")
 
     def getHTTP(self, path):
-        return networkString("http://127.0.0.1:{}/{}".format(self.plainPortno, path))
+        return networkString(f"http://127.0.0.1:{self.plainPortno}/{path}")
 
     def setUp(self):
         plainRoot = Data(b"not me", "text/plain")

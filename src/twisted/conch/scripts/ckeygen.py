@@ -13,9 +13,9 @@ import socket
 import sys
 from functools import wraps
 from imp import reload
+
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-
 
 if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
     try:
@@ -240,9 +240,9 @@ def changePassPhrase(options):
         except keys.BadKeyError:
             sys.exit("Could not change passphrase: old passphrase error")
         except keys.EncryptedKeyError as e:
-            sys.exit("Could not change passphrase: {}".format(e))
+            sys.exit(f"Could not change passphrase: {e}")
     except keys.BadKeyError as e:
-        sys.exit("Could not change passphrase: {}".format(e))
+        sys.exit(f"Could not change passphrase: {e}")
 
     if not options.get("newpass"):
         while 1:
@@ -263,12 +263,12 @@ def changePassPhrase(options):
             passphrase=options["newpass"],
         )
     except Exception as e:
-        sys.exit("Could not change passphrase: {}".format(e))
+        sys.exit(f"Could not change passphrase: {e}")
 
     try:
         keys.Key.fromString(newkeydata, passphrase=options["newpass"])
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
-        sys.exit("Could not change passphrase: {}".format(e))
+        sys.exit(f"Could not change passphrase: {e}")
 
     with open(options["filename"], "wb") as fd:
         fd.write(newkeydata)
@@ -312,9 +312,9 @@ def _saveKey(key, options):
     KeyTypeMapping = {"EC": "ecdsa", "Ed25519": "ed25519", "RSA": "rsa", "DSA": "dsa"}
     keyTypeName = KeyTypeMapping[key.type()]
     if not options["filename"]:
-        defaultPath = os.path.expanduser("~/.ssh/id_{}".format(keyTypeName))
+        defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         newPath = _inputSaveFile(
-            "Enter file in which to save the key ({}): ".format(defaultPath)
+            f"Enter file in which to save the key ({defaultPath}): "
         )
 
         options["filename"] = newPath.strip() or defaultPath
@@ -339,7 +339,7 @@ def _saveKey(key, options):
     if options.get("private-key-subtype") is None:
         options["private-key-subtype"] = _defaultPrivateKeySubtype(key.type())
 
-    comment = "{}@{}".format(getpass.getuser(), socket.gethostname())
+    comment = f"{getpass.getuser()}@{socket.gethostname()}"
 
     filepath.FilePath(options["filename"]).setContent(
         key.toString(

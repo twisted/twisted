@@ -7,17 +7,16 @@ Test cases for L{twisted.logger._logger}.
 
 from typing import List, Optional, Type, cast
 
-from constantly import NamedConstant
-
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.trial import unittest
+from .._format import formatEvent
+from .._global import globalLogPublisher
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import InvalidLogLevelError, LogLevel
-from .._format import formatEvent
 from .._logger import Logger
-from .._global import globalLogPublisher
 
 
 class TestLogger(Logger):
@@ -57,7 +56,7 @@ class LogComposedObject:
         self.state = state
 
     def __str__(self) -> str:
-        return "<LogComposedObject {state}>".format(state=self.state)
+        return f"<LogComposedObject {self.state}>"
 
 
 class LoggerTests(unittest.TestCase):
@@ -71,7 +70,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
+        self.assertEqual(repr(log), f"<Logger {repr(namespace)}>")
 
     def test_namespaceDefault(self) -> None:
         """
@@ -86,7 +85,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result = []  # type: List[Logger]
+        result: List[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -120,12 +119,12 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed = []  # type: List[LogEvent]
+        observed: List[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))
 
-        cast(Logger, MyObject.log).info("hello")
+        MyObject.log.info("hello")
         self.assertEqual(len(observed), 1)
         self.assertEqual(observed[0]["log_format"], "hello")
 

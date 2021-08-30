@@ -134,7 +134,7 @@ class SMTPClientError(SMTPError):
 
     def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = ["{:03d} ".format(self.code).encode("utf-8") + self.resp]
+            res = [f"{self.code:03d} ".encode() + self.resp]
         else:
             res = [self.resp]
         if self.log:

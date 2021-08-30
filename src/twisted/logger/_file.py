@@ -6,15 +6,12 @@
 File log observer.
 """
 
-from typing import Any, Callable, IO, Optional
+from typing import IO, Any, Callable, Optional
 
 from zope.interface import implementer
 
 from twisted.python.compat import ioType
-
-from ._format import formatTime
-from ._format import timeFormatRFC3339
-from ._format import formatEventAsClassicLogText
+from ._format import formatEventAsClassicLogText, formatTime, timeFormatRFC3339
 from ._interfaces import ILogObserver, LogEvent
 
 
@@ -33,7 +30,7 @@ class FileLogObserver:
         @param formatEvent: A callable that formats an event.
         """
         if ioType(outFile) is not str:
-            self._encoding = "utf-8"  # type: Optional[str]
+            self._encoding: Optional[str] = "utf-8"
         else:
             self._encoding = None
 

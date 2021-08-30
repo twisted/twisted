@@ -17,26 +17,25 @@ except ImportError:
 
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
-
-from twisted.python import log
+from twisted.internet import interfaces, reactor
+from twisted.internet.defer import gatherResults, maybeDeferred
+from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.internet.tcp import (
     _ACCEPT_ERRORS,
-    ECONNABORTED,
-    EPERM,
-    ENOMEM,
-    ENFILE,
     EAGAIN,
-    EMFILE,
-    ENOBUFS,
+    ECONNABORTED,
     EINPROGRESS,
+    EMFILE,
+    ENFILE,
+    ENOBUFS,
+    ENOMEM,
+    EPERM,
     EWOULDBLOCK,
     Port,
 )
-from twisted.internet.protocol import Protocol, ServerFactory
+from twisted.python import log
 from twisted.python.runtime import platform
-from twisted.internet.defer import maybeDeferred, gatherResults
-from twisted.internet import reactor, interfaces
+from twisted.trial.unittest import TestCase
 
 
 @skipIf(

@@ -6,17 +6,18 @@
 An FTP protocol implementation
 """
 
-# System Imports
-import os
-import time
-import re
-import stat
 import errno
 import fnmatch
 
+# System Imports
+import os
+import re
+import stat
+import time
+
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pwd = grp = None  # type: ignore[assignment]
 
@@ -24,11 +25,10 @@ from zope.interface import Interface, implementer
 
 # Twisted Imports
 from twisted import copyright
-from twisted.internet import reactor, interfaces, protocol, error, defer
+from twisted.cred import checkers, credentials, error as cred_error, portal
+from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.protocols import basic, policies
-
-from twisted.python import log, failure, filepath
-from twisted.cred import error as cred_error, portal, credentials, checkers
+from twisted.python import failure, filepath, log
 
 # constants
 # response codes
@@ -804,7 +804,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 msg in err.value.args[0]
                 for msg in ("takes exactly", "required positional argument")
             ):
-                self.reply(SYNTAX_ERR, "{} requires an argument.".format(cmd))
+                self.reply(SYNTAX_ERR, f"{cmd} requires an argument.")
             else:
                 log.msg("Unexpected FTP error")
                 log.err(err)
@@ -886,7 +886,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 return dtpPort
         raise error.CannotListenError(
-            "", portn, "No port available in range {}".format(self.passivePortRange)
+            "", portn, f"No port available in range {self.passivePortRange}"
         )
 
     def ftp_USER(self, username):
@@ -1312,7 +1312,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         def cbSent(result):
             """
-            Called from data transport when tranfer is done.
+            Called from data transport when transfer is done.
             """
             return (TXFR_COMPLETE_OK,)
 
@@ -1562,7 +1562,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
     userAnonymous = "anonymous"
     timeOut = 600
 
-    welcomeMessage = "Twisted {} FTP Server".format(copyright.version)
+    welcomeMessage = f"Twisted {copyright.version} FTP Server"
 
     passivePortRange = range(0, 1)
 
@@ -1808,7 +1808,7 @@ def _testPermissions(uid, gid, spath, mode="r"):
         oth = stat.S_IWOTH
         amode = os.W_OK
     else:
-        raise ValueError("Invalid mode {!r}: must specify 'r' or 'w'".format(mode))
+        raise ValueError(f"Invalid mode {mode!r}: must specify 'r' or 'w'")
 
     access = False
     if os.path.exists(spath):
@@ -2218,7 +2218,7 @@ class BaseFTPRealm:
         @rtype: L{FilePath}
         """
         raise NotImplementedError(
-            "{!r} did not override getHomeDirectory".format(self.__class__)
+            f"{self.__class__!r} did not override getHomeDirectory"
         )
 
     def requestAvatar(self, avatarId, mind, *interfaces):
@@ -2411,7 +2411,7 @@ def decodeHostPort(line):
         if x < 0 or x > 255:
             raise ValueError("Out of range", line, x)
     a, b, c, d, e, f = parsed
-    host = "{}.{}.{}.{}".format(a, b, c, d)
+    host = f"{a}.{b}.{c}.{d}"
     port = (int(e) << 8) + int(f)
     return host, port
 
@@ -2648,7 +2648,7 @@ class FTPClientBasic(basic.LineReceiver):
             self.nextDeferred.errback(failure.Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
-            log.msg("Server sent invalid response code {}".format(code))
+            log.msg(f"Server sent invalid response code {code}")
             self.nextDeferred.errback(failure.Failure(BadResponse(response)))
 
         # Run the next command

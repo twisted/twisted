@@ -6,25 +6,24 @@ Tests for L{twisted.python.log}.
 """
 
 
+import calendar
+import logging
 import os
 import sys
 import time
-import logging
 import warnings
-import calendar
 from io import IOBase, StringIO
 
-from twisted.trial import unittest
-
-from twisted.python import log, failure
-from twisted.logger.test.test_stdlib import handlerAndBytesIO
-from twisted.python.log import LogPublisher
 from twisted.logger import (
+    LogBeginner,
     LoggingFile,
     LogLevel as NewLogLevel,
-    LogBeginner,
     LogPublisher as NewLogPublisher,
 )
+from twisted.logger.test.test_stdlib import handlerAndBytesIO
+from twisted.python import failure, log
+from twisted.python.log import LogPublisher
+from twisted.trial import unittest
 
 
 class FakeWarning(Warning):
@@ -343,7 +342,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.assertIsInstance(chunk, str, "{!r} was not a string".format(chunk))
+            self.assertIsInstance(chunk, str, f"{chunk!r} was not a string")
 
         if self._origEncoding is not None:
             sys.setdefaultencoding(self._origEncoding)
@@ -748,7 +747,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         self.assertTrue(
             result.startswith(prefix),
-            "{!r} does not start with {!r}".format(result, prefix),
+            f"{result!r} does not start with {prefix!r}",
         )
 
     def test_emitNewline(self):
@@ -768,7 +767,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
 
         self.assertTrue(
             result.endswith(suffix),
-            "{!r} does not end with {!r}".format(result, suffix),
+            f"{result!r} does not end with {suffix!r}",
         )
 
 
@@ -816,7 +815,7 @@ class PythonLoggingObserverTests(unittest.SynchronousTestCase):
         output = self.out.getvalue()
         self.assertTrue(
             output.startswith(prefix),
-            "Does not start with {!r}: {!r}".format(prefix, output),
+            f"Does not start with {prefix!r}: {output!r}",
         )
 
     def test_formatString(self):

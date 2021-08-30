@@ -6,11 +6,10 @@ Tests for L{twisted.internet.task}.
 """
 
 
-from twisted.trial import unittest
-
-from twisted.internet import interfaces, task, reactor, defer, error
+from twisted.internet import defer, error, interfaces, reactor, task
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 # Be compatible with any jerks who used our private stuff
 Clock = task.Clock
@@ -479,14 +478,12 @@ class LoopTests(unittest.TestCase):
         # valid.  First, the "epsilon" value here measures the floating-point
         # inaccuracy in question, and so if it doesn't exist then we are not
         # triggering an interesting condition.
-        self.assertTrue(
-            abs(epsilon) > 0.0, "{} should be greater than zero".format(epsilon)
-        )
+        self.assertTrue(abs(epsilon) > 0.0, f"{epsilon} should be greater than zero")
         # Secondly, task.Clock should behave in such a way that once we have
         # advanced to this point, it has reached or exceeded the timespan.
         self.assertTrue(
             secondsValue >= timespan,
-            "{} should be greater than or equal to {}".format(secondsValue, timespan),
+            f"{secondsValue} should be greater than or equal to {timespan}",
         )
 
         self.assertEqual(sum(accumulator), count)

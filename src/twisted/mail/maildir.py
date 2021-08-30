@@ -9,22 +9,20 @@ Maildir-style mailbox support.
 
 import io
 import os
-import stat
 import socket
+import stat
 from hashlib import md5
+from typing import IO
 
 from zope.interface import implementer
 
-from twisted.mail import pop3
-from twisted.mail import smtp
-from twisted.protocols import basic
-from twisted.persisted import dirdbm
-from twisted.python import log, failure
-from twisted.mail import mail
-from twisted.internet import interfaces, defer, reactor
-from twisted.cred import portal, credentials, checkers
+from twisted.cred import checkers, credentials, portal
 from twisted.cred.error import UnauthorizedLogin
-from typing import IO
+from twisted.internet import defer, interfaces, reactor
+from twisted.mail import mail, pop3, smtp
+from twisted.persisted import dirdbm
+from twisted.protocols import basic
+from twisted.python import failure, log
 
 INTERNAL_ERROR = """\
 From: Twisted.mail Internals
@@ -78,7 +76,7 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return "{}.M{}P{}Q{}.{}".format(seconds, microseconds, self.p, self.n, self.s)
+        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
@@ -256,7 +254,7 @@ class AbstractMaildirDomain:
         filename = os.path.join(dir, "tmp", fname)
         fp = open(filename, "w")
         return MaildirMessage(
-            "{}@{}".format(name, domain), fp, filename, os.path.join(dir, "new", fname)
+            f"{name}@{domain}", fp, filename, os.path.join(dir, "new", fname)
         )
 
     def willRelay(self, user, protocol):

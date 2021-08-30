@@ -7,32 +7,55 @@ Object-oriented filesystem path representation.
 """
 
 
+import base64
+import errno
 import os
 import sys
-import errno
-import base64
-
-from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname, join as joinpath
-from os import listdir, utime, stat
-
-from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
-from stat import S_IRUSR, S_IWUSR, S_IXUSR
-from stat import S_IRGRP, S_IWGRP, S_IXGRP
-from stat import S_IROTH, S_IWOTH, S_IXOTH
+from os import listdir, stat, utime
+from os.path import (
+    abspath,
+    basename,
+    dirname,
+    exists,
+    isabs,
+    join as joinpath,
+    normpath,
+    splitext,
+)
+from stat import (
+    S_IMODE,
+    S_IRGRP,
+    S_IROTH,
+    S_IRUSR,
+    S_ISBLK,
+    S_ISDIR,
+    S_ISREG,
+    S_ISSOCK,
+    S_IWGRP,
+    S_IWOTH,
+    S_IWUSR,
+    S_IXGRP,
+    S_IXOTH,
+    S_IXUSR,
+)
 from typing import IO, Union, cast
 
-from zope.interface import Interface, Attribute, implementer
+from zope.interface import Attribute, Interface, implementer
+
+from twisted.python.compat import cmp, comparable
+from twisted.python.runtime import platform
+from twisted.python.util import FancyEqMixin
+from twisted.python.win32 import (
+    ERROR_DIRECTORY,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_INVALID_NAME,
+    ERROR_PATH_NOT_FOUND,
+    O_BINARY,
+)
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
-
-from twisted.python.compat import comparable, cmp
-from twisted.python.runtime import platform
-from twisted.python.util import FancyEqMixin
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
@@ -417,7 +440,7 @@ class AbstractFilePath:
             p = p.parent()
         if f == ancestor and segments:
             return segments
-        raise ValueError("{!r} not parent of {!r}".format(ancestor, self))
+        raise ValueError(f"{ancestor!r} not parent of {self!r}")
 
     # new in 8.0
     def __hash__(self):
@@ -516,17 +539,17 @@ class Permissions(FancyEqMixin):
     compareAttributes = ("user", "group", "other")
 
     def __init__(self, statModeInt):
-        self.user, self.group, self.other = [
-            RWX(*[statModeInt & bit > 0 for bit in bitGroup])
+        self.user, self.group, self.other = (
+            RWX(*(statModeInt & bit > 0 for bit in bitGroup))
             for bitGroup in [
                 [S_IRUSR, S_IWUSR, S_IXUSR],
                 [S_IRGRP, S_IWGRP, S_IXGRP],
                 [S_IROTH, S_IWOTH, S_IXOTH],
             ]
-        ]
+        )
 
     def __repr__(self) -> str:
-        return "[{} | {} | {}]".format(str(self.user), str(self.group), str(self.other))
+        return f"[{str(self.user)} | {str(self.group)} | {str(self.other)}]"
 
     def shorthand(self):
         """
@@ -632,7 +655,7 @@ class FilePath(AbstractFilePath):
     """
 
     _statinfo = None
-    path = None  # type: Union[bytes, str]
+    path: Union[bytes, str] = None  # type: ignore[assignment]
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -744,17 +767,15 @@ class FilePath(AbstractFilePath):
 
         if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
-            raise InsecurePath("{!r} contains a colon.".format(path))
+            raise InsecurePath(f"{path!r} contains a colon.")
 
         norm = normpath(path)
         if sep in norm:
-            raise InsecurePath(
-                "{!r} contains one or more directory separators".format(path)
-            )
+            raise InsecurePath(f"{path!r} contains one or more directory separators")
 
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("{!r} is not a child of {}".format(newpath, ourPath))
+            raise InsecurePath(f"{newpath!r} is not a child of {ourPath}")
         return self.clonePath(newpath)
 
     def preauthChild(self, path):
@@ -772,7 +793,7 @@ class FilePath(AbstractFilePath):
 
         newpath = abspath(joinpath(ourPath, normpath(path)))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("{} is not a child of {}".format(newpath, ourPath))
+            raise InsecurePath(f"{newpath} is not a child of {ourPath}")
         return self.clonePath(newpath)
 
     def childSearchPreauth(self, *paths):
@@ -1245,7 +1266,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
     def __repr__(self) -> str:
-        return "FilePath({!r})".format(self.path)
+        return f"FilePath({self.path!r})"
 
     def touch(self):
         """

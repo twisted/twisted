@@ -10,10 +10,11 @@ HTML pretty-printing for Python source code.
 
 __version__ = "$Revision: 1.8 $"[11:-2]
 
-from twisted.python import htmlizer, usage
-from twisted import copyright
+import os
+import sys
 
-import os, sys
+from twisted import copyright
+from twisted.python import htmlizer, usage
 
 header = """<html><head>
 <title>%(title)s</title>
@@ -63,7 +64,7 @@ def run():
     with open(filename + ".html", "wb") as output:
         outHeader = header % {
             "title": filename,
-            "generator": "htmlizer/{}".format(copyright.longversion),
+            "generator": f"htmlizer/{copyright.longversion}",
             "alternate": alternateLink % {"source": filename},
             "stylesheet": stylesheet,
         }

@@ -26,17 +26,17 @@ real applications.
 from queue import Empty, Queue
 
 try:
-    from wx import (
-        PySimpleApp as wxPySimpleApp,
+    from wx import (  # type: ignore[import]
         CallAfter as wxCallAfter,
+        PySimpleApp as wxPySimpleApp,
         Timer as wxTimer,
     )
 except ImportError:
     # older version of wxPython:
-    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
+    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer  # type: ignore[import]
 
-from twisted.python import log, runtime
 from twisted.internet import _threadedselect
+from twisted.python import log, runtime
 
 
 class ProcessEventsTimer(wxTimer):

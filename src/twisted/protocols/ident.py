@@ -10,7 +10,7 @@ import struct
 
 from twisted.internet import defer
 from twisted.protocols import basic
-from twisted.python import log, failure
+from twisted.python import failure, log
 
 _MIN_PORT = 1
 _MAX_PORT = 2 ** 16 - 1
@@ -215,7 +215,7 @@ class IdentClient(basic.LineOnlyReceiver):
 
     def lineReceived(self, line):
         if not self.queries:
-            log.msg("Unexpected server response: {!r}".format(line))
+            log.msg(f"Unexpected server response: {line!r}")
         else:
             d, _, _ = self.queries.pop(0)
             self.parseResponse(d, line)

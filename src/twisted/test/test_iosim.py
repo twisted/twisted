@@ -10,7 +10,6 @@ from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.protocol import Protocol
-
 from twisted.test.iosim import FakeTransport, connect
 from twisted.trial.unittest import TestCase
 
@@ -72,12 +71,12 @@ class StrictPushProducer:
 
     def pauseProducing(self):
         if self._state != "running":
-            raise ValueError("Cannot pause {} IPushProducer".format(self._state))
+            raise ValueError(f"Cannot pause {self._state} IPushProducer")
         self._state = "paused"
 
     def resumeProducing(self):
         if self._state != "paused":
-            raise ValueError("Cannot resume {} IPushProducer".format(self._state))
+            raise ValueError(f"Cannot resume {self._state} IPushProducer")
         self._state = "running"
 
 

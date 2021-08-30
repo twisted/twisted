@@ -35,22 +35,20 @@ import sys
 import time
 import types
 import warnings
-
 from importlib.machinery import SourceFileLoader
 
-from twisted.python import reflect, log, failure, modules, filepath
+from zope.interface import implementer
 
 from twisted.internet import defer
-from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
+from twisted.python import failure, filepath, log, modules, reflect
+from twisted.trial import unittest, util
 from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
 from twisted.trial._synctest import _logObserver
+from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
-
-from zope.interface import implementer
 
 pyunit = __import__("unittest")
 
@@ -100,18 +98,32 @@ def filenameToModule(fn):
     @return: A module object.
     @raise ValueError: If C{fn} does not exist.
     """
+    oldFn = fn
+
+    if (3, 8) <= sys.version_info < (3, 10) and not os.path.isabs(fn):
+        # module.__spec__.__file__ is supposed to be absolute in py3.8+
+        # importlib.util.spec_from_file_location does this automatically from
+        # 3.10+
+        # This was backported to 3.8 and 3.9, but then reverted in 3.8.11 and
+        # 3.9.6
+        # See https://twistedmatrix.com/trac/ticket/10230
+        # and https://bugs.python.org/issue44070
+        fn = os.path.join(os.getcwd(), fn)
+
     if not os.path.exists(fn):
-        raise ValueError("{!r} doesn't exist".format(fn))
+        raise ValueError(f"{oldFn!r} doesn't exist")
+
+    moduleName = reflect.filenameToModuleName(fn)
     try:
-        ret = reflect.namedAny(reflect.filenameToModuleName(fn))
+        ret = reflect.namedAny(moduleName)
     except (ValueError, AttributeError):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # >=3.7 has __file__ attribute as None, previously __file__ was not present
     if getattr(ret, "__file__", None) is None:
         # This isn't a Python module in a package, so import it from a file
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + ".py"
@@ -119,11 +131,11 @@ def filenameToModule(fn):
     same = getattr(os.path, "samefile", samefile)
     if os.path.isfile(fn) and not same(fn, retFile):
         del sys.modules[ret.__name__]
-        ret = _importFromFile(fn)
+        ret = _importFromFile(fn, moduleName=moduleName)
     return ret
 
 
-def _importFromFile(fn, moduleName=None):
+def _importFromFile(fn, *, moduleName):
     fn = _resolveDirectory(fn)
     if not moduleName:
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]
@@ -145,7 +157,7 @@ def _resolveDirectory(fn):
         if initFile:
             fn = os.path.join(fn, initFile)
         else:
-            raise ValueError("{!r} is not a package directory".format(fn))
+            raise ValueError(f"{fn!r} is not a package directory")
     return fn
 
 
@@ -462,9 +474,7 @@ class TestLoader:
                     raise
 
                 if remaining == "":
-                    raise reflect.ModuleNotFound(
-                        "The module {} does not exist.".format(name)
-                    )
+                    raise reflect.ModuleNotFound(f"The module {name} does not exist.")
 
         if obj is None:
             # If it's none here, we didn't get to import anything.
@@ -479,7 +489,7 @@ class TestLoader:
                 # class from just holding onto the method.
                 parent, obj = obj, getattr(obj, part)
         except AttributeError:
-            raise AttributeError("{} does not exist.".format(name))
+            raise AttributeError(f"{name} does not exist.")
 
         return self.loadAnything(
             obj, parent=parent, qualName=remaining, recurse=recurse
@@ -501,7 +511,7 @@ class TestLoader:
         ## a custom suite.
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
-            raise TypeError("{!r} is not a module".format(module))
+            raise TypeError(f"{module!r} is not a module")
         if hasattr(module, "testSuite"):
             return module.testSuite()
         elif hasattr(module, "test_suite"):
@@ -525,9 +535,9 @@ class TestLoader:
         @param klass: The class to load tests from.
         """
         if not isinstance(klass, type):
-            raise TypeError("{!r} is not a class".format(klass))
+            raise TypeError(f"{klass!r} is not a class")
         if not isTestCase(klass):
-            raise ValueError("{!r} is not a test case".format(klass))
+            raise ValueError(f"{klass!r} is not a test case")
         names = self.getTestCaseNames(klass)
         tests = self.sort(
             [self._makeCase(klass, self.methodPrefix + name) for name in names]
@@ -570,7 +580,7 @@ class TestLoader:
         tests.
         """
         if not isPackage(package):
-            raise TypeError("{!r} is not a package".format(package))
+            raise TypeError(f"{package!r} is not a package")
         pkgobj = modules.getModule(package.__name__)
         if recurse:
             discovery = pkgobj.walkModules()
@@ -666,7 +676,7 @@ class TestLoader:
             # We've found a test suite.
             return obj
         else:
-            raise TypeError("don't know how to make test from: {}".format(obj))
+            raise TypeError(f"don't know how to make test from: {obj}")
 
     def loadByName(self, name, recurse=False):
         """
@@ -733,7 +743,7 @@ class TestLoader:
             module = SourceFileLoader(name, fileName).load_module()
             return self.loadAnything(module, recurse=recurse)
         except OSError:
-            raise ValueError("{} is not a Python file.".format(fileName))
+            raise ValueError(f"{fileName} is not a Python file.")
 
 
 def _qualNameWalker(qualName):

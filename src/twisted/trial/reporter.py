@@ -9,24 +9,23 @@ Defines classes that handle the results of tests.
 """
 
 
-import sys
 import os
+import sys
 import time
-import warnings
 import unittest as pyunit
-
+import warnings
 from collections import OrderedDict
 
 from zope.interface import implementer
 
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
 try:
-    from subunit import TestProtocolClient
+    from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
 
@@ -457,7 +456,7 @@ class Reporter(TestResult):
         @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(""))
+        assert isinstance(s, str)
         if args:
             self._stream.write(s % args)
         else:
@@ -638,7 +637,7 @@ class Reporter(TestResult):
         )
 
     def _printUnexpectedSuccess(self, todo):
-        ret = "Reason: {!r}\n".format(todo.reason)
+        ret = f"Reason: {todo.reason!r}\n"
         if todo.errors:
             ret += "Expected errors: {}\n".format(", ".join(todo.errors))
         return ret
@@ -881,7 +880,7 @@ class _AnsiColorizer:
         @param color: A string label for a color. e.g. 'red', 'white'.
         """
         color = self._colors[color]
-        self.stream.write("\x1b[{};1m{}\x1b[0m".format(color, text))
+        self.stream.write(f"\x1b[{color};1m{text}\x1b[0m")
 
 
 class _Win32Colorizer:
@@ -890,13 +889,13 @@ class _Win32Colorizer:
     """
 
     def __init__(self, stream):
-        from win32console import (
-            GetStdHandle,
-            STD_OUTPUT_HANDLE,
-            FOREGROUND_RED,
+        from win32console import (  # type: ignore[import]
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
+            FOREGROUND_RED,
+            STD_OUTPUT_HANDLE,
+            GetStdHandle,
         )
 
         red, green, blue, bold = (
@@ -926,7 +925,7 @@ class _Win32Colorizer:
             screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes
+        import pywintypes  # type: ignore[import]
 
         try:
             screenBuffer.SetConsoleTextAttribute(
@@ -1203,9 +1202,9 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                    self._write(f"{self.indent * indentLevel}{seg}\n")
             else:
-                self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                self._write(f"{self.indent * indentLevel}{seg}\n")
             indentLevel += 1
         self._lastTest = segments
 

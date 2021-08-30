@@ -11,32 +11,33 @@ import re
 import string
 import struct
 import types
+from hashlib import md5, sha1, sha256, sha384, sha512
 from typing import Optional, Type
 
-from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted import __version__ as twisted_version
-from twisted.trial.unittest import TestCase
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.randbytes import insecureRandom
 from twisted.python.compat import iterbytes
-from twisted.conch.ssh import address, service, _kex
-from twisted.conch.error import ConchError
-from twisted.test import proto_helpers
+from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
+from twisted.test import proto_helpers
+from twisted.trial.unittest import TestCase
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
 if pyasn1 and cryptography:
     dependencySkip = ""
-    from twisted.conch.ssh import common, transport, keys, factory
-    from twisted.conch.test import keydata
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric import dh, ec
     from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import dh, ec
+
+    from twisted.conch.ssh import common, factory, keys, transport
+    from twisted.conch.test import keydata
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
@@ -353,7 +354,7 @@ def generatePredictableKey(transport):
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
         ).private_key(default_backend())
     except ValueError:
-        print("\np={}\ng={}\nx={}\n".format(p, g, x))
+        print(f"\np={p}\ng={g}\nx={x}\n")
         raise
     transport.dhSecretKeyPublicMP = common.MP(
         transport.dhSecretKey.public_key().public_numbers().y
@@ -365,7 +366,7 @@ class TransportTestCase(TestCase):
     Base class for transport test cases.
     """
 
-    klass = None  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = None
 
     if dependencySkip:
         skip = dependencySkip
@@ -462,7 +463,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass = MockTransportBase  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = MockTransportBase
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -1366,9 +1367,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass = (
-        transport.SSHServerTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHServerTransport
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -1921,9 +1920,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHClientTransport tests.
     """
 
-    klass = (
-        transport.SSHClientTransport
-    )  # type: Optional[Type[transport.SSHTransportBase]]
+    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHClientTransport
 
     def verifyHostKey(self, pubKey, fingerprint):
         """
@@ -2734,7 +2731,7 @@ class SSHCiphersTests(TestCase):
             self.assertEqual(
                 mac,
                 binascii.hexlify(outMAC.makeMAC(seqid, shortened)),
-                "Failed HMAC test vector; key={!r} data={!r}".format(key, data),
+                f"Failed HMAC test vector; key={key!r} data={data!r}",
             )
 
 

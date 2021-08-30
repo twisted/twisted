@@ -21,7 +21,6 @@ from datetime import datetime, timedelta
 from twisted.python.compat import nativeString
 from twisted.python.util import FancyStrMixin
 
-
 RFC4034_TIME_FORMAT = "%Y%m%d%H%M%S"
 
 
@@ -84,9 +83,7 @@ class SerialNumber(FancyStrMixin):
         @raise TypeError: If C{other} is not compatible.
         """
         if not isinstance(other, SerialNumber):
-            raise TypeError(
-                "cannot compare or combine {!r} and {!r}".format(self, other)
-            )
+            raise TypeError(f"cannot compare or combine {self!r} and {other!r}")
 
         if self._serialBits != other._serialBits:
             raise TypeError(

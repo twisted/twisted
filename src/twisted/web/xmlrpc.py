@@ -12,19 +12,19 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-from twisted.python.compat import nativeString
-
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib
 from urllib.parse import urlparse
-from xmlrpc.client import Fault, Binary, Boolean, DateTime
+from xmlrpc.client import Binary, Boolean, DateTime, Fault
+
+from twisted.internet import defer, error, protocol
+from twisted.logger import Logger
+from twisted.python import failure, reflect
+from twisted.python.compat import nativeString
 
 # Sibling Imports
-from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, error
-from twisted.python import reflect, failure
-from twisted.logger import Logger
+from twisted.web import http, resource, server
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001
@@ -142,7 +142,7 @@ class XMLRPC(resource.Resource):
                 request.content.read(), use_datetime=self.useDateTime
             )
         except Exception as e:
-            f = Fault(self.FAILURE, "Can't deserialize input: {}".format(e))
+            f = Fault(self.FAILURE, f"Can't deserialize input: {e}")
             self._cbRender(f, request)
         else:
             try:
@@ -177,7 +177,7 @@ class XMLRPC(resource.Resource):
                     result, methodresponse=True, allow_none=self.allowNone
                 )
             except Exception as e:
-                f = Fault(self.FAILURE, "Can't serialize output: {}".format(e))
+                f = Fault(self.FAILURE, f"Can't serialize output: {e}")
                 content = xmlrpclib.dumps(
                     f, methodresponse=True, allow_none=self.allowNone
                 )

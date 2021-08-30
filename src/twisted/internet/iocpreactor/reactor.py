@@ -14,14 +14,12 @@ from typing import Tuple, Type
 
 from zope.interface import implementer
 
-from twisted.internet import base, interfaces, main, error
-from twisted.python import log, failure
+from twisted.internet import base, error, interfaces, main
 from twisted.internet._dumbwin32proc import Process
-from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
-
-from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
-from twisted.internet.iocpreactor import tcp, udp
+from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
+from twisted.python import failure, log
 
 try:
     from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
@@ -29,7 +27,7 @@ except ImportError:
     TLSMemoryBIOFactory = None
     # Either pyOpenSSL isn't installed, or it is too old for this code to work.
     # The reactor won't provide IReactorSSL.
-    _extraInterfaces = ()  # type: Tuple[Type[interfaces.IReactorSSL], ...]
+    _extraInterfaces: Tuple[Type[interfaces.IReactorSSL], ...] = ()
     warnings.warn(
         "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
         "It is missing, so the reactor will not support SSL APIs."
@@ -274,7 +272,6 @@ class IOCPReactor(
                 "Custom child file descriptor mappings are unsupported on "
                 "this platform."
             )
-        args, env = self._checkProcessArgs(args, env)
         return Process(self, processProtocol, executable, args, env, path)
 
     def removeAll(self):

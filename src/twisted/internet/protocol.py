@@ -11,13 +11,14 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
+
 from zope.interface import implementer
 
-from twisted.python import log, failure, components
-from twisted.internet import interfaces, error, defer
-from twisted.internet.interfaces import ITransport
+from twisted.internet import defer, error, interfaces
+from twisted.internet.interfaces import IAddress, ITransport
 from twisted.logger import _loggerFor
+from twisted.python import components, failure, log
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
@@ -29,7 +30,7 @@ class Factory:
     self.protocol.
     """
 
-    protocol = None  # type: Optional[Callable[[], Protocol]]
+    protocol: "Optional[Callable[[], Protocol]]" = None
 
     numPorts = 0
     noisy = True
@@ -112,7 +113,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr: Tuple[str, int]) -> "Protocol":
+    def buildProtocol(self, addr: IAddress) -> "Optional[Protocol]":
         """
         Create an instance of a subclass of Protocol.
 
@@ -125,7 +126,7 @@ class Factory:
 
         Override this method to alter how Protocol instances get created.
 
-        @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
+        @param addr: an object implementing L{IAddress}
         """
         assert self.protocol is not None
         p = self.protocol()
@@ -189,7 +190,7 @@ class _InstanceFactory(ClientFactory):
         self.deferred = deferred
 
     def __repr__(self) -> str:
-        return "<ClientCreator factory: {!r}>".format(self.instance)
+        return f"<ClientCreator factory: {self.instance!r}>"
 
     def buildProtocol(self, addr):
         """
@@ -394,7 +395,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning {} on explicit request".format(connector))
+                log.msg(f"Abandoning {connector} on explicit request")
             return
 
         if connector is None:
@@ -494,7 +495,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport = None  # type: Optional[ITransport]
+    transport: Optional[ITransport] = None
 
     def makeConnection(self, transport):
         """
@@ -543,7 +544,7 @@ class Protocol(BaseProtocol):
     see the L{twisted.protocols.basic} module for a few of them.
     """
 
-    factory = None  # type: Optional[Factory]
+    factory: Optional[Factory] = None
 
     def logPrefix(self):
         """

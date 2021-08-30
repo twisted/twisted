@@ -1,14 +1,16 @@
 # Do everything properly, and componentize
+import cgi
+import os
+import pwd
+
+from zope.interface import Interface, implementer
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, utils, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor, utils
 from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
-from zope.interface import Interface, implementer
-import cgi
-import pwd
-import os
+from twisted.words.protocols import irc
 
 
 class IFingerService(Interface):
@@ -131,7 +133,7 @@ class IRCReplyBot(irc.IRCClient):
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of {}: {}".format(msg, m))
+            d.addCallback(lambda m: f"Status of {msg}: {m}")
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -181,7 +183,7 @@ class UserStatusTree(resource.Resource):
         d = self.service.getUsers()
 
         def formatUsers(users):
-            l = ['<li><a href="{}">{}</a></li>'.format(user, user) for user in users]
+            l = [f'<li><a href="{user}">{user}</a></li>' for user in users]
             return "<ul>" + "".join(l) + "</ul>"
 
         d.addCallback(formatUsers)

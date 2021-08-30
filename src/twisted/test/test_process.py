@@ -18,15 +18,14 @@ Test running processes.
 """
 
 
-import gzip
-import os
-import sys
-import signal
 import errno
 import gc
-import stat
+import gzip
 import operator
-
+import os
+import signal
+import stat
+import sys
 from unittest import skipIf
 
 try:
@@ -45,17 +44,16 @@ except ImportError:
 else:
     process = _process
 
-from zope.interface.verify import verifyObject
-
 from io import BytesIO
 
-from twisted.python.log import msg
-from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.trial import unittest
-from twisted.python import runtime, procutils
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.python import procutils, runtime
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
-
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable).path
@@ -231,12 +229,12 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         if childFD == 1:
             self.stages.append(2)
             if self.data != b"abcd":
-                raise RuntimeError("Data was {!r} instead of 'abcd'".format(self.data))
+                raise RuntimeError(f"Data was {self.data!r} instead of 'abcd'")
             self.transport.write(b"1234")
         elif childFD == 2:
             self.stages.append(3)
             if self.err != b"1234":
-                raise RuntimeError("Err was {!r} instead of '1234'".format(self.err))
+                raise RuntimeError(f"Err was {self.err!r} instead of '1234'")
             self.transport.write(b"abcd")
             self.stages.append(4)
         elif childFD == 0:
@@ -309,7 +307,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         is set up and ready to receive the signal) by sending the signal to
         it.  Also log all output to help with debugging.
         """
-        msg("Received {!r} from child stdout".format(data))
+        msg(f"Received {data!r} from child stdout")
         if not self.signaled:
             self.signaled = True
             self.transport.signalProcess(self.signal)
@@ -319,7 +317,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         Log all data received from the child's stderr to help with
         debugging.
         """
-        msg("Received {!r} from child stderr".format(data))
+        msg(f"Received {data!r} from child stderr")
 
     def processEnded(self, reason):
         """
@@ -329,11 +327,9 @@ class SignalProtocol(protocol.ProcessProtocol):
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
         """
-        msg("Child exited: {!r}".format(reason.getTraceback()))
+        msg(f"Child exited: {reason.getTraceback()!r}")
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: {}".format(reason))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if isinstance(self.signal, str):
             signalValue = getattr(signal, "SIG" + self.signal)
@@ -341,9 +337,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             signalValue = self.signal
         if v.exitCode is not None:
             return self.deferred.errback(
-                ValueError(
-                    "SIG{}: exitCode is {}, not None".format(self.signal, v.exitCode)
-                )
+                ValueError(f"SIG{self.signal}: exitCode is {v.exitCode}, not None")
             )
         if v.signal != signalValue:
             return self.deferred.errback(
@@ -354,7 +348,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             )
         if os.WTERMSIG(v.status) != signalValue:
             return self.deferred.errback(
-                ValueError("SIG{}: {}".format(self.signal, os.WTERMSIG(v.status)))
+                ValueError(f"SIG{self.signal}: {os.WTERMSIG(v.status)}")
             )
         self.deferred.callback(None)
 
@@ -378,7 +372,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     @ivar programName: The name of the program to run.
     """
 
-    programName = b""  # type: bytes
+    programName: bytes = b""
 
     @classmethod
     def run(cls, reactor, argv, env):
@@ -503,13 +497,13 @@ class ProcessTests(unittest.TestCase):
         """
         L{twisted.internet.stdio} test.
         """
-        scriptPath = b"twisted.test.process_twisted"
+        scriptPath = "twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(
             p,
             pyExe,
-            [pyExe, b"-u", b"-m", scriptPath],
+            [pyExe, "-u", "-m", scriptPath],
             env=properEnv,
             path=None,
             usePTY=self.usePTY,
@@ -530,6 +524,41 @@ class ProcessTests(unittest.TestCase):
             )
 
         return d.addCallback(processEnded)
+
+    def test_patchSysStdoutWithNone(self):
+        """
+        In some scenarious, such as Python running as part of a Windows
+        Windows GUI Application with no console, L{sys.stdout} is L{None}.
+        """
+        import sys
+
+        self.patch(sys, "stdout", None)
+        return self.test_stdio()
+
+    def test_patchSysStdoutWithStringIO(self):
+        """
+        Some projects which use the Twisted reactor
+        such as Buildbot patch L{sys.stdout} with L{io.StringIO}
+        before running their tests.
+        """
+        import sys
+        from io import StringIO
+
+        stdoutStringIO = StringIO()
+        self.patch(sys, "stdout", stdoutStringIO)
+        return self.test_stdio()
+
+    def test_patch_sys__stdout__WithStringIO(self):
+        """
+        If L{sys.stdout} and L{sys.__stdout__} are patched with L{io.StringIO},
+        we should get a L{ValueError}.
+        """
+        import sys
+        from io import StringIO
+
+        self.patch(sys, "stdout", StringIO())
+        self.patch(sys, "__stdout__", StringIO())
+        return self.test_stdio()
 
     def test_unsetPid(self):
         """
@@ -553,7 +582,7 @@ class ProcessTests(unittest.TestCase):
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
         and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_process(self):
@@ -578,7 +607,9 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob
+                import glob
+
+                import process_tester  # type: ignore[import]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -591,7 +622,7 @@ class ProcessTests(unittest.TestCase):
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
         and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8)],
+        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_manyProcesses(self):
@@ -670,45 +701,6 @@ class ProcessTests(unittest.TestCase):
             self.assertEqual(recvdArgs, args)
 
         return d.addCallback(processEnded)
-
-    def test_wrongArguments(self):
-        """
-        Test invalid arguments to spawnProcess: arguments and environment
-        must only contains string or unicode, and not null bytes.
-        """
-        p = protocol.ProcessProtocol()
-
-        badEnvs = [{b"foo": 2}, {b"foo": b"egg\0a"}, {3: b"bar"}, {b"bar\0foo": b"bar"}]
-
-        badArgs = [[pyExe, 2], b"spam", [pyExe, b"foo\0bar"]]
-
-        # Sanity check - this will fail for people who have mucked with
-        # their site configuration in a stupid way, but there's nothing we
-        # can do about that.
-        badUnicode = "\N{SNOWMAN}"
-        try:
-            badUnicode.encode(sys.stdout.encoding)
-        except UnicodeEncodeError:
-            # Okay, that unicode doesn't encode, put it in as a bad environment
-            # key.
-            badEnvs.append({badUnicode: "value for bad unicode key"})
-            badEnvs.append({"key for bad unicode value": badUnicode})
-            badArgs.append([pyExe, badUnicode])
-        else:
-            # It _did_ encode.  Most likely, Gtk2 is being used and the
-            # default system encoding is UTF-8, which can encode anything.
-            # In any case, if implicit unicode -> str conversion works for
-            # that string, we can't test that TypeError gets raised instead,
-            # so just leave it off.
-            pass
-
-        for env in badEnvs:
-            self.assertRaises(
-                TypeError, reactor.spawnProcess, p, pyExe, [pyExe, b"-c", b""], env=env
-            )
-
-        for args in badArgs:
-            self.assertRaises(TypeError, reactor.spawnProcess, p, pyExe, args, env=None)
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
@@ -863,13 +855,11 @@ class FDChecker(protocol.ProcessProtocol):
                 self.transport.writeToChild(3, b"efgh")
                 return
         if self.state == 2:
-            self.fail("read '{}' on fd {} during state 2".format(childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 2")
             return
         if self.state == 3:
             if childFD != 1:
-                self.fail(
-                    "read '{}' on fd {} (not 1) during state 3".format(childFD, data)
-                )
+                self.fail(f"read '{childFD}' on fd {data} (not 1) during state 3")
                 return
             self.data += data
             if len(self.data) == 6:
@@ -879,7 +869,7 @@ class FDChecker(protocol.ProcessProtocol):
                 self.state = 4
             return
         if self.state == 4:
-            self.fail("read '{}' on fd {} during state 4".format(childFD, data))
+            self.fail(f"read '{childFD}' on fd {data} during state 4")
             return
 
     def childConnectionLost(self, childFD):
@@ -998,7 +988,7 @@ class PosixProcessBase:
         elif usrbinLoc.exists():
             return usrbinLoc._asBytesPath()
         else:
-            raise RuntimeError("{} not found in /bin or /usr/bin".format(commandName))
+            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -2190,14 +2180,10 @@ class Win32SignalProtocol(SignalProtocol):
         Otherwise, errback with a C{ValueError} describing the problem.
         """
         if not reason.check(error.ProcessTerminated):
-            return self.deferred.errback(
-                ValueError("wrong termination: {}".format(reason))
-            )
+            return self.deferred.errback(ValueError(f"wrong termination: {reason}"))
         v = reason.value
         if v.exitCode != 1:
-            return self.deferred.errback(
-                ValueError("Wrong exit code: {}".format(v.exitCode))
-            )
+            return self.deferred.errback(ValueError(f"Wrong exit code: {v.exitCode}"))
         self.deferred.callback(None)
 
 
@@ -2231,7 +2217,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api
+        import win32api  # type: ignore[import]
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

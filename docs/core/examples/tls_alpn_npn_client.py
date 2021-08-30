@@ -20,7 +20,7 @@ It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
 """
 
-from twisted.internet import ssl, protocol, endpoints, task, defer
+from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.python.filepath import FilePath
 
 # The hostname the remote server to contact.
@@ -80,7 +80,7 @@ def main(reactor):
             # the TLS handshake is over. This is generally *not* in the call to
             # connectionMade, but instead only when we've received some data
             # back.
-            print("Next protocol is: {}".format(self.transport.negotiatedProtocol))
+            print(f"Next protocol is: {self.transport.negotiatedProtocol}")
             self.transport.loseConnection()
 
             # If this is the first data write, we can tell the reactor we're
@@ -93,7 +93,7 @@ def main(reactor):
             # If we haven't received any data, an error occurred. Otherwise,
             # we lost the connection on purpose.
             if self.complete is not None:
-                print("Connection lost due to error {}".format(reason))
+                print(f"Connection lost due to error {reason}")
                 self.complete.callback(None)
             else:
                 print("Connection closed cleanly")

@@ -31,7 +31,7 @@ from twisted.application import internet, service
 from twisted.conch.insults import insults
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol
 from twisted.python import log
@@ -57,7 +57,7 @@ class DemoProtocol(insults.TerminalProtocol):
         self.terminal.write("> ")
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: {!r}".format(seq))
+        log.msg(f"Client sent something weird: {seq!r}")
 
     def keystrokeReceived(self, keyID, modifier):
         if keyID == "\r":

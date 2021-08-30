@@ -8,14 +8,14 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import errno
 import inspect
+import os
 import pickle
 import signal
-import os
 import sys
 
 try:
-    import pwd as _pwd
     import grp as _grp
+    import pwd as _pwd
 except ImportError:
     pwd = None
     grp = None
@@ -25,36 +25,37 @@ else:
 
 from io import StringIO
 from unittest import skipIf
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
-from twisted.test.test_process import MockOS
-
-from twisted import plugin, logger, internet
-from twisted.application import service, app, reactors
+from twisted import internet, logger, plugin
+from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
+from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
-from twisted.internet.base import ReactorBase
-from twisted.test.proto_helpers import MemoryReactor
-from twisted.python.components import Componentized
+from twisted.logger import ILogObserver, globalLogBeginner, globalLogPublisher
 from twisted.python import util
+from twisted.python.components import Componentized
+from twisted.python.fakepwd import UserDatabase
 from twisted.python.log import ILogObserver as LegacyILogObserver, textFromEventDict
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
-from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
-
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.test_process import MockOS
+from twisted.trial.unittest import TestCase
 
 _twistd_unix = requireModule("twistd.scripts._twistd_unix")
 if _twistd_unix:
-    from twisted.scripts._twistd_unix import checkPID
-    from twisted.scripts._twistd_unix import UnixApplicationRunner
-    from twisted.scripts._twistd_unix import UnixAppLogger
+    from twisted.scripts._twistd_unix import (
+        UnixApplicationRunner,
+        UnixAppLogger,
+        checkPID,
+    )
 
 
 syslog = requireModule("twistd.python.syslog")
@@ -327,21 +328,13 @@ class ServerOptionsTests(TestCase):
             config.parseOptions,
             ["--logger", "twisted.test.test_twistd.FOOBAR"],
         )
-        if sys.version_info <= (3, 5):
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: 'module' object has no attribute 'FOOBAR'"
-                )
+        self.assertTrue(
+            e.args[0].startswith(
+                "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
+                "imported: module 'twisted.test.test_twistd' "
+                "has no attribute 'FOOBAR'"
             )
-        else:
-            self.assertTrue(
-                e.args[0].startswith(
-                    "Logger 'twisted.test.test_twistd.FOOBAR' could not be "
-                    "imported: module 'twisted.test.test_twistd' "
-                    "has no attribute 'FOOBAR'"
-                )
-            )
+        )
         self.assertNotIn("\n", e.args[0])
 
     def test_version(self):
@@ -363,6 +356,15 @@ class ServerOptionsTests(TestCase):
         e = self.assertRaises(SystemExit, config.parseOptions, ["--version"])
         self.assertIs(e.code, None)
         self.assertEqual(stdout.getvalue(), expectedOutput)
+
+    def test_printSubCommandForUsageError(self):
+        """
+        Command is printed when an invalid option is requested.
+        """
+        stdout = StringIO()
+        config = twistd.ServerOptions(stdout=stdout)
+
+        self.assertRaises(UsageError, config.parseOptions, ["web --foo"])
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -1541,9 +1543,10 @@ class AppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = app.AppLogger({"logfile": filename})
+        sut = app.AppLogger({"logfile": filename})
 
-        logger._getLogObserver()
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1594,7 +1597,7 @@ class AppLoggerTests(TestCase):
 
         self.assertIn("starting up", textFromEventDict(logs[0]))
         warnings = self.flushWarnings([self.test_legacyObservers])
-        self.assertEqual(len(warnings), 0)
+        self.assertEqual(len(warnings), 0, warnings)
 
     def test_unmarkedObserversDeprecated(self):
         """
@@ -1610,7 +1613,7 @@ class AppLoggerTests(TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings([self.test_unmarkedObserversDeprecated])
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(warnings), 1, warnings)
         self.assertEqual(
             warnings[0]["message"],
             (
@@ -1682,8 +1685,10 @@ class UnixAppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
@@ -1714,8 +1719,10 @@ class UnixAppLoggerTests(TestCase):
 
         self.patch(signal, "getsignal", fakeGetSignal)
         filename = self.mktemp()
-        logger = UnixAppLogger({"logfile": filename})
-        logger._getLogObserver()
+        sut = UnixAppLogger({"logfile": filename})
+
+        observer = sut._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(self.signals, [])
 

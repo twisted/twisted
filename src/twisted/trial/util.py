@@ -21,7 +21,7 @@ Maintainer: Jonathan Lange
 
 from random import randrange
 
-from twisted.internet import utils, interfaces
+from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -194,7 +194,7 @@ def acquireAttribute(objects, attr, default=_DEFAULT):
             return getattr(obj, attr)
     if default is not _DEFAULT:
         return default
-    raise AttributeError("attribute {!r} not found in {!r}".format(attr, objects))
+    raise AttributeError(f"attribute {attr!r} not found in {objects!r}")
 
 
 def excInfoOrFailureToExcInfo(err):
@@ -274,7 +274,7 @@ def _removeSafely(path):
     """
     if not path.child(b"_trial_marker").exists():
         raise _NoTrialMarker(
-            "{!r} is not a trial temporary path, refusing to remove it".format(path)
+            f"{path!r} is not a trial temporary path, refusing to remove it"
         )
     try:
         path.remove()
@@ -376,7 +376,7 @@ def _listToPhrase(things, finalDelimiter, delimiter=", "):
     if len(things) == 1:
         return str(things[0])
     if len(things) == 2:
-        return "{} {} {}".format(str(things[0]), finalDelimiter, str(things[1]))
+        return f"{str(things[0])} {finalDelimiter} {str(things[1])}"
     else:
         strThings = []
         for thing in things:

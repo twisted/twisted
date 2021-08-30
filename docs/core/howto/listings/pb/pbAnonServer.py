@@ -18,11 +18,14 @@ from sys import stdout
 
 from zope.interface import implementer
 
-from twisted.python.log import startLogging
-from twisted.cred.checkers import ANONYMOUS, AllowAnonymousAccess
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.checkers import (
+    ANONYMOUS,
+    AllowAnonymousAccess,
+    InMemoryUsernamePasswordDatabaseDontUse,
+)
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor
+from twisted.python.log import startLogging
 from twisted.spread.pb import Avatar, IPerspective, PBServerFactory
 
 
@@ -47,9 +50,7 @@ class MyPerspective(Avatar):
         Print a simple message which gives the argument this method was
         called with and this avatar's name.
         """
-        print(
-            "I am {}.  perspective_foo({}) called on {}.".format(self.name, arg, self)
-        )
+        print(f"I am {self.name}.  perspective_foo({arg}) called on {self}.")
 
 
 @implementer(IRealm)

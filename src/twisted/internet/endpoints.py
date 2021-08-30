@@ -16,65 +16,63 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 import os
 import re
 import socket
-from unicodedata import normalize
 import warnings
+from unicodedata import normalize
 
-from constantly import NamedConstant, Names
+from zope.interface import directlyProvides, implementer, provider
+
+from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
-from zope.interface import implementer, directlyProvides, provider
-
-from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet import defer, error, fdesc, interfaces, threads
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.address import (
-    _ProcessAddress,
     HostnameAddress,
     IPv4Address,
     IPv6Address,
+    _ProcessAddress,
 )
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor,
-    IResolutionReceiver,
-    IReactorPluggableNameResolver,
     IHostnameResolver,
+    IReactorPluggableNameResolver,
+    IResolutionReceiver,
+    IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpointStringParser,
 )
-from twisted.internet.protocol import ClientFactory, Factory
-from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
 
 try:
-    from twisted.internet.stdio import StandardIO, PipeAddress
+    from twisted.internet.stdio import PipeAddress, StandardIO
 except ImportError:
     # fallback if pywin32 is not installed
     StandardIO = None  # type: ignore[assignment,misc]
     PipeAddress = None  # type: ignore[assignment,misc]
 
-from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
+from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import deprecate, log
-from twisted.python.compat import nativeString, _matchingString
+from twisted.python.compat import _matchingString, iterbytes, nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.python.compat import iterbytes
-from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
-
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
+    from OpenSSL.SSL import Error as SSLError
+
     from twisted.internet.ssl import (
-        optionsForClientTLS,
-        PrivateCertificate,
         Certificate,
-        KeyPair,
         CertificateOptions,
+        KeyPair,
+        PrivateCertificate,
+        optionsForClientTLS,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError
+    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -840,7 +838,7 @@ class HostnameEndpoint:
             # constructor, which is already a native string.
             host = self._hostStr
         elif isIPv6Address(self._hostStr):
-            host = "[{}]".format(self._hostStr)
+            host = f"[{self._hostStr}]"
         else:
             # Convert the bytes representation to a native string to ensure
             # that we display the punycoded version of the hostname, which is
@@ -935,7 +933,7 @@ class HostnameEndpoint:
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(ValueError("invalid hostname: {}".format(self._hostStr)))
+            return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
 
         d = Deferred()
         addresses = []
@@ -960,9 +958,7 @@ class HostnameEndpoint:
 
         d.addErrback(
             lambda ignored: defer.fail(
-                error.DNSLookupError(
-                    "Couldn't find the hostname '{}'".format(self._hostStr)
-                )
+                error.DNSLookupError(f"Couldn't find the hostname '{self._hostStr}'")
             )
         )
 
@@ -1022,7 +1018,7 @@ class HostnameEndpoint:
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    "no results for hostname lookup: {}".format(self._hostStr)
+                    f"no results for hostname lookup: {self._hostStr}"
                 )
             iterEndpoints = iter(endpoints)
             pending = []
@@ -1715,7 +1711,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '{}'".format(endpointType))
+    raise ValueError(f"Unknown endpoint type: '{endpointType}'")
 
 
 def serverFromString(reactor, description):
@@ -2226,7 +2222,7 @@ def _parseClientTLS(
     privateKey=None,
     trustRoots=None,
     endpoint=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Internal method to construct an endpoint from string parameters.

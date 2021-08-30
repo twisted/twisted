@@ -5,10 +5,9 @@
 Test cases for L{twisted.logger._util}.
 """
 
-from twisted.trial import unittest
-
 from zope.interface import implementer
 
+from twisted.trial import unittest
 from .._interfaces import ILogObserver, LogEvent
 from .._observer import LogPublisher
 from .._util import formatTrace
@@ -25,7 +24,7 @@ class UtilTests(unittest.TestCase):
         """
         publisher = LogPublisher()
 
-        event = dict(log_trace=[])  # type: LogEvent
+        event: LogEvent = dict(log_trace=[])
 
         @implementer(ILogObserver)
         def o1(e: LogEvent) -> None:
@@ -64,7 +63,7 @@ class UtilTests(unittest.TestCase):
         """
         Format trace as string.
         """
-        event = dict(log_trace=[])  # type: LogEvent
+        event: LogEvent = dict(log_trace=[])
 
         @implementer(ILogObserver)
         def o1(e: LogEvent) -> None:

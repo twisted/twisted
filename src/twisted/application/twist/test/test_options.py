@@ -5,23 +5,22 @@
 Tests for L{twisted.application.twist._options}.
 """
 
-from sys import stdout, stderr
+from sys import stderr, stdout
 from typing import Callable, Dict, List, Optional, TextIO, Tuple
 
-from ...reactors import NoSuchReactor
+import twisted.trial.unittest
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
     FileLogObserver,
     LogLevel,
-    textFileLogObserver,
     jsonFileLogObserver,
+    textFileLogObserver,
 )
 from twisted.python.usage import UsageError
 from twisted.test.proto_helpers import MemoryReactor
-import twisted.trial.unittest
-
+from ...reactors import NoSuchReactor
 from ...runner._exit import ExitStatus
 from ...runner.test.test_runner import DummyExit
 from ...service import ServiceMaker
@@ -45,9 +44,9 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         Patch L{_options.open} so we can capture usage and prevent actual opens.
         """
-        self.opened = []  # type: List[Tuple[str, Optional[str]]]
+        self.opened: List[Tuple[str, Optional[str]]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> NotImplemented:
+        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
             if name == "nocanopen":
                 raise OSError(None, None, name)
 
@@ -61,7 +60,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors = {}  # type: Dict[str, IReactorCore]
+        self.installedReactors: Dict[str, IReactorCore] = {}
 
         def installReactor(name: str) -> IReactorCore:
             if name != "fusion":

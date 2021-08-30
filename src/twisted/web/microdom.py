@@ -22,11 +22,10 @@ Microdom mainly focuses on working with HTML and XHTML.
 import re
 from io import BytesIO, StringIO
 
-
 # Twisted Imports
 from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
-from twisted.web.sux import XMLParser, ParseError
+from twisted.web.sux import ParseError, XMLParser
 
 
 def getElementsByTagName(iNode, name):
@@ -355,7 +354,7 @@ class Document(Node):
 
         w('<?xml version="1.0"?>' + newl)
         if self.doctype:
-            w("<!DOCTYPE {}>{}".format(self.doctype, newl))
+            w(f"<!DOCTYPE {self.doctype}>{newl}")
         self.documentElement.writexml(
             stream, indent, addindent, newl, strip, nsprefixes, namespace
         )
@@ -443,7 +442,7 @@ class Comment(CharacterData):
     ):
         w = _streamWriteWrapper(stream)
         val = self.data
-        w("<!--{}-->".format(val))
+        w(f"<!--{val}-->")
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
@@ -813,11 +812,11 @@ class Element(Node):
     def __repr__(self) -> str:
         rep = "Element(%s" % repr(self.nodeName)
         if self.attributes:
-            rep += ", attributes={!r}".format(self.attributes)
+            rep += f", attributes={self.attributes!r}"
         if self._filename:
-            rep += ", filename={!r}".format(self._filename)
+            rep += f", filename={self._filename!r}"
         if self._markpos:
-            rep += ", markpos={!r}".format(self._markpos)
+            rep += f", markpos={self._markpos!r}"
         return rep + ")"
 
     def __str__(self) -> str:

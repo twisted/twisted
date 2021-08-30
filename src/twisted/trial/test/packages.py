@@ -8,14 +8,14 @@ and L{twisted.trial.test.test_loader}.
 """
 
 
-import sys
 import os
-
-from twisted.trial import unittest
+import sys
 
 # Python 3 has some funny import caching, which we don't want.
 # invalidate_caches clears it out for us.
 from importlib import invalidate_caches as invalidateImportCaches
+
+from twisted.trial import unittest
 
 testModule = """
 from twisted.trial import unittest

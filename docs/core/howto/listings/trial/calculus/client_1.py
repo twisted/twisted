@@ -1,7 +1,7 @@
 # -*- test-case-name: calculus.test.test_client_1 -*-
 
-from twisted.protocols import basic
 from twisted.internet import defer
+from twisted.protocols import basic
 
 
 class RemoteCalculationClient(basic.LineReceiver):
@@ -15,7 +15,7 @@ class RemoteCalculationClient(basic.LineReceiver):
     def _sendOperation(self, op, a, b):
         d = defer.Deferred()
         self.results.append(d)
-        line = "{} {} {}".format(op, a, b).encode("utf-8")
+        line = f"{op} {a} {b}".encode()
         self.sendLine(line)
         return d
 

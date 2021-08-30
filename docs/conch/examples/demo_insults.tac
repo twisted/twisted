@@ -26,13 +26,14 @@ raindrops at random locations on the client's terminal.  +, -, *, and
 animation process.
 """
 
-import random, string
+import random
+import string
 
 from twisted.application import internet, service
 from twisted.conch.insults import insults
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol, task
 from twisted.python import log
@@ -211,7 +212,7 @@ class DemoProtocol(insults.TerminalProtocol):
         self.height = height
 
     def unhandledControlSequence(self, seq):
-        log.msg("Client sent something weird: {!r}".format(seq))
+        log.msg(f"Client sent something weird: {seq!r}")
 
     def keystrokeReceived(self, keyID, modifier):
         if keyID == "+":
@@ -223,7 +224,7 @@ class DemoProtocol(insults.TerminalProtocol):
         elif keyID == "/":
             self.rate *= 1.1
         else:
-            log.msg("Client sent: {!r}".format(keyID))
+            log.msg(f"Client sent: {keyID!r}")
             return
 
         self._call.stop()

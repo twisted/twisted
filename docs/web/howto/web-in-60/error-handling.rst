@@ -16,7 +16,7 @@ response when a client requests a non-existent URL.
 
 
 
-As in the previous examples, we'll start with :api:`twisted.web.server.Site <Site>` , :api:`twisted.web.resource.Resource <Resource>` , :api:`twisted.internet.reactor <reactor>`, and :api:`twisted.internet.endpoints <endpoints>` imports:
+As in the previous examples, we'll start with :py:class:`Site <twisted.web.server.Site>` , :py:class:`Resource <twisted.web.resource.Resource>` , :py:mod:`reactor <twisted.internet.reactor>`, and :py:mod:`endpoints <twisted.internet.endpoints>` imports:
 
 
 
@@ -32,7 +32,7 @@ As in the previous examples, we'll start with :api:`twisted.web.server.Site <Sit
 
 
 
-Next, we'll add one more import. :api:`twisted.web.resource.NoResource <NoResource>` is one of the pre-defined error
+Next, we'll add one more import. :py:class:`NoResource <twisted.web.resource.NoResource>` is one of the pre-defined error
 resources provided by Twisted Web. It generates the necessary 404 response code
 and renders a simple html page telling the client there is no such resource.
 

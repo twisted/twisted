@@ -12,10 +12,11 @@ from typing import Iterable, List, Optional
 
 from zope.interface import implementer
 
+from twisted.internet import interfaces, main
+from twisted.python import failure, reflect
+
 # Twisted Imports
 from twisted.python.compat import lazyByteSlice
-from twisted.python import reflect, failure
-from twisted.internet import interfaces, main
 
 
 def _dataMustBeBytes(obj):
@@ -186,7 +187,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer = []  # type: List[bytes]
+        self._tempDataBuffer: List[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):
@@ -513,7 +514,7 @@ def isIPAddress(addr: str, family: int = AF_INET) -> bool:
         if addr.count(".") != 3:
             return False
     else:
-        raise ValueError("unknown address family {!r}".format(family))
+        raise ValueError(f"unknown address family {family!r}")
     try:
         # This might be a native implementation or the one from
         # twisted.python.compat.

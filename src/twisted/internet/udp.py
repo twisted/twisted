@@ -27,15 +27,17 @@ from zope.interface import implementer
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
+    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
     from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT  # type: ignore[attr-defined]
     from errno import (  # type: ignore[attr-defined]
         WSAECONNREFUSED,
         WSAECONNRESET,
+        WSAEINTR,
+        WSAEMSGSIZE,
         WSAENETRESET,
+        WSAENOPROTOOPT as ENOPROTOOPT,
+        WSAETIMEDOUT,
     )
-    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAENOPROTOOPT as ENOPROTOOPT  # type: ignore[attr-defined]
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
@@ -47,16 +49,14 @@ if platformType == "win32":
     EAGAIN = WSAEWOULDBLOCK
     EINTR = WSAEINTR
 else:
-    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
-    from errno import ENOPROTOOPT
+    from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOPROTOOPT, EWOULDBLOCK
 
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
 # Twisted Imports
-from twisted.internet import base, defer, address
-from twisted.python import log, failure
-from twisted.internet import abstract, error, interfaces
+from twisted.internet import abstract, address, base, defer, error, interfaces
+from twisted.python import failure, log
 
 
 @implementer(
@@ -85,7 +85,7 @@ class Port(base.BasePort):
     socketType = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
@@ -164,9 +164,9 @@ class Port(base.BasePort):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<{} not connected>".format(self.protocol.__class__)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """

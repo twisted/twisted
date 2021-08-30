@@ -14,14 +14,12 @@ import time
 from pprint import pformat
 from unittest import skipIf
 
-from twisted.python.win32 import ERROR_DIRECTORY
-from twisted.python import filepath
-from twisted.python.runtime import platform
-
-from twisted.trial.unittest import SynchronousTestCase as TestCase
-
 from zope.interface.verify import verifyObject
 
+from twisted.python import filepath
+from twisted.python.runtime import platform
+from twisted.python.win32 import ERROR_DIRECTORY
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 symlinkSkip = not platform._supportsSymlinks()
 
@@ -500,10 +498,10 @@ class PermissionsTests(BytesTestCase):
 
         def _rwxFromStat(statModeInt, who):
             def getPermissionBit(what, who):
-                return (statModeInt & getattr(stat, "S_I{}{}".format(what, who))) > 0
+                return (statModeInt & getattr(stat, f"S_I{what}{who}")) > 0
 
             return filepath.RWX(
-                *[getPermissionBit(what, who) for what in ("R", "W", "X")]
+                *(getPermissionBit(what, who) for what in ("R", "W", "X"))
             )
 
         for u in range(0, 8):
@@ -515,17 +513,17 @@ class PermissionsTests(BytesTestCase):
                     self.assertEqual(
                         perm.user,
                         _rwxFromStat(chmodVal, "USR"),
-                        "{}: got user: {}".format(chmodString, perm.user),
+                        f"{chmodString}: got user: {perm.user}",
                     )
                     self.assertEqual(
                         perm.group,
                         _rwxFromStat(chmodVal, "GRP"),
-                        "{}: got group: {}".format(chmodString, perm.group),
+                        f"{chmodString}: got group: {perm.group}",
                     )
                     self.assertEqual(
                         perm.other,
                         _rwxFromStat(chmodVal, "OTH"),
-                        "{}: got other: {}".format(chmodString, perm.other),
+                        f"{chmodString}: got other: {perm.other}",
                     )
         perm = filepath.Permissions(0o777)
         for who in ("user", "group", "other"):
@@ -856,7 +854,7 @@ class FilePathTests(AbstractFilePathTests):
         ts = self.path.temporarySibling(testExtension)
         self.assertTrue(
             ts.basename().endswith(testExtension),
-            "{} does not end with {}".format(ts.basename(), testExtension),
+            f"{ts.basename()} does not end with {testExtension}",
         )
 
     def test_removeDirectory(self):

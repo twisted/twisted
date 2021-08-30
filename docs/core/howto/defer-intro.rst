@@ -6,18 +6,18 @@
 Introduction to Deferreds
 =========================
 
-This document introduces :api:`twisted.internet.defer.Deferred <Deferred>`\s, Twisted's preferred mechanism for controlling the flow of asynchronous code.
+This document introduces :py:class:`Deferred <twisted.internet.defer.Deferred>`\s, Twisted's preferred mechanism for controlling the flow of asynchronous code.
 Don't worry if you don't know what that means yet -- that's why you are here!
 
-It is intended for newcomers to Twisted, and was written particularly to help people read and understand code that already uses :api:`twisted.internet.defer.Deferred <Deferred>`\s.
+It is intended for newcomers to Twisted, and was written particularly to help people read and understand code that already uses :py:class:`Deferred <twisted.internet.defer.Deferred>`\s.
 
 This document assumes you have a good working knowledge of Python.
 It assumes no knowledge of Twisted.
 
-By the end of the document, you should understand what :api:`twisted.internet.defer.Deferred <Deferred>`\s are and how they can be used to coordinate asynchronous code.
+By the end of the document, you should understand what :py:class:`Deferred <twisted.internet.defer.Deferred>`\s are and how they can be used to coordinate asynchronous code.
 In particular, you should be able to:
 
-- Read and understand code that uses :api:`twisted.internet.defer.Deferred <Deferred>`\s
+- Read and understand code that uses :py:class:`Deferred <twisted.internet.defer.Deferred>`\s
 - Translate from synchronous code to asynchronous code and back again
 - Implement any sort of error-handling for asynchronous code that you wish
 
@@ -112,7 +112,7 @@ Perhaps we want something that looks a little like this::
 One solution: Deferred
 ----------------------
 
-Twisted tackles this problem with :api:`twisted.internet.defer.Deferred <Deferred>`\s, a type of object designed to do one thing, and one thing only: encode an order of execution separately from the order of lines in Python source code.
+Twisted tackles this problem with :py:class:`Deferred <twisted.internet.defer.Deferred>`\s, a type of object designed to do one thing, and one thing only: encode an order of execution separately from the order of lines in Python source code.
 
 It doesn't deal with threads, parallelism, signals, or subprocesses.
 It doesn't know anything about an event loop, greenlets, or scheduling.
@@ -133,7 +133,7 @@ We write::
 That introduced a dozen new concepts in a couple of lines of code, so let's break it down.
 If you think you've got it, you might want to skip to the next section.
 
-Here, ``pod_bay_doors.open()`` is returning a :api:`twisted.internet.defer.Deferred <Deferred>`, which we assign to ``d``.
+Here, ``pod_bay_doors.open()`` is returning a :py:class:`Deferred <twisted.internet.defer.Deferred>`, which we assign to ``d``.
 We can think of ``d`` as a placeholder, representing the value that ``open()`` will eventually return when it finally gets around to finishing.
 
 To "do this next", we add a *callback* to ``d``.
@@ -148,9 +148,9 @@ Of course, programs generally consist of more than two lines, and we still don't
 Getting it right: The failure cases
 -----------------------------------
 
-In what follows, we are going to take each way of expressing order of operations in normal Python (using lines of code and ``try``/``except``) and translate them into an equivalent code built with :api:`twisted.internet.defer.Deferred <Deferred>` objects.
+In what follows, we are going to take each way of expressing order of operations in normal Python (using lines of code and ``try``/``except``) and translate them into an equivalent code built with :py:class:`Deferred <twisted.internet.defer.Deferred>` objects.
 
-This is going to be a bit painstaking, but if you want to really understand how to use :api:`twisted.internet.defer.Deferred <Deferred>`\s and maintain code that uses them, it is worth understanding each example below.
+This is going to be a bit painstaking, but if you want to really understand how to use :py:class:`Deferred <twisted.internet.defer.Deferred>`\s and maintain code that uses them, it is worth understanding each example below.
 
 
 One thing, then another, then another
@@ -169,7 +169,7 @@ Also written as::
 What if neither ``get_names`` nor ``sorted`` can be relied on to finish before they return?
 That is, if both are asynchronous operations?
 
-Well, in Twisted-speak they would return :api:`twisted.internet.defer.Deferred <Deferred>`\s and so we would write::
+Well, in Twisted-speak they would return :py:class:`Deferred <twisted.internet.defer.Deferred>`\s and so we would write::
 
     d = x.get_names()
     d.addCallback(sorted)
@@ -195,7 +195,7 @@ We often want to write code equivalent to this::
     except Exception as e:
         report_error(e)
 
-How would we write this with :api:`twisted.internet.defer.Deferred <Deferred>`\s?
+How would we write this with :py:class:`Deferred <twisted.internet.defer.Deferred>`\s?
 
 .. code-block:: python
 
@@ -205,7 +205,7 @@ How would we write this with :api:`twisted.internet.defer.Deferred <Deferred>`\s
 *errback* is the Twisted name for a callback that is called when an error is received.
 
 This glosses over an important detail.
-Instead of getting the exception object ``e``, ``report_error`` would get a :api:`twisted.python.failure.Failure <Failure>` object, which has all of the useful information that ``e`` does, but is optimized for use with :api:`twisted.internet.defer.Deferred <Deferred>`\s.
+Instead of getting the exception object ``e``, ``report_error`` would get a :py:class:`Failure <twisted.python.failure.Failure>` object, which has all of the useful information that ``e`` does, but is optimized for use with :py:class:`Deferred <twisted.internet.defer.Deferred>`\s.
 
 We'll dig into that a bit later, after we've dealt with all of the other combinations of exceptions.
 
@@ -223,7 +223,7 @@ Abandoning our contrived examples and reaching for generic variable names, we ge
     else:
         h(y)
 
-Well, we'd write it like this with :api:`twisted.internet.defer.Deferred <Deferred>`\s::
+Well, we'd write it like this with :py:class:`Deferred <twisted.internet.defer.Deferred>`\s::
 
     d = f()
     d.addCallbacks(h, g)
@@ -247,7 +247,7 @@ That is, what if we wanted to do the equivalent of this generic code::
         y = g(e)
     h(y)
 
-And with :api:`twisted.internet.defer.Deferred <Deferred>`\s::
+And with :py:class:`Deferred <twisted.internet.defer.Deferred>`\s::
 
     d = f()
     d.addErrback(g)
@@ -274,7 +274,7 @@ What if we want to wrap up a multi-step operation in one exception handler?
     except Exception as e:
         g(e)
 
-With :api:`twisted.internet.defer.Deferred <Deferred>`\s, it would look like this::
+With :py:class:`Deferred <twisted.internet.defer.Deferred>`\s, it would look like this::
 
     d = f()
     d.addCallback(h)
@@ -308,7 +308,7 @@ It is equivalent to::
     d.addCallbacks(g, g)
 
 Why "roughly"?
-Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Failure <Failure>` object representing the exception.
+Because if ``f`` raises, ``g`` will be passed a :py:class:`Failure <twisted.python.failure.Failure>` object representing the exception.
 Otherwise, ``g`` will be passed the asynchronous equivalent of the return value of ``f()`` (i.e. ``y``).
 
 
@@ -320,13 +320,13 @@ Coroutines with async/await
     .. versionadded:: 16.4
 
 Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and native coroutines.
-:api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
+:py:meth:`Deferred.fromCoroutine <twisted.internet.defer.Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
 Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
 Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
 
 .. note::
 
-    The :api:`twisted.internet.defer.ensureDeferred <ensureDeferred>` function also provides a way to convert a coroutine to a Deferred, but it's interface is more type-ambiguous; ``Deferred.fromCoroutine`` is meant to replace it.
+    The :py:func:`ensureDeferred <twisted.internet.defer.ensureDeferred>` function also provides a way to convert a coroutine to a Deferred, but it's interface is more type-ambiguous; ``Deferred.fromCoroutine`` is meant to replace it.
 
 Awaiting on a Deferred which fires with a Failure will raise the exception inside your coroutine as if it were regular Python.
 If your coroutine raises an exception, it will be translated into a Failure fired on the Deferred that ``Deferred.fromCoroutine`` returns for you.
@@ -352,7 +352,7 @@ Calling ``return`` will cause the Deferred that ``Deferred.fromCoroutine`` retur
        return d
 
 
-When writing coroutines, you do not need to use :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
+When writing coroutines, you do not need to use :py:meth:`Deferred.fromCoroutine <twisted.internet.defer.Deferred.fromCoroutine>` when you are writing a coroutine which calls other coroutines which await on Deferreds; you can just ``await`` on it directly.
 For example:
 
 .. code-block:: python3
@@ -371,7 +371,7 @@ For example:
         return Deferred.fromCoroutine(coro)
 
 
-Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :api:`twisted.internet.defer.Deferred.fromCoroutine <Deferred.fromCoroutine>` to return a Deferred.
+Even though Deferreds were used in both coroutines, only ``bar`` had to be wrapped in :py:meth:`Deferred.fromCoroutine <twisted.internet.defer.Deferred.fromCoroutine>` to return a Deferred.
 
 
 Inline callbacks - using 'yield'
@@ -462,7 +462,7 @@ Our exception handling is simplified because we can use Python's familiar ``try`
 Conclusion
 ----------
 
-You have been introduced to asynchronous code and have seen how to use :api:`twisted.internet.defer.Deferred <Deferred>`\s to:
+You have been introduced to asynchronous code and have seen how to use :py:class:`Deferred <twisted.internet.defer.Deferred>`\s to:
 
 - Do something after an asynchronous operation completes successfully
 - Use the result of a successful asynchronous operation
@@ -474,6 +474,6 @@ You have been introduced to asynchronous code and have seen how to use :api:`twi
 - Write code without callbacks using ``inlineCallbacks``
 - Write coroutines that interact with Deferreds using ``Deferred.fromCoroutine``
 
-These are very basic uses of :api:`twisted.internet.defer.Deferred <Deferred>`.
+These are very basic uses of :py:class:`Deferred <twisted.internet.defer.Deferred>`.
 For detailed information about how they work, how to combine multiple Deferreds, and how to write code that mixes synchronous and asynchronous APIs, see the :doc:`Deferred reference <defer>`.
 Alternatively, read about how to write functions that :doc:`generate Deferreds <gendefer>`.

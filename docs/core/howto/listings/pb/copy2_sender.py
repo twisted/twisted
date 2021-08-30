@@ -4,10 +4,11 @@
 # See LICENSE for details.
 
 
-from twisted.spread import pb, jelly
-from twisted.python import log
-from twisted.internet import reactor
 from copy2_classes import SenderPond
+
+from twisted.internet import reactor
+from twisted.python import log
+from twisted.spread import jelly, pb
 
 
 class Sender:

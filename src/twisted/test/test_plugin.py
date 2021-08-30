@@ -13,16 +13,15 @@ import functools
 import os
 import sys
 import time
+from importlib import invalidate_caches as invalidateImportCaches
 from typing import Callable
 
-from importlib import invalidate_caches as invalidateImportCaches
 from zope.interface import Interface
 
-from twisted.trial import unittest
-from twisted.python.log import textFromEventDict, addObserver, removeObserver
-from twisted.python.filepath import FilePath
-
 from twisted import plugin
+from twisted.python.filepath import FilePath
+from twisted.python.log import addObserver, removeObserver, textFromEventDict
+from twisted.trial import unittest
 
 
 class ITestPlugin(Interface):
@@ -65,7 +64,7 @@ class PluginTests(unittest.TestCase):
         self.originalPlugin = "testplugin"
 
         sys.path.insert(0, self.root.path)
-        import mypackage
+        import mypackage  # type: ignore[import]
 
         self.module = mypackage
 
@@ -126,7 +125,7 @@ class PluginTests(unittest.TestCase):
         cache = plugin.getCache(self.module)
 
         dropin = cache[self.originalPlugin]
-        self.assertEqual(dropin.moduleName, "mypackage.{}".format(self.originalPlugin))
+        self.assertEqual(dropin.moduleName, f"mypackage.{self.originalPlugin}")
         self.assertIn("I'm a test drop-in.", dropin.description)
 
         # Note, not the preferred way to get a plugin by its interface.
@@ -144,11 +143,11 @@ class PluginTests(unittest.TestCase):
         # The plugin should match the class present in sys.modules
         self.assertIs(
             realPlugin,
-            sys.modules["mypackage.{}".format(self.originalPlugin)].TestPlugin,
+            sys.modules[f"mypackage.{self.originalPlugin}"].TestPlugin,
         )
 
         # And it should also match if we import it classicly
-        import mypackage.testplugin as tp
+        import mypackage.testplugin as tp  # type: ignore[import]
 
         self.assertIs(realPlugin, tp.TestPlugin)
 
@@ -457,7 +456,7 @@ class DeveloperSetupTests(unittest.TestCase):
         """
         # Import the module we just added to our path.  (Local scope because
         # this package doesn't exist outside of this test.)
-        import plugindummy.plugins
+        import plugindummy.plugins  # type: ignore[import]
 
         x = list(plugin.getPlugins(ITestPlugin, plugindummy.plugins))
         return [plug.__name__ for plug in x]
@@ -645,7 +644,7 @@ class AdjacentPackageTests(unittest.TestCase):
         sys.path.append(firstDirectory.path)
         sys.path.append(secondDirectory.path)
 
-        import dummy.plugins
+        import dummy.plugins  # type: ignore[import]
 
         plugins = list(plugin.getPlugins(ITestPlugin, dummy.plugins))
         self.assertEqual(["first"], [p.__name__ for p in plugins])

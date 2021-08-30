@@ -8,34 +8,36 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
+import os
+
 # System Imports
 import socket
-import sys
-import os
 import struct
-from typing import Optional
-
-import attr
+import sys
+from typing import Callable, ClassVar, List, Optional
 
 from zope.interface import Interface, implementer
 
-from twisted.logger import Logger
+import attr
+import typing_extensions
+
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
-    ITCPTransport,
-    ISystemHandle,
     IListeningPort,
+    ISystemHandle,
+    ITCPTransport,
 )
+from twisted.logger import ILogObserver, LogEvent, Logger
+from twisted.python import deprecate, versions
 from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
-from twisted.python import versions, deprecate
 
 try:
     # Try to get the memory BIO based startTLS implementation, available since
     # pyOpenSSL 0.10
     from twisted.internet._newtls import (
-        ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
+        ConnectionMixin as _TLSConnectionMixin,
         ServerMixin as _TLSServerMixin,
     )
     from twisted.internet.interfaces import ITLSTransport
@@ -57,13 +59,15 @@ if platformType == "win32":
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINPROGRESS as EINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
-    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
-    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
-    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEALREADY as EALREADY,
+        WSAEINPROGRESS as EINPROGRESS,
+        WSAEINVAL as EINVAL,
+        WSAEISCONN as EISCONN,
+        WSAEMFILE as EMFILE,
+        WSAENOBUFS as ENOBUFS,
+        WSAEWOULDBLOCK as EWOULDBLOCK,
+    )
 
     # No such thing as WSAENFILE, either.
     ENFILE = object()
@@ -89,17 +93,15 @@ else:
 
     from os import strerror
 
-
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import base, address, fdesc
-from twisted.internet.task import deferLater
-from twisted.python import log, failure, reflect
-from twisted.python.util import untilConcludes
+from twisted.internet import abstract, address, base, error, fdesc, main
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import deferLater
+from twisted.python import failure, log, reflect
+from twisted.python.util import untilConcludes
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
@@ -750,7 +752,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
+        s = f"<{self.__class__} to {self.addr} at {id(self):x}>"
         return s
 
 
@@ -798,7 +800,7 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.hostname)
+        self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
             self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
@@ -934,8 +936,13 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
+class _HasClose(typing_extensions.Protocol):
+    def close(self) -> object:
+        ...
+
+
 @implementer(_IFileDescriptorReservation)
-@attr.s
+@attr.s(auto_attribs=True)
 class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
@@ -946,10 +953,10 @@ class _FileDescriptorReservation:
         returns an object with a C{close} method.
     """
 
-    _log = Logger()
+    _log: ClassVar[Logger] = Logger()
 
-    _fileFactory = attr.ib()
-    _fileDescriptor = attr.ib(init=False, default=None)
+    _fileFactory: Callable[[], _HasClose]
+    _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
 
     def available(self):
         """
@@ -1085,7 +1092,7 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
@@ -1099,9 +1106,9 @@ class _BuffersLogs:
     @type _observer: L{twisted.logger.ILogObserver}.
     """
 
-    _namespace = attr.ib()
-    _observer = attr.ib()
-    _logs = attr.ib(default=attr.Factory(list))
+    _namespace: str
+    _observer: ILogObserver
+    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
@@ -1246,7 +1253,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # An externally initialized socket that we will use, rather than creating
     # our own.
@@ -1442,7 +1449,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -1493,7 +1500,7 @@ class Connector(base.BaseConnector):
             try:
                 port = socket.getservbyname(port, "tcp")
             except OSError as e:
-                raise error.ServiceNameUnknownError(string="{} ({!r})".format(e, port))
+                raise error.ServiceNameUnknownError(string=f"{e} ({port!r})")
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address

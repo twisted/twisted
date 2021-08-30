@@ -9,17 +9,18 @@ import os
 import socket
 import traceback
 from unittest import skipIf
+
 from zope.interface import implementer
 
-from twisted.python.runtime import platform
-from twisted.trial.unittest import SkipTest
-from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
 
 # twisted.internet.tcp nicely defines some names with proper values on
 # several different platforms.
 from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest
 
 
 def socketpair():
@@ -290,7 +291,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             # set without generating a notification.  That means epollreactor
             # will not call any methods on Victim after the close, so there's
             # no chance to notice the socket is no longer valid.
-            raise SkipTest("{!r} cannot detect lost file descriptors".format(name))
+            raise SkipTest(f"{name!r} cannot detect lost file descriptors")
 
         client, server = self._connectedPair()
 

@@ -6,13 +6,12 @@ Test cases for L{twisted.logger._global}.
 """
 
 import io
-from typing import Any, IO, List, Optional, TextIO, Tuple, Type, cast
+from typing import IO, Any, List, Optional, TextIO, Tuple, Type, cast
 
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
 from .._file import textFileLogObserver
-from .._global import LogBeginner, MORE_THAN_ONCE_WARNING
+from .._global import MORE_THAN_ONCE_WARNING, LogBeginner
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import LogLevel
 from .._logger import Logger
@@ -66,9 +65,11 @@ class LogBeginnerTests(unittest.TestCase):
 
         class NotWarnings:
             def __init__(self) -> None:
-                self.warnings = (
-                    []
-                )  # type: List[Tuple[str, Type[Warning], str, int, Optional[IO[Any]], Optional[int]]]
+                self.warnings: List[
+                    Tuple[
+                        str, Type[Warning], str, int, Optional[IO[Any]], Optional[int]
+                    ]
+                ] = []
 
             def showwarning(
                 self,
@@ -109,8 +110,8 @@ class LogBeginnerTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1 = []  # type: List[LogEvent]
-        events2 = []  # type: List[LogEvent]
+        events1: List[LogEvent] = []
+        events2: List[LogEvent] = []
 
         o1 = cast(ILogObserver, lambda e: events1.append(e))
         o2 = cast(ILogObserver, lambda e: events2.append(e))
@@ -128,8 +129,8 @@ class LogBeginnerTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1 = []  # type: List[LogEvent]
-        events2 = []  # type: List[LogEvent]
+        events1: List[LogEvent] = []
+        events2: List[LogEvent] = []
 
         o1 = cast(ILogObserver, lambda e: events1.append(e))
         o2 = cast(ILogObserver, lambda e: events2.append(e))
@@ -154,7 +155,7 @@ class LogBeginnerTests(unittest.TestCase):
         """
         for count in range(limit + 1):
             self.publisher(dict(count=count))
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
         beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         self.assertEqual(
             list(range(1, limit + 1)),
@@ -190,8 +191,8 @@ class LogBeginnerTests(unittest.TestCase):
         message warning the user that they previously began logging, and add
         the new log observers.
         """
-        events1 = []  # type: List[LogEvent]
-        events2 = []  # type: List[LogEvent]
+        events1: List[LogEvent] = []
+        events2: List[LogEvent] = []
         fileHandle = io.StringIO()
         textObserver = textFileLogObserver(fileHandle)
         self.publisher(dict(event="prebuffer"))
@@ -224,8 +225,8 @@ class LogBeginnerTests(unittest.TestCase):
         compareEvents(self, events2, [warning, dict(event="postwarn")])
 
         output = fileHandle.getvalue()
-        self.assertIn("<{}:{}>".format(firstFilename, firstLine), output)
-        self.assertIn("<{}:{}>".format(secondFilename, secondLine), output)
+        self.assertIn(f"<{firstFilename}:{firstLine}>", output)
+        self.assertIn(f"<{secondFilename}:{secondLine}>", output)
 
     def test_criticalLogging(self) -> None:
         """
@@ -252,7 +253,7 @@ class LogBeginnerTests(unittest.TestCase):
         error streams by setting the C{stdio} and C{stderr} attributes on its
         sys module object.
         """
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         print("Hello, world.", file=cast(TextIO, self.sysModule.stdout))
         compareEvents(
@@ -288,7 +289,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.sysModule.stdout = weird
         self.sysModule.stderr = weirderr
 
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         stdout = cast(TextIO, self.sysModule.stdout)
         stderr = cast(TextIO, self.sysModule.stderr)
@@ -305,7 +306,7 @@ class LogBeginnerTests(unittest.TestCase):
         warnings module into the logging system.
         """
         self.warningsModule.showwarning("a message", DeprecationWarning, __file__, 1)
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         self.warningsModule.showwarning(
             "another message", DeprecationWarning, __file__, 2

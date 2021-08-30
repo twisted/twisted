@@ -2,10 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
-
 from twisted.conch.insults import text
 from twisted.conch.insults.text import attributes as A
+from twisted.trial import unittest
 
 
 class FormattedTextTests(unittest.TestCase):

@@ -27,17 +27,17 @@ How does this thing work?
     play, the end.
 """
 
-from time import time, ctime
+from time import ctime, time
 
 from zope.interface import implementer
 
 from twisted import copyright
-from twisted.cred import portal, credentials, error as ecred
+from twisted.cred import credentials, error as ecred, portal
 from twisted.internet import defer, protocol
-from twisted.python import log, failure, reflect
+from twisted.python import failure, log, reflect
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
-from twisted.words import iwords, ewords
+from twisted.words import ewords, iwords
 from twisted.words.protocols import irc
 
 
@@ -212,13 +212,11 @@ class IRCUser(irc.IRC):
 
     # IChatClient implementation
     def userJoined(self, group, user):
-        self.join(
-            "{}!{}@{}".format(user.name, user.name, self.hostname), "#" + group.name
-        )
+        self.join(f"{user.name}!{user.name}@{self.hostname}", "#" + group.name)
 
     def userLeft(self, group, user, reason=None):
         self.part(
-            "{}!{}@{}".format(user.name, user.name, self.hostname),
+            f"{user.name}!{user.name}@{self.hostname}",
             "#" + group.name,
             (reason or "leaving"),
         )
@@ -235,7 +233,7 @@ class IRCUser(irc.IRC):
         text = message.get("text", "<an unrepresentable message>")
         for L in text.splitlines():
             self.privmsg(
-                "{}!{}@{}".format(sender.name, sender.name, self.hostname),
+                f"{sender.name}!{sender.name}@{self.hostname}",
                 recipientName,
                 L,
             )
@@ -248,7 +246,7 @@ class IRCUser(irc.IRC):
                 self.name,
                 "#" + group.name,
                 topic,
-                "{}!{}@{}".format(author, author, self.hostname),
+                f"{author}!{author}@{self.hostname}",
             )
 
     # irc.IRC callbacks - starting with login related stuff.
@@ -367,7 +365,7 @@ class IRCUser(irc.IRC):
 
     def _cbLogin(self, result):
         (iface, avatar, logout) = result
-        assert iface is iwords.IUser, "Realm is buggy, got {!r}".format(iface)
+        assert iface is iwords.IUser, f"Realm is buggy, got {iface!r}"
 
         # Let them send messages to the world
         del self.irc_PRIVMSG

@@ -6,22 +6,21 @@ Tests for L{twisted.trial._dist.workertrial}.
 """
 
 import errno
-import sys
 import os
-
+import sys
 from io import BytesIO
 
 from twisted.protocols.amp import AMP
 from twisted.test.proto_helpers import StringTransport
-from twisted.trial.unittest import TestCase
-from twisted.trial._dist.workertrial import WorkerLogObserver, main, _setupPath
 from twisted.trial._dist import (
-    workertrial,
     _WORKER_AMP_STDIN,
     _WORKER_AMP_STDOUT,
-    workercommands,
     managercommands,
+    workercommands,
+    workertrial,
 )
+from twisted.trial._dist.workertrial import WorkerLogObserver, _setupPath, main
+from twisted.trial.unittest import TestCase
 
 
 class FakeAMP(AMP):
@@ -76,7 +75,7 @@ class MainTests(TestCase):
             self.assertEqual("wb", mode)
             return self.writeStream
         else:
-            raise AssertionError("Unexpected fd {!r}".format(fd))
+            raise AssertionError(f"Unexpected fd {fd!r}")
 
     def startLoggingWithObserver(self, emit, setStdout):
         """

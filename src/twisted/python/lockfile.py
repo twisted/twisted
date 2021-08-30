@@ -10,7 +10,6 @@ Filesystem-based interprocess mutex.
 
 import errno
 import os
-
 from time import time as _uniquefloat
 
 from twisted.python.runtime import platform
@@ -23,10 +22,7 @@ def unique():
 from os import rename
 
 if not platform.isWindows():
-    from os import kill
-    from os import symlink
-    from os import readlink
-    from os import remove as rmlink
+    from os import kill, readlink, remove as rmlink, symlink
 
     _windows = False
 else:
@@ -43,8 +39,8 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        from win32api import OpenProcess
-        import pywintypes
+        import pywintypes  # type: ignore[import]
+        from win32api import OpenProcess  # type: ignore[import]
     except ImportError:
         kill = None  # type: ignore[assignment,misc]
     else:
@@ -217,7 +213,7 @@ class FilesystemLock:
         """
         pid = readlink(self.name)
         if int(pid) != os.getpid():
-            raise ValueError("Lock {!r} not owned by this process".format(self.name))
+            raise ValueError(f"Lock {self.name!r} not owned by this process")
         rmlink(self.name)
         self.locked = False
 

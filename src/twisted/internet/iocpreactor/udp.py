@@ -13,15 +13,16 @@ from typing import Optional
 
 from zope.interface import implementer
 
-from twisted.internet import defer, address, error, interfaces
+from twisted.internet import address, defer, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log, failure
-
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_PORT_UNREACHABLE,
+)
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from twisted.python import failure, log
 
 
 @implementer(
@@ -44,7 +45,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """
@@ -81,9 +82,9 @@ class Port(abstract.FileHandle):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<{} on {}>".format(self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<{} not connected>".format(self.protocol.__class__)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """

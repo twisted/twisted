@@ -6,22 +6,22 @@
 Mail service support.
 """
 
+# System imports
+import os
 import warnings
+
+from zope.interface import implementer
+
+from twisted.application import internet, service
+from twisted.cred.portal import Portal
 
 # Twisted imports
 from twisted.internet import defer
-from twisted.application import service, internet
-from twisted.python import util
-from twisted.python import log
-from twisted.mail.interfaces import IAliasableDomain, IDomain
-from twisted.cred.portal import Portal
 
 # Sibling imports
 from twisted.mail import protocols, smtp
-
-# System imports
-import os
-from zope.interface import implementer
+from twisted.mail.interfaces import IAliasableDomain, IDomain
+from twisted.python import log, util
 
 
 class DomainWithDefaultDict:
@@ -172,7 +172,7 @@ class DomainWithDefaultDict:
         @return: A string containing the mapping of domain names to domain
             objects.
         """
-        return "<DomainWithDefaultDict {}>".format(self.domains)
+        return f"<DomainWithDefaultDict {self.domains}>"
 
     def __repr__(self) -> str:
         """
@@ -182,7 +182,7 @@ class DomainWithDefaultDict:
         @return: A pseudo-executable string describing the underlying domain
             mapping of this object.
         """
-        return "DomainWithDefaultDict({})".format(self.domains)
+        return f"DomainWithDefaultDict({self.domains})"
 
     def get(self, key, default=None):
         """
@@ -700,7 +700,7 @@ class FileMonitoringService(internet.TimerService):
             except BaseException:
                 now = 0
             if now > mtime:
-                log.msg("{} changed, notifying listener".format(name))
+                log.msg(f"{name} changed, notifying listener")
                 self.files[self.index][3] = now
                 callback(name)
         self._setupMonitor()

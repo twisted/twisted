@@ -2,25 +2,25 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
-import sys
 import inspect
-
+import sys
 from typing import List
 from unittest import skipIf
+
 from zope.interface import directlyProvides
 
 import twisted.mail._pop3client
-
-from twisted.internet import reactor, defer, error, protocol, interfaces
-from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
-from twisted.mail.pop3 import InsecureAuthenticationDisallowed
-from twisted.mail.pop3 import ServerErrorResponse
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.mail.pop3 import (
+    AdvancedPOP3Client as POP3Client,
+    InsecureAuthenticationDisallowed,
+    ServerErrorResponse,
+)
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
-
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -488,7 +488,7 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output = []  # type: List[bytes]
+        output: List[bytes] = []
 
         def connectionMade(self):
             self.factory.input = []
@@ -637,7 +637,7 @@ class POP3ClientModuleStructureTests(TestCase):
             if not pc == "POP3Client":
                 self.assertTrue(
                     hasattr(twisted.mail.pop3, pc),
-                    "{} not in {}".format(pc, twisted.mail.pop3),
+                    f"{pc} not in {twisted.mail.pop3}",
                 )
             else:
                 self.assertTrue(hasattr(twisted.mail.pop3, "AdvancedPOP3Client"))

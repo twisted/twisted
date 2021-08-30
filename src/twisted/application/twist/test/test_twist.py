@@ -8,12 +8,11 @@ Tests for L{twisted.application.twist._twist}.
 from sys import stdout
 from typing import Any, Dict, List
 
+import twisted.trial.unittest
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import LogLevel, jsonFileLogObserver
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.test.test_twistd import SignalCapturingMemoryReactor
-import twisted.trial.unittest
-
 from ...runner._exit import ExitStatus
 from ...runner._runner import Runner
 from ...runner.test.test_runner import DummyExit
@@ -43,7 +42,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors = {}  # type: Dict[str, IReactorCore]
+        self.installedReactors: Dict[str, IReactorCore] = {}
 
         def installReactor(_: TwistOptions, name: str) -> IReactorCore:
             reactor = MemoryReactor()
@@ -57,7 +56,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         Patch L{MultiService.startService} so we can capture usage and prevent
         actual starts.
         """
-        self.serviceStarts = []  # type: List[IService]
+        self.serviceStarts: List[IService] = []
 
         def startService(service: IService) -> None:
             self.serviceStarts.append(service)
@@ -88,7 +87,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         )
         self.assertTrue(
             self.exit.message.endswith(  # type: ignore[union-attr]
-                "\n\n{}".format(TwistOptions())
+                f"\n\n{TwistOptions()}"
             )
         )
 
@@ -108,8 +107,10 @@ class TwistTests(twisted.trial.unittest.TestCase):
         options = Twist.options(["twist", "web"])
 
         reactor = options["reactor"]
+        subCommand = options.subCommand
+        assert subCommand is not None
         service = Twist.service(
-            plugin=options.plugins[options.subCommand],
+            plugin=options.plugins[subCommand],
             options=options.subOptions,
         )
 

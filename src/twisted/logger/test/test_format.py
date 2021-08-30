@@ -16,17 +16,16 @@ except ImportError:
     tzset = None  # type: ignore[assignment,misc]
 
 from twisted.python.failure import Failure
-from twisted.python.test.test_tzhelper import mktime, addTZCleanup, setTZ
+from twisted.python.test.test_tzhelper import addTZCleanup, mktime, setTZ
 from twisted.trial import unittest
 from twisted.trial.unittest import SkipTest
-
 from .._format import (
-    formatEvent,
-    formatUnformattableEvent,
-    formatTime,
-    formatEventAsClassicLogText,
-    formatWithCall,
     eventAsText,
+    formatEvent,
+    formatEventAsClassicLogText,
+    formatTime,
+    formatUnformattableEvent,
+    formatWithCall,
 )
 from .._interfaces import LogEvent
 from .._levels import LogLevel
@@ -109,11 +108,11 @@ class FormattingTests(unittest.TestCase):
         """
         Formatting an unformattable event that has an unformattable key.
         """
-        event = {
+        event: LogEvent = {
             "log_format": "{evil()}",
             "evil": lambda: 1 / 0,
             cast(str, Unformattable()): "gurk",
-        }  # type: LogEvent
+        }
         result = formatEvent(event)
         self.assertIn("MESSAGE LOST: unformattable object logged:", result)
         self.assertIn("Recoverable data:", result)
@@ -261,7 +260,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
 
         def formatTime(t: Optional[float]) -> str:
-            return "__{}__".format(t)
+            return f"__{t}__"
 
         event = dict(log_format="XYZZY", log_time=12345)
         self.assertEqual(
@@ -414,7 +413,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}  # type: LogEvent
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn(str(f.getTraceback()), eventText)
@@ -429,7 +428,7 @@ class EventAsTextTests(unittest.TestCase):
             raise CapturedError("This is a fake error")
         except CapturedError:
             f = Failure()
-        event = {"log_format": ""}  # type: LogEvent
+        event: LogEvent = {"log_format": ""}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn(str(f.getTraceback()), eventText)
@@ -466,11 +465,11 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {
+        event: LogEvent = {
             "log_format": "{evil()}",
             "evil": lambda: 1 / 0,
             cast(str, Unformattable()): "gurk",
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIsInstance(eventText, str)
@@ -483,7 +482,7 @@ class EventAsTextTests(unittest.TestCase):
         If a traceback cannot be appended, a message indicating this is true
         is appended.
         """
-        event = {"log_format": ""}  # type: LogEvent
+        event: LogEvent = {"log_format": ""}
         event["log_failure"] = object()
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIsInstance(eventText, str)
@@ -493,7 +492,7 @@ class EventAsTextTests(unittest.TestCase):
         """
         An event with no C{log_failure} key will not have a traceback appended.
         """
-        event = {"log_format": "This is a test log message"}  # type: LogEvent
+        event: LogEvent = {"log_format": "This is a test log message"}
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIsInstance(eventText, str)
         self.assertIn("This is a test log message", eventText)
@@ -507,7 +506,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}  # type: LogEvent
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn("€", eventText)
@@ -524,7 +523,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        event = {"log_format": "This is a test log message"}  # type: LogEvent
+        event: LogEvent = {"log_format": "This is a test log message"}
         event["log_failure"] = f
         eventText = eventAsText(event, includeTimestamp=True, includeSystem=False)
         self.assertIn("Traceback", eventText)
@@ -541,11 +540,11 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
             "log_time": t,
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(
             event,
@@ -575,11 +574,11 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
             "log_time": t,
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(
             event,
@@ -603,10 +602,10 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(
             event,
@@ -630,12 +629,12 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
             "log_level": LogLevel.info,
             "log_namespace": "test",
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(
             event,
@@ -659,11 +658,11 @@ class EventAsTextTests(unittest.TestCase):
             f = Failure()
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        event = {
+        event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
             "log_level": LogLevel.info,
-        }  # type: LogEvent
+        }
         event["log_failure"] = f
         eventText = eventAsText(
             event,

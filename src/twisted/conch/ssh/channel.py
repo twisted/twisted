@@ -12,9 +12,9 @@ Maintainer: Paul Swartz
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.internet import interfaces
 from twisted.logger import Logger
+from twisted.python import log
 
 
 @implementer(interfaces.ITransport)
@@ -52,7 +52,7 @@ class SSHChannel(log.Logger):
     """
 
     _log = Logger()
-    name = None  # type: bytes  # only needed for client channels
+    name: bytes = None  # type: ignore[assignment]  # only needed for client channels
 
     def __init__(
         self,
@@ -104,7 +104,7 @@ class SSHChannel(log.Logger):
             name = self.name.decode("ascii")
         else:
             name = "None"
-        return "SSHChannel {} ({}) on {}".format(name, id, self.conn.logPrefix())
+        return f"SSHChannel {name} ({id}) on {self.conn.logPrefix()}"
 
     def channelOpen(self, specificData):
         """

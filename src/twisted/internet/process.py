@@ -12,24 +12,23 @@ Maintainer: Itamar Shtull-Trauring
 
 import errno
 import gc
-import os
 import io
+import os
 import signal
 import stat
 import sys
 import traceback
-
 from typing import Callable, Dict, Optional
-from twisted.python.runtime import platform
 
 from zope.interface import implementer
 
-from twisted.python import log, failure
-from twisted.python.util import switchUID
-from twisted.internet import fdesc, abstract, error
-from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
+from twisted.internet import abstract, error, fdesc
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import failure, log
+from twisted.python.runtime import platform
+from twisted.python.util import switchUID
 
 if platform.isWindows():
     raise ImportError(
@@ -56,7 +55,7 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers = {}  # type: Dict[int, Callable]
+reapProcessHandlers: Dict[int, Callable] = {}
 
 
 def reapAllProcesses():
@@ -82,7 +81,7 @@ def registerReapProcessHandler(pid, process):
     try:
         auxPID, status = os.waitpid(pid, os.WNOHANG)
     except BaseException:
-        log.msg("Failed to reap {}:".format(pid))
+        log.msg(f"Failed to reap {pid}:")
         log.err()
 
         if pid is None:
@@ -275,7 +274,7 @@ class _BaseProcess(BaseProcess):
     Base class for Process and PTYProcess.
     """
 
-    status = None  # type: Optional[int]
+    status: Optional[int] = None
     pid = None
 
     def reapProcess(self):
@@ -301,7 +300,7 @@ class _BaseProcess(BaseProcess):
                 else:
                     raise
         except BaseException:
-            log.msg("Failed to reap {}:".format(self.pid))
+            log.msg(f"Failed to reap {self.pid}:")
             log.err()
             pid = None
         if pid:
@@ -328,7 +327,7 @@ class _BaseProcess(BaseProcess):
         @type signalID: C{str} or C{int}
         """
         if signalID in ("HUP", "STOP", "INT", "KILL", "TERM"):
-            signalID = getattr(signal, "SIG{}".format(signalID))
+            signalID = getattr(signal, f"SIG{signalID}")
         if self.pid is None:
             raise ProcessExitedAlready()
         try:
@@ -696,7 +695,7 @@ class Process(_BaseProcess):
                     fdmap[childFD] = readFD  # child reads from this
                     helpers[childFD] = writeFD  # parent writes to this
                 else:
-                    assert type(target) == int, "{!r} should be an int".format(target)
+                    assert type(target) == int, f"{target!r} should be an int"
                     fdmap[childFD] = target  # parent ignores this
             if debug:
                 print("fdmap", fdmap)
@@ -847,12 +846,12 @@ class Process(_BaseProcess):
             self.pipes[childFD].loseConnection()
 
     def pauseProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.stopReading()
 
     def resumeProducing(self):
-        for p in self.pipes.itervalues():
+        for p in self.pipes.values():
             if isinstance(p, ProcessReader):
                 p.startReading()
 

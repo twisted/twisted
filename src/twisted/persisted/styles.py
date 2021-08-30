@@ -11,13 +11,13 @@ import copyreg as copy_reg
 import inspect
 import pickle
 import types
-from typing import Dict
-from twisted.python.compat import _PYPY
-from twisted.python import log, reflect
 from io import StringIO as _cStringIO
+from typing import Dict
 
+from twisted.python import log, reflect
+from twisted.python.compat import _PYPY
 
-oldModules = {}  # type: Dict[str, types.ModuleType]
+oldModules: Dict[str, types.ModuleType] = {}
 
 
 _UniversalPicklingError = pickle.PicklingError
@@ -97,7 +97,7 @@ def _pickleFunction(f):
     @rtype: 2-tuple of C{callable, native string}
     """
     if f.__name__ == "<lambda>":
-        raise _UniversalPicklingError("Cannot pickle lambda function: {}".format(f))
+        raise _UniversalPicklingError(f"Cannot pickle lambda function: {f}")
     return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
 
 
@@ -233,7 +233,7 @@ class Ephemeral:
 
             if getattr(gc, "get_referrers", None):
                 for r in gc.get_referrers(self):
-                    log.msg(" referred to by {}".format(r))
+                    log.msg(f" referred to by {r}")
         return None
 
     def __setstate__(self, state):
@@ -241,7 +241,7 @@ class Ephemeral:
         self.__class__ = Ephemeral
 
 
-versionedsToUpgrade = {}  # type: Dict[int, 'Versioned']
+versionedsToUpgrade: Dict[int, "Versioned"] = {}
 upgraded = {}
 
 
@@ -321,7 +321,7 @@ class Versioned:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
                 dct[
-                    "{}.persistenceVersion".format(reflect.qual(base))
+                    f"{reflect.qual(base)}.persistenceVersion"
                 ] = base.persistenceVersion
         return dct
 

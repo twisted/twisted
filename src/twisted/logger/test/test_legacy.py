@@ -13,15 +13,13 @@ from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
-
 from twisted.python import context, log as legacyLog
 from twisted.python.failure import Failure
-
-from .._interfaces import ILogObserver, LogEvent
-from .._levels import LogLevel
+from twisted.trial import unittest
 from .._format import formatEvent
+from .._interfaces import ILogObserver, LogEvent
 from .._legacy import LegacyLogObserverWrapper, publishToNewObserver
+from .._levels import LogLevel
 
 
 class LegacyLogObserverWrapperTests(unittest.TestCase):
@@ -66,7 +64,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
         @return: the event as observed by the legacy wrapper
         """
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
 
         legacyObserver = cast(legacyLog.ILogObserver, lambda e: events.append(e))
         observer = LegacyLogObserverWrapper(legacyObserver)
@@ -282,7 +280,7 @@ class PublishToNewObserverTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.events = []  # type: List[LogEvent]
+        self.events: List[LogEvent] = []
         self.observer = cast(ILogObserver, self.events.append)
 
     def legacyEvent(self, *message: str, **values: object) -> legacyLog.EventDict:

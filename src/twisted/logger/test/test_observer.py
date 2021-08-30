@@ -12,7 +12,6 @@ from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
-
 from .._interfaces import ILogObserver, LogEvent
 from .._logger import Logger
 from .._observer import LogPublisher
@@ -94,9 +93,9 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1 = []  # type: List[LogEvent]
-        events2 = []  # type: List[LogEvent]
-        events3 = []  # type: List[LogEvent]
+        events1: List[LogEvent] = []
+        events2: List[LogEvent] = []
+        events3: List[LogEvent] = []
 
         o1 = cast(ILogObserver, events1.append)
         o2 = cast(ILogObserver, events2.append)
@@ -116,7 +115,7 @@ class LogPublisherTests(unittest.TestCase):
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")
 
-        events = []  # type: List[LogEvent]
+        events: List[LogEvent] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -125,7 +124,7 @@ class LogPublisherTests(unittest.TestCase):
             if shouldRaise:
                 raise exception
 
-        collector = []  # type: List[LogEvent]
+        collector: List[LogEvent] = []
 
         publisher = LogPublisher(observer, cast(ILogObserver, collector.append))
         publisher(event)
@@ -169,7 +168,7 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2, log_trace=[])
 
-        traces = {}  # type: Dict[int, Tuple[Tuple[Logger, ILogObserver]]]
+        traces: Dict[int, Tuple[Tuple[Logger, ILogObserver]]] = {}
 
         # Copy trace to a tuple; otherwise, both observers will store the same
         # mutable list, and we won't be able to see o1's view distinctly.

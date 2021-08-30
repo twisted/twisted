@@ -9,15 +9,12 @@ You will find these useful if you're adding a new protocol to IM.
 """
 from typing import Type
 
-from twisted.words.im.locals import OFFLINE, OfflineError
-
-from twisted.internet.protocol import connectionDone, Protocol
+from twisted.internet import error
+from twisted.internet.protocol import Protocol, connectionDone
+from twisted.persisted import styles
 from twisted.python.failure import Failure
 from twisted.python.reflect import prefixedMethods
-from twisted.persisted import styles
-
-from twisted.internet import error
-
+from twisted.words.im.locals import OFFLINE, OfflineError
 
 # Abstract representation of chat "model" classes
 
@@ -57,10 +54,10 @@ class AbstractGroup:
         self.account.client.leaveGroup(self.name)
 
     def __repr__(self) -> str:
-        return "<{} {!r}>".format(self.__class__, self.name)
+        return f"<{self.__class__} {self.name!r}>"
 
     def __str__(self) -> str:
-        return "{}@{}".format(self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractPerson:
@@ -84,10 +81,10 @@ class AbstractPerson:
         return "--"
 
     def __repr__(self) -> str:
-        return "<{} {!r}/{}>".format(self.__class__, self.name, self.status)
+        return f"<{self.__class__} {self.name!r}/{self.status}>"
 
     def __str__(self) -> str:
-        return "{}@{}".format(self.name, self.account.accountName)
+        return f"{self.name}@{self.account.accountName}"
 
 
 class AbstractClientMixin:
@@ -98,7 +95,7 @@ class AbstractClientMixin:
     @ivar _logonDeferred: Fired when I am done logging in.
     """
 
-    _protoBase = None  # type: Type[Protocol]
+    _protoBase: Type[Protocol] = None  # type: ignore[assignment]
 
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:

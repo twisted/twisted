@@ -10,29 +10,30 @@ import socket
 import struct
 from typing import Optional
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import interfaces, error, address, main, defer
-from twisted.internet.protocol import Protocol
+from twisted.internet import address, defer, error, interfaces, main
 from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_NETWORK_UNREACHABLE,
+    SO_UPDATE_ACCEPT_CONTEXT,
+    SO_UPDATE_CONNECT_CONTEXT,
+)
+from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
+from twisted.internet.protocol import Protocol
 from twisted.internet.tcp import (
-    _SocketCloser,
     Connector as TCPConnector,
     _AbortingMixin,
     _BaseBaseClient,
     _BaseTCPClient,
-    _resolveIPv6,
     _getsockname,
+    _resolveIPv6,
+    _SocketCloser,
 )
-from twisted.python import log, failure, reflect
-
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
-from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import SO_UPDATE_CONNECT_CONTEXT
-from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
+from twisted.python import failure, log, reflect
 
 try:
     from twisted.internet._newtls import startTLS as __startTLS
@@ -357,7 +358,7 @@ class Server(Connection):
         self.clientAddr = clientAddr
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "{},{},{}".format(logPrefix, sessionno, self.clientAddr.host)
+        self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
         self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
@@ -407,7 +408,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None  # type: Optional[int]
+    _realPortNumber: Optional[int] = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
@@ -490,7 +491,7 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg("({} Port {} Closed)".format(self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """

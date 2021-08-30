@@ -18,19 +18,17 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import Dict, Sequence, Optional, Type, Union
+from typing import Dict, Optional, Sequence, Type, Union
 
 from zope.interface import Interface
 
-from twisted.trial.unittest import SynchronousTestCase, SkipTest
-from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
-from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-
 from twisted.python import log
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.failure import Failure
-
+from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 
 # Access private APIs.
 try:
@@ -178,8 +176,8 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
-    requiredInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
-    skippedReactors = {}  # type: Dict[str, str]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
+    skippedReactors: Dict[str, str] = {}
 
     def setUp(self):
         """
@@ -254,8 +252,8 @@ class ReactorBuilder:
         Create and return a reactor using C{self.reactorFactory}.
         """
         try:
-            from twisted.internet.cfreactor import CFReactor
             from twisted.internet import reactor as globalReactor
+            from twisted.internet.cfreactor import CFReactor
         except ImportError:
             pass
         else:
@@ -336,9 +334,7 @@ class ReactorBuilder:
         timedOutCall = reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
-            raise TestTimeoutError(
-                "reactor still running after {} seconds".format(timeout)
-            )
+            raise TestTimeoutError(f"reactor still running after {timeout} seconds")
         else:
             timedOutCall.cancel()
 
@@ -350,9 +346,9 @@ class ReactorBuilder:
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes = (
-            {}
-        )  # type: Dict[str, Union[Type['ReactorBuilder'], Type[SynchronousTestCase]]]
+        classes: Dict[
+            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
+        ] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")

@@ -8,9 +8,9 @@ This module tests twisted.conch.ssh.connection.
 import struct
 
 from twisted.conch.ssh import channel
-from twisted.trial import unittest
 from twisted.conch.test import test_userauth
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 
@@ -372,7 +372,7 @@ class ConnectionTests(unittest.TestCase):
             common.NS(b"conch-error-args") + b"\x00\x00\x00\x01" * 4
         )
         errors = self.flushLoggedErrors(error.ConchError)
-        self.assertEqual(len(errors), 1, "Expected one error, got: {!r}".format(errors))
+        self.assertEqual(len(errors), 1, f"Expected one error, got: {errors!r}")
         self.assertEqual(errors[0].value.args, (123, "error args in wrong order"))
         self.assertEqual(
             self.transport.packets,

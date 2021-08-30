@@ -18,11 +18,10 @@ import tty
 from typing import List, Optional, Union
 
 from twisted.conch.client import connect, default, options
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import channel, filetransfer
+from twisted.conch.ssh import channel, common, connection, filetransfer
+from twisted.internet import defer, reactor, stdio, utils
 from twisted.protocols import basic
-from twisted.internet import reactor, stdio, defer, utils
-from twisted.python import log, usage, failure
+from twisted.python import failure, log, usage
 from twisted.python.filepath import FilePath
 
 
@@ -37,12 +36,12 @@ class ClientOptions(options.ConchOptions):
         "executing commands to send and receive file information"
     )
 
-    optParameters = [
+    optParameters: List[List[Optional[Union[str, int]]]] = [
         ["buffersize", "B", 32768, "Size of the buffer to use for sending/receiving."],
         ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
         ["requests", "R", 5, "Number of requests to make before waiting for a reply."],
         ["subsystem", "s", "sftp", "Subsystem/server program to connect to."],
-    ]  # type: List[List[Optional[Union[str, int]]]]
+    ]
 
     compData = usage.Completions(
         descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},
@@ -420,7 +419,7 @@ class StdioClient(basic.LineReceiver):
         lf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred {} to {}".format(rf.name, lf.name)
+        return f"Transferred {rf.name} to {lf.name}"
 
     def cmd_PUT(self, rest):
         """
@@ -590,7 +589,7 @@ class StdioClient(basic.LineReceiver):
         rf.close()
         if self.useProgressBar:
             self._writeToTransport("\n")
-        return "Transferred {} to {}".format(lf.name, rf.name)
+        return f"Transferred {lf.name} to {rf.name}"
 
     def cmd_LCD(self, path):
         os.chdir(path)
@@ -845,7 +844,7 @@ version                         Print the SFTP version.
             self._abbrevTime(timeLeft),
         )
         spaces = (winSize[1] - (len(front) + len(back) + 1)) * " "
-        command = "\r{}{}{}".format(front, spaces, back)
+        command = f"\r{front}{spaces}{back}"
         self._writeToTransport(command)
 
     def _getFilename(self, line):
@@ -873,7 +872,7 @@ version                         Print the SFTP version.
                     elif c == "\\":  # quoted character
                         del line[i]
                         if line[i] not in "'\"\\":
-                            raise IndexError("bad quote: \\{}".format(line[i]))
+                            raise IndexError(f"bad quote: \\{line[i]}")
                         ret.append(line[i])
                     else:
                         ret.append(line[i])

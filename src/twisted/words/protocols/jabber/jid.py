@@ -13,10 +13,11 @@ L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
 from typing import Dict
+
 from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nameprep,
     nodeprep,
     resourceprep,
-    nameprep,
 )
 
 
@@ -114,7 +115,7 @@ def prep(user, host, resource):
     return (user, host, resource)
 
 
-__internJIDs = {}  # type: Dict[str, 'JID']
+__internJIDs: Dict[str, "JID"] = {}
 
 
 def internJID(jidstring):
@@ -165,7 +166,7 @@ class JID:
         @rtype: L{str}
         """
         if self.user:
-            return "{}@{}".format(self.user, self.host)
+            return f"{self.user}@{self.host}"
         else:
             return self.host
 
@@ -195,12 +196,12 @@ class JID:
         """
         if self.user:
             if self.resource:
-                return "{}@{}/{}".format(self.user, self.host, self.resource)
+                return f"{self.user}@{self.host}/{self.resource}"
             else:
-                return "{}@{}".format(self.user, self.host)
+                return f"{self.user}@{self.host}"
         else:
             if self.resource:
-                return "{}/{}".format(self.host, self.resource)
+                return f"{self.host}/{self.resource}"
             else:
                 return self.host
 

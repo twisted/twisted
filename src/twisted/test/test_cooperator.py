@@ -7,7 +7,7 @@ related functionality.
 """
 
 
-from twisted.internet import reactor, defer, task
+from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
 
 
@@ -223,7 +223,7 @@ class CooperatorTests(unittest.TestCase):
                 self.func = func
 
             def __repr__(self) -> str:
-                return "<FakeCall {!r}>".format(self.func)
+                return f"<FakeCall {self.func!r}>"
 
         def sched(f):
             self.assertFalse(calls, repr(calls))

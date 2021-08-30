@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from slides import Slide, Bullet, SubBullet, URL, Image, PRE
+from slides import PRE, URL, Bullet, Image, Slide, SubBullet
 from twslides import Lecture
 
 
@@ -8,7 +8,7 @@ class PythonSource:
         self.content = content
 
     def toHTML(self):
-        return '<pre class="python">{}</pre>'.format(self.content)
+        return f'<pre class="python">{self.content}</pre>'
 
 
 class Raw:

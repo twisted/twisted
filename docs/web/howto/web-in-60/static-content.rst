@@ -9,19 +9,19 @@ Serving Static Content From a Directory
 The goal of this example is to show you how to serve static content from a filesystem.
 First, we need to import some objects:
 
-- :api:`twisted.web.server.Site <Site>`, an :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` which glues a listening server port (:api:`twisted.internet.interfaces.IListeningPort <IListeningPort>`) to the :api:`twisted.web.http.HTTPChannel <HTTPChannel>` implementation::
+- :py:class:`Site <twisted.web.server.Site>`, an :py:class:`IProtocolFactory <twisted.internet.interfaces.IProtocolFactory>` which glues a listening server port (:py:class:`IListeningPort <twisted.internet.interfaces.IListeningPort>`) to the :py:class:`HTTPChannel <twisted.web.http.HTTPChannel>` implementation::
 
     from twisted.web.server import Site
 
-- :api:`twisted.web.static.File <File>`, an :api:`twisted.web.resource.IResource <IResource>` which glues the HTTP protocol implementation to the filesystem::
+- :py:class:`File <twisted.web.static.File>`, an :py:class:`IResource <twisted.web.resource.IResource>` which glues the HTTP protocol implementation to the filesystem::
 
     from twisted.web.static import File
 
-- The :api:`twisted.internet.reactor <reactor>`, which drives the whole process, actually accepting TCP connections and moving bytes into and out of them::
+- The :py:mod:`reactor <twisted.internet.reactor>`, which drives the whole process, actually accepting TCP connections and moving bytes into and out of them::
 
     from twisted.internet import reactor
 
-- And the :api:`twisted.internet.endpoints <endpoints>` module, which gives us tools for, amongst other things, creating listening sockets::
+- And the :py:mod:`endpoints <twisted.internet.endpoints>` module, which gives us tools for, amongst other things, creating listening sockets::
 
     from twisted.internet import endpoints
 
@@ -35,7 +35,7 @@ Then we create an instance of the Site factory with that resource::
 
 Now we glue that factory to a TCP port::
 
-    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(factory)
 
 Finally, we start the reactor so it can make the program work::
@@ -50,7 +50,7 @@ And that's it. Here's the complete program::
 
     resource = File('/tmp')
     factory = Site(resource)
-    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8888)
+    endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(factory)
     reactor.run()
 

@@ -13,20 +13,18 @@ the recipient and sends on the message.
 
 import email.utils
 import os
-import time
 import pickle
+import time
 from typing import Type
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.mail import relay
-from twisted.mail import bounce
+from twisted.application import internet
 from twisted.internet import protocol
-from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
-from twisted.mail import smtp
-from twisted.application import internet
+from twisted.internet.protocol import connectionDone
+from twisted.mail import bounce, relay, smtp
+from twisted.python import log
+from twisted.python.failure import Failure
 
 
 class ManagedRelayerMixin:
@@ -156,7 +154,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol = SMTPManagedRelayer  # type: Type[protocol.Protocol]
+    protocol: "Type[protocol.Protocol]" = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -468,7 +466,7 @@ class Queue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
+        fname = f"{os.getpid()}_{time.time()}_{self.n}_{id(self)}"
         self.n = self.n + 1
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
@@ -676,7 +674,7 @@ class SmartHostSMTPRelayingManager:
         filenames of messages the managed relayer is responsible for.
     """
 
-    factory = SMTPManagedRelayerFactory  # type: Type[protocol.ClientFactory]
+    factory: Type[protocol.ClientFactory] = SMTPManagedRelayerFactory
 
     PORT = 25
 
@@ -1087,7 +1085,7 @@ class MXCalculator:
             # try to look up an A record.  This provides behavior described as
             # a special case in RFC 974 in the section headed I{Interpreting
             # the List of MX RRs}.
-            return Failure(error.DNSNameError("No MX records for {!r}".format(domain)))
+            return Failure(error.DNSNameError(f"No MX records for {domain!r}"))
 
     def _ebMX(self, failure, domain):
         """
@@ -1112,7 +1110,7 @@ class MXCalculator:
             fallback to domain option is in effect but no address for the
             domain could be found.
         """
-        from twisted.names import error, dns
+        from twisted.names import dns, error
 
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)
@@ -1135,5 +1133,5 @@ class MXCalculator:
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
-            raise OSError("No MX found for {!r}".format(domain))
+            raise OSError(f"No MX found for {domain!r}")
         return failure

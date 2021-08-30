@@ -1,6 +1,7 @@
 from calculus.client_1 import RemoteCalculationClient
-from twisted.trial import unittest
+
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class ClientCalculationTestCase(unittest.TestCase):
@@ -11,9 +12,7 @@ class ClientCalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         d = getattr(self.proto, operation)(a, b)
-        self.assertEqual(
-            self.tr.value(), "{} {} {}\r\n".format(operation, a, b).encode("utf-8")
-        )
+        self.assertEqual(self.tr.value(), f"{operation} {a} {b}\r\n".encode())
         self.tr.clear()
         d.addCallback(self.assertEqual, expected)
         self.proto.dataReceived(

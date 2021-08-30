@@ -6,23 +6,19 @@ Test cases for the L{twisted.python.failure} module.
 """
 
 
+import linecache
+import pdb
 import re
 import sys
 import traceback
-import pdb
-import linecache
-
 from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
 
-from twisted.python import reflect
-from twisted.python import failure
+from cython_test_exception_raiser import raiser  # type: ignore[import]
 
+from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
-
-
-from cython_test_exception_raiser import raiser
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -107,9 +103,7 @@ class FailureTests(SynchronousTestCase):
         @param prefix: The string that C{s} should start with.
         @type prefix: C{str}
         """
-        self.assertTrue(
-            s.startswith(prefix), "{!r} is not the start of {!r}".format(prefix, s)
-        )
+        self.assertTrue(s.startswith(prefix), f"{prefix!r} is not the start of {s!r}")
 
     def assertEndsWith(self, s, suffix):
         """
@@ -120,9 +114,7 @@ class FailureTests(SynchronousTestCase):
         @param suffix: The string that C{s} should end with.
         @type suffix: C{str}
         """
-        self.assertTrue(
-            s.endswith(suffix), "{!r} is not the end of {!r}".format(suffix, s)
-        )
+        self.assertTrue(s.endswith(suffix), f"{suffix!r} is not the end of {s!r}")
 
     def assertTracebackFormat(self, tb, prefix, suffix):
         """
@@ -256,13 +248,13 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += "{}:{}:{}\n".format(filename, lineno, method)
+            stack += f"{filename}:{lineno}:{method}\n"
 
         zde = repr(ZeroDivisionError)
         self.assertTracebackFormat(
             tb,
-            "Traceback: {}: ".format(zde),
-            "{}\n{}".format(failure.EXCEPTION_CAUGHT_HERE, stack),
+            f"Traceback: {zde}: ",
+            f"{failure.EXCEPTION_CAUGHT_HERE}\n{stack}",
         )
 
         if captureVars:
@@ -303,8 +295,8 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += '  File "{}", line {}, in {}\n'.format(filename, lineno, method)
-            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
+            stack += f'  File "{filename}", line {lineno}, in {method}\n'
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,
@@ -532,13 +524,12 @@ class BrokenExceptionMetaclass(type):
         raise ValueError("You cannot make a string out of me.")
 
 
-class BrokenExceptionType(Exception):
+class BrokenExceptionType(Exception, metaclass=BrokenExceptionMetaclass):
+
     """
-    The aforementioned exception type which cnanot be presented as a string via
+    The aforementioned exception type which cannot be presented as a string via
     L{str}.
     """
-
-    __metaclass__ = BrokenExceptionMetaclass
 
 
 class GetTracebackTests(SynchronousTestCase):

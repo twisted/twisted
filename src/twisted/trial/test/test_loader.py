@@ -8,18 +8,16 @@ Tests for loading tests by name.
 
 import os
 import sys
-
 import unittest as pyunit
 from hashlib import md5
 
-from twisted.python import util, filepath
-from twisted.trial.test import packages
-from twisted.trial import runner, reporter, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial._asyncrunner import _iterateTests
-
+from twisted.python import filepath, util
 from twisted.python.modules import getModule
 from twisted.python.reflect import ModuleNotFound
+from twisted.trial import reporter, runner, unittest
+from twisted.trial._asyncrunner import _iterateTests
+from twisted.trial.itrial import ITestCase
+from twisted.trial.test import packages
 
 
 def testNames(tests):
@@ -98,23 +96,19 @@ class FileTests(packages.SysPathManglingTest):
         L{runner.filenameToModule} returns a module object loosely
         resembling the module defined by that file anyway.
         """
-        # "test_sample" isn't actually the name of this module.  However,
-        # filenameToModule can't seem to figure that out.  So clean up this
-        # misnamed module.  It would be better if this weren't necessary
-        # and filenameToModule either didn't exist or added a correctly
-        # named module to sys.modules.
-        self.addCleanup(sys.modules.pop, "test_sample", None)
 
         self.mangleSysPath(self.oldPath)
         sample1 = runner.filenameToModule(
             os.path.join(self.parent, "goodpackage", "test_sample.py")
         )
-        self.mangleSysPath(self.newPath)
-        from goodpackage import test_sample as sample2
+        self.assertEqual(sample1.__name__, "goodpackage.test_sample")
 
-        self.assertEqual(
-            os.path.splitext(sample2.__file__)[0], os.path.splitext(sample1.__file__)[0]
-        )
+        self.cleanUpModules()
+        self.mangleSysPath(self.newPath)
+        from goodpackage import test_sample as sample2  # type: ignore[import]
+
+        self.assertIsNot(sample1, sample2)
+        self.assertEqual(sample1.__spec__, sample2.__spec__)
 
     def test_packageInPath(self):
         """
@@ -122,9 +116,8 @@ class FileTests(packages.SysPathManglingTest):
         properly import and return that package.
         """
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
-        import goodpackage
 
-        self.assertEqual(goodpackage, package1)
+        self.assertIs(package1, sys.modules["goodpackage"])
 
     def test_packageNotInPath(self):
         """
@@ -133,22 +126,16 @@ class FileTests(packages.SysPathManglingTest):
         module object loosely resembling the package defined by that
         directory anyway.
         """
-        # "__init__" isn't actually the name of the package!  However,
-        # filenameToModule is pretty stupid and decides that is its name
-        # after all.  Make sure it gets cleaned up.  See the comment in
-        # test_moduleNotInPath for possible courses of action related to
-        # this.
-        self.addCleanup(sys.modules.pop, "__init__")
-
         self.mangleSysPath(self.oldPath)
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
+        self.assertEqual(package1.__name__, "goodpackage")
+
+        self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         import goodpackage
 
-        self.assertEqual(
-            os.path.splitext(goodpackage.__file__)[0],
-            os.path.splitext(package1.__file__)[0],
-        )
+        self.assertIsNot(package1, goodpackage)
+        self.assertEqual(package1.__spec__, goodpackage.__spec__)
 
     def test_directoryNotPackage(self):
         """
@@ -160,9 +147,7 @@ class FileTests(packages.SysPathManglingTest):
         emptyDir.createDirectory()
 
         err = self.assertRaises(ValueError, runner.filenameToModule, emptyDir.path)
-        self.assertEqual(
-            str(err), "{!r} is not a package directory".format(emptyDir.path)
-        )
+        self.assertEqual(str(err), f"{emptyDir.path!r} is not a package directory")
 
     def test_filenameNotPython(self):
         """
@@ -383,7 +368,7 @@ class LoaderTests(packages.SysPathManglingTest):
         self.assertRaises(TypeError, self.loader.loadAnything, "goodpackage")
 
     def test_importErrors(self):
-        import package
+        import package  # type: ignore[import]
 
         suite = self.loader.loadPackage(package, recurse=True)
         result = reporter.Reporter()
@@ -587,7 +572,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
         """
         Verify that packages are loaded in the correct order.
         """
-        import uberpackage
+        import uberpackage  # type: ignore[import]
 
         self.loader.sorter = sorter
         suite = self.loader.loadPackage(uberpackage, recurse=True)

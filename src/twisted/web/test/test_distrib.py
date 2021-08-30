@@ -16,19 +16,20 @@ else:
     pwd = _pwd
 
 from unittest import skipIf
+
 from zope.interface.verify import verifyObject
 
-from twisted.python import filepath, failure
-from twisted.internet import reactor, defer
-from twisted.trial.unittest import TestCase
+from twisted.internet import defer, reactor
+from twisted.logger import globalLogPublisher
+from twisted.python import failure, filepath
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest, DummyChannel
-from twisted.web.test._util import _render
 from twisted.test import proto_helpers
+from twisted.trial.unittest import TestCase
+from twisted.web import client, distrib, resource, server, static
 from twisted.web.http_headers import Headers
-from twisted.logger import globalLogPublisher
+from twisted.web.test._util import _render
+from twisted.web.test.test_web import DummyChannel, DummyRequest
 
 
 class MySite(server.Site):
@@ -97,7 +98,7 @@ class DistribTests(TestCase):
         f2 = MySite(r2)
         self.port2 = reactor.listenTCP(0, f2)
         agent = client.Agent(reactor)
-        url = "http://127.0.0.1:{}/here/there".format(self.port2.getHost().port)
+        url = f"http://127.0.0.1:{self.port2.getHost().port}/here/there"
         url = url.encode("ascii")
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
@@ -144,7 +145,7 @@ class DistribTests(TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
         agent = client.Agent(reactor)
-        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = f"http://{mainAddr.host}:{mainAddr.port}/child"
         url = url.encode("ascii")
         d = agent.request(b"GET", url, **kwargs)
         d.addCallback(client.readBody)
@@ -165,7 +166,7 @@ class DistribTests(TestCase):
         """
         mainPort, mainAddr = self._setupDistribServer(child)
 
-        url = "http://{}:{}/child".format(mainAddr.host, mainAddr.port)
+        url = f"http://{mainAddr.host}:{mainAddr.port}/child"
         url = url.encode("ascii")
         d = client.Agent(reactor).request(b"GET", url, **kwargs)
 

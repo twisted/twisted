@@ -12,12 +12,13 @@ import tempfile
 
 from zope.interface import implementer
 
+from twisted.internet import defer, interfaces, main, protocol
+from twisted.internet.interfaces import IAddress
+from twisted.internet.task import deferLater
+
 # Twisted Imports
 from twisted.protocols import policies
-from twisted.internet import interfaces, protocol, main, defer
-from twisted.internet.task import deferLater
 from twisted.python import failure
-from twisted.internet.interfaces import IAddress
 
 
 class _LoopbackQueue:
@@ -322,7 +323,7 @@ class LoopbackRelay:
         self.producer = None
 
     def logPrefix(self):
-        return "Loopback({!r})".format(self.target.__class__.__name__)
+        return f"Loopback({self.target.__class__.__name__!r})"
 
 
 class LoopbackClientFactory(protocol.ClientFactory):

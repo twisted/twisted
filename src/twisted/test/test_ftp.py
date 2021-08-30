@@ -5,29 +5,26 @@
 FTP tests.
 """
 
-import os
 import errno
-from io import BytesIO
 import getpass
-import string
+import os
 import random
+import string
+from io import BytesIO
 from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
-from twisted.cred import portal, checkers, credentials
+from twisted.cred import checkers, credentials, portal
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm
-from twisted.internet import reactor, task, protocol, defer, error
+from twisted.internet import defer, error, protocol, reactor, task
 from twisted.internet.interfaces import IConsumer
-from twisted.protocols import basic
+from twisted.protocols import basic, ftp, loopback
 from twisted.python import failure, filepath, runtime
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
-
-from twisted.protocols import ftp, loopback
-
 
 if runtime.platform.isWindows():
     nonPOSIXSkip = "Cannot run on Windows"
@@ -76,7 +73,7 @@ def passivemode_msg(protocol, host="127.0.0.1", port=12345):
     @param port: the port
     @return: the passive mode message
     """
-    msg = "227 Entering Passive Mode ({}).".format(ftp.encodeHostPort(host, port))
+    msg = f"227 Entering Passive Mode ({ftp.encodeHostPort(host, port)})."
     return msg.encode(protocol._encoding)
 
 
@@ -1063,7 +1060,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
 
         d.addCallback(loggedIn)
 
-        self._download("{} something".format(command), chainDeferred=d)
+        self._download(f"{command} something", chainDeferred=d)
 
         def checkDownload(download):
             self.assertEqual(expectedOutput, download)
@@ -1534,7 +1531,7 @@ class FTPFileListingTests(TestCase):
 
         def check(fileOther):
             ((file,), other) = fileOther
-            self.assertFalse(other, "unexpect unparsable lines: {}".format(repr(other)))
+            self.assertFalse(other, f"unexpect unparsable lines: {repr(other)}")
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
             self.assertTrue(file["owner"] == "root", "misparsed fileitem")
@@ -3827,6 +3824,6 @@ class FTPResponseCodeTests(TestCase):
                 self.assertNotIn(
                     value,
                     seenValues,
-                    "Duplicate code {!r} with value {!r}".format(key, value),
+                    f"Duplicate code {key!r} with value {value!r}",
                 )
                 seenValues.add(value)

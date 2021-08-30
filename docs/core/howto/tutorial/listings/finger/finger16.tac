@@ -1,11 +1,11 @@
 # Read from file, announce on the web, irc
+import cgi
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.web import resource, server, static
-
-import cgi
+from twisted.words.protocols import irc
 
 
 class FingerProtocol(basic.LineReceiver):
@@ -75,7 +75,7 @@ class FingerService(service.Service):
             user = self.users.get(path, b"No such users <p/> usage: site/user")
             path = path.decode("ascii")
             user = user.decode("ascii")
-            text = "<h1>{}</h1><p>{}</p>".format(path, user)
+            text = f"<h1>{path}</h1><p>{user}</p>"
             text = text.encode("ascii")
             return static.Data(text, "text/html")
 
