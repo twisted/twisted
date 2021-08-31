@@ -6,13 +6,15 @@ Test cases for L{twisted.internet.defer}.
 """
 
 
-import warnings
-import gc
 import functools
-import traceback
+import gc
 import re
+import traceback
 import types
+import warnings
+from asyncio import AbstractEventLoop, CancelledError, Future, new_event_loop
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -24,7 +26,6 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
 )
@@ -37,19 +38,21 @@ from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
-    _DeferredResultT,
-    _DeferredListResultListT,
-    _DeferredListSingleResultT,
-    ensureDeferred,
     Deferred,
     DeferredFilesystemLock,
     DeferredList,
     DeferredLock,
-    DeferredSemaphore,
     DeferredQueue,
+    DeferredSemaphore,
+    _DeferredListResultListT,
+    _DeferredListSingleResultT,
+    _DeferredResultT,
+    ensureDeferred,
 )
 from twisted.internet.task import Clock
-
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.trial import unittest
 
 if TYPE_CHECKING:
     import contextvars

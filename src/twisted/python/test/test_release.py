@@ -9,49 +9,50 @@ only ever performed on Linux.
 """
 
 
-import glob
 import functools
+import glob
 import operator
 import os
-import sys
-import textwrap
-import tempfile
 import shutil
-
+import sys
+import tempfile
+import textwrap
 from io import BytesIO, StringIO
+from subprocess import CalledProcessError
 from unittest import skipIf
-
-from twisted.trial.unittest import TestCase, FailTest, SkipTest
-
-from twisted.python.procutils import which
-from twisted.python import release
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import requireModule
 
 from incremental import Version
 
-from subprocess import CalledProcessError
-
+from twisted.python import release
 from twisted.python._release import (
-    findTwistedProjects,
-    replaceInFile,
-    Project,
-    filePathDelta,
     APIBuilder,
     BuildAPIDocsScript,
     CheckNewsfragmentScript,
-    runCommand,
-    NotWorkingDirectory,
-    SphinxBuilder,
     GitCommand,
-    getRepositoryCommand,
     IVCSCommand,
+    NotWorkingDirectory,
+    Project,
+    SphinxBuilder,
+    filePathDelta,
+    findTwistedProjects,
+    getRepositoryCommand,
+    replaceInFile,
+    runCommand,
 )
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
+from twisted.trial.unittest import FailTest, SkipTest, TestCase
 
 if sys.platform != "win32":
     skip = None
 else:
     skip = "Release toolchain only supported on POSIX."
+
+# This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
+PRECOMMIT_CI_ENVIRON = {"GITHUB_HEAD_REF": "pre-commit-ci-update-config"}
+# This should match the GHA environment for non pre-commit.ci PRs.
+GENERIC_CI_ENVIRON = {"GITHUB_HEAD_REF": "1234-some-branch-name"}
 
 
 class ExternalTempdirTestCase(TestCase):
@@ -962,6 +963,8 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         runCommand(["git", "clone", self.origin.path, self.repo.path])
         _gitConfig(self.repo)
+        # Inject a rigged environment to have full control over the test execution.
+        self.patch(os, "environ", GENERIC_CI_ENVIRON)
 
     def test_noArgs(self):
         """
@@ -1077,6 +1080,63 @@ class CheckNewsfragmentScriptTests(ExternalTempdirTestCase):
 
         self.assertEqual(e.exception.args, (1,))
         self.assertEqual(logs[-1], "No newsfragments should be on the release branch.")
+
+    def test_preCommitAutoupdate(self):
+        """
+        Running it on the autoupdate branch returns green if there is no
+        newsfragments even if there are changes.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        somefile = self.repo.child("somefile")
+        somefile.setContent(b"change")
+
+        runCommand(["git", "add", somefile.path, somefile.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "some file"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (0,))
+        self.assertEqual(
+            logs[-1], "Autoupdated branch with no newsfragments, all good."
+        )
+
+    def test_preCommitAutoupdateWithNewsfragments(self):
+        """
+        Running it on the autoupdate branch returns red if there are new
+        newsfragments.
+        """
+        runCommand(
+            ["git", "checkout", "-b", "pre-commit-ci-update-config"], cwd=self.repo.path
+        )
+
+        newsfragments = self.repo.child("twisted").child("newsfragments")
+        newsfragments.makedirs()
+        fragment = newsfragments.child("1234.misc")
+        fragment.setContent(b"")
+
+        unrelated = self.repo.child("somefile")
+        unrelated.setContent(b"Boo")
+
+        runCommand(["git", "add", fragment.path, unrelated.path], cwd=self.repo.path)
+        runCommand(["git", "commit", "-m", "fragment"], cwd=self.repo.path)
+
+        logs = []
+        self.patch(os, "environ", PRECOMMIT_CI_ENVIRON)
+
+        with self.assertRaises(SystemExit) as e:
+            CheckNewsfragmentScript(logs.append).main([self.repo.path])
+
+        self.assertEqual(e.exception.args, (1,))
+        self.assertEqual(
+            logs[-1], "No newsfragments should be present on an autoupdated branch."
+        )
 
     def test_onlyQuotes(self):
         """

@@ -8,18 +8,16 @@ Tests for loading tests by name.
 
 import os
 import sys
-
 import unittest as pyunit
 from hashlib import md5
 
-from twisted.python import util, filepath
-from twisted.trial.test import packages
-from twisted.trial import runner, reporter, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial._asyncrunner import _iterateTests
-
+from twisted.python import filepath, util
 from twisted.python.modules import getModule
 from twisted.python.reflect import ModuleNotFound
+from twisted.trial import reporter, runner, unittest
+from twisted.trial._asyncrunner import _iterateTests
+from twisted.trial.itrial import ITestCase
+from twisted.trial.test import packages
 
 
 def testNames(tests):

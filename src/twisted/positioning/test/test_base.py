@@ -3,11 +3,12 @@
 """
 Test cases for positioning primitives.
 """
-from twisted.trial.unittest import TestCase
+from zope.interface import verify
+
 from twisted.positioning import base
 from twisted.positioning.base import Angles, Directions
 from twisted.positioning.ipositioning import IPositioningBeacon
-from zope.interface import verify
+from twisted.trial.unittest import TestCase
 
 
 class AngleTests(TestCase):

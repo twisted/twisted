@@ -10,7 +10,7 @@ import struct
 import zipfile
 from hashlib import md5
 
-from twisted.python import zipstream, filepath
+from twisted.python import filepath, zipstream
 from twisted.trial import unittest
 
 

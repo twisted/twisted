@@ -6,7 +6,6 @@ Helpers for URI and method injection tests.
 
 import string
 
-
 UNPRINTABLE_ASCII = frozenset(range(0, 128)) - frozenset(
     bytearray(string.printable, "ascii")
 )

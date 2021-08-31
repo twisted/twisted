@@ -6,14 +6,14 @@
 Integration with L{twisted.python.log}.
 """
 
-from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 from zope.interface import implementer
 
 from ._format import formatEvent
 from ._interfaces import ILogObserver, LogEvent
 from ._levels import LogLevel
-from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
+from ._stdlib import StringifiableFromEvent, fromStdlibLogLevelMapping
 
 if TYPE_CHECKING:
     from twisted.python.log import ILogObserver as ILegacyLogObserver

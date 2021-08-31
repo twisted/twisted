@@ -8,12 +8,13 @@ Support for results that aren't immediately available.
 Maintainer: Glyph Lefkowitz
 """
 
+import traceback
+import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
-import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -35,19 +36,17 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import Literal
-import warnings
 
 import attr
-
 from incremental import Version
+from typing_extensions import Literal
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
-from twisted.python.failure import Failure, _extraneous
 from twisted.python import lockfile
-from twisted.python.compat import cmp, comparable, _PYPY
+from twisted.python.compat import _PYPY, cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
+from twisted.python.failure import Failure, _extraneous
 
 try:
     from contextvars import copy_context as __copy_context

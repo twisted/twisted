@@ -6,20 +6,19 @@ Tests for L{twisted.internet.asyncioreactor}.
 """
 import gc
 import sys
-from unittest import skipIf
-
-from twisted.python.runtime import platform
-from twisted.trial.unittest import SynchronousTestCase
-from .reactormixins import ReactorBuilder
-
-from twisted.internet.asyncioreactor import AsyncioSelectorReactor
 from asyncio import (
-    set_event_loop,
-    set_event_loop_policy,
     DefaultEventLoopPolicy,
     Future,
     SelectorEventLoop,
+    set_event_loop,
+    set_event_loop_policy,
 )
+from unittest import skipIf
+
+from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SynchronousTestCase
+from .reactormixins import ReactorBuilder
 
 hasWindowsProactorEventLoopPolicy = False
 hasWindowsSelectorEventLoopPolicy = False

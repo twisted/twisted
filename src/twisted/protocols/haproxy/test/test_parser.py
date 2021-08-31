@@ -4,20 +4,20 @@
 """
 Tests for L{twisted.protocols.haproxy._parser}.
 """
-from typing import Union, Type
-from twisted.trial.unittest import SynchronousTestCase as TestCase
-from twisted.test.proto_helpers import MemoryReactor
+from typing import Type, Union
+
 from twisted.internet.endpoints import (
-    _WrapperServerEndpoint,
     TCP4ServerEndpoint,
     TCP6ServerEndpoint,
     UNIXServerEndpoint,
-    serverFromString,
     _parse as parseEndpoint,
+    _WrapperServerEndpoint,
+    serverFromString,
 )
-
-from .._wrapper import HAProxyWrappingFactory
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 from .._parser import unparseEndpoint
+from .._wrapper import HAProxyWrappingFactory
 
 
 class UnparseEndpointTests(TestCase):

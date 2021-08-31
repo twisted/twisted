@@ -12,12 +12,13 @@ Twisted.  The Protocol class contains some introductory material.
 
 import random
 from typing import Callable, Optional
+
 from zope.interface import implementer
 
-from twisted.python import log, failure, components
-from twisted.internet import interfaces, error, defer
+from twisted.internet import defer, error, interfaces
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.logger import _loggerFor
+from twisted.python import components, failure, log
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)

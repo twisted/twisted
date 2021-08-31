@@ -7,10 +7,9 @@ Context manager for capturing logs.
 """
 
 from contextlib import contextmanager
-from typing import List, Iterator, Sequence, cast
+from typing import Iterator, List, Sequence, cast
 
 from twisted.logger import globalLogPublisher
-
 from ._interfaces import ILogObserver, LogEvent
 
 

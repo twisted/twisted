@@ -60,26 +60,33 @@ version of jelly running on an older version of Python.)
 
 """
 
+import copy
+import datetime
+import decimal
+
 # System Imports
 import types
 import warnings
-import decimal
 from functools import reduce
-import copy
-import datetime
+
 from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.persisted.crefutil import (
+    NotKnown,
+    _Container,
+    _Dereference,
+    _DictKeyAndValue,
+    _InstanceMethod,
+    _Tuple,
+)
 
 # Twisted Imports
 from twisted.python.compat import nativeString
-from twisted.python.reflect import namedObject, qual, namedAny
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
-from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
-from twisted.persisted.crefutil import _Container
-
-from twisted.spread.interfaces import IJellyable, IUnjellyable
-
 from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
+from twisted.python.reflect import namedAny, namedObject, qual
+from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 DictTypes = (dict,)
 

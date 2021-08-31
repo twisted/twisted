@@ -8,9 +8,9 @@ VT102 and VT220 terminal manipulation.
 @author: Jp Calderone
 """
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
-from twisted.internet import protocol, defer, interfaces as iinternet
+from twisted.internet import defer, interfaces as iinternet, protocol
 from twisted.python.compat import iterbytes, networkString
 
 

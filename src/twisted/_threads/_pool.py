@@ -8,14 +8,12 @@ L{twisted.python.threadpool}.
 """
 
 
-from threading import Thread, Lock, local as LocalStorage
 from queue import Queue
+from threading import Lock, Thread, local as LocalStorage
 
 from twisted.python.log import err
-
-from ._threadworker import LockWorker
 from ._team import Team
-from ._threadworker import ThreadWorker
+from ._threadworker import LockWorker, ThreadWorker
 
 
 def pool(currentLimit, threadFactory=Thread):
