@@ -23,9 +23,8 @@ from typing import Optional, Tuple
 from unittest import SkipTest
 
 from twisted.internet.defer import ensureDeferred
-from twisted.python import failure, log, monkey
-from twisted.python.reflect import fullyQualifiedName
 from twisted.internet.utils import suppressedWarnings
+from twisted.python import failure, log, monkey
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
     getDeprecationWarningString,
