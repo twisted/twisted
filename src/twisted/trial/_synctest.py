@@ -17,12 +17,12 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import Optional, Tuple, List, Union, TypeVar, Iterable, Callable
-
-import attr
+from typing import Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
+
+import attr
 
 from twisted.internet.defer import ensureDeferred
 from twisted.python import failure, log, monkey
