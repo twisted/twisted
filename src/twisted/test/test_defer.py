@@ -29,13 +29,8 @@ from typing import (
     Union,
     cast,
 )
-
-from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
 from unittest import mock
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
     Deferred,

@@ -15,22 +15,15 @@ See L{Failure}.
 # System Imports
 import copy
 import inspect
-import opcode
+import linecache
+import sys
 import types
-
 from inspect import getmro
 from io import StringIO
 from typing import List, TypeVar
 
-from twisted.python import reflect
-
-import typing_extensions
-import linecache
-import sys
-from inspect import getmro
-from io import StringIO
-
 import opcode
+import typing_extensions
 
 from twisted.python import reflect
 
