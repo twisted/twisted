@@ -10,8 +10,9 @@ import sys
 from unittest import skipIf
 
 try:
-    from twisted.internet import gireactor as _gireactor
     from gi.repository import Gio  # type: ignore[import]
+
+    from twisted.internet import gireactor as _gireactor
 except ImportError:
     gireactor = None
     gtk3reactor = None
@@ -28,8 +29,8 @@ else:
         from gi.repository import Gtk
 
 from twisted.internet.error import ReactorAlreadyRunning
-from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.trial.unittest import SkipTest, TestCase
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:

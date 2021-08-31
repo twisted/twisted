@@ -9,7 +9,7 @@ A library for performing interesting tasks with DOM objects.
 from io import StringIO
 
 from twisted.web import microdom
-from twisted.web.microdom import getElementsByTagName, escape, unescape
+from twisted.web.microdom import escape, getElementsByTagName, unescape
 
 # These modules are imported here as a shortcut.
 escape

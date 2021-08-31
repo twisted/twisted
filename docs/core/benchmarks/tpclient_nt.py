@@ -1,6 +1,8 @@
 """Non-twisted throughput client."""
 
-import socket, time, sys
+import socket
+import sys
+import time
 
 TIMES = 50000
 S = "0123456789" * 1024

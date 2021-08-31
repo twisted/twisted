@@ -9,9 +9,7 @@ Some fairly inadequate testcases for Twisted XML support.
 from io import BytesIO
 
 from twisted.trial.unittest import TestCase
-from twisted.web import sux
-from twisted.web import microdom
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom, sux
 
 
 class Sux0r(sux.XMLParser):

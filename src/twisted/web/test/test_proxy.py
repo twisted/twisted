@@ -5,14 +5,17 @@
 Test for L{twisted.web.proxy}.
 """
 
+from twisted.test.proto_helpers import MemoryReactor, StringTransportWithDisconnection
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransportWithDisconnection
-from twisted.test.proto_helpers import MemoryReactor
-
+from twisted.web.proxy import (
+    ProxyClient,
+    ProxyClientFactory,
+    ProxyRequest,
+    ReverseProxyRequest,
+    ReverseProxyResource,
+)
 from twisted.web.resource import Resource
 from twisted.web.server import Site
-from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
-from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
 from twisted.web.test.test_web import DummyRequest
 
 

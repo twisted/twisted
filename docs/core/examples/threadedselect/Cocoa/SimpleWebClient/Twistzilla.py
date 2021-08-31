@@ -2,21 +2,25 @@
 # See LICENSE for details.
 
 
-# import needed classes/functions from Cocoa
-from Foundation import *
 from AppKit import *
 
+# import needed classes/functions from Cocoa
+from Foundation import *
+
 # import Nib loading functionality from AppKit
-from PyObjCTools import NibClassBuilder, AppHelper
+from PyObjCTools import AppHelper, NibClassBuilder
 
 from twisted.internet import _threadedselect
 
 _threadedselect.install()
 
-from twisted.internet import reactor, protocol
-from twisted.web import http
+import sys
+
+import urlparse
+
+from twisted.internet import protocol, reactor
 from twisted.python import log
-import sys, urlparse
+from twisted.web import http
 
 # create ObjC classes as defined in MainMenu.nib
 NibClassBuilder.extractClasses("MainMenu")

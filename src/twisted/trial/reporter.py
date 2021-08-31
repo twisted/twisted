@@ -9,17 +9,16 @@ Defines classes that handle the results of tests.
 """
 
 
-import sys
 import os
+import sys
 import time
-import warnings
 import unittest as pyunit
-
+import warnings
 from collections import OrderedDict
 
 from zope.interface import implementer
 
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
@@ -891,12 +890,12 @@ class _Win32Colorizer:
 
     def __init__(self, stream):
         from win32console import (  # type: ignore[import]
-            GetStdHandle,
-            STD_OUTPUT_HANDLE,
-            FOREGROUND_RED,
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
+            FOREGROUND_RED,
+            STD_OUTPUT_HANDLE,
+            GetStdHandle,
         )
 
         red, green, blue, bold = (

@@ -1,9 +1,10 @@
 # Read from file, announce on the web!
+import cgi
+
 from twisted.application import service, strports
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.web import resource, server, static
-import cgi
 
 
 class FingerProtocol(basic.LineReceiver):

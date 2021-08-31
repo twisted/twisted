@@ -4,9 +4,9 @@
 # See LICENSE for details.
 
 
-from twisted.internet import protocol
-from twisted.internet import reactor
 import re
+
+from twisted.internet import protocol, reactor
 
 
 class MyPP(protocol.ProcessProtocol):

@@ -13,10 +13,11 @@ L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
 from typing import Dict
+
 from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nameprep,
     nodeprep,
     resourceprep,
-    nameprep,
 )
 
 

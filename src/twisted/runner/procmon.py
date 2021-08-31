@@ -5,16 +5,16 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import attr
 import incremental
 
-from twisted.python import deprecate
-from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
-from twisted.protocols import basic
+from twisted.internet import error, protocol, reactor as _reactor
 from twisted.logger import Logger
+from twisted.protocols import basic
+from twisted.python import deprecate
 
 
 @attr.s(frozen=True, auto_attribs=True)

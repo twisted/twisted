@@ -1,5 +1,5 @@
-from twisted.web.template import XMLFile, TagLoader, Element, renderer, flattenString
 from twisted.python.filepath import FilePath
+from twisted.web.template import Element, TagLoader, XMLFile, flattenString, renderer
 
 
 class WidgetsElement(Element):

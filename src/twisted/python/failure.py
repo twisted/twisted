@@ -14,8 +14,6 @@ See L{Failure}.
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
 import opcode
 import types
@@ -27,6 +25,14 @@ from typing import List, TypeVar
 from twisted.python import reflect
 
 import typing_extensions
+import linecache
+import sys
+from inspect import getmro
+from io import StringIO
+
+import opcode
+
+from twisted.python import reflect
 
 count = 0
 traceupLength = 4

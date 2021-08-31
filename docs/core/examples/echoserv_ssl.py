@@ -4,11 +4,11 @@
 
 import sys
 
-from twisted.internet import ssl, protocol, task, defer
+import echoserv
+
+from twisted.internet import defer, protocol, ssl, task
 from twisted.python import log
 from twisted.python.modules import getModule
-
-import echoserv
 
 
 def main(reactor):

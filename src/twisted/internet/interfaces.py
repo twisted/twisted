@@ -8,6 +8,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     AnyStr,
     Callable,
@@ -17,11 +18,12 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TYPE_CHECKING,
     Union,
 )
+
+from zope.interface import Attribute, Interface
+
 from twisted.python.failure import Failure
-from zope.interface import Interface, Attribute
 
 if TYPE_CHECKING:
     from socket import AddressFamily
@@ -47,7 +49,6 @@ if TYPE_CHECKING:
     from twisted.internet.ssl import ClientContextFactory
     from twisted.names.dns import Query, RRHeader
     from twisted.protocols.tls import TLSMemoryBIOProtocol
-
     from twisted.python.runtime import platform
 
     if platform.supportsThreads():

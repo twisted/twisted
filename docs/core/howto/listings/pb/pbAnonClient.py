@@ -11,10 +11,10 @@ either anonymously or with username/password credentials.
 
 from sys import stdout
 
-from twisted.python.log import err, startLogging
 from twisted.cred.credentials import Anonymous, UsernamePassword
 from twisted.internet import reactor
 from twisted.internet.defer import gatherResults
+from twisted.python.log import err, startLogging
 from twisted.spread.pb import PBClientFactory
 
 
