@@ -7,9 +7,9 @@ An in-memory caching resolver.
 """
 
 
-from twisted.names import dns, common
-from twisted.python import failure, log
 from twisted.internet import defer
+from twisted.names import common, dns
+from twisted.python import failure, log
 
 
 class CacheResolver(common.ResolverBase):

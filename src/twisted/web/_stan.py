@@ -22,7 +22,7 @@ cumbersome.
 """
 
 
-from inspect import isgenerator, iscoroutine
+from inspect import iscoroutine, isgenerator
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from warnings import warn
 
@@ -225,7 +225,7 @@ class Tag:
             warn(
                 "Cloning a Tag which contains a generator is unsafe, "
                 "since the generator can be consumed only once; "
-                "this is deprecated since Twisted NEXT and will raise "
+                "this is deprecated since Twisted 21.7.0 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )
@@ -234,7 +234,7 @@ class Tag:
             warn(
                 "Cloning a Tag which contains a coroutine is unsafe, "
                 "since the coroutine can run only once; "
-                "this is deprecated since Twisted NEXT and will raise "
+                "this is deprecated since Twisted 21.7.0 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )

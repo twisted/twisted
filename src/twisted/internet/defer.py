@@ -8,12 +8,13 @@ Support for results that aren't immediately available.
 Maintainer: Glyph Lefkowitz
 """
 
+import traceback
+import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
-import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -35,19 +36,17 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import Literal
-import warnings
 
 import attr
-
 from incremental import Version
+from typing_extensions import Literal
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
-from twisted.python.failure import Failure, _extraneous
 from twisted.python import lockfile
-from twisted.python.compat import cmp, comparable, _PYPY
+from twisted.python.compat import _PYPY, cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
+from twisted.python.failure import Failure, _extraneous
 
 try:
     from contextvars import copy_context as __copy_context
@@ -941,7 +940,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         result = getattr(self, "result", _NO_RESULT)
         myID = id(self)
         if self._chainedTo is not None:
-            result = " waiting on Deferred at 0x{:x}".format(id(self._chainedTo))
+            result = f" waiting on Deferred at 0x{id(self._chainedTo):x}"
         elif result is _NO_RESULT:
             result = ""
         else:
@@ -1839,8 +1838,8 @@ class _InternalInlineCallbacksCancelledError(Exception):
 # type note: "..." is used here because we don't have a better way to express
 #     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
-    f: Callable[..., Generator[Deferred[object], object, None]]
-) -> Callable[..., Deferred[object]]:
+    f: Callable[..., Generator[Deferred[object], object, _T]]
+) -> Callable[..., Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::

@@ -9,23 +9,22 @@ IProxyParser implementation for version two of the PROXY protocol.
 
 import binascii
 import struct
-from typing import Union, Tuple, Type, Callable
-
-from constantly import Values, ValueConstant  # type: ignore[import]
-from typing_extensions import Literal
+from typing import Callable, Tuple, Type, Union
 
 from zope.interface import implementer
+
+from constantly import ValueConstant, Values  # type: ignore[import]
+from typing_extensions import Literal
+
 from twisted.internet import address
 from twisted.python import compat
-
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError,
-    InvalidProxyHeader,
     InvalidNetworkProtocol,
+    InvalidProxyHeader,
     MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
 
 
 class NetFamily(Values):
@@ -141,7 +140,7 @@ class V2Parser:
         """
         hexString = binascii.b2a_hex(bytestring)
         return b":".join(
-            ("{:x}".format(int(hexString[b : b + 4], 16))).encode("ascii")
+            (f"{int(hexString[b : b + 4], 16):x}").encode("ascii")
             for b in range(0, 32, 4)
         )
 

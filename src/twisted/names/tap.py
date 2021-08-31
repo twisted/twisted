@@ -6,15 +6,12 @@
 Domain Name Server
 """
 
-import os, traceback
+import os
+import traceback
 
-from twisted.python import usage
-from twisted.names import dns
 from twisted.application import internet, service
-
-from twisted.names import server
-from twisted.names import authority
-from twisted.names import secondary
+from twisted.names import authority, dns, secondary, server
+from twisted.python import usage
 
 
 class Options(usage.Options):
@@ -77,7 +74,7 @@ class Options(usage.Options):
                 port = int(address[1])
             except ValueError:
                 raise usage.UsageError(
-                    "Specify an integer port number, not {!r}".format(address[1])
+                    f"Specify an integer port number, not {address[1]!r}"
                 )
             address = (address[0], port)
         self.secondaries.append((address, [args[1]]))
@@ -125,7 +122,7 @@ def _buildResolvers(config):
     @return: Two-item tuple of a list of cache resovers and a list of client
         resolvers
     """
-    from twisted.names import client, cache, hosts
+    from twisted.names import cache, client, hosts
 
     ca, cl = [], []
     if config["cache"]:

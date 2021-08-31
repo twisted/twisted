@@ -13,9 +13,8 @@ from threading import Thread, currentThread
 from typing import List
 
 from twisted._threads import pool as _pool
-from twisted.python import log, context
+from twisted.python import context, log
 from twisted.python.failure import Failure
-
 
 WorkerStop = object()
 
@@ -168,7 +167,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-{}-{}".format(self.name or id(self), self.workers)
+        return f"PoolThread-{self.name or id(self)}-{self.workers}"
 
     def stopAWorker(self):
         """

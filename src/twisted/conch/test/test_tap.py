@@ -5,14 +5,11 @@
 Tests for L{twisted.conch.tap}.
 """
 
-from twisted.python.reflect import requireModule
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
-from twisted.cred.credentials import ISSHPrivateKey
-from twisted.cred.credentials import IUsernamePassword, UsernamePassword
-
+from twisted.cred.credentials import ISSHPrivateKey, IUsernamePassword, UsernamePassword
+from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
-
 
 cryptography = requireModule("cryptography")
 pyasn1 = requireModule("pyasn1")

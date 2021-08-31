@@ -2,10 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.internet import ssl, task, protocol, endpoints, defer
-from twisted.python.modules import getModule
-
 import echoclient
+
+from twisted.internet import defer, endpoints, protocol, ssl, task
+from twisted.python.modules import getModule
 
 
 async def main(reactor):

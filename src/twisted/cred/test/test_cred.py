@@ -6,15 +6,15 @@ Tests for L{twisted.cred}, now with 30% more starch.
 """
 
 
-from zope.interface import implementer, Interface
-
 from binascii import hexlify, unhexlify
 
-from twisted.trial import unittest
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, error, portal
+from twisted.internet import defer
 from twisted.python import components
 from twisted.python.versions import Version
-from twisted.internet import defer
-from twisted.cred import checkers, credentials, portal, error
+from twisted.trial import unittest
 
 try:
     from crypt import crypt as _crypt

@@ -8,7 +8,7 @@ them.
 """
 from typing import Iterable, cast
 
-from zope.interface import Interface, Attribute, implementer
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.internet.interfaces import IReactorCore
 from twisted.plugin import IPlugin, getPlugins

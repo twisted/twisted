@@ -3,12 +3,12 @@
 from zope.interface import Interface, implementer
 
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components, log
-from twisted.web import resource, server, xmlrpc
 from twisted.spread import pb
+from twisted.web import resource, server, xmlrpc
+from twisted.words.protocols import irc
 
 
 class IFingerService(Interface):

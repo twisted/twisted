@@ -6,9 +6,10 @@ Twisted Python: Utilities and Enhancements for Python.
 """
 
 
+from .deprecate import deprecatedModuleAttribute
+
 # Deprecating twisted.python.constants.
 from .versions import Version
-from .deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 16, 5, 0),

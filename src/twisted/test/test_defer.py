@@ -6,13 +6,15 @@ Test cases for L{twisted.internet.defer}.
 """
 
 
-import warnings
-import gc
 import functools
-import traceback
+import gc
 import re
+import traceback
 import types
+import warnings
+from asyncio import AbstractEventLoop, CancelledError, Future, new_event_loop
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -24,31 +26,27 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
 )
 
-from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
-
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
-    _DeferredResultT,
-    _DeferredListResultListT,
-    _DeferredListSingleResultT,
-    ensureDeferred,
     Deferred,
     DeferredFilesystemLock,
     DeferredList,
     DeferredLock,
-    DeferredSemaphore,
     DeferredQueue,
+    DeferredSemaphore,
+    _DeferredListResultListT,
+    _DeferredListSingleResultT,
+    _DeferredResultT,
+    ensureDeferred,
 )
 from twisted.internet.task import Clock
-
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.trial import unittest
 
 if TYPE_CHECKING:
     import contextvars
@@ -1395,9 +1393,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         d: Deferred[str] = Deferred()
         d.callback("orange")
-        self.assertEqual(
-            repr(d), "<Deferred at 0x{:x} current result: 'orange'>".format(id(d))
-        )
+        self.assertEqual(repr(d), f"<Deferred at 0x{id(d):x} current result: 'orange'>")
 
     def test_reprWithChaining(self) -> None:
         """
@@ -1410,7 +1406,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         b.chainDeferred(a)
         self.assertEqual(
             repr(a),
-            "<Deferred at 0x{:x} waiting on Deferred at 0x{:x}>".format(id(a), id(b)),
+            f"<Deferred at 0x{id(a):x} waiting on Deferred at 0x{id(b):x}>",
         )
 
     def test_boundedStackDepth(self) -> None:
@@ -1646,7 +1642,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = Failure()
 
         error = defer.FirstError(f, 3)
-        self.assertEqual(repr(error), "FirstError[#3, {}]".format(repr(exc)))
+        self.assertEqual(repr(error), f"FirstError[#3, {repr(exc)}]")
 
     def test_str(self) -> None:
         """
@@ -1660,7 +1656,7 @@ class FirstErrorTests(unittest.SynchronousTestCase):
             f = Failure()
 
         error = defer.FirstError(f, 5)
-        self.assertEqual(str(error), "FirstError[#5, {}]".format(str(f)))
+        self.assertEqual(str(error), f"FirstError[#5, {str(f)}]")
 
     def test_comparison(self) -> None:
         """

@@ -5,8 +5,8 @@
 
 __version__ = "$Revision: 1.5 $"[11:-2]
 
-from twisted.trial import unittest
 from twisted.protocols import pcp
+from twisted.trial import unittest
 
 # Goal:
 
@@ -320,7 +320,7 @@ class BufferedConsumerTests(unittest.TestCase):
         self.assertFalse(self.parentProducer.resumed)
 
     def testTriggerPause(self):
-        """Make sure I say \"when.\""""
+        """Make sure I say \"when.\" """
 
         # Pause the proxy so data sent to it builds up in its buffer.
         self.proxy.pauseProducing()

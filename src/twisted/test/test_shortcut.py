@@ -11,6 +11,7 @@ from twisted.trial import unittest
 skipReason = None
 try:
     from win32com.shell import shell  # type: ignore[import]
+
     from twisted.python import shortcut
 except ImportError:
     skipReason = "Only runs on Windows with win32com"

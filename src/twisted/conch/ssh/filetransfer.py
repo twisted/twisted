@@ -7,13 +7,13 @@
 import errno
 import struct
 import warnings
-
 from typing import Dict
+
 from zope.interface import implementer
 
-from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+from twisted.conch.interfaces import ISFTPFile, ISFTPServer
 from twisted.conch.ssh.common import NS, getNS
-from twisted.internet import defer, protocol, error
+from twisted.internet import defer, error, protocol
 from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString, networkString
@@ -94,7 +94,7 @@ class FileTransferBase(protocol.Protocol):
             for i in range(extendedCount):
                 (extendedType, data) = getNS(data)
                 (extendedData, data) = getNS(data)
-                attrs["ext_{}".format(nativeString(extendedType))] = extendedData
+                attrs[f"ext_{nativeString(extendedType)}"] = extendedData
         return attrs, data
 
     def _packAttributes(self, attrs):

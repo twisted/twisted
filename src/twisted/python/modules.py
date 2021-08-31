@@ -57,14 +57,14 @@ the modules outside the standard library's python-files directory::
 """
 
 
-# let's try to keep path imports to a minimum...
-from os.path import dirname, split as splitpath
-
-import sys
 import inspect
-from typing import cast
+import sys
 import warnings
 import zipimport
+
+# let's try to keep path imports to a minimum...
+from os.path import dirname, split as splitpath
+from typing import cast
 
 from zope.interface import Interface, implementer
 
@@ -73,7 +73,6 @@ from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.reflect import namedAny
 from twisted.python.zippath import ZipArchive
-
 
 _nothing = object()
 
@@ -481,7 +480,7 @@ class IPathImportMapper(Interface):
 
 @implementer(IPathImportMapper)
 class _DefaultMapImpl:
-    """ Wrapper for the default importer, i.e. None.  """
+    """Wrapper for the default importer, i.e. None."""
 
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
@@ -492,7 +491,7 @@ _theDefaultMapper = _DefaultMapImpl()
 
 @implementer(IPathImportMapper)
 class _ZipMapImpl:
-    """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+    """IPathImportMapper implementation for zipimport.ZipImporter."""
 
     def __init__(self, importer):
         self.importer = importer

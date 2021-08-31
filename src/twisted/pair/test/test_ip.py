@@ -1,10 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from twisted.trial import unittest
-
-from twisted.python import components
-from twisted.pair import ip, raw
 from zope import interface
+
+from twisted.pair import ip, raw
+from twisted.python import components
+from twisted.trial import unittest
 
 
 @interface.implementer(raw.IRawDatagramProtocol)
@@ -39,7 +39,7 @@ class MyProtocol:
         for k in expectKwKeys:
             assert (
                 expectKw[k] == localVariables[k]
-            ), "Expected {}={!r}, got {!r}".format(k, expectKw[k], localVariables[k])
+            ), f"Expected {k}={expectKw[k]!r}, got {localVariables[k]!r}"
         assert expectData == data, f"Expected {expectData!r}, got {data!r}"
 
     def addProto(self, num, proto):

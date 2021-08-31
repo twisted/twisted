@@ -11,11 +11,11 @@ Interface definitions for L{twisted.web}.
 """
 from typing import TYPE_CHECKING, Callable, List, Optional
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
+from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
-from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:

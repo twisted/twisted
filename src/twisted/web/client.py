@@ -7,42 +7,46 @@ HTTP client.
 """
 
 
-import os
 import collections
+import os
 import warnings
-
-from urllib.parse import urljoin, urldefrag
-from urllib.parse import urlunparse as _urlunparse
-
 import zlib
 from functools import wraps
+from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
 
-from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
-from twisted.python.failure import Failure
 from incremental import Version
 
-from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
-from twisted.python.deprecate import getDeprecationWarningString
-from twisted.web import http
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.python.util import InsensitiveDict
-from twisted.python.components import proxyForInterface
-from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
-from twisted.web.http_headers import Headers
+from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
 from twisted.logger import Logger
-
-from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+from twisted.python.compat import nativeString, networkString
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import (
+    deprecated,
+    deprecatedModuleAttribute,
+    getDeprecationWarningString,
+)
+from twisted.python.failure import Failure
+from twisted.python.util import InsensitiveDict
+from twisted.web import error, http
+from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
+)
 
 
 def urlunparse(parts):
-    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    result = _urlunparse(tuple(p.decode("charmap") for p in parts))
     return result.encode("charmap")
 
 
@@ -835,7 +839,6 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # should be significantly better than anything above, though it is not yet
 # feature equivalent.
 
-from twisted.web.error import SchemeNotSupported
 from twisted.web._newclient import (
     HTTP11ClientProtocol,
     PotentialDataLoss,
@@ -849,17 +852,17 @@ from twisted.web._newclient import (
     ResponseNeverReceived,
     _WrapperException,
 )
-
+from twisted.web.error import SchemeNotSupported
 
 try:
-    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL import SSL
 except ImportError:
-    SSL = None
+    SSL = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import (
         CertificateOptions,
-        platformTrust,
         optionsForClientTLS,
+        platformTrust,
     )
 
 
@@ -877,7 +880,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
+        @wraps(decoratee)  # type: ignore[unreachable]
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
@@ -1502,9 +1505,7 @@ class _AgentBase:
         the request.
         """
         if not isinstance(method, bytes):
-            raise TypeError(
-                "method={!r} is {}, but must be bytes".format(method, type(method))
-            )
+            raise TypeError(f"method={method!r} is {type(method)}, but must be bytes")
 
         method = _ensureValidMethod(method)
 

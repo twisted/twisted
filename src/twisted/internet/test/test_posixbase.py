@@ -6,10 +6,10 @@ Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
+from twisted.trial.unittest import TestCase
 
 skipSockets = None
 try:
@@ -18,8 +18,8 @@ try:
 except ImportError:
     skipSockets = "Platform does not support AF_UNIX sockets"
 
-from twisted.internet.tcp import Port
 from twisted.internet import reactor
+from twisted.internet.tcp import Port
 
 
 class TrivialReactor(PosixReactorBase):

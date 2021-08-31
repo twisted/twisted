@@ -14,10 +14,15 @@ import os
 import sys
 import tempfile
 import types
+import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
 from typing import Optional, Tuple
 
+# Python 2.7 and higher has skip support built-in
+from unittest import SkipTest
+
+from twisted.internet.defer import ensureDeferred
 from twisted.python import failure, log, monkey
 from twisted.python.reflect import fullyQualifiedName
 from twisted.internet.utils import suppressWarningsCM
@@ -27,14 +32,9 @@ from twisted.python.deprecate import (
     getVersionString,
     warnAboutFunction,
 )
-from twisted.internet.defer import ensureDeferred
-
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
-
-import unittest as pyunit
-
-# Python 2.7 and higher has skip support built-in
-from unittest import SkipTest
 
 
 class FailTest(AssertionError):

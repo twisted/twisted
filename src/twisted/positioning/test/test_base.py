@@ -3,11 +3,12 @@
 """
 Test cases for positioning primitives.
 """
-from twisted.trial.unittest import TestCase
+from zope.interface import verify
+
 from twisted.positioning import base
 from twisted.positioning.base import Angles, Directions
 from twisted.positioning.ipositioning import IPositioningBeacon
-from zope.interface import verify
+from twisted.trial.unittest import TestCase
 
 
 class AngleTests(TestCase):
@@ -243,7 +244,7 @@ class CoordinateTests(TestCase):
         appropriate repr.
         """
         coordinate = base.Coordinate(10.0)
-        expectedRepr = "<Angle of unknown type ({} degrees)>".format(10.0)
+        expectedRepr = f"<Angle of unknown type ({10.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
     def test_positiveLatitude(self):
@@ -251,7 +252,7 @@ class CoordinateTests(TestCase):
         Positive latitudes have a repr that specifies their type and value.
         """
         coordinate = base.Coordinate(10.0, Angles.LATITUDE)
-        expectedRepr = "<Latitude ({} degrees)>".format(10.0)
+        expectedRepr = f"<Latitude ({10.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
     def test_negativeLatitude(self):
@@ -259,7 +260,7 @@ class CoordinateTests(TestCase):
         Negative latitudes have a repr that specifies their type and value.
         """
         coordinate = base.Coordinate(-50.0, Angles.LATITUDE)
-        expectedRepr = "<Latitude ({} degrees)>".format(-50.0)
+        expectedRepr = f"<Latitude ({-50.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
     def test_positiveLongitude(self):
@@ -267,7 +268,7 @@ class CoordinateTests(TestCase):
         Positive longitudes have a repr that specifies their type and value.
         """
         longitude = base.Coordinate(50.0, Angles.LONGITUDE)
-        expectedRepr = "<Longitude ({} degrees)>".format(50.0)
+        expectedRepr = f"<Longitude ({50.0} degrees)>"
         self.assertEqual(repr(longitude), expectedRepr)
 
     def test_negativeLongitude(self):
@@ -275,7 +276,7 @@ class CoordinateTests(TestCase):
         Negative longitudes have a repr that specifies their type and value.
         """
         longitude = base.Coordinate(-50.0, Angles.LONGITUDE)
-        expectedRepr = "<Longitude ({} degrees)>".format(-50.0)
+        expectedRepr = f"<Longitude ({-50.0} degrees)>"
         self.assertEqual(repr(longitude), expectedRepr)
 
     def test_bogusCoordinateType(self):

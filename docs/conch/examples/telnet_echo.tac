@@ -11,10 +11,10 @@ This demo sets up a listening port on 6023 which accepts telnet connections.
 No login for the telnet server is required.
 """
 
-from twisted.conch.telnet import TelnetTransport, TelnetProtocol
-from twisted.internet.protocol import ServerFactory
 from twisted.application.internet import TCPServer
 from twisted.application.service import Application
+from twisted.conch.telnet import TelnetProtocol, TelnetTransport
+from twisted.internet.protocol import ServerFactory
 
 
 class TelnetEcho(TelnetProtocol):

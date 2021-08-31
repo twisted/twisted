@@ -1,4 +1,4 @@
-from twisted.internet import ssl, endpoints, task, protocol, defer
+from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.protocols.basic import LineReceiver
 from twisted.python.modules import getModule
 

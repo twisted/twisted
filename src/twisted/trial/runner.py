@@ -35,22 +35,20 @@ import sys
 import time
 import types
 import warnings
-
 from importlib.machinery import SourceFileLoader
 
-from twisted.python import reflect, log, failure, modules, filepath
+from zope.interface import implementer
 
 from twisted.internet import defer
-from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
+from twisted.python import failure, filepath, log, modules, reflect
+from twisted.trial import unittest, util
 from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
 from twisted.trial._synctest import _logObserver
+from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
-
-from zope.interface import implementer
 
 pyunit = __import__("unittest")
 
@@ -100,18 +98,32 @@ def filenameToModule(fn):
     @return: A module object.
     @raise ValueError: If C{fn} does not exist.
     """
+    oldFn = fn
+
+    if (3, 8) <= sys.version_info < (3, 10) and not os.path.isabs(fn):
+        # module.__spec__.__file__ is supposed to be absolute in py3.8+
+        # importlib.util.spec_from_file_location does this automatically from
+        # 3.10+
+        # This was backported to 3.8 and 3.9, but then reverted in 3.8.11 and
+        # 3.9.6
+        # See https://twistedmatrix.com/trac/ticket/10230
+        # and https://bugs.python.org/issue44070
+        fn = os.path.join(os.getcwd(), fn)
+
     if not os.path.exists(fn):
-        raise ValueError(f"{fn!r} doesn't exist")
+        raise ValueError(f"{oldFn!r} doesn't exist")
+
+    moduleName = reflect.filenameToModuleName(fn)
     try:
-        ret = reflect.namedAny(reflect.filenameToModuleName(fn))
+        ret = reflect.namedAny(moduleName)
     except (ValueError, AttributeError):
         # Couldn't find module.  The file 'fn' is not in PYTHONPATH
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # >=3.7 has __file__ attribute as None, previously __file__ was not present
     if getattr(ret, "__file__", None) is None:
         # This isn't a Python module in a package, so import it from a file
-        return _importFromFile(fn)
+        return _importFromFile(fn, moduleName=moduleName)
 
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + ".py"
@@ -119,11 +131,11 @@ def filenameToModule(fn):
     same = getattr(os.path, "samefile", samefile)
     if os.path.isfile(fn) and not same(fn, retFile):
         del sys.modules[ret.__name__]
-        ret = _importFromFile(fn)
+        ret = _importFromFile(fn, moduleName=moduleName)
     return ret
 
 
-def _importFromFile(fn, moduleName=None):
+def _importFromFile(fn, *, moduleName):
     fn = _resolveDirectory(fn)
     if not moduleName:
         moduleName = os.path.splitext(os.path.split(fn)[-1])[0]

@@ -8,7 +8,7 @@ Simple insults-based widget library
 
 import array
 
-from twisted.conch.insults import insults, helper
+from twisted.conch.insults import helper, insults
 from twisted.python import text as tptext
 
 
@@ -321,7 +321,7 @@ class _Box(ContainerWidget):
             wants.append(hint[self.variableDimension])
 
         length = (width, height)[self.variableDimension]
-        totalWant = sum([w for w in wants if w is not None])
+        totalWant = sum(w for w in wants if w is not None)
         if greedy:
             leftForGreedy = int((length - totalWant) / greedy)
 

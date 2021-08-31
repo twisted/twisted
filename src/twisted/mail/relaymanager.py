@@ -13,20 +13,18 @@ the recipient and sends on the message.
 
 import email.utils
 import os
-import time
 import pickle
+import time
 from typing import Type
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.mail import relay
-from twisted.mail import bounce
+from twisted.application import internet
 from twisted.internet import protocol
-from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
-from twisted.mail import smtp
-from twisted.application import internet
+from twisted.internet.protocol import connectionDone
+from twisted.mail import bounce, relay, smtp
+from twisted.python import log
+from twisted.python.failure import Failure
 
 
 class ManagedRelayerMixin:
@@ -468,7 +466,7 @@ class Queue:
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "{}_{}_{}_{}".format(os.getpid(), time.time(), self.n, id(self))
+        fname = f"{os.getpid()}_{time.time()}_{self.n}_{id(self)}"
         self.n = self.n + 1
         headerFile = open(os.path.join(self.directory, fname + "-H"), "wb")
         tempFilename = os.path.join(self.directory, fname + "-C")
@@ -1112,7 +1110,7 @@ class MXCalculator:
             fallback to domain option is in effect but no address for the
             domain could be found.
         """
-        from twisted.names import error, dns
+        from twisted.names import dns, error
 
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)
