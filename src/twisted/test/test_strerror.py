@@ -5,15 +5,14 @@
 Test strerror
 """
 
-import socket
 import os
-
+import socket
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.tcp import ECONNABORTED
-from twisted.python.win32 import _ErrorFormatter, formatError
 from twisted.python.runtime import platform
+from twisted.python.win32 import _ErrorFormatter, formatError
+from twisted.trial.unittest import TestCase
 
 
 class _MyWindowsException(OSError):

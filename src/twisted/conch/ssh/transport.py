@@ -15,26 +15,24 @@ import binascii
 import hmac
 import struct
 import zlib
-
 from hashlib import md5, sha1, sha256, sha384, sha512
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from twisted import __version__ as twisted_version
-from twisted.internet import protocol, defer
+from twisted.conch.ssh import _kex, address, keys
+from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
+from twisted.internet import defer, protocol
+from twisted.logger import Logger
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, networkString
-from twisted.logger import Logger
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
-
-from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs
 
 
 def _mpFromBytes(data):

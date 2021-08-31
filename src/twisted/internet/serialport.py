@@ -27,9 +27,17 @@ __all__ = [
 
 # all of them require pyserial at the moment, so check that first
 import serial  # type: ignore[import]
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import (
+    EIGHTBITS,
+    FIVEBITS,
+    PARITY_EVEN,
+    PARITY_NONE,
+    PARITY_ODD,
+    SEVENBITS,
+    SIXBITS,
+    STOPBITS_ONE,
+    STOPBITS_TWO,
+)
 
 from twisted.python.runtime import platform
 

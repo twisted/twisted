@@ -1,5 +1,6 @@
 import os
 import sys
+
 import pkg_resources
 
 print("::group::Python info")

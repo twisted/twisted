@@ -8,14 +8,13 @@ Protocol wrapper that provides HAProxy PROXY protocol support.
 """
 from typing import Optional, Union
 
-from twisted.protocols import policies
 from twisted.internet import interfaces
 from twisted.internet.endpoints import _WrapperServerEndpoint
-
+from twisted.protocols import policies
+from . import _info
 from ._exceptions import InvalidProxyHeader
 from ._v1parser import V1Parser
 from ._v2parser import V2Parser
-from . import _info
 
 
 class HAProxyProtocolWrapper(policies.ProtocolWrapper):

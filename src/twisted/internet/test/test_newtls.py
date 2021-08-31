@@ -6,21 +6,24 @@ Tests for L{twisted.internet._newtls}.
 """
 
 
-from twisted.trial import unittest
 from twisted.internet import interfaces
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.connectionmixins import (
     ConnectableProtocol,
     runProtocolsWithReactor,
 )
-from twisted.internet.test.test_tls import SSLCreator, TLSMixin
-from twisted.internet.test.test_tls import StartTLSClientCreator
-from twisted.internet.test.test_tls import ContextGeneratingMixin
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import TCPCreator
+from twisted.internet.test.test_tls import (
+    ContextGeneratingMixin,
+    SSLCreator,
+    StartTLSClientCreator,
+    TLSMixin,
+)
+from twisted.trial import unittest
 
 try:
-    from twisted.protocols import tls
     from twisted.internet import _newtls as __newtls
+    from twisted.protocols import tls
 except ImportError:
     _newtls = None
 else:

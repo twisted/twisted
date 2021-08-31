@@ -9,7 +9,6 @@ instead.
 """
 from twisted.internet import testing
 
-
 __all__ = [
     "AccumulatingProtocol",
     "LineSendingProtocol",

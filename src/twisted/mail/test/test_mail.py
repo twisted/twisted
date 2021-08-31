@@ -5,23 +5,23 @@
 Tests for large portions of L{twisted.mail}.
 """
 
-import io
-import os
-import sys
-import textwrap
-import errno
-import shutil
-import pickle
 import email.message
 import email.parser
-import tempfile
+import errno
+import io
+import os
+import pickle
+import shutil
 import signal
+import sys
+import tempfile
+import textwrap
 import time
 from hashlib import md5
 from unittest import skipIf
 
-from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
+from zope.interface.verify import verifyClass
 
 import twisted.cred.checkers
 import twisted.cred.credentials
@@ -32,20 +32,19 @@ import twisted.mail.maildir
 import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-
 from twisted import cred, mail
 from twisted.internet import address, defer, interfaces, protocol, reactor, task
 from twisted.internet.defer import Deferred
 from twisted.internet.error import (
-    DNSLookupError,
     CannotListenError,
+    DNSLookupError,
     ProcessDone,
     ProcessTerminated,
 )
 from twisted.mail import pop3, smtp
 from twisted.mail.relaymanager import _AttemptManager
 from twisted.names import dns
-from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
+from twisted.names.dns import Record_CNAME, Record_MX, RRHeader
 from twisted.names.error import DNSNameError
 from twisted.python import failure, log
 from twisted.python.filepath import FilePath
@@ -1159,9 +1158,7 @@ class DirectoryQueueTests(TestCase):
             self.assertEqual(envelopes.pop(0), ["header", i])
 
 
-from twisted.names import server
-from twisted.names import client
-from twisted.names import common
+from twisted.names import client, common, server
 
 
 class TestAuthority(common.ResolverBase):

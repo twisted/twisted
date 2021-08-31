@@ -21,7 +21,6 @@ from datetime import datetime, timedelta
 from twisted.python.compat import nativeString
 from twisted.python.util import FancyStrMixin
 
-
 RFC4034_TIME_FORMAT = "%Y%m%d%H%M%S"
 
 

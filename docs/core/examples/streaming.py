@@ -11,14 +11,15 @@ and finally closes the connection.
 """
 
 
-from sys import stdout
 from random import randrange
+from sys import stdout
 
 from zope.interface import implementer
-from twisted.python.log import startLogging
+
 from twisted.internet import interfaces, reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
+from twisted.python.log import startLogging
 
 
 @implementer(interfaces.IPushProducer)

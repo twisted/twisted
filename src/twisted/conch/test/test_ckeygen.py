@@ -6,36 +6,34 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 """
 
 import getpass
-import sys
 import subprocess
-
+import sys
 from io import StringIO
 
-from twisted.python.reflect import requireModule
-
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
 from twisted.conch.test.keydata import (
-    publicRSA_openssh,
-    privateRSA_openssh,
-    privateRSA_openssh_encrypted,
     privateECDSA_openssh,
     privateEd25519_openssh_new,
+    privateRSA_openssh,
+    privateRSA_openssh_encrypted,
+    publicRSA_openssh,
 )
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
+from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
-    from twisted.conch.ssh.keys import (
-        Key,
-        BadKeyError,
-        BadFingerPrintFormat,
-        FingerprintFormats,
-    )
     from twisted.conch.scripts.ckeygen import (
+        _saveKey,
         changePassPhrase,
         displayPublicKey,
-        printFingerprint,
-        _saveKey,
         enumrepresentation,
+        printFingerprint,
+    )
+    from twisted.conch.ssh.keys import (
+        BadFingerPrintFormat,
+        BadKeyError,
+        FingerprintFormats,
+        Key,
     )
 else:
     skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"

@@ -54,14 +54,13 @@ APIs listed above.
 """
 
 
-# System imports
-from OpenSSL import SSL  # type: ignore[import]
+from zope.interface import implementedBy, implementer, implementer_only
 
-from zope.interface import implementer, implementer_only, implementedBy
+# System imports
+from OpenSSL import SSL
 
 # Twisted imports
-from twisted.internet import tcp, interfaces
-
+from twisted.internet import interfaces, tcp
 
 supported = True
 
@@ -236,23 +235,23 @@ class Connector(tcp.Connector):
 
 
 from twisted.internet._sslverify import (
-    KeyPair,
-    DistinguishedName,
     DN,
     Certificate,
     CertificateRequest,
-    PrivateCertificate,
+    DistinguishedName,
+    KeyPair,
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
-    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
-    platformTrust,
     OpenSSLDefaultPaths,
+    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
+    PrivateCertificate,
+    ProtocolNegotiationSupport,
+    TLSVersion,
     VerificationError,
     optionsForClientTLS,
-    ProtocolNegotiationSupport,
+    platformTrust,
     protocolNegotiationMechanisms,
     trustRootFromCertificates,
-    TLSVersion,
 )
 
 __all__ = [

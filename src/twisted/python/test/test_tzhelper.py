@@ -14,12 +14,11 @@ except ImportError:
 else:
     tzset = _tzset
 
-from twisted.python._tzhelper import FixedOffsetTimeZone
-from twisted.trial.unittest import TestCase, SkipTest
 from datetime import timedelta
-
 from time import mktime as mktime_real
 
+from twisted.python._tzhelper import FixedOffsetTimeZone
+from twisted.trial.unittest import SkipTest, TestCase
 
 # On some rare platforms (FreeBSD 8?  I was not able to reproduce
 # on FreeBSD 9) 'mktime' seems to always fail once tzset() has been

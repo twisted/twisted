@@ -6,11 +6,10 @@ Tests for L{twisted.internet.main}.
 """
 
 
-from twisted.trial import unittest
 from twisted.internet.error import ReactorAlreadyInstalledError
 from twisted.internet.main import installReactor
-
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 
 class InstallReactorTests(unittest.SynchronousTestCase):

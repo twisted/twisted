@@ -5,10 +5,9 @@
 Test cases for L{twisted.logger._util}.
 """
 
-from twisted.trial import unittest
-
 from zope.interface import implementer
 
+from twisted.trial import unittest
 from .._interfaces import ILogObserver, LogEvent
 from .._observer import LogPublisher
 from .._util import formatTrace

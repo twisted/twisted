@@ -5,16 +5,15 @@
 Abstract file handle class
 """
 
-from twisted.internet import main, error, interfaces
-from twisted.internet.abstract import _ConsumerMixin, _LogOwner, _dataMustBeBytes
-from twisted.python import failure
-
-from zope.interface import implementer
 import errno
 
-from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
+from zope.interface import implementer
+
+from twisted.internet import error, interfaces, main
+from twisted.internet.abstract import _ConsumerMixin, _dataMustBeBytes, _LogOwner
 from twisted.internet.iocpreactor import iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import ERROR_HANDLE_EOF, ERROR_IO_PENDING
+from twisted.python import failure
 
 
 @implementer(

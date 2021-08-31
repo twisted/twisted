@@ -3,27 +3,25 @@
 # See LICENSE for details.
 
 
-import sys
+import getpass
 import os
 import pdb
-import getpass
-import traceback
 import signal
+import sys
+import traceback
 import warnings
-
 from operator import attrgetter
 
-from twisted import copyright, plugin, logger
-from twisted.application import service, reactors
-from twisted.internet import defer
-from twisted.persisted import sob
-from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.reflect import qual, namedAny, namedModule
-from twisted.internet.interfaces import _ISupportsExitSignalCapturing
+from twisted import copyright, logger, plugin
+from twisted.application import reactors, service
 
 # Expose the new implementation of installReactor at the old location.
-from twisted.application.reactors import installReactor
-from twisted.application.reactors import NoSuchReactor
+from twisted.application.reactors import NoSuchReactor, installReactor
+from twisted.internet import defer
+from twisted.internet.interfaces import _ISupportsExitSignalCapturing
+from twisted.persisted import sob
+from twisted.python import failure, log, logfile, runtime, usage, util
+from twisted.python.reflect import namedAny, namedModule, qual
 
 
 class _BasicProfiler:

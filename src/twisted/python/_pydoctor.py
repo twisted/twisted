@@ -12,7 +12,7 @@ This documentation does not link to pydoctor API as there is no public API yet.
 import ast
 from typing import Optional
 
-from pydoctor import model, zopeinterface, astbuilder  # type: ignore[import]
+from pydoctor import astbuilder, model, zopeinterface  # type: ignore[import]
 from pydoctor.sphinx import SphinxInventory  # type: ignore[import]
 
 
