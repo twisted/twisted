@@ -6,10 +6,9 @@ Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
 
 
-from twisted.internet import defer, reactor, threads
+from twisted.internet import defer, reactor, task, threads
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import unittest
-from twisted.internet import defer, threads, reactor, task
 from twisted.trial.util import suppress as SUPPRESS
 
 

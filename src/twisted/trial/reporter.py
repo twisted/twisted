@@ -22,7 +22,7 @@ from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
-from . import itrial, util, _frames
+from . import _frames, itrial, util
 
 try:
     from subunit import TestProtocolClient  # type: ignore[import]

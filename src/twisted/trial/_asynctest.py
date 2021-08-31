@@ -12,7 +12,6 @@ Maintainer: Jonathan Lange
 import inspect
 import warnings
 from collections.abc import Awaitable
-
 from typing import List
 
 from zope.interface import implementer

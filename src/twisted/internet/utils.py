@@ -7,8 +7,8 @@ Utility methods.
 """
 
 
-import sys
 import contextlib
+import sys
 import warnings
 from functools import wraps
 from io import BytesIO
