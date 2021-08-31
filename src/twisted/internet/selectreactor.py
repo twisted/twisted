@@ -7,17 +7,16 @@ Select reactor
 """
 
 
-from time import sleep
 import select
 import sys
-from errno import EINTR, EBADF
-
+from errno import EBADF, EINTR
+from time import sleep
 from typing import Type
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 from twisted.python.runtime import platformType
 

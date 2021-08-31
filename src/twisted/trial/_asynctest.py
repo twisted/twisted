@@ -22,7 +22,6 @@ from zope.interface import implementer
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
 from twisted.python import failure
-
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 

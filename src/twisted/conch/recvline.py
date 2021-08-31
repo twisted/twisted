@@ -13,11 +13,10 @@ from typing import Dict
 
 from zope.interface import implementer
 
-from twisted.conch.insults import insults, helper
-
+from twisted.conch.insults import helper, insults
+from twisted.logger import Logger
 from twisted.python import reflect
 from twisted.python.compat import iterbytes
-from twisted.logger import Logger
 
 _counters: Dict[str, int] = {}
 

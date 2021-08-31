@@ -5,11 +5,10 @@
 Test cases for L{twisted.protocols.haproxy.V2Parser}.
 """
 
-from twisted.trial import unittest
 from twisted.internet import address
-
-from .._exceptions import InvalidProxyHeader
+from twisted.trial import unittest
 from .. import _v2parser
+from .._exceptions import InvalidProxyHeader
 
 V2_SIGNATURE = b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
 

@@ -9,22 +9,20 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-
+from asyncio import AbstractEventLoop, get_event_loop
 from typing import Dict, Optional, Type
 
 from zope.interface import implementer
 
-from twisted.logger import Logger
-from twisted.internet.posixbase import (
-    PosixReactorBase,
-    _NO_FILEDESC,
-    _ContinuousPolling,
-)
-from twisted.python.log import callWithLogger
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
-
-from asyncio import get_event_loop, AbstractEventLoop
+from twisted.internet.posixbase import (
+    _NO_FILEDESC,
+    PosixReactorBase,
+    _ContinuousPolling,
+)
+from twisted.logger import Logger
+from twisted.python.log import callWithLogger
 
 
 @implementer(IReactorFDSet)

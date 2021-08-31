@@ -22,11 +22,10 @@ Microdom mainly focuses on working with HTML and XHTML.
 import re
 from io import BytesIO, StringIO
 
-
 # Twisted Imports
 from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
-from twisted.web.sux import XMLParser, ParseError
+from twisted.web.sux import ParseError, XMLParser
 
 
 def getElementsByTagName(iNode, name):

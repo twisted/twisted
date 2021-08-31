@@ -24,23 +24,21 @@ of course.
 
 import gc
 import sys
-import weakref
 import unittest as pyunit
+import weakref
 from io import StringIO
 
+from twisted.internet import defer, reactor
 from twisted.python.compat import _PYPY
 from twisted.python.reflect import namedAny
-from twisted.internet import defer, reactor
-from twisted.trial import unittest, reporter, util
-
-from twisted.trial import runner
-from twisted.trial.test import erroneous
-from twisted.trial.test.test_suppression import SuppressionMixin
+from twisted.trial import reporter, runner, unittest, util
 from twisted.trial._asyncrunner import (
     _clearSuite,
     _ForceGarbageCollectionDecorator,
     _iterateTests,
 )
+from twisted.trial.test import erroneous
+from twisted.trial.test.test_suppression import SuppressionMixin
 
 
 class ResultsTestMixin:

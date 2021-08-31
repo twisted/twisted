@@ -11,7 +11,6 @@ from typing import Any, Optional, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
-
 from ._interfaces import ILogObserver, LogTrace
 from ._levels import InvalidLogLevelError, LogLevel
 

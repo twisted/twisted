@@ -6,13 +6,14 @@ Tests for implementations of L{IReactorThreads}.
 """
 
 
+import gc
+import threading
 from weakref import ref
-import gc, threading
 
-from twisted.python.threadable import isInIOThread
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadpool import ThreadPool
 from twisted.internet.interfaces import IReactorThreads
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.threadable import isInIOThread
+from twisted.python.threadpool import ThreadPool
 
 
 class ThreadTestsBuilder(ReactorBuilder):

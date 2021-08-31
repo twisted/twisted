@@ -7,13 +7,13 @@ Test cases for using NMEA sentences.
 
 import datetime
 from operator import attrgetter
+
 from zope.interface import implementer
 
-from twisted.positioning import base, nmea, ipositioning
+from twisted.positioning import base, ipositioning, nmea
+from twisted.positioning.base import Angles
 from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
-
-from twisted.positioning.base import Angles
 
 # Sample sentences
 GPGGA = b"$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47"

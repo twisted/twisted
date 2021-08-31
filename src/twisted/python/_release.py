@@ -14,11 +14,10 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from subprocess import STDOUT, CalledProcessError, check_output
 from typing import Dict
 
 from zope.interface import Interface, implementer
-
-from subprocess import check_output, STDOUT, CalledProcessError
 
 from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
@@ -31,8 +30,8 @@ intersphinxURLs = [
     "https://cryptography.io/en/latest/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://twisted.github.io/incremental/docs/objects.inv",
+    "https://twisted.org/constantly/docs/objects.inv",
+    "https://twisted.org/incremental/docs/objects.inv",
     "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "https://priority.readthedocs.io/en/stable/objects.inv",
     "https://zopeinterface.readthedocs.io/en/latest/objects.inv",

@@ -11,12 +11,10 @@ import errno
 import os
 import re
 import sys
-
 from inspect import getmro
 from io import BytesIO, StringIO
 from typing import Type
-from unittest import expectedFailure
-from unittest import TestCase as StdlibTestCase
+from unittest import TestCase as StdlibTestCase, expectedFailure
 
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
@@ -26,6 +24,10 @@ from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
+from twisted.trial import itrial, reporter, runner, unittest, util
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
+from twisted.trial.test import erroneous, sample
+from twisted.trial.unittest import SkipTest, Todo, makeTodo
 
 
 class BrokenStream:

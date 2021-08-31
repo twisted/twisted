@@ -8,14 +8,14 @@ Tests for actual functionality belong elsewhere, written in a way that doesn't
 involve launching child processes.
 """
 
-from os import devnull, getcwd, chdir
-from sys import executable
+from os import chdir, devnull, getcwd
 from subprocess import PIPE, Popen
+from sys import executable
 
-from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.modules import getModule
 from twisted.python.filepath import FilePath
+from twisted.python.modules import getModule
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
+from twisted.trial.unittest import SkipTest, TestCase
 
 
 def outputFromPythonScript(script, *args):

@@ -8,9 +8,9 @@ Implementation module for the I{mailmail} command.
 
 
 import email.utils
+import getpass
 import os
 import sys
-import getpass
 from configparser import ConfigParser
 from io import StringIO
 

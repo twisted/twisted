@@ -6,15 +6,12 @@
 Domain Name Server
 """
 
-import os, traceback
+import os
+import traceback
 
-from twisted.python import usage
-from twisted.names import dns
 from twisted.application import internet, service
-
-from twisted.names import server
-from twisted.names import authority
-from twisted.names import secondary
+from twisted.names import authority, dns, secondary, server
+from twisted.python import usage
 
 
 class Options(usage.Options):
@@ -125,7 +122,7 @@ def _buildResolvers(config):
     @return: Two-item tuple of a list of cache resovers and a list of client
         resolvers
     """
-    from twisted.names import client, cache, hosts
+    from twisted.names import cache, client, hosts
 
     ca, cl = [], []
     if config["cache"]:

@@ -7,12 +7,12 @@ These protocols are either provided by inetd, or are not provided at all.
 """
 
 
-import time
 import struct
+import time
 
 from zope.interface import implementer
 
-from twisted.internet import protocol, interfaces
+from twisted.internet import interfaces, protocol
 
 
 class Echo(protocol.Protocol):

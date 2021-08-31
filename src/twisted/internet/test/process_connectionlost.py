@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 while 1:
     line = sys.stdin.readline().strip()

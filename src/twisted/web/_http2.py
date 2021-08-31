@@ -16,35 +16,33 @@ it has stabilised, it'll be made public.
 
 
 import io
-
 from collections import deque
 from typing import List
 
 from zope.interface import implementer
 
-import priority  # type: ignore[import]
 import h2.config  # type: ignore[import]
 import h2.connection  # type: ignore[import]
 import h2.errors  # type: ignore[import]
 import h2.events  # type: ignore[import]
 import h2.exceptions  # type: ignore[import]
+import priority  # type: ignore[import]
 
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
-    IProtocol,
-    ITransport,
     IConsumer,
+    IProtocol,
     IPushProducer,
     ISSLTransport,
+    ITransport,
 )
-from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
 from twisted.python.failure import Failure
 from twisted.web.error import ExcessiveBufferingError
-
 
 # This API is currently considered private.
 __all__: List[str] = []
