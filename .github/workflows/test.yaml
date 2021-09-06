@@ -41,7 +41,7 @@ jobs:
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-beta.4]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-rc.1]
         tox-env: ['alldeps-withcov-posix']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
