@@ -1,0 +1,1 @@
+twisted.internet.defer.inlineCallbacks no longer causes confusing StopIteration tracebacks to be added to the top of tracebacks originating in triggered callbacks
