@@ -1646,7 +1646,7 @@ def _inlineCallbacks(
 
     # Get the current contextvars Context object.
     current_context = _copy_context()
-    
+
     stop_iteration: Bool = False
     callback_value: Any = None
 
@@ -1745,7 +1745,7 @@ def _inlineCallbacks(
         except BaseException:
             status.deferred.errback()
             return
-        
+
         if stop_iteration:
             # Call the callback outside of the exception handler to avoid inappropriate/confusing
             # "During handling of the above exception, another exception occurred:" if the callback
