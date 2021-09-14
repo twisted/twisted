@@ -1647,7 +1647,7 @@ def _inlineCallbacks(
     # Get the current contextvars Context object.
     current_context = _copy_context()
 
-    stop_iteration: Bool = False
+    stop_iteration: bool = False
     callback_value: Any = None
 
     while 1:
