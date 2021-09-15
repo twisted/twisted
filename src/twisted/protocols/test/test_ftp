@@ -1,0 +1,33 @@
+import mock
+import twisted
+from twisted.trial import unittest
+from twisted.protocols.ftp import ASCIIConsumerWrapper
+
+class ASCIIConsumerWrapperTestCase(unittest.TestCase):
+    """ Test case for ASCIIConsumerWrapper, tests __init__ and write function ""
+    @mock.patch("twisted.protocols.ftp.os")
+    def test_init(self, os_mock):
+        """ Test non supported platform, and make sure that for '\r\n' we're not wrapping the write function.
+        cons_mock = mock.MagicMock()
+        # Make sure the assert is working
+        os_mock.linesep = ""  # Length != 1
+        with self.assertRaises(AssertionError):
+            ASCIIConsumerWrapper(cons_mock)
+
+        os_mock.linesep = "\r\n"
+        cons_wrapper = ASCIIConsumerWrapper(cons_mock)
+        self.assertEqual(cons_wrapper.write, cons_mock.write)
+
+    @mock.patch("twisted.protocols.ftp.os")
+    def test_write(self, os_mock):
+        """ Mock an OS where the consumer write function is wrapper, and make sure that the line seperators are replaced properly """
+        # Mock behaviour for an OS with '\n' linesep
+        bytes = b"test\n"
+        os_mock.linesep = "\n"
+        twisted.protocols.ftp._LINESEP_BYTES = b"\n"
+
+        # Make sure it is properly replaced by '\r\n'
+        cons_mock = mock.MagicMock()
+        cons_wrapper = ASCIIConsumerWrapper(cons_mock)
+        cons_wrapper.write(bytes)
+        cons_mock.write.assert_called_once_with(b"test\r\n")
