@@ -13,14 +13,12 @@ Support for aliases(5) configuration files.
 import os
 import tempfile
 
+from zope.interface import implementer
+
+from twisted.internet import defer, protocol, reactor
 from twisted.mail import smtp
 from twisted.mail.interfaces import IAlias
-from twisted.internet import reactor
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.python import failure
-from twisted.python import log
-from zope.interface import implementer
+from twisted.python import failure, log
 
 
 def handle(result, line, filename, lineNo):

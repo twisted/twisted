@@ -41,21 +41,20 @@ reactor.listen/connect* methods for more information.
 from random import random as _goodEnoughRandom
 from typing import List
 
-from twisted.python import log
-from twisted.logger import Logger
+from automat import MethodicalMachine  # type: ignore[import]
 
 from twisted.application import service
 from twisted.internet import task
-from twisted.python.failure import Failure
 from twisted.internet.defer import (
     CancelledError,
     Deferred,
-    succeed,
     fail,
     maybeDeferred,
+    succeed,
 )
-
-from automat import MethodicalMachine  # type: ignore[import]
+from twisted.logger import Logger
+from twisted.python import log
+from twisted.python.failure import Failure
 
 
 def _maybeGlobalReactor(maybeReactor):

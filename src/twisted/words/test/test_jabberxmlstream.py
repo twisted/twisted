@@ -6,7 +6,6 @@ Tests for L{twisted.words.protocols.jabber.xmlstream}.
 """
 
 from unittest import skipIf
-from twisted.trial import unittest
 
 from zope.interface.verify import verifyObject
 
@@ -15,9 +14,10 @@ from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.python import failure
 from twisted.test import proto_helpers
+from twisted.trial import unittest
+from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
-from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 try:
     from twisted.internet import ssl as _ssl
@@ -27,8 +27,8 @@ except ImportError:
 else:
     ssl = _ssl
     skipWhenNoSSL = (False, "")
-    from twisted.internet.ssl import CertificateOptions
     from twisted.internet._sslverify import ClientTLSOptions
+    from twisted.internet.ssl import CertificateOptions
 
 NS_XMPP_TLS = "urn:ietf:params:xml:ns:xmpp-tls"
 

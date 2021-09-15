@@ -4,9 +4,10 @@
 
 import errno
 import socket
-from twisted.trial import unittest
+
 from twisted.internet import error
 from twisted.python.runtime import platformType
+from twisted.trial import unittest
 
 
 class StringificationTests(unittest.SynchronousTestCase):

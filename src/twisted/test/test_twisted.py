@@ -8,7 +8,6 @@ the code in C{twisted/__init__.py}.
 
 
 import sys
-
 from types import ModuleType
 
 from twisted.trial.unittest import TestCase

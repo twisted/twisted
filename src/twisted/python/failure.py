@@ -14,14 +14,15 @@ See L{Failure}.
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
-import opcode
+import linecache
+import sys
 from inspect import getmro
+from io import StringIO
+
+import opcode
 
 from twisted.python import reflect
-from io import StringIO
 
 count = 0
 traceupLength = 4
@@ -466,24 +467,12 @@ class Failure(BaseException):
                 return error
         return None
 
-    # It would be nice to use twisted.python.compat.reraise, but that breaks
-    # the stack exploration in _findFailure; possibly this can be fixed in
-    # #5931.
-    if getattr(BaseException, "with_traceback", None):
-        # Python 3
-        def raiseException(self):
-            raise self.value.with_traceback(self.tb)
-
-    else:
-        exec(
-            """def raiseException(self):
-    raise self.type, self.value, self.tb"""
-        )
-
-    raiseException.__doc__ = """
+    def raiseException(self):
+        """
         raise the original exception, preserving traceback
         information if available.
         """
+        raise self.value.with_traceback(self.tb)
 
     @_extraneous
     def throwExceptionIntoGenerator(self, g):

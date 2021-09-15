@@ -18,7 +18,7 @@ Examples:
 import sys
 from typing import Optional, Sequence, Type
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 from twisted.plugin import getPlugins
 from twisted.python import usage

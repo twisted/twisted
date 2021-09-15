@@ -11,12 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
 import pathlib
 import subprocess
-from pprint import pprint
+import sys
 from datetime import date
+from pprint import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -48,7 +48,6 @@ except ImportError:
 extensions.append("traclinks")
 
 from twisted import version as twisted_version_object
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -114,6 +113,15 @@ html_theme_path = ["_themes"]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_js_files = [
+    "js/custom.js",
+    # Here we have a Sphinx HTML injection hack to make the JS script load without blocking.
+    'https://sidecar.gitter.im/dist/sidecar.v1.js" defer hack="',
+]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = "Twisteddoc"
@@ -225,9 +233,9 @@ pydoctor_args = [
     "--intersphinx=https://cryptography.io/en/latest/objects.inv",
     "--intersphinx=https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "--intersphinx=https://twisted.github.io/constantly/docs/objects.inv",
-    "--intersphinx=https://twisted.github.io/incremental/docs/objects.inv",
-    "--intersphinx=https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "--intersphinx=https://twisted.org/constantly/docs/objects.inv",
+    "--intersphinx=https://twisted.org/incremental/docs/objects.inv",
+    "--intersphinx=https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "--intersphinx=https://priority.readthedocs.io/en/stable/objects.inv",
     "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "--intersphinx=https://automat.readthedocs.io/en/latest/objects.inv",

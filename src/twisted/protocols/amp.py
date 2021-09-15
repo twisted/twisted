@@ -196,27 +196,26 @@ has several features:
 
 import datetime
 import decimal
+import warnings
 from functools import partial
 from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-import warnings
 
 from zope.interface import Interface, implementer
 
-from twisted.internet.defer import Deferred, maybeDeferred, fail
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.error import PeerVerifyError, ConnectionLost
+from twisted.internet.defer import Deferred, fail, maybeDeferred
+from twisted.internet.error import ConnectionClosed, ConnectionLost, PeerVerifyError
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python import log, filepath
+from twisted.python import filepath, log
 from twisted.python._tzhelper import (
-    FixedOffsetTimeZone as _FixedOffsetTZInfo,
     UTC as utc,
+    FixedOffsetTimeZone as _FixedOffsetTZInfo,
 )
 from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
@@ -226,7 +225,7 @@ try:
     from twisted.internet import ssl as _ssl
 
     if _ssl.supported:
-        from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
+        from twisted.internet.ssl import DN, Certificate, CertificateOptions, KeyPair
     else:
         ssl = None
 except ImportError:

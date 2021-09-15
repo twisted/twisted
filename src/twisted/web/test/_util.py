@@ -9,9 +9,8 @@ General helpers for L{twisted.web} unit tests.
 from typing import Type
 
 from twisted.internet.defer import Deferred, succeed
-from twisted.web import server
 from twisted.trial.unittest import SynchronousTestCase
-
+from twisted.web import server
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
 from twisted.web.template import Flattenable

@@ -11,8 +11,8 @@ Test reporter forwarding test results over trial distributed AMP commands.
 
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
-from twisted.trial.reporter import TestResult
 from twisted.trial._dist import managercommands
+from twisted.trial.reporter import TestResult
 
 
 class WorkerReporter(TestResult):

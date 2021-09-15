@@ -1,10 +1,11 @@
 # Do everything properly
+import cgi
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.web import resource, server, static, xmlrpc
-import cgi
+from twisted.words.protocols import irc
 
 
 def catchError(err):

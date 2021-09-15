@@ -8,7 +8,7 @@ Simple insults-based widget library
 
 import array
 
-from twisted.conch.insults import insults, helper
+from twisted.conch.insults import helper, insults
 from twisted.python import text as tptext
 
 
