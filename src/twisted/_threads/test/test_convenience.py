@@ -7,7 +7,6 @@ Test cases for convenience functionality in L{twisted._threads._convenience}.
 
 
 from twisted.trial.unittest import SynchronousTestCase
-
 from .._convenience import Quit
 from .._ithreads import AlreadyQuit
 

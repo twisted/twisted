@@ -8,9 +8,9 @@ This module tests twisted.conch.ssh.connection.
 import struct
 
 from twisted.conch.ssh import channel
-from twisted.trial import unittest
 from twisted.conch.test import test_userauth
 from twisted.python.reflect import requireModule
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 

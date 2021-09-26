@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from slides import Slide, Bullet, SubBullet, URL, Image, PRE
+from slides import PRE, URL, Bullet, Image, Slide, SubBullet
 from twslides import Lecture
 
 

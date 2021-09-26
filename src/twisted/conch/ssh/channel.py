@@ -12,9 +12,9 @@ Maintainer: Paul Swartz
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.internet import interfaces
 from twisted.logger import Logger
+from twisted.python import log
 
 
 @implementer(interfaces.ITransport)

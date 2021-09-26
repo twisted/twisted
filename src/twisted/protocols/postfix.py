@@ -10,9 +10,8 @@ import sys
 from collections import UserDict
 from urllib.parse import quote as _quote, unquote as _unquote
 
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol, defer
+from twisted.internet import defer, protocol
+from twisted.protocols import basic, policies
 from twisted.python import log
 
 

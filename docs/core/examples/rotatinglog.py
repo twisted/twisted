@@ -6,8 +6,7 @@
 An example of using the rotating log.
 """
 
-from twisted.python import log
-from twisted.python import logfile
+from twisted.python import log, logfile
 
 # rotate every 100 bytes
 f = logfile.LogFile("test.log", "/tmp", rotateLength=100)

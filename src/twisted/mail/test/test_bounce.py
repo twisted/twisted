@@ -1,11 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
-from twisted.mail import bounce
 import email.message
 import email.parser
 from io import BytesIO, StringIO
+
+from twisted.mail import bounce
+from twisted.trial import unittest
 
 
 class BounceTests(unittest.TestCase):

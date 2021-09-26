@@ -1,5 +1,6 @@
 import sys
-from twisted.internet import defer, endpoints, protocol, ssl, task, error
+
+from twisted.internet import defer, endpoints, error, protocol, ssl, task
 
 
 def main(reactor, host, port=443):

@@ -91,12 +91,12 @@ __all__ = [
 ]
 
 
+import inspect
+import sys
 from dis import findlinestarts
 from functools import wraps
-import inspect
 from types import ModuleType
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
-import sys
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString

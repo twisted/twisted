@@ -7,34 +7,29 @@ Logging and metrics infrastructure.
 """
 
 
-from abc import ABC, abstractmethod
-from datetime import datetime
 import sys
 import time
-from typing import Any, BinaryIO, Dict, Optional, cast
 import warnings
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, BinaryIO, Dict, Optional, cast
 
 from zope.interface import Interface
 
-from twisted.python import context
-from twisted.python import reflect
-from twisted.python import util
-from twisted.python import failure
-from twisted.python.threadable import synchronize
 from twisted.logger import (
-    Logger as NewLogger,
-    LogLevel as NewLogLevel,
-    STDLibLogObserver as NewSTDLibLogObserver,
     LegacyLogObserverWrapper,
+    Logger as NewLogger,
     LoggingFile,
+    LogLevel as NewLogLevel,
     LogPublisher as NewPublisher,
-    globalLogPublisher as newGlobalLogPublisher,
+    STDLibLogObserver as NewSTDLibLogObserver,
     globalLogBeginner as newGlobalLogBeginner,
+    globalLogPublisher as newGlobalLogPublisher,
 )
-
 from twisted.logger._global import LogBeginner
 from twisted.logger._legacy import publishToNewObserver as _publishNew
-
+from twisted.python import context, failure, reflect, util
+from twisted.python.threadable import synchronize
 
 EventDict = Dict[str, Any]
 

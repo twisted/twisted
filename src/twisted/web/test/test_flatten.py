@@ -6,16 +6,16 @@ Tests for the flattening portion of L{twisted.web.template}, implemented in
 L{twisted.web._flatten}.
 """
 
-import sys
 import re
+import sys
 import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
 from typing import Callable, Dict, List, NoReturn, Optional, cast
-
-from twisted.test.testutils import XMLAssertionMixin
 from xml.etree.ElementTree import XML
+
+from zope.interface import implementer
 
 from twisted.internet.defer import (
     CancelledError,
@@ -25,12 +25,9 @@ from twisted.internet.defer import (
     succeed,
 )
 from twisted.python.failure import Failure
+from twisted.test.testutils import XMLAssertionMixin
 from twisted.trial.unittest import SynchronousTestCase
-from twisted.web.error import (
-    FlattenerError,
-    UnfilledSlot,
-    UnsupportedType,
-)
+from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
 from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
 from twisted.web.template import (
     CDATA,
@@ -46,7 +43,6 @@ from twisted.web.template import (
     tags,
 )
 from twisted.web.test._util import FlattenTestCase
-from zope.interface import implementer
 
 
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):

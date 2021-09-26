@@ -7,14 +7,13 @@ Test cases for L{twisted.logger._filter}.
 
 from typing import Iterable, List, Tuple, Union, cast
 
-from constantly import NamedConstant  # type: ignore[import]
-
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.trial import unittest
 from .._filter import (
     FilteringLogObserver,
     ILogFilterPredicate,

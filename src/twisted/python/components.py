@@ -34,12 +34,11 @@ from io import StringIO
 from typing import Dict
 
 # zope3 imports
-from zope.interface import interface, declarations
+from zope.interface import declarations, interface
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
 from twisted.python import reflect
-
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()

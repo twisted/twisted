@@ -10,12 +10,11 @@ Test methods in twisted.internet.threads and reactor thread APIs.
 import os
 import sys
 import time
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase
 
-from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import failure, threadable, log, threadpool
+from twisted.internet import defer, error, interfaces, protocol, reactor, threads
+from twisted.python import failure, log, threadable, threadpool
+from twisted.trial.unittest import TestCase
 
 try:
     import threading

@@ -8,23 +8,28 @@ Tests for L{twisted.protocols.tls}.
 
 import gc
 
-from zope.interface.verify import verifyObject
 from zope.interface import Interface, directlyProvides, implementer
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import iterbytes
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
-    from twisted.protocols.tls import _PullToPush, _ProducerMembrane
     from OpenSSL import crypto
     from OpenSSL.SSL import (
-        TLSv1_METHOD,
+        Connection,
+        Context,
+        Error,
         TLSv1_1_METHOD,
         TLSv1_2_METHOD,
-        Error,
-        Context,
-        Connection,
+        TLSv1_METHOD,
         WantReadError,
+    )
+
+    from twisted.protocols.tls import (
+        TLSMemoryBIOFactory,
+        TLSMemoryBIOProtocol,
+        _ProducerMembrane,
+        _PullToPush,
     )
 except ImportError:
     # Skip the whole test module if it can't be imported.
@@ -35,35 +40,27 @@ else:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext, certPath
     from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 
-from twisted.test.iosim import connectedServerAndClient
-
-from twisted.python.filepath import FilePath
-from twisted.python.failure import Failure
-from twisted.python import log
-
-from twisted.internet.interfaces import (
-    ISystemHandle,
-    ISSLTransport,
-    IPushProducer,
-    IProtocolNegotiationFactory,
-    IHandshakeListener,
-    IOpenSSLServerConnectionCreator,
-    IOpenSSLClientConnectionCreator,
-)
-
-from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.protocol import (
-    ClientFactory,
-    Factory,
-    Protocol,
-    ServerFactory,
+from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.interfaces import (
+    IHandshakeListener,
+    IOpenSSLClientConnectionCreator,
+    IOpenSSLServerConnectionCreator,
+    IProtocolNegotiationFactory,
+    IPushProducer,
+    ISSLTransport,
+    ISystemHandle,
 )
+from twisted.internet.protocol import ClientFactory, Factory, Protocol, ServerFactory
 from twisted.internet.task import TaskStopped
-from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
-from twisted.trial.unittest import TestCase, SynchronousTestCase
+from twisted.protocols.loopback import collapsingPumpPolicy, loopbackAsync
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
+from twisted.test.iosim import connectedServerAndClient
+from twisted.test.proto_helpers import NonStreamingProducer, StringTransport
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
-from twisted.test.proto_helpers import StringTransport, NonStreamingProducer
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class HandshakeCallbackContextFactory:

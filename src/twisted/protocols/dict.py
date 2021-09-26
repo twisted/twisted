@@ -8,10 +8,11 @@ Dict client protocol implementation.
 @author: Pavel Pergamenshchik
 """
 
-from twisted.protocols import basic
-from twisted.internet import defer, protocol
-from twisted.python import log
 from io import BytesIO
+
+from twisted.internet import defer, protocol
+from twisted.protocols import basic
+from twisted.python import log
 
 
 def parseParam(line):

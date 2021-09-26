@@ -6,21 +6,20 @@ Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase
-from twisted.python.filepath import FilePath
 from twisted.internet.defer import gatherResults
-
 from twisted.names.dns import (
-    A,
     AAAA,
     IN,
+    A,
     DomainError,
-    RRHeader,
     Query,
     Record_A,
     Record_AAAA,
+    RRHeader,
 )
 from twisted.names.hosts import Resolver, searchFileFor, searchFileForAll
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class GoodTempPathMixin:
