@@ -26,13 +26,14 @@ raindrops at random locations on the client's terminal.  +, -, *, and
 animation process.
 """
 
-import random, string
+import random
+import string
 
 from twisted.application import internet, service
 from twisted.conch.insults import insults
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol, task
 from twisted.python import log

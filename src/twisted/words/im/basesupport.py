@@ -9,15 +9,12 @@ You will find these useful if you're adding a new protocol to IM.
 """
 from typing import Type
 
-from twisted.words.im.locals import OFFLINE, OfflineError
-
-from twisted.internet.protocol import connectionDone, Protocol
+from twisted.internet import error
+from twisted.internet.protocol import Protocol, connectionDone
+from twisted.persisted import styles
 from twisted.python.failure import Failure
 from twisted.python.reflect import prefixedMethods
-from twisted.persisted import styles
-
-from twisted.internet import error
-
+from twisted.words.im.locals import OFFLINE, OfflineError
 
 # Abstract representation of chat "model" classes
 

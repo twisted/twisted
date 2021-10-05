@@ -7,13 +7,12 @@ Tests for L{twisted.internet.task}.
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
-from twisted.internet import interfaces, task, reactor, error
+from twisted.internet import error, interfaces, reactor, task
 from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.main import installReactor
 from twisted.internet.task import Clock
 from twisted.internet.test.modulehelpers import NoReactor
 from twisted.python.failure import DefaultException
-
 from twisted.trial import unittest
 
 

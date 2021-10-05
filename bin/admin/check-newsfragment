@@ -8,6 +8,7 @@ Check that the current commits since branching have a topfile.
 
 
 import sys
+
 from twisted.python._release import CheckNewsfragmentScript
 
 CheckNewsfragmentScript(print).main(sys.argv[1:])

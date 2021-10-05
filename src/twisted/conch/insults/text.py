@@ -62,7 +62,6 @@ from twisted.conch.insults import helper, insults
 from twisted.python import _textattributes
 from twisted.python.deprecate import deprecatedModuleAttribute
 
-
 flatten = _textattributes.flatten
 
 deprecatedModuleAttribute(

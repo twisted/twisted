@@ -12,23 +12,18 @@ from io import BytesIO
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import reflect, failure
-from twisted.python.filepath import FilePath
-from twisted.trial import unittest
-from twisted.internet import reactor, interfaces
+from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
-from twisted.web import server, resource
-from twisted.web import iweb, http, error
-
-from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from twisted.web.static import Data
-from twisted.logger import globalLogPublisher, LogLevel
+from twisted.logger import LogLevel, globalLogPublisher
+from twisted.python import failure, reflect
+from twisted.python.filepath import FilePath
 from twisted.test.proto_helpers import EventLoggingObserver
-
-from ._util import (
-    assertIsFilesystemTemporary,
-)
+from twisted.trial import unittest
+from twisted.web import error, http, iweb, resource, server
+from twisted.web.static import Data
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from ._util import assertIsFilesystemTemporary
 
 
 class ResourceTests(unittest.TestCase):
@@ -214,17 +209,29 @@ class SessionTests(unittest.TestCase):
         """
         self.clock = Clock()
         self.uid = b"unique"
-        self.site = server.Site(resource.Resource())
-        self.session = server.Session(self.site, self.uid, self.clock)
+        self.site = server.Site(resource.Resource(), reactor=self.clock)
+        self.session = server.Session(self.site, self.uid)
         self.site.sessions[self.uid] = self.session
 
     def test_defaultReactor(self):
         """
-        If not value is passed to L{server.Session.__init__}, the global
-        reactor is used.
+        If no value is passed to L{server.Session.__init__}, the reactor
+        associated with the site is used.
         """
-        session = server.Session(server.Site(resource.Resource()), b"123")
-        self.assertIdentical(session._reactor, reactor)
+        site = server.Site(resource.Resource(), reactor=Clock())
+        session = server.Session(site, b"123")
+        self.assertIdentical(session._reactor, site.reactor)
+
+    def test_explicitReactor(self):
+        """
+        L{Session} accepts the reactor to use as a parameter.
+        """
+        site = server.Site(resource.Resource())
+        otherReactor = Clock()
+
+        session = server.Session(site, b"123", reactor=otherReactor)
+
+        self.assertIdentical(session._reactor, otherReactor)
 
     def test_startCheckingExpiration(self):
         """
@@ -761,7 +768,7 @@ class RequestTests(unittest.TestCase):
         request = server.Request(d, 1)
         request.site = site
         request.sitepath = []
-        mySession = server.Session(b"special-id", site)
+        mySession = server.Session(site, b"special-id")
         site.sessions[mySession.uid] = mySession
         request.received_cookies[b"TWISTED_SESSION"] = mySession.uid
         self.assertIs(request.getSession(), mySession)
@@ -1231,7 +1238,7 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 405)
         self.assertTrue(req.responseHeaders.hasHeader(b"allow"))
         raw_header = req.responseHeaders.getRawHeaders(b"allow")[0]
-        allowed = sorted([h.strip() for h in raw_header.split(b",")])
+        allowed = sorted(h.strip() for h in raw_header.split(b","))
         self.assertEqual([b"GET", b"HEAD", b"HEH"], allowed)
 
     def testImplicitHead(self):
@@ -1827,11 +1834,11 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
     def test_explicitReactor(self):
         """
         L{http.HTTPFactory.__init__} accepts a reactor argument which is set on
-        L{http.HTTPFactory._reactor}.
+        L{http.HTTPFactory.reactor}.
         """
         reactor = "I am a reactor!"
         factory = http.HTTPFactory(reactor=reactor)
-        self.assertIs(factory._reactor, reactor)
+        self.assertIs(factory.reactor, reactor)
 
     def test_defaultReactor(self):
         """
@@ -1841,4 +1848,4 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
         from twisted.internet import reactor
 
         factory = http.HTTPFactory()
-        self.assertIs(factory._reactor, reactor)
+        self.assertIs(factory.reactor, reactor)

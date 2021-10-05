@@ -7,17 +7,16 @@ Test cases for L{twisted.logger._logger}.
 
 from typing import List, Optional, Type, cast
 
-from constantly import NamedConstant  # type: ignore[import]
-
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.trial import unittest
+from .._format import formatEvent
+from .._global import globalLogPublisher
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import InvalidLogLevelError, LogLevel
-from .._format import formatEvent
 from .._logger import Logger
-from .._global import globalLogPublisher
 
 
 class TestLogger(Logger):
@@ -71,7 +70,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
+        self.assertEqual(repr(log), f"<Logger {repr(namespace)}>")
 
     def test_namespaceDefault(self) -> None:
         """

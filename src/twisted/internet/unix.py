@@ -12,21 +12,20 @@ Maintainer: Itamar Shtull-Trauring
 
 
 import os
-import stat
 import socket
+import stat
 import struct
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
+from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
 from typing import Optional, Type
-from zope.interface import implementer, implementer_only, implementedBy
 
-from twisted.internet import main, base, tcp, udp, error, interfaces
-from twisted.internet import protocol, address
+from zope.interface import implementedBy, implementer, implementer_only
+
+from twisted.internet import address, base, error, interfaces, main, protocol, tcp, udp
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import lockfile, log, reflect, failure
+from twisted.python import failure, lockfile, log, reflect
+from twisted.python.compat import lazyByteSlice
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
-from twisted.python.compat import lazyByteSlice
-
 
 try:
     from twisted.python import sendmsg as _sendmsg
@@ -508,7 +507,7 @@ class DatagramPort(_UNIXPort, udp.Port):
             return f"<{protocolName} (not listening)>"
 
     def _bindSocket(self):
-        log.msg("{} starting on {}".format(self.protocol.__class__, repr(self.port)))
+        log.msg(f"{self.protocol.__class__} starting on {repr(self.port)}")
         try:
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:

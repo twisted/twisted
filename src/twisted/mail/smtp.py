@@ -9,51 +9,35 @@ Simple Mail Transfer Protocol implementation.
 """
 
 
-import time
-import re
 import base64
-import socket
+import binascii
 import os
 import random
-import binascii
+import re
+import socket
+import time
 import warnings
-from typing import Type
-
 from email.utils import parseaddr
+from io import BytesIO
+from typing import Type
 
 from zope.interface import implementer
 
 from twisted import cred
 from twisted.copyright import longversion
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import reactor
-from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet import defer, error, protocol, reactor
 from twisted.internet._idna import _idnaText
-from twisted.python import log
-from twisted.python import util
-from twisted.python.compat import networkString, nativeString, iterbytes
-from twisted.python.runtime import platform
-
-from twisted.mail.interfaces import (
-    IClientAuthentication,
-    IMessageSMTP as IMessage,
-    IMessageDeliveryFactory,
-    IMessageDelivery,
-)
+from twisted.internet.interfaces import ISSLTransport, ITLSTransport
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
     LOGINAuthenticator,
     LOGINCredentials as _lcredentials,
 )
 from twisted.mail._except import (
-    AUTHDeclinedError,
-    AUTHRequiredError,
     AddressError,
+    AUTHDeclinedError,
     AuthenticationError,
+    AUTHRequiredError,
     EHLORequiredError,
     ESMTPClientError,
     SMTPAddressError,
@@ -63,16 +47,22 @@ from twisted.mail._except import (
     SMTPConnectError,
     SMTPDeliveryError,
     SMTPError,
+    SMTPProtocolError,
     SMTPServerError,
     SMTPTimeoutError,
     SMTPTLSError as TLSError,
     TLSRequiredError,
-    SMTPProtocolError,
 )
-
-
-from io import BytesIO
-
+from twisted.mail.interfaces import (
+    IClientAuthentication,
+    IMessageDelivery,
+    IMessageDeliveryFactory,
+    IMessageSMTP as IMessage,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log, util
+from twisted.python.compat import iterbytes, nativeString, networkString
+from twisted.python.runtime import platform
 
 __all__ = [
     "AUTHDeclinedError",
@@ -320,9 +310,7 @@ class Address:
                     # Now in domain
                     domain = [b""]
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] != b".":
-                raise AddressError(
-                    "Parse error at {!r} of {!r}".format(atl[0], (addr, atl))
-                )
+                raise AddressError(f"Parse error at {atl[0]!r} of {(addr, atl)!r}")
             else:
                 if not domain:
                     local.append(atl[0])

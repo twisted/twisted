@@ -14,14 +14,12 @@ import time
 from pprint import pformat
 from unittest import skipIf
 
-from twisted.python.win32 import ERROR_DIRECTORY
-from twisted.python import filepath
-from twisted.python.runtime import platform
-
-from twisted.trial.unittest import SynchronousTestCase as TestCase
-
 from zope.interface.verify import verifyObject
 
+from twisted.python import filepath
+from twisted.python.runtime import platform
+from twisted.python.win32 import ERROR_DIRECTORY
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 symlinkSkip = not platform._supportsSymlinks()
 
@@ -503,7 +501,7 @@ class PermissionsTests(BytesTestCase):
                 return (statModeInt & getattr(stat, f"S_I{what}{who}")) > 0
 
             return filepath.RWX(
-                *[getPermissionBit(what, who) for what in ("R", "W", "X")]
+                *(getPermissionBit(what, who) for what in ("R", "W", "X"))
             )
 
         for u in range(0, 8):

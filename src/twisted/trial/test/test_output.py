@@ -13,7 +13,6 @@ from twisted.scripts import trial
 from twisted.trial import runner
 from twisted.trial.test import packages
 
-
 _noModuleError = "No module named 'frotz'"
 
 

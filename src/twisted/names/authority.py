@@ -10,8 +10,8 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns, error, common
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
 from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
@@ -434,7 +434,7 @@ class BindAuthority(FileAuthority):
         @param rdata:
         @type rdata: bytes
         """
-        record = getattr(dns, "Record_{}".format(nativeString(type)), None)
+        record = getattr(dns, f"Record_{nativeString(type)}", None)
         if record:
             r = record(*rdata)
             r.ttl = ttl
@@ -444,7 +444,7 @@ class BindAuthority(FileAuthority):
                 self.soa = (domain, r)
         else:
             raise NotImplementedError(
-                "Record type {!r} not supported".format(nativeString(type))
+                f"Record type {nativeString(type)!r} not supported"
             )
 
     def parseRecordLine(self, origin, ttl, line):

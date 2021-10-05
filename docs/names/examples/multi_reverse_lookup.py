@@ -11,8 +11,8 @@ Lookup the reverse DNS pointer records for one or more IP addresses.
 
 IPADDRESS: An IPv4 or IPv6 address.
 """
-import sys
 import socket
+import sys
 
 from twisted.internet import defer, task
 from twisted.names import client
@@ -40,7 +40,7 @@ def reverseNameFromIPv6Address(address):
     """
     # Expand addresses that are in compressed format eg ::1
     fullHex = "".join(
-        "{:02x}".format(ord(c)) for c in socket.inet_pton(socket.AF_INET6, address)
+        f"{ord(c):02x}" for c in socket.inet_pton(socket.AF_INET6, address)
     )
     tokens = list(reversed(fullHex)) + ["ip6", "arpa", ""]
     return ".".join(tokens)
@@ -76,7 +76,7 @@ def printSummary(results):
     """
     statuses = zip(*results)[0]
     sys.stdout.write(
-        "{} responses to {} queries".format(statuses.count(True), len(statuses)) + "\n"
+        f"{statuses.count(True)} responses to {len(statuses)} queries" + "\n"
     )
 
 

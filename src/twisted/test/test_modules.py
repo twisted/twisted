@@ -7,21 +7,19 @@ objects.
 """
 
 
-import sys
-import itertools
 import compileall
+import itertools
+import sys
 import zipfile
 
 import twisted
-
 from twisted.python import modules
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-
-from twisted.trial.unittest import TestCase
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.python.test.test_zippath import zipit
+from twisted.trial.unittest import TestCase
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
@@ -326,7 +324,7 @@ class PathModificationTests(TwistedModulesTestCase):
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            networkString("__path__.append({})\n".format(repr(moddir2)))
+            networkString(f"__path__.append({repr(moddir2)})\n")
         )
         # Cut here
         self._setupSysPath()

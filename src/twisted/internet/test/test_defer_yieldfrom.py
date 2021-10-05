@@ -9,8 +9,8 @@ Tests for C{yield from} support in Deferreds.
 import types
 
 from twisted.internet.defer import Deferred, ensureDeferred, fail, succeed
-from twisted.trial.unittest import TestCase
 from twisted.internet.task import Clock
+from twisted.trial.unittest import TestCase
 
 
 class YieldFromTests(TestCase):

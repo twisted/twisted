@@ -11,13 +11,13 @@ import errno
 import os
 import signal
 
-from twisted.python.runtime import platformType
 from twisted.python.log import msg
+from twisted.python.runtime import platformType
 from twisted.trial.unittest import SynchronousTestCase
 
 if platformType == "posix":
-    from twisted.internet.fdesc import setNonBlocking
     from twisted.internet._signals import installHandler, isDefaultHandler
+    from twisted.internet.fdesc import setNonBlocking
 else:
     skip = "These tests can only run on POSIX platforms."
 

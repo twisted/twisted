@@ -5,9 +5,9 @@
 Tests for L{twisted.protocols.finger}.
 """
 
-from twisted.trial import unittest
 from twisted.protocols import finger
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 class FingerTests(unittest.TestCase):

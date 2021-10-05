@@ -8,23 +8,21 @@ asyncio-based reactor implementation.
 
 
 import errno
-
+import sys
+from asyncio import AbstractEventLoop, get_event_loop
 from typing import Dict, Optional, Type
 
 from zope.interface import implementer
 
-from twisted.logger import Logger
-from twisted.internet.posixbase import (
-    PosixReactorBase,
-    _NO_FILEDESC,
-    _ContinuousPolling,
-)
-from twisted.python.log import callWithLogger
-from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
-
-from asyncio import get_event_loop, AbstractEventLoop, SelectorEventLoop
+from twisted.internet.posixbase import (
+    _NO_FILEDESC,
+    PosixReactorBase,
+    _ContinuousPolling,
+)
+from twisted.logger import Logger
+from twisted.python.log import callWithLogger
 
 
 @implementer(IReactorFDSet)
@@ -47,7 +45,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
     _asyncClosed = False
     _log = Logger()
 
-    def __init__(self, eventloop: Optional[SelectorEventLoop] = None):
+    def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
             _eventloop: AbstractEventLoop = get_event_loop()
         else:
@@ -56,10 +54,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
         # On Python 3.8+, asyncio.get_event_loop() on
         # Windows was changed to return a ProactorEventLoop
         # unless the loop policy has been changed.
-        if not isinstance(_eventloop, SelectorEventLoop):
-            raise TypeError(f"SelectorEventLoop required, instead got: {_eventloop}")
+        if sys.platform == "win32":
+            from asyncio import ProactorEventLoop
 
-        self._asyncioEventloop: SelectorEventLoop = _eventloop
+            if isinstance(_eventloop, ProactorEventLoop):
+                raise TypeError(
+                    f"ProactorEventLoop is not supported, got: {_eventloop}"
+                )
+
+        self._asyncioEventloop: AbstractEventLoop = _eventloop
         self._writers: Dict[Type[FileDescriptor], int] = {}
         self._readers: Dict[Type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
@@ -262,8 +265,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def crash(self):
         super().crash()
         self._asyncioEventloop.stop()
-
-    seconds = staticmethod(runtimeSeconds)
 
     def _onTimer(self):
         self._scheduledAt = None

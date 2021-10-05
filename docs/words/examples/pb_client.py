@@ -19,11 +19,12 @@ To run the script:
 
 
 import sys
-from twisted.python import log
+
 from twisted.cred import credentials
-from twisted.words import service
-from twisted.spread import pb
 from twisted.internet import reactor
+from twisted.python import log
+from twisted.spread import pb
+from twisted.words import service
 
 
 class DemoMind(service.PBMind):
@@ -96,9 +97,7 @@ def main():
     Set up logging, have the real main function run, and start the reactor.
     """
     if len(sys.argv) != 6:
-        raise SystemExit(
-            "Usage: {} host port username password group".format(sys.argv[0])
-        )
+        raise SystemExit(f"Usage: {sys.argv[0]} host port username password group")
     log.startLogging(sys.stdout)
 
     host, port, username, password, group = sys.argv[1:]

@@ -12,27 +12,26 @@ import socket
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import context
-from twisted.python.log import ILogContext, err
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet import defer, error
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext,
     IListeningPort,
-    IReactorUDP,
+    ILoggingContext,
     IReactorSocket,
+    IReactorUDP,
 )
-from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
-
 from twisted.internet.test.connectionmixins import LogObserverMixin, findFreePort
-from twisted.internet import defer, error
-from twisted.test.test_udp import Server, GoodClient
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python import context
+from twisted.python.log import ILogContext, err
+from twisted.test.test_udp import GoodClient, Server
 from twisted.trial.unittest import SkipTest
 
 
 def _has_ipv6():
-    """ Returns True if the system can bind an IPv6 address."""
+    """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
 

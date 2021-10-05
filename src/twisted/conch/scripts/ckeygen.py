@@ -13,9 +13,9 @@ import socket
 import sys
 from functools import wraps
 from imp import reload
+
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-
 
 if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
     try:

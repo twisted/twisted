@@ -16,19 +16,20 @@ else:
     pwd = _pwd
 
 from unittest import skipIf
+
 from zope.interface.verify import verifyObject
 
-from twisted.python import filepath, failure
-from twisted.internet import reactor, defer
-from twisted.trial.unittest import TestCase
+from twisted.internet import defer, reactor
+from twisted.logger import globalLogPublisher
+from twisted.python import failure, filepath
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest, DummyChannel
-from twisted.web.test._util import _render
 from twisted.test import proto_helpers
+from twisted.trial.unittest import TestCase
+from twisted.web import client, distrib, resource, server, static
 from twisted.web.http_headers import Headers
-from twisted.logger import globalLogPublisher
+from twisted.web.test._util import _render
+from twisted.web.test.test_web import DummyChannel, DummyRequest
 
 
 class MySite(server.Site):

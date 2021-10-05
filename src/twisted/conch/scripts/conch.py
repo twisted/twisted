@@ -9,23 +9,22 @@
 # Implementation module for the `conch` command.
 #
 
+import fcntl
+import getpass
+import os
+import signal
+import struct
+import sys
+import tty
+from typing import List, Tuple
+
 from twisted.conch.client import connect, default
 from twisted.conch.client.options import ConchOptions
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import session, forwarding, channel
+from twisted.conch.ssh import channel, common, connection, forwarding, session
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
 from twisted.python.compat import ioType, networkString
-
-import os
-import sys
-import getpass
-import struct
-import tty
-import fcntl
-import signal
-from typing import List, Tuple
 
 
 class ClientOptions(ConchOptions):
@@ -470,7 +469,7 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
-            log.msg("got {} stderr data".format(len(data)))
+            log.msg(f"got {len(data)} stderr data")
             if ioType(sys.stderr) == str:
                 sys.stderr.buffer.write(data)
             else:

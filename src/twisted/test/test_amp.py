@@ -9,18 +9,19 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-from unittest import skipIf
 from typing import Dict, Type
+from unittest import skipIf
+
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
+from twisted.internet import address, defer, error, interfaces, protocol, reactor
+from twisted.protocols import amp
 from twisted.python import filepath
 from twisted.python.failure import Failure
-from twisted.protocols import amp
-from twisted.trial.unittest import TestCase
-from twisted.internet import address, protocol, defer, error, reactor, interfaces
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet import ssl as _ssl
@@ -1392,7 +1393,7 @@ class AMPTests(TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEqual(repr(a), "<AMP at 0x{:x}>".format(id(a)))
+        self.assertEqual(repr(a), f"<AMP at 0x{id(a):x}>")
 
     @skipIf(skipSSL, "SSL not available")
     def test_simpleSSLRepr(self):

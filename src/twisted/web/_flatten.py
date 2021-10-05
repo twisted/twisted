@@ -8,9 +8,10 @@ complex or arbitrarily nested, as strings.
 """
 
 
+from inspect import iscoroutine
 from io import BytesIO
-
 from sys import exc_info
+from traceback import extract_tb
 from types import GeneratorType
 from typing import (
     Any,
@@ -26,17 +27,13 @@ from typing import (
     Union,
     cast,
 )
-from traceback import extract_tb
-from inspect import iscoroutine
-
-from twisted.python.compat import nativeString
 
 from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
-from twisted.web._stan import Tag, slot, voidElements, Comment, CDATA, CharRef
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
+from twisted.web._stan import CDATA, CharRef, Comment, Tag, slot, voidElements
+from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
 from twisted.web.iweb import IRenderable, IRequest
-
 
 T = TypeVar("T")
 

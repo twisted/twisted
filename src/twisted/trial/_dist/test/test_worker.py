@@ -11,27 +11,25 @@ from io import BytesIO, StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.trial.reporter import TestResult
-from twisted.trial.unittest import TestCase
+from twisted.internet.defer import fail, succeed
+from twisted.internet.error import ConnectionDone
+from twisted.internet.interfaces import IAddress, ITransport
+from twisted.internet.main import CONNECTION_DONE
+from twisted.protocols.amp import AMP
+from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import fullyQualifiedName
+from twisted.scripts import trial
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial._dist import managercommands, workercommands
 from twisted.trial._dist.worker import (
     LocalWorker,
     LocalWorkerAMP,
     LocalWorkerTransport,
     WorkerProtocol,
 )
-from twisted.trial._dist import managercommands, workercommands
-
-from twisted.scripts import trial
-from twisted.test.proto_helpers import StringTransport
-
-from twisted.internet.interfaces import ITransport, IAddress
-from twisted.internet.defer import fail, succeed
-from twisted.internet.main import CONNECTION_DONE
-from twisted.internet.error import ConnectionDone
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.failure import Failure
-from twisted.protocols.amp import AMP
+from twisted.trial.reporter import TestResult
+from twisted.trial.unittest import TestCase
 
 
 class FakeAMP(AMP):

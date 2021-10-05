@@ -6,34 +6,32 @@
 Tests for L{twisted.conch.scripts.cftp}.
 """
 
-import locale
 import getpass
+import locale
 import operator
 import os
 import struct
 import sys
 import time
-from unittest import skipIf
 from io import BytesIO
+from unittest import skipIf
 
-from twisted.python.filepath import FilePath
-from twisted.python.procutils import which
-from twisted.python.reflect import requireModule
 from zope.interface import implementer
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
-from twisted.conch.test.test_filetransfer import SFTPTestBase
-from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer, error
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.internet.task import Clock
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import StringTransport
-from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
-
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
@@ -44,9 +42,9 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test import test_conch, test_ssh
         from twisted.conch.test.test_conch import FakeStdio
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError:
         pass
 
@@ -608,7 +606,7 @@ class StdioClientTests(TestCase):
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
                 line = line.strip().split(" ", 1)
-                actualTransfer.append("{} {}".format(line[0], line[1].strip()))
+                actualTransfer.append(f"{line[0]} {line[1].strip()}")
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 

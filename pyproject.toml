@@ -34,6 +34,10 @@ build-backend = "setuptools.build_meta"
         path = "names"
         name = "Names"
 
+    [[tool.towncrier.section]]
+        path = "trial"
+        name = "Trial"
+
     [[tool.towncrier.type]]
         directory = "feature"
         name = "Features"
@@ -63,14 +67,12 @@ build-backend = "setuptools.build_meta"
 target-version = ['py36', 'py37', 'py38']
 
 [tool.isort]
-line_length = 88
+profile = "black"
 sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
 default_section = "THIRDPARTY"
 no_lines_before = "LOCALFOLDER"
 known_first_party = "twisted"
 known_zope = "zope"
 known_openssl = "OpenSSL"
-multi_line_output = 3
-include_trailing_comma = true
 combine_as_imports = true
 skip = "src/twisted/logger/__init__.py,src/twisted/internet/reactor.py"

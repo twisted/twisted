@@ -108,27 +108,28 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
+from typing import Callable
 from urllib.parse import (
     ParseResultBytes,
-    urlparse as _urlparse,
     unquote_to_bytes as unquote,
+    urlparse as _urlparse,
 )
-from typing import Callable
 
 from zope.interface import Attribute, Interface, implementer, provider
 
 from incremental import Version
-from twisted.logger import Logger
+
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
+from twisted.logger import Logger
+from twisted.protocols import basic, policies
+from twisted.python import log
 from twisted.python.compat import _PY37PLUS, nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python import log
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
-from twisted.protocols import basic, policies
 
 # twisted imports
 from twisted.web._responses import (
@@ -160,12 +161,12 @@ from twisted.web._responses import (
     OK,
     PARTIAL_CONTENT,
     PAYMENT_REQUIRED,
+    PERMANENT_REDIRECT,
     PRECONDITION_FAILED,
     PROXY_AUTH_REQUIRED,
     REQUEST_ENTITY_TOO_LARGE,
     REQUEST_TIMEOUT,
     REQUEST_URI_TOO_LONG,
-    PERMANENT_REDIRECT,
     REQUESTED_RANGE_NOT_SATISFIABLE,
     RESET_CONTENT,
     RESPONSES,
@@ -179,7 +180,6 @@ from twisted.web._responses import (
 )
 from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
-
 
 try:
     from twisted.web._http2 import H2Connection
@@ -407,7 +407,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString("{:x}".format(len(data))), b"\r\n", data, b"\r\n")
+    return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
 def fromChunk(data):
@@ -3099,8 +3099,8 @@ class HTTPFactory(protocol.ServerFactory):
         support writing to L{twisted.python.log} which, unfortunately, works
         with native strings.
 
-    @ivar _reactor: An L{IReactorTime} provider used to compute logging
-        timestamps.
+    @ivar reactor: An L{IReactorTime} provider used to manage connection
+        timeouts and compute logging timestamps.
     """
 
     # We need to ignore the mypy error here, because
@@ -3130,12 +3130,13 @@ class HTTPFactory(protocol.ServerFactory):
             the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to manage connection
-            timeouts and compute logging timestamps.
+        @param reactor: An L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps. Defaults to the global
+            reactor.
         """
         if not reactor:
             from twisted.internet import reactor
-        self._reactor = reactor
+        self.reactor = reactor
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3153,8 +3154,8 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString(self._reactor.seconds())
-        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
+        self._logDateTime = datetimeToLogString(self.reactor.seconds())
+        self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -3164,7 +3165,7 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self._reactor.callLater
+        p.callLater = self.reactor.callLater
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there

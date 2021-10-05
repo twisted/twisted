@@ -1,8 +1,7 @@
 #!/usr/bin/python2.2
 # Moshe -- This seems like 30+ minutes to me!
-from slides import NumSlide, Slide, Bullet, SubBullet, PRE, URL
+from slides import PRE, URL, Bullet, NumSlide, Slide, SubBullet
 from twslides import Lecture
-
 
 lecture = Lecture(
     "Managing the Release of a Large Python Project",

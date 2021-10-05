@@ -7,7 +7,7 @@ related functionality.
 """
 
 
-from twisted.internet import reactor, defer, task
+from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
 
 

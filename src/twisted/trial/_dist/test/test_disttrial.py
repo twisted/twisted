@@ -9,27 +9,27 @@ import os
 import sys
 from io import StringIO
 
-from twisted.internet.protocol import Protocol, ProcessProtocol
+from zope.interface import implementer, verify
+
+from twisted.internet import error, interfaces, reactor
 from twisted.internet.defer import fail, gatherResults, maybeDeferred, succeed
-from twisted.internet.task import Cooperator, deferLater
 from twisted.internet.main import CONNECTION_DONE
-from twisted.internet import reactor, interfaces, error
+from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.task import Cooperator, deferLater
 from twisted.python.failure import Failure
 from twisted.python.lockfile import FilesystemLock
-
-from twisted.test.test_cooperator import FakeScheduler
 from twisted.test.proto_helpers import MemoryReactorClock
-
-from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.trial.reporter import Reporter, TreeReporter
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
-from twisted.trial.runner import TrialSuite, ErrorHolder
-
-from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.test.test_cooperator import FakeScheduler
 from twisted.trial._dist.distreporter import DistReporter
+from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.trial._dist.worker import LocalWorker
-
-from zope.interface import implementer, verify
+from twisted.trial.reporter import (
+    Reporter,
+    TreeReporter,
+    UncleanWarningsReporterWrapper,
+)
+from twisted.trial.runner import ErrorHolder, TrialSuite
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class FakeTransport:

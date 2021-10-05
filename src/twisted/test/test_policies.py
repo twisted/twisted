@@ -6,19 +6,15 @@ Test code for policies.
 """
 
 
+import builtins
 from io import StringIO
 
-from zope.interface import Interface, implementer, implementedBy
+from zope.interface import Interface, implementedBy, implementer
 
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
-
-from twisted.internet import protocol, reactor, address, defer, task
+from twisted.internet import address, defer, protocol, reactor, task
 from twisted.protocols import policies
-
-
-import builtins
+from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
+from twisted.trial import unittest
 
 
 class SimpleProtocol(protocol.Protocol):
@@ -360,7 +356,7 @@ class ThrottlingTests(unittest.TestCase):
         This is a flaky test.
         """
         server = Server()
-        c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
+        c1, c2, c3, c4 = (SimpleProtocol() for i in range(4))
         tServer = policies.ThrottlingFactory(server, 2)
         wrapTServer = WrappingFactory(tServer)
         wrapTServer.deferred = defer.Deferred()

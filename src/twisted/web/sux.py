@@ -24,7 +24,6 @@ does not:
 from twisted.internet.protocol import Protocol
 from twisted.python.reflect import prefixedMethodNames
 
-
 # Elements of the three-tuples in the state table.
 BEGIN_HANDLER = 0
 DO_HANDLER = 1
@@ -49,8 +48,8 @@ def unionlist(*args):
 def zipfndict(*args, **kw):
     default = kw.get("default", nop)
     d = {}
-    for key in unionlist(*[fndict.keys() for fndict in args]):
-        d[key] = tuple([x.get(key, default) for x in args])
+    for key in unionlist(*(fndict.keys() for fndict in args)):
+        d[key] = tuple(x.get(key, default) for x in args)
     return d
 
 
@@ -113,10 +112,10 @@ class XMLParser(Protocol):
         stateTable = getattr(self.__class__, "__stateTable", None)
         if stateTable is None:
             stateTable = self.__class__.__stateTable = zipfndict(
-                *[
+                *(
                     prefixedMethodObjDict(self, prefix)
                     for prefix in ("begin_", "do_", "end_")
-                ]
+                )
             )
         return stateTable
 

@@ -9,16 +9,14 @@ Integration with Python standard library logging.
 import logging as stdlibLogging
 from typing import Mapping, Tuple
 
-from constantly import NamedConstant  # type: ignore[import]
-
 from zope.interface import implementer
 
-from twisted.python.compat import currentframe
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.python.compat import currentframe
+from ._format import formatEvent
 from ._interfaces import ILogObserver, LogEvent
 from ._levels import LogLevel
-from ._format import formatEvent
-
 
 # Mappings to Python's logging module
 toStdlibLogLevelMapping: Mapping[NamedConstant, int] = {

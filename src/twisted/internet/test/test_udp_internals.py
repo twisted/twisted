@@ -8,10 +8,10 @@ Tests for the internal implementation details of L{twisted.internet.udp}.
 
 import socket
 
-from twisted.trial import unittest
-from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp
+from twisted.internet.protocol import DatagramProtocol
 from twisted.python.runtime import platformType
+from twisted.trial import unittest
 
 if platformType == "win32":
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]

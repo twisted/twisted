@@ -6,15 +6,15 @@ Tests for L{twisted.python.threadpool}
 """
 
 
+import gc
 import pickle
+import threading
 import time
 import weakref
-import gc
-import threading
 
-from twisted.trial import unittest
-from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
+from twisted.python import context, failure, threadable, threadpool
+from twisted.trial import unittest
 
 
 class Synchronization:

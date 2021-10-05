@@ -6,23 +6,19 @@ Test cases for the L{twisted.python.failure} module.
 """
 
 
+import linecache
+import pdb
 import re
 import sys
 import traceback
-import pdb
-import linecache
-
 from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
 
-from twisted.python import reflect
-from twisted.python import failure
-
-from twisted.trial.unittest import SynchronousTestCase
-
-
 from cython_test_exception_raiser import raiser  # type: ignore[import]
+
+from twisted.python import failure, reflect
+from twisted.trial.unittest import SynchronousTestCase
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -300,7 +296,7 @@ class FailureTests(SynchronousTestCase):
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += f'  File "{filename}", line {lineno}, in {method}\n'
-            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,

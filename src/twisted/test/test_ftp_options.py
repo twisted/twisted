@@ -5,12 +5,11 @@
 Tests for L{twisted.tap.ftp}.
 """
 
-from twisted.trial.unittest import TestCase
-
 from twisted.cred import credentials, error
-from twisted.tap.ftp import Options
 from twisted.python import versions
 from twisted.python.filepath import FilePath
+from twisted.tap.ftp import Options
+from twisted.trial.unittest import TestCase
 
 
 class FTPOptionsTests(TestCase):

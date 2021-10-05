@@ -10,15 +10,15 @@ import os
 import weakref
 from collections import deque
 
-from twisted.trial.unittest import SynchronousTestCase as TestCase
 from twisted.python import reflect
 from twisted.python.reflect import (
     accumulateMethods,
-    prefixedMethods,
-    prefixedMethodNames,
     addMethodNamesToDict,
     fullyQualifiedName,
+    prefixedMethodNames,
+    prefixedMethods,
 )
+from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
 class Base:
@@ -448,7 +448,7 @@ class SafeReprTests(TestCase):
             breakRepr = True
 
         xRepr = reflect.safe_repr(X)
-        xReprExpected = "<BrokenType instance at 0x{:x} with repr error:".format(id(X))
+        xReprExpected = f"<BrokenType instance at 0x{id(X):x} with repr error:"
         self.assertEqual(xReprExpected, xRepr.split("\n")[0])
 
     def test_brokenClassStr(self):
