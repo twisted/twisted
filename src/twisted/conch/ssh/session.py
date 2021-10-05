@@ -10,23 +10,22 @@ Maintainer: Paul Swartz
 """
 
 
-import struct
-import signal
-import sys
 import os
+import signal
+import struct
+import sys
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces, protocol
-from twisted.logger import Logger
-from twisted.python.compat import networkString
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted,
     ISession,
     ISessionSetEnv,
 )
-from twisted.conch.ssh import common, channel, connection
-
+from twisted.conch.ssh import channel, common, connection
+from twisted.internet import interfaces, protocol
+from twisted.logger import Logger
+from twisted.python.compat import networkString
 
 log = Logger()
 

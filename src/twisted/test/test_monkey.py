@@ -6,8 +6,8 @@ Tests for L{twisted.python.monkey}.
 """
 
 
-from twisted.trial import unittest
 from twisted.python.monkey import MonkeyPatcher
+from twisted.trial import unittest
 
 
 class TestObj:

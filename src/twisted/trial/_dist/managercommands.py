@@ -7,7 +7,7 @@ Commands for reporting test success of failure to the manager.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Command, Boolean, ListOf, Unicode
+from twisted.protocols.amp import Boolean, Command, ListOf, Unicode
 
 NativeString = Unicode
 

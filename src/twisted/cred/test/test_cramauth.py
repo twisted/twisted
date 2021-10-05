@@ -7,13 +7,11 @@ Tests for L{twisted.cred}'s implementation of CRAM-MD5.
 
 
 import hashlib
-
-from hmac import HMAC
 from binascii import hexlify
+from hmac import HMAC
 
+from twisted.cred.credentials import CramMD5Credentials, IUsernameHashedPassword
 from twisted.trial.unittest import TestCase
-from twisted.cred.credentials import CramMD5Credentials
-from twisted.cred.credentials import IUsernameHashedPassword
 
 
 class CramMD5CredentialsTests(TestCase):

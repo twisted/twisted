@@ -9,16 +9,16 @@ Documented in RFC 2543.
 [Superseded by 3261]
 """
 
-from collections import OrderedDict
 import socket
 import time
-from typing import Dict, List
 import warnings
+from collections import OrderedDict
+from typing import Dict, List
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
 from twisted import cred
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import log
 

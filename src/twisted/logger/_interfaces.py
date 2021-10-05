@@ -5,7 +5,7 @@
 Logger interfaces.
 """
 
-from typing import Any, Dict, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 from zope.interface import Interface
 

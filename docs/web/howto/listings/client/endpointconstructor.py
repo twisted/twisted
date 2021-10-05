@@ -17,8 +17,8 @@ from zope.interface import implementer
 
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.internet.task import react
-from twisted.web.iweb import IAgentEndpointFactory
 from twisted.web.client import Agent, readBody
+from twisted.web.iweb import IAgentEndpointFactory
 
 
 @implementer(IAgentEndpointFactory)

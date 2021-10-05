@@ -7,24 +7,18 @@ Tests for L{twisted.conch.manhole_tap}.
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.application.service import MultiService
-
+from twisted.conch import telnet
 from twisted.cred import error
 from twisted.cred.credentials import UsernamePassword
-
-from twisted.conch import telnet
-
 from twisted.python import usage
-
-from twisted.trial.unittest import TestCase
-
 from twisted.python.reflect import requireModule
-
+from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
 pyasn1 = requireModule("pyasn1")
 
 if cryptography and pyasn1:
-    from twisted.conch import manhole_tap, manhole_ssh
+    from twisted.conch import manhole_ssh, manhole_tap
 
 
 class MakeServiceTests(TestCase):

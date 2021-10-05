@@ -12,7 +12,6 @@ import re
 
 import setuptools
 
-
 setuptools.setup(
     # Munge links of the form `NEWS <NEWS.rst>`_ to point at the appropriate
     # location on GitHub so that they function when the long description is

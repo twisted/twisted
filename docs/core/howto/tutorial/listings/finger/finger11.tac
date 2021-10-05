@@ -3,7 +3,7 @@
 # Write application. Save in 'finger.tpy'
 
 from twisted.application import service, strports
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 
 

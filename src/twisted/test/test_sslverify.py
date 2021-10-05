@@ -7,31 +7,26 @@ Tests for L{twisted.internet._sslverify}.
 """
 
 
-import sys
-import itertools
 import datetime
-
+import itertools
+import sys
 from unittest import skipIf
 
 from zope.interface import implementer
-from twisted.python.reflect import requireModule
-from twisted.test.test_twisted import SetAsideModule
-from twisted.test.iosim import connectedServerAndClient
 
-from twisted.internet.error import ConnectionClosed
+from incremental import Version
+
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet._idna import _idnaText
+from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
-
+from twisted.python.reflect import requireModule
+from twisted.test.iosim import connectedServerAndClient
+from twisted.test.test_twisted import SetAsideModule
 from twisted.trial import util
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
-from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText
-
-from twisted.internet.error import CertificateError, ConnectionLost
-from twisted.internet import interfaces
-from incremental import Version
-
 
 skipSSL = ""
 skipSNI = ""
@@ -41,21 +36,21 @@ skipALPN = ""
 if requireModule("OpenSSL"):
     import ipaddress
 
-    from twisted.internet import ssl
-
-    from OpenSSL import SSL  # type: ignore[import]
-    from OpenSSL.crypto import get_elliptic_curves  # type: ignore[import]
-    from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+    from OpenSSL import SSL
+    from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
 
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives.serialization import PrivateFormat, NoEncryption
-
+    from cryptography.hazmat.primitives.serialization import (
+        Encoding,
+        NoEncryption,
+        PrivateFormat,
+    )
     from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives.serialization import Encoding
+
+    from twisted.internet import ssl
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -68,7 +63,7 @@ if requireModule("OpenSSL"):
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.set_alpn_select_callback(lambda c: None)
+        ctx.set_alpn_select_callback(lambda c: None)  # type: ignore[misc,arg-type]
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
 else:
@@ -78,8 +73,8 @@ else:
     skipALPN = skipSSL
 
 if not skipSSL:
-    from twisted.internet.ssl import platformTrust, VerificationError
     from twisted.internet import _sslverify as sslverify
+    from twisted.internet.ssl import VerificationError, platformTrust
     from twisted.protocols.tls import TLSMemoryBIOFactory
 
 

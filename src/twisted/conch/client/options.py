@@ -1,12 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-from twisted.conch.ssh.transport import SSHClientTransport, SSHCiphers
-from twisted.python import usage
-
 import sys
 from typing import List, Optional, Union
+
+#
+from twisted.conch.ssh.transport import SSHCiphers, SSHClientTransport
+from twisted.python import usage
 
 
 class ConchOptions(usage.Options):

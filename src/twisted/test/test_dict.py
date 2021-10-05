@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
+from twisted.protocols import dict
 from twisted.trial import unittest
 from twisted.trial.unittest import SynchronousTestCase
-from twisted.protocols import dict
 
 paramString = b'"This is a dqstring \\w\\i\\t\\h boring stuff like: \\"" and t\\hes\\"e are a\\to\\ms'
 goodparams = [

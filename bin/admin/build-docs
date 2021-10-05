@@ -7,6 +7,7 @@
 # It is only for use in making upstream Twisted releases.
 
 import sys
+
 from twisted.python._release import SphinxBuilder
 
 SphinxBuilder().main(sys.argv[1:])

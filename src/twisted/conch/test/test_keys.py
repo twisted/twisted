@@ -16,7 +16,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-
 cryptography = requireModule("cryptography")
 if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
@@ -26,7 +25,8 @@ pyasn1 = requireModule("pyasn1")
 
 if cryptography and pyasn1:
     from cryptography.hazmat.backends import default_backend
-    from twisted.conch.ssh import keys, common, sexpy
+
+    from twisted.conch.ssh import common, keys, sexpy
 
     ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
@@ -916,8 +916,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A private EC key is correctly generated from a private key blob.
         """
-        from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=keydata.ECDatanistp256["x"],
