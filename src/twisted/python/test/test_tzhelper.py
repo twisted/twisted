@@ -8,21 +8,23 @@ Tests for L{twisted.python._tzhelper}.
 from os import environ
 
 try:
-    from time import tzset
+    from time import tzset as _tzset
 except ImportError:
     tzset = None
+else:
+    tzset = _tzset
 
-from twisted.python._tzhelper import FixedOffsetTimeZone
-from twisted.trial.unittest import TestCase, SkipTest
 from datetime import timedelta
-
 from time import mktime as mktime_real
 
+from twisted.python._tzhelper import FixedOffsetTimeZone
+from twisted.trial.unittest import SkipTest, TestCase
 
 # On some rare platforms (FreeBSD 8?  I was not able to reproduce
 # on FreeBSD 9) 'mktime' seems to always fail once tzset() has been
 # called more than once in a process lifetime.  I think this is
 # just a platform bug, so let's work around it.  -glyph
+
 
 def mktime(t9):
     """
@@ -38,11 +40,7 @@ def mktime(t9):
     try:
         return mktime_real(t9)
     except OverflowError:
-        raise SkipTest(
-            "Platform cannot construct time zone for {0!r}"
-            .format(t9)
-        )
-
+        raise SkipTest(f"Platform cannot construct time zone for {t9!r}")
 
 
 def setTZ(name):
@@ -65,7 +63,6 @@ def setTZ(name):
     tzset()
 
 
-
 def addTZCleanup(testCase):
     """
     Add cleanup hooks to a test case to reset timezone to original value.
@@ -80,7 +77,6 @@ def addTZCleanup(testCase):
         setTZ(tzIn)
 
 
-
 class FixedOffsetTimeZoneTests(TestCase):
     """
     Tests for L{FixedOffsetTimeZone}.
@@ -92,9 +88,7 @@ class FixedOffsetTimeZoneTests(TestCase):
         standard C{TZ} environment variable and L{tzset} API.
         """
         if tzset is None:
-            raise SkipTest(
-                "Platform cannot change timezone; unable to verify offsets."
-            )
+            raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
         def testForTimeZone(name, expectedOffsetDST, expectedOffsetSTD):
             setTZ(name)
@@ -105,14 +99,8 @@ class FixedOffsetTimeZoneTests(TestCase):
             tzDST = FixedOffsetTimeZone.fromLocalTimeStamp(localDST)
             tzSTD = FixedOffsetTimeZone.fromLocalTimeStamp(localSTD)
 
-            self.assertEqual(
-                tzDST.tzname(localDST),
-                "UTC{0}".format(expectedOffsetDST)
-            )
-            self.assertEqual(
-                tzSTD.tzname(localSTD),
-                "UTC{0}".format(expectedOffsetSTD)
-            )
+            self.assertEqual(tzDST.tzname(localDST), f"UTC{expectedOffsetDST}")
+            self.assertEqual(tzSTD.tzname(localSTD), f"UTC{expectedOffsetSTD}")
 
             self.assertEqual(tzDST.dst(localDST), timedelta(0))
             self.assertEqual(tzSTD.dst(localSTD), timedelta(0))
@@ -133,12 +121,10 @@ class FixedOffsetTimeZoneTests(TestCase):
                 return timedelta(hours=hours, minutes=minutes)
 
             self.assertEqual(
-                tzDST.utcoffset(localDST),
-                timeDeltaFromOffset(expectedOffsetDST)
+                tzDST.utcoffset(localDST), timeDeltaFromOffset(expectedOffsetDST)
             )
             self.assertEqual(
-                tzSTD.utcoffset(localSTD),
-                timeDeltaFromOffset(expectedOffsetSTD)
+                tzSTD.utcoffset(localSTD), timeDeltaFromOffset(expectedOffsetSTD)
             )
 
         addTZCleanup(self)

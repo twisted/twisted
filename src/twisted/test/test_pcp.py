@@ -3,10 +3,10 @@
 # See LICENSE for details.
 
 
-__version__ = '$Revision: 1.5 $'[11:-2]
+__version__ = "$Revision: 1.5 $"[11:-2]
 
-from twisted.trial import unittest
 from twisted.protocols import pcp
+from twisted.trial import unittest
 
 # Goal:
 
@@ -41,7 +41,8 @@ class DummyTransport:
         self._writes.append(data)
 
     def getvalue(self):
-        return ''.join(self._writes)
+        return "".join(self._writes)
+
 
 class DummyProducer:
     resumed = False
@@ -76,6 +77,7 @@ class DummyConsumer(DummyTransport):
     def finish(self):
         self.finished = True
 
+
 class TransportInterfaceTests(unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
@@ -85,6 +87,7 @@ class TransportInterfaceTests(unittest.TestCase):
 
     def testWrite(self):
         self.transport.write("some bytes")
+
 
 class ConsumerInterfaceTest:
     """Test ProducerConsumerProxy as a Consumer.
@@ -107,7 +110,7 @@ class ConsumerInterfaceTest:
 
     ## I'm I'm just a proxy, should I only do resumeProducing when
     ## I get poked myself?
-    #def testRegisterPull(self):
+    # def testRegisterPull(self):
     #    self.consumer.registerProducer(self.producer, False)
     #    ## Consumer SHOULD have called PushProducer.resumeProducing
     #    self.assertTrue(self.producer.resumed)
@@ -151,8 +154,9 @@ class ProducerInterfaceTest:
     def testPause(self):
         self.producer.pauseProducing()
         self.producer.write("yakkity yak")
-        self.assertFalse(self.consumer.getvalue(),
-                    "Paused producer should not have sent data.")
+        self.assertFalse(
+            self.consumer.getvalue(), "Paused producer should not have sent data."
+        )
 
     def testResume(self):
         self.producer.pauseProducing()
@@ -163,8 +167,9 @@ class ProducerInterfaceTest:
     def testResumeNoEmptyWrite(self):
         self.producer.pauseProducing()
         self.producer.resumeProducing()
-        self.assertEqual(len(self.consumer._writes), 0,
-                             "Resume triggered an empty write.")
+        self.assertEqual(
+            len(self.consumer._writes), 0, "Resume triggered an empty write."
+        )
 
     def testResumeBuffer(self):
         self.producer.pauseProducing()
@@ -175,25 +180,30 @@ class ProducerInterfaceTest:
     def testStop(self):
         self.producer.stopProducing()
         self.producer.write("yakkity yak")
-        self.assertFalse(self.consumer.getvalue(),
-                    "Stopped producer should not have sent data.")
+        self.assertFalse(
+            self.consumer.getvalue(), "Stopped producer should not have sent data."
+        )
 
 
 class PCP_ConsumerInterfaceTests(ConsumerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
+
 class PCPII_ConsumerInterfaceTests(ConsumerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.ProducerConsumerProxy
+
 
 class PCP_ProducerInterfaceTests(ProducerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.BasicProducerConsumerProxy
 
+
 class PCPII_ProducerInterfaceTests(ProducerInterfaceTest, unittest.TestCase):
     proxyClass = pcp.ProducerConsumerProxy
 
+
 class ProducerProxyTests(unittest.TestCase):
-    """Producer methods on me should be relayed to the Producer I proxy.
-    """
+    """Producer methods on me should be relayed to the Producer I proxy."""
+
     proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
@@ -207,8 +217,8 @@ class ProducerProxyTests(unittest.TestCase):
 
 
 class ConsumerProxyTests(unittest.TestCase):
-    """Consumer methods on me should be relayed to the Consumer I proxy.
-    """
+    """Consumer methods on me should be relayed to the Consumer I proxy."""
+
     proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
@@ -239,8 +249,9 @@ class PullProducerTest:
     def testHoldWrites(self):
         self.proxy.write("hello")
         # Consumer should get no data before it says resumeProducing.
-        self.assertFalse(self.underlying.getvalue(),
-                    "Pulling Consumer got data before it pulled.")
+        self.assertFalse(
+            self.underlying.getvalue(), "Pulling Consumer got data before it pulled."
+        )
 
     def testPull(self):
         self.proxy.write("hello")
@@ -252,10 +263,10 @@ class PullProducerTest:
         self.proxy.write("sunshine")
         self.proxy.resumeProducing()
         nwrites = len(self.underlying._writes)
-        self.assertEqual(nwrites, 1, "Pull resulted in %d writes instead "
-                             "of 1." % (nwrites,))
+        self.assertEqual(
+            nwrites, 1, "Pull resulted in %d writes instead " "of 1." % (nwrites,)
+        )
         self.assertEqual(self.underlying.getvalue(), "hello sunshine")
-
 
     def testLateWrite(self):
         # consumer sends its initial pull before we have data
@@ -264,15 +275,19 @@ class PullProducerTest:
         # This data should answer that pull request.
         self.assertEqual(self.underlying.getvalue(), "data")
 
+
 class PCP_PullProducerTests(PullProducerTest, unittest.TestCase):
     class proxyClass(pcp.BasicProducerConsumerProxy):
         iAmStreaming = False
+
 
 class PCPII_PullProducerTests(PullProducerTest, unittest.TestCase):
     class proxyClass(pcp.ProducerConsumerProxy):
         iAmStreaming = False
 
+
 # Buffering!
+
 
 class BufferedConsumerTests(unittest.TestCase):
     """As a consumer, ask the producer to pause after too much data."""
@@ -305,7 +320,7 @@ class BufferedConsumerTests(unittest.TestCase):
         self.assertFalse(self.parentProducer.resumed)
 
     def testTriggerPause(self):
-        """Make sure I say \"when.\""""
+        """Make sure I say \"when.\" """
 
         # Pause the proxy so data sent to it builds up in its buffer.
         self.proxy.pauseProducing()
@@ -323,9 +338,9 @@ class BufferedConsumerTests(unittest.TestCase):
         self.proxy.resumeProducing()
         # Resuming should have emptied my buffer, so I should tell my
         # parent to resume too.
-        self.assertFalse(self.parentProducer.paused,
-                    "Producer should have resumed.")
+        self.assertFalse(self.parentProducer.paused, "Producer should have resumed.")
         self.assertFalse(self.proxy.producerPaused)
+
 
 class BufferedPullTests(unittest.TestCase):
     class proxyClass(pcp.ProducerConsumerProxy):

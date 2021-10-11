@@ -12,21 +12,19 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 
-from twisted.python.filepath import FilePath
-from twisted.python.modules import theSystemPath
 from twisted.internet.defer import DeferredList
 from twisted.internet.task import cooperate
-
-from twisted.trial.util import _unusedTestDirectory
+from twisted.python.filepath import FilePath
+from twisted.python.modules import theSystemPath
 from twisted.trial._asyncrunner import _iterateTests
-from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
-from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist.distreporter import DistReporter
+from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
+from twisted.trial.reporter import UncleanWarningsReporterWrapper
+from twisted.trial.util import _unusedTestDirectory
 
 
-
-class DistTrialRunner(object):
+class DistTrialRunner:
     """
     A specialized runner for distributed trial. The runner launches a number of
     local worker processes which will run tests.
@@ -38,26 +36,32 @@ class DistTrialRunner(object):
 
     @ivar _reporterFactory: the reporter class to be used.
     """
+
     _distReporterFactory = DistReporter
 
     def _makeResult(self):
         """
         Make reporter factory, and wrap it with a L{DistReporter}.
         """
-        reporter = self._reporterFactory(self._stream, self._tbformat,
-                                         realtime=self._rterrors)
+        reporter = self._reporterFactory(
+            self._stream, self._tbformat, realtime=self._rterrors
+        )
         if self._uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return self._distReporterFactory(reporter)
 
-
-    def __init__(self, reporterFactory, workerNumber, workerArguments,
-                 stream=None,
-                 tracebackFormat='default',
-                 realTimeErrors=False,
-                 uncleanWarnings=False,
-                 logfile='test.log',
-                 workingDirectory='_trial_temp'):
+    def __init__(
+        self,
+        reporterFactory,
+        workerNumber,
+        workerArguments,
+        stream=None,
+        tracebackFormat="default",
+        realTimeErrors=False,
+        uncleanWarnings=False,
+        logfile="test.log",
+        workingDirectory="_trial_temp",
+    ):
         self._workerNumber = workerNumber
         self._workerArguments = workerArguments
         self._reporterFactory = reporterFactory
@@ -74,7 +78,6 @@ class DistTrialRunner(object):
         self._logFileObject = None
         self._logWarnings = False
 
-
     def writeResults(self, result):
         """
         Write test run final outcome to result.
@@ -82,7 +85,6 @@ class DistTrialRunner(object):
         @param result: A C{TestResult} which will print errors and the summary.
         """
         result.done()
-
 
     def createLocalWorkers(self, protocols, workingDirectory):
         """
@@ -96,11 +98,10 @@ class DistTrialRunner(object):
 
         @return: A list of C{quantity} C{LocalWorker} instances.
         """
-        return [LocalWorker(protocol,
-                            os.path.join(workingDirectory, str(x)),
-                            self._logFile)
-                for x, protocol in enumerate(protocols)]
-
+        return [
+            LocalWorker(protocol, os.path.join(workingDirectory, str(x)), self._logFile)
+            for x, protocol in enumerate(protocols)
+        ]
 
     def launchWorkerProcesses(self, spawner, protocols, arguments):
         """
@@ -112,21 +113,23 @@ class DistTrialRunner(object):
 
         @param arguments: Extra arguments passed to the processes.
         """
-        workertrialPath = theSystemPath[
-            'twisted.trial._dist.workertrial'].filePath.path
-        childFDs = {0: 'w', 1: 'r', 2: 'r', _WORKER_AMP_STDIN: 'w',
-                    _WORKER_AMP_STDOUT: 'r'}
+        workertrialPath = theSystemPath["twisted.trial._dist.workertrial"].filePath.path
+        childFDs = {
+            0: "w",
+            1: "r",
+            2: "r",
+            _WORKER_AMP_STDIN: "w",
+            _WORKER_AMP_STDOUT: "r",
+        }
         environ = os.environ.copy()
         # Add an environment variable containing the raw sys.path, to be used by
         # subprocesses to make sure it's identical to the parent. See
         # workertrial._setupPath.
-        environ['TRIAL_PYTHONPATH'] = os.pathsep.join(sys.path)
+        environ["TRIAL_PYTHONPATH"] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
-            spawner(worker, sys.executable, args=args, childFDs=childFDs,
-                    env=environ)
-
+            spawner(worker, sys.executable, args=args, childFDs=childFDs, env=environ)
 
     def _driveWorker(self, worker, result, testCases, cooperate):
         """
@@ -157,9 +160,7 @@ class DistTrialRunner(object):
 
         return cooperate(task(case) for case in testCases).whenDone()
 
-
-    def run(self, suite, reactor=None, cooperate=cooperate,
-            untilFailure=False):
+    def run(self, suite, reactor=None, cooperate=cooperate, untilFailure=False):
         """
         Spawn local worker processes and load tests. After that, run them.
 
@@ -192,14 +193,12 @@ class DistTrialRunner(object):
             self.writeResults(result)
             return result
 
-        testDir, testDirLock = _unusedTestDirectory(
-            FilePath(self._workingDirectory))
+        testDir, testDirLock = _unusedTestDirectory(FilePath(self._workingDirectory))
         workerNumber = min(count, self._workerNumber)
         ampWorkers = [LocalWorkerAMP() for x in range(workerNumber)]
         workers = self.createLocalWorkers(ampWorkers, testDir.path)
         processEndDeferreds = [worker.endDeferred for worker in workers]
-        self.launchWorkerProcesses(reactor.spawnProcess, workers,
-                                   self._workerArguments)
+        self.launchWorkerProcesses(reactor.spawnProcess, workers, self._workerArguments)
 
         def runTests():
             testCases = iter(list(_iterateTests(suite)))
@@ -207,10 +206,11 @@ class DistTrialRunner(object):
             workerDeferreds = []
             for worker in ampWorkers:
                 workerDeferreds.append(
-                    self._driveWorker(worker, result, testCases,
-                                      cooperate=cooperate))
-            return DeferredList(workerDeferreds, consumeErrors=True,
-                                fireOnOneErrback=True)
+                    self._driveWorker(worker, result, testCases, cooperate=cooperate)
+                )
+            return DeferredList(
+                workerDeferreds, consumeErrors=True, fireOnOneErrback=True
+            )
 
         stopping = []
 
@@ -243,11 +243,10 @@ class DistTrialRunner(object):
         d.addCallback(nextRun)
         d.addBoth(stop)
 
-        reactor.addSystemEventTrigger('before', 'shutdown', beforeShutDown)
+        reactor.addSystemEventTrigger("before", "shutdown", beforeShutDown)
         reactor.run()
 
         return result
-
 
     def runUntilFailure(self, suite):
         """

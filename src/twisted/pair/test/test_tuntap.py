@@ -5,18 +5,16 @@
 Tests for L{twisted.pair.tuntap}.
 """
 
-from __future__ import division, absolute_import
 
 import os
-import struct
 import socket
-from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT, ENODEV
-from random import randrange
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
+from random import randrange
 from signal import SIGINT
 
-from twisted.python.compat import intToBytes, _PY3
 from twisted.python.reflect import ObjectNotFound, namedAny
 
 try:
@@ -24,26 +22,27 @@ try:
 except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
 else:
-    platformSkip = None
+    platformSkip = ""
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import IListeningPort
-from twisted.internet.protocol import DatagramProtocol
-from twisted.pair.rawudp import RawUDPProtocol
-from twisted.pair.ip import IPProtocol
+from twisted.internet.error import CannotListenError
+from twisted.internet.interfaces import IAddress, IListeningPort, IReactorFDSet
+from twisted.internet.protocol import (
+    AbstractDatagramProtocol,
+    DatagramProtocol,
+    Factory,
+)
+from twisted.internet.task import Clock
 from twisted.pair.ethernet import EthernetProtocol
-
-from twisted.python.reflect import fullyQualifiedName
+from twisted.pair.ip import IPProtocol
+from twisted.pair.raw import IRawPacketProtocol
+from twisted.pair.rawudp import RawUDPProtocol
 from twisted.python.compat import iterbytes
 from twisted.python.log import addObserver, removeObserver, textFromEventDict
-from twisted.internet.interfaces import IAddress, IReactorFDSet
-from twisted.internet.protocol import AbstractDatagramProtocol, Factory
-from twisted.internet.task import Clock
+from twisted.python.reflect import fullyQualifiedName
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
-from twisted.internet.error import CannotListenError
-from twisted.pair.raw import IRawPacketProtocol
 
 # Let the module-scope testing subclass of this still be defined (and then not
 # used) in case we can't import from twisted.pair.testing due to platform
@@ -54,20 +53,32 @@ _RealSystem = object
 _IInputOutputSystem = Interface
 
 
-if platformSkip is None:
+if not platformSkip:
     from twisted.pair.testing import (
-        _PI_SIZE, Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
-
+        _H,
+        _PI_SIZE,
+        MemoryIOSystem,
+        Tunnel,
+        _ethernet,
+        _ip,
+        _IPv4,
+        _udp,
+    )
     from twisted.pair.tuntap import (
-        _TUNSETIFF, _IFNAMSIZ, _RealSystem,
-        _IInputOutputSystem, TunnelFlags, TunnelAddress, TuntapPort)
+        _IFNAMSIZ,
+        _TUNSETIFF,
+        TunnelAddress,
+        TunnelFlags,
+        TuntapPort,
+        _IInputOutputSystem,
+        _RealSystem,
+    )
 else:
     skip = platformSkip
 
 
-
 @implementer(IReactorFDSet)
-class ReactorFDSet(object):
+class ReactorFDSet:
     """
     An implementation of L{IReactorFDSet} which only keeps track of which
     descriptors have been registered for reading and writing.
@@ -82,28 +93,24 @@ class ReactorFDSet(object):
     @ivar _writers: A L{set} of L{IWriteDescriptor} providers which the reactor
         is supposedly monitoring for write events.
     """
+
     def __init__(self):
         self._readers = set()
         self._writers = set()
         self.addReader = self._readers.add
         self.addWriter = self._writers.add
 
-
     def removeReader(self, reader):
         self._readers.discard(reader)
-
 
     def removeWriter(self, writer):
         self._writers.discard(writer)
 
-
     def getReaders(self):
         return iter(self._readers)
 
-
     def getWriters(self):
         return iter(self._writers)
-
 
     def removeAll(self):
         try:
@@ -111,29 +118,30 @@ class ReactorFDSet(object):
         finally:
             self._readers = set()
             self._writers = set()
-verifyObject(IReactorFDSet, ReactorFDSet())
 
+
+verifyObject(IReactorFDSet, ReactorFDSet())
 
 
 class FSSetClock(Clock, ReactorFDSet):
     """
     An L{FSSetClock} is a L{IReactorFDSet} and an L{IReactorClock}.
     """
+
     def __init__(self):
         Clock.__init__(self)
         ReactorFDSet.__init__(self)
 
 
-
-class TunHelper(object):
+class TunHelper:
     """
     A helper for tests of tun-related functionality (ip-level tunnels).
     """
+
     @property
     def TUNNEL_TYPE(self):
         # Hide this in a property because TunnelFlags is not always imported.
         return TunnelFlags.IFF_TUN | TunnelFlags.IFF_NO_PI
-
 
     def __init__(self, tunnelRemote, tunnelLocal):
         """
@@ -147,7 +155,6 @@ class TunHelper(object):
         """
         self.tunnelRemote = tunnelRemote
         self.tunnelLocal = tunnelLocal
-
 
     def encapsulate(self, source, destination, payload):
         """
@@ -168,10 +175,10 @@ class TunHelper(object):
         @rtype: L{bytes}
         """
         return _ip(
-            src=self.tunnelRemote, dst=self.tunnelLocal,
-            payload=_udp(
-                src=source, dst=destination, payload=payload))
-
+            src=self.tunnelRemote,
+            dst=self.tunnelLocal,
+            payload=_udp(src=source, dst=destination, payload=payload),
+        )
 
     def parser(self):
         """
@@ -206,18 +213,17 @@ class TunHelper(object):
         return parse
 
 
-
-class TapHelper(object):
+class TapHelper:
     """
     A helper for tests of tap-related functionality (ethernet-level tunnels).
     """
+
     @property
     def TUNNEL_TYPE(self):
         flag = TunnelFlags.IFF_TAP
         if not self.pi:
             flag |= TunnelFlags.IFF_NO_PI
         return flag
-
 
     def __init__(self, tunnelRemote, tunnelLocal, pi):
         """
@@ -236,7 +242,6 @@ class TapHelper(object):
         self.tunnelRemote = tunnelRemote
         self.tunnelLocal = tunnelLocal
         self.pi = pi
-
 
     def encapsulate(self, source, destination, payload):
         """
@@ -259,8 +264,11 @@ class TapHelper(object):
         tun = TunHelper(self.tunnelRemote, self.tunnelLocal)
         ip = tun.encapsulate(source, destination, payload)
         frame = _ethernet(
-            src=b'\x00\x00\x00\x00\x00\x00', dst=b'\xff\xff\xff\xff\xff\xff',
-            protocol=_IPv4, payload=ip)
+            src=b"\x00\x00\x00\x00\x00\x00",
+            dst=b"\xff\xff\xff\xff\xff\xff",
+            protocol=_IPv4,
+            payload=ip,
+        )
         if self.pi:
             # Going to send a datagram using IPv4 addressing
             protocol = _IPv4
@@ -268,7 +276,6 @@ class TapHelper(object):
             flags = 0
             frame = _H(flags) + _H(protocol) + frame
         return frame
-
 
     def parser(self):
         """
@@ -311,50 +318,45 @@ class TapHelper(object):
         return parser
 
 
-
 class TunnelTests(SynchronousTestCase):
     """
     L{Tunnel} is mostly tested by other test cases but some tests don't fit
     there.  Those tests are here.
     """
+
     def test_blockingRead(self):
         """
         Blocking reads are not implemented by L{Tunnel.read}.  Attempting one
         results in L{NotImplementedError} being raised.
         """
         tunnel = Tunnel(MemoryIOSystem(), os.O_RDONLY, None)
-        self.assertRaises(
-            NotImplementedError, tunnel.read, 1024)
+        self.assertRaises(NotImplementedError, tunnel.read, 1024)
 
 
-
-class TunnelDeviceTestsMixin(object):
+class TunnelDeviceTestsMixin:
     """
     A mixin defining tests that apply to L{_IInputOutputSystem}
     implementations.
     """
+
     def setUp(self):
         """
         Create the L{_IInputOutputSystem} provider under test and open a tunnel
         using it.
         """
         self.system = self.createSystem()
-        self.fileno = self.system.open(b"/dev/net/tun",
-                                       os.O_RDWR | os.O_NONBLOCK)
+        self.fileno = self.system.open(b"/dev/net/tun", os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.system.close, self.fileno)
 
         mode = self.helper.TUNNEL_TYPE
-        config = struct.pack(
-            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, mode.value)
+        config = struct.pack("%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, mode.value)
         self.system.ioctl(self.fileno, _TUNSETIFF, config)
-
 
     def test_interface(self):
         """
         The object under test provides L{_IInputOutputSystem}.
         """
         self.assertTrue(verifyObject(_IInputOutputSystem, self.system))
-
 
     def _invalidFileDescriptor(self):
         """
@@ -369,7 +371,6 @@ class TunnelDeviceTestsMixin(object):
         self.system.close(fd)
         return fd
 
-
     def test_readEBADF(self):
         """
         The device's C{read} implementation raises L{OSError} with an errno of
@@ -379,7 +380,6 @@ class TunnelDeviceTestsMixin(object):
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(OSError, self.system.read, fd, 1024)
         self.assertEqual(EBADF, exc.errno)
-
 
     def test_writeEBADF(self):
         """
@@ -391,7 +391,6 @@ class TunnelDeviceTestsMixin(object):
         exc = self.assertRaises(OSError, self.system.write, fd, b"bytes")
         self.assertEqual(EBADF, exc.errno)
 
-
     def test_closeEBADF(self):
         """
         The device's C{close} implementation raises L{OSError} with an errno of
@@ -402,7 +401,6 @@ class TunnelDeviceTestsMixin(object):
         exc = self.assertRaises(OSError, self.system.close, fd)
         self.assertEqual(EBADF, exc.errno)
 
-
     def test_ioctlEBADF(self):
         """
         The device's C{ioctl} implementation raises L{OSError} with an errno of
@@ -410,10 +408,8 @@ class TunnelDeviceTestsMixin(object):
         has no associated file description).
         """
         fd = self._invalidFileDescriptor()
-        exc = self.assertRaises(
-            IOError, self.system.ioctl, fd, _TUNSETIFF, b"tap0")
+        exc = self.assertRaises(IOError, self.system.ioctl, fd, _TUNSETIFF, b"tap0")
         self.assertEqual(EBADF, exc.errno)
-
 
     def test_ioctlEINVAL(self):
         """
@@ -425,9 +421,9 @@ class TunnelDeviceTestsMixin(object):
         # request on any system.
         request = 0xDEADBEEF
         exc = self.assertRaises(
-            IOError, self.system.ioctl, self.fileno, request, b"garbage")
+            IOError, self.system.ioctl, self.fileno, request, b"garbage"
+        )
         self.assertEqual(EINVAL, exc.errno)
-
 
     def test_receive(self):
         """
@@ -442,7 +438,7 @@ class TunnelDeviceTestsMixin(object):
         # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
-            message = b"hello world:" + intToBytes(key)
+            message = b"hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             # Likewise try receiving each of those datagrams a lot of times.
@@ -451,7 +447,7 @@ class TunnelDeviceTestsMixin(object):
             for j in range(100):
                 try:
                     packet = self.system.read(self.fileno, 1024)
-                except EnvironmentError as e:
+                except OSError as e:
                     if e.errno in (EAGAIN, EWOULDBLOCK):
                         break
                     raise
@@ -467,7 +463,6 @@ class TunnelDeviceTestsMixin(object):
         if not found:
             self.fail("Never saw probe UDP packet on tunnel")
 
-
     def test_send(self):
         """
         If a UDP datagram is written the tunnel device then it is received by
@@ -476,7 +471,7 @@ class TunnelDeviceTestsMixin(object):
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
-        message = b"hello world:" + intToBytes(key)
+        message = b"hello world:%d" % (key,)
 
         # To avoid really inconvenient test failures where the test just hangs
         # forever, set up a timeout for blocking socket operations.  This
@@ -507,13 +502,13 @@ class TunnelDeviceTestsMixin(object):
         self.assertEqual(message, packet)
 
 
-
-class FakeDeviceTestsMixin(object):
+class FakeDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
     instances as the provider of that interface.
     """
+
     _TUNNEL_DEVICE = b"tap-twistedtest"
     _TUNNEL_LOCAL = b"172.16.2.1"
     _TUNNEL_REMOTE = b"172.16.2.2"
@@ -532,38 +527,54 @@ class FakeDeviceTestsMixin(object):
         return system
 
 
-
-class FakeTapDeviceTests(FakeDeviceTestsMixin,
-                         TunnelDeviceTestsMixin, SynchronousTestCase):
+class FakeTapDeviceTests(
+    FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
+):
     """
     Run various tap-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTapDeviceTests.helper = TapHelper(
-    FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=False)
 
 
+setattr(
+    FakeTapDeviceTests,
+    "helper",
+    TapHelper(
+        FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL, pi=False
+    ),
+)
 
-class FakeTapDeviceWithPITests(FakeDeviceTestsMixin,
-                               TunnelDeviceTestsMixin, SynchronousTestCase):
+
+class FakeTapDeviceWithPITests(
+    FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
+):
     """
     Run various tap-type tunnel unit tests against an in-memory I/O system with
     the PI header enabled.
     """
-FakeTapDeviceWithPITests.helper = TapHelper(
-    FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
-    pi=True)
 
 
+setattr(
+    FakeTapDeviceWithPITests,
+    "helper",
+    TapHelper(
+        FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL, pi=True
+    ),
+)
 
-class FakeTunDeviceTests(FakeDeviceTestsMixin,
-                         TunnelDeviceTestsMixin, SynchronousTestCase):
+
+class FakeTunDeviceTests(
+    FakeDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
+):
     """
     Run various tun-type tunnel unit tests against an in-memory I/O system.
     """
-FakeTunDeviceTests.helper = TunHelper(
-    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL)
 
+
+setattr(
+    FakeTunDeviceTests,
+    "helper",
+    TunHelper(FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL),
+)
 
 
 @implementer(_IInputOutputSystem)
@@ -572,6 +583,7 @@ class TestRealSystem(_RealSystem):
     Add extra skipping logic so tests that try to create real tunnel devices on
     platforms where those are not supported automatically get skipped.
     """
+
     def open(self, filename, *args, **kwargs):
         """
         Attempt an open, but if the file is /dev/net/tun and it does not exist,
@@ -579,14 +591,13 @@ class TestRealSystem(_RealSystem):
         platform support for tuntap devices are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).open(filename, *args, **kwargs)
+            return super().open(filename, *args, **kwargs)
         except OSError as e:
             # The device file may simply be missing.  The device file may also
             # exist but be unsupported by the kernel.
             if e.errno in (ENOENT, ENODEV) and filename == b"/dev/net/tun":
                 raise SkipTest("Platform lacks /dev/net/tun")
             raise
-
 
     def ioctl(self, *args, **kwargs):
         """
@@ -595,12 +606,11 @@ class TestRealSystem(_RealSystem):
         do not have them are skipped instead of failed.
         """
         try:
-            return super(TestRealSystem, self).ioctl(*args, **kwargs)
-        except IOError as e:
+            return super().ioctl(*args, **kwargs)
+        except OSError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
             raise
-
 
     def sendUDP(self, datagram, address):
         """
@@ -616,10 +626,9 @@ class TestRealSystem(_RealSystem):
         @rtype: L{tuple} of (L{bytes}, L{int})
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('172.16.0.1', 0))
+        s.bind(("172.16.0.1", 0))
         s.sendto(datagram, address)
         return s.getsockname()
-
 
     def receiveUDP(self, fileno, host, port):
         """
@@ -646,16 +655,15 @@ class TestRealSystem(_RealSystem):
         return s
 
 
-
-class RealDeviceTestsMixin(object):
+class RealDeviceTestsMixin:
     """
     Define a mixin for use with test cases that require an
     L{_IInputOutputSystem} provider.  This mixin hands out L{TestRealSystem}
     instances as the provider of that interface.
     """
+
     if platformSkip:
         skip = platformSkip
-
 
     def createSystem(self):
         """
@@ -668,14 +676,14 @@ class RealDeviceTestsMixin(object):
         return TestRealSystem()
 
 
-
-class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
-                                             TunnelDeviceTestsMixin,
-                                             SynchronousTestCase):
+class RealDeviceWithProtocolInformationTests(
+    RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
+):
     """
     Run various tap-type tunnel unit tests, with "protocol information" (PI)
     turned on, against a real I/O system.
     """
+
     _TUNNEL_DEVICE = b"tap-twtest-pi"
     _TUNNEL_LOCAL = b"172.16.1.1"
     _TUNNEL_REMOTE = b"172.16.1.2"
@@ -687,15 +695,15 @@ class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
     helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=True)
 
 
-
-class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
-                                                TunnelDeviceTestsMixin,
-                                                SynchronousTestCase):
+class RealDeviceWithoutProtocolInformationTests(
+    RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
+):
 
     """
     Run various tap-type tunnel unit tests, with "protocol information" (PI)
     turned off, against a real I/O system.
     """
+
     _TUNNEL_DEVICE = b"tap-twtest"
     _TUNNEL_LOCAL = b"172.16.0.1"
     _TUNNEL_REMOTE = b"172.16.0.2"
@@ -703,18 +711,17 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
     helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=False)
 
 
-
 class TuntapPortTests(SynchronousTestCase):
     """
     Tests for L{TuntapPort} behavior that is independent of the tunnel type.
     """
+
     def test_interface(self):
         """
         A L{TuntapPort} instance provides L{IListeningPort}.
         """
         port = TuntapPort(b"device", EthernetProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
-
 
     def test_realSystem(self):
         """
@@ -725,14 +732,14 @@ class TuntapPortTests(SynchronousTestCase):
         self.assertIsInstance(port._system, _RealSystem)
 
 
-
-class TunnelTestsMixin(object):
+class TunnelTestsMixin:
     """
     A mixin defining tests for L{TuntapPort}.
 
     These tests run against L{MemoryIOSystem} (proven equivalent to the real
     thing by the tests above) to avoid performing any real I/O.
     """
+
     def setUp(self):
         """
         Create an in-memory I/O system and set up a L{TuntapPort} against it.
@@ -741,11 +748,12 @@ class TunnelTestsMixin(object):
         self.system = MemoryIOSystem()
         self.system.registerSpecialDevice(Tunnel._DEVICE_NAME, Tunnel)
         self.protocol = self.factory.buildProtocol(
-            TunnelAddress(self.helper.TUNNEL_TYPE, self.name))
+            TunnelAddress(self.helper.TUNNEL_TYPE, self.name)
+        )
         self.reactor = FSSetClock()
         self.port = TuntapPort(
-            self.name, self.protocol, reactor=self.reactor, system=self.system)
-
+            self.name, self.protocol, reactor=self.reactor, system=self.system
+        )
 
     def _tunnelTypeOnly(self, flags):
         """
@@ -760,7 +768,6 @@ class TunnelTestsMixin(object):
         """
         return flags & (TunnelFlags.IFF_TUN | TunnelFlags.IFF_TAP)
 
-
     def test_startListeningOpensDevice(self):
         """
         L{TuntapPort.startListening} opens the tunnel factory character special
@@ -773,13 +780,18 @@ class TunnelTestsMixin(object):
         expected = (
             system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
             b"tun0" + b"\x00" * (_IFNAMSIZ - len(b"tun0")),
-            self.port.interface, False, True)
+            self.port.interface,
+            False,
+            True,
+        )
         actual = (
             tunnel.openFlags,
             tunnel.requestedName,
-            tunnel.name, tunnel.blocking, tunnel.closeOnExec)
+            tunnel.name,
+            tunnel.blocking,
+            tunnel.closeOnExec,
+        )
         self.assertEqual(expected, actual)
-
 
     def test_startListeningSetsConnected(self):
         """
@@ -789,7 +801,6 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.assertTrue(self.port.connected)
 
-
     def test_startListeningConnectsProtocol(self):
         """
         L{TuntapPort.startListening} calls C{makeConnection} on the protocol
@@ -797,7 +808,6 @@ class TunnelTestsMixin(object):
         """
         self.port.startListening()
         self.assertIs(self.port, self.protocol.transport)
-
 
     def test_startListeningStartsReading(self):
         """
@@ -808,24 +818,21 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.assertIn(self.port, self.reactor.getReaders())
 
-
     def test_startListeningHandlesOpenFailure(self):
         """
         L{TuntapPort.startListening} raises L{CannotListenError} if opening the
         tunnel factory character special device fails.
         """
-        self.system.permissions.remove('open')
+        self.system.permissions.remove("open")
         self.assertRaises(CannotListenError, self.port.startListening)
-
 
     def test_startListeningHandlesConfigureFailure(self):
         """
         L{TuntapPort.startListening} raises L{CannotListenError} if the
         C{ioctl} call to configure the tunnel device fails.
         """
-        self.system.permissions.remove('ioctl')
+        self.system.permissions.remove("ioctl")
         self.assertRaises(CannotListenError, self.port.startListening)
-
 
     def _stopPort(self, port):
         """
@@ -842,7 +849,6 @@ class TunnelTestsMixin(object):
         self.reactor.advance(0)
         self.assertIsNone(self.successResultOf(stopped))
 
-
     def test_stopListeningStopsReading(self):
         """
         L{TuntapPort.stopListening} returns a L{Deferred} which fires after the
@@ -855,7 +861,6 @@ class TunnelTestsMixin(object):
 
         self.assertNotIn(fileno, self.system._openFiles)
 
-
     def test_stopListeningUnsetsConnected(self):
         """
         After the L{Deferred} returned by L{TuntapPort.stopListening} fires,
@@ -864,7 +869,6 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self._stopPort(self.port)
         self.assertFalse(self.port.connected)
-
 
     def test_stopListeningStopsProtocol(self):
         """
@@ -875,7 +879,6 @@ class TunnelTestsMixin(object):
         self._stopPort(self.port)
         self.assertIsNone(self.protocol.transport)
 
-
     def test_stopListeningWhenStopped(self):
         """
         L{TuntapPort.stopListening} returns a L{Deferred} which succeeds
@@ -883,7 +886,6 @@ class TunnelTestsMixin(object):
         """
         stopped = self.port.stopListening()
         self.assertIsNone(self.successResultOf(stopped))
-
 
     def test_multipleStopListening(self):
         """
@@ -895,7 +897,6 @@ class TunnelTestsMixin(object):
         second = self.port.stopListening()
         self.reactor.advance(0)
         self.assertIsNone(self.successResultOf(second))
-
 
     def test_loseConnection(self):
         """
@@ -909,14 +910,14 @@ class TunnelTestsMixin(object):
 
         self.assertFalse(self.port.connected)
         warnings = self.flushWarnings([self.test_loseConnection])
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(
             "twisted.pair.tuntap.TuntapPort.loseConnection was deprecated "
             "in Twisted 14.0.0; please use twisted.pair.tuntap.TuntapPort."
             "stopListening instead",
-            warnings[0]['message'])
+            warnings[0]["message"],
+        )
         self.assertEqual(1, len(warnings))
-
 
     def _stopsReadingTest(self, style):
         """
@@ -935,14 +936,12 @@ class TunnelTestsMixin(object):
         self.port.doRead()
         self.assertEqual([], self.protocol.received)
 
-
     def test_eagainStopsReading(self):
         """
         Once L{TuntapPort.doRead} encounters an I{EAGAIN} errno from a C{read}
         call, it returns.
         """
         self._stopsReadingTest(Tunnel.EAGAIN_STYLE)
-
 
     def test_ewouldblockStopsReading(self):
         """
@@ -951,7 +950,6 @@ class TunnelTestsMixin(object):
         """
         self._stopsReadingTest(Tunnel.EWOULDBLOCK_STYLE)
 
-
     def test_eintrblockStopsReading(self):
         """
         Once L{TuntapPort.doRead} encounters an I{EINTR} errno from a C{read}
@@ -959,19 +957,18 @@ class TunnelTestsMixin(object):
         """
         self._stopsReadingTest(Tunnel.EINTR_STYLE)
 
-
     def test_unhandledReadError(self):
         """
         If L{Tuntap.doRead} encounters any exception other than one explicitly
         handled by the code, the exception propagates to the caller.
         """
+
         class UnexpectedException(Exception):
             pass
 
         self.assertRaises(
-            UnexpectedException,
-            self._stopsReadingTest, UnexpectedException())
-
+            UnexpectedException, self._stopsReadingTest, UnexpectedException()
+        )
 
     def test_unhandledEnvironmentReadError(self):
         """
@@ -980,9 +977,8 @@ class TunnelTestsMixin(object):
         C{EnvironmentError} (C{OSError} or C{IOError}).
         """
         self.assertRaises(
-            IOError,
-            self._stopsReadingTest, IOError(EPERM, "Operation not permitted"))
-
+            IOError, self._stopsReadingTest, IOError(EPERM, "Operation not permitted")
+        )
 
     def test_doReadSmallDatagram(self):
         """
@@ -990,13 +986,12 @@ class TunnelTestsMixin(object):
         C{TuntapPort.maxPacketSize} from the port's file descriptor and passes
         it to its protocol's C{datagramReceived} method.
         """
-        datagram = b'x' * (self.port.maxPacketSize - 1)
+        datagram = b"x" * (self.port.maxPacketSize - 1)
         self.port.startListening()
         tunnel = self.system.getTunnel(self.port)
         tunnel.readBuffer.append(datagram)
         self.port.doRead()
         self.assertEqual([datagram], self.protocol.received)
-
 
     def test_doReadLargeDatagram(self):
         """
@@ -1004,20 +999,19 @@ class TunnelTestsMixin(object):
         C{TuntapPort.maxPacketSize} from the port's file descriptor and passes
         the truncated data to its protocol's C{datagramReceived} method.
         """
-        datagram = b'x' * self.port.maxPacketSize
+        datagram = b"x" * self.port.maxPacketSize
         self.port.startListening()
         tunnel = self.system.getTunnel(self.port)
-        tunnel.readBuffer.append(datagram + b'y')
+        tunnel.readBuffer.append(datagram + b"y")
         self.port.doRead()
         self.assertEqual([datagram], self.protocol.received)
-
 
     def test_doReadSeveralDatagrams(self):
         """
         L{TuntapPort.doRead} reads several datagrams, of up to
         C{TuntapPort.maxThroughput} bytes total, before returning.
         """
-        values = cycle(iterbytes(b'abcdefghijklmnopqrstuvwxyz'))
+        values = cycle(iterbytes(b"abcdefghijklmnopqrstuvwxyz"))
         total = 0
         datagrams = []
         while total < self.port.maxThroughput:
@@ -1027,11 +1021,10 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         tunnel = self.system.getTunnel(self.port)
         tunnel.readBuffer.extend(datagrams)
-        tunnel.readBuffer.append(b'excessive datagram, not to be read')
+        tunnel.readBuffer.append(b"excessive datagram, not to be read")
 
         self.port.doRead()
         self.assertEqual(datagrams, self.protocol.received)
-
 
     def _datagramReceivedException(self):
         """
@@ -1049,7 +1042,6 @@ class TunnelTestsMixin(object):
         self.port.doRead()
         return self.flushLoggedErrors(AttributeError)
 
-
     def test_datagramReceivedException(self):
         """
         If the protocol's C{datagramReceived} method raises an exception, the
@@ -1057,7 +1049,6 @@ class TunnelTestsMixin(object):
         """
         errors = self._datagramReceivedException()
         self.assertEqual(1, len(errors))
-
 
     def test_datagramReceivedExceptionIdentifiesProtocol(self):
         """
@@ -1068,13 +1059,13 @@ class TunnelTestsMixin(object):
         addObserver(messages.append)
         self.addCleanup(removeObserver, messages.append)
         self._datagramReceivedException()
-        error = next(m for m in messages if m['isError'])
+        error = next(m for m in messages if m["isError"])
         message = textFromEventDict(error)
         self.assertEqual(
-            "Unhandled exception from %s.datagramReceived" % (
-                fullyQualifiedName(self.protocol.__class__),),
-            message.splitlines()[0])
-
+            "Unhandled exception from %s.datagramReceived"
+            % (fullyQualifiedName(self.protocol.__class__),),
+            message.splitlines()[0],
+        )
 
     def test_write(self):
         """
@@ -1084,9 +1075,8 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.port.write(datagram)
         self.assertEqual(
-            self.system.getTunnel(self.port).writeBuffer,
-            deque([datagram]))
-
+            self.system.getTunnel(self.port).writeBuffer, deque([datagram])
+        )
 
     def test_interruptedWrite(self):
         """
@@ -1099,7 +1089,6 @@ class TunnelTestsMixin(object):
         self.port.write(b"hello, world")
         self.assertEqual(deque([b"hello, world"]), tunnel.writeBuffer)
 
-
     def test_unhandledWriteError(self):
         """
         Any exception raised by the underlying write call, except for EINTR, is
@@ -1108,9 +1097,8 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         tunnel = self.system.getTunnel(self.port)
         self.assertRaises(
-            IOError,
-            self.port.write, b"x" * tunnel.SEND_BUFFER_SIZE + b"y")
-
+            IOError, self.port.write, b"x" * tunnel.SEND_BUFFER_SIZE + b"y"
+        )
 
     def test_writeSequence(self):
         """
@@ -1121,9 +1109,8 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.port.writeSequence(datagram)
         self.assertEqual(
-            self.system.getTunnel(self.port).writeBuffer,
-            deque([b"".join(datagram)]))
-
+            self.system.getTunnel(self.port).writeBuffer, deque([b"".join(datagram)])
+        )
 
     def test_getHost(self):
         """
@@ -1135,9 +1122,10 @@ class TunnelTestsMixin(object):
         self.assertEqual(
             TunnelAddress(
                 self._tunnelTypeOnly(self.helper.TUNNEL_TYPE),
-                self.system.getTunnel(self.port).name),
-            address)
-
+                self.system.getTunnel(self.port).name,
+            ),
+            address,
+        )
 
     def test_listeningString(self):
         """
@@ -1145,41 +1133,26 @@ class TunnelTestsMixin(object):
         tunnel type and interface and the protocol associated with the port.
         """
         self.port.startListening()
-        if _PY3:
-            self.assertRegex(str(self.port),
-                             fullyQualifiedName(self.protocol.__class__))
+        self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-            expected = " listening on %s/%s>" % (
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.system.getTunnel(self.port).name)
-            self.assertTrue(str(self.port).find(expected) != -1)
-        else:
-            expected = "<%s listening on %s/%s>" % (
-                fullyQualifiedName(self.protocol.__class__),
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.system.getTunnel(self.port).name)
-            self.assertEqual(expected, str(self.port))
-
+        expected = " listening on {}/{}>".format(
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+            self.system.getTunnel(self.port).name,
+        )
+        self.assertTrue(str(self.port).find(expected) != -1)
 
     def test_unlisteningString(self):
         """
         The string representation of a L{TuntapPort} instance includes the
         tunnel type and interface and the protocol associated with the port.
         """
-        if _PY3:
-            self.assertRegex(str(self.port),
-                             fullyQualifiedName(self.protocol.__class__))
+        self.assertRegex(str(self.port), fullyQualifiedName(self.protocol.__class__))
 
-            expected = " not listening on %s/%s>" % (
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
-                self.name)
-            self.assertTrue(str(self.port).find(expected) != -1)
-        else:
-            expected = "<%s not listening on %s/%s>" % (
-                fullyQualifiedName(self.protocol.__class__),
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
-            self.assertEqual(expected, str(self.port))
-
+        expected = " not listening on {}/{}>".format(
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+            self.name,
+        )
+        self.assertTrue(str(self.port).find(expected) != -1)
 
     def test_logPrefix(self):
         """
@@ -1187,24 +1160,27 @@ class TunnelTestsMixin(object):
         protocol and the type of tunnel.
         """
         self.assertEqual(
-            "%s (%s)" % (
+            "%s (%s)"
+            % (
                 self.protocol.__class__.__name__,
-                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name),
-            self.port.logPrefix())
-
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
+            ),
+            self.port.logPrefix(),
+        )
 
 
 class TunnelAddressTests(SynchronousTestCase):
     """
     Tests for L{TunnelAddress}.
     """
+
     def test_interfaces(self):
         """
         A L{TunnelAddress} instances provides L{IAddress}.
         """
         self.assertTrue(
-            verifyObject(IAddress, TunnelAddress(TunnelFlags.IFF_TAP, "tap0")))
-
+            verifyObject(IAddress, TunnelAddress(TunnelFlags.IFF_TAP, "tap0"))
+        )
 
     def test_indexing(self):
         """
@@ -1218,28 +1194,23 @@ class TunnelAddressTests(SynchronousTestCase):
         warnings = self.flushWarnings([self.test_indexing])
         message = (
             "TunnelAddress.__getitem__ is deprecated since Twisted 14.0.0  "
-            "Use attributes instead.")
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(message, warnings[0]['message'])
-        self.assertEqual(DeprecationWarning, warnings[1]['category'])
-        self.assertEqual(message, warnings[1]['message'])
+            "Use attributes instead."
+        )
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
+        self.assertEqual(message, warnings[0]["message"])
+        self.assertEqual(DeprecationWarning, warnings[1]["category"])
+        self.assertEqual(message, warnings[1]["message"])
         self.assertEqual(2, len(warnings))
-
 
     def test_repr(self):
         """
         The string representation of a L{TunnelAddress} instance includes the
         class name and the values of the C{type} and C{name} attributes.
         """
-        if _PY3:
-            self.assertRegex(
-                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
-                "TunnelAddress type=IFF_TUN name=b'device'>")
-        else:
-            self.assertEqual(
-                "<TunnelAddress type=IFF_TUN name='device'>",
-                repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
-
+        self.assertRegex(
+            repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")),
+            "TunnelAddress type=IFF_TUN name=b'device'>",
+        )
 
 
 class TunnelAddressEqualityTests(SynchronousTestCase):
@@ -1247,6 +1218,7 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
     Tests for the implementation of equality (C{==} and C{!=}) for
     L{TunnelAddress}.
     """
+
     def setUp(self):
         self.first = TunnelAddress(TunnelFlags.IFF_TUN, b"device")
 
@@ -1257,11 +1229,11 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         # The implementation will have to compare their values directly until
         # https://twistedmatrix.com/trac/ticket/6878 is resolved.
         self.second = TunnelAddress(
-            TunnelFlags.IFF_TUN | TunnelFlags.IFF_TUN, b"device")
+            TunnelFlags.IFF_TUN | TunnelFlags.IFF_TUN, b"device"
+        )
 
         self.variedType = TunnelAddress(TunnelFlags.IFF_TAP, b"tap1")
         self.variedName = TunnelAddress(TunnelFlags.IFF_TUN, b"tun1")
-
 
     def test_selfComparesEqual(self):
         """
@@ -1269,13 +1241,11 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         """
         self.assertTrue(self.first == self.first)
 
-
     def test_selfNotComparesNotEqual(self):
         """
         A L{TunnelAddress} doesn't compare not equal to itself.
         """
         self.assertFalse(self.first != self.first)
-
 
     def test_sameAttributesComparesEqual(self):
         """
@@ -1284,14 +1254,12 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         """
         self.assertTrue(self.first == self.second)
 
-
     def test_sameAttributesNotComparesNotEqual(self):
         """
         Two L{TunnelAddress} instances with the same value for the C{type} and
         C{name} attributes don't compare not equal to each other.
         """
         self.assertFalse(self.first != self.second)
-
 
     def test_differentTypeComparesNotEqual(self):
         """
@@ -1300,14 +1268,12 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         """
         self.assertFalse(self.first == self.variedType)
 
-
     def test_differentTypeNotComparesEqual(self):
         """
         Two L{TunnelAddress} instances that differ only by the value of their
         type compare not equal to each other.
         """
         self.assertTrue(self.first != self.variedType)
-
 
     def test_differentNameComparesNotEqual(self):
         """
@@ -1316,14 +1282,12 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         """
         self.assertFalse(self.first == self.variedName)
 
-
     def test_differentNameNotComparesEqual(self):
         """
         Two L{TunnelAddress} instances that differ only by the value of their
         name compare not equal to each other.
         """
         self.assertTrue(self.first != self.variedName)
-
 
     def test_differentClassNotComparesEqual(self):
         """
@@ -1332,7 +1296,6 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         """
         self.assertFalse(self.first == self)
 
-
     def test_differentClassComparesNotEqual(self):
         """
         A L{TunnelAddress} compares not equal to an instance of another class.
@@ -1340,58 +1303,64 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
         self.assertTrue(self.first != self)
 
 
-
 @implementer(IRawPacketProtocol)
 class IPRecordingProtocol(AbstractDatagramProtocol):
     """
     A protocol which merely records the datagrams delivered to it.
     """
+
     def startProtocol(self):
         self.received = []
 
-
-    def datagramReceived(self, datagram, partial=False):
+    def datagramReceived(
+        self, datagram, partial=False, dest=None, source=None, protocol=None
+    ):
         self.received.append(datagram)
 
+    def addProto(self, num, proto):
+        # IRawPacketProtocol.addProto
+        pass
 
 
 class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """
     Tests for L{TuntapPort} when used to open a Linux I{tun} tunnel.
     """
-    factory = Factory()
-    factory.protocol = IPRecordingProtocol
-    helper = TunHelper(None, None)
 
+    factory = Factory()
+    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
+    factory.protocol = IPRecordingProtocol  # type: ignore[assignment]
+    helper = TunHelper(None, None)
 
 
 class EthernetRecordingProtocol(EthernetProtocol):
     """
     A protocol which merely records the datagrams delivered to it.
     """
+
     def startProtocol(self):
         self.received = []
 
-
     def datagramReceived(self, datagram, partial=False):
         self.received.append(datagram)
-
 
 
 class TapTests(TunnelTestsMixin, SynchronousTestCase):
     """
     Tests for L{TuntapPort} when used to open a Linux I{tap} tunnel.
     """
+
     factory = Factory()
-    factory.protocol = EthernetRecordingProtocol
+    # Type is wrong. See: https://twistedmatrix.com/trac/ticket/10008#ticket
+    factory.protocol = EthernetRecordingProtocol  # type: ignore[assignment]
     helper = TapHelper(None, None, pi=False)
 
 
-
-class IOSystemTestsMixin(object):
+class IOSystemTestsMixin:
     """
     Tests that apply to any L{_IInputOutputSystem} implementation.
     """
+
     def test_noSuchDevice(self):
         """
         L{_IInputOutputSystem.open} raises L{OSError} when called with a
@@ -1399,21 +1368,19 @@ class IOSystemTestsMixin(object):
         """
         system = self.createSystem()
         self.assertRaises(
-            OSError,
-            system.open, b"/dev/there-is-no-such-device-ever", os.O_RDWR)
+            OSError, system.open, b"/dev/there-is-no-such-device-ever", os.O_RDWR
+        )
 
 
-
-class MemoryIOSystemTests(IOSystemTestsMixin, SynchronousTestCase,
-                          FakeDeviceTestsMixin):
+class MemoryIOSystemTests(
+    IOSystemTestsMixin, SynchronousTestCase, FakeDeviceTestsMixin
+):
     """
     General L{_IInputOutputSystem} tests applied to L{MemoryIOSystem}.
     """
 
 
-
-class RealIOSystemTests(IOSystemTestsMixin, SynchronousTestCase,
-                        RealDeviceTestsMixin):
+class RealIOSystemTests(IOSystemTestsMixin, SynchronousTestCase, RealDeviceTestsMixin):
     """
     General L{_IInputOutputSystem} tests applied to L{_RealSystem}.
     """

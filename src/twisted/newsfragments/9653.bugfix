@@ -1,1 +1,0 @@
-Incoming HTTP/2 connections will now not time out if they persist for longer than one minute.

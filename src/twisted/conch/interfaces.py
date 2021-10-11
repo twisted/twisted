@@ -5,7 +5,8 @@
 This module contains interfaces defined for the L{twisted.conch} package.
 """
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
+
 
 class IConchUser(Interface):
     """
@@ -13,7 +14,7 @@ class IConchUser(Interface):
     the interface between the SSH connection and the user.
     """
 
-    conn = Attribute('The SSHConnection object for this user.')
+    conn = Attribute("The SSHConnection object for this user.")
 
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
@@ -71,9 +72,7 @@ class IConchUser(Interface):
         """
 
 
-
 class ISession(Interface):
-
     def getPty(term, windowSize, modes):
         """
         Get a pseudo-terminal for use by a shell or command.
@@ -112,6 +111,37 @@ class ISession(Interface):
         """
 
 
+class EnvironmentVariableNotPermitted(ValueError):
+    """Setting this environment variable in this session is not permitted."""
+
+
+class ISessionSetEnv(Interface):
+    """A session that can set environment variables."""
+
+    def setEnv(name, value):
+        """
+        Set an environment variable for the shell or command to be started.
+
+        From U{RFC 4254, section 6.4
+        <https://tools.ietf.org/html/rfc4254#section-6.4>}: "Uncontrolled
+        setting of environment variables in a privileged process can be a
+        security hazard.  It is recommended that implementations either
+        maintain a list of allowable variable names or only set environment
+        variables after the server process has dropped sufficient
+        privileges."
+
+        (OpenSSH refuses all environment variables by default, but has an
+        C{AcceptEnv} configuration option to select specific variables to
+        accept.)
+
+        @param name: The name of the environment variable to set.
+        @type name: L{bytes}
+        @param value: The value of the environment variable to set.
+        @type value: L{bytes}
+        @raise EnvironmentVariableNotPermitted: if setting this environment
+            variable is not permitted.
+        """
+
 
 class ISFTPServer(Interface):
     """
@@ -125,8 +155,8 @@ class ISFTPServer(Interface):
         """
         The avatar returned by the Realm that we are authenticated with,
         and represents the logged-in user.
-        """)
-
+        """
+    )
 
     def gotVersion(otherVersion, extData):
         """
@@ -143,15 +173,15 @@ class ISFTPServer(Interface):
         """
         return {}
 
-
     def openFile(filename, flags, attrs):
         """
         Called when the clients asks to open a file.
 
         @param filename: a string representing the file to open.
 
-        @param flags: an integer of the flags to open the file with, ORed together.
-        The flags and their values are listed at the bottom of this file.
+        @param flags: an integer of the flags to open the file with, ORed
+        together.  The flags and their values are listed at the bottom of
+        L{twisted.conch.ssh.filetransfer} as FXF_*.
 
         @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
@@ -174,7 +204,6 @@ class ISFTPServer(Interface):
         with the object.
         """
 
-
     def removeFile(filename):
         """
         Remove the given file.
@@ -184,7 +213,6 @@ class ISFTPServer(Interface):
 
         @param filename: the name of the file as a string.
         """
-
 
     def renameFile(oldpath, newpath):
         """
@@ -198,7 +226,6 @@ class ISFTPServer(Interface):
         @param newpath: the new file name.
         """
 
-
     def makeDirectory(path, attrs):
         """
         Make a directory.
@@ -210,7 +237,6 @@ class ISFTPServer(Interface):
         @param attrs: a dictionary of attributes to create the directory with.
         Its meaning is the same as the attrs in the L{openFile} method.
         """
-
 
     def removeDirectory(path):
         """
@@ -224,7 +250,6 @@ class ISFTPServer(Interface):
 
         @param path: the directory to remove.
         """
-
 
     def openDirectory(path):
         """
@@ -257,7 +282,6 @@ class ISFTPServer(Interface):
         @param path: the directory to open.
         """
 
-
     def getAttrs(path, followLinks):
         """
         Return the attributes for the given path.
@@ -271,7 +295,6 @@ class ISFTPServer(Interface):
         return attributes for the specified path.
         """
 
-
     def setAttrs(path, attrs):
         """
         Set the attributes for the path.
@@ -284,7 +307,6 @@ class ISFTPServer(Interface):
         L{openFile}.
         """
 
-
     def readLink(path):
         """
         Find the root of a set of symbolic links.
@@ -294,7 +316,6 @@ class ISFTPServer(Interface):
 
         @param path: the path of the symlink to read.
         """
-
 
     def makeLink(linkPath, targetPath):
         """
@@ -307,7 +328,6 @@ class ISFTPServer(Interface):
         @param targetPath: the path of the target of the link as a string.
         """
 
-
     def realPath(path):
         """
         Convert any path to an absolute path.
@@ -317,7 +337,6 @@ class ISFTPServer(Interface):
 
         @param path: the path to convert as a string.
         """
-
 
     def extendedRequest(extendedName, extendedData):
         """
@@ -334,7 +353,6 @@ class ISFTPServer(Interface):
         @param extendedData: the data the other side sent with the request,
         as a string.
         """
-
 
 
 class IKnownHostEntry(Interface):
@@ -354,7 +372,6 @@ class IKnownHostEntry(Interface):
         @type key: L{twisted.conch.ssh.keys.Key}
         """
 
-
     def matchesHost(hostname):
         """
         Return True if this entry matches the given hostname, False otherwise.
@@ -363,10 +380,9 @@ class IKnownHostEntry(Interface):
         address, you have to resolve it yourself, and pass it in as a dotted
         quad string.
 
-        @param key: The hostname to match against.
-        @type key: L{str}
+        @param hostname: The hostname to match against.
+        @type hostname: L{str}
         """
-
 
     def toString():
         """
@@ -376,7 +392,6 @@ class IKnownHostEntry(Interface):
 
         @rtype: L{str}
         """
-
 
 
 class ISFTPFile(Interface):
@@ -393,7 +408,6 @@ class ISFTPFile(Interface):
         Deferred that is called back when the close succeeds.
         """
 
-
     def readChunk(offset, length):
         """
         Read from the file.
@@ -409,7 +423,6 @@ class ISFTPFile(Interface):
         this should read the requested number (up to the end of the file).
         """
 
-
     def writeChunk(offset, data):
         """
         Write to the file.
@@ -421,7 +434,6 @@ class ISFTPFile(Interface):
         @param data: a string that is the data to write.
         """
 
-
     def getAttrs():
         """
         Return the attributes for the file.
@@ -429,7 +441,6 @@ class ISFTPFile(Interface):
         This method returns a dictionary in the same format as the attrs
         argument to L{openFile} or a L{Deferred} that is called back with same.
         """
-
 
     def setAttrs(attrs):
         """

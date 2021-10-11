@@ -5,28 +5,31 @@
 
 """Test SOAP support."""
 
+
+from unittest import skipIf
+
+from twisted.internet import defer, reactor
+from twisted.trial.unittest import TestCase
+from twisted.web import error, server
+
 try:
-    import SOAPpy
+    import SOAPpy  # type: ignore[import]
+
+    from twisted.web import soap
+    from twisted.web.soap import SOAPPublisher
 except ImportError:
     SOAPpy = None
-    class SOAPPublisher: pass
-else:
-    from twisted.web import soap
-    SOAPPublisher = soap.SOAPPublisher
-
-from twisted.trial import unittest
-from twisted.web import server, error
-from twisted.internet import reactor, defer
+    SOAPPublisher = object  # type: ignore[misc,assignment]
 
 
 class Test(SOAPPublisher):
-
     def soap_add(self, a, b):
         return a + b
 
     def soap_kwargs(self, a=1, b=2):
         return a + b
-    soap_kwargs.useKeywords=True
+
+    soap_kwargs.useKeywords = True  # type: ignore[attr-defined]
 
     def soap_triple(self, string, num):
         return [string, num, None]
@@ -53,12 +56,13 @@ class Test(SOAPPublisher):
         return map[key]
 
 
-class SOAPTests(unittest.TestCase):
-
+@skipIf(not SOAPpy, "SOAPpy not installed")
+class SOAPTests(TestCase):
     def setUp(self):
         self.publisher = Test()
-        self.p = reactor.listenTCP(0, server.Site(self.publisher),
-                                   interface="127.0.0.1")
+        self.p = reactor.listenTCP(
+            0, server.Site(self.publisher), interface="127.0.0.1"
+        )
         self.port = self.p.getHost().port
 
     def tearDown(self):
@@ -72,7 +76,8 @@ class SOAPTests(unittest.TestCase):
             ("add", (2, 3), 5),
             ("defer", ("a",), "a"),
             ("dict", ({"a": 1}, "a"), 1),
-            ("triple", ("a", 1), ["a", 1, None])]
+            ("triple", ("a", 1), ["a", 1, None]),
+        ]
 
         dl = []
         for meth, args, outp in inputOutput:
@@ -81,22 +86,25 @@ class SOAPTests(unittest.TestCase):
             dl.append(d)
 
         # SOAPpy kinda blows.
-        d = self.proxy().callRemote('complex')
+        d = self.proxy().callRemote("complex")
         d.addCallback(lambda result: result._asdict())
         d.addCallback(self.assertEqual, {"a": ["b", "c", 12, []], "D": "foo"})
         dl.append(d)
 
-        # We now return to our regularly scheduled program, already in progress.
+        # We now return to our regularly scheduled program,
+        # already in progress.
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
     def testMethodNotFound(self):
         """
         Check that a non existing method return error 500.
         """
-        d = self.proxy().callRemote('doesntexist')
+        d = self.proxy().callRemote("doesntexist")
         self.assertFailure(d, error.Error)
+
         def cb(err):
             self.assertEqual(int(err.status), 500)
+
         d.addCallback(cb)
         return d
 
@@ -108,7 +116,3 @@ class SOAPTests(unittest.TestCase):
         self.assertTrue(self.publisher.lookupFunction("add"))
         self.assertTrue(self.publisher.lookupFunction("fail"))
         self.assertFalse(self.publisher.lookupFunction("foobar"))
-
-if not SOAPpy:
-    SOAPTests.skip = "SOAPpy not installed"
-

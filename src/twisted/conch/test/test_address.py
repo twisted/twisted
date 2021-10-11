@@ -5,14 +5,11 @@
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
 
-from __future__ import division, absolute_import
-
-from twisted.trial import unittest
-from twisted.internet.address import IPv4Address
-from twisted.internet.test.test_address import AddressTestCaseMixin
 
 from twisted.conch.ssh.address import SSHTransportAddress
-
+from twisted.internet.address import IPv4Address
+from twisted.internet.test.test_address import AddressTestCaseMixin
+from twisted.trial import unittest
 
 
 class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
@@ -22,7 +19,6 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
     basic functionality of that class (string representation, comparison, &c).
     """
 
-
     def _stringRepresentation(self, stringFunction):
         """
         The string representation of C{SSHTransportAddress} should be
@@ -31,9 +27,7 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
         addr = self.buildAddress()
         stringValue = stringFunction(addr)
         addressValue = stringFunction(addr.address)
-        self.assertEqual(stringValue,
-                         "SSHTransportAddress(%s)" % addressValue)
-
+        self.assertEqual(stringValue, "SSHTransportAddress(%s)" % addressValue)
 
     def buildAddress(self):
         """
@@ -41,7 +35,6 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
         created for each call, but always for the same address.
         """
         return SSHTransportAddress(IPv4Address("TCP", "127.0.0.1", 22))
-
 
     def buildDifferentAddress(self):
         """

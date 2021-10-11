@@ -33,5 +33,6 @@ zone = [
     CNAME('ftp.example-domain.com', 'example-domain.com'),
 
     MX('example-domain.com', 0, 'mail.example-domain.com'),
-    A('mail.example-domain.com', '123.0.16.43')
+    A('mail.example-domain.com', '123.0.16.43'),
+    PTR('43.16.0.123.in-addr.arpa', 'mail.example-domain.com'),
 ]

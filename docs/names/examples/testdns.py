@@ -19,13 +19,11 @@ from twisted.names import client, dns, error
 from twisted.python import usage
 
 
-
 class Options(usage.Options):
-    synopsis = 'Usage: testdns.py DOMAINNAME'
+    synopsis = "Usage: testdns.py DOMAINNAME"
 
     def parseArgs(self, domainname):
-        self['domainname'] = domainname
-
+        self["domainname"] = domainname
 
 
 def formatRecords(records, heading):
@@ -34,25 +32,24 @@ def formatRecords(records, heading):
     formatted string beneath the given heading.
     """
     answers, authority, additional = records
-    lines = ['# ' + heading]
+    lines = ["# " + heading]
     for a in answers:
         line = [
             a.name,
-            dns.QUERY_CLASSES.get(a.cls, 'UNKNOWN (%d)' % (a.cls,)),
-            a.payload]
-        lines.append(' '.join(str(word) for word in line))
+            dns.QUERY_CLASSES.get(a.cls, "UNKNOWN (%d)" % (a.cls,)),
+            a.payload,
+        ]
+        lines.append(" ".join(str(word) for word in line))
 
-    return '\n'.join(line for line in lines)
-
+    return "\n".join(line for line in lines)
 
 
 def printResults(results, domainname):
     """
     Print the formatted results for each DNS record type.
     """
-    sys.stdout.write('# Domain Summary for %r\n' % (domainname,))
-    sys.stdout.write('\n\n'.join(results) + '\n')
-
+    sys.stdout.write(f"# Domain Summary for {domainname!r}\n")
+    sys.stdout.write("\n\n".join(results) + "\n")
 
 
 def printError(failure, domainname):
@@ -63,8 +60,7 @@ def printError(failure, domainname):
     failure.trap(defer.FirstError)
     failure = failure.value.subFailure
     failure.trap(error.DNSNameError)
-    sys.stderr.write('ERROR: domain name not found %r\n' % (domainname,))
-
+    sys.stderr.write(f"ERROR: domain name not found {domainname!r}\n")
 
 
 def main(reactor, *argv):
@@ -72,26 +68,27 @@ def main(reactor, *argv):
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(str(options) + '\n')
-        sys.stderr.write('ERROR: %s\n' % (errortext,))
+        sys.stderr.write(str(options) + "\n")
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
-    domainname = options['domainname']
-    r = client.Resolver('/etc/resolv.conf')
-    d = defer.gatherResults([
-            r.lookupAddress(domainname).addCallback(
-                formatRecords, 'Addresses'),
+    domainname = options["domainname"]
+    r = client.Resolver("/etc/resolv.conf")
+    d = defer.gatherResults(
+        [
+            r.lookupAddress(domainname).addCallback(formatRecords, "Addresses"),
             r.lookupMailExchange(domainname).addCallback(
-                formatRecords, 'Mail Exchangers'),
-            r.lookupNameservers(domainname).addCallback(
-                formatRecords, 'Nameservers'),
-            ], consumeErrors=True)
+                formatRecords, "Mail Exchangers"
+            ),
+            r.lookupNameservers(domainname).addCallback(formatRecords, "Nameservers"),
+        ],
+        consumeErrors=True,
+    )
 
     d.addCallback(printResults, domainname)
     d.addErrback(printError, domainname)
     return d
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     react(main, sys.argv[1:])

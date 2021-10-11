@@ -63,7 +63,7 @@ class NoMoreTokens(Exception):
     """Another exception object, for when we run out of tokens"""
     pass
 
-class Token(object):
+class Token:
     """Yapps token.
 
     This is a container for a scanned token.
@@ -89,7 +89,7 @@ class Token(object):
         return output
 
 in_name=0
-class Scanner(object):
+class Scanner:
     """Yapps scanner.
 
     The Yapps scanner can work in context sensitive or context
@@ -377,7 +377,7 @@ class Scanner(object):
             raise SyntaxError(tok.pos, 'Trying to find '+type+': '+ ', '.join(self.last_types)+", got "+tok.type, context=context)
         return tok.value
 
-class Parser(object):
+class Parser:
     """Base class for Yapps-generated parsers.
 
     """
@@ -399,7 +399,7 @@ class Parser(object):
         """Returns the matched text, and moves to the next token"""
         return self._scanner.scan(type, **kw)
 
-class Context(object):
+class Context:
     """Class to represent the parser's call stack.
 
     Every rule creates a Context that links to its parent rule.  The

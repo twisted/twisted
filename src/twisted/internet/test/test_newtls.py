@@ -5,22 +5,29 @@
 Tests for L{twisted.internet._newtls}.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.trial import unittest
 from twisted.internet import interfaces
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.connectionmixins import (
-    ConnectableProtocol, runProtocolsWithReactor)
-from twisted.internet.test.test_tls import SSLCreator, TLSMixin
-from twisted.internet.test.test_tls import StartTLSClientCreator
-from twisted.internet.test.test_tls import ContextGeneratingMixin
+    ConnectableProtocol,
+    runProtocolsWithReactor,
+)
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import TCPCreator
+from twisted.internet.test.test_tls import (
+    ContextGeneratingMixin,
+    SSLCreator,
+    StartTLSClientCreator,
+    TLSMixin,
+)
+from twisted.trial import unittest
+
 try:
+    from twisted.internet import _newtls as __newtls
     from twisted.protocols import tls
-    from twisted.internet import _newtls
 except ImportError:
     _newtls = None
+else:
+    _newtls = __newtls
 from zope.interface import implementer
 
 
@@ -41,7 +48,7 @@ class BypassTLSTests(unittest.TestCase):
         default = object()
         result = []
 
-        class FakeTransport(object):
+        class FakeTransport:
             def loseConnection(self, _connDone=default):
                 result.append(_connDone)
 
@@ -57,8 +64,7 @@ class BypassTLSTests(unittest.TestCase):
         self.assertEqual(result, [default, notDefault])
 
 
-
-class FakeProducer(object):
+class FakeProducer:
     """
     A producer that does nothing.
     """
@@ -66,14 +72,11 @@ class FakeProducer(object):
     def pauseProducing(self):
         pass
 
-
     def resumeProducing(self):
         pass
 
-
     def stopProducing(self):
         pass
-
 
 
 @implementer(interfaces.IHandshakeListener)
@@ -87,10 +90,8 @@ class ProducerProtocol(ConnectableProtocol):
         self.producer = producer
         self.result = result
 
-
     def handshakeCompleted(self):
-        if not isinstance(self.transport.protocol,
-                          tls.TLSMemoryBIOProtocol):
+        if not isinstance(self.transport.protocol, tls.TLSMemoryBIOProtocol):
             # Either the test or the code have a bug...
             raise RuntimeError("TLSMemoryBIOProtocol not hooked up.")
 
@@ -102,7 +103,6 @@ class ProducerProtocol(ConnectableProtocol):
         # The producer was unregistered from the TLSMemoryBIOProtocol:
         self.result.append(self.transport.protocol._producer)
         self.transport.loseConnection()
-
 
 
 class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
@@ -122,11 +122,13 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         result = []
         producer = FakeProducer()
 
-        runProtocolsWithReactor(self, ConnectableProtocol(),
-                                ProducerProtocol(producer, result),
-                                SSLCreator())
+        runProtocolsWithReactor(
+            self,
+            ConnectableProtocol(),
+            ProducerProtocol(producer, result),
+            SSLCreator(),
+        )
         self.assertEqual(result, [producer, None])
-
 
     def test_producerAfterStartTLS(self):
         """
@@ -137,11 +139,13 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         result = []
         producer = FakeProducer()
 
-        runProtocolsWithReactor(self, ConnectableProtocol(),
-                                ProducerProtocol(producer, result),
-                                StartTLSClientCreator())
+        runProtocolsWithReactor(
+            self,
+            ConnectableProtocol(),
+            ProducerProtocol(producer, result),
+            StartTLSClientCreator(),
+        )
         self.assertEqual(result, [producer, None])
-
 
     def startTLSAfterRegisterProducer(self, streaming):
         """
@@ -165,8 +169,7 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
                     result.append(self.transport.producer._producer)
                 else:
                     # _ProducerMembrane -> _PullToPush -> producer:
-                    result.append(
-                        self.transport.protocol._producer._producer._producer)
+                    result.append(self.transport.protocol._producer._producer._producer)
                     result.append(self.transport.producer._producer._producer)
                 self.transport.unregisterProducer()
                 self.transport.loseConnection()
@@ -175,10 +178,10 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
             def connectionMade(self):
                 self.transport.startTLS(clientContext)
 
-        runProtocolsWithReactor(self, RegisterTLSProtocol(),
-                                StartTLSProtocol(), TCPCreator())
+        runProtocolsWithReactor(
+            self, RegisterTLSProtocol(), StartTLSProtocol(), TCPCreator()
+        )
         self.assertEqual(result, [producer, producer])
-
 
     def test_startTLSAfterRegisterProducerStreaming(self):
         """
@@ -186,7 +189,6 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
         the producer is re-registered with the C{TLSMemoryBIOProtocol}.
         """
         self.startTLSAfterRegisterProducer(True)
-
 
     def test_startTLSAfterRegisterProducerNonStreaming(self):
         """

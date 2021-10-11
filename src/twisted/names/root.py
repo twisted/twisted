@@ -13,10 +13,9 @@ todo::
     documentation
 """
 
-from twisted.python.failure import Failure
 from twisted.internet import defer
-from twisted.names import dns, common, error
-
+from twisted.names import common, dns, error
+from twisted.python.failure import Failure
 
 
 class _DummyController:
@@ -25,9 +24,9 @@ class _DummyController:
     will be responses to previously issued queries.  Anything else received
     will be ignored.
     """
+
     def messageReceived(self, *args):
         pass
-
 
 
 class Resolver(common.ResolverBase):
@@ -40,8 +39,8 @@ class Resolver(common.ResolverBase):
     @ivar _reactor: See C{reactor} parameter of L{__init__}
     @ivar _resolverFactory: See C{resolverFactory} parameter of L{__init__}
     """
-    def __init__(self, hints, maximumQueries=10,
-                 reactor=None, resolverFactory=None):
+
+    def __init__(self, hints, maximumQueries=10, reactor=None, resolverFactory=None):
         """
         @param hints: A L{list} of L{str} giving the dotted quad
             representation of IP addresses of root servers at which to
@@ -70,14 +69,12 @@ class Resolver(common.ResolverBase):
             from twisted.names.client import Resolver as resolverFactory
         self._resolverFactory = resolverFactory
 
-
     def _roots(self):
         """
         Return a list of two-tuples representing the addresses of the root
         servers, as defined by C{self.hints}.
         """
         return [(ip, dns.PORT) for ip in self.hints]
-
 
     def _query(self, query, servers, timeout, filter):
         """
@@ -110,7 +107,6 @@ class Resolver(common.ResolverBase):
             d.addCallback(r.filterAnswers)
         return d
 
-
     def _lookup(self, name, cls, type, timeout):
         """
         Implement name lookup by recursively discovering the authoritative
@@ -122,9 +118,8 @@ class Resolver(common.ResolverBase):
             # arbitrary total of 60 seconds.
             timeout = (1, 3, 11, 45)
         return self._discoverAuthority(
-            dns.Query(name, type, cls), self._roots(), timeout,
-            self._maximumQueries)
-
+            dns.Query(name, type, cls), self._roots(), timeout, self._maximumQueries
+        )
 
     def _discoverAuthority(self, query, servers, timeout, queriesLeft):
         """
@@ -150,14 +145,11 @@ class Resolver(common.ResolverBase):
         """
         # Stop now if we've hit the query limit.
         if queriesLeft <= 0:
-            return Failure(
-                error.ResolverError("Query limit reached without result"))
+            return Failure(error.ResolverError("Query limit reached without result"))
 
         d = self._query(query, servers, timeout, False)
-        d.addCallback(
-            self._discoveredAuthority, query, timeout, queriesLeft - 1)
+        d.addCallback(self._discoveredAuthority, query, timeout, queriesLeft - 1)
         return d
-
 
     def _discoveredAuthority(self, response, query, timeout, queriesLeft):
         """
@@ -193,7 +185,7 @@ class Resolver(common.ResolverBase):
         def findAnswerOrCName(name, type, cls):
             cname = None
             for record in records.get(name, []):
-                if record.cls ==  cls:
+                if record.cls == cls:
                     if record.type == type:
                         return record
                     elif record.type == dns.CNAME:
@@ -218,27 +210,28 @@ class Resolver(common.ResolverBase):
                     # Try to resolve the CNAME with another query.
                     d = self._discoverAuthority(
                         dns.Query(str(name), query.type, query.cls),
-                        self._roots(), timeout, queriesLeft)
+                        self._roots(),
+                        timeout,
+                        queriesLeft,
+                    )
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
+
                     def cbResolved(results):
                         answers, authority, additional = results
                         answers.insert(0, previous)
                         return (answers, authority, additional)
+
                     d.addCallback(cbResolved)
                     return d
             elif record.type == query.type:
-                return (
-                    response.answers,
-                    response.authority,
-                    response.additional)
+                return (response.answers, response.authority, response.additional)
             else:
                 # It's a CNAME record.  Try to resolve it from the records
                 # in this response with another iteration around the loop.
                 if record.payload.name in seen:
                     raise error.ResolverError("Cycle in CNAME processing")
                 name = record.payload.name
-
 
         # Build a map to use to convert NS names into IP addresses.
         addresses = {}
@@ -256,29 +249,34 @@ class Resolver(common.ResolverBase):
                 else:
                     traps.append(ns)
         if hints:
-            return self._discoverAuthority(
-                query, hints, timeout, queriesLeft)
+            return self._discoverAuthority(query, hints, timeout, queriesLeft)
         elif traps:
             d = self.lookupAddress(traps[0], timeout)
+
             def getOneAddress(results):
                 answers, authority, additional = results
                 return answers[0].payload.dottedQuad()
+
             d.addCallback(getOneAddress)
             d.addCallback(
                 lambda hint: self._discoverAuthority(
-                    query, [(hint, dns.PORT)], timeout, queriesLeft - 1))
+                    query, [(hint, dns.PORT)], timeout, queriesLeft - 1
+                )
+            )
             return d
         else:
-            return Failure(error.ResolverError(
-                    "Stuck at response without answers or delegation"))
-
+            return Failure(
+                error.ResolverError("Stuck at response without answers or delegation")
+            )
 
 
 def makePlaceholder(deferred, name):
     def placeholder(*args, **kw):
         deferred.addCallback(lambda r: getattr(r, name)(*args, **kw))
         return deferred
+
     return placeholder
+
 
 class DeferredResolver:
     def __init__(self, resolverDeferred):
@@ -293,11 +291,10 @@ class DeferredResolver:
             d.callback(resolver)
 
     def __getattr__(self, name):
-        if name.startswith('lookup') or name in ('getHostByName', 'query'):
+        if name.startswith("lookup") or name in ("getHostByName", "query"):
             self.waiting.append(defer.Deferred())
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
-
 
 
 def bootstrap(resolver, resolverFactory=None):
@@ -320,14 +317,15 @@ def bootstrap(resolver, resolverFactory=None):
     @return: A L{DeferredResolver} which will be dynamically replaced
         with L{Resolver} when the root nameservers have been looked up.
     """
-    domains = [chr(ord('a') + i) for i in range(13)]
-    L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
+    domains = [chr(ord("a") + i) for i in range(13)]
+    L = [resolver.getHostByName("%s.root-servers.net" % d) for d in domains]
     d = defer.DeferredList(L, consumeErrors=True)
 
     def buildResolver(res):
         return Resolver(
-            hints=[e[1] for e in res if e[0]],
-            resolverFactory=resolverFactory)
+            hints=[e[1] for e in res if e[0]], resolverFactory=resolverFactory
+        )
+
     d.addCallback(buildResolver)
 
     return DeferredResolver(d)

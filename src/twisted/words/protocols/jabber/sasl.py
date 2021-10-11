@@ -5,25 +5,25 @@
 XMPP-specific SASL profile.
 """
 
-from __future__ import absolute_import, division
 
-from base64 import b64decode, b64encode
 import re
+from base64 import b64decode, b64encode
+
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.words.protocols.jabber import sasl_mechanisms, xmlstream
 from twisted.words.xish import domish
 
-NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
+NS_XMPP_SASL = "urn:ietf:params:xml:ns:xmpp-sasl"
+
 
 def get_mechanisms(xs):
     """
     Parse the SASL feature to extract the available mechanism names.
     """
     mechanisms = []
-    for element in xs.features[(NS_XMPP_SASL, 'mechanisms')].elements():
-        if element.name == 'mechanism':
-            mechanisms.append(unicode(element))
+    for element in xs.features[(NS_XMPP_SASL, "mechanisms")].elements():
+        if element.name == "mechanism":
+            mechanisms.append(str(element))
 
     return mechanisms
 
@@ -44,11 +44,11 @@ class SASLAuthError(SASLError):
     """
     SASL Authentication failed.
     """
+
     def __init__(self, condition=None):
         self.condition = condition
 
-
-    def __str__(self):
+    def __str__(self) -> str:
         return "SASLAuthError with condition %r" % self.condition
 
 
@@ -71,7 +71,9 @@ class SASLIncorrectEncodingError(SASLError):
     advised.
     """
 
+
 base64Pattern = re.compile("^[0-9A-Za-z+/]*[0-9A-Za-z+/=]{,2}$")
+
 
 def fromBase64(s):
     """
@@ -93,7 +95,6 @@ def fromBase64(s):
         raise SASLIncorrectEncodingError(str(e))
 
 
-
 class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
     """
     Stream initializer that performs SASL authentication.
@@ -105,7 +106,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
     Otherwise, C{DIGEST-MD5} and C{PLAIN} are attempted, in that order.
     """
 
-    feature = (NS_XMPP_SASL, 'mechanisms')
+    feature = (NS_XMPP_SASL, "mechanisms")
     _deferred = None
 
     def setMechanism(self):
@@ -123,19 +124,19 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
         mechanisms = get_mechanisms(self.xmlstream)
         if jid.user is not None:
-            if 'DIGEST-MD5' in mechanisms:
-                self.mechanism = sasl_mechanisms.DigestMD5('xmpp', jid.host, None,
-                                                           jid.user, password)
-            elif 'PLAIN' in mechanisms:
+            if "DIGEST-MD5" in mechanisms:
+                self.mechanism = sasl_mechanisms.DigestMD5(
+                    "xmpp", jid.host, None, jid.user, password
+                )
+            elif "PLAIN" in mechanisms:
                 self.mechanism = sasl_mechanisms.Plain(None, jid.user, password)
             else:
                 raise SASLNoAcceptableMechanism()
         else:
-            if 'ANONYMOUS' in mechanisms:
+            if "ANONYMOUS" in mechanisms:
                 self.mechanism = sasl_mechanisms.Anonymous()
             else:
                 raise SASLNoAcceptableMechanism()
-
 
     def start(self):
         """
@@ -144,12 +145,11 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
         self.setMechanism()
         self._deferred = defer.Deferred()
-        self.xmlstream.addObserver('/challenge', self.onChallenge)
-        self.xmlstream.addOnetimeObserver('/success', self.onSuccess)
-        self.xmlstream.addOnetimeObserver('/failure', self.onFailure)
+        self.xmlstream.addObserver("/challenge", self.onChallenge)
+        self.xmlstream.addOnetimeObserver("/success", self.onSuccess)
+        self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
         self.sendAuth(self.mechanism.getInitialResponse())
         return self._deferred
-
 
     def sendAuth(self, data=None):
         """
@@ -162,14 +162,13 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @type data: C{str} or L{None}.
         """
 
-        auth = domish.Element((NS_XMPP_SASL, 'auth'))
-        auth['mechanism'] = self.mechanism.name
+        auth = domish.Element((NS_XMPP_SASL, "auth"))
+        auth["mechanism"] = self.mechanism.name
         if data is not None:
-            auth.addContent(b64encode(data).decode('ascii') or u'=')
+            auth.addContent(b64encode(data).decode("ascii") or "=")
         self.xmlstream.send(auth)
 
-
-    def sendResponse(self, data=b''):
+    def sendResponse(self, data=b""):
         """
         Send response to a challenge.
 
@@ -177,11 +176,10 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @type data: L{bytes}.
         """
 
-        response = domish.Element((NS_XMPP_SASL, 'response'))
+        response = domish.Element((NS_XMPP_SASL, "response"))
         if data:
-            response.addContent(b64encode(data).decode('ascii'))
+            response.addContent(b64encode(data).decode("ascii"))
         self.xmlstream.send(response)
-
 
     def onChallenge(self, element):
         """
@@ -192,12 +190,11 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         """
 
         try:
-            challenge = fromBase64(unicode(element))
+            challenge = fromBase64(str(element))
         except SASLIncorrectEncodingError:
             self._deferred.errback()
         else:
             self.sendResponse(self.mechanism.getResponse(challenge))
-
 
     def onSuccess(self, success):
         """
@@ -208,12 +205,11 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @type success: L{domish.Element}
         """
 
-        self.xmlstream.removeObserver('/challenge', self.onChallenge)
-        self.xmlstream.removeObserver('/failure', self.onFailure)
+        self.xmlstream.removeObserver("/challenge", self.onChallenge)
+        self.xmlstream.removeObserver("/failure", self.onFailure)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
         self._deferred.callback(xmlstream.Reset)
-
 
     def onFailure(self, failure):
         """
@@ -224,8 +220,8 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @type failure: L{domish.Element}
         """
 
-        self.xmlstream.removeObserver('/challenge', self.onChallenge)
-        self.xmlstream.removeObserver('/success', self.onSuccess)
+        self.xmlstream.removeObserver("/challenge", self.onChallenge)
+        self.xmlstream.removeObserver("/success", self.onSuccess)
         try:
             condition = failure.firstChildElement().name
         except AttributeError:

@@ -72,7 +72,7 @@ How
 
     
 From the root of the Twisted source tree, run
-`Trial <http://twistedmatrix.com/trac/wiki/TwistedTrial>`_ :
+`Trial <https://twistedmatrix.com/trac/wiki/TwistedTrial>`_ :
 
 
     
@@ -110,7 +110,7 @@ When
 
 
     
-Always, always, *always* be sure `all the     tests pass <http://ronjeffries.com/xprog/classics/expunittestsat100/>`_ before committing any code.  If someone else
+Always, always, *always* be sure `all the     tests pass <https://ronjeffries.com/xprog/classics/expunittestsat100/>`_ before committing any code.  If someone else
 checks out code at the start of a development session and finds
 failing tests, they will not be happy and may decide to *hunt you down* .
 
@@ -237,17 +237,17 @@ Real I/O
 Most unit tests should avoid performing real, platform-implemented I/O operations.
 Real I/O is slow, unreliable, and unwieldy.
 
-When implementing a protocol, :api:`twisted.test.proto_helpers.StringTransport` can be used instead of a real TCP transport.
+When implementing a protocol, :py:class:`twisted.internet.testing.StringTransport` can be used instead of a real TCP transport.
 ``StringTransport`` is fast, deterministic, and can easily be used to exercise all possible network behaviors.
 
-If you need pair a client to a server and have them talk to each other, use :api:`twisted.test.iosim.connect` with :api:`twisted.test.iosim.FakeTransport` transports.
+If you need pair a client to a server and have them talk to each other, use ``twisted.test.iosim.connect`` with ``twisted.test.iosim.FakeTransport`` transports.
 
 
 Real Time
 ~~~~~~~~~
 
 Most unit tests should also avoid waiting for real time to pass.
-Unit tests which construct and advance a :api:`twisted.internet.task.Clock <twisted.internet.task.Clock>` are fast and deterministic.
+Unit tests which construct and advance a :py:class:`twisted.internet.task.Clock` are fast and deterministic.
 
 When designing your code allow for the reactor to be injected during tests.
 
@@ -306,7 +306,7 @@ Since unit tests are avoiding real I/O and real time, they can usually avoid usi
 The only exceptions to this are unit tests for a real reactor implementation.
 Unit tests for protocol implementations or other application code should not use a reactor.
 Unit tests for real reactor implementations should not use the global reactor, but should
-instead use :api:`twisted.internet.test.reactormixins.ReactorBuilder` so they can be applied to all of the reactor implementations automatically.
+instead use ``twisted.internet.test.reactormixins.ReactorBuilder`` so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
@@ -560,7 +560,7 @@ handle this yet.. ``trial --testmodule`` does, though)
 
 The ``test-case-name`` tag will allow ``trial --testmodule twisted/dir/myfile.py`` to determine which test cases need
 to be run to exercise the code in ``myfile.py`` . Several tools (as
-well as http://launchpad.net/twisted-emacs's ``twisted-dev.el`` 's F9 command) use this to automatically
+well as https://launchpad.net/twisted-emacs's ``twisted-dev.el`` 's F9 command) use this to automatically
 run the right tests.
 
 
@@ -580,14 +580,14 @@ Links
 
 
 
-- A chapter on `Unit Testing <http://www.diveintopython3.net/unit-testing.html>`_ 
-  in Mark Pilgrim's `Dive Into      Python <http://www.diveintopython3.net/>`_ .
-- `unittest <http://docs.python.org/library/unittest.html>`_ module documentation, in the `Python Library      Reference <http://docs.python.org/library>`_ .
+- A chapter on `Unit Testing <https://www.diveintopython3.net/unit-testing.html>`_ 
+  in Mark Pilgrim's `Dive Into Python <https://www.diveintopython3.net/>`_ .
+- :mod:`unittest` module documentation, in the `Python Library Reference <https://docs.python.org/3/library>`_ .
 - `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
 - `Unit      Tests <http://www.extremeprogramming.org/rules/unittests.html>`_ in `Extreme Programming: A Gentle Introduction <http://www.extremeprogramming.org>`_ .
-- Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://ronjeffries.com/xprog/classics/expunittestsat100/>`_ .
-- Ron Jeffries writes about the `Unit      Test <https://web.archive.org/web/20140708115244/http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <http://web.archive.org/web/20140827044941/http://www.xprogramming.com/Practices/xpractices.htm>`_ .
+- Ron Jeffries expounds on the importance of `Unit Tests at 100% <https://ronjeffries.com/xprog/classics/expunittestsat100/>`_ .
+- Ron Jeffries writes about the `Unit Test <https://web.archive.org/web/20140708115244/http://www.xprogramming.com/Practices/PracUnitTest.html>`_ in the `Extreme      Programming practices of C3 <https://web.archive.org/web/20140827044941/http://www.xprogramming.com/Practices/xpractices.htm>`_ .
 - `PyUnit's homepage <http://pyunit.sourceforge.net>`_ .
 - The top-level tests directory, `twisted/test <https://github.com/twisted/twisted/tree/trunk/twisted/test>`_.
 

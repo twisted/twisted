@@ -5,23 +5,20 @@
 Tools for automated testing of L{twisted.pair}-based applications.
 """
 
-import struct
 import socket
-from errno import (
-    EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS)
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINTR, EINVAL, ENOBUFS, ENOSYS, EPERM, EWOULDBLOCK
 from functools import wraps
 
 from zope.interface import implementer
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.ethernet import EthernetProtocol
-from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
-from twisted.pair.tuntap import (
-    _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelFlags)
+from twisted.pair.rawudp import RawUDPProtocol
+from twisted.pair.tuntap import _IFNAMSIZ, _TUNSETIFF, TunnelFlags, _IInputOutputSystem
 from twisted.python.compat import nativeString
-
 
 # The number of bytes in the "protocol information" header that may be present
 # on datagrams read from a tunnel device.  This is two bytes of flags followed
@@ -40,7 +37,7 @@ def _H(n):
     @return: The packed representation of the integer.
     @rtype: L{bytes}
     """
-    return struct.pack('>H', n)
+    return struct.pack(">H", n)
 
 
 _IPv4 = 0x0800
@@ -68,7 +65,6 @@ def _ethernet(src, dst, protocol, payload):
     return dst + src + _H(protocol) + payload
 
 
-
 def _ip(src, dst, payload):
     """
     Construct an IP datagram with the given source, destination, and
@@ -88,21 +84,22 @@ def _ip(src, dst, payload):
     """
     ipHeader = (
         # Version and header length, 4 bits each
-        b'\x45'
+        b"\x45"
         # Differentiated services field
-        b'\x00'
+        b"\x00"
         # Total length
         + _H(20 + len(payload))
-        + b'\x00\x01\x00\x00\x40\x11'
+        + b"\x00\x01\x00\x00\x40\x11"
         # Checksum
         + _H(0)
         # Source address
         + socket.inet_pton(socket.AF_INET, nativeString(src))
         # Destination address
-        + socket.inet_pton(socket.AF_INET, nativeString(dst)))
+        + socket.inet_pton(socket.AF_INET, nativeString(dst))
+    )
 
     # Total all of the 16-bit integers in the header
-    checksumStep1 = sum(struct.unpack('!10H', ipHeader))
+    checksumStep1 = sum(struct.unpack("!10H", ipHeader))
     # Pull off the carry
     carry = checksumStep1 >> 16
     # And add it to what was left over
@@ -113,13 +110,9 @@ def _ip(src, dst, payload):
     # Reconstruct the IP header including the correct checksum so the platform
     # IP stack, if there is one involved in this test, doesn't drop it on the
     # floor as garbage.
-    ipHeader = (
-        ipHeader[:10] +
-        struct.pack('!H', checksumStep3) +
-        ipHeader[12:])
+    ipHeader = ipHeader[:10] + struct.pack("!H", checksumStep3) + ipHeader[12:]
 
     return ipHeader + payload
-
 
 
 def _udp(src, dst, payload):
@@ -147,12 +140,12 @@ def _udp(src, dst, payload):
         # Length
         + _H(len(payload) + 8)
         # Checksum
-        + _H(0))
+        + _H(0)
+    )
     return udpHeader + payload
 
 
-
-class Tunnel(object):
+class Tunnel:
     """
     An in-memory implementation of a tun or tap device.
 
@@ -160,6 +153,7 @@ class Tunnel(object):
         for the tunnel factory character special device.
     @type _DEVICE_NAME: C{bytes}
     """
+
     _DEVICE_NAME = b"/dev/net/tun"
 
     # Between POSIX and Python, there are 4 combinations.  Here are two, at
@@ -198,7 +192,6 @@ class Tunnel(object):
         self.writeBuffer = deque()
         self.pendingSignals = deque()
 
-
     @property
     def blocking(self):
         """
@@ -207,7 +200,6 @@ class Tunnel(object):
         """
         return not (self.openFlags & self.system.O_NONBLOCK)
 
-
     @property
     def closeOnExec(self):
         """
@@ -215,7 +207,6 @@ class Tunnel(object):
         C{True}.  C{False} otherwise.
         """
         return bool(self.openFlags & self.system.O_CLOEXEC)
-
 
     def addToReadBuffer(self, datagram):
         """
@@ -229,11 +220,10 @@ class Tunnel(object):
         # TAP devices also include ethernet framing.
         if self.tunnelMode & TunnelFlags.IFF_TAP.value:
             datagram = _ethernet(
-                src=b'\x00' * 6, dst=b'\xff' * 6, protocol=_IPv4,
-                payload=datagram)
+                src=b"\x00" * 6, dst=b"\xff" * 6, protocol=_IPv4, payload=datagram
+            )
 
         self.readBuffer.append(datagram)
-
 
     def read(self, limit):
         """
@@ -270,7 +260,6 @@ class Tunnel(object):
         else:
             raise self.nonBlockingExceptionStyle
 
-
     def write(self, datagram):
         """
         Write a datagram into this tunnel.
@@ -286,14 +275,13 @@ class Tunnel(object):
         """
         if self.pendingSignals:
             self.pendingSignals.popleft()
-            raise IOError(EINTR, "Interrupted system call")
+            raise OSError(EINTR, "Interrupted system call")
 
         if len(datagram) > self.SEND_BUFFER_SIZE:
-            raise IOError(ENOBUFS, "No buffer space available")
+            raise OSError(ENOBUFS, "No buffer space available")
 
         self.writeBuffer.append(datagram)
         return len(datagram)
-
 
 
 def _privileged(original):
@@ -307,17 +295,18 @@ def _privileged(original):
 
     @return: A wrapper around C{original} that applies permission checks.
     """
+
     @wraps(original)
     def permissionChecker(self, *args, **kwargs):
         if original.__name__ not in self.permissions:
-            raise IOError(EPERM, "Operation not permitted")
+            raise OSError(EPERM, "Operation not permitted")
         return original(self, *args, **kwargs)
+
     return permissionChecker
 
 
-
 @implementer(_IInputOutputSystem)
-class MemoryIOSystem(object):
+class MemoryIOSystem:
     """
     An in-memory implementation of basic I/O primitives, useful in the context
     of unit testing as a drop-in replacement for parts of the C{os} module.
@@ -328,6 +317,7 @@ class MemoryIOSystem(object):
 
     @ivar _counter:
     """
+
     _counter = 8192
 
     O_RDWR = 1 << 0
@@ -337,8 +327,7 @@ class MemoryIOSystem(object):
     def __init__(self):
         self._devices = {}
         self._openFiles = {}
-        self.permissions = set(['open', 'ioctl'])
-
+        self.permissions = {"open", "ioctl"}
 
     def getTunnel(self, port):
         """
@@ -353,7 +342,6 @@ class MemoryIOSystem(object):
         """
         return self._openFiles[port.fileno()]
 
-
     def registerSpecialDevice(self, name, cls):
         """
         Specify a class which will be used to handle I/O to a device of a
@@ -366,7 +354,6 @@ class MemoryIOSystem(object):
             device is opened.
         """
         self._devices[name] = cls
-
 
     @_privileged
     def open(self, name, flags, mode=None):
@@ -399,7 +386,6 @@ class MemoryIOSystem(object):
             return fd
         raise OSError(ENOSYS, "Function not implemented")
 
-
     def read(self, fd, limit):
         """
         Try to read some bytes out of one of the in-memory buffers which may
@@ -411,7 +397,6 @@ class MemoryIOSystem(object):
             return self._openFiles[fd].read(limit)
         except KeyError:
             raise OSError(EBADF, "Bad file descriptor")
-
 
     def write(self, fd, data):
         """
@@ -425,7 +410,6 @@ class MemoryIOSystem(object):
         except KeyError:
             raise OSError(EBADF, "Bad file descriptor")
 
-
     def close(self, fd):
         """
         Discard the in-memory buffer and other in-memory state for the given
@@ -438,7 +422,6 @@ class MemoryIOSystem(object):
         except KeyError:
             raise OSError(EBADF, "Bad file descriptor")
 
-
     @_privileged
     def ioctl(self, fd, request, args):
         """
@@ -450,18 +433,17 @@ class MemoryIOSystem(object):
         try:
             tunnel = self._openFiles[fd]
         except KeyError:
-            raise IOError(EBADF, "Bad file descriptor")
+            raise OSError(EBADF, "Bad file descriptor")
 
         if request != _TUNSETIFF:
-            raise IOError(EINVAL, "Request or args is not valid.")
+            raise OSError(EINVAL, "Request or args is not valid.")
 
-        name, mode = struct.unpack('%dsH' % (_IFNAMSIZ,), args)
+        name, mode = struct.unpack("%dsH" % (_IFNAMSIZ,), args)
         tunnel.tunnelMode = mode
         tunnel.requestedName = name
-        tunnel.name = name[:_IFNAMSIZ - 3] + b"123"
+        tunnel.name = name[: _IFNAMSIZ - 3] + b"123"
 
-        return struct.pack('%dsH' % (_IFNAMSIZ,), tunnel.name, mode)
-
+        return struct.pack("%dsH" % (_IFNAMSIZ,), tunnel.name, mode)
 
     def sendUDP(self, datagram, address):
         """
@@ -480,18 +462,19 @@ class MemoryIOSystem(object):
         @rtype: L{tuple} of (L{bytes}, L{int})
         """
         # Just make up some random thing
-        srcIP = '10.1.2.3'
+        srcIP = "10.1.2.3"
         srcPort = 21345
 
         serialized = _ip(
-            src=srcIP, dst=address[0], payload=_udp(
-                src=srcPort, dst=address[1], payload=datagram))
+            src=srcIP,
+            dst=address[0],
+            payload=_udp(src=srcPort, dst=address[1], payload=datagram),
+        )
 
         openFiles = list(self._openFiles.values())
         openFiles[0].addToReadBuffer(serialized)
 
         return (srcIP, srcPort)
-
 
     def receiveUDP(self, fileno, host, port):
         """
@@ -515,16 +498,15 @@ class MemoryIOSystem(object):
         return _FakePort(self, fileno)
 
 
-
-class _FakePort(object):
+class _FakePort:
     """
     A socket-like object which can be used to read UDP datagrams from
     tunnel-like file descriptors managed by a L{MemoryIOSystem}.
     """
+
     def __init__(self, system, fileno):
         self._system = system
         self._fileno = fileno
-
 
     def recv(self, nbytes):
         """
@@ -554,13 +536,14 @@ class _FakePort(object):
         ip.addProto(17, udp)
 
         mode = self._system._openFiles[self._fileno].tunnelMode
-        if (mode & TunnelFlags.IFF_TAP.value):
+        if mode & TunnelFlags.IFF_TAP.value:
             ether = EthernetProtocol()
             ether.addProto(0x800, ip)
             datagramReceived = ether.datagramReceived
         else:
             datagramReceived = lambda data: ip.datagramReceived(
-                data, None, None, None, None)
+                data, None, None, None, None
+            )
 
         dataHasPI = not (mode & TunnelFlags.IFF_NO_PI.value)
 

@@ -8,25 +8,22 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
 
 import struct
 
+from twisted.conch.ssh import channel, common
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
-from twisted.python import log
-from twisted.python.compat import _PY3, unicode
 
-from twisted.conch.ssh import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
         self.conn = connection
-        self.hostport = hostport # tuple
+        self.hostport = hostport  # tuple
         self.klass = klass
 
     def buildProtocol(self, addr):
-        channel = self.klass(conn = self.conn)
+        channel = self.klass(conn=self.conn)
         client = SSHForwardingClient(channel)
         channel.client = client
         addrTuple = (addr.host, addr.port)
@@ -34,14 +31,14 @@ class SSHListenForwardingFactory(protocol.Factory):
         self.conn.openChannel(channel, channelOpenData)
         return client
 
-class SSHListenForwardingChannel(channel.SSHChannel):
 
+class SSHListenForwardingChannel(channel.SSHChannel):
     def channelOpen(self, specificData):
-        log.msg('opened forwarding channel %s' % self.id)
-        if len(self.client.buf)>1:
+        self._log.info("opened forwarding channel {id}", id=self.id)
+        if len(self.client.buf) > 1:
             b = self.client.buf[1:]
             self.write(b)
-        self.client.buf = b''
+        self.client.buf = b""
 
     def openFailed(self, reason):
         self.closed()
@@ -53,19 +50,20 @@ class SSHListenForwardingChannel(channel.SSHChannel):
         self.client.transport.loseConnection()
 
     def closed(self):
-        if hasattr(self, 'client'):
-            log.msg('closing local forwarding channel %s' % self.id)
+        if hasattr(self, "client"):
+            self._log.info("closing local forwarding channel {id}", id=self.id)
             self.client.transport.loseConnection()
             del self.client
 
+
 class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
 
-    name = b'direct-tcpip'
+    name = b"direct-tcpip"
+
 
 class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
 
-    name = b'forwarded-tcpip'
-
+    name = b"forwarded-tcpip"
 
 
 class SSHConnectForwardingChannel(channel.SSHChannel):
@@ -91,22 +89,23 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         result of C{channelOpen}.
     @type _channelOpenDeferred: L{twisted.internet.defer.Deferred}
     """
+
     _reactor = reactor
 
     def __init__(self, hostport, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.hostport = hostport
         self.client = None
-        self.clientBuf = b''
-
+        self.clientBuf = b""
 
     def channelOpen(self, specificData):
         """
         See: L{channel.SSHChannel}
         """
-        log.msg("connecting to %s:%i" % self.hostport)
-        ep = HostnameEndpoint(
-            self._reactor, self.hostport[0], self.hostport[1])
+        self._log.info(
+            "connecting to {host}:{port}", host=self.hostport[0], port=self.hostport[1]
+        )
+        ep = HostnameEndpoint(self._reactor, self.hostport[0], self.hostport[1])
         d = connectProtocol(ep, SSHForwardingClient(self))
         d.addCallbacks(self._setClient, self._close)
         self._channelOpenDeferred = d
@@ -120,14 +119,15 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @type  client: L{protocol.Protocol}
         """
         self.client = client
-        log.msg("connected to %s:%i" % self.hostport)
+        self._log.info(
+            "connected to {host}:{port}", host=self.hostport[0], port=self.hostport[1]
+        )
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None
         if self.client.buf[1:]:
             self.write(self.client.buf[1:])
-        self.client.buf = b''
-
+        self.client.buf = b""
 
     def _close(self, reason):
         """
@@ -136,9 +136,13 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         @param reason: Reason why connection failed.
         @type  reason: L{twisted.python.failure.Failure}
         """
-        log.msg("failed to connect: %s" % reason)
+        self._log.error(
+            "failed to connect to {host}:{port}: {reason}",
+            host=self.hostport[0],
+            port=self.hostport[1],
+            reason=reason,
+        )
         self.loseConnection()
-
 
     def dataReceived(self, data):
         """
@@ -149,32 +153,32 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         else:
             self.clientBuf += data
 
-
     def closed(self):
         """
         See: L{channel.SSHChannel}
         """
         if self.client:
-            log.msg('closed remote forwarding channel %s' % self.id)
+            self._log.info("closed remote forwarding channel {id}", id=self.id)
             if self.client.channel:
                 self.loseConnection()
             self.client.transport.loseConnection()
             del self.client
 
 
-
 def openConnectForwardingClient(remoteWindow, remoteMaxPacket, data, avatar):
     remoteHP, origHP = unpackOpen_direct_tcpip(data)
-    return SSHConnectForwardingChannel(remoteHP, 
-                                       remoteWindow=remoteWindow,
-                                       remoteMaxPacket=remoteMaxPacket,
-                                       avatar=avatar)
+    return SSHConnectForwardingChannel(
+        remoteHP,
+        remoteWindow=remoteWindow,
+        remoteMaxPacket=remoteMaxPacket,
+        avatar=avatar,
+    )
+
 
 class SSHForwardingClient(protocol.Protocol):
-
     def __init__(self, channel):
         self.channel = channel
-        self.buf = b'\000'
+        self.buf = b"\000"
 
     def dataReceived(self, data):
         if self.buf:
@@ -200,31 +204,32 @@ def packOpen_direct_tcpip(destination, source):
     """
     (connHost, connPort) = destination
     (origHost, origPort) = source
-    if isinstance(connHost, unicode):
+    if isinstance(connHost, str):
         connHost = connHost.encode("utf-8")
-    if isinstance(origHost, unicode):
+    if isinstance(origHost, str):
         origHost = origHost.encode("utf-8")
-    conn = common.NS(connHost) + struct.pack('>L', connPort)
-    orig = common.NS(origHost) + struct.pack('>L', origPort)
+    conn = common.NS(connHost) + struct.pack(">L", connPort)
+    orig = common.NS(origHost) + struct.pack(">L", origPort)
     return conn + orig
+
 
 packOpen_forwarded_tcpip = packOpen_direct_tcpip
 
+
 def unpackOpen_direct_tcpip(data):
-    """Unpack the data to a usable format.
-    """
+    """Unpack the data to a usable format."""
     connHost, rest = common.getNS(data)
-    if _PY3 and isinstance(connHost, bytes):
+    if isinstance(connHost, bytes):
         connHost = connHost.decode("utf-8")
-    connPort = int(struct.unpack('>L', rest[:4])[0])
+    connPort = int(struct.unpack(">L", rest[:4])[0])
     origHost, rest = common.getNS(rest[4:])
-    if _PY3 and isinstance(origHost, bytes):
+    if isinstance(origHost, bytes):
         origHost = origHost.decode("utf-8")
-    origPort = int(struct.unpack('>L', rest[:4])[0])
+    origPort = int(struct.unpack(">L", rest[:4])[0])
     return (connHost, connPort), (origHost, origPort)
 
-unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
 
+unpackOpen_forwarded_tcpip = unpackOpen_direct_tcpip
 
 
 def packGlobal_tcpip_forward(peer):
@@ -235,16 +240,16 @@ def packGlobal_tcpip_forward(peer):
     @type peer: L{tuple}
     """
     (host, port) = peer
-    return common.NS(host) + struct.pack('>L', port)
-
+    return common.NS(host) + struct.pack(">L", port)
 
 
 def unpackGlobal_tcpip_forward(data):
     host, rest = common.getNS(data)
-    if _PY3 and isinstance(host, bytes):
+    if isinstance(host, bytes):
         host = host.decode("utf-8")
-    port = int(struct.unpack('>L', rest[:4])[0])
+    port = int(struct.unpack(">L", rest[:4])[0])
     return host, port
+
 
 """This is how the data -> eof -> close stuff /should/ work.
 

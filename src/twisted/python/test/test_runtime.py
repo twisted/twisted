@@ -5,15 +5,13 @@
 Tests for L{twisted.python.runtime}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 
 from twisted.python.reflect import namedModule
-from twisted.trial.util import suppress as SUPRESS
-from twisted.trial.unittest import SynchronousTestCase
-
 from twisted.python.runtime import Platform, shortPythonVersion
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.util import suppress as SUPRESS
 
 
 class PythonVersionTests(SynchronousTestCase):
@@ -25,10 +23,9 @@ class PythonVersionTests(SynchronousTestCase):
         """
         Verify if the Python version is returned correctly.
         """
-        ver = shortPythonVersion().split('.')
+        ver = shortPythonVersion().split(".")
         for i in range(3):
             self.assertEqual(int(ver[i]), sys.version_info[i])
-
 
 
 class PlatformTests(SynchronousTestCase):
@@ -36,9 +33,10 @@ class PlatformTests(SynchronousTestCase):
     Tests for the default L{Platform} initializer.
     """
 
-    isWinNTDeprecationMessage = ('twisted.python.runtime.Platform.isWinNT was '
-        'deprecated in Twisted 13.0. Use Platform.isWindows instead.')
-
+    isWinNTDeprecationMessage = (
+        "twisted.python.runtime.Platform.isWinNT was "
+        "deprecated in Twisted 13.0. Use Platform.isWindows instead."
+    )
 
     def test_isKnown(self):
         """
@@ -47,7 +45,6 @@ class PlatformTests(SynchronousTestCase):
         """
         platform = Platform()
         self.assertTrue(platform.isKnown())
-
 
     def test_isVistaConsistency(self):
         """
@@ -60,7 +57,6 @@ class PlatformTests(SynchronousTestCase):
             self.assertTrue(platform.isWindows())
             self.assertFalse(platform.isMacOSX())
 
-
     def test_isMacOSXConsistency(self):
         """
         L{Platform.isMacOSX} can only return C{True} if L{Platform.getType}
@@ -68,8 +64,7 @@ class PlatformTests(SynchronousTestCase):
         """
         platform = Platform()
         if platform.isMacOSX():
-            self.assertEqual(platform.getType(), 'posix')
-
+            self.assertEqual(platform.getType(), "posix")
 
     def test_isLinuxConsistency(self):
         """
@@ -79,7 +74,6 @@ class PlatformTests(SynchronousTestCase):
         platform = Platform()
         if platform.isLinux():
             self.assertTrue(sys.platform.startswith("linux"))
-
 
     def test_isWinNT(self):
         """
@@ -92,9 +86,12 @@ class PlatformTests(SynchronousTestCase):
         if platform.getType() != "win32":
             self.assertFalse(isWinNT)
 
-    test_isWinNT.suppress = [SUPRESS(category=DeprecationWarning,
-         message=isWinNTDeprecationMessage)]
-
+    test_isWinNT.suppress = [  # type: ignore[attr-defined]
+        SUPRESS(
+            category=DeprecationWarning,
+            message=isWinNTDeprecationMessage,
+        )
+    ]
 
     def test_isWinNTDeprecated(self):
         """
@@ -104,9 +101,7 @@ class PlatformTests(SynchronousTestCase):
         platform.isWinNT()
         warnings = self.flushWarnings([self.test_isWinNTDeprecated])
         self.assertEqual(len(warnings), 1)
-        self.assertEqual(
-            warnings[0]['message'], self.isWinNTDeprecationMessage)
-
+        self.assertEqual(warnings[0]["message"], self.isWinNTDeprecationMessage)
 
     def test_supportsThreads(self):
         """
@@ -117,12 +112,11 @@ class PlatformTests(SynchronousTestCase):
         # module.  Perhaps an adequate test is to just test the behavior with
         # the current runtime, whatever that happens to be.
         try:
-            namedModule('threading')
+            namedModule("threading")
         except ImportError:
             self.assertFalse(Platform().supportsThreads())
         else:
             self.assertTrue(Platform().supportsThreads())
-
 
 
 class ForeignPlatformTests(SynchronousTestCase):
@@ -136,11 +130,10 @@ class ForeignPlatformTests(SynchronousTestCase):
         L{Platform.getType} returns the platform type which corresponds to that
         name.
         """
-        self.assertEqual(Platform('nt').getType(), 'win32')
-        self.assertEqual(Platform('ce').getType(), 'win32')
-        self.assertEqual(Platform('posix').getType(), 'posix')
-        self.assertEqual(Platform('java').getType(), 'java')
-
+        self.assertEqual(Platform("nt").getType(), "win32")
+        self.assertEqual(Platform("ce").getType(), "win32")
+        self.assertEqual(Platform("posix").getType(), "posix")
+        self.assertEqual(Platform("java").getType(), "java")
 
     def test_isMacOSX(self):
         """
@@ -148,10 +141,9 @@ class ForeignPlatformTests(SynchronousTestCase):
         is used to determine the result of L{Platform.isMacOSX}, which returns
         C{True} for C{"darwin"}, C{False} otherwise.
         """
-        self.assertTrue(Platform(None, 'darwin').isMacOSX())
-        self.assertFalse(Platform(None, 'linux2').isMacOSX())
-        self.assertFalse(Platform(None, 'win32').isMacOSX())
-
+        self.assertTrue(Platform(None, "darwin").isMacOSX())
+        self.assertFalse(Platform(None, "linux2").isMacOSX())
+        self.assertFalse(Platform(None, "win32").isMacOSX())
 
     def test_isLinux(self):
         """
@@ -159,12 +151,11 @@ class ForeignPlatformTests(SynchronousTestCase):
         is used to determine the result of L{Platform.isLinux}, which returns
         C{True} for values beginning with C{"linux"}, C{False} otherwise.
         """
-        self.assertFalse(Platform(None, 'darwin').isLinux())
-        self.assertTrue(Platform(None, 'linux').isLinux())
-        self.assertTrue(Platform(None, 'linux2').isLinux())
-        self.assertTrue(Platform(None, 'linux3').isLinux())
-        self.assertFalse(Platform(None, 'win32').isLinux())
-
+        self.assertFalse(Platform(None, "darwin").isLinux())
+        self.assertTrue(Platform(None, "linux").isLinux())
+        self.assertTrue(Platform(None, "linux2").isLinux())
+        self.assertTrue(Platform(None, "linux3").isLinux())
+        self.assertFalse(Platform(None, "win32").isLinux())
 
 
 class DockerPlatformTests(SynchronousTestCase):
@@ -176,18 +167,16 @@ class DockerPlatformTests(SynchronousTestCase):
         """
         If the platform is not Linux, C{isDocker()} always returns L{False}.
         """
-        platform = Platform(None, 'win32')
+        platform = Platform(None, "win32")
         self.assertFalse(platform.isDocker())
-
 
     def test_noCGroups(self):
         """
         If the platform is Linux, and the cgroups file in C{/proc} does not
         exist, C{isDocker()} returns L{False}
         """
-        platform = Platform(None, 'linux')
+        platform = Platform(None, "linux")
         self.assertFalse(platform.isDocker(_initCGroupLocation="fakepath"))
-
 
     def test_cgroupsSuggestsDocker(self):
         """
@@ -196,9 +185,10 @@ class DockerPlatformTests(SynchronousTestCase):
         C{True}.
         """
         cgroupsFile = self.mktemp()
-        with open(cgroupsFile, 'wb') as f:
+        with open(cgroupsFile, "wb") as f:
             # real cgroups file from inside a Debian 7 docker container
-            f.write(b"""10:debug:/
+            f.write(
+                b"""10:debug:/
 9:net_prio:/
 8:perf_event:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 7:net_cls:/
@@ -207,11 +197,11 @@ class DockerPlatformTests(SynchronousTestCase):
 4:blkio:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 3:cpuacct:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 2:cpu:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
-1:cpuset:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f""")
+1:cpuset:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f"""
+            )
 
-        platform = Platform(None, 'linux')
+        platform = Platform(None, "linux")
         self.assertTrue(platform.isDocker(_initCGroupLocation=cgroupsFile))
-
 
     def test_cgroupsSuggestsRealSystem(self):
         """
@@ -220,9 +210,10 @@ class DockerPlatformTests(SynchronousTestCase):
         C{False}.
         """
         cgroupsFile = self.mktemp()
-        with open(cgroupsFile, 'wb') as f:
+        with open(cgroupsFile, "wb") as f:
             # real cgroups file from a Fedora 17 system
-            f.write(b"""9:perf_event:/
+            f.write(
+                b"""9:perf_event:/
 8:blkio:/
 7:net_cls:/
 6:freezer:/
@@ -230,7 +221,8 @@ class DockerPlatformTests(SynchronousTestCase):
 4:memory:/
 3:cpuacct,cpu:/
 2:cpuset:/
-1:name=systemd:/system""")
+1:name=systemd:/system"""
+            )
 
-        platform = Platform(None, 'linux')
+        platform = Platform(None, "linux")
         self.assertFalse(platform.isDocker(_initCGroupLocation=cgroupsFile))

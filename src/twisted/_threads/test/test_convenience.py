@@ -5,10 +5,8 @@
 Test cases for convenience functionality in L{twisted._threads._convenience}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from twisted.trial.unittest import SynchronousTestCase
-
 from .._convenience import Quit
 from .._ithreads import AlreadyQuit
 
@@ -25,7 +23,6 @@ class QuitTests(SynchronousTestCase):
         quit = Quit()
         self.assertEqual(quit.isSet, False)
 
-
     def test_setSetsSet(self):
         """
         L{Quit.set} sets L{Quit.isSet} to L{True}.
@@ -34,14 +31,12 @@ class QuitTests(SynchronousTestCase):
         quit.set()
         self.assertEqual(quit.isSet, True)
 
-
     def test_checkDoesNothing(self):
         """
         L{Quit.check} initially does nothing and returns L{None}.
         """
         quit = Quit()
         self.assertIs(quit.check(), None)
-
 
     def test_checkAfterSetRaises(self):
         """
@@ -50,7 +45,6 @@ class QuitTests(SynchronousTestCase):
         quit = Quit()
         quit.set()
         self.assertRaises(AlreadyQuit, quit.check)
-
 
     def test_setTwiceRaises(self):
         """

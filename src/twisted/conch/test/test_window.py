@@ -1,11 +1,9 @@
-
 """
 Tests for the insults windowing module, L{twisted.conch.insults.window}.
 """
 
+from twisted.conch.insults.window import ScrolledArea, TextOutput, TopWindow
 from twisted.trial.unittest import TestCase
-
-from twisted.conch.insults.window import TopWindow, ScrolledArea, TextOutput
 
 
 class TopWindowTests(TestCase):
@@ -49,12 +47,12 @@ class TopWindowTests(TestCase):
         self.assertEqual(len(scheduled), 1)
 
 
-
 class ScrolledAreaTests(TestCase):
     """
     Tests for L{ScrolledArea}, a widget which creates a viewport containing
     another widget and can reposition that viewport using scrollbars.
     """
+
     def test_parent(self):
         """
         The parent of the widget passed to L{ScrolledArea} is set to a new

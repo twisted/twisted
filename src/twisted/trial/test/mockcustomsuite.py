@@ -8,7 +8,8 @@ See {twisted.trial.test.test_loader.LoaderTest.test_loadModuleWith_test_suite}.
 """
 
 
-from twisted.trial import unittest, runner
+from twisted.trial import runner, unittest
+
 
 class Foo(unittest.SynchronousTestCase):
     def test_foo(self):

@@ -6,23 +6,22 @@ Direct unit tests for L{twisted.trial.unittest.SynchronousTestCase} and
 L{twisted.trial.unittest.TestCase}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-class TestCaseMixin(object):
+class TestCaseMixin:
     """
     L{TestCase} tests.
     """
+
     def setUp(self):
         """
         Create a couple instances of C{MyTestCase}, each for the same test
         method, to be used in the test methods of this class.
         """
-        self.first = self.MyTestCase('test_1')
-        self.second = self.MyTestCase('test_1')
-
+        self.first = self.MyTestCase("test_1")
+        self.second = self.MyTestCase("test_1")
 
     def test_equality(self):
         """
@@ -32,7 +31,6 @@ class TestCaseMixin(object):
         self.assertTrue(self.first == self.first)
         self.assertTrue(self.first != self.second)
         self.assertFalse(self.first == self.second)
-
 
     def test_hashability(self):
         """
@@ -46,16 +44,15 @@ class TestCaseMixin(object):
         self.assertEqual(len(container), 2)
 
 
-
 class SynchronousTestCaseTests(TestCaseMixin, SynchronousTestCase):
     class MyTestCase(SynchronousTestCase):
         """
         Some test methods which can be used to test behaviors of
         L{SynchronousTestCase}.
         """
+
         def test_1(self):
             pass
-
 
 
 # Yes, subclass SynchronousTestCase again.  There are no interesting behaviors
@@ -66,5 +63,6 @@ class AsynchronousTestCaseTests(TestCaseMixin, SynchronousTestCase):
         Some test methods which can be used to test behaviors of
         L{TestCase}.
         """
+
         def test_1(self):
             pass

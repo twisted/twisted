@@ -11,25 +11,25 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
-from __future__ import division, absolute_import, print_function
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
-import opcode
+import linecache
+import sys
 from inspect import getmro
+from io import StringIO
+
+import opcode
 
 from twisted.python import reflect
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
 
 count = 0
 traceupLength = 4
 
+
 class DefaultException(Exception):
     pass
-
 
 
 def format_frames(frames, write, detail="default"):
@@ -49,38 +49,38 @@ def format_frames(frames, write, detail="default"):
         about the missing data is shown.
     @type detail: string
     """
-    if detail not in ('default', 'brief', 'verbose',
-                      'verbose-vars-not-captured'):
+    if detail not in ("default", "brief", "verbose", "verbose-vars-not-captured"):
         raise ValueError(
             "Detail must be default, brief, verbose, or "
-            "verbose-vars-not-captured. (not %r)" % (detail,))
+            "verbose-vars-not-captured. (not %r)" % (detail,)
+        )
     w = write
     if detail == "brief":
         for method, filename, lineno, localVars, globalVars in frames:
-            w('%s:%s:%s\n' % (filename, lineno, method))
+            w(f"{filename}:{lineno}:{method}\n")
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
-            w('  File "%s", line %s, in %s\n' % (filename, lineno, method))
-            w('    %s\n' % linecache.getline(filename, lineno).strip())
+            w(f'  File "{filename}", line {lineno}, in {method}\n')
+            w("    %s\n" % linecache.getline(filename, lineno).strip())
     elif detail == "verbose-vars-not-captured":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
-        w(' [Capture of Locals and Globals disabled (use captureVars=True)]\n')
+        w(" [Capture of Locals and Globals disabled (use captureVars=True)]\n")
     elif detail == "verbose":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
-            w(' [ Locals ]\n')
+            w(" [ Locals ]\n")
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  %s : %s\n" % (name, repr(val)))
-            w(' ( Globals )\n')
+                w(f"  {name} : {repr(val)}\n")
+            w(" ( Globals )\n")
             for name, val in globalVars:
-                w("  %s : %s\n" % (name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
+
 
 # slyphon: i have a need to check for this value in trial
 #          so I made it a module-level constant
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
-
 
 
 class NoCurrentExceptionError(Exception):
@@ -88,7 +88,6 @@ class NoCurrentExceptionError(Exception):
     Raised when trying to create a Failure from the current interpreter
     exception state and there is no current exception state.
     """
-
 
 
 def _Traceback(stackFrames, tbFrames):
@@ -129,8 +128,7 @@ def _Traceback(stackFrames, tbFrames):
     return firstTb
 
 
-
-class _TracebackFrame(object):
+class _TracebackFrame:
     """
     Fake traceback object which can be passed to functions in the standard
     library L{traceback} module.
@@ -145,8 +143,7 @@ class _TracebackFrame(object):
         self.tb_next = None
 
 
-
-class _Frame(object):
+class _Frame:
     """
     A fake frame object, used by L{_Traceback}.
 
@@ -171,18 +168,18 @@ class _Frame(object):
         self.f_back = back
 
 
-
-class _Code(object):
+class _Code:
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
     """
+
     def __init__(self, name, filename):
         self.co_name = name
         self.co_filename = filename
 
 
-
 _inlineCallbacksExtraneous = []
+
 
 def _extraneous(f):
     """
@@ -198,7 +195,6 @@ def _extraneous(f):
     """
     _inlineCallbacksExtraneous.append(f.__code__)
     return f
-
 
 
 class Failure(BaseException):
@@ -229,14 +225,9 @@ class Failure(BaseException):
     # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes
     # are stored in bytes so we need to properly account for this
     # difference.
-    if _PY3:
-        _yieldOpcode = opcode.opmap["YIELD_VALUE"]
-    else:
-        _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
+    _yieldOpcode = opcode.opmap["YIELD_VALUE"]
 
-
-    def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
-                 captureVars=False):
+    def __init__(self, exc_value=None, exc_type=None, exc_tb=None, captureVars=False):
         """
         Initialize me with an explanation of the error.
 
@@ -359,13 +350,16 @@ class Failure(BaseException):
                 globalz = globalz.items()
             else:
                 localz = globalz = ()
-            stack.insert(0, (
-                f.f_code.co_name,
-                f.f_code.co_filename,
-                f.f_lineno,
-                localz,
-                globalz,
-                ))
+            stack.insert(
+                0,
+                (
+                    f.f_code.co_name,
+                    f.f_code.co_filename,
+                    f.f_lineno,
+                    localz,
+                    globalz,
+                ),
+            )
             f = f.f_back
 
         while tb is not None:
@@ -383,20 +377,21 @@ class Failure(BaseException):
                 globalz = list(globalz.items())
             else:
                 localz = globalz = ()
-            frames.append((
-                f.f_code.co_name,
-                f.f_code.co_filename,
-                tb.tb_lineno,
-                localz,
-                globalz,
-                ))
+            frames.append(
+                (
+                    f.f_code.co_name,
+                    f.f_code.co_filename,
+                    tb.tb_lineno,
+                    localz,
+                    globalz,
+                )
+            )
             tb = tb.tb_next
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
             self.parents = list(map(reflect.qual, parentCs))
         else:
             self.parents = [self.type]
-
 
     def _extrapolate(self, otherFailure):
         """
@@ -419,16 +414,13 @@ class Failure(BaseException):
         while tb is not None:
             f = tb.tb_frame
             if f.f_code not in _inlineCallbacksExtraneous:
-                frames.append((
-                    f.f_code.co_name,
-                    f.f_code.co_filename,
-                    tb.tb_lineno, (), ()
-                ))
+                frames.append(
+                    (f.f_code.co_name, f.f_code.co_filename, tb.tb_lineno, (), ())
+                )
             tb = tb.tb_next
         # Merging current stack with stack stored in the Failure.
         frames.extend(self.frames)
         self.frames = frames
-
 
     def trap(self, *errorTypes):
         """
@@ -456,12 +448,8 @@ class Failure(BaseException):
         """
         error = self.check(*errorTypes)
         if not error:
-            if _PY3:
-                self.raiseException()
-            else:
-                raise self
+            self.raiseException()
         return error
-
 
     def check(self, *errorTypes):
         """
@@ -479,23 +467,12 @@ class Failure(BaseException):
                 return error
         return None
 
-    # It would be nice to use twisted.python.compat.reraise, but that breaks
-    # the stack exploration in _findFailure; possibly this can be fixed in
-    # #5931.
-    if getattr(BaseException, "with_traceback", None):
-        # Python 3
-        def raiseException(self):
-            raise self.value.with_traceback(self.tb)
-    else:
-        exec("""def raiseException(self):
-    raise self.type, self.value, self.tb""")
-
-    raiseException.__doc__ = (
+    def raiseException(self):
         """
         raise the original exception, preserving traceback
         information if available.
-        """)
-
+        """
+        raise self.value.with_traceback(self.tb)
 
     @_extraneous
     def throwExceptionIntoGenerator(self, g):
@@ -511,7 +488,7 @@ class Failure(BaseException):
         # is done in _findFailure.
         return g.throw(self.type, self.value, self.tb)
 
-
+    @classmethod
     def _findFailure(cls):
         """
         Find the failure that represents the exception currently in context.
@@ -536,7 +513,7 @@ class Failure(BaseException):
 
         # Handle raiseException-originated exceptions
         if lastFrame.f_code is cls.raiseException.__code__:
-            return lastFrame.f_locals.get('self')
+            return lastFrame.f_locals.get("self")
 
         # Handle throwExceptionIntoGenerator-originated exceptions
         # this is tricky, and differs if the exception was caught
@@ -548,8 +525,9 @@ class Failure(BaseException):
         # Pyrex and Cython extensions create traceback frames
         # with no co_code, but they can't yield so we know it's okay to
         # just return here.
-        if ((not lastFrame.f_code.co_code) or
-            lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode):
+        if (not lastFrame.f_code.co_code) or lastFrame.f_code.co_code[
+            lastTb.tb_lasti
+        ] != cls._yieldOpcode:
             return
 
         # If the exception was caught above the generator.throw
@@ -558,7 +536,7 @@ class Failure(BaseException):
         if secondLastTb:
             frame = secondLastTb.tb_frame
             if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
-                return frame.f_locals.get('self')
+                return frame.f_locals.get("self")
 
         # If the exception was caught below the generator.throw
         # (inside the generator), it will appear in the frames' linked
@@ -567,52 +545,54 @@ class Failure(BaseException):
         # throwExceptionIntoGenerator).
         frame = tb.tb_frame.f_back
         if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
-            return frame.f_locals.get('self')
+            return frame.f_locals.get("self")
 
-    _findFailure = classmethod(_findFailure)
+    def __repr__(self) -> str:
+        return "<{} {}: {}>".format(
+            reflect.qual(self.__class__),
+            reflect.qual(self.type),
+            self.getErrorMessage(),
+        )
 
-    def __repr__(self):
-        return "<%s %s: %s>" % (reflect.qual(self.__class__),
-                                reflect.qual(self.type),
-                                self.getErrorMessage())
-
-
-    def __str__(self):
+    def __str__(self) -> str:
         return "[Failure instance: %s]" % self.getBriefTraceback()
 
-
     def __getstate__(self):
-        """Avoid pickling objects in the traceback.
-        """
+        """Avoid pickling objects in the traceback."""
         if self.pickled:
             return self.__dict__
         c = self.__dict__.copy()
 
-        c['frames'] = [
+        c["frames"] = [
             [
-                v[0], v[1], v[2],
+                v[0],
+                v[1],
+                v[2],
                 _safeReprVars(v[3]),
                 _safeReprVars(v[4]),
-            ] for v in self.frames
+            ]
+            for v in self.frames
         ]
 
         # Added 2003-06-23. See comment above in __init__
-        c['tb'] = None
+        c["tb"] = None
 
         if self.stack is not None:
             # XXX: This is a band-aid.  I can't figure out where these
             # (failure.stack is None) instances are coming from.
-            c['stack'] = [
+            c["stack"] = [
                 [
-                    v[0], v[1], v[2],
+                    v[0],
+                    v[1],
+                    v[2],
                     _safeReprVars(v[3]),
                     _safeReprVars(v[4]),
-                ] for v in self.stack
+                ]
+                for v in self.stack
             ]
 
-        c['pickled'] = 1
+        c["pickled"] = 1
         return c
-
 
     def cleanFailure(self):
         """
@@ -625,7 +605,6 @@ class Failure(BaseException):
         if getattr(self.value, "__traceback__", None):
             # Python 3
             self.value.__traceback__ = None
-
 
     def getTracebackObject(self):
         """
@@ -644,8 +623,7 @@ class Failure(BaseException):
         else:
             return None
 
-
-    def getErrorMessage(self):
+    def getErrorMessage(self) -> str:
         """
         Get a string of the exception which caused this Failure.
         """
@@ -653,22 +631,19 @@ class Failure(BaseException):
             return self.value.getErrorMessage()
         return reflect.safe_str(self.value)
 
-
-    def getBriefTraceback(self):
+    def getBriefTraceback(self) -> str:
         io = StringIO()
         self.printBriefTraceback(file=io)
         return io.getvalue()
 
-
-    def getTraceback(self, elideFrameworkCode=0, detail='default'):
+    def getTraceback(self, elideFrameworkCode: int = 0, detail: str = "default") -> str:
         io = StringIO()
-        self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode,
-                            detail=detail)
+        self.printTraceback(
+            file=io, elideFrameworkCode=elideFrameworkCode, detail=detail
+        )
         return io.getvalue()
 
-
-    def printTraceback(self, file=None, elideFrameworkCode=False,
-                       detail='default'):
+    def printTraceback(self, file=None, elideFrameworkCode=False, detail="default"):
         """
         Emulate Python's standard error reporting mechanism.
 
@@ -685,71 +660,69 @@ class Failure(BaseException):
         """
         if file is None:
             from twisted.python import log
+
             file = log.logerr
         w = file.write
 
-        if detail == 'verbose' and not self.captureVars:
+        if detail == "verbose" and not self.captureVars:
             # We don't have any locals or globals, so rather than show them as
             # empty make the output explicitly say that we don't have them at
             # all.
-            formatDetail = 'verbose-vars-not-captured'
+            formatDetail = "verbose-vars-not-captured"
         else:
             formatDetail = detail
 
         # Preamble
-        if detail == 'verbose':
-            w('*--- Failure #%d%s---\n' %
-              (self.count,
-               (self.pickled and ' (pickled) ') or ' '))
-        elif detail == 'brief':
+        if detail == "verbose":
+            w(
+                "*--- Failure #%d%s---\n"
+                % (self.count, (self.pickled and " (pickled) ") or " ")
+            )
+        elif detail == "brief":
             if self.frames:
-                hasFrames = 'Traceback'
+                hasFrames = "Traceback"
             else:
-                hasFrames = 'Traceback (failure with no frames)'
-            w("%s: %s: %s\n" % (
-                    hasFrames,
-                    reflect.safe_str(self.type),
-                    reflect.safe_str(self.value)))
+                hasFrames = "Traceback (failure with no frames)"
+            w(
+                "%s: %s: %s\n"
+                % (hasFrames, reflect.safe_str(self.type), reflect.safe_str(self.value))
+            )
         else:
-            w('Traceback (most recent call last):\n')
+            w("Traceback (most recent call last):\n")
 
         # Frames, formatted in appropriate style
         if self.frames:
             if not elideFrameworkCode:
                 format_frames(self.stack[-traceupLength:], w, formatDetail)
-                w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
+                w(f"{EXCEPTION_CAUGHT_HERE}\n")
             format_frames(self.frames, w, formatDetail)
-        elif not detail == 'brief':
+        elif not detail == "brief":
             # Yeah, it's not really a traceback, despite looking like one...
             w("Failure: ")
 
         # Postamble, if any
-        if not detail == 'brief':
-            w("%s: %s\n" % (reflect.qual(self.type),
-                            reflect.safe_str(self.value)))
+        if not detail == "brief":
+            w(f"{reflect.qual(self.type)}: {reflect.safe_str(self.value)}\n")
 
         # Chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?
             file.write(" (chained Failure)\n")
             self.value.printTraceback(file, elideFrameworkCode, detail)
-        if detail == 'verbose':
-            w('*--- End of Failure #%d ---\n' % self.count)
-
+        if detail == "verbose":
+            w("*--- End of Failure #%d ---\n" % self.count)
 
     def printBriefTraceback(self, file=None, elideFrameworkCode=0):
         """
         Print a traceback as densely as possible.
         """
-        self.printTraceback(file, elideFrameworkCode, detail='brief')
-
+        self.printTraceback(file, elideFrameworkCode, detail="brief")
 
     def printDetailedTraceback(self, file=None, elideFrameworkCode=0):
         """
         Print a traceback with detailed locals and globals information.
         """
-        self.printTraceback(file, elideFrameworkCode, detail='verbose')
-
+        self.printTraceback(file, elideFrameworkCode, detail="verbose")
 
 
 def _safeReprVars(varsDictItems):
@@ -770,9 +743,15 @@ def _safeReprVars(varsDictItems):
 
 DO_POST_MORTEM = True
 
-def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
-               captureVars=False,
-               Failure__init__=Failure.__init__):
+
+def _debuginit(
+    self,
+    exc_value=None,
+    exc_type=None,
+    exc_tb=None,
+    captureVars=False,
+    Failure__init__=Failure.__init__,
+):
     """
     Initialize failure object, possibly spawning pdb.
     """
@@ -781,14 +760,17 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
         if not exc[0] == self.__class__ and DO_POST_MORTEM:
             try:
                 strrepr = str(exc[1])
-            except:
+            except BaseException:
                 strrepr = "broken str"
-            print("Jumping into debugger for post-mortem of exception '%s':" %
-                  (strrepr,))
+            print(
+                "Jumping into debugger for post-mortem of exception '{}':".format(
+                    strrepr
+                )
+            )
             import pdb
+
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
-
 
 
 def startDebugMode():

@@ -5,21 +5,21 @@
 Test cases for L{jelly} object serialization.
 """
 
-from __future__ import absolute_import, division
 
 import datetime
 import decimal
 
-from twisted.python.compat import unicode
-from twisted.spread import jelly, pb
-from twisted.trial import unittest
+from twisted.spread import banana, jelly, pb
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 
-class TestNode(jelly.Jellyable, object):
+class TestNode(jelly.Jellyable):
     """
     An object to test jellyfying of new style class instances.
     """
+
     classAttr = 4
 
     def __init__(self, parent=None):
@@ -30,7 +30,6 @@ class TestNode(jelly.Jellyable, object):
             self.id = 1
         self.parent = parent
         self.children = []
-
 
 
 class A:
@@ -44,12 +43,10 @@ class A:
         """
 
 
-
 def afunc(self):
     """
     A dummy function to test function serialization.
     """
-
 
 
 class B:
@@ -63,7 +60,6 @@ class B:
         """
 
 
-
 class C:
     """
     Dummy class.
@@ -75,15 +71,13 @@ class C:
         """
 
 
-
-class D(object):
+class D:
     """
     Dummy new-style class.
     """
 
 
-
-class E(object):
+class E:
     """
     Dummy new-style class with slots.
     """
@@ -94,15 +88,12 @@ class E(object):
         self.x = x
         self.y = y
 
-
     def __getstate__(self):
-        return {"x" : self.x, "y" : self.y}
-
+        return {"x": self.x, "y": self.y}
 
     def __setstate__(self, state):
         self.x = state["x"]
         self.y = state["y"]
-
 
 
 class SimpleJellyTest:
@@ -114,17 +105,33 @@ class SimpleJellyTest:
         return self.__dict__ == other.__dict__
 
 
+def jellyRoundTrip(testCase, toSerialize):
+    """
+    Verify that the given object round-trips through jelly & banana and comes
+    out equivalent to the input.
+    """
+    jellied = jelly.jelly(toSerialize)
+    encoded = banana.encode(jellied)
+    decoded = banana.decode(encoded)
+    unjellied = jelly.unjelly(decoded)
+    testCase.assertEqual(toSerialize, unjellied)
 
-class JellyTests(unittest.TestCase):
+
+class JellyTests(TestCase):
     """
     Testcases for L{jelly} module serialization.
 
     @cvar decimalData: serialized version of decimal data, to be used in tests.
     @type decimalData: L{list}
     """
-    decimalData = [b'list', [b'decimal', 995, -2], [b'decimal', 0, 0],
-                   [b'decimal', 123456, 0], [b'decimal', -78901, -3]]
 
+    decimalData = [
+        b"list",
+        [b"decimal", 995, -2],
+        [b"decimal", 0, 0],
+        [b"decimal", 123456, 0],
+        [b"decimal", -78901, -3],
+    ]
 
     def _testSecurity(self, inputList, atom):
         """
@@ -145,7 +152,6 @@ class JellyTests(unittest.TestCase):
         # But it should raise an exception when disallowed
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
 
-
     def test_methodsNotSelfIdentity(self):
         """
         If a class change after an instance has been created, L{jelly.unjelly}
@@ -163,7 +169,6 @@ class JellyTests(unittest.TestCase):
         finally:
             C.cmethod = savecmethod
 
-
     def test_newStyle(self):
         """
         Test that a new style class can be jellied and unjellied with its
@@ -180,7 +185,6 @@ class JellyTests(unittest.TestCase):
         self.assertIs(m.n2, m.n3)
         self.assertEqual(m.x, 1)
 
-
     def test_newStyleWithSlots(self):
         """
         A class defined with I{slots} can be jellied and unjellied with the
@@ -193,17 +197,6 @@ class JellyTests(unittest.TestCase):
         self.assertIsInstance(m, E)
         self.assertEqual(n.x, 1)
 
-
-    def test_typeOldStyle(self):
-        """
-        Test that an old style class type can be jellied and unjellied
-        to the original type.
-        """
-        t = [C]
-        r = jelly.unjelly(jelly.jelly(t))
-        self.assertEqual(t, r)
-
-
     def test_typeNewStyle(self):
         """
         Test that a new style class type can be jellied and unjellied
@@ -213,7 +206,6 @@ class JellyTests(unittest.TestCase):
         r = jelly.unjelly(jelly.jelly(t))
         self.assertEqual(t, r)
 
-
     def test_typeBuiltin(self):
         """
         Test that a builtin type can be jellied and unjellied to the original
@@ -222,7 +214,6 @@ class JellyTests(unittest.TestCase):
         t = [str]
         r = jelly.unjelly(jelly.jelly(t))
         self.assertEqual(t, r)
-
 
     def test_dateTime(self):
         """
@@ -238,6 +229,20 @@ class JellyTests(unittest.TestCase):
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
 
+    def test_bananaTimeTypes(self):
+        """
+        Jellying L{datetime.time}, L{datetime.timedelta}, L{datetime.datetime},
+        and L{datetime.date} objects should result in jellied objects which can
+        be serialized and unserialized with banana.
+        """
+        sampleDate = datetime.date(2020, 7, 11)
+        sampleTime = datetime.time(1, 16, 5, 344)
+        sampleDateTime = datetime.datetime.combine(sampleDate, sampleTime)
+        sampleTimeDelta = sampleDateTime - datetime.datetime(2020, 7, 3)
+        jellyRoundTrip(self, sampleDate)
+        jellyRoundTrip(self, sampleTime)
+        jellyRoundTrip(self, sampleDateTime)
+        jellyRoundTrip(self, sampleTimeDelta)
 
     def test_decimal(self):
         """
@@ -245,15 +250,16 @@ class JellyTests(unittest.TestCase):
         should produce objects which represent the values of the original
         inputs.
         """
-        inputList = [decimal.Decimal('9.95'),
-                     decimal.Decimal(0),
-                     decimal.Decimal(123456),
-                     decimal.Decimal('-78.901')]
+        inputList = [
+            decimal.Decimal("9.95"),
+            decimal.Decimal(0),
+            decimal.Decimal(123456),
+            decimal.Decimal("-78.901"),
+        ]
         c = jelly.jelly(inputList)
         output = jelly.unjelly(c)
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
-
 
     def test_decimalUnjelly(self):
         """
@@ -267,13 +273,14 @@ class JellyTests(unittest.TestCase):
         L{decimal.Decimal} instances even though the s-expression correctly
         represents a list of them.
         """
-        expected = [decimal.Decimal('9.95'),
-                    decimal.Decimal(0),
-                    decimal.Decimal(123456),
-                    decimal.Decimal('-78.901')]
+        expected = [
+            decimal.Decimal("9.95"),
+            decimal.Decimal(0),
+            decimal.Decimal(123456),
+            decimal.Decimal("-78.901"),
+        ]
         output = jelly.unjelly(self.decimalData)
         self.assertEqual(output, expected)
-
 
     def test_decimalSecurity(self):
         """
@@ -281,9 +288,8 @@ class JellyTests(unittest.TestCase):
         L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
-        inputList = [decimal.Decimal('9.95')]
+        inputList = [decimal.Decimal("9.95")]
         self._testSecurity(inputList, b"decimal")
-
 
     def test_set(self):
         """
@@ -291,11 +297,10 @@ class JellyTests(unittest.TestCase):
         should produce objects which represent the values of the original
         inputs.
         """
-        inputList = [set([1, 2, 3])]
+        inputList = [{1, 2, 3}]
         output = jelly.unjelly(jelly.jelly(inputList))
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
-
 
     def test_frozenset(self):
         """
@@ -308,16 +313,14 @@ class JellyTests(unittest.TestCase):
         self.assertEqual(inputList, output)
         self.assertIsNot(inputList, output)
 
-
     def test_setSecurity(self):
         """
         By default, C{set} objects should be allowed by
         L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
         L{jelly.InsecureJelly} when trying to unjelly it.
         """
-        inputList = [set([1, 2, 3])]
+        inputList = [{1, 2, 3}]
         self._testSecurity(inputList, b"set")
-
 
     def test_frozensetSecurity(self):
         """
@@ -328,67 +331,24 @@ class JellyTests(unittest.TestCase):
         inputList = [frozenset([1, 2, 3])]
         self._testSecurity(inputList, b"frozenset")
 
-
-    def test_oldSets(self):
-        """
-        Test jellying C{sets.Set}: it should serialize to the same thing as
-        C{set} jelly, and be unjellied as C{set} if available.
-        """
-        inputList = [jelly._sets.Set([1, 2, 3])]
-        inputJelly = jelly.jelly(inputList)
-        self.assertEqual(inputJelly, jelly.jelly([set([1, 2, 3])]))
-        output = jelly.unjelly(inputJelly)
-        # Even if the class is different, it should coerce to the same list
-        self.assertEqual(list(inputList[0]), list(output[0]))
-        if set is jelly._sets.Set:
-            self.assertIsInstance(output[0], jelly._sets.Set)
-        else:
-            self.assertIsInstance(output[0], set)
-
-    if not jelly._sets:
-        test_oldSets.skip = "sets.Set is gone in Python 3 and higher"
-
-
-    def test_oldImmutableSets(self):
-        """
-        Test jellying C{sets.ImmutableSet}: it should serialize to the same
-        thing as L{frozenset} jelly, and be unjellied as L{frozenset} if
-        available.
-        """
-        inputList = [jelly._sets.ImmutableSet([1, 2, 3])]
-        inputJelly = jelly.jelly(inputList)
-        self.assertEqual(inputJelly, jelly.jelly([frozenset([1, 2, 3])]))
-        output = jelly.unjelly(inputJelly)
-        # Even if the class is different, it should coerce to the same list
-        self.assertEqual(list(inputList[0]), list(output[0]))
-        if frozenset is jelly._sets.ImmutableSet:
-            self.assertIsInstance(output[0], jelly._sets.ImmutableSet)
-        else:
-            self.assertIsInstance(output[0], frozenset)
-
-    if not jelly._sets:
-        test_oldImmutableSets.skip = (
-            "sets.ImmutableSets is gone in Python 3 and higher")
-
-
     def test_simple(self):
         """
         Simplest test case.
         """
-        self.assertTrue(SimpleJellyTest('a', 'b').isTheSameAs(
-                        SimpleJellyTest('a', 'b')))
+        self.assertTrue(
+            SimpleJellyTest("a", "b").isTheSameAs(SimpleJellyTest("a", "b"))
+        )
         a = SimpleJellyTest(1, 2)
         cereal = jelly.jelly(a)
         b = jelly.unjelly(cereal)
         self.assertTrue(a.isTheSameAs(b))
-
 
     def test_identity(self):
         """
         Test to make sure that objects retain identity properly.
         """
         x = []
-        y = (x)
+        y = x
         x.append(y)
         x.append(y)
         self.assertIs(x[0], x[1])
@@ -398,23 +358,20 @@ class JellyTests(unittest.TestCase):
         self.assertIs(z[0], z[1])
         self.assertIs(z[0][0], z)
 
-
-    def test_unicode(self):
-        x = unicode('blah')
+    def test_str(self):
+        x = "blah"
         y = jelly.unjelly(jelly.jelly(x))
         self.assertEqual(x, y)
         self.assertEqual(type(x), type(y))
 
-
     def test_stressReferences(self):
         reref = []
-        toplevelTuple = ({'list': reref}, reref)
+        toplevelTuple = ({"list": reref}, reref)
         reref.append(toplevelTuple)
         s = jelly.jelly(toplevelTuple)
         z = jelly.unjelly(s)
-        self.assertIs(z[0]['list'], z[1])
-        self.assertIs(z[0]['list'][0], z)
-
+        self.assertIs(z[0]["list"], z[1])
+        self.assertIs(z[0]["list"][0], z)
 
     def test_moreReferences(self):
         a = []
@@ -424,7 +381,6 @@ class JellyTests(unittest.TestCase):
         z = jelly.unjelly(s)
         self.assertIs(z[0][0][0], z)
 
-
     def test_typeSecurity(self):
         """
         Test for type-level security of serialization.
@@ -433,11 +389,9 @@ class JellyTests(unittest.TestCase):
         dct = jelly.jelly({})
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, dct, taster)
 
-
     def test_newStyleClasses(self):
         uj = jelly.unjelly(D)
         self.assertIs(D, uj)
-
 
     def test_lotsaTypes(self):
         """
@@ -446,23 +400,39 @@ class JellyTests(unittest.TestCase):
         a = A()
         jelly.unjelly(jelly.jelly(a))
         jelly.unjelly(jelly.jelly(a.amethod))
-        items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3,
-                 (1, 2, 3), None, A, unittest, {'a': 1}, A.amethod]
+        items = [
+            afunc,
+            [1, 2, 3],
+            not bool(1),
+            bool(1),
+            "test",
+            20.3,
+            (1, 2, 3),
+            None,
+            A,
+            unittest,
+            {"a": 1},
+            A.amethod,
+        ]
         for i in items:
             self.assertEqual(i, jelly.unjelly(jelly.jelly(i)))
 
-
     def test_setState(self):
         global TupleState
+
         class TupleState:
             def __init__(self, other):
                 self.other = other
+
             def __getstate__(self):
                 return (self.other,)
+
             def __setstate__(self, state):
                 self.other = state[0]
+
             def __hash__(self):
                 return hash(self.other)
+
         a = A()
         t1 = TupleState(a)
         t2 = TupleState(a)
@@ -470,7 +440,6 @@ class JellyTests(unittest.TestCase):
         d = {t1: t1, t2: t2, t3: t3, "t3": t3}
         t3prime = jelly.unjelly(jelly.jelly(d))["t3"]
         self.assertIs(t3prime.other[0].other, t3prime.other[1].other)
-
 
     def test_classSecurity(self):
         """
@@ -500,30 +469,31 @@ class JellyTests(unittest.TestCase):
         x = jelly.unjelly(friendly, taster)
         self.assertIs(x, A, "A came back: %s" % x)
 
-
     def test_unjellyable(self):
         """
         Test that if Unjellyable is used to deserialize a jellied object,
         state comes out right.
         """
+
         class JellyableTestClass(jelly.Jellyable):
             pass
+
         jelly.setUnjellyableForClass(JellyableTestClass, jelly.Unjellyable)
         input = JellyableTestClass()
-        input.attribute = 'value'
+        input.attribute = "value"
         output = jelly.unjelly(jelly.jelly(input))
-        self.assertEqual(output.attribute, 'value')
+        self.assertEqual(output.attribute, "value")
         self.assertIsInstance(output, jelly.Unjellyable)
-
 
     def test_persistentStorage(self):
         perst = [{}, 1]
-        def persistentStore(obj, jel, perst = perst):
+
+        def persistentStore(obj, jel, perst=perst):
             perst[1] = perst[1] + 1
             perst[0][perst[1]] = obj
             return str(perst[1])
 
-        def persistentLoad(pidstr, unj, perst = perst):
+        def persistentLoad(pidstr, unj, perst=perst):
             pid = int(pidstr)
             return perst[0][pid]
 
@@ -535,13 +505,12 @@ class JellyTests(unittest.TestCase):
         a.c = c
         c.b = b
 
-        jel = jelly.jelly(a, persistentStore = persistentStore)
-        x = jelly.unjelly(jel, persistentLoad = persistentLoad)
+        jel = jelly.jelly(a, persistentStore=persistentStore)
+        x = jelly.unjelly(jel, persistentLoad=persistentLoad)
 
         self.assertIs(x.b, x.c.b)
         self.assertTrue(perst[0], "persistentStore was not called.")
         self.assertIs(x.b, a.b, "Persistent storage identity failure.")
-
 
     def test_newStyleClassesAttributes(self):
         n = TestNode()
@@ -554,7 +523,6 @@ class JellyTests(unittest.TestCase):
         # Check that it has been restored ok
         self._check_newstyle(n, m)
 
-
     def _check_newstyle(self, a, b):
         self.assertEqual(a.id, b.id)
         self.assertEqual(a.classAttr, 4)
@@ -562,7 +530,6 @@ class JellyTests(unittest.TestCase):
         self.assertEqual(len(a.children), len(b.children))
         for x, y in zip(a.children, b.children):
             self._check_newstyle(x, y)
-
 
     def test_referenceable(self):
         """
@@ -583,8 +550,7 @@ class JellyTests(unittest.TestCase):
         self.assertIn(uj.luid, jellyBroker.localObjects)
 
 
-
-class JellyDeprecationTests(unittest.TestCase):
+class JellyDeprecationTests(TestCase):
     """
     Tests for deprecated Jelly things
     """
@@ -597,32 +563,27 @@ class JellyDeprecationTests(unittest.TestCase):
         warnings = self.flushWarnings([self.test_deprecatedInstanceAtom])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
-            warnings[0]['message'],
-            'twisted.spread.jelly.instance_atom was deprecated in Twisted '
-            '15.0.0: instance_atom is unused within Twisted.')
-        self.assertEqual(
-            warnings[0]['category'],
-            DeprecationWarning)
-
+            warnings[0]["message"],
+            "twisted.spread.jelly.instance_atom was deprecated in Twisted "
+            "15.0.0: instance_atom is unused within Twisted.",
+        )
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
 
     def test_deprecatedUnjellyingInstanceAtom(self):
         """
         Unjellying the instance atom is deprecated with 15.0.0.
         """
         jelly.unjelly(
-            ["instance",
-             ["class", "twisted.spread.test.test_jelly.A"],
-             ["dictionary"]])
+            ["instance", ["class", "twisted.spread.test.test_jelly.A"], ["dictionary"]]
+        )
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "Unjelly support for the instance atom is deprecated since "
-            "Twisted 15.0.0.  Upgrade peer for modern instance support.")
-        self.assertEqual(
-            warnings[0]['category'],
-            DeprecationWarning)
-
+            "Twisted 15.0.0.  Upgrade peer for modern instance support.",
+        )
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
 
 
 class ClassA(pb.Copyable, pb.RemoteCopy):
@@ -630,14 +591,12 @@ class ClassA(pb.Copyable, pb.RemoteCopy):
         self.ref = ClassB(self)
 
 
-
 class ClassB(pb.Copyable, pb.RemoteCopy):
     def __init__(self, ref):
         self.ref = ref
 
 
-
-class CircularReferenceTests(unittest.TestCase):
+class CircularReferenceTests(TestCase):
     """
     Tests for circular references handling in the jelly/unjelly process.
     """
@@ -646,13 +605,12 @@ class CircularReferenceTests(unittest.TestCase):
         jelly.setUnjellyableForClass(ClassA, ClassA)
         jelly.setUnjellyableForClass(ClassB, ClassB)
         a = jelly.unjelly(jelly.jelly(ClassA()))
-        self.assertIs(a.ref.ref, a,
-            "Identity not preserved in circular reference")
-
+        self.assertIs(a.ref.ref, a, "Identity not preserved in circular reference")
 
     def test_circleWithInvoker(self):
         class DummyInvokerClass:
             pass
+
         dummyInvoker = DummyInvokerClass()
         dummyInvoker.serializingPerspective = None
         a0 = ClassA()
@@ -660,9 +618,9 @@ class CircularReferenceTests(unittest.TestCase):
         jelly.setUnjellyableForClass(ClassB, ClassB)
         j = jelly.jelly(a0, invoker=dummyInvoker)
         a1 = jelly.unjelly(j)
-        self.failUnlessIdentical(a1.ref.ref, a1,
-            "Identity not preserved in circular reference")
-
+        self.failUnlessIdentical(
+            a1.ref.ref, a1, "Identity not preserved in circular reference"
+        )
 
     def test_set(self):
         """
@@ -675,7 +633,6 @@ class CircularReferenceTests(unittest.TestCase):
         res = jelly.unjelly(jelly.jelly(a))
         self.assertIsInstance(res.x, set)
         self.assertEqual(list(res.x), [res])
-
 
     def test_frozenset(self):
         """

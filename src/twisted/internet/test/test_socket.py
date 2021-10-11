@@ -10,19 +10,17 @@ I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
 behave exactly the same as L{IReactorTCP.listenTCP}.
 """
 
-import errno, socket
+import errno
+import socket
 
 from zope.interface import verify
 
-from twisted.python.log import err
-from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import UnsupportedAddressFamily
+from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
-from twisted.internet.test.reactormixins import (
-    ReactorBuilder, needsRunningReactor)
-from twisted.python.compat import _PY3
+from twisted.internet.test.reactormixins import ReactorBuilder, needsRunningReactor
+from twisted.python.log import err
 from twisted.python.runtime import platform
-
 
 
 class IReactorSocketVerificationTestsBuilder(ReactorBuilder):
@@ -41,8 +39,8 @@ class IReactorSocketVerificationTestsBuilder(ReactorBuilder):
     These tests will be skipped for reactors which do not claim to
     provide L{IReactorSocket}.
     """
-    requiredInterfaces = [IReactorSocket]
 
+    requiredInterfaces = [IReactorSocket]
 
     def test_provider(self):
         """
@@ -50,9 +48,7 @@ class IReactorSocketVerificationTestsBuilder(ReactorBuilder):
         L{IReactorSocket}.
         """
         reactor = self.buildReactor()
-        self.assertTrue(
-            verify.verifyObject(IReactorSocket, reactor))
-
+        self.assertTrue(verify.verifyObject(IReactorSocket, reactor))
 
 
 class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
@@ -64,6 +60,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
     I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
     behave exactly the same as L{IReactorTCP.listenTCP}.
     """
+
     requiredInterfaces = [IReactorSocket]
 
     def test_invalidDescriptor(self):
@@ -80,12 +77,15 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
 
         exc = self.assertRaises(
             socket.error,
-            reactor.adoptStreamPort, fileno, socket.AF_INET, ServerFactory())
-        if platform.isWindows() and _PY3:
+            reactor.adoptStreamPort,
+            fileno,
+            socket.AF_INET,
+            ServerFactory(),
+        )
+        if platform.isWindows():
             self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
         else:
             self.assertEqual(exc.args[0], errno.EBADF)
-
 
     def test_invalidAddressFamily(self):
         """
@@ -104,8 +104,11 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
 
         self.assertRaises(
             UnsupportedAddressFamily,
-            reactor.adoptStreamPort, port.fileno(), arbitrary, ServerFactory())
-
+            reactor.adoptStreamPort,
+            port.fileno(),
+            arbitrary,
+            ServerFactory(),
+        )
 
     def test_stopOnlyCloses(self):
         """
@@ -126,26 +129,28 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
 
         # The file descriptor is duplicated by adoptStreamPort
         port = reactor.adoptStreamPort(
-            portSocket.fileno(), portSocket.family, ServerFactory())
+            portSocket.fileno(), portSocket.family, ServerFactory()
+        )
         d = port.stopListening()
+
         def stopped(ignored):
             # Should still be possible to accept a connection on
             # portSocket.  If it was shutdown, the exception would be
             # EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
-            if platform.isWindows() and _PY3:
+            if platform.isWindows():
                 self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
             else:
                 self.assertEqual(exc.args[0], errno.EAGAIN)
+
         d.addCallback(stopped)
         d.addErrback(err, "Failed to accept on original port.")
 
         needsRunningReactor(
-            reactor,
-            lambda: d.addCallback(lambda ignored: reactor.stop()))
+            reactor, lambda: d.addCallback(lambda ignored: reactor.stop())
+        )
 
         reactor.run()
-
 
 
 class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
@@ -158,6 +163,7 @@ class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
     I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
     behave exactly the same as L{IReactorTCP.listenTCP}.
     """
+
     requiredInterfaces = [IReactorSocket]
 
     def test_invalidAddressFamily(self):
@@ -175,17 +181,19 @@ class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
 
         self.assertRaises(
             UnsupportedAddressFamily,
-            reactor.adoptStreamConnection, connection.fileno(), arbitrary,
-            ServerFactory())
-
+            reactor.adoptStreamConnection,
+            connection.fileno(),
+            arbitrary,
+            ServerFactory(),
+        )
 
 
 class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
     """
     Builder for testing L{IReactorSocket.adoptDatagramPort} implementations.
     """
-    requiredInterfaces = [IReactorSocket]
 
+    requiredInterfaces = [IReactorSocket]
 
     def test_invalidDescriptor(self):
         """
@@ -201,13 +209,15 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
         exc = self.assertRaises(
             socket.error,
-            reactor.adoptDatagramPort, fileno, socket.AF_INET,
-            DatagramProtocol())
-        if platform.isWindows() and _PY3:
+            reactor.adoptDatagramPort,
+            fileno,
+            socket.AF_INET,
+            DatagramProtocol(),
+        )
+        if platform.isWindows():
             self.assertEqual(exc.args[0], errno.WSAENOTSOCK)
         else:
             self.assertEqual(exc.args[0], errno.EBADF)
-
 
     def test_invalidAddressFamily(self):
         """
@@ -224,9 +234,11 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
         self.assertRaises(
             UnsupportedAddressFamily,
-            reactor.adoptDatagramPort, port.fileno(), arbitrary,
-            DatagramProtocol())
-
+            reactor.adoptDatagramPort,
+            port.fileno(),
+            arbitrary,
+            DatagramProtocol(),
+        )
 
     def test_stopOnlyCloses(self):
         """
@@ -246,25 +258,27 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
         # The file descriptor is duplicated by adoptDatagramPort
         port = reactor.adoptDatagramPort(
-            portSocket.fileno(), portSocket.family, DatagramProtocol())
+            portSocket.fileno(), portSocket.family, DatagramProtocol()
+        )
         d = port.stopListening()
+
         def stopped(ignored):
             # Should still be possible to recv on portSocket.  If
             # it was shutdown, the exception would be EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.recvfrom, 1)
-            if platform.isWindows() and _PY3:
+            if platform.isWindows():
                 self.assertEqual(exc.args[0], errno.WSAEWOULDBLOCK)
             else:
                 self.assertEqual(exc.args[0], errno.EAGAIN)
+
         d.addCallback(stopped)
         d.addErrback(err, "Failed to read on original port.")
 
         needsRunningReactor(
-            reactor,
-            lambda: d.addCallback(lambda ignored: reactor.stop()))
+            reactor, lambda: d.addCallback(lambda ignored: reactor.stop())
+        )
 
         reactor.run()
-
 
 
 globals().update(IReactorSocketVerificationTestsBuilder.makeTestCaseClasses())

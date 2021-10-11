@@ -16,7 +16,7 @@ Overview
 
 
     
-Twisted provides a variety of implementations of the :api:`twisted.internet.reactor <twisted.internet.reactor>` .  The specialized
+Twisted provides a variety of implementations of the :py:mod:`twisted.internet.reactor` .  The specialized
 implementations are suited for different purposes and are
 designed to integrate better with particular platforms.
 
@@ -212,7 +212,7 @@ KQueue
 
     
 The KQueue Reactor allows Twisted to use FreeBSD's kqueue mechanism for
-event scheduling. See instructions in the :api:`twisted.internet.kqreactor <twisted.internet.kqreactor>` 's
+event scheduling. See instructions in the :py:mod:`twisted.internet.kqreactor` 's
 docstring for installation notes.
 
 
@@ -603,7 +603,7 @@ some specialized support code:
 .. code-block:: python
 
     
-    from Tkinter import *
+    from tkinter import *
     from twisted.internet import tksupport, reactor
     
     root = Tk()

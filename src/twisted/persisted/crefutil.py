@@ -8,10 +8,9 @@
 Utility classes for dealing with circular references.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python import log, reflect
-from twisted.python.compat import range, _constructMethod
+from twisted.python.compat import _constructMethod
 
 
 class NotKnown:
@@ -21,7 +20,7 @@ class NotKnown:
 
     def addDependant(self, mutableObject, key):
         assert not self.resolved
-        self.dependants.append( (mutableObject, key) )
+        self.dependants.append((mutableObject, key))
 
     resolvedObject = None
 
@@ -31,10 +30,8 @@ class NotKnown:
         for mut, key in self.dependants:
             mut[key] = newObject
 
-
     def __hash__(self):
         assert 0, "I am not to be used as a dictionary key."
-
 
 
 class _Container(NotKnown):
@@ -62,7 +59,6 @@ class _Container(NotKnown):
         if not self.locs:
             self.resolveDependants(self.containerType(self.l))
 
-
     def __setitem__(self, n, obj):
         """
         Change the value of one contained objects, and resolve references if
@@ -73,7 +69,6 @@ class _Container(NotKnown):
             self.locs.remove(n)
             if not self.locs:
                 self.resolveDependants(self.containerType(self.l))
-
 
 
 class _Tuple(_Container):
@@ -90,7 +85,6 @@ class _Tuple(_Container):
         _Container.__init__(self, l, tuple)
 
 
-
 class _InstanceMethod(NotKnown):
     def __init__(self, im_name, im_self, im_class):
         NotKnown.__init__(self)
@@ -101,8 +95,9 @@ class _InstanceMethod(NotKnown):
 
     def __call__(self, *args, **kw):
         import traceback
-        log.msg('instance method %s.%s' % (reflect.qual(self.my_class), self.name))
-        log.msg('being called with %r %r' % (args, kw))
+
+        log.msg(f"instance method {reflect.qual(self.my_class)}.{self.name}")
+        log.msg(f"being called with {args!r} {kw!r}")
         traceback.print_stack(file=log.logfile)
         assert 0
 
@@ -112,13 +107,15 @@ class _InstanceMethod(NotKnown):
             method = _constructMethod(self.my_class, self.name, obj)
             self.resolveDependants(method)
 
+
 class _DictKeyAndValue:
     def __init__(self, dict):
         self.dict = dict
+
     def __setitem__(self, n, obj):
         if n not in (1, 0):
             raise RuntimeError("DictKeyAndValue should only ever be called with 0 or 1")
-        if n: # value
+        if n:  # value
             self.value = obj
         else:
             self.key = obj
@@ -132,10 +129,10 @@ class _Dereference(NotKnown):
         self.id = id
 
 
-
 from twisted.internet.defer import Deferred
 
-class _Defer(Deferred, NotKnown):
+
+class _Defer(Deferred[object], NotKnown):
     def __init__(self):
         Deferred.__init__(self)
         NotKnown.__init__(self)
@@ -145,7 +142,11 @@ class _Defer(Deferred, NotKnown):
 
     def __setitem__(self, n, obj):
         if self.wasset:
-            raise RuntimeError('setitem should only be called once, setting %r to %r' % (n, obj))
+            raise RuntimeError(
+                "setitem should only be called once, setting {!r} to {!r}".format(
+                    n, obj
+                )
+            )
         else:
             self.wasset = 1
         self.callback(obj)
@@ -153,7 +154,7 @@ class _Defer(Deferred, NotKnown):
     def addDependant(self, dep, key):
         # by the time I'm adding a dependant, I'm *not* adding any more
         # callbacks
-        NotKnown.addDependant(self,  dep, key)
+        NotKnown.addDependant(self, dep, key)
         self.unpause()
         resovd = self.result
         self.resolveDependants(resovd)

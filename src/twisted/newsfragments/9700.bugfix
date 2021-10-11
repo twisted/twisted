@@ -1,1 +1,0 @@
-The serial extra now requires pywin32 on Windows enabling use of twisted.internet.serialport without specifying the windows_platform extra.

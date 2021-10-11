@@ -14,22 +14,28 @@ exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
 
 # Include NEWS, READMEs, etc
 recursive-include docs README
-include NEWS.rst README.rst INSTALL.rst CONTRIBUTING LICENSE code_of_conduct.md
+include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.md
 
 # Exclude admin scripts and things only useful when running from a source checkout
-exclude pyproject.toml
 exclude codecov.yml
-exclude appveyor.yml
 exclude .coveralls.yml
-exclude .circleci
+exclude .git-blame-ignore-revs
+exclude .readthedocs.yml
+exclude .pre-commit-config.yaml
 recursive-exclude .circleci *
+exclude azure-pipelines
+recursive-exclude azure-pipelines *
 prune bin
 prune admin
-prune .travis
 prune .github
+prune docs/_build
+
+
+# Include marker indicating that we ship type annotations (PEP 561)
+include src/twisted/py.typed
 
 # Include test-running utilities for downstream packagers
-include tox.ini .coveragerc
+include mypy.ini tox.ini .coveragerc
 
 # Include our docs templates
 recursive-include src/twisted/python/_pydoctortemplates *.html
@@ -44,7 +50,6 @@ include src/twisted/internet/test/fake_CAs/*
 include src/twisted/mail/test/rfc822.message
 
 # Some extras
-recursive-include src/twisted *.3only
 recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
 
 # Docs
@@ -80,6 +85,8 @@ recursive-include docs *.txt
 recursive-include docs *.users
 recursive-include docs *.xml
 recursive-include docs Makefile
+recursive-include docs/_static/js *.js
+prune docs/_build
 
 # Don't have the real old historic docs
 exclude docs/historic/2003

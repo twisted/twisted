@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh.forwarding}.
 """
 
-from __future__ import division, absolute_import
 
 from twisted.python.reflect import requireModule
 
@@ -14,9 +13,9 @@ if cryptography:
     from twisted.conch.ssh import forwarding
 
 from twisted.internet.address import IPv6Address
-from twisted.trial import unittest
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.trial import unittest
 
 
 class TestSSHConnectForwardingChannel(unittest.TestCase):
@@ -41,17 +40,15 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         transport = StringTransport(peerAddress=connector.getDestination())
         protocol.makeConnection(transport)
 
-
     def test_channelOpenHostnameRequests(self):
         """
         When a hostname is sent as part of forwarding requests, it
         is resolved using HostnameEndpoint's resolver.
         """
-        sut = forwarding.SSHConnectForwardingChannel(
-            hostport=('fwd.example.org', 1234))
+        sut = forwarding.SSHConnectForwardingChannel(hostport=("fwd.example.org", 1234))
         # Patch channel and resolver to not touch the network.
         memoryReactor = MemoryReactorClock()
-        sut._reactor = deterministicResolvingReactor(memoryReactor, ['::1'])
+        sut._reactor = deterministicResolvingReactor(memoryReactor, ["::1"])
         sut.channelOpen(None)
 
         self.makeTCPConnection(memoryReactor)
@@ -60,4 +57,5 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         # address of the requested host.
         self.assertIsInstance(sut.client, forwarding.SSHForwardingClient)
         self.assertEqual(
-            IPv6Address('TCP', '::1', 1234), sut.client.transport.getPeer())
+            IPv6Address("TCP", "::1", 1234), sut.client.transport.getPeer()
+        )

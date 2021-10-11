@@ -8,11 +8,8 @@ Twisted Python Roots: an abstract hierarchy representation for Twisted.
 Maintainer: Glyph Lefkowitz
 """
 
-from __future__ import absolute_import, division
 
 from twisted.python import reflect
-from twisted.python._oldstyle import _oldStyle
-
 
 
 class NotSupportedError(NotImplementedError):
@@ -22,8 +19,6 @@ class NotSupportedError(NotImplementedError):
     """
 
 
-
-@_oldStyle
 class Request:
     """I am an abstract representation of a request for an entity.
 
@@ -31,22 +26,20 @@ class Request:
     self.write(data) until there is no data left and then calling
     self.finish().
     """
+
     # This attribute should be set to the string name of the protocol being
     # responded to (e.g. HTTP or FTP)
     wireProtocol = None
+
     def write(self, data):
-        """Add some data to the response to this request.
-        """
+        """Add some data to the response to this request."""
         raise NotImplementedError("%s.write" % reflect.qual(self.__class__))
 
     def finish(self):
-        """The response to this request is finished; flush all data to the network stream.
-        """
+        """The response to this request is finished; flush all data to the network stream."""
         raise NotImplementedError("%s.finish" % reflect.qual(self.__class__))
 
 
-
-@_oldStyle
 class Entity:
     """I am a terminal object in a hierarchy, with no children.
 
@@ -57,6 +50,7 @@ class Entity:
     required, and will be emulated on a per-protocol basis for types which do
     not handle them.
     """
+
     def render(self, request):
         """
         I produce a stream of bytes for the request, by calling request.write()
@@ -65,8 +59,6 @@ class Entity:
         raise NotImplementedError("%s.render" % reflect.qual(self.__class__))
 
 
-
-@_oldStyle
 class Collection:
     """I represent a static collection of entities.
 
@@ -75,8 +67,7 @@ class Collection:
     """
 
     def __init__(self, entities=None):
-        """Initialize me.
-        """
+        """Initialize me."""
         if entities is not None:
             self.entities = entities
         else:
@@ -127,13 +118,11 @@ class Collection:
         del self.entities[name]
 
     def storeEntity(self, name, request):
-        """Store an entity for 'name', based on the content of 'request'.
-        """
+        """Store an entity for 'name', based on the content of 'request'."""
         raise NotSupportedError("%s.storeEntity" % reflect.qual(self.__class__))
 
     def removeEntity(self, name, request):
-        """Remove an entity for 'name', based on the content of 'request'.
-        """
+        """Remove an entity for 'name', based on the content of 'request'."""
         raise NotSupportedError("%s.removeEntity" % reflect.qual(self.__class__))
 
     def listStaticEntities(self):
@@ -164,14 +153,12 @@ class Collection:
         """
         return self.entities.keys()
 
-
     def listDynamicNames(self):
         """Retrieve a list of the names of entities that I store references to.
 
         See getDynamicEntity.
         """
         return []
-
 
     def listNames(self, request):
         """Retrieve a list of all names for entities that I contain.
@@ -182,8 +169,7 @@ class Collection:
 
 
 class ConstraintViolation(Exception):
-    """An exception raised when a constraint is violated.
-    """
+    """An exception raised when a constraint is violated."""
 
 
 class Constrained(Collection):
@@ -247,8 +233,7 @@ class Homogenous(Constrained):
         if isinstance(entity, self.entityType):
             return 1
         else:
-            raise ConstraintViolation("%s of incorrect type (%s)" %
-                                      (entity, self.entityType))
+            raise ConstraintViolation(f"{entity} of incorrect type ({self.entityType})")
 
     def getNameType(self):
         return "Name"

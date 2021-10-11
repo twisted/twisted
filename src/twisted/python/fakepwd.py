@@ -6,17 +6,17 @@
 L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
 
-from __future__ import absolute_import, division
 
-__all__ = ['UserDatabase', 'ShadowDatabase']
+__all__ = ["UserDatabase", "ShadowDatabase"]
 
 
-class _UserRecord(object):
+class _UserRecord:
     """
     L{_UserRecord} holds the user data for a single user in L{UserDatabase}.
-    It corresponds to L{pwd.struct_passwd}.  See that class for attribute
-    documentation.
+    It corresponds to the C{passwd} structure from the L{pwd} module.
+    See that module for attribute documentation.
     """
+
     def __init__(self, name, password, uid, gid, gecos, home, shell):
         self.pw_name = name
         self.pw_passwd = password
@@ -26,19 +26,22 @@ class _UserRecord(object):
         self.pw_dir = home
         self.pw_shell = shell
 
-
     def __len__(self):
         return 7
 
-
     def __getitem__(self, index):
         return (
-            self.pw_name, self.pw_passwd, self.pw_uid,
-            self.pw_gid, self.pw_gecos, self.pw_dir, self.pw_shell)[index]
+            self.pw_name,
+            self.pw_passwd,
+            self.pw_uid,
+            self.pw_gid,
+            self.pw_gecos,
+            self.pw_dir,
+            self.pw_shell,
+        )[index]
 
 
-
-class UserDatabase(object):
+class UserDatabase:
     """
     L{UserDatabase} holds a traditional POSIX user data in memory and makes it
     available via the same API as L{pwd}.
@@ -46,9 +49,9 @@ class UserDatabase(object):
     @ivar _users: A C{list} of L{_UserRecord} instances holding all user data
         added to this database.
     """
+
     def __init__(self):
         self._users = []
-
 
     def addUser(self, username, password, uid, gid, gecos, home, shell):
         """
@@ -82,9 +85,9 @@ class UserDatabase(object):
             add.
         @type shell: C{str}
         """
-        self._users.append(_UserRecord(
-            username, password, uid, gid, gecos, home, shell))
-
+        self._users.append(
+            _UserRecord(username, password, uid, gid, gecos, home, shell)
+        )
 
     def getpwuid(self, uid):
         """
@@ -95,7 +98,6 @@ class UserDatabase(object):
                 return entry
         raise KeyError()
 
-
     def getpwnam(self, name):
         """
         Return the user record corresponding to the given username.
@@ -105,7 +107,6 @@ class UserDatabase(object):
                 return entry
         raise KeyError()
 
-
     def getpwall(self):
         """
         Return a list of all user records.
@@ -113,15 +114,16 @@ class UserDatabase(object):
         return self._users
 
 
-
-class _ShadowRecord(object):
+class _ShadowRecord:
     """
     L{_ShadowRecord} holds the shadow user data for a single user in
     L{ShadowDatabase}.  It corresponds to C{spwd.struct_spwd}.  See that class
     for attribute documentation.
     """
-    def __init__(self, username, password, lastChange, min, max, warn, inact,
-                 expire, flag):
+
+    def __init__(
+        self, username, password, lastChange, min, max, warn, inact, expire, flag
+    ):
         self.sp_nam = username
         self.sp_pwd = password
         self.sp_lstchg = lastChange
@@ -132,20 +134,24 @@ class _ShadowRecord(object):
         self.sp_expire = expire
         self.sp_flag = flag
 
-
     def __len__(self):
         return 9
 
-
     def __getitem__(self, index):
         return (
-            self.sp_nam, self.sp_pwd, self.sp_lstchg, self.sp_min,
-            self.sp_max, self.sp_warn, self.sp_inact, self.sp_expire,
-            self.sp_flag)[index]
+            self.sp_nam,
+            self.sp_pwd,
+            self.sp_lstchg,
+            self.sp_min,
+            self.sp_max,
+            self.sp_warn,
+            self.sp_inact,
+            self.sp_expire,
+            self.sp_flag,
+        )[index]
 
 
-
-class ShadowDatabase(object):
+class ShadowDatabase:
     """
     L{ShadowDatabase} holds a shadow user database in memory and makes it
     available via the same API as C{spwd}.
@@ -155,12 +161,13 @@ class ShadowDatabase(object):
 
     @since: 12.0
     """
+
     def __init__(self):
         self._users = []
 
-
-    def addUser(self, username, password, lastChange, min, max, warn, inact,
-                expire, flag):
+    def addUser(
+        self, username, password, lastChange, min, max, warn, inact, expire, flag
+    ):
         """
         Add a new user record to this database.
 
@@ -198,10 +205,11 @@ class ShadowDatabase(object):
             add.
         @type flag: C{int}
         """
-        self._users.append(_ShadowRecord(
-                username, password, lastChange,
-                min, max, warn, inact, expire, flag))
-
+        self._users.append(
+            _ShadowRecord(
+                username, password, lastChange, min, max, warn, inact, expire, flag
+            )
+        )
 
     def getspnam(self, username):
         """
@@ -211,7 +219,6 @@ class ShadowDatabase(object):
             if entry.sp_nam == username:
                 return entry
         raise KeyError
-
 
     def getspall(self):
         """

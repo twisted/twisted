@@ -9,40 +9,40 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
-
-from twisted.internet import protocol
-from twisted.python import log
-
-from twisted.conch import error
-from twisted.conch.ssh import (_kex, transport, userauth, connection)
 
 import random
+
+from twisted.conch import error
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.logger import Logger
 
 
 class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
     """
+
+    _log = Logger()
     protocol = transport.SSHServerTransport
 
     services = {
-        b'ssh-userauth':userauth.SSHUserAuthServer,
-        b'ssh-connection':connection.SSHConnection
+        b"ssh-userauth": userauth.SSHUserAuthServer,
+        b"ssh-connection": connection.SSHConnection,
     }
+
     def startFactory(self):
         """
         Check for public and private keys.
         """
-        if not hasattr(self,'publicKeys'):
+        if not hasattr(self, "publicKeys"):
             self.publicKeys = self.getPublicKeys()
-        if not hasattr(self,'privateKeys'):
+        if not hasattr(self, "privateKeys"):
             self.privateKeys = self.getPrivateKeys()
         if not self.publicKeys or not self.privateKeys:
-            raise error.ConchError('no host keys, failing')
-        if not hasattr(self,'primes'):
+            raise error.ConchError("no host keys, failing")
+        if not hasattr(self, "primes"):
             self.primes = self.getPrimes()
-
 
     def buildProtocol(self, addr):
         """
@@ -57,14 +57,16 @@ class SSHFactory(protocol.Factory):
         t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
-            log.msg('disabling non-fixed-group key exchange algorithms '
-                    'because we cannot find moduli file')
+            self._log.info(
+                "disabling non-fixed-group key exchange algorithms "
+                "because we cannot find moduli file"
+            )
             t.supportedKeyExchanges = [
-                kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm) or
-                     _kex.isEllipticCurve(kexAlgorithm)]
+                kexAlgorithm
+                for kexAlgorithm in t.supportedKeyExchanges
+                if _kex.isFixedGroup(kexAlgorithm) or _kex.isEllipticCurve(kexAlgorithm)
+            ]
         return t
-
 
     def getPublicKeys(self):
         """
@@ -74,8 +76,7 @@ class SSHFactory(protocol.Factory):
 
         @rtype: L{dict}
         """
-        raise NotImplementedError('getPublicKeys unimplemented')
-
+        raise NotImplementedError("getPublicKeys unimplemented")
 
     def getPrivateKeys(self):
         """
@@ -85,8 +86,7 @@ class SSHFactory(protocol.Factory):
 
         @rtype: L{dict}
         """
-        raise NotImplementedError('getPrivateKeys unimplemented')
-
+        raise NotImplementedError("getPrivateKeys unimplemented")
 
     def getPrimes(self):
         """
@@ -96,7 +96,6 @@ class SSHFactory(protocol.Factory):
 
         @rtype: L{dict}
         """
-
 
     def getDHPrime(self, bits):
         """
@@ -110,7 +109,6 @@ class SSHFactory(protocol.Factory):
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
 
-
     def getService(self, transport, service):
         """
         Return a class to use as a service for the given transport.
@@ -119,5 +117,5 @@ class SSHFactory(protocol.Factory):
         @type service:      L{bytes}
         @rtype:             subclass of L{service.SSHService}
         """
-        if service == b'ssh-userauth' or hasattr(transport, 'avatar'):
+        if service == b"ssh-userauth" or hasattr(transport, "avatar"):
             return self.services[service]

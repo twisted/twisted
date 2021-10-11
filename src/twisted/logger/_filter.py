@@ -7,14 +7,15 @@ Filtering log observer.
 """
 
 from functools import partial
+from typing import Dict, Iterable
 
 from zope.interface import Interface, implementer
 
-from constantly import NamedConstant, Names
+from constantly import NamedConstant, Names  # type: ignore[import]
 
+from ._interfaces import ILogObserver, LogEvent
 from ._levels import InvalidLogLevelError, LogLevel
-from ._observer import ILogObserver
-
+from ._observer import bitbucketLogObserver
 
 
 class PredicateResult(Names):
@@ -36,10 +37,10 @@ class PredicateResult(Names):
         if returned by the last predicate being considered, then the event will
         be logged.
     """
+
     yes = NamedConstant()
     no = NamedConstant()
     maybe = NamedConstant()
-
 
 
 class ILogFilterPredicate(Interface):
@@ -47,7 +48,7 @@ class ILogFilterPredicate(Interface):
     A predicate that determined whether an event should be logged.
     """
 
-    def __call__(event):
+    def __call__(event: LogEvent) -> NamedConstant:
         """
         Determine whether an event should be logged.
 
@@ -55,8 +56,7 @@ class ILogFilterPredicate(Interface):
         """
 
 
-
-def shouldLogEvent(predicates, event):
+def shouldLogEvent(predicates: Iterable[ILogFilterPredicate], event: LogEvent) -> bool:
     """
     Determine whether an event should be logged, based on the result of
     C{predicates}.
@@ -72,13 +72,9 @@ def shouldLogEvent(predicates, event):
     run out, at which point we return C{True}.
 
     @param predicates: The predicates to use.
-    @type predicates: iterable of L{ILogFilterPredicate}
-
     @param event: An event
-    @type event: L{dict}
 
     @return: True if the message should be forwarded on, C{False} if not.
-    @rtype: L{bool}
     """
     for predicate in predicates:
         result = predicate(event)
@@ -88,55 +84,49 @@ def shouldLogEvent(predicates, event):
             return False
         if result == PredicateResult.maybe:
             continue
-        raise TypeError("Invalid predicate result: {0!r}".format(result))
+        raise TypeError(f"Invalid predicate result: {result!r}")
     return True
 
 
-
 @implementer(ILogObserver)
-class FilteringLogObserver(object):
+class FilteringLogObserver:
     """
     L{ILogObserver} that wraps another L{ILogObserver}, but filters out events
     based on applying a series of L{ILogFilterPredicate}s.
     """
 
     def __init__(
-        self, observer, predicates,
-        negativeObserver=lambda event: None
-    ):
+        self,
+        observer: ILogObserver,
+        predicates: Iterable[ILogFilterPredicate],
+        negativeObserver: ILogObserver = bitbucketLogObserver,
+    ) -> None:
         """
         @param observer: An observer to which this observer will forward
             events when C{predictates} yield a positive result.
-        @type observer: L{ILogObserver}
-
         @param predicates: Predicates to apply to events before forwarding to
             the wrapped observer.
-        @type predicates: ordered iterable of predicates
-
         @param negativeObserver: An observer to which this observer will
             forward events when C{predictates} yield a negative result.
-        @type negativeObserver: L{ILogObserver}
         """
         self._observer = observer
         self._shouldLogEvent = partial(shouldLogEvent, list(predicates))
         self._negativeObserver = negativeObserver
 
-
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         Forward to next observer if predicate allows it.
         """
         if self._shouldLogEvent(event):
             if "log_trace" in event:
-                event["log_trace"].append((self, self.observer))
+                event["log_trace"].append((self, self._observer))
             self._observer(event)
         else:
             self._negativeObserver(event)
 
 
-
 @implementer(ILogFilterPredicate)
-class LogLevelFilterPredicate(object):
+class LogLevelFilterPredicate:
     """
     L{ILogFilterPredicate} that filters out events with a log level lower than
     the log level for the event's namespace.
@@ -144,17 +134,15 @@ class LogLevelFilterPredicate(object):
     Events that not not have a log level or namespace are also dropped.
     """
 
-    def __init__(self, defaultLogLevel=LogLevel.info):
+    def __init__(self, defaultLogLevel: NamedConstant = LogLevel.info) -> None:
         """
         @param defaultLogLevel: The default minimum log level.
-        @type defaultLogLevel: L{LogLevel}
         """
-        self._logLevelsByNamespace = {}
+        self._logLevelsByNamespace: Dict[str, NamedConstant] = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
 
-
-    def logLevelForNamespace(self, namespace):
+    def logLevelForNamespace(self, namespace: str) -> NamedConstant:
         """
         Determine an appropriate log level for the given namespace.
 
@@ -163,15 +151,13 @@ class LogLevelFilterPredicate(object):
         C{logLevelForNamespace("mypackage.subpackage")} will return
         C{LogLevel.debug}.
 
-        @param namespace: A logging namespace, or L{None} for the default
+        @param namespace: A logging namespace.  Use C{""} for the default
             namespace.
-        @type namespace: L{str} (native string)
 
         @return: The log level for the specified namespace.
-        @rtype: L{LogLevel}
         """
         if not namespace:
-            return self._logLevelsByNamespace[None]
+            return self._logLevelsByNamespace[""]
 
         if namespace in self._logLevelsByNamespace:
             return self._logLevelsByNamespace[namespace]
@@ -185,18 +171,14 @@ class LogLevelFilterPredicate(object):
                 return self._logLevelsByNamespace[namespace]
             index -= 1
 
-        return self._logLevelsByNamespace[None]
+        return self._logLevelsByNamespace[""]
 
-
-    def setLogLevelForNamespace(self, namespace, level):
+    def setLogLevelForNamespace(self, namespace: str, level: NamedConstant) -> None:
         """
         Sets the log level for a logging namespace.
 
         @param namespace: A logging namespace.
-        @type namespace: L{str} (native string)
-
         @param level: The log level for the given namespace.
-        @type level: L{LogLevel}
         """
         if level not in LogLevel.iterconstants():
             raise InvalidLogLevelError(level)
@@ -204,28 +186,26 @@ class LogLevelFilterPredicate(object):
         if namespace:
             self._logLevelsByNamespace[namespace] = level
         else:
-            self._logLevelsByNamespace[None] = level
+            self._logLevelsByNamespace[""] = level
 
-
-    def clearLogLevels(self):
+    def clearLogLevels(self) -> None:
         """
         Clears all log levels to the default.
         """
         self._logLevelsByNamespace.clear()
-        self._logLevelsByNamespace[None] = self.defaultLogLevel
+        self._logLevelsByNamespace[""] = self.defaultLogLevel
 
+    def __call__(self, event: LogEvent) -> NamedConstant:
+        eventLevel = event.get("log_level", None)
+        if eventLevel is None:
+            return PredicateResult.no
 
-    def __call__(self, event):
-        eventLevel     = event.get("log_level", None)
-        namespace = event.get("log_namespace", None)
+        namespace = event.get("log_namespace", "")
+        if not namespace:
+            return PredicateResult.no
+
         namespaceLevel = self.logLevelForNamespace(namespace)
-
-        if (
-            eventLevel is None or
-            namespace is None or
-            LogLevel._priorityForLevel(eventLevel) <
-            LogLevel._priorityForLevel(namespaceLevel)
-        ):
+        if eventLevel < namespaceLevel:
             return PredicateResult.no
 
         return PredicateResult.maybe

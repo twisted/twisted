@@ -6,16 +6,17 @@
 Select reactor
 """
 
-from __future__ import division, absolute_import
 
+import select
+import sys
+from errno import EBADF, EINTR
 from time import sleep
-import sys, select, socket
-from errno import EINTR, EBADF
+from typing import Type
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 from twisted.python.runtime import platformType
 
@@ -37,6 +38,7 @@ def win32select(r, w, e, timeout=None):
     r, w, e = select.select(r, w, w, timeout)
     return r, w + e, []
 
+
 if platformType == "win32":
     _select = win32select
 else:
@@ -46,13 +48,13 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase = object
+    _extraBase: Type[object] = object
 else:
     _extraBase = _ThreadedWin32EventsMixin
 
 
 @implementer(IReactorFDSet)
-class SelectReactor(posixbase.PosixReactorBase, _extraBase):
+class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[misc,valid-type]
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 
@@ -71,15 +73,13 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
         self._writes = set()
         posixbase.PosixReactorBase.__init__(self)
 
-
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
         readers = list(self._reads)
         writers = list(self._writes)
         self._reads.clear()
         self._writes.clear()
-        for selSet, selList in ((self._reads, readers),
-                                 (self._writes, writers)):
+        for selSet, selList in ((self._reads, readers), (self._writes, writers)):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
@@ -89,7 +89,6 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
                 else:
                     selSet.add(selectable)
 
-
     def doSelect(self, timeout):
         """
         Run one iteration of the I/O monitor loop.
@@ -98,9 +97,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
         waiting for them.
         """
         try:
-            r, w, ignored = _select(self._reads,
-                                    self._writes,
-                                    [], timeout)
+            r, w, ignored = _select(self._reads, self._writes, [], timeout)
         except ValueError:
             # Possibly a file descriptor has gone negative?
             self._preenDescriptors()
@@ -111,7 +108,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
             log.err()
             self._preenDescriptors()
             return
-        except (select.error, socket.error, IOError) as se:
+        except OSError as se:
             # select(2) encountered an error, perhaps while calling the fileno()
             # method of a socket.  (Python 2.6 socket.error is an IOError
             # subclass, but on Python 2.5 and earlier it is not.)
@@ -132,8 +129,10 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
 
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
-        for selectables, method, fdset in ((r, "doRead", self._reads),
-                                           (w,"doWrite", self._writes)):
+        for selectables, method, fdset in (
+            (r, "doRead", self._reads),
+            (w, "doWrite", self._writes),
+        ):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 # ^^^^ --- what the !@#*?  serious!  -exarkun
@@ -147,11 +146,11 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
     def _doReadOrWrite(self, selectable, method):
         try:
             why = getattr(selectable, method)()
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:
-            self._disconnectSelectable(selectable, why, method=="doRead")
+            self._disconnectSelectable(selectable, why, method == "doRead")
 
     def addReader(self, reader):
         """
@@ -180,21 +179,19 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)
 
-
     def getReaders(self):
         return list(self._reads)
-
 
     def getWriters(self):
         return list(self._writes)
 
 
-
 def install():
-    """Configure the twisted mainloop to be run using the select() reactor.
-    """
+    """Configure the twisted mainloop to be run using the select() reactor."""
     reactor = SelectReactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
 
-__all__ = ['install']
+
+__all__ = ["install"]

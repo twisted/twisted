@@ -11,30 +11,27 @@ Lookup the reverse DNS pointer records for one or more IP addresses.
 
 IPADDRESS: An IPv4 or IPv6 address.
 """
-import sys
 import socket
+import sys
 
 from twisted.internet import defer, task
 from twisted.names import client
 from twisted.python import usage
 
 
-
 class Options(usage.Options):
-    synopsis = 'Usage: multi_reverse_lookup.py IPADDRESS [IPADDRESS]'
+    synopsis = "Usage: multi_reverse_lookup.py IPADDRESS [IPADDRESS]"
 
     def parseArgs(self, *addresses):
-        self['addresses'] = addresses
-
+        self["addresses"] = addresses
 
 
 def reverseNameFromIPv4Address(address):
     """
     Return a reverse domain name for the given IPv4 address.
     """
-    tokens = list(reversed(address.split('.'))) + ['in-addr', 'arpa', '']
-    return '.'.join(tokens)
-
+    tokens = list(reversed(address.split("."))) + ["in-addr", "arpa", ""]
+    return ".".join(tokens)
 
 
 def reverseNameFromIPv6Address(address):
@@ -42,11 +39,11 @@ def reverseNameFromIPv6Address(address):
     Return a reverse domain name for the given IPv6 address.
     """
     # Expand addresses that are in compressed format eg ::1
-    fullHex = ''.join('%02x' % (ord(c),)
-                      for c in socket.inet_pton(socket.AF_INET6, address))
-    tokens = list(reversed(fullHex)) + ['ip6', 'arpa', '']
-    return '.'.join(tokens)
-
+    fullHex = "".join(
+        f"{ord(c):02x}" for c in socket.inet_pton(socket.AF_INET6, address)
+    )
+    tokens = list(reversed(fullHex)) + ["ip6", "arpa", ""]
+    return ".".join(tokens)
 
 
 def reverseNameFromIPAddress(address):
@@ -55,11 +52,10 @@ def reverseNameFromIPAddress(address):
     """
     try:
         socket.inet_pton(socket.AF_INET, address)
-    except socket.error:
+    except OSError:
         return reverseNameFromIPv6Address(address)
     else:
         return reverseNameFromIPv4Address(address)
-
 
 
 def printResult(result):
@@ -70,10 +66,8 @@ def printResult(result):
     answers, authority, additional = result
     if answers:
         sys.stdout.write(
-            ', '.join(
-                '{} IN {}'.format(a.name.name, a.payload) for a in answers)
-            + '\n')
-
+            ", ".join(f"{a.name.name} IN {a.payload}" for a in answers) + "\n"
+        )
 
 
 def printSummary(results):
@@ -82,9 +76,8 @@ def printSummary(results):
     """
     statuses = zip(*results)[0]
     sys.stdout.write(
-        '{} responses to {} queries'.format(
-            statuses.count(True), len(statuses)) + '\n')
-
+        f"{statuses.count(True)} responses to {len(statuses)} queries" + "\n"
+    )
 
 
 def main(reactor, *argv):
@@ -92,12 +85,12 @@ def main(reactor, *argv):
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(str(options) + '\n')
-        sys.stderr.write('ERROR: %s\n' % (errortext,))
+        sys.stderr.write(str(options) + "\n")
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
     pending = []
-    for address in options['addresses']:
+    for address in options["addresses"]:
         pointerName = reverseNameFromIPAddress(address)
         # Force a single 1s timeout, so that slow or offline servers don't
         # adversely slow down the script.
@@ -108,7 +101,6 @@ def main(reactor, *argv):
     allResults = defer.DeferredList(pending, consumeErrors=False)
     allResults.addCallback(printSummary)
     return allResults
-
 
 
 if __name__ == "__main__":

@@ -9,29 +9,24 @@ functionality.
 
 import os
 import sys
+from unittest import skipIf
 
-from twisted.conch.insults import insults
 from twisted.conch import recvline
-
-from twisted.python import reflect, components, filepath
-from twisted.python.compat import iterbytes, bytesEnviron
-from twisted.python.runtime import platform
-from twisted.internet import defer, error
-from twisted.trial import unittest
+from twisted.conch.insults import insults
 from twisted.cred import portal
+from twisted.internet import defer, error
+from twisted.python import components, filepath, reflect
+from twisted.python.compat import iterbytes
+from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial.unittest import SkipTest, TestCase
 
-if platform.isWindows():
-    properEnv = dict(os.environ)
-    properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
-else:
-    properEnv = bytesEnviron()
-    properEnv[b"PYTHONPATH"] = os.pathsep.join(sys.path).encode(
-        sys.getfilesystemencoding())
+stdio = requireModule("twisted.conch.stdio")
+properEnv = dict(os.environ)
+properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 
 
-
-class ArrowsTests(unittest.TestCase):
+class ArrowsTests(TestCase):
     def setUp(self):
         self.underlyingTransport = StringTransport()
         self.pt = insults.ServerProtocol()
@@ -40,18 +35,16 @@ class ArrowsTests(unittest.TestCase):
         self.pt.factory = self
         self.pt.makeConnection(self.underlyingTransport)
 
-
     def test_printableCharacters(self):
         """
         When L{HistoricRecvLine} receives a printable character,
         it adds it to the current line buffer.
         """
-        self.p.keystrokeReceived(b'x', None)
-        self.p.keystrokeReceived(b'y', None)
-        self.p.keystrokeReceived(b'z', None)
+        self.p.keystrokeReceived(b"x", None)
+        self.p.keystrokeReceived(b"y", None)
+        self.p.keystrokeReceived(b"z", None)
 
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
     def test_horizontalArrows(self):
         """
@@ -60,38 +53,37 @@ class ArrowsTests(unittest.TestCase):
         in the current line buffer, respectively.
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
-        for ch in iterbytes(b'xyz'):
+        for ch in iterbytes(b"xyz"):
             kR(ch)
 
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b'z'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xy", b"z"))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'x', b'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"x", b"yz"))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b"xyz"))
 
         kR(self.pt.LEFT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b'xyz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b"xyz"))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'x', b'yz'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"x", b"yz"))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b'z'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xy", b"z"))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.RIGHT_ARROW)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
     def test_newline(self):
         """
@@ -100,22 +92,20 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz\nabc\n123\n'):
+        for ch in iterbytes(b"xyz\nabc\n123\n"):
             kR(ch)
 
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc', b'123'), ()))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz", b"abc", b"123"), ()))
 
-        kR(b'c')
-        kR(b'b')
-        kR(b'a')
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc', b'123'), ()))
+        kR(b"c")
+        kR(b"b")
+        kR(b"a")
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz", b"abc", b"123"), ()))
 
-        kR(b'\n')
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc', b'123', b'cba'), ()))
-
+        kR(b"\n")
+        self.assertEqual(
+            self.p.currentHistoryBuffer(), ((b"xyz", b"abc", b"123", b"cba"), ())
+        )
 
     def test_verticalArrows(self):
         """
@@ -126,38 +116,31 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz\nabc\n123\n'):
+        for ch in iterbytes(b"xyz\nabc\n123\n"):
             kR(ch)
 
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc', b'123'), ()))
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz", b"abc", b"123"), ()))
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b""))
 
         kR(self.pt.UP_ARROW)
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc'), (b'123',)))
-        self.assertEqual(self.p.currentLineBuffer(), (b'123', b''))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz", b"abc"), (b"123",)))
+        self.assertEqual(self.p.currentLineBuffer(), (b"123", b""))
 
         kR(self.pt.UP_ARROW)
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz',), (b'abc', b'123')))
-        self.assertEqual(self.p.currentLineBuffer(), (b'abc', b''))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz",), (b"abc", b"123")))
+        self.assertEqual(self.p.currentLineBuffer(), (b"abc", b""))
 
         kR(self.pt.UP_ARROW)
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((), (b'xyz', b'abc', b'123')))
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((), (b"xyz", b"abc", b"123")))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.UP_ARROW)
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((), (b'xyz', b'abc', b'123')))
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentHistoryBuffer(), ((), (b"xyz", b"abc", b"123")))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         for i in range(4):
             kR(self.pt.DOWN_ARROW)
-        self.assertEqual(self.p.currentHistoryBuffer(),
-                          ((b'xyz', b'abc', b'123'), ()))
-
+        self.assertEqual(self.p.currentHistoryBuffer(), ((b"xyz", b"abc", b"123"), ()))
 
     def test_home(self):
         """
@@ -166,13 +149,12 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'hello, world'):
+        for ch in iterbytes(b"hello, world"):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"hello, world", b""))
 
         kR(self.pt.HOME)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b'hello, world'))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b"hello, world"))
 
     def test_end(self):
         """
@@ -181,14 +163,13 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'hello, world'):
+        for ch in iterbytes(b"hello, world"):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"hello, world", b""))
 
         kR(self.pt.HOME)
         kR(self.pt.END)
-        self.assertEqual(self.p.currentLineBuffer(), (b'hello, world', b''))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"hello, world", b""))
 
     def test_backspace(self):
         """
@@ -197,20 +178,19 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz'):
+        for ch in iterbytes(b"xyz"):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xy", b""))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b'y'))
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b"y"))
 
         kR(self.pt.BACKSPACE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b'y'))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b"y"))
 
     def test_delete(self):
         """
@@ -219,28 +199,27 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz'):
+        for ch in iterbytes(b"xyz"):
             kR(ch)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyz', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyz", b""))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'xy', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"xy", b""))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'x', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"x", b""))
 
         kR(self.pt.LEFT_ARROW)
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b""))
 
         kR(self.pt.DELETE)
-        self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
-
+        self.assertEqual(self.p.currentLineBuffer(), (b"", b""))
 
     def test_insert(self):
         """
@@ -249,17 +228,16 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz'):
+        for ch in iterbytes(b"xyz"):
             kR(ch)
 
         kR(self.pt.LEFT_ARROW)
-        kR(b'A')
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyA', b'z'))
+        kR(b"A")
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyA", b"z"))
 
         kR(self.pt.LEFT_ARROW)
-        kR(b'B')
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyB', b'Az'))
-
+        kR(b"B")
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyB", b"Az"))
 
     def test_typeover(self):
         """
@@ -270,19 +248,18 @@ class ArrowsTests(unittest.TestCase):
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
-        for ch in iterbytes(b'xyz'):
+        for ch in iterbytes(b"xyz"):
             kR(ch)
 
         kR(self.pt.INSERT)
 
         kR(self.pt.LEFT_ARROW)
-        kR(b'A')
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyA', b''))
+        kR(b"A")
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyA", b""))
 
         kR(self.pt.LEFT_ARROW)
-        kR(b'B')
-        self.assertEqual(self.p.currentLineBuffer(), (b'xyB', b''))
-
+        kR(b"B")
+        self.assertEqual(self.p.currentLineBuffer(), (b"xyB", b""))
 
     def test_unprintableCharacters(self):
         """
@@ -292,20 +269,35 @@ class ArrowsTests(unittest.TestCase):
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
         pt = self.pt
 
-        for ch in (pt.F1, pt.F2, pt.F3, pt.F4, pt.F5, pt.F6, pt.F7, pt.F8,
-                   pt.F9, pt.F10, pt.F11, pt.F12, pt.PGUP, pt.PGDN):
+        for ch in (
+            pt.F1,
+            pt.F2,
+            pt.F3,
+            pt.F4,
+            pt.F5,
+            pt.F6,
+            pt.F7,
+            pt.F8,
+            pt.F9,
+            pt.F10,
+            pt.F11,
+            pt.F12,
+            pt.PGUP,
+            pt.PGDN,
+        ):
             kR(ch)
-            self.assertEqual(self.p.currentLineBuffer(), (b'', b''))
-
+            self.assertEqual(self.p.currentLineBuffer(), (b"", b""))
 
 
 from twisted.conch import telnet
 from twisted.conch.insults import helper
 from twisted.conch.test.loopback import LoopbackRelay
 
+
 class EchoServer(recvline.HistoricRecvLine):
     def lineReceived(self, line):
-        self.terminal.write(line + b'\n' + self.ps[self.pn])
+        self.terminal.write(line + b"\n" + self.ps[self.pn])
+
 
 # An insults API for this would be nice.
 left = b"\x1b[D"
@@ -321,17 +313,32 @@ backspace = b"\x7f"
 from twisted.cred import checkers
 
 try:
-    from twisted.conch.ssh import (userauth, transport, channel, connection,
-                                   session, keys)
-    from twisted.conch.manhole_ssh import TerminalUser, TerminalSession, TerminalRealm, TerminalSessionTransport, ConchFactory
+    from twisted.conch.manhole_ssh import (
+        ConchFactory,
+        TerminalRealm,
+        TerminalSession,
+        TerminalSessionTransport,
+        TerminalUser,
+    )
+    from twisted.conch.ssh import (
+        channel,
+        connection,
+        keys,
+        session,
+        transport,
+        userauth,
+    )
 except ImportError:
     ssh = False
 else:
     ssh = True
-    class SessionChannel(channel.SSHChannel):
-        name = b'session'
 
-        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
+    class SessionChannel(channel.SSHChannel):
+        name = b"session"
+
+        def __init__(
+            self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw
+        ):
             channel.SSHChannel.__init__(self, *a, **kw)
 
             self.protocolFactory = protocolFactory
@@ -341,27 +348,29 @@ else:
             self.width = width
             self.height = height
 
-
         def channelOpen(self, data):
-            term = session.packRequest_pty_req(b"vt102", (self.height, self.width, 0, 0), b'')
-            self.conn.sendRequest(self, b'pty-req', term)
-            self.conn.sendRequest(self, b'shell', b'')
+            term = session.packRequest_pty_req(
+                b"vt102", (self.height, self.width, 0, 0), b""
+            )
+            self.conn.sendRequest(self, b"pty-req", term)
+            self.conn.sendRequest(self, b"shell", b"")
 
-            self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self._protocolInstance = self.protocolFactory(
+                *self.protocolArgs, **self.protocolKwArgs
+            )
             self._protocolInstance.factory = self
             self._protocolInstance.makeConnection(self)
-
 
         def closed(self):
             self._protocolInstance.connectionLost(error.ConnectionDone())
 
-
         def dataReceived(self, data):
             self._protocolInstance.dataReceived(data)
 
-
     class TestConnection(connection.SSHConnection):
-        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
+        def __init__(
+            self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw
+        ):
             connection.SSHConnection.__init__(self, *a, **kw)
 
             self.protocolFactory = protocolFactory
@@ -371,28 +380,40 @@ else:
             self.width = width
             self.height = height
 
-
         def serviceStarted(self):
-            self.__channel = SessionChannel(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
+            self.__channel = SessionChannel(
+                self.protocolFactory,
+                self.protocolArgs,
+                self.protocolKwArgs,
+                self.width,
+                self.height,
+            )
             self.openChannel(self.__channel)
-
 
         def write(self, data):
             return self.__channel.write(data)
-
 
     class TestAuth(userauth.SSHUserAuthClient):
         def __init__(self, username, password, *a, **kw):
             userauth.SSHUserAuthClient.__init__(self, username, *a, **kw)
             self.password = password
 
-
         def getPassword(self):
             return defer.succeed(self.password)
 
-
     class TestTransport(transport.SSHClientTransport):
-        def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
+        def __init__(
+            self,
+            protocolFactory,
+            protocolArgs,
+            protocolKwArgs,
+            username,
+            password,
+            width,
+            height,
+            *a,
+            **kw,
+        ):
             self.protocolFactory = protocolFactory
             self.protocolArgs = protocolArgs
             self.protocolKwArgs = protocolKwArgs
@@ -401,29 +422,30 @@ else:
             self.width = width
             self.height = height
 
-
         def verifyHostKey(self, hostKey, fingerprint):
             return defer.succeed(True)
 
-
         def connectionSecure(self):
-            self.__connection = TestConnection(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
+            self.__connection = TestConnection(
+                self.protocolFactory,
+                self.protocolArgs,
+                self.protocolKwArgs,
+                self.width,
+                self.height,
+            )
             self.requestService(
-                TestAuth(self.username, self.password, self.__connection))
-
+                TestAuth(self.username, self.password, self.__connection)
+            )
 
         def write(self, data):
             return self.__connection.write(data)
-
 
     class TestSessionTransport(TerminalSessionTransport):
         def protocolFactory(self):
             return self.avatar.conn.transport.factory.serverProtocol()
 
-
     class TestSession(TerminalSession):
         transportFactory = TestSessionTransport
-
 
     class TestUser(TerminalUser):
         pass
@@ -431,21 +453,17 @@ else:
     components.registerAdapter(TestSession, TestUser, session.ISession)
 
 
-
 class NotifyingExpectableBuffer(helper.ExpectableBuffer):
     def __init__(self):
         self.onConnection = defer.Deferred()
         self.onDisconnection = defer.Deferred()
 
-
     def connectionMade(self):
         helper.ExpectableBuffer.connectionMade(self)
         self.onConnection.callback(self)
 
-
     def connectionLost(self, reason):
         self.onDisconnection.errback(reason)
-
 
 
 class _BaseMixin:
@@ -454,15 +472,16 @@ class _BaseMixin:
 
     def _assertBuffer(self, lines):
         receivedLines = self.recvlineClient.__bytes__().splitlines()
-        expectedLines = lines + ([b''] * (self.HEIGHT - len(lines) - 1))
+        expectedLines = lines + ([b""] * (self.HEIGHT - len(lines) - 1))
         self.assertEqual(len(receivedLines), len(expectedLines))
         for i in range(len(receivedLines)):
             self.assertEqual(
-                receivedLines[i], expectedLines[i],
-                b"".join(receivedLines[max(0, i-1):i+1]) +
-                b" != " +
-                b"".join(expectedLines[max(0, i-1):i+1]))
-
+                receivedLines[i],
+                expectedLines[i],
+                b"".join(receivedLines[max(0, i - 1) : i + 1])
+                + b" != "
+                + b"".join(expectedLines[max(0, i - 1) : i + 1]),
+            )
 
     def _trivialTest(self, inputLine, output):
         done = self.recvlineClient.expect(b"done")
@@ -475,15 +494,15 @@ class _BaseMixin:
         return done.addCallback(finished)
 
 
-
 class _SSHMixin(_BaseMixin):
     def setUp(self):
         if not ssh:
-            raise unittest.SkipTest(
+            raise SkipTest(
                 "cryptography requirements missing, can't run historic "
-                "recvline tests over ssh")
+                "recvline tests over ssh"
+            )
 
-        u, p = b'testuser', b'testpass'
+        u, p = b"testuser", b"testpass"
         rlm = TerminalRealm()
         rlm.userFactory = TestUser
         rlm.chainedProtocolFactory = lambda: insultsServer
@@ -494,8 +513,9 @@ class _SSHMixin(_BaseMixin):
         ptl.registerChecker(checker)
         sshFactory = ConchFactory(ptl)
 
-        sshKey = keys._getPersistentRSAKey(filepath.FilePath(self.mktemp()),
-                                           keySize=512)
+        sshKey = keys._getPersistentRSAKey(
+            filepath.FilePath(self.mktemp()), keySize=512
+        )
         sshFactory.publicKeys[b"ssh-rsa"] = sshKey
         sshFactory.privateKeys[b"ssh-rsa"] = sshKey
 
@@ -509,7 +529,9 @@ class _SSHMixin(_BaseMixin):
 
         recvlineClient = NotifyingExpectableBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
-        sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT)
+        sshClient = TestTransport(
+            lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT
+        )
         serverTransport = LoopbackRelay(sshClient)
 
         sshClient.makeConnection(clientTransport)
@@ -523,24 +545,19 @@ class _SSHMixin(_BaseMixin):
 
         return recvlineClient.onConnection
 
-
     def _testwrite(self, data):
         self.sshClient.write(data)
 
 
-
 from twisted.conch.test import test_telnet
 
-class TestInsultsClientProtocol(insults.ClientProtocol,
-                                test_telnet.TestProtocol):
+
+class TestInsultsClientProtocol(insults.ClientProtocol, test_telnet.TestProtocol):
     pass
 
 
-
-class TestInsultsServerProtocol(insults.ServerProtocol,
-                                test_telnet.TestProtocol):
+class TestInsultsServerProtocol(insults.ServerProtocol, test_telnet.TestProtocol):
     pass
-
 
 
 class _TelnetMixin(_BaseMixin):
@@ -568,15 +585,8 @@ class _TelnetMixin(_BaseMixin):
 
         return recvlineClient.onConnection
 
-
     def _testwrite(self, data):
         self.telnetClient.write(data)
-
-try:
-    from twisted.conch import stdio
-except ImportError:
-    stdio = None
-
 
 
 class _StdioMixin(_BaseMixin):
@@ -602,15 +612,15 @@ class _StdioMixin(_BaseMixin):
         # handle bytes we send to the child process.
         exe = sys.executable
         module = stdio.__file__
-        if module.endswith('.pyc') or module.endswith('.pyo'):
+        if module.endswith(".pyc") or module.endswith(".pyo"):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
-        if not platform.isWindows():
-            args = [arg.encode(sys.getfilesystemencoding()) for arg in args]
 
         from twisted.internet import reactor
-        clientTransport = reactor.spawnProcess(processClient, exe, args,
-                                               env=properEnv, usePTY=True)
+
+        clientTransport = reactor.spawnProcess(
+            processClient, exe, args, env=properEnv, usePTY=True
+        )
 
         self.recvlineClient = self.testTerminal = testTerminal
         self.processClient = processClient
@@ -619,10 +629,9 @@ class _StdioMixin(_BaseMixin):
         # Wait for the process protocol and test terminal to become
         # connected before proceeding.  The former should always
         # happen first, but it doesn't hurt to be safe.
-        return defer.gatherResults(filter(None, [
-            processClient.onConnection,
-            testTerminal.expect(b">>> ")]))
-
+        return defer.gatherResults(
+            filter(None, [processClient.onConnection, testTerminal.expect(b">>> ")])
+        )
 
     def tearDown(self):
         # Kill the child process.  We're done with it.
@@ -630,16 +639,16 @@ class _StdioMixin(_BaseMixin):
             self.clientTransport.signalProcess("KILL")
         except (error.ProcessExitedAlready, OSError):
             pass
+
         def trap(failure):
             failure.trap(error.ProcessTerminated)
             self.assertIsNone(failure.value.exitCode)
             self.assertEqual(failure.value.status, 9)
-        return self.testTerminal.onDisconnection.addErrback(trap)
 
+        return self.testTerminal.onDisconnection.addErrback(trap)
 
     def _testwrite(self, data):
         self.clientTransport.write(data)
-
 
 
 class RecvlineLoopbackMixin:
@@ -647,91 +656,69 @@ class RecvlineLoopbackMixin:
 
     def testSimple(self):
         return self._trivialTest(
-            b"first line\ndone",
-            [b">>> first line",
-             b"first line",
-             b">>> done"])
-
+            b"first line\ndone", [b">>> first line", b"first line", b">>> done"]
+        )
 
     def testLeftArrow(self):
         return self._trivialTest(
-            insert + b'first line' + left * 4 + b"xxxx\ndone",
-            [b">>> first xxxx",
-             b"first xxxx",
-             b">>> done"])
-
+            insert + b"first line" + left * 4 + b"xxxx\ndone",
+            [b">>> first xxxx", b"first xxxx", b">>> done"],
+        )
 
     def testRightArrow(self):
         return self._trivialTest(
-            insert + b'right line' + left * 4 + right * 2 + b"xx\ndone",
-            [b">>> right lixx",
-             b"right lixx",
-            b">>> done"])
-
+            insert + b"right line" + left * 4 + right * 2 + b"xx\ndone",
+            [b">>> right lixx", b"right lixx", b">>> done"],
+        )
 
     def testBackspace(self):
         return self._trivialTest(
             b"second line" + backspace * 4 + b"xxxx\ndone",
-            [b">>> second xxxx",
-             b"second xxxx",
-             b">>> done"])
-
+            [b">>> second xxxx", b"second xxxx", b">>> done"],
+        )
 
     def testDelete(self):
         return self._trivialTest(
             b"delete xxxx" + left * 4 + delete * 4 + b"line\ndone",
-            [b">>> delete line",
-             b"delete line",
-             b">>> done"])
-
+            [b">>> delete line", b"delete line", b">>> done"],
+        )
 
     def testInsert(self):
         return self._trivialTest(
             b"third ine" + left * 3 + b"l\ndone",
-            [b">>> third line",
-             b"third line",
-             b">>> done"])
-
+            [b">>> third line", b"third line", b">>> done"],
+        )
 
     def testTypeover(self):
         return self._trivialTest(
             b"fourth xine" + left * 4 + insert + b"l\ndone",
-            [b">>> fourth line",
-             b"fourth line",
-             b">>> done"])
-
+            [b">>> fourth line", b"fourth line", b">>> done"],
+        )
 
     def testHome(self):
         return self._trivialTest(
             insert + b"blah line" + home + b"home\ndone",
-            [b">>> home line",
-             b"home line",
-             b">>> done"])
-
+            [b">>> home line", b"home line", b">>> done"],
+        )
 
     def testEnd(self):
         return self._trivialTest(
             b"end " + left * 4 + end + b"line\ndone",
-            [b">>> end line",
-             b"end line",
-             b">>> done"])
+            [b">>> end line", b"end line", b">>> done"],
+        )
 
 
-
-class RecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackTelnetTests(_TelnetMixin, TestCase, RecvlineLoopbackMixin):
     pass
 
 
-
-class RecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackSSHTests(_SSHMixin, TestCase, RecvlineLoopbackMixin):
     pass
 
 
-
-class RecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
-    if stdio is None:
-        skip = "Terminal requirements missing, can't run recvline tests over stdio"
-
+@skipIf(not stdio, "Terminal requirements missing, can't run recvline tests over stdio")
+class RecvlineLoopbackStdioTests(_StdioMixin, TestCase, RecvlineLoopbackMixin):
+    pass
 
 
 class HistoricRecvlineLoopbackMixin:
@@ -740,12 +727,14 @@ class HistoricRecvlineLoopbackMixin:
     def testUpArrow(self):
         return self._trivialTest(
             b"first line\n" + up + b"\ndone",
-            [b">>> first line",
-             b"first line",
-             b">>> first line",
-             b"first line",
-             b">>> done"])
-
+            [
+                b">>> first line",
+                b"first line",
+                b">>> first line",
+                b"first line",
+                b">>> done",
+            ],
+        )
 
     def test_DownArrowToPartialLineInHistory(self):
         """
@@ -761,43 +750,53 @@ class HistoricRecvlineLoopbackMixin:
 
         return self._trivialTest(
             b"first line\n" + b"partial line" + up + down + b"\ndone",
-            [b">>> first line",
-             b"first line",
-             b">>> partial line",
-             b"partial line",
-             b">>> done"])
-
+            [
+                b">>> first line",
+                b"first line",
+                b">>> partial line",
+                b"partial line",
+                b">>> done",
+            ],
+        )
 
     def testDownArrow(self):
         return self._trivialTest(
             b"first line\nsecond line\n" + up * 2 + down + b"\ndone",
-            [b">>> first line",
-             b"first line",
-             b">>> second line",
-             b"second line",
-             b">>> second line",
-             b"second line",
-             b">>> done"])
+            [
+                b">>> first line",
+                b"first line",
+                b">>> second line",
+                b"second line",
+                b">>> second line",
+                b"second line",
+                b">>> done",
+            ],
+        )
 
 
-
-class HistoricRecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackTelnetTests(
+    _TelnetMixin, TestCase, HistoricRecvlineLoopbackMixin
+):
     pass
 
 
-
-class HistoricRecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackSSHTests(
+    _SSHMixin, TestCase, HistoricRecvlineLoopbackMixin
+):
     pass
 
 
+@skipIf(
+    not stdio,
+    "Terminal requirements missing, " "can't run historic recvline tests over stdio",
+)
+class HistoricRecvlineLoopbackStdioTests(
+    _StdioMixin, TestCase, HistoricRecvlineLoopbackMixin
+):
+    pass
 
-class HistoricRecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    if stdio is None:
-        skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
 
-
-
-class TransportSequenceTests(unittest.TestCase):
+class TransportSequenceTests(TestCase):
     """
     L{twisted.conch.recvline.TransportSequence}
     """

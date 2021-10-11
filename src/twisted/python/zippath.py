@@ -8,23 +8,26 @@ This module contains implementations of L{IFilePath} for zip files.
 See the constructor of L{ZipArchive} for use.
 """
 
-from __future__ import absolute_import, division
 
+import errno
 import os
 import time
-import errno
-
+from typing import Dict
 from zipfile import ZipFile
-
-from twisted.python.compat import comparable, cmp
-from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
-from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.filepath import UnlistableError
 
 from zope.interface import implementer
 
-ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
-                                # path separator, regardless of platform.
+from twisted.python.compat import cmp, comparable
+from twisted.python.filepath import (
+    AbstractFilePath,
+    FilePath,
+    IFilePath,
+    UnlistableError,
+    _coerceToFilesystemEncoding,
+)
+
+ZIP_PATH_SEP = "/"  # In zipfiles, "/" is universally used as the
+# path separator, regardless of platform.
 
 
 @comparable
@@ -49,25 +52,24 @@ class ZipPath(AbstractFilePath):
         # 'zipimport' module does it.
         sep = _coerceToFilesystemEncoding(pathInArchive, ZIP_PATH_SEP)
         archiveFilename = _coerceToFilesystemEncoding(
-            pathInArchive, archive.zipfile.filename)
-        self.path = os.path.join(archiveFilename,
-                                 *(self.pathInArchive.split(sep)))
-
+            pathInArchive, archive.zipfile.filename
+        )
+        self.path = os.path.join(archiveFilename, *(self.pathInArchive.split(sep)))
 
     def __cmp__(self, other):
         if not isinstance(other, ZipPath):
             return NotImplemented
-        return cmp((self.archive, self.pathInArchive),
-                   (other.archive, other.pathInArchive))
+        return cmp(
+            (self.archive, self.pathInArchive), (other.archive, other.pathInArchive)
+        )
 
-
-    def __repr__(self):
-        parts = [_coerceToFilesystemEncoding(
-            self.sep, os.path.abspath(self.archive.path))]
+    def __repr__(self) -> str:
+        parts = [
+            _coerceToFilesystemEncoding(self.sep, os.path.abspath(self.archive.path))
+        ]
         parts.extend(self.pathInArchive.split(self.sep))
         ossep = _coerceToFilesystemEncoding(self.sep, os.sep)
-        return "ZipPath(%r)" % (ossep.join(parts),)
-
+        return f"ZipPath({ossep.join(parts)!r})"
 
     @property
     def sep(self):
@@ -79,13 +81,11 @@ class ZipPath(AbstractFilePath):
         """
         return _coerceToFilesystemEncoding(self.path, ZIP_PATH_SEP)
 
-
     def parent(self):
         splitup = self.pathInArchive.split(self.sep)
         if len(splitup) == 1:
             return self.archive
         return ZipPath(self.archive, self.sep.join(splitup[:-1]))
-
 
     def child(self, path):
         """
@@ -103,38 +103,31 @@ class ZipPath(AbstractFilePath):
         pathInArchive = _coerceToFilesystemEncoding(path, self.pathInArchive)
         return ZipPath(self.archive, joiner.join([pathInArchive, path]))
 
-
     def sibling(self, path):
         return self.parent().child(path)
-
 
     def exists(self):
         return self.isdir() or self.isfile()
 
-
     def isdir(self):
         return self.pathInArchive in self.archive.childmap
-
 
     def isfile(self):
         return self.pathInArchive in self.archive.zipfile.NameToInfo
 
-
     def islink(self):
         return False
-
 
     def listdir(self):
         if self.exists():
             if self.isdir():
                 return list(self.archive.childmap[self.pathInArchive].keys())
             else:
-                raise UnlistableError(
-                    OSError(errno.ENOTDIR, "Leaf zip entry listed"))
+                raise UnlistableError(OSError(errno.ENOTDIR, "Leaf zip entry listed"))
         else:
             raise UnlistableError(
-                OSError(errno.ENOENT, "Non-existent zip entry listed"))
-
+                OSError(errno.ENOENT, "Non-existent zip entry listed")
+            )
 
     def splitext(self):
         """
@@ -145,25 +138,20 @@ class ZipPath(AbstractFilePath):
         # attribute.
         return os.path.splitext(self.path)
 
-
     def basename(self):
         return self.pathInArchive.split(self.sep)[-1]
-
 
     def dirname(self):
         # XXX NOTE: This API isn't a very good idea on filepath, but it's even
         # less meaningful here.
         return self.parent().path
 
-
     def open(self, mode="r"):
-        pathInArchive = _coerceToFilesystemEncoding('', self.pathInArchive)
+        pathInArchive = _coerceToFilesystemEncoding("", self.pathInArchive)
         return self.archive.zipfile.open(pathInArchive, mode=mode)
-
 
     def changed(self):
         pass
-
 
     def getsize(self):
         """
@@ -174,7 +162,6 @@ class ZipPath(AbstractFilePath):
         pathInArchive = _coerceToFilesystemEncoding("", self.pathInArchive)
         return self.archive.zipfile.NameToInfo[pathInArchive].file_size
 
-
     def getAccessTime(self):
         """
         Retrieve this file's last access-time.  This is the same as the last access
@@ -183,7 +170,6 @@ class ZipPath(AbstractFilePath):
         @return: a number of seconds since the epoch
         """
         return self.archive.getAccessTime()
-
 
     def getModificationTime(self):
         """
@@ -194,9 +180,8 @@ class ZipPath(AbstractFilePath):
         """
         pathInArchive = _coerceToFilesystemEncoding("", self.pathInArchive)
         return time.mktime(
-            self.archive.zipfile.NameToInfo[pathInArchive].date_time
-            + (0, 0, 0))
-
+            self.archive.zipfile.NameToInfo[pathInArchive].date_time + (0, 0, 0)
+        )
 
     def getStatusChangeTime(self):
         """
@@ -206,7 +191,6 @@ class ZipPath(AbstractFilePath):
         @return: a number of seconds since the epoch.
         """
         return self.getModificationTime()
-
 
 
 class ZipArchive(ZipPath):
@@ -221,7 +205,10 @@ class ZipArchive(ZipPath):
     instances will be in the mode of the argument to the creator method,
     converting if required.
     """
-    archive = property(lambda self: self)
+
+    @property
+    def archive(self):
+        return self
 
     def __init__(self, archivePathname):
         """
@@ -232,12 +219,11 @@ class ZipArchive(ZipPath):
             filesystem.
         """
         self.path = archivePathname
-        self.zipfile = ZipFile(_coerceToFilesystemEncoding('',
-                                                           archivePathname))
-        self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, '')
+        self.zipfile = ZipFile(_coerceToFilesystemEncoding("", archivePathname))
+        self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, "")
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
-        self.childmap = {}      # map parent: list of children
+        self.childmap: Dict[str, Dict[str, int]] = {}
 
         for name in self.zipfile.namelist():
             name = _coerceToFilesystemEncoding(self.path, name).split(self.sep)
@@ -247,8 +233,7 @@ class ZipArchive(ZipPath):
                 if parent not in self.childmap:
                     self.childmap[parent] = {}
                 self.childmap[parent][child] = 1
-            parent = _coerceToFilesystemEncoding(archivePathname, '')
-
+            parent = _coerceToFilesystemEncoding(archivePathname, "")
 
     def child(self, path):
         """
@@ -259,13 +244,11 @@ class ZipArchive(ZipPath):
         """
         return ZipPath(self, path)
 
-
     def exists(self):
         """
         Returns C{True} if the underlying archive exists.
         """
         return FilePath(self.zipfile.filename).exists()
-
 
     def getAccessTime(self):
         """
@@ -273,13 +256,11 @@ class ZipArchive(ZipPath):
         """
         return FilePath(self.zipfile.filename).getAccessTime()
 
-
     def getModificationTime(self):
         """
         Return the archive file's modification time.
         """
         return FilePath(self.zipfile.filename).getModificationTime()
-
 
     def getStatusChangeTime(self):
         """
@@ -287,9 +268,8 @@ class ZipArchive(ZipPath):
         """
         return FilePath(self.zipfile.filename).getStatusChangeTime()
 
+    def __repr__(self) -> str:
+        return f"ZipArchive({os.path.abspath(self.path)!r})"
 
-    def __repr__(self):
-        return 'ZipArchive(%r)' % (os.path.abspath(self.path),)
 
-
-__all__ = ['ZipArchive', 'ZipPath']
+__all__ = ["ZipArchive", "ZipPath"]

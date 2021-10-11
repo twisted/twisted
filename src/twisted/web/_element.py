@@ -2,16 +2,26 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+
+from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union, overload
 
 from zope.interface import implementer
 
-from twisted.web.iweb import IRenderable
-from twisted.web.error import MissingRenderMethod, UnexposedMethodError
-from twisted.web.error import MissingTemplateLoader
+from twisted.web.error import (
+    MissingRenderMethod,
+    MissingTemplateLoader,
+    UnexposedMethodError,
+)
+from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
 
 
-class Expose(object):
+T = TypeVar("T")
+
+
+class Expose:
     """
     Helper for exposing methods for various uses using a simple decorator-style
     callable.
@@ -19,20 +29,14 @@ class Expose(object):
     Instances of this class can be called with one or more functions as
     positional arguments.  The names of these functions will be added to a list
     on the class object of which they are methods.
-
-    @ivar attributeName: The attribute with which exposed methods will be
-    tracked.
     """
-    def __init__(self, doc=None):
-        self.doc = doc
 
-
-    def __call__(self, *funcObjs):
+    def __call__(self, *funcObjs: Callable) -> Callable:
         """
         Add one or more functions to the set of exposed functions.
 
         This is a way to declare something about a class definition, similar to
-        L{zope.interface.declarations.implementer}.  Use it like this::
+        L{zope.interface.implementer}.  Use it like this::
 
             magic = Expose('perform extra magic')
             class Foo(Bar):
@@ -58,13 +62,24 @@ class Expose(object):
         if not funcObjs:
             raise TypeError("expose() takes at least 1 argument (0 given)")
         for fObj in funcObjs:
-            fObj.exposedThrough = getattr(fObj, 'exposedThrough', [])
-            fObj.exposedThrough.append(self)
+            exposedThrough: List[Expose] = getattr(fObj, "exposedThrough", [])
+            exposedThrough.append(self)
+            setattr(fObj, "exposedThrough", exposedThrough)
         return funcObjs[0]
 
-
     _nodefault = object()
-    def get(self, instance, methodName, default=_nodefault):
+
+    @overload
+    def get(self, instance: object, methodName: str) -> Callable:
+        ...
+
+    @overload
+    def get(self, instance: object, methodName: str, default: T) -> Union[Callable, T]:
+        ...
+
+    def get(
+        self, instance: object, methodName: str, default: object = _nodefault
+    ) -> object:
         """
         Retrieve an exposed method with the given name from the given instance.
 
@@ -75,7 +90,7 @@ class Expose(object):
         instance.
         """
         method = getattr(instance, methodName, None)
-        exposedThrough = getattr(method, 'exposedThrough', [])
+        exposedThrough = getattr(method, "exposedThrough", [])
         if self not in exposedThrough:
             if default is self._nodefault:
                 raise UnexposedMethodError(self, methodName)
@@ -83,23 +98,14 @@ class Expose(object):
         return method
 
 
-    @classmethod
-    def _withDocumentation(cls, thunk):
-        """
-        Slight hack to make users of this class appear to have a docstring to
-        documentation generators, by defining them with a decorator.  (This hack
-        should be removed when epydoc can be convinced to use some other method
-        for documenting.)
-        """
-        return cls(thunk.__doc__)
+def exposer(thunk: Callable) -> Expose:
+    expose = Expose()
+    expose.__doc__ = thunk.__doc__
+    return expose
 
-
-# Avoid exposing the ugly, private classmethod name in the docs.  Luckily this
-# namespace is private already so this doesn't leak further.
-exposer = Expose._withDocumentation
 
 @exposer
-def renderer():
+def renderer() -> None:
     """
     Decorate with L{renderer} to use methods as template render directives.
 
@@ -122,9 +128,8 @@ def renderer():
     """
 
 
-
 @implementer(IRenderable)
-class Element(object):
+class Element:
     """
     Base for classes which can render part of a page.
 
@@ -147,18 +152,19 @@ class Element(object):
     L{twisted.web.http.Request} being served and second, the tag object which
     "invoked" the render method.
 
-    @type loader: L{ITemplateLoader} provider
     @ivar loader: The factory which will be used to load documents to
         return from C{render}.
     """
-    loader = None
 
-    def __init__(self, loader=None):
+    loader: Optional[ITemplateLoader] = None
+
+    def __init__(self, loader: Optional[ITemplateLoader] = None):
         if loader is not None:
             self.loader = loader
 
-
-    def lookupRenderMethod(self, name):
+    def lookupRenderMethod(
+        self, name: str
+    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
         """
         Look up and return the named render method.
         """
@@ -167,8 +173,7 @@ class Element(object):
             raise MissingRenderMethod(self, name)
         return method
 
-
-    def render(self, request):
+    def render(self, request: Optional[IRequest]) -> "Flattenable":
         """
         Implement L{IRenderable} to allow one L{Element} to be embedded in
         another's template or rendering output.

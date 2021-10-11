@@ -5,20 +5,18 @@
 Tests for implementations of L{IReactorTime}.
 """
 
-__metaclass__ = type
-
+from twisted.internet.interfaces import IReactorThreads, IReactorTime
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg
 from twisted.python.runtime import platform
-
 from twisted.trial.unittest import SkipTest
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.interfaces import IReactorTime, IReactorThreads
 
 
 class TimeTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorTime}.
     """
+
     requiredInterfaces = (IReactorTime,)
 
     def test_delayedCallStopsReactor(self):
@@ -29,7 +27,6 @@ class TimeTestsBuilder(ReactorBuilder):
         reactor.callLater(0, reactor.stop)
         reactor.run()
 
-
     def test_distantDelayedCall(self):
         """
         Scheduling a delayed call at a point in the extreme future does not
@@ -37,13 +34,17 @@ class TimeTestsBuilder(ReactorBuilder):
         """
         reactor = self.buildReactor()
         if IReactorThreads.providedBy(reactor):
+
             def eventSource(reactor, event):
-                msg(format="Thread-based event-source scheduling %(event)r",
-                    event=event)
+                msg(
+                    format="Thread-based event-source scheduling %(event)r", event=event
+                )
                 reactor.callFromThread(event)
+
         else:
-            raise SkipTest("Do not know how to synthesize non-time event to "
-                           "stop the test")
+            raise SkipTest(
+                "Do not know how to synthesize non-time event to " "stop the test"
+            )
 
         # Pick a pretty big delay.
         delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
@@ -71,19 +72,21 @@ class TimeTestsBuilder(ReactorBuilder):
         self.assertIn(delayedCall, reactor.getDelayedCalls())
 
 
-
 class GlibTimeTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorTime} for reactors based
     off glib.
     """
+
     requiredInterfaces = (IReactorTime,)
 
     if platform.isWindows():
         _reactors = ["twisted.internet.gtk2reactor.PortableGtkReactor"]
     else:
-        _reactors = ["twisted.internet.glib2reactor.Glib2Reactor",
-                     "twisted.internet.gtk2reactor.Gtk2Reactor"]
+        _reactors = [
+            "twisted.internet.glib2reactor.Glib2Reactor",
+            "twisted.internet.gtk2reactor.Gtk2Reactor",
+        ]
 
     def test_timeout_add(self):
         """
@@ -92,13 +95,16 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        import gobject
+        import gobject  # type: ignore[import]
+
         reactor = self.buildReactor()
 
         result = []
+
         def gschedule():
             reactor.callLater(0, callback)
             return 0
+
         def callback():
             result.append(True)
             reactor.stop()

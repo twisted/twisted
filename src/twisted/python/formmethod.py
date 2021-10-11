@@ -11,13 +11,12 @@ to format methods.
 """
 
 import calendar
-
-from twisted.python._oldstyle import _oldStyle
+from typing import Any, Optional, Tuple
 
 
 class FormException(Exception):
-    """An error occurred calling the form method.
-    """
+    """An error occurred calling the form method."""
+
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args)
         self.descriptions = kwargs
@@ -29,16 +28,15 @@ class InputError(FormException):
     """
 
 
-
-@_oldStyle
 class Argument:
     """Base class for form arguments."""
 
     # default value for argument, if no other default is given
-    defaultDefault = None
+    defaultDefault: Any = None
 
-    def __init__(self, name, default=None, shortDesc=None,
-                 longDesc=None, hints=None, allowNone=1):
+    def __init__(
+        self, name, default=None, shortDesc=None, longDesc=None, hints=None, allowNone=1
+    ):
         self.name = name
         self.allowNone = allowNone
         if default is None:
@@ -60,7 +58,7 @@ class Argument:
         return self.shortDesc or self.name.capitalize()
 
     def getLongDescription(self):
-        return self.longDesc or '' #self.shortDesc or "The %s." % self.name
+        return self.longDesc or ""  # self.shortDesc or "The %s." % self.name
 
     def coerce(self, val):
         """Convert the value to the correct format."""
@@ -68,16 +66,32 @@ class Argument:
 
 
 class String(Argument):
-    """A single string.
-    """
-    defaultDefault = ''
+    """A single string."""
+
+    defaultDefault: str = ""
     min = 0
     max = None
 
-    def __init__(self, name, default=None, shortDesc=None,
-                 longDesc=None, hints=None, allowNone=1, min=0, max=None):
-        Argument.__init__(self, name, default=default, shortDesc=shortDesc,
-                          longDesc=longDesc, hints=hints, allowNone=allowNone)
+    def __init__(
+        self,
+        name,
+        default=None,
+        shortDesc=None,
+        longDesc=None,
+        hints=None,
+        allowNone=1,
+        min=0,
+        max=None,
+    ):
+        Argument.__init__(
+            self,
+            name,
+            default=default,
+            shortDesc=shortDesc,
+            longDesc=longDesc,
+            hints=hints,
+            allowNone=allowNone,
+        )
         self.min = min
         self.max = max
 
@@ -85,19 +99,17 @@ class String(Argument):
         s = str(val)
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return str(val)
 
 
 class Text(String):
-    """A long string.
-    """
+    """A long string."""
 
 
 class Password(String):
-    """A string which should be obscured when input.
-    """
+    """A string which should be obscured when input."""
 
 
 class VerifiedPassword(String):
@@ -109,7 +121,7 @@ class VerifiedPassword(String):
         s = str(vals[0])
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return s
 
@@ -122,19 +134,19 @@ class Hidden(String):
 
 
 class Integer(Argument):
-    """A single integer.
-    """
-    defaultDefault = None
+    """A single integer."""
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
-                 longDesc=None, hints=None):
-        #although Argument now has allowNone, that was recently added, and
-        #putting it at the end kept things which relied on argument order
-        #from breaking.  However, allowNone originally was in here, so
-        #I have to keep the same order, to prevent breaking code that
-        #depends on argument order only
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints,
-                          allowNone)
+    defaultDefault: Optional[int] = None
+
+    def __init__(
+        self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
+    ):
+        # although Argument now has allowNone, that was recently added, and
+        # putting it at the end kept things which relied on argument order
+        # from breaking.  However, allowNone originally was in here, so
+        # I have to keep the same order, to prevent breaking code that
+        # depends on argument order only
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone)
 
     def coerce(self, val):
         if not val.strip() and self.allowNone:
@@ -142,43 +154,67 @@ class Integer(Argument):
         try:
             return int(val)
         except ValueError:
-            raise InputError("%s is not valid, please enter a whole number, e.g. 10" % val)
+            raise InputError(
+                "{} is not valid, please enter " "a whole number, e.g. 10".format(val)
+            )
 
 
 class IntegerRange(Integer):
-
-    def __init__(self, name, min, max, allowNone=1, default=None, shortDesc=None,
-                 longDesc=None, hints=None):
+    def __init__(
+        self,
+        name,
+        min,
+        max,
+        allowNone=1,
+        default=None,
+        shortDesc=None,
+        longDesc=None,
+        hints=None,
+    ):
         self.min = min
         self.max = max
-        Integer.__init__(self, name, allowNone=allowNone, default=default, shortDesc=shortDesc,
-                         longDesc=longDesc, hints=hints)
+        Integer.__init__(
+            self,
+            name,
+            allowNone=allowNone,
+            default=default,
+            shortDesc=shortDesc,
+            longDesc=longDesc,
+            hints=hints,
+        )
 
     def coerce(self, val):
         result = Integer.coerce(self, val)
         if self.allowNone and result == None:
             return result
         if result < self.min:
-            raise InputError("Value %s is too small, it should be at least %s" % (result, self.min))
+            raise InputError(
+                "Value {} is too small, it should be at least {}".format(
+                    result, self.min
+                )
+            )
         if result > self.max:
-            raise InputError("Value %s is too large, it should be at most %s" % (result, self.max))
+            raise InputError(
+                "Value {} is too large, it should be at most {}".format(
+                    result, self.max
+                )
+            )
         return result
 
 
 class Float(Argument):
 
-    defaultDefault = None
+    defaultDefault: Optional[float] = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
-                 longDesc=None, hints=None):
-        #although Argument now has allowNone, that was recently added, and
-        #putting it at the end kept things which relied on argument order
-        #from breaking.  However, allowNone originally was in here, so
-        #I have to keep the same order, to prevent breaking code that
-        #depends on argument order only
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints,
-                          allowNone)
-
+    def __init__(
+        self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
+    ):
+        # although Argument now has allowNone, that was recently added, and
+        # putting it at the end kept things which relied on argument order
+        # from breaking.  However, allowNone originally was in here, so
+        # I have to keep the same order, to prevent breaking code that
+        # depends on argument order only
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone)
 
     def coerce(self, val):
         if not val.strip() and self.allowNone:
@@ -199,12 +235,23 @@ class Choice(Argument):
     initially the first item will be selected.  Only one item can (should)
     be selected at once.
     """
-    def __init__(self, name, choices=[], default=[], shortDesc=None,
-                 longDesc=None, hints=None, allowNone=1):
+
+    def __init__(
+        self,
+        name,
+        choices=[],
+        default=[],
+        shortDesc=None,
+        longDesc=None,
+        hints=None,
+        allowNone=1,
+    ):
         self.choices = choices
         if choices and not default:
             default.append(choices[0][1])
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone=allowNone)
+        Argument.__init__(
+            self, name, default, shortDesc, longDesc, hints, allowNone=allowNone
+        )
 
     def coerce(self, inIdent):
         for ident, val, desc in self.choices:
@@ -224,10 +271,21 @@ class Flags(Argument):
     initially nothing will be selected.  Several items may be selected at
     once.
     """
-    def __init__(self, name, flags=(), default=(), shortDesc=None,
-                 longDesc=None, hints=None, allowNone=1):
+
+    def __init__(
+        self,
+        name,
+        flags=(),
+        default=(),
+        shortDesc=None,
+        longDesc=None,
+        hints=None,
+        allowNone=1,
+    ):
         self.flags = flags
-        Argument.__init__(self, name, default, shortDesc, longDesc, hints, allowNone=allowNone)
+        Argument.__init__(
+            self, name, default, shortDesc, longDesc, hints, allowNone=allowNone
+        )
 
     def coerce(self, inFlagKeys):
         if not inFlagKeys:
@@ -256,15 +314,16 @@ class Boolean(Argument):
         if not inVal:
             return 0
         lInVal = str(inVal).lower()
-        if lInVal in ('no', 'n', 'f', 'false', '0'):
+        if lInVal in ("no", "n", "f", "false", "0"):
             return 0
         return 1
 
+
 class File(Argument):
-    def __init__(self, name, allowNone=1, shortDesc=None, longDesc=None,
-                 hints=None):
-        Argument.__init__(self, name, None, shortDesc, longDesc, hints,
-                          allowNone=allowNone)
+    def __init__(self, name, allowNone=1, shortDesc=None, longDesc=None, hints=None):
+        Argument.__init__(
+            self, name, None, shortDesc, longDesc, hints, allowNone=allowNone
+        )
 
     def coerce(self, file):
         if not file and self.allowNone:
@@ -274,18 +333,22 @@ class File(Argument):
         else:
             raise InputError("Invalid File")
 
+
 def positiveInt(x):
     x = int(x)
-    if x <= 0: raise ValueError
+    if x <= 0:
+        raise ValueError
     return x
+
 
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault = None
+    defaultDefault: Optional[Tuple[int, int, int]] = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None,
-                 longDesc=None, hints=None):
+    def __init__(
+        self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
+    ):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
         if not allowNone:
@@ -317,10 +380,24 @@ class Date(Argument):
 class Submit(Choice):
     """Submit button or a reasonable facsimile thereof."""
 
-    def __init__(self, name, choices=[("Submit", "submit", "Submit form")],
-                 reset=0, shortDesc=None, longDesc=None, allowNone=0, hints=None):
-        Choice.__init__(self, name, choices=choices, shortDesc=shortDesc,
-                        longDesc=longDesc, hints=hints)
+    def __init__(
+        self,
+        name,
+        choices=[("Submit", "submit", "Submit form")],
+        reset=0,
+        shortDesc=None,
+        longDesc=None,
+        allowNone=0,
+        hints=None,
+    ):
+        Choice.__init__(
+            self,
+            name,
+            choices=choices,
+            shortDesc=shortDesc,
+            longDesc=longDesc,
+            hints=hints,
+        )
         self.allowNone = allowNone
         self.reset = reset
 
@@ -331,24 +408,19 @@ class Submit(Choice):
             return Choice.coerce(self, value)
 
 
-
-@_oldStyle
 class PresentationHint:
     """
     A hint to a particular system.
     """
 
 
-
-@_oldStyle
 class MethodSignature:
     """
     A signature of a callable.
     """
 
     def __init__(self, *sigList):
-        """
-        """
+        """"""
         self.methodSignature = sigList
 
     def getArgument(self, name):
@@ -360,8 +432,6 @@ class MethodSignature:
         return FormMethod(self, callable, takesRequest)
 
 
-
-@_oldStyle
 class FormMethod:
     """A callable object with a signature."""
 
@@ -373,5 +443,5 @@ class FormMethod:
     def getArgs(self):
         return tuple(self.signature.methodSignature)
 
-    def call(self,*args,**kw):
-        return self.callable(*args,**kw)
+    def call(self, *args, **kw):
+        return self.callable(*args, **kw)

@@ -5,10 +5,9 @@
 Tests for L{twisted.names.resolve}.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.names.error import DomainError
 from twisted.names.resolve import ResolverChain
-
+from twisted.trial.unittest import TestCase
 
 
 class ResolverChainTests(TestCase):
@@ -22,10 +21,9 @@ class ResolverChainTests(TestCase):
         its C{resolvers} list is empty.
         """
         r = ResolverChain([])
-        d = r.lookupAddress('www.example.com')
+        d = r.lookupAddress("www.example.com")
         f = self.failureResultOf(d)
         self.assertIs(f.trap(DomainError), DomainError)
-
 
     def test_emptyResolversListLookupAllRecords(self):
         """
@@ -33,6 +31,6 @@ class ResolverChainTests(TestCase):
         failure if its C{resolvers} list is empty.
         """
         r = ResolverChain([])
-        d = r.lookupAllRecords('www.example.com')
+        d = r.lookupAllRecords("www.example.com")
         f = self.failureResultOf(d)
         self.assertIs(f.trap(DomainError), DomainError)

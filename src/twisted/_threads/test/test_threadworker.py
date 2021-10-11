@@ -5,21 +5,19 @@
 Tests for L{twisted._threads._threadworker}.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import gc
 import weakref
-
-from twisted.trial.unittest import SynchronousTestCase
 from threading import ThreadError, local
 
-from .. import ThreadWorker, LockWorker, AlreadyQuit
+from twisted.trial.unittest import SynchronousTestCase
+from .. import AlreadyQuit, LockWorker, ThreadWorker
+
 
 class FakeQueueEmpty(Exception):
     """
     L{FakeQueue}'s C{get} has exhausted the queue.
     """
-
 
 
 class WouldDeadlock(Exception):
@@ -29,8 +27,7 @@ class WouldDeadlock(Exception):
     """
 
 
-
-class FakeThread(object):
+class FakeThread:
     """
     A fake L{threading.Thread}.
 
@@ -48,7 +45,6 @@ class FakeThread(object):
         self.target = target
         self.started = False
 
-
     def start(self):
         """
         Set the "started" flag.
@@ -56,8 +52,7 @@ class FakeThread(object):
         self.started = True
 
 
-
-class FakeQueue(object):
+class FakeQueue:
     """
     A fake L{Queue} implementing C{put} and C{get}.
 
@@ -72,7 +67,6 @@ class FakeQueue(object):
         """
         self.items = []
 
-
     def put(self, item):
         """
         Put an item into the queue for later retrieval by L{FakeQueue.get}.
@@ -80,7 +74,6 @@ class FakeQueue(object):
         @param item: any object
         """
         self.items.append(item)
-
 
     def get(self):
         """
@@ -93,8 +86,7 @@ class FakeQueue(object):
         return self.items.pop(0)
 
 
-
-class FakeLock(object):
+class FakeLock:
     """
     A stand-in for L{threading.Lock}.
 
@@ -107,7 +99,6 @@ class FakeLock(object):
         """
         self.acquired = False
 
-
     def acquire(self):
         """
         Acquire the lock.  Raise an exception if the lock is already acquired.
@@ -115,7 +106,6 @@ class FakeLock(object):
         if self.acquired:
             raise WouldDeadlock()
         self.acquired = True
-
 
     def release(self):
         """
@@ -125,7 +115,6 @@ class FakeLock(object):
         if not self.acquired:
             raise ThreadError()
         self.acquired = False
-
 
 
 class ThreadWorkerTests(SynchronousTestCase):
@@ -139,13 +128,14 @@ class ThreadWorkerTests(SynchronousTestCase):
         """
         self.fakeThreads = []
         self.fakeQueue = FakeQueue()
+
         def startThread(target):
             newThread = FakeThread(target=target)
             newThread.start()
             self.fakeThreads.append(newThread)
             return newThread
-        self.worker = ThreadWorker(startThread, self.fakeQueue)
 
+        self.worker = ThreadWorker(startThread, self.fakeQueue)
 
     def test_startsThreadAndPerformsWork(self):
         """
@@ -155,14 +145,15 @@ class ThreadWorkerTests(SynchronousTestCase):
         """
         self.assertEqual(len(self.fakeThreads), 1)
         self.assertEqual(self.fakeThreads[0].started, True)
+
         def doIt():
             doIt.done = True
+
         doIt.done = False
         self.worker.do(doIt)
         self.assertEqual(doIt.done, False)
         self.assertRaises(FakeQueueEmpty, self.fakeThreads[0].target)
         self.assertEqual(doIt.done, True)
-
 
     def test_quitPreventsFutureCalls(self):
         """
@@ -172,7 +163,6 @@ class ThreadWorkerTests(SynchronousTestCase):
         self.worker.quit()
         self.assertRaises(AlreadyQuit, self.worker.quit)
         self.assertRaises(AlreadyQuit, self.worker.do, list)
-
 
 
 class LockWorkerTests(SynchronousTestCase):
@@ -189,7 +179,6 @@ class LockWorkerTests(SynchronousTestCase):
         lock.acquire()
         self.assertRaises(WouldDeadlock, lock.acquire)
 
-
     def test_fakeDoubleRelease(self):
         """
         The L{FakeLock} test fixture will alert us if there's a potential
@@ -201,7 +190,6 @@ class LockWorkerTests(SynchronousTestCase):
         self.assertEqual(None, lock.release())
         self.assertRaises(ThreadError, lock.release)
 
-
     def test_doExecutesImmediatelyWithLock(self):
         """
         L{LockWorker.do} immediately performs the work it's given, while the
@@ -210,15 +198,16 @@ class LockWorkerTests(SynchronousTestCase):
         storage = local()
         lock = FakeLock()
         worker = LockWorker(lock, storage)
+
         def work():
             work.done = True
             work.acquired = lock.acquired
+
         work.done = False
         worker.do(work)
         self.assertEqual(work.done, True)
         self.assertEqual(work.acquired, True)
         self.assertEqual(lock.acquired, False)
-
 
     def test_doUnwindsReentrancy(self):
         """
@@ -229,6 +218,7 @@ class LockWorkerTests(SynchronousTestCase):
         worker = LockWorker(lock, local())
         levels = []
         acquired = []
+
         def work():
             work.level += 1
             levels.append(work.level)
@@ -236,11 +226,11 @@ class LockWorkerTests(SynchronousTestCase):
             if len(levels) < 2:
                 worker.do(work)
             work.level -= 1
+
         work.level = 0
         worker.do(work)
         self.assertEqual(levels, [1, 1])
         self.assertEqual(acquired, [True, True])
-
 
     def test_quit(self):
         """
@@ -258,7 +248,6 @@ class LockWorkerTests(SynchronousTestCase):
         self.assertRaises(AlreadyQuit, worker.quit)
         self.assertRaises(AlreadyQuit, worker.do, list)
 
-
     def test_quitWhileWorking(self):
         """
         If L{LockWorker.quit} is invoked during a call to L{LockWorker.do}, all
@@ -274,10 +263,13 @@ class LockWorkerTests(SynchronousTestCase):
             worker.quit()
             self.assertRaises(AlreadyQuit, worker.do, list)
             phase1.complete = True
+
         phase1.complete = False
+
         def phase2():
             phase2.complete = True
             phase2.acquired = lock.acquired
+
         phase2.complete = False
         worker.do(phase1)
         self.assertEqual(phase1.complete, True)
@@ -287,22 +279,22 @@ class LockWorkerTests(SynchronousTestCase):
         gc.collect()
         self.assertIs(ref(), None)
 
-
     def test_quitWhileGettingLock(self):
         """
         If L{LockWorker.do} is called concurrently with L{LockWorker.quit}, and
         C{quit} wins the race before C{do} gets the lock attribute, then
         L{AlreadyQuit} will be raised.
         """
-        class RacyLockWorker(LockWorker):
-            def _lock_get(self):
-                self.quit()
-                return self.__dict__['_lock']
-            def _lock_set(self, value):
-                self.__dict__['_lock'] = value
 
-            _lock = property(_lock_get, _lock_set)
+        class RacyLockWorker(LockWorker):
+            @property
+            def _lock(self):
+                self.quit()
+                return self.__dict__["_lock"]
+
+            @_lock.setter
+            def _lock(self, value):
+                self.__dict__["_lock"] = value
 
         worker = RacyLockWorker(FakeLock(), local())
         self.assertRaises(AlreadyQuit, worker.do, list)
-

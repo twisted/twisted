@@ -22,29 +22,29 @@ toolkits like GTK+ or Tk.
 
 Twisted Internet contains the various interfaces to the reactor
 API, whose usage is documented in the low-level chapter. Those APIs
-are :api:`twisted.internet.interfaces.IReactorCore <IReactorCore>` , 
-:api:`twisted.internet.interfaces.IReactorTCP <IReactorTCP>` , 
-:api:`twisted.internet.interfaces.IReactorSSL <IReactorSSL>` , 
-:api:`twisted.internet.interfaces.IReactorUNIX <IReactorUNIX>` , 
-:api:`twisted.internet.interfaces.IReactorUDP <IReactorUDP>` , 
-:api:`twisted.internet.interfaces.IReactorTime <IReactorTime>` , 
-:api:`twisted.internet.interfaces.IReactorProcess <IReactorProcess>` , 
-:api:`twisted.internet.interfaces.IReactorMulticast <IReactorMulticast>` 
-and :api:`twisted.internet.interfaces.IReactorThreads <IReactorThreads>` .
+are :py:class:`IReactorCore <twisted.internet.interfaces.IReactorCore>` , 
+:py:class:`IReactorTCP <twisted.internet.interfaces.IReactorTCP>` , 
+:py:class:`IReactorSSL <twisted.internet.interfaces.IReactorSSL>` , 
+:py:class:`IReactorUNIX <twisted.internet.interfaces.IReactorUNIX>` , 
+:py:class:`IReactorUDP <twisted.internet.interfaces.IReactorUDP>` , 
+:py:class:`IReactorTime <twisted.internet.interfaces.IReactorTime>` , 
+:py:class:`IReactorProcess <twisted.internet.interfaces.IReactorProcess>` , 
+:py:class:`IReactorMulticast <twisted.internet.interfaces.IReactorMulticast>` 
+and :py:class:`IReactorThreads <twisted.internet.interfaces.IReactorThreads>` .
 The reactor APIs allow non-persistent calls to be made.
 
 
 
 
 Twisted Internet also covers the interfaces for the various transports,
-in :api:`twisted.internet.interfaces.ITransport <ITransport>` 
+in :py:class:`ITransport <twisted.internet.interfaces.ITransport>` 
 and friends. These interfaces allow Twisted network code to be written without
 regard to the underlying implementation of the transport.
 
 
 
 
-The :api:`twisted.internet.interfaces.IProtocolFactory <IProtocolFactory>` 
+The :py:class:`IProtocolFactory <twisted.internet.interfaces.IProtocolFactory>` 
 dictates how factories, which are usually a large part of third party code, are
 written.
 

@@ -9,7 +9,6 @@ to test that L{os.write} can be reliably used after
 L{twisted.internet.stdio.StandardIO} has finished.
 """
 
-from __future__ import absolute_import, division
 
 import sys
 
@@ -23,25 +22,22 @@ class LastWriteChild(Protocol):
         self.reactor = reactor
         self.magicString = magicString
 
-
     def connectionMade(self):
         self.transport.write(self.magicString)
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         self.reactor.stop()
 
 
-
 def main(reactor, magicString):
-    p = LastWriteChild(reactor, magicString.encode('ascii'))
+    p = LastWriteChild(reactor, magicString.encode("ascii"))
     StandardIO(p)
     reactor.run()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     namedAny(sys.argv[1]).install()
     from twisted.internet import reactor
+
     main(reactor, sys.argv[2])

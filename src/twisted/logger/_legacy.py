@@ -6,48 +6,45 @@
 Integration with L{twisted.python.log}.
 """
 
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+
 from zope.interface import implementer
 
-from ._levels import LogLevel
 from ._format import formatEvent
-from ._observer import ILogObserver
-from ._stdlib import fromStdlibLogLevelMapping, StringifiableFromEvent
+from ._interfaces import ILogObserver, LogEvent
+from ._levels import LogLevel
+from ._stdlib import StringifiableFromEvent, fromStdlibLogLevelMapping
 
+if TYPE_CHECKING:
+    from twisted.python.log import ILogObserver as ILegacyLogObserver
 
 
 @implementer(ILogObserver)
-class LegacyLogObserverWrapper(object):
+class LegacyLogObserverWrapper:
     """
-    L{ILogObserver} that wraps an L{twisted.python.log.ILogObserver}.
+    L{ILogObserver} that wraps a L{twisted.python.log.ILogObserver}.
 
     Received (new-style) events are modified prior to forwarding to
     the legacy observer to ensure compatibility with observers that
     expect legacy events.
     """
 
-    def __init__(self, legacyObserver):
+    def __init__(self, legacyObserver: "ILegacyLogObserver") -> None:
         """
         @param legacyObserver: a legacy observer to which this observer will
             forward events.
-        @type legacyObserver: L{twisted.python.log.ILogObserver}
         """
         self.legacyObserver = legacyObserver
 
+    def __repr__(self) -> str:
+        return "{self.__class__.__name__}({self.legacyObserver})".format(self=self)
 
-    def __repr__(self):
-        return (
-            "{self.__class__.__name__}({self.legacyObserver})"
-            .format(self=self)
-        )
-
-
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         Forward events to the legacy observer after editing them to
         ensure compatibility.
 
         @param event: an event
-        @type event: L{dict}
         """
 
         # The "message" key is required by textFromEventDict()
@@ -93,8 +90,11 @@ class LegacyLogObserverWrapper(object):
         self.legacyObserver(event)
 
 
-
-def publishToNewObserver(observer, eventDict, textFromEventDict):
+def publishToNewObserver(
+    observer: ILogObserver,
+    eventDict: Dict[str, Any],
+    textFromEventDict: Callable[[Dict[str, Any]], Optional[str]],
+) -> None:
     """
     Publish an old-style (L{twisted.python.log}) event to a new-style
     (L{twisted.logger}) observer.
@@ -103,20 +103,13 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
         L{LegacyLogObserverWrapper}, and may now be getting sent back to a
         new-style observer.  In this case, it's already a new-style event,
         adapted to also look like an old-style event, and we don't need to
-        tweak it again to be a new-style event, hence the checks for
+        tweak it again to be a new-style event, hence this checks for
         already-defined new-style keys.
 
     @param observer: A new-style observer to handle this event.
-    @type observer: L{ILogObserver}
-
     @param eventDict: An L{old-style <twisted.python.log>}, log event.
-    @type eventDict: L{dict}
-
     @param textFromEventDict: callable that can format an old-style event as a
         string.  Passed here rather than imported to avoid circular dependency.
-    @type textFromEventDict: 1-arg L{callable} taking L{dict} returning L{str}
-
-    @return: L{None}
     """
 
     if "log_time" not in eventDict:
@@ -126,7 +119,7 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
         text = textFromEventDict(eventDict)
         if text is not None:
             eventDict["log_text"] = text
-            eventDict["log_format"] = u"{log_text}"
+            eventDict["log_format"] = "{log_text}"
 
     if "log_level" not in eventDict:
         if "logLevel" in eventDict:
@@ -146,7 +139,7 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
             eventDict["log_level"] = level
 
     if "log_namespace" not in eventDict:
-        eventDict["log_namespace"] = u"log_legacy"
+        eventDict["log_namespace"] = "log_legacy"
 
     if "log_system" not in eventDict and "system" in eventDict:
         eventDict["log_system"] = eventDict["system"]

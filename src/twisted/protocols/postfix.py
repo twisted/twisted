@@ -7,34 +7,21 @@ Postfix mail transport agent related protocols.
 """
 
 import sys
-try:
-    # Python 2
-    from UserDict import UserDict
-except ImportError:
-    # Python 3
-    from collections import UserDict
+from collections import UserDict
+from urllib.parse import quote as _quote, unquote as _unquote
 
-try:
-    # Python 2
-    from urllib import quote as _quote, unquote as _unquote
-except ImportError:
-    # Python 3
-    from urllib.parse import quote as _quote, unquote as _unquote
-
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol, defer
+from twisted.internet import defer, protocol
+from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import unicode
+
 
 # urllib's quote functions just happen to match
 # the postfix semantics.
 def quote(s):
     quoted = _quote(s)
-    if isinstance(quoted, unicode):
+    if isinstance(quoted, str):
         quoted = quoted.encode("ascii")
     return quoted
-
 
 
 def unquote(s):
@@ -42,7 +29,6 @@ def unquote(s):
         s = s.decode("ascii")
     quoted = _unquote(s)
     return quoted.encode("ascii")
-
 
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
@@ -60,20 +46,16 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
     """
 
     timeout = 600
-    delimiter = b'\n'
+    delimiter = b"\n"
 
     def connectionMade(self):
         self.setTimeout(self.timeout)
 
-
-
-    def sendCode(self, code, message=b''):
+    def sendCode(self, code, message=b""):
         """
         Send an SMTP-like code with a message.
         """
-        self.sendLine(str(code).encode("ascii") + b' ' + message)
-
-
+        self.sendLine(str(code).encode("ascii") + b" " + message)
 
     def lineReceived(self, line):
         self.resetTimeout()
@@ -83,18 +65,15 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             request = line
             params = None
         try:
-            f = getattr(self, u'do_' + request.decode("ascii"))
+            f = getattr(self, "do_" + request.decode("ascii"))
         except AttributeError:
-            self.sendCode(400, b'unknown command')
+            self.sendCode(400, b"unknown command")
         else:
             try:
                 f(params)
-            except:
+            except BaseException:
                 excInfo = str(sys.exc_info()[1]).encode("ascii")
-                self.sendCode(400, b'Command ' + request + b' failed: ' +
-                              excInfo)
-
-
+                self.sendCode(400, b"Command " + request + b" failed: " + excInfo)
 
     def do_get(self, key):
         if key is None:
@@ -104,21 +83,15 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             d.addCallbacks(self._cbGot, self._cbNot)
             d.addErrback(log.err)
 
-
-
     def _cbNot(self, fail):
         msg = fail.getErrorMessage().encode("ascii")
         self.sendCode(400, msg)
-
-
 
     def _cbGot(self, value):
         if value is None:
             self.sendCode(500)
         else:
             self.sendCode(200, quote(value))
-
-
 
     def do_put(self, keyAndValue):
         if keyAndValue is None:
@@ -129,8 +102,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
             except ValueError:
                 self.sendCode(400, b"Command 'put' takes 2 parameters.")
             else:
-                self.sendCode(500, b'put is not implemented yet.')
-
+                self.sendCode(500, b"put is not implemented yet.")
 
 
 class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
@@ -139,7 +111,6 @@ class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
     """
 
     protocol = PostfixTCPMapServer
-
 
 
 class PostfixTCPMapDeferringDictServerFactory(protocol.ServerFactory):

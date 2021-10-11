@@ -13,8 +13,8 @@ Using TLS in Twisted requires that you have `pyOpenSSL <https://github.com/pyca/
 
 Twisted provides TLS support as a transport --- that is, as an alternative to TCP.
 When using TLS, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel TLS APIs (many of which still use the legacy name "SSL" due to age and/or compatibility with older APIs).
-To create a TLS server, use :api:`twisted.internet.endpoints.SSL4ServerEndpoint <SSL4ServerEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` .
-To create a TLS client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` .
+To create a TLS server, use :py:class:`SSL4ServerEndpoint <twisted.internet.endpoints.SSL4ServerEndpoint>` or :py:meth:`listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>` .
+To create a TLS client, use :py:class:`SSL4ClientEndpoint <twisted.internet.endpoints.SSL4ClientEndpoint>` or :py:meth:`connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>` .
 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
@@ -39,15 +39,15 @@ Both *can* provide a certificate to prove their identity, but commonly, TLS *ser
 
 Since these requirements are slightly different, there are different APIs to construct an appropriate ``contextFactory`` value for a client or a server.
 
-For servers, we can use :api:`twisted.internet.ssl.CertificateOptions`.
+For servers, we can use :py:class:`twisted.internet.ssl.CertificateOptions`.
 In order to prove the server's identity, you pass the ``privateKey`` and ``certificate`` arguments to this object.
-:api:`twisted.internet.ssl.PrivateCertificate.options` is a convenient way to create a ``CertificateOptions`` instance configured to use a particular key and certificate.
+:py:meth:`twisted.internet.ssl.PrivateCertificate.options` is a convenient way to create a ``CertificateOptions`` instance configured to use a particular key and certificate.
 
-For clients, we can use :api:`twisted.internet.ssl.optionsForClientTLS`.
+For clients, we can use :py:func:`twisted.internet.ssl.optionsForClientTLS`.
 This takes two arguments, ``hostname`` (which indicates what hostname must be advertised in the server's certificate) and optionally ``trustRoot``.
-By default, :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
+By default, :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
 
-You may obtain an object suitable to pass as the ``trustRoot=`` parameter with an explicit list of :api:`twisted.internet.ssl.Certificate` or :api:`twisted.internet.ssl.PrivateCertificate` instances by calling :api:`twisted.internet.ssl.trustRootFromCertificates`. This will cause :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` to accept any connection so long as the server's certificate is signed by at least one of the certificates passed.
+You may obtain an object suitable to pass as the ``trustRoot=`` parameter with an explicit list of :py:class:`twisted.internet.ssl.Certificate` or :py:class:`twisted.internet.ssl.PrivateCertificate` instances by calling :py:func:`twisted.internet.ssl.trustRootFromCertificates`. This will cause :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` to accept any connection so long as the server's certificate is signed by at least one of the certificates passed.
 
 .. note::
 
@@ -55,8 +55,8 @@ You may obtain an object suitable to pass as the ``trustRoot=`` parameter with a
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
    If you're using the OpenSSL shipped as part of macOS 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
-   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` uses by default --- more robust.
-   For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
+   Work is ongoing to make :py:func:`platformTrust <twisted.internet.ssl.platformTrust>` --- the API that :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` uses by default --- more robust.
+   For example, :py:func:`platformTrust <twisted.internet.ssl.platformTrust>` should fall back to `the "certifi" package <https://pypi.org/project/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
    When this happens, you shouldn't need to change your code.
 
 TLS echo server and client
@@ -72,7 +72,7 @@ TLS echo server
 
 .. literalinclude:: ../examples/echoserv_ssl.py
 
-This server uses :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` to listen for TLS traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
+This server uses :py:meth:`listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>` to listen for TLS traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
 It uses the same echo example server as the TCP echo server --- even going so far as to import its protocol class.
 Assuming that you can buy your own TLS certificate from a certificate authority, this is a fairly realistic TLS server.
 
@@ -83,20 +83,20 @@ TLS echo client
 
 .. literalinclude:: ../examples/echoclient_ssl.py
 
-This client uses :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` to connect to ``echoserv_ssl.py``.
+This client uses :py:class:`SSL4ClientEndpoint <twisted.internet.endpoints.SSL4ClientEndpoint>` to connect to ``echoserv_ssl.py``.
 It *also* uses the same echo example client as the TCP echo client.
 Whenever you have a protocol that listens on plain-text TCP it is easy to run it over TLS instead.
 It specifies that it only wants to talk to a host named ``"example.com"``, and that it trusts the certificate authority in ``"public.pem"`` to say who ``"example.com"`` is.
 Note that the host you are connecting to --- localhost --- and the host whose identity you are verifying --- example.com --- can differ.
 In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is proably running on localhost.
 
-In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>`) and :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`.
+In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :py:class:`SSL4ClientEndpoint <twisted.internet.endpoints.SSL4ClientEndpoint>`) and :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>`.
 In this case we're using "``localhost``" as the host to connect to because you're probably running this example on your own computer and "``example.com``" because that's the value hard-coded in the dummy certificate distributed along with Twisted's example code.
 
 Connecting To Public Servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here is a short example, now using the default trust roots for :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` from :api:`twisted.internet.ssl.platformTrust <platformTrust>`.
+Here is a short example, now using the default trust roots for :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>` from :py:func:`platformTrust <twisted.internet.ssl.platformTrust>`.
 
 :download:`check_server_certificate.py <listings/ssl/check_server_certificate.py>`
 
@@ -124,11 +124,11 @@ Using startTLS
 --------------
 
 If you want to switch from unencrypted to encrypted traffic
-mid-connection, you'll need to turn on TLS with :api:`twisted.internet.interfaces.ITLSTransport.startTLS <startTLS>` on both
+mid-connection, you'll need to turn on TLS with :py:meth:`startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>` on both
 ends of the connection at the same time via some agreed-upon signal like the
 reception of a particular message. You can readily verify the switch to an
 encrypted channel by examining the packet payloads with a tool like
-`Wireshark <http://www.wireshark.org/>`_ .
+`Wireshark <https://www.wireshark.org/>`_ .
 
 startTLS server
 ~~~~~~~~~~~~~~~
@@ -173,7 +173,7 @@ A server can use this to verify that a client provides a valid certificate signe
 Client with certificates
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following client then supplies such a certificate as the ``clientCertificate`` argument to :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`, while still validating the server's identity.
+The following client then supplies such a certificate as the ``clientCertificate`` argument to :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>`, while still validating the server's identity.
 
 :download:`ssl_clientauth_client.py <../examples/ssl_clientauth_client.py>`
 
@@ -186,7 +186,7 @@ TLS Protocol Options
 ~~~~~~~~~~~~~~~~~~~~
 
 For servers, it is desirable to offer Diffie-Hellman based key exchange that provides perfect forward secrecy.
-The ciphers are activated by default, however it is necessary to pass an instance of :api:`twisted.internet.ssl.DiffieHellmanParameters <DiffieHellmanParameters>` to ``CertificateOptions`` via the ``dhParameters`` option to be able to use them.
+The ciphers are activated by default, however it is necessary to pass an instance of :py:class:`DiffieHellmanParameters <twisted.internet.ssl.DiffieHellmanParameters>` to ``CertificateOptions`` via the ``dhParameters`` option to be able to use them.
 
 For example,
 
@@ -240,7 +240,7 @@ As an example, this supports all TLS versions and SSLv3:
 
 Future OpenSSL versions may completely remove the ability to negotiate the insecure SSLv3 protocol, and this will not allow you to re-enable it.
 
-Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :api:`twisted.internet.interfaces.IAcceptableCiphers <IAcceptableCiphers>` object to ``CertificateOptions``.
+Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :py:class:`IAcceptableCiphers <twisted.internet.interfaces.IAcceptableCiphers>` object to ``CertificateOptions``.
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
 
 
@@ -253,10 +253,10 @@ This avoids the need for extra custom round trips once the encrypted connection 
 NPN is supported from OpenSSL version 1.0.1.
 ALPN is the newer of the two protocols, supported in OpenSSL versions 1.0.2 onward.
 These functions require pyOpenSSL version 0.15 or higher.
-To query the methods supported by your system,  use :api:`twisted.internet.ssl.protocolNegotiationMechanisms`.
+To query the methods supported by your system,  use :py:func:`twisted.internet.ssl.protocolNegotiationMechanisms`.
 It will return a collection of flags indicating support for NPN and/or ALPN.
 
-:api:`twisted.internet.ssl.CertificateOptions` and :api:`twisted.internet.ssl.optionsForClientTLS` allow for selecting the protocols your program is willing to speak after the connection is established.
+:py:class:`twisted.internet.ssl.CertificateOptions` and :py:func:`twisted.internet.ssl.optionsForClientTLS` allow for selecting the protocols your program is willing to speak after the connection is established.
 
 On the server=side you will have:
 
@@ -279,7 +279,7 @@ For NPN, the client selects the protocol to use;
 For ALPN, the server does.
 If Twisted is acting as the peer who is supposed to select the protocol, it will prefer the earliest protocol in the list that is supported by both peers.
 
-To determine what protocol was negotiated, after the connection is done,  use :api:`twisted.protocols.tls.TLSMemoryBIOProtocol.negotiatedProtocol <TLSMemoryBIOProtocol.negotiatedProtocol>`.
+To determine what protocol was negotiated, after the connection is done,  use :py:attr:`TLSMemoryBIOProtocol.negotiatedProtocol <twisted.protocols.tls.TLSMemoryBIOProtocol.negotiatedProtocol>`.
 It will return one of the protocol names passed to the ``acceptableProtocols`` parameter.
 It will return ``None`` if the peer did not offer ALPN or NPN.
 
@@ -297,10 +297,10 @@ An example of using this functionality can be found in :download:`this example s
 Related facilities
 ------------------
 
-:api:`twisted.protocols.amp <twisted.protocols.amp>` supports encrypted
+:py:mod:`twisted.protocols.amp` supports encrypted
 connections and exposes a ``startTLS`` method one can use or
-subclass. :api:`twisted.web <twisted.web>` has built-in TLS support in
-its :api:`twisted.web.client <client>` , :api:`twisted.web.http <http>` , and :api:`twisted.web.xmlrpc <xmlrpc>` modules.
+subclass. :py:mod:`twisted.web` has built-in TLS support in
+its :py:mod:`client <twisted.web.client>` , :py:mod:`http <twisted.web.http>` , and :py:mod:`xmlrpc <twisted.web.xmlrpc>` modules.
 
 
 Conclusion

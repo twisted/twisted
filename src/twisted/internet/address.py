@@ -5,22 +5,24 @@
 Address objects for network connections.
 """
 
-from __future__ import division, absolute_import
 
-import attr
-import warnings, os
+import os
+from typing import Optional, Union
+from warnings import warn
 
 from zope.interface import implementer
+
+import attr
+from typing_extensions import Literal
+
 from twisted.internet.interfaces import IAddress
-from twisted.python.filepath import _asFilesystemBytes
-from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.filepath import _asFilesystemBytes, _coerceToFilesystemEncoding
 from twisted.python.runtime import platform
-from twisted.python.compat import _PY3
 
 
 @implementer(IAddress)
-@attr.s(hash=True)
-class IPv4Address(object):
+@attr.s(hash=True, auto_attribs=True)
+class IPv4Address:
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
 
@@ -34,15 +36,17 @@ class IPv4Address(object):
     @ivar port: An integer representing the port number.
     @type port: C{int}
     """
-    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
-    host = attr.ib()
-    port = attr.ib()
 
+    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+        validator=attr.validators.in_(["TCP", "UDP"])
+    )
+    host: str
+    port: int
 
 
 @implementer(IAddress)
-@attr.s(hash=True)
-class IPv6Address(object):
+@attr.s(hash=True, auto_attribs=True)
+class IPv6Address:
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
 
@@ -64,25 +68,26 @@ class IPv6Address(object):
         interface traffic destined for this address must be transmitted over.
     @type scopeID: L{int} or L{str}
     """
-    type = attr.ib(validator=attr.validators.in_(["TCP", "UDP"]))
-    host = attr.ib()
-    port = attr.ib()
-    flowInfo = attr.ib(default=0)
-    scopeID = attr.ib(default=0)
 
+    type: Union[Literal["TCP"], Literal["UDP"]] = attr.ib(
+        validator=attr.validators.in_(["TCP", "UDP"])
+    )
+    host: str
+    port: int
+    flowInfo: int = 0
+    scopeID: Union[str, int] = 0
 
 
 @implementer(IAddress)
-class _ProcessAddress(object):
+class _ProcessAddress:
     """
     An L{interfaces.IAddress} provider for process transports.
     """
 
 
-
-@attr.s(hash=True)
+@attr.s(hash=True, auto_attribs=True)
 @implementer(IAddress)
-class HostnameAddress(object):
+class HostnameAddress:
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
@@ -93,14 +98,13 @@ class HostnameAddress(object):
     @type port: L{int}
     """
 
-    hostname = attr.ib()
-    port = attr.ib()
+    hostname: bytes
+    port: int
 
 
-
-@attr.s(hash=False, repr=False, cmp=False)
+@attr.s(hash=False, repr=False, eq=False, auto_attribs=True)
 @implementer(IAddress)
-class UNIXAddress(object):
+class UNIXAddress:
     """
     Object representing a UNIX socket endpoint.
 
@@ -108,18 +112,20 @@ class UNIXAddress(object):
     @type name: C{bytes}
     """
 
-    name = attr.ib(converter=attr.converters.optional(_asFilesystemBytes))
+    name: Optional[bytes] = attr.ib(
+        converter=attr.converters.optional(_asFilesystemBytes)
+    )
 
-    if getattr(os.path, 'samefile', None) is not None:
-        def __eq__(self, other):
+    if getattr(os.path, "samefile", None) is not None:
+
+        def __eq__(self, other: object) -> bool:
             """
             Overriding C{attrs} to ensure the os level samefile
             check is done if the name attributes do not match.
             """
-            if isinstance(other, self.__class__):
-                res = self.name == other.name
-            else:
-                return False
+            if not isinstance(other, self.__class__):
+                return NotImplemented
+            res = self.name == other.name
             if not res and self.name and other.name:
                 try:
                     return os.path.samefile(self.name, other.name)
@@ -128,28 +134,22 @@ class UNIXAddress(object):
                 except (TypeError, ValueError) as e:
                     # On Linux, abstract namespace UNIX sockets start with a
                     # \0, which os.path doesn't like.
-                    if not _PY3 and not platform.isLinux():
+                    if not platform.isLinux():
                         raise e
             return res
+
     else:
-        def __eq__(self, other):
+
+        def __eq__(self, other: object) -> bool:
             if isinstance(other, self.__class__):
                 return self.name == other.name
-            return False
+            return NotImplemented
 
-
-    def __ne__(self, other):
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return True
-
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.name
         if name:
-            name = _coerceToFilesystemEncoding('', self.name)
-        return 'UNIXAddress(%r)' % (name,)
-
+            name = _coerceToFilesystemEncoding("", self.name)
+        return f"UNIXAddress({name!r})"
 
     def __hash__(self):
         if self.name is None:
@@ -161,20 +161,23 @@ class UNIXAddress(object):
             return hash(self.name)
 
 
-
 # These are for buildFactory backwards compatibility due to
 # stupidity-induced inconsistency.
+
 
 class _ServerFactoryIPv4Address(IPv4Address):
     """Backwards compatibility hack. Just like IPv4Address in practice."""
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, tuple):
-            warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
-                          category=DeprecationWarning, stacklevel=2)
+            warn(
+                "IPv4Address.__getitem__ is deprecated.  " "Use attributes instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             return (self.host, self.port) == other
         elif isinstance(other, IPv4Address):
             a = (self.type, self.host, self.port)
             b = (other.type, other.host, other.port)
             return a == b
-        return False
+        return NotImplemented

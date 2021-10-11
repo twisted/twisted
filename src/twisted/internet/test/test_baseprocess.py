@@ -6,11 +6,9 @@ Tests for L{twisted.internet._baseprocess} which implements process-related
 functionality that is useful in all platforms supporting L{IReactorProcess}.
 """
 
-__metaclass__ = type
-
+from twisted.internet._baseprocess import BaseProcess
 from twisted.python.deprecate import getWarningMethod, setWarningMethod
 from twisted.trial.unittest import TestCase
-from twisted.internet._baseprocess import BaseProcess
 
 
 class BaseProcessTests(TestCase):
@@ -19,12 +17,14 @@ class BaseProcessTests(TestCase):
     processes which implements functionality common to many different process
     implementations.
     """
+
     def test_callProcessExited(self):
         """
         L{BaseProcess._callProcessExited} calls the C{processExited} method of
         its C{proto} attribute and passes it a L{Failure} wrapping the given
         exception.
         """
+
         class FakeProto:
             reason = None
 
@@ -37,13 +37,13 @@ class BaseProcessTests(TestCase):
         process.proto.reason.trap(RuntimeError)
         self.assertIs(reason, process.proto.reason.value)
 
-
     def test_callProcessExitedMissing(self):
         """
         L{BaseProcess._callProcessExited} emits a L{DeprecationWarning} if the
         object referred to by its C{proto} attribute has no C{processExited}
         method.
         """
+
         class FakeProto:
             pass
 
@@ -52,8 +52,10 @@ class BaseProcessTests(TestCase):
 
         self.addCleanup(setWarningMethod, getWarningMethod())
         warnings = []
+
         def collect(message, category, stacklevel):
             warnings.append((message, category, stacklevel))
+
         setWarningMethod(collect)
 
         process._callProcessExited(reason)
@@ -62,8 +64,8 @@ class BaseProcessTests(TestCase):
         self.assertEqual(
             message,
             "Since Twisted 8.2, IProcessProtocol.processExited is required.  "
-            "%s.%s must implement it." % (
-                FakeProto.__module__, FakeProto.__name__))
+            "%s.%s must implement it." % (FakeProto.__module__, FakeProto.__name__),
+        )
         self.assertIs(category, DeprecationWarning)
         # The stacklevel doesn't really make sense for this kind of
         # deprecation.  Requiring it to be 0 will at least avoid pointing to

@@ -4,7 +4,6 @@
 """
 Tests for L{twisted._threads._memory}.
 """
-from __future__ import absolute_import, division, print_function
 
 from zope.interface.verify import verifyObject
 
@@ -34,7 +33,6 @@ class MemoryWorkerTests(SynchronousTestCase):
         self.assertEqual(performer(), True)
         self.assertEqual(done, [3, 4])
 
-
     def test_quitQuits(self):
         """
         Calling C{quit} on the worker returned by L{createMemoryWorker} causes
@@ -44,8 +42,10 @@ class MemoryWorkerTests(SynchronousTestCase):
         """
         worker, performer = createMemoryWorker()
         done = []
+
         def moreWork():
             done.append(7)
+
         worker.do(moreWork)
         worker.quit()
         self.assertRaises(AlreadyQuit, worker.do, moreWork)
@@ -53,7 +53,6 @@ class MemoryWorkerTests(SynchronousTestCase):
         performer()
         self.assertEqual(done, [7])
         self.assertEqual(performer(), False)
-
 
     def test_performWhenNothingToDoYet(self):
         """
