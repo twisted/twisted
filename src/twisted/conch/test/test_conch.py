@@ -7,7 +7,6 @@ import socket
 import subprocess
 import sys
 from itertools import count
-from unittest import skipIf
 
 from zope.interface import implementer
 
@@ -28,6 +27,7 @@ from twisted.python import filepath, log, runtime
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
+from twisted.test.testutils import HAS_IPV6, skipWithoutIPv6
 from twisted.trial.unittest import SkipTest, TestCase
 
 try:
@@ -59,26 +59,6 @@ except ImportError as e:
     del e
 else:
     StdioInteractingSession = _StdioInteractingSession
-
-
-def _has_ipv6():
-    """Returns True if the system can bind an IPv6 address."""
-    sock = None
-    has_ipv6 = False
-
-    try:
-        sock = socket.socket(socket.AF_INET6)
-        sock.bind(("::1", 0))
-        has_ipv6 = True
-    except OSError:
-        pass
-
-    if sock:
-        sock.close()
-    return has_ipv6
-
-
-HAS_IPV6 = _has_ipv6()
 
 
 class FakeStdio:
@@ -715,7 +695,7 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin, TestCase
     Connection forwarding tests run against the OpenSSL command line client.
     """
 
-    @skipIf(not HAS_IPV6, "Requires IPv6 support")
+    @skipWithoutIPv6
     def test_localToRemoteForwardingV6(self):
         """
         Forwarding of arbitrary IPv6 TCP connections via SSH.
