@@ -1490,6 +1490,12 @@ class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
 
 
 class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    Test the C{PORT} command.
+
+    This opens a data connection to a given address and port.
+    """
+
     def setUp(self):
         self.dataPorts = []
         return FTPServerPasvDataConnectionTests.setUp(self)
@@ -1517,7 +1523,8 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
         """
         Tear down the connection.
 
-        @return: L{defer.DeferredList}
+        @return: a L{defer.DeferredList} that fires when all open data ports
+            have been closed.
         """
         l = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
         d = defer.maybeDeferred(FTPServerPasvDataConnectionTests.tearDown, self)
@@ -1526,13 +1533,15 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
 
     def test_PORTCannotConnect(self):
         """
-        Listen on a port, and immediately stop listening as a way to find a
-        port number that is definitely closed.
+        When C{PORT} is asked to connect to a closed port, it returns a
+        suitable error.
         """
         # Login
         d = self._anonymousLogin()
 
         def loggedIn(ignored):
+            # Listen on a port, and immediately stop listening as a way to
+            # find a port number that should be closed.
             port = reactor.listenTCP(0, protocol.Factory(), interface="127.0.0.1")
             portNum = port.getHost().port
             d = port.stopListening()
@@ -1572,6 +1581,13 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
 
 
 class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    Test the C{EPRT} command.
+
+    This opens a data connection to a given protocol, address, and port, in
+    a format compatible with both IPv4 and IPv6.
+    """
+
     def setUp(self):
         self.dataPorts = []
         return FTPServerPasvDataConnectionTests.setUp(self)
@@ -1600,7 +1616,8 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
         """
         Tear down the connection.
 
-        @return: L{defer.DeferredList}
+        @return: a L{defer.DeferredList} that fires when all open data ports
+            have been closed.
         """
         dl = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
         d = defer.maybeDeferred(FTPServerPasvDataConnectionTests.tearDown, self)
@@ -1609,13 +1626,15 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
 
     def test_EPRTCannotConnect(self):
         """
-        Listen on a port, and immediately stop listening as a way to find a
-        port number that is definitely closed.
+        When C{EPRT} is asked to connect to a closed port, it returns a
+        suitable error.
         """
         # Login
         d = self._anonymousLogin()
 
         def loggedIn(ignored):
+            # Listen on a port, and immediately stop listening as a way to
+            # find a port number that should be closed.
             port = reactor.listenTCP(0, protocol.Factory(), interface="127.0.0.1")
             portNum = port.getHost().port
             d = port.stopListening()

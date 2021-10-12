@@ -908,6 +908,13 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         """
         Return a port for passive access, using C{self.passivePortRange}
         attribute.
+
+        @param factory: the protocol factory to connect to the port.
+        @type factory: L{twisted.internet.protocol.ServerFactory}
+
+        @param interface: the local IPv4 or IPv6 address to which to bind;
+            defaults to "", i.e. all IPv4 addresses.
+        @type interface: C{str}
         """
         for portn in self.passivePortRange:
             try:
