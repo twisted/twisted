@@ -34,7 +34,7 @@ else:
     nonPOSIXSkip = ""
 
 
-def _has_ipv4_mapped_addresses():
+def _hasIPv4MappedAddresses():
     """Returns True if the system supports IPv4-mapped IPv6 addresses."""
     if not HAS_IPV6:
         return False
@@ -59,7 +59,7 @@ def _has_ipv4_mapped_addresses():
     return has_ipv4_mapped_addresses
 
 
-HAS_IPV4_MAPPED_ADDRESSES = _has_ipv4_mapped_addresses()
+HAS_IPV4_MAPPED_ADDRESSES = _hasIPv4MappedAddresses()
 
 
 def skipWithoutIPv4MappedAddresses(f):
