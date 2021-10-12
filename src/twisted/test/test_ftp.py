@@ -114,20 +114,6 @@ def passivemode_msg(protocol, host="127.0.0.1", port=12345):
     return msg.encode(protocol._encoding)
 
 
-def decodeExtendedAddressLine(line):
-    """
-    Decode an FTP response specifying a protocol/address/port combination,
-    using the syntax defined in RFC 2428 sections 2 and 3.
-
-    @return: a 3-tuple of (protocol, host, port).
-    """
-    match = re.search(r"\((.*)\)", line)
-    if match:
-        return ftp.decodeExtendedAddress(match.group(1))
-    else:
-        raise ValueError('No extended address found in "%s"' % line)  # pragma: nocov
-
-
 class FTPServerTestCase(TestCase):
     """
     Simple tests for an FTP server with the default settings.
@@ -271,6 +257,17 @@ class FTPServerTestCase(TestCase):
             ["230 User logged in, proceed"],
             chainDeferred=d,
         )
+
+    def decodeExtendedAddressLine(self, line):
+        """
+        Decode an FTP response specifying a protocol/address/port combination,
+        using the syntax defined in RFC 2428 sections 2 and 3.
+
+        @return: a 3-tuple of (protocol, host, port).
+        """
+        match = re.search(r"\((.*)\)", line)
+        self.assertIsNotNone(match, f"No extended address found in {line}")
+        return ftp.decodeExtendedAddress(match.group(1))
 
 
 class FTPAnonymousTests(FTPServerTestCase):
@@ -637,7 +634,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             Extract the port from the response, and verify the server is
             listening on the port it claims to be.
             """
-            _, _, port = decodeExtendedAddressLine(responseLines[-1][4:])
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
         d.addCallback(cb)
@@ -658,7 +655,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             Extract the port from the response, and verify the server is
             listening on the port it claims to be.
             """
-            _, _, port = decodeExtendedAddressLine(responseLines[-1][4:])
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
         d.addCallback(cb)
@@ -695,7 +692,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             Extract the port from the response, and verify the server is
             listening on the port it claims to be.
             """
-            _, _, port = decodeExtendedAddressLine(responseLines[-1][4:])
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
             self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
         d.addCallback(cb)
@@ -1474,7 +1471,7 @@ class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
         d = self.client.queueStringCommand("EPSV")
 
         def gotEPSV(responseLines):
-            _, _, port = decodeExtendedAddressLine(responseLines[-1][4:])
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
             return cc.connectTCP("::1", port)
 
