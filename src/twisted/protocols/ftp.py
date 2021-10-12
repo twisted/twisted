@@ -81,6 +81,7 @@ SYNTAX_ERR = "500"
 SYNTAX_ERR_IN_ARGS = "501"
 CMD_NOT_IMPLMNTD = "502.1"
 OPTS_NOT_IMPLEMENTED = "502.2"
+PASV_IPV6_NOT_IMPLEMENTED = "502.3"
 BAD_CMD_SEQ = "503"
 CMD_NOT_IMPLMNTD_FOR_PARAM = "504"
 UNSUPPORTED_NETWORK_PROTOCOL = "522"
@@ -162,6 +163,7 @@ RESPONSE = {
     SYNTAX_ERR_IN_ARGS: "501 syntax error in argument(s) %s.",
     CMD_NOT_IMPLMNTD: "502 Command '%s' not implemented",
     OPTS_NOT_IMPLEMENTED: "502 Option '%s' not implemented.",
+    PASV_IPV6_NOT_IMPLEMENTED: "502 PASV available only for IPv4 (use EPSV instead)",
     BAD_CMD_SEQ: "503 Incorrect sequence of commands: " "%s",
     CMD_NOT_IMPLMNTD_FOR_PARAM: "504 Not implemented for parameter " "'%s'.",
     # RFC 2428 section 2
@@ -376,6 +378,14 @@ class CmdNotImplementedForArgError(FTPCmdError):
     """
 
     errorCode = CMD_NOT_IMPLMNTD_FOR_PARAM
+
+
+class PASVIPv6NotImplementedError(FTPCmdError):
+    """
+    Raised when PASV is used with IPv6.
+    """
+
+    errorCode = PASV_IPV6_NOT_IMPLEMENTED
 
 
 class FTPError(Exception):
@@ -1010,7 +1020,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 # response in order that at least clients that ignore the
                 # host part can work, and if it becomes necessary then we
                 # could do that too.)
-                return defer.fail(CmdNotImplementedError("PASV"))
+                return defer.fail(PASVIPv6NotImplementedError())
 
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:

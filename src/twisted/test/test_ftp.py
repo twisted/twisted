@@ -590,7 +590,9 @@ class BasicFTPServerTests(FTPServerTestCase):
         d.addCallback(gotClient)
         d.addCallback(lambda _: self._anonymousLogin())
         return self.assertCommandFailed(
-            "PASV", ["502 Command 'PASV' not implemented"], chainDeferred=d
+            "PASV",
+            ["502 PASV available only for IPv4 (use EPSV instead)"],
+            chainDeferred=d,
         )
 
     def test_EPSVALLBeforePASV(self):
