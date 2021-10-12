@@ -741,10 +741,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     @ivar listenFactory: A callable with the signature of
         L{twisted.internet.interfaces.IReactorTCP.listenTCP} which will be used
         to create Ports for passive connections (mainly for testing).
-    @ivar epsvAll: If true, "EPSV ALL" was received from the client, requiring
-        the server to reject all data connection setup commands other than
-        EPSV.  See RFC 2428.
-    @ivar supportedNetworkProtocols: A collection of network protocol
+    @ivar _epsvAll: If true, "EPSV ALL" was received from the client,
+        requiring the server to reject all data connection setup commands
+        other than EPSV.  See RFC 2428.
+    @ivar _supportedNetworkProtocols: A collection of network protocol
         numbers supported by the EPRT and EPSV commands.
 
     @ivar passivePortRange: iterator used as source of passive port numbers.
@@ -777,8 +777,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     dtpPort = None
     dtpInstance = None
     binary = True
-    epsvAll = False
-    supportedNetworkProtocols = (_AFNUM_IP, _AFNUM_IP6)
+    _epsvAll = False
+    _supportedNetworkProtocols = (_AFNUM_IP, _AFNUM_IP6)
     PUBLIC_COMMANDS = ["FEAT", "QUIT"]
     FEATURES = ["FEAT", "MDTM", "PASV", "SIZE", "TYPE A;I"]
 
@@ -816,7 +816,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if hasattr(self.shell, "logout") and self.shell.logout is not None:
             self.shell.logout()
         self.shell = None
-        self.epsvAll = False
+        self._epsvAll = False
         self.transport = None
 
     def timeoutConnection(self):
@@ -990,7 +990,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             response to this command includes the host and port address this
             server is listening on.
         """
-        if self.epsvAll:
+        if self._epsvAll:
             return defer.fail(BadCmdSequenceError("may not send PASV after EPSV ALL"))
 
         host = self.transport.getHost().host
@@ -1044,9 +1044,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             protocol = int(protocol)
         except ValueError:
             raise CmdArgSyntaxError(protocol)
-        if protocol not in self.supportedNetworkProtocols:
+        if protocol not in self._supportedNetworkProtocols:
             raise UnsupportedNetworkProtocolError(
-                ",".join(str(p) for p in self.supportedNetworkProtocols)
+                ",".join(str(p) for p in self._supportedNetworkProtocols)
             )
 
     def ftp_EPSV(self, protocol=""):
@@ -1067,7 +1067,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             needed in the EPSV response in the future.
         """
         if protocol == "ALL":
-            self.epsvAll = True
+            self._epsvAll = True
             return EPSV_ALL_OK
         elif protocol:
             try:
@@ -1093,7 +1093,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         return self.dtpFactory.deferred.addCallback(lambda ign: None)
 
     def ftp_PORT(self, address):
-        if self.epsvAll:
+        if self._epsvAll:
             return defer.fail(BadCmdSequenceError("may not send PORT after EPSV ALL"))
 
         addr = tuple(map(int, address.split(",")))
@@ -1129,7 +1129,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             consist of the network protocol as well as the network and
             transport addresses.
         """
-        if self.epsvAll:
+        if self._epsvAll:
             return defer.fail(BadCmdSequenceError("may not send EPRT after EPSV ALL"))
 
         try:
