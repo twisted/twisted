@@ -1629,6 +1629,39 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
 
         return d.addCallback(gotPortNum)
 
+    def test_EPRTBadAddress(self):
+        """
+        C{EPRT} returns a syntax error if it can't decode the address.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT nonsense",
+            ["501 syntax error in argument(s) nonsense."],
+            chainDeferred=d,
+        )
+
+    def test_EPRTInvalidNetworkProtocol(self):
+        """
+        C{EPRT} returns a syntax error if the network protocol is ill-formed.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT |not-a-protocol|127.0.0.1|12345|",
+            ["501 syntax error in argument(s) not-a-protocol."],
+            chainDeferred=d,
+        )
+
+    def test_EPRTUnsupportedNetworkProtocol(self):
+        """
+        C{EPRT} returns an error if the network protocol is unsupported.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT |3|127.0.0.1|12345|",
+            ["522 Network protocol not supported, use (1,2)"],
+            chainDeferred=d,
+        )
+
 
 class DTPFactoryTests(TestCase):
     """
