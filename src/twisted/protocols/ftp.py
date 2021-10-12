@@ -2614,20 +2614,6 @@ def decodeExtendedAddress(address):
     return protocol, host, int(port)
 
 
-def decodeExtendedAddressLine(line):
-    """
-    Decode an FTP response specifying a protocol/address/port combination,
-    using the syntax defined in RFC 2428 sections 2 and 3.
-
-    @return: a 3-tuple of (protocol, host, port).
-    """
-    match = re.search(r"\((.*)\)", line)
-    if match:
-        return decodeExtendedAddress(match.group(1))
-    else:
-        raise ValueError('No extended address found in "%s"' % line)
-
-
 def _unwrapFirstError(failure):
     failure.trap(defer.FirstError)
     return failure.value.subFailure
