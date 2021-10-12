@@ -124,8 +124,8 @@ def decodeExtendedAddressLine(line):
     match = re.search(r"\((.*)\)", line)
     if match:
         return ftp.decodeExtendedAddress(match.group(1))
-    else:  # pragma: nocov
-        raise ValueError('No extended address found in "%s"' % line)
+    else:
+        raise ValueError('No extended address found in "%s"' % line)  # pragma: nocov
 
 
 class FTPServerTestCase(TestCase):
