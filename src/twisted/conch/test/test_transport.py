@@ -804,7 +804,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         Test that EXT_INFO messages are sent correctly.  See RFC 8308,
         section 2.3.
         """
-        self.proto._supportsExtensionNegotiation = True
+        self.proto._peerSupportsExtensions = True
         self.proto.sendExtInfo(
             [
                 (b"server-sig-algs", b"ssh-rsa,rsa-sha2-256"),
@@ -848,7 +848,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             + common.NS(b"s"),
         )
         self.assertEqual(
-            self.proto.otherExtensions,
+            self.proto.peerExtensions,
             {
                 b"server-sig-algs": b"ssh-rsa,rsa-sha2-256,rsa-sha2-512",
                 b"no-flow-control": b"s",
@@ -1471,7 +1471,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.keyAlg, b"ssh-dss")
         self.assertEqual(self.proto.outgoingCompressionType, b"none")
         self.assertEqual(self.proto.incomingCompressionType, b"none")
-        self.assertFalse(self.proto._supportsExtensionNegotiation)
+        self.assertFalse(self.proto._peerSupportsExtensions)
         ne = self.proto.nextEncryptions
         self.assertEqual(ne.outCipType, b"aes128-ctr")
         self.assertEqual(ne.inCipType, b"aes128-ctr")
@@ -1501,7 +1501,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         )
         self.proto.ssh_KEXINIT(kexInitPacket)
         self.assertEqual(self.proto.kexAlg, b"diffie-hellman-group-exchange-sha256")
-        self.assertTrue(self.proto._supportsExtensionNegotiation)
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def test_ignoreGuessPacketKex(self):
         """
@@ -1713,7 +1713,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.supportedPublicKeys = [b"ssh-rsa", b"rsa-sha2-256", b"rsa-sha2-512"]
         self.proto.kexAlg = b"diffie-hellman-group14-sha1"
         self.proto.nextEncryptions = MockCipher()
-        self.proto._supportsExtensionNegotiation = True
+        self.proto._peerSupportsExtensions = True
         self.simulateKeyExchange(b"AB", b"CD")
         self.assertEqual(self.packets[-2], (transport.MSG_NEWKEYS, b""))
         self.assertEqual(
@@ -2165,7 +2165,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
             + b"\x00\x00\x00\x00"
         )
         self.proto.ssh_KEXINIT(kexInitPacket)
-        self.assertTrue(self.proto._supportsExtensionNegotiation)
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def begin_KEXDH_REPLY(self):
         """

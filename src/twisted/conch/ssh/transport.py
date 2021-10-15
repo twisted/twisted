@@ -420,10 +420,11 @@ class SSHTransportBase(protocol.Protocol):
         to send them while a key exchange is in progress.  When the key
         exchange completes, another attempt is made to send these messages.
 
-    @ivar _supportsExtensionNegotiation: a boolean indicating whether the
-        other side supports RFC 8308 extension negotiation.
+    @ivar _peerSupportsExtensions: a boolean indicating whether the other side
+        of the connection supports RFC 8308 extension negotiation.
 
-    @ivar otherExtensions: a dict of extensions supported by the other side.
+    @ivar peerExtensions: a dict of extensions supported by the other side of
+        the connection.
     """
 
     _log = Logger()
@@ -499,8 +500,8 @@ class SSHTransportBase(protocol.Protocol):
     # extension negotiation.
     _EXT_INFO_S = b"ext-info-s"
 
-    _supportsExtensionNegotiation = False
-    otherExtensions: Dict[bytes, bytes] = {}
+    _peerSupportsExtensions = False
+    peerExtensions: Dict[bytes, bytes] = {}
 
     def connectionLost(self, reason):
         """
@@ -927,7 +928,7 @@ class SSHTransportBase(protocol.Protocol):
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
             )
             return
-        self._supportsExtensionNegotiation = (
+        self._peerSupportsExtensions = (
             self._EXT_INFO_S if self.isClient else self._EXT_INFO_C
         ) in kexAlgs
         self._log.debug(
@@ -1027,7 +1028,7 @@ class SSHTransportBase(protocol.Protocol):
         for _ in range(numExtensions):
             extName, extValue, packet = getNS(packet, 2)
             extensions[extName] = extValue
-        self.otherExtensions = extensions
+        self.peerExtensions = extensions
 
     def setService(self, service):
         """
@@ -1104,7 +1105,7 @@ class SSHTransportBase(protocol.Protocol):
         @type extensions: L{list} of (L{bytes}, L{bytes})
         @param extensions: a list of (extension-name, extension-value) pairs.
         """
-        if self._supportsExtensionNegotiation:
+        if self._peerSupportsExtensions:
             payload = b"".join(
                 [struct.pack(">L", len(extensions))]
                 + [NS(name) + NS(value) for name, value in extensions]
