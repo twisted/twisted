@@ -491,6 +491,14 @@ class SSHTransportBase(protocol.Protocol):
     _keyExchangeState = _KEY_EXCHANGE_NONE
     _blockedByKeyExchange = None
 
+    # Added to key exchange algorithms by a client to indicate support for
+    # extension negotiation.
+    _EXT_INFO_C = b"ext-info-c"
+
+    # Added to key exchange algorithms by a server to indicate support for
+    # extension negotiation.
+    _EXT_INFO_S = b"ext-info-s"
+
     _supportsExtensionNegotiation = False
     otherExtensions: Dict[bytes, bytes] = {}
 
@@ -543,7 +551,9 @@ class SSHTransportBase(protocol.Protocol):
         # there's nothing to forbid the server from sending it as well, and
         # doing so makes things easier if it needs to process extensions
         # sent by clients in future.
-        supportedKeyExchanges.append(b"ext-info-c" if self.isClient else b"ext-info-s")
+        supportedKeyExchanges.append(
+            self._EXT_INFO_C if self.isClient else self._EXT_INFO_S
+        )
 
         self.ourKexInitPayload = b"".join(
             [
@@ -906,7 +916,7 @@ class SSHTransportBase(protocol.Protocol):
                 self.incomingCompressionType,
             )
             # RFC 8308, section 2.2
-            or self.kexAlg in (b"ext-info-c", b"ext-info-s")
+            or self.kexAlg in (self._EXT_INFO_C, self._EXT_INFO_S)
         ):
             self.sendDisconnect(
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
@@ -918,7 +928,7 @@ class SSHTransportBase(protocol.Protocol):
             )
             return
         self._supportsExtensionNegotiation = (
-            b"ext-info-s" if self.isClient else b"ext-info-c"
+            self._EXT_INFO_S if self.isClient else self._EXT_INFO_C
         ) in kexAlgs
         self._log.debug(
             "kex alg={kexAlg!r} key alg={keyAlg!r}",
