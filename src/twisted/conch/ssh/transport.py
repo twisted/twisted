@@ -1101,7 +1101,7 @@ class SSHTransportBase(protocol.Protocol):
     def sendExtInfo(self, extensions):
         """
         Send an RFC 8308 extension advertisement to the remote peer.
-        
+
         Nothing is sent if the peer doesn't support negotiations.
         @type extensions: L{list} of (L{bytes}, L{bytes})
         @param extensions: a list of (extension-name, extension-value) pairs.
