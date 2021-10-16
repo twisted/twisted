@@ -916,7 +916,9 @@ class SSHTransportBase(protocol.Protocol):
                 self.outgoingCompressionType,
                 self.incomingCompressionType,
             )
-            # RFC 8308, section 2.2
+            # We MUST disconnect if an extension negotiation indication ends
+            # up being negotiated as a key exchange method (RFC 8308,
+            # section 2.2).
             or self.kexAlg in (self._EXT_INFO_C, self._EXT_INFO_S)
         ):
             self.sendDisconnect(
