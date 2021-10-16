@@ -827,17 +827,17 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
 
     def test_sendExtInfoUnsupported(self):
         """
-        If the other end has not advertised support for extension
-        negotiation, no EXT_INFO message is sent.  See RFC 8308, section
-        2.2.
+        If the peer has not advertised support for extension negotiation, no
+        EXT_INFO message is sent, since RFC 8308 only guarantees that the
+        peer will be prepared to accept it if it has advertised support.
         """
         self.proto.sendExtInfo([(b"server-sig-algs", b"ssh-rsa,rsa-sha2-256")])
         self.assertEqual(self.packets, [])
 
     def test_EXT_INFO(self):
         """
-        Test that EXT_INFO messages are received correctly.  See RFC 8308,
-        section 2.3.
+        When an EXT_INFO message is received, the transport stores a mapping
+        of the peer's advertised extensions.  See RFC 8308, section 2.3.
         """
         self.proto.dispatchMessage(
             transport.MSG_EXT_INFO,
