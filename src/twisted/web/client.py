@@ -2288,7 +2288,7 @@ class _ReadBodyProtocol(protocol.Protocol):
             self.deferred.errback(reason)
 
 
-def readBody(response):
+def readBody(response: IResponse) -> defer.Deferred[bytes]:
     """
     Get the body of an L{IResponse} and return it as a byte string.
 
