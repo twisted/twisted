@@ -1,14 +1,17 @@
 # Do everything properly, and componentize
+import cgi
+
+from zope.interface import Interface, implementer
+
+from OpenSSL import SSL
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components
-from twisted.web import resource, server, static, xmlrpc
 from twisted.spread import pb
-from zope.interface import Interface, implementer
-from OpenSSL import SSL
-import cgi
+from twisted.web import resource, server, static, xmlrpc
+from twisted.words.protocols import irc
 
 
 class IFingerService(Interface):

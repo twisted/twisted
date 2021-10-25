@@ -10,8 +10,8 @@ import re
 import sys
 import traceback
 
-from twisted.trial import unittest
 from twisted.python.compat import nativeString
+from twisted.trial import unittest
 from twisted.web import error
 from twisted.web.template import Tag
 

@@ -9,14 +9,13 @@ Infrastructure for test running and suites.
 
 import doctest
 import gc
+import unittest as pyunit
+
+from zope.interface import implementer
 
 from twisted.python import components
-
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
-
-import unittest as pyunit
-from zope.interface import implementer
 
 
 class TestSuite(pyunit.TestSuite):

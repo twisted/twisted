@@ -16,65 +16,63 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 import os
 import re
 import socket
-from unicodedata import normalize
 import warnings
+from unicodedata import normalize
+
+from zope.interface import directlyProvides, implementer, provider
 
 from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
-from zope.interface import implementer, directlyProvides, provider
-
-from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet import defer, error, fdesc, interfaces, threads
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.address import (
-    _ProcessAddress,
     HostnameAddress,
     IPv4Address,
     IPv6Address,
+    _ProcessAddress,
 )
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor,
-    IResolutionReceiver,
-    IReactorPluggableNameResolver,
     IHostnameResolver,
+    IReactorPluggableNameResolver,
+    IResolutionReceiver,
+    IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpointStringParser,
 )
-from twisted.internet.protocol import ClientFactory, Factory
-from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
 
 try:
-    from twisted.internet.stdio import StandardIO, PipeAddress
+    from twisted.internet.stdio import PipeAddress, StandardIO
 except ImportError:
     # fallback if pywin32 is not installed
     StandardIO = None  # type: ignore[assignment,misc]
     PipeAddress = None  # type: ignore[assignment,misc]
 
-from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
+from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import deprecate, log
-from twisted.python.compat import nativeString, _matchingString
+from twisted.python.compat import _matchingString, iterbytes, nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.python.compat import iterbytes
-from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
-
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
+    from OpenSSL.SSL import Error as SSLError
+
     from twisted.internet.ssl import (
-        optionsForClientTLS,
-        PrivateCertificate,
         Certificate,
-        KeyPair,
         CertificateOptions,
+        KeyPair,
+        PrivateCertificate,
+        optionsForClientTLS,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError
+    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 except ImportError:
     TLSMemoryBIOFactory = None
 else:

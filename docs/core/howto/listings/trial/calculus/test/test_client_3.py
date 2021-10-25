@@ -1,8 +1,8 @@
-from calculus.client_3 import RemoteCalculationClient, ClientTimeoutError
+from calculus.client_3 import ClientTimeoutError, RemoteCalculationClient
 
 from twisted.internet import task
-from twisted.trial import unittest
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class ClientCalculationTestCase(unittest.TestCase):

@@ -9,28 +9,28 @@ Tests for implementations of L{IReactorProcess}.
 """
 
 
-import hamcrest
 import io
 import os
 import signal
+import subprocess
 import sys
 import threading
-import twisted
-import subprocess
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.log import msg, err
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString
-from twisted.internet import utils
-from twisted.internet.interfaces import IReactorProcess, IProcessTransport
-from twisted.internet.defer import Deferred, inlineCallbacks, succeed
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.error import ProcessDone, ProcessTerminated
+import hamcrest
 
+import twisted
+from twisted.internet import utils
+from twisted.internet.defer import Deferred, inlineCallbacks, succeed
+from twisted.internet.error import ProcessDone, ProcessTerminated
+from twisted.internet.interfaces import IProcessTransport, IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.compat import networkString
+from twisted.python.filepath import FilePath, _asFilesystemBytes
+from twisted.python.log import err, msg
+from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
@@ -42,6 +42,7 @@ properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
     import resource as _resource
+
     from twisted.internet import process as _process
 
     if os.getuid() != 0:

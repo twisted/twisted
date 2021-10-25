@@ -13,13 +13,14 @@ or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
 
+import getopt
+
 # System Imports
 import inspect
 import os
 import sys
-import getopt
-from os import path
 import textwrap
+from os import path
 from typing import Optional, cast
 
 # Sibling Imports

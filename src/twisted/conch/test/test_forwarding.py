@@ -13,9 +13,9 @@ if cryptography:
     from twisted.conch.ssh import forwarding
 
 from twisted.internet.address import IPv6Address
-from twisted.trial import unittest
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.trial import unittest
 
 
 class TestSSHConnectForwardingChannel(unittest.TestCase):

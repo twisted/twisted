@@ -15,27 +15,27 @@ import pickle
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.application import internet
 from twisted.application.internet import (
+    ClientService,
     StreamServerEndpointService,
     TimerService,
-    ClientService,
-)
-from twisted.internet.defer import Deferred, CancelledError
-from twisted.internet.interfaces import (
-    IStreamServerEndpoint,
-    IStreamClientEndpoint,
-    IListeningPort,
-    IHalfCloseableProtocol,
-    IFileDescriptorReceiver,
 )
 from twisted.internet import task
+from twisted.internet.defer import CancelledError, Deferred
+from twisted.internet.interfaces import (
+    IFileDescriptorReceiver,
+    IHalfCloseableProtocol,
+    IListeningPort,
+    IStreamClientEndpoint,
+    IStreamServerEndpoint,
+)
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.task import Clock
+from twisted.logger import formatEvent, globalLogPublisher
 from twisted.python.failure import Failure
-from twisted.logger import globalLogPublisher, formatEvent
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 def fakeTargetFunction():

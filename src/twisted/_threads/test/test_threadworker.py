@@ -8,11 +8,10 @@ Tests for L{twisted._threads._threadworker}.
 
 import gc
 import weakref
-
-from twisted.trial.unittest import SynchronousTestCase
 from threading import ThreadError, local
 
-from .. import ThreadWorker, LockWorker, AlreadyQuit
+from twisted.trial.unittest import SynchronousTestCase
+from .. import AlreadyQuit, LockWorker, ThreadWorker
 
 
 class FakeQueueEmpty(Exception):

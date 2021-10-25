@@ -6,6 +6,7 @@
 An API for storing HTTP header names and values.
 """
 
+from collections.abc import Sequence as _Sequence
 from typing import (
     AnyStr,
     Dict,
@@ -14,16 +15,14 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
-    TypeVar,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
 )
-from collections.abc import Sequence as _Sequence
 
-from twisted.python.compat import comparable, cmp
-
+from twisted.python.compat import cmp, comparable
 
 _T = TypeVar("_T")
 

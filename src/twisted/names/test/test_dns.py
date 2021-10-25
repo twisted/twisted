@@ -7,8 +7,8 @@ Tests for twisted.names.dns.
 """
 
 
-from io import BytesIO
 import struct
+from io import BytesIO
 from typing import cast
 
 from zope.interface.verify import verifyClass

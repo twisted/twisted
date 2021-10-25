@@ -3,10 +3,19 @@
 # See LICENSE for details.
 
 from twisted.conch.insults import helper
-from twisted.conch.insults.insults import G0, G1, G2, G3
-from twisted.conch.insults.insults import modes, privateModes
-from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
-
+from twisted.conch.insults.insults import (
+    BLINK,
+    BOLD,
+    G0,
+    G1,
+    G2,
+    G3,
+    NORMAL,
+    REVERSE_VIDEO,
+    UNDERLINE,
+    modes,
+    privateModes,
+)
 from twisted.trial import unittest
 
 WIDTH = 80

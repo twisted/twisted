@@ -15,26 +15,25 @@ import binascii
 import hmac
 import struct
 import zlib
-
 from hashlib import md5, sha1, sha256, sha384, sha512
+from typing import Dict
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.ciphers import algorithms, modes, Cipher
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from twisted import __version__ as twisted_version
-from twisted.internet import protocol, defer
+from twisted.conch.ssh import _kex, address, keys
+from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
+from twisted.internet import defer, protocol
+from twisted.logger import Logger
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, networkString
-from twisted.logger import Logger
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
-
-from twisted.conch.ssh import address, keys, _kex
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, ffs
 
 
 def _mpFromBytes(data):
@@ -420,6 +419,12 @@ class SSHTransportBase(protocol.Protocol):
         passed to L{sendPacket} but could not be sent because it is not legal
         to send them while a key exchange is in progress.  When the key
         exchange completes, another attempt is made to send these messages.
+
+    @ivar _peerSupportsExtensions: a boolean indicating whether the other side
+        of the connection supports RFC 8308 extension negotiation.
+
+    @ivar peerExtensions: a dict of extensions supported by the other side of
+        the connection.
     """
 
     _log = Logger()
@@ -487,6 +492,17 @@ class SSHTransportBase(protocol.Protocol):
     _keyExchangeState = _KEY_EXCHANGE_NONE
     _blockedByKeyExchange = None
 
+    # Added to key exchange algorithms by a client to indicate support for
+    # extension negotiation.
+    _EXT_INFO_C = b"ext-info-c"
+
+    # Added to key exchange algorithms by a server to indicate support for
+    # extension negotiation.
+    _EXT_INFO_S = b"ext-info-s"
+
+    _peerSupportsExtensions = False
+    peerExtensions: Dict[bytes, bytes] = {}
+
     def connectionLost(self, reason):
         """
         When the underlying connection is closed, stop the running service (if
@@ -527,11 +543,24 @@ class SSHTransportBase(protocol.Protocol):
                 % (self._keyExchangeState,)
             )
 
+        supportedKeyExchanges = list(self.supportedKeyExchanges)
+        # Advertise extension negotiation (RFC 8308, section 2.1).  At
+        # present, the Conch client processes the "server-sig-algs"
+        # extension (section 3.1), and the Conch server sends that but
+        # ignores any extensions sent by the client, so strictly speaking at
+        # the moment we only need to send this in the client case; however,
+        # there's nothing to forbid the server from sending it as well, and
+        # doing so makes things easier if it needs to process extensions
+        # sent by clients in future.
+        supportedKeyExchanges.append(
+            self._EXT_INFO_C if self.isClient else self._EXT_INFO_S
+        )
+
         self.ourKexInitPayload = b"".join(
             [
                 bytes((MSG_KEXINIT,)),
                 randbytes.secureRandom(16),
-                NS(b",".join(self.supportedKeyExchanges)),
+                NS(b",".join(supportedKeyExchanges)),
                 NS(b",".join(self.supportedPublicKeys)),
                 NS(b",".join(self.supportedCiphers)),
                 NS(b",".join(self.supportedCiphers)),
@@ -565,7 +594,11 @@ class SSHTransportBase(protocol.Protocol):
         # Written somewhat peculularly to reflect the way the specification
         # defines the allowed message types.
         if 1 <= messageType <= 19:
-            return messageType not in (MSG_SERVICE_REQUEST, MSG_SERVICE_ACCEPT)
+            return messageType not in (
+                MSG_SERVICE_REQUEST,
+                MSG_SERVICE_ACCEPT,
+                MSG_EXT_INFO,
+            )
         if 20 <= messageType <= 29:
             return messageType not in (MSG_KEXINIT,)
         return 30 <= messageType <= 49
@@ -875,11 +908,18 @@ class SSHTransportBase(protocol.Protocol):
         )
         self.outgoingCompressionType = ffs(client[6], server[6])
         self.incomingCompressionType = ffs(client[7], server[7])
-        if None in (
-            self.kexAlg,
-            self.keyAlg,
-            self.outgoingCompressionType,
-            self.incomingCompressionType,
+        if (
+            None
+            in (
+                self.kexAlg,
+                self.keyAlg,
+                self.outgoingCompressionType,
+                self.incomingCompressionType,
+            )
+            # We MUST disconnect if an extension negotiation indication ends
+            # up being negotiated as a key exchange method (RFC 8308,
+            # section 2.2).
+            or self.kexAlg in (self._EXT_INFO_C, self._EXT_INFO_S)
         ):
             self.sendDisconnect(
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
@@ -890,6 +930,9 @@ class SSHTransportBase(protocol.Protocol):
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
             )
             return
+        self._peerSupportsExtensions = (
+            self._EXT_INFO_S if self.isClient else self._EXT_INFO_C
+        ) in kexAlgs
         self._log.debug(
             "kex alg={kexAlg!r} key alg={keyAlg!r}",
             kexAlg=self.kexAlg,
@@ -970,6 +1013,25 @@ class SSHTransportBase(protocol.Protocol):
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 
+    def ssh_EXT_INFO(self, packet):
+        """
+        Called when we get a MSG_EXT_INFO message.  Payload::
+            uint32 nr-extensions
+            repeat the following 2 fields "nr-extensions" times:
+              string extension-name
+              string extension-value (binary)
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+        """
+        (numExtensions,) = struct.unpack(">L", packet[:4])
+        packet = packet[4:]
+        extensions = {}
+        for _ in range(numExtensions):
+            extName, extValue, packet = getNS(packet, 2)
+            extensions[extName] = extValue
+        self.peerExtensions = extensions
+
     def setService(self, service):
         """
         Set our service to service and start it running.  If we were
@@ -1037,6 +1099,21 @@ class SSHTransportBase(protocol.Protocol):
             description=desc,
         )
         self.transport.loseConnection()
+
+    def sendExtInfo(self, extensions):
+        """
+        Send an RFC 8308 extension advertisement to the remote peer.
+
+        Nothing is sent if the peer doesn't support negotiations.
+        @type extensions: L{list} of (L{bytes}, L{bytes})
+        @param extensions: a list of (extension-name, extension-value) pairs.
+        """
+        if self._peerSupportsExtensions:
+            payload = b"".join(
+                [struct.pack(">L", len(extensions))]
+                + [NS(name) + NS(value) for name, value in extensions]
+            )
+            self.sendPacket(MSG_EXT_INFO, payload)
 
     def _startEphemeralDH(self):
         """
@@ -1576,6 +1653,22 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
+    def _keySetup(self, sharedSecret, exchangeHash):
+        """
+        See SSHTransportBase._keySetup().
+        """
+        firstKey = self.sessionID is None
+        SSHTransportBase._keySetup(self, sharedSecret, exchangeHash)
+        # RFC 8308 section 2.4 says that the server MAY send EXT_INFO at
+        # zero, one, or both of the following opportunities: the next packet
+        # following the server's first MSG_NEWKEYS, or immediately preceding
+        # the server's MSG_USERAUTH_SUCCESS.  We have no need for the
+        # latter, so make sure we only send it in the former case.
+        if firstKey:
+            self.sendExtInfo(
+                [(b"server-sig-algs", b",".join(self.supportedPublicKeys))]
+            )
+
     def ssh_NEWKEYS(self, packet):
         """
         Called when we get a MSG_NEWKEYS message.  No payload.
@@ -2086,6 +2179,7 @@ MSG_UNIMPLEMENTED = 3
 MSG_DEBUG = 4
 MSG_SERVICE_REQUEST = 5
 MSG_SERVICE_ACCEPT = 6
+MSG_EXT_INFO = 7
 MSG_KEXINIT = 20
 MSG_NEWKEYS = 21
 MSG_KEXDH_INIT = 30

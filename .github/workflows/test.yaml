@@ -11,6 +11,15 @@ on:
     branches: [ trunk ]
 
 
+# Only have a run a single parallel for each branch.
+# Runs for trunk are queues.
+# Older runs for non-trunk branches are cancelled and the jobs are executed
+# only for the latest push to the branch.
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/trunk' }}
+
+
 defaults:
   run:
     shell: bash
@@ -32,7 +41,7 @@ jobs:
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-beta.4]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-rc.1]
         tox-env: ['alldeps-withcov-posix']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
@@ -110,7 +119,7 @@ jobs:
         tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
@@ -120,7 +129,7 @@ jobs:
         python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v1
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -128,7 +137,7 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       continue-on-error: true
       run: |
         python -m coveralls -v

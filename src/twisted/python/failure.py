@@ -14,14 +14,15 @@ See L{Failure}.
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
-import opcode
+import linecache
+import sys
 from inspect import getmro
+from io import StringIO
+
+import opcode
 
 from twisted.python import reflect
-from io import StringIO
 
 count = 0
 traceupLength = 4

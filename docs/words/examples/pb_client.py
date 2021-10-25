@@ -19,11 +19,12 @@ To run the script:
 
 
 import sys
-from twisted.python import log
+
 from twisted.cred import credentials
-from twisted.words import service
-from twisted.spread import pb
 from twisted.internet import reactor
+from twisted.python import log
+from twisted.spread import pb
+from twisted.words import service
 
 
 class DemoMind(service.PBMind):

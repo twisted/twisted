@@ -11,7 +11,6 @@ Data used by test_keys as well as others.
 
 from base64 import decodebytes
 
-
 RSAData = {
     "n": int(
         "269413617238113438198661010376758399219880277968382122687862697"
