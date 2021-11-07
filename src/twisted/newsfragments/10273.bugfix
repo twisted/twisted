@@ -1,0 +1,1 @@
+Replaced usage of ``threading.currentThread()`` with ``threading.current_thread()`` to avoid the deprecation warnings introduced for the former in Python 3.10.
