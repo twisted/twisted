@@ -9,7 +9,7 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from threading import Thread, currentThread
+from threading import Thread, current_thread
 from typing import List
 
 from twisted._threads import pool as _pool
@@ -43,7 +43,7 @@ class ThreadPool:
     name = None
 
     threadFactory = Thread
-    currentThread = staticmethod(currentThread)
+    current_thread = staticmethod(current_thread)
     _pool = staticmethod(_pool)
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
