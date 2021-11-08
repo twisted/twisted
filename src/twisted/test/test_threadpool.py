@@ -404,11 +404,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(threadable.getThreadID().ident)
+            threadIds.append(threadable.getThreadID())
             event.set()
 
         def func():
-            threadIds.append(threadable.getThreadID().ident)
+            threadIds.append(threadable.getThreadID())
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)
