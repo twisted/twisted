@@ -7,11 +7,12 @@ Tests for implementations of L{IReactorThreads}.
 
 
 import gc
+import threading
 from weakref import ref
 
 from twisted.internet.interfaces import IReactorThreads
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadable import getThreadID, isInIOThread
+from twisted.python.threadable import isInIOThread
 from twisted.python.threadpool import ThreadPool
 from twisted.python.versions import Version
 
@@ -109,13 +110,13 @@ class ThreadTestsBuilder(ReactorBuilder):
         result = []
 
         def threadCall():
-            result.append(getThreadID())
+            result.append(threading.current_thread())
             reactor.stop()
 
         reactor.callLater(0, reactor.callInThread, reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
-        self.assertEqual(result, [getThreadID()])
+        self.assertEqual(result, [threading.current_thread()])
 
     def test_stopThreadPool(self):
         """
