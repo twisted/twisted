@@ -223,7 +223,10 @@ class ThreadTestsBuilder(ReactorBuilder):
 
     def test_threadPoolCurrentThreadDeprecated(self):
         self.callDeprecated(
-            version=(Version("Twisted", "NEXT", 0, 0), "twisted.python.threadable.getThreadID"),
+            version=(
+                Version("Twisted", "NEXT", 0, 0),
+                "twisted.python.threadable.getThreadID",
+            ),
             f=ThreadPool.currentThread,
         )
 
