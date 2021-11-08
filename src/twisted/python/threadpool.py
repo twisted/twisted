@@ -45,10 +45,12 @@ class ThreadPool:
     name = None
 
     threadFactory = Thread
-    currentThread = staticmethod(deprecated(
-        version=Version("Twisted", "NEXT", 0, 0),
-        replacement="ThreadPool.current_thread",
-    )(currentThread))
+    currentThread = staticmethod(
+        deprecated(
+            version=Version("Twisted", "NEXT", 0, 0),
+            replacement="ThreadPool.current_thread",
+        )(currentThread)
+    )
     current_thread = staticmethod(current_thread)
     _pool = staticmethod(_pool)
 
