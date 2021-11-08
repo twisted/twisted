@@ -12,7 +12,7 @@ from weakref import ref
 
 from twisted.internet.interfaces import IReactorThreads
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadable import isInIOThread
+from twisted.python.threadable import getThreadID, isInIOThread
 from twisted.python.threadpool import ThreadPool
 from twisted.python.versions import Version
 
@@ -110,13 +110,13 @@ class ThreadTestsBuilder(ReactorBuilder):
         result = []
 
         def threadCall():
-            result.append(threading.current_thread())
+            result.append(getThreadID())
             reactor.stop()
 
         reactor.callLater(0, reactor.callInThread, reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
-        self.assertEqual(result, [threading.current_thread()])
+        self.assertEqual(result, [getThreadID()])
 
     def test_stopThreadPool(self):
         """
@@ -223,7 +223,7 @@ class ThreadTestsBuilder(ReactorBuilder):
 
     def test_threadPoolCurrentThreadDeprecated(self):
         self.callDeprecated(
-            version=(Version("Twisted", "NEXT", 0, 0), "ThreadPool.current_thread"),
+            version=(Version("Twisted", "NEXT", 0, 0), "twisted.python.threadable.getThreadID"),
             f=ThreadPool.currentThread,
         )
 
