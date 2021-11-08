@@ -14,6 +14,7 @@ from twisted.internet.interfaces import IReactorThreads
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadable import isInIOThread
 from twisted.python.threadpool import ThreadPool
+from twisted.python.versions import Version
 
 
 class ThreadTestsBuilder(ReactorBuilder):
@@ -219,6 +220,12 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callInThread(check)
         self.runReactor(reactor)
         self.assertEqual([False], results)
+
+    def test_threadPoolCurrentThreadDeprecated(self):
+        self.callDeprecated(
+            version=(Version("Twisted", "NEXT", 0, 0), "ThreadPool.current_thread"),
+            f=ThreadPool.currentThread,
+        )
 
 
 globals().update(ThreadTestsBuilder.makeTestCaseClasses())
