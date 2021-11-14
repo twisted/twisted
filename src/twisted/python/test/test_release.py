@@ -423,7 +423,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), f"API index {outputPath.path!r} did not exist."
         )
         self.assertIn(
-            f'<a href="{projectURL}">{projectName}</a>',
+            f'<a href="{projectURL}" class="projecthome">{projectName}</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -439,11 +439,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            f'<a href="{sourceURL}/{packageName}/__init__.py">(source)</a>',
+            f'<a href="{sourceURL}/{packageName}/__init__.py" class="sourceLink">'
+            f"(source)</a>",
             quuxPath.getContent().decode(),
         )
         self.assertIn(
-            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
+            '<a class="sourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
             quuxPath.getContent().decode(),
         )
@@ -480,7 +481,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
-            '<a href="https://twistedmatrix.com/">Twisted</a>',
+            '<a href="https://twistedmatrix.com/" class="projecthome">Twisted</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -499,7 +500,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # source code.
         self.assertIn(
             '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
+            'twisted-1.0.0/src/twisted/__init__.py" class="sourceLink">(source)</a>',
             twistedPath.getContent().decode(),
         )
 
