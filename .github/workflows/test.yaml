@@ -184,7 +184,7 @@ jobs:
 
   cryptography-main:
     runs-on: ubuntu-latest
-    name: "pyca/cryptography main"
+    name: "pyca/cryptography latest"
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -198,7 +198,7 @@ jobs:
           override: true
           default: true
       - run: 'pip install ".[all_non_platform]"'
-      - run: pip install git+https://github.com/pyca/cryptography.git
+      - run: pip install -U cryptography
       - run: python -m twisted.trial src/twisted
 
 
