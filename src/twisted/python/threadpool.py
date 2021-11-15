@@ -48,7 +48,7 @@ class ThreadPool:
     currentThread = staticmethod(
         deprecated(
             version=Version("Twisted", "NEXT", 0, 0),
-            replacement="twisted.python.threadable.getThreadID",
+            replacement="threading.current_thread",
         )(current_thread)
     )
     _pool = staticmethod(_pool)
