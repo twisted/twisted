@@ -50,7 +50,6 @@ from twisted.internet.test.connectionmixins import (
     runProtocolsWithReactor,
 )
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
     MyClientFactory,
     MyServerFactory,
@@ -818,7 +817,6 @@ class UNIXPortTestsBuilder(
     ListenUNIXMixin,
     UNIXPortTestsMixin,
     ReactorBuilder,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     """
@@ -830,7 +828,6 @@ class UNIXFDPortTestsBuilder(
     SocketUNIXMixin,
     UNIXPortTestsMixin,
     ReactorBuilder,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     """
