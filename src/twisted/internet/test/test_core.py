@@ -144,7 +144,6 @@ class SystemEventTestsBuilder(ReactorBuilder):
         sawPhase = []
 
         def fakeSignal(signum: int, action: Callable[[int, FrameType], None]) -> None:
-            nonlocal phase
             sawPhase.append(phase)
 
         testCase = cast(SynchronousTestCase, self)
