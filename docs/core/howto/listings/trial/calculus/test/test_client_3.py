@@ -16,10 +16,10 @@ class ClientCalculationTestCase(unittest.TestCase):
 
     def _test(self, operation, a, b, expected):
         d = getattr(self.proto, operation)(a, b)
-        self.assertEqual(self.tr.value(), f"{operation} {a} {b}\r\n".encode("utf-8"))
+        self.assertEqual(self.tr.value(), f"{operation} {a} {b}\r\n".encode())
         self.tr.clear()
         d.addCallback(self.assertEqual, expected)
-        self.proto.dataReceived(f"{expected}\r\n".encode("utf-8"))
+        self.proto.dataReceived(f"{expected}\r\n".encode())
         return d
 
     def test_add(self):
