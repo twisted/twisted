@@ -1,5 +1,5 @@
 from twisted.internet import reactor
-from twisted.python import log, compat
+from twisted.python import compat, log
 from twisted.web.client import Agent, CookieAgent
 
 

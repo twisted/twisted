@@ -12,18 +12,17 @@ Plugin system for Twisted.
 
 
 import os
+import pickle
 import sys
 import types
-from typing import TypeVar, Optional, Iterable, Type
+from typing import Iterable, Optional, Type, TypeVar
 
 from zope.interface import Interface, providedBy
 
-import pickle
-
-from twisted.python.components import getAdapterFactory
-from twisted.python.reflect import namedAny
 from twisted.python import log
+from twisted.python.components import getAdapterFactory
 from twisted.python.modules import getModule
+from twisted.python.reflect import namedAny
 
 
 class IPlugin(Interface):

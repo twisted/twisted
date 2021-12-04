@@ -1,6 +1,8 @@
 import io
-from twisted.logger import jsonFileLogObserver, globalLogPublisher
+
 from ad_hoc import AdHoc
+
+from twisted.logger import globalLogPublisher, jsonFileLogObserver
 
 globalLogPublisher.addObserver(jsonFileLogObserver(open("log.json", "a")))
 

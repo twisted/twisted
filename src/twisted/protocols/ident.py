@@ -10,7 +10,7 @@ import struct
 
 from twisted.internet import defer
 from twisted.protocols import basic
-from twisted.python import log, failure
+from twisted.python import failure, log
 
 _MIN_PORT = 1
 _MAX_PORT = 2 ** 16 - 1

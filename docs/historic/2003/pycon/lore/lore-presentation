@@ -1,8 +1,7 @@
 #!/usr/bin/python2.2
 # Moshe -- current content is estimated at about 15 minutes
-from slides import NumSlide, Slide, Bullet, SubBullet, PRE, URL
+from slides import PRE, URL, Bullet, NumSlide, Slide, SubBullet
 from twslides import Lecture
-
 
 lecture = Lecture(
     "Lore: A Document Generation System",

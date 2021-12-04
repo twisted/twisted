@@ -6,12 +6,13 @@ Tests for L{twisted.protocol.socks}, an implementation of the SOCKSv4 and
 SOCKSv4a protocols.
 """
 
-import struct, socket
+import socket
+import struct
 
-from twisted.internet import defer, address
+from twisted.internet import address, defer
 from twisted.internet.error import DNSLookupError
-from twisted.python.compat import iterbytes
 from twisted.protocols import socks
+from twisted.python.compat import iterbytes
 from twisted.test import proto_helpers
 from twisted.trial import unittest
 

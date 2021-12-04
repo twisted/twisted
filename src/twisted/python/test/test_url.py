@@ -6,10 +6,8 @@
 Tests for L{twisted.python.url}.
 """
 
-from ..url import URL
-
 from twisted.trial.unittest import SynchronousTestCase
-
+from ..url import URL
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 

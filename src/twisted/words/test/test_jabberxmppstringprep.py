@@ -2,11 +2,10 @@
 # See LICENSE for details.
 
 from twisted.trial import unittest
-
 from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nameprep,
     nodeprep,
     resourceprep,
-    nameprep,
 )
 
 

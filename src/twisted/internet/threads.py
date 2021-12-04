@@ -9,8 +9,9 @@ For basic support see reactor threading API docs.
 
 
 import queue as Queue
-from twisted.python import failure
+
 from twisted.internet import defer
+from twisted.python import failure
 
 
 def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):

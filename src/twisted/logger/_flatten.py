@@ -14,7 +14,6 @@ from typing import Any, Dict, Optional
 
 from ._interfaces import LogEvent
 
-
 aFormatter = Formatter()
 
 

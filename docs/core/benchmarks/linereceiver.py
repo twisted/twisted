@@ -1,7 +1,7 @@
 import time
 
-from twisted.python.compat import range
 from twisted.protocols import basic
+from twisted.python.compat import range
 
 
 class CollectingLineReceiver(basic.LineReceiver):

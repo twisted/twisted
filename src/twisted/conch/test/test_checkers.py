@@ -14,35 +14,33 @@ else:
     cryptSkip = ""
 
 import os
-
 from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import util
-from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
-from twisted.trial.unittest import TestCase
-from twisted.python.filepath import FilePath
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.credentials import (
-    UsernamePassword,
+    ISSHPrivateKey,
     IUsernamePassword,
     SSHPrivateKey,
-    ISSHPrivateKey,
+    UsernamePassword,
 )
-from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.python import util
+from twisted.python.failure import Failure
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.test_process import MockOS
-
+from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
     dependencySkip = ""
-    from twisted.conch.ssh import keys
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
+    from twisted.conch.ssh import keys
     from twisted.conch.test import keydata
 else:
     dependencySkip = "can't run without cryptography and PyASN1"

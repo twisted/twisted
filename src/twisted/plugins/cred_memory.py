@@ -11,10 +11,9 @@ Cred plugin for an in-memory user database.
 from zope.interface import implementer
 
 from twisted import plugin
-from twisted.cred.strcred import ICheckerFactory
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.credentials import IUsernamePassword, IUsernameHashedPassword
-
+from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
+from twisted.cred.strcred import ICheckerFactory
 
 inMemoryCheckerFactoryHelp = """
 A checker that uses an in-memory user database.
