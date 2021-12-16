@@ -18,6 +18,7 @@ import signal
 import stat
 import sys
 import traceback
+from os import POSIX_SPAWN_CLOSE, POSIX_SPAWN_DUP2
 from typing import Callable, Dict, Optional
 
 from zope.interface import implementer
@@ -349,24 +350,49 @@ class _BaseProcess(BaseProcess):
                 # Reset signal handling to the default
                 signal.signal(signalnum, signal.SIG_DFL)
 
+    def _trySpawnInsteadOfFork(
+        self, path, uid, gid, executable, args, environment, kwargs
+    ):
+        """
+        Try to use posix_spawn instead of fork(), if possible.
+
+        This implementation returns False because the non-PTY subclass
+        implements the actual logic; we can't yet use this for pty processes.
+
+        @return: a boolean indicating whether posix_spawn was used or not.
+        """
+        return False
+
     def _fork(self, path, uid, gid, executable, args, environment, **kwargs):
         """
         Fork and then exec sub-process.
 
         @param path: the path where to run the new process.
         @type path: L{bytes} or L{unicode}
+
         @param uid: if defined, the uid used to run the new process.
         @type uid: L{int}
+
         @param gid: if defined, the gid used to run the new process.
         @type gid: L{int}
+
         @param executable: the executable to run in a new process.
         @type executable: L{str}
+
         @param args: arguments used to create the new process.
         @type args: L{list}.
+
         @param environment: environment used for the new process.
         @type environment: L{dict}.
+
         @param kwargs: keyword arguments to L{_setupChild} method.
         """
+
+        if self._trySpawnInsteadOfFork(
+            path, uid, gid, executable, args, environment, kwargs
+        ):
+            return
+
         collectorEnabled = gc.isenabled()
         gc.disable()
         try:
@@ -601,13 +627,13 @@ class Process(_BaseProcess):
     An operating-system Process.
 
     This represents an operating-system process with arbitrary input/output
-    pipes connected to it. Those pipes may represent standard input,
-    standard output, and standard error, or any other file descriptor.
+    pipes connected to it.  Those pipes may represent standard input, standard
+    output, and standard error, or any other file descriptor.
 
-    On UNIX, this is implemented using fork(), exec(), pipe()
-    and fcntl(). These calls may not exist elsewhere so this
-    code is not cross-platform. (also, windows can only select
-    on sockets...)
+    On UNIX, this is implemented using posix_spawn when possible (or fork(),
+    exec(), pipe() and fcntl() when not).  These calls may not exist elsewhere
+    so this code is not cross-platform.  (also, windows can only select on
+    sockets...)
     """
 
     debug = False
@@ -737,6 +763,66 @@ class Process(_BaseProcess):
         # callback.  That's probably not ideal.  The replacement API for
         # spawnProcess should improve upon this situation.
         registerReapProcessHandler(self.pid, self)
+
+    def _trySpawnInsteadOfFork(
+        self, path, uid, gid, executable, args, environment, kwargs
+    ):
+        """
+        Try to use posix_spawn instead of fork(), if possible.
+        @return: a boolean indicating whether posix_spawn was used or not.
+        """
+        if (
+            # no support for setuid/setgid anywhere but in QNX's
+            # posix_spawnattr_setcred
+            (uid is not None)
+            or (gid is not None)
+            or ((path is not None) and (os.path.abspath(path) != os.path.abspath(".")))
+        ):
+            return False
+        fdmap = kwargs.get("fdmap")
+        dupSources = set(fdmap.values())
+        shouldEventuallyClose = _listOpenFDs()
+        closeBeforeDup = []
+        closeAfterDup = []
+        for eachFD in shouldEventuallyClose:
+            try:
+                isCloseOnExec = fcntl.fcntl(eachFD, fcntl.F_GETFD, fcntl.FD_CLOEXEC)
+            except OSError:
+                pass
+            else:
+                if eachFD not in fdmap and not isCloseOnExec:
+                    (closeAfterDup if eachFD in dupSources else closeBeforeDup).append(
+                        (POSIX_SPAWN_CLOSE, eachFD)
+                    )
+
+        if environment is None:
+            environment = {}
+
+        fileActions = (
+            closeBeforeDup
+            + [
+                (POSIX_SPAWN_DUP2, parentFD, childFD)
+                for (childFD, parentFD) in fdmap.items()
+                if childFD != parentFD
+            ]
+            + closeAfterDup
+        )
+
+        setSigDef = [
+            everySignal
+            for everySignal in range(1, signal.NSIG)
+            if signal.getsignal(everySignal) == signal.SIG_IGN
+        ]
+
+        self.pid = os.posix_spawn(
+            executable,
+            args,
+            environment,
+            file_actions=fileActions,
+            setsigdef=setSigDef,
+        )
+        self.status = -1
+        return True
 
     def _setupChild(self, fdmap):
         """

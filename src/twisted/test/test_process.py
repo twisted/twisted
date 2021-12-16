@@ -1298,10 +1298,15 @@ class MockOS:
         self.O_RDWR = -1
         self.O_NOCTTY = -2
         self.WNOHANG = -4
+        self.F_GETFD = 1001
+        self.FD_CLOEXEC = 1002
         self.WEXITSTATUS = lambda x: 0
         self.WIFEXITED = lambda x: 1
         self.seteuidCalls = []
         self.setegidCalls = []
+
+    def fcntl(self, op, fl, arg):
+        return 0
 
     def open(self, dev, flags):
         """
@@ -1384,6 +1389,28 @@ class MockOS:
         """
         self.actions.append("exec")
         if self.raiseExec:
+            raise RuntimeError("Bar")
+
+    def posix_spawn(
+        self,
+        path,
+        argv,
+        env,
+        *,
+        file_actions=None,
+        setpgroup=None,
+        resetids=False,
+        setsid=False,
+        setsigmask=(),
+        setsigdef=(),
+        scheduler=None,
+    ):
+        """
+        Fake C{os.posix_spawn}. Save the action.
+        """
+        self.actions.append("posix_spawn")
+        if self.raiseExec:
+            # if exec() would raise, so would posix_spawn()
             raise RuntimeError("Bar")
 
     def pipe(self):
@@ -1612,6 +1639,10 @@ class DumbPTYProcess(PTYProcess):
         """
 
 
+class ForkOrSpawn(object):
+    def __eq__(self, other):
+        return other == ("fork", False) or other == "posix_spawn"
+
 class MockProcessTests(unittest.TestCase):
     """
     Mock a process runner to test forked child code path.
@@ -1639,6 +1670,7 @@ class MockProcessTests(unittest.TestCase):
         self.patch(process, "fdesc", self.mockos)
         self.patch(process.Process, "processReaderFactory", DumbProcessReader)
         self.patch(process.Process, "processWriterFactory", DumbProcessWriter)
+        self.patch(process.Process, "_trySpawnInsteadOfFork", lambda *a, **k: False)
         self.patch(process, "pty", self.mockos)
 
         self.mocksig = MockSignal()
@@ -1649,6 +1681,13 @@ class MockProcessTests(unittest.TestCase):
         Reset processes registered for reap.
         """
         process.reapProcessHandlers = {}
+
+    def assertProcessLaunched(self):
+        """
+        A process should have been launched, but I don't care whether it was
+        with fork() or posix_spawn().
+        """
+        self.assertEqual(self.mockos.actions, [ForkOrSpawn(), "waitpid"])
 
     def test_mockFork(self):
         """
@@ -1688,8 +1727,7 @@ class MockProcessTests(unittest.TestCase):
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
         self.assertEqual(set(self.mockos.closed), {-1, -4, -6})
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
     def test_mockForkInParentGarbageCollectorEnabled(self):
         """
         The garbage collector should be enabled when L{reactor.spawnProcess}
@@ -1885,8 +1923,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False, uid=8080)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
     def test_mockPTYSetUid(self):
         """
         Try creating a PTY process with setting its uid: it's almost the same
@@ -1933,8 +1970,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=True, uid=8080)
         finally:
             process.PTYProcess = oldPTYProcess
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
     def test_mockWithWaitError(self):
         """
         Test that reapProcess logs errors raised.
@@ -1946,8 +1982,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
         self.mockos.raiseWaitPid = OSError()
         proc.reapProcess()
         errors = self.flushLoggedErrors()
@@ -1966,8 +2001,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
         self.mockos.raiseWaitPid = OSError()
         self.mockos.raiseWaitPid.errno = errno.ECHILD
         # This should not produce any errors
