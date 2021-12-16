@@ -1639,9 +1639,10 @@ class DumbPTYProcess(PTYProcess):
         """
 
 
-class ForkOrSpawn(object):
+class ForkOrSpawn:
     def __eq__(self, other):
         return other == ("fork", False) or other == "posix_spawn"
+
 
 class MockProcessTests(unittest.TestCase):
     """
@@ -1728,6 +1729,7 @@ class MockProcessTests(unittest.TestCase):
         # It should close the first read pipe, and the 2 last write pipes
         self.assertEqual(set(self.mockos.closed), {-1, -4, -6})
         self.assertProcessLaunched()
+
     def test_mockForkInParentGarbageCollectorEnabled(self):
         """
         The garbage collector should be enabled when L{reactor.spawnProcess}
@@ -1924,6 +1926,7 @@ class MockProcessTests(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False, uid=8080)
         self.assertProcessLaunched()
+
     def test_mockPTYSetUid(self):
         """
         Try creating a PTY process with setting its uid: it's almost the same
@@ -1971,6 +1974,7 @@ class MockProcessTests(unittest.TestCase):
         finally:
             process.PTYProcess = oldPTYProcess
         self.assertProcessLaunched()
+
     def test_mockWithWaitError(self):
         """
         Test that reapProcess logs errors raised.
