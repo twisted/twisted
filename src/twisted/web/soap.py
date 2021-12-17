@@ -16,11 +16,12 @@ Pluggable method lookup policies.
 """
 
 # SOAPpy
-import SOAPpy
+import SOAPpy  # type: ignore[import]
+
+from twisted.internet import defer
 
 # twisted imports
-from twisted.web import server, resource, client
-from twisted.internet import defer
+from twisted.web import client, resource, server
 
 
 class SOAPPublisher(resource.Resource):

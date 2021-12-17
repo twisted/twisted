@@ -20,3 +20,4 @@ apidocs/
 pip-wheel-metadata/
 .vscode/
 .idea/
+.tox/

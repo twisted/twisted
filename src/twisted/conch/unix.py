@@ -20,25 +20,25 @@ from zope.interface import implementer
 from twisted.conch import ttymodes
 from twisted.conch.avatar import ConchUser
 from twisted.conch.error import ConchError
+from twisted.conch.interfaces import ISession, ISFTPFile, ISFTPServer
 from twisted.conch.ls import lsLine
-from twisted.conch.ssh import session, forwarding, filetransfer
+from twisted.conch.ssh import filetransfer, forwarding, session
 from twisted.conch.ssh.filetransfer import (
-    FXF_READ,
-    FXF_WRITE,
     FXF_APPEND,
     FXF_CREAT,
-    FXF_TRUNC,
     FXF_EXCL,
+    FXF_READ,
+    FXF_TRUNC,
+    FXF_WRITE,
 )
-from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
+from twisted.logger import Logger
 from twisted.python import components
 from twisted.python.compat import nativeString
-from twisted.logger import Logger
 
 try:
-    import utmp
+    import utmp  # type: ignore[import]
 except ImportError:
     utmp = None
 
@@ -97,7 +97,7 @@ class UnixConchUser(ConchUser):
                 ),
                 interface=hostToBind,
             )
-        except:
+        except BaseException:
             return 0
         else:
             self.listeners[(hostToBind, portToBind)] = listener
@@ -223,12 +223,12 @@ class SSHSessionForUnixConchUser:
         shellExec = os.path.basename(shell)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
-        self.environ["SSH_CLIENT"] = "%s %s %s" % (peer.host, peer.port, host.port)
+        self.environ["SSH_CLIENT"] = f"{peer.host} {peer.port} {host.port}"
         self.getPtyOwnership()
         self.pty = self._reactor.spawnProcess(
             proto,
             shell,
-            ["-%s" % (shellExec,)],
+            [f"-{shellExec}"],
             self.environ,
             homeDir,
             uid,
@@ -251,7 +251,7 @@ class SSHSessionForUnixConchUser:
         command = (shell, "-c", cmd)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
-        self.environ["SSH_CLIENT"] = "%s %s %s" % (peer.host, peer.port, host.port)
+        self.environ["SSH_CLIENT"] = f"{peer.host} {peer.port} {host.port}"
         if self.ptyTuple:
             self.getPtyOwnership()
         self.pty = self._reactor.spawnProcess(
@@ -299,9 +299,9 @@ class SSHSessionForUnixConchUser:
                 else:
                     attr[flag] = attr[flag] & ~ttyval
             elif ttyMode == "OSPEED":
-                attr[tty.OSPEED] = getattr(tty, "B%s" % (modeValue,))
+                attr[tty.OSPEED] = getattr(tty, f"B{modeValue}")
             elif ttyMode == "ISPEED":
-                attr[tty.ISPEED] = getattr(tty, "B%s" % (modeValue,))
+                attr[tty.ISPEED] = getattr(tty, f"B{modeValue}")
             else:
                 if not hasattr(tty, ttyMode):
                     continue

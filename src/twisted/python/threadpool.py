@@ -13,9 +13,8 @@ from threading import Thread, currentThread
 from typing import List
 
 from twisted._threads import pool as _pool
-from twisted.python import log, context
+from twisted.python import context, log
 from twisted.python.failure import Failure
-
 
 WorkerStop = object()
 
@@ -65,7 +64,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads = []  # type: List[Thread]
+        self.threads: List[Thread] = []
 
         def trackingThreadFactory(*a, **kw):
             thread = self.threadFactory(  # type: ignore[misc]
@@ -168,7 +167,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-%s-%s" % (self.name or id(self), self.workers)
+        return f"PoolThread-{self.name or id(self)}-{self.workers}"
 
     def stopAWorker(self):
         """
@@ -237,7 +236,7 @@ class ThreadPool:
             try:
                 result = inContext.theWork()  # type: ignore[attr-defined]
                 ok = True
-            except:
+            except BaseException:
                 result = Failure()
                 ok = False
 
@@ -302,6 +301,6 @@ class ThreadPool:
         Dump some plain-text informational messages to the log about the state
         of this L{ThreadPool}.
         """
-        log.msg("waiters: %s" % (self.waiters,))
-        log.msg("workers: %s" % (self.working,))
-        log.msg("total: %s" % (self.threads,))
+        log.msg(f"waiters: {self.waiters}")
+        log.msg(f"workers: {self.working}")
+        log.msg(f"total: {self.threads}")

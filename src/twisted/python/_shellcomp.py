@@ -32,7 +32,7 @@ import itertools
 from types import MethodType
 from typing import Dict, List, Set
 
-from twisted.python import reflect, util, usage
+from twisted.python import reflect, usage, util
 from twisted.python.compat import ioType
 
 
@@ -116,9 +116,9 @@ def shellComplete(config, cmdName, words, shellCompFile):
                     subOptions = parser()
                     subOptions.parent = config
 
-                    gen = ZshSubcommandBuilder(
+                    gen: ZshBuilder = ZshSubcommandBuilder(
                         subOptions, config, cmdName, shellCompFile
-                    )  # type: ZshBuilder
+                    )
                     gen.write()
                     return
 
@@ -140,7 +140,7 @@ class SubcommandAction(usage.Completer):
     def _shellCode(self, optName, shellType):
         if shellType == usage._ZSH:
             return "*::subcmd:->subcmd"
-        raise NotImplementedError("Unknown shellType %r" % (shellType,))
+        raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
 class ZshBuilder:
@@ -305,8 +305,8 @@ class ZshArgumentsGenerator:
 
         aCL = reflect.accumulateClassList
 
-        optFlags = []  # type: List[List[object]]
-        optParams = []  # type: List[List[object]]
+        optFlags: List[List[object]] = []
+        optParams: List[List[object]] = []
 
         aCL(options.__class__, "optFlags", optFlags)
         aCL(options.__class__, "optParameters", optParams)
@@ -384,7 +384,7 @@ class ZshArgumentsGenerator:
 
         @return: L{None}
 
-        @raises: ValueError: if C{Completer} with C{repeat=True} is found and
+        @raise ValueError: If C{Completer} with C{repeat=True} is found and
             is not the last item in the C{extraActions} list.
         """
         for i, action in enumerate(self.extraActions):
@@ -408,7 +408,7 @@ class ZshArgumentsGenerator:
         """
         Ensure that none of the option names given in the metadata are typoed
         @return: L{None}
-        @raise ValueError: Raised if unknown option names have been found.
+        @raise ValueError: If unknown option names have been found.
         """
 
         def err(name):
@@ -481,7 +481,7 @@ class ZshArgumentsGenerator:
             if optList[1] != None:
                 longToShort[optList[0]] = optList[1]
 
-        excludes = {}  # type: Dict[str, Set[str]]
+        excludes: Dict[str, Set[str]] = {}
         for lst in self.mutuallyExclusive:
             for i, longname in enumerate(lst):
                 tmp = set(lst[:i] + lst[i + 1 :])
@@ -518,8 +518,8 @@ class ZshArgumentsGenerator:
             shortField = ""
 
         descr = self.getDescription(longname)
-        descriptionField = descr.replace("[", "\[")
-        descriptionField = descriptionField.replace("]", "\]")
+        descriptionField = descr.replace("[", r"\[")
+        descriptionField = descriptionField.replace("]", r"\]")
         descriptionField = "[%s]" % descriptionField
 
         actionField = self.getAction(longname)
@@ -574,7 +574,7 @@ class ZshArgumentsGenerator:
             return action._shellCode(longname, usage._ZSH)
 
         if longname in self.paramNameToDefinition:
-            return ":%s:_files" % (longname,)
+            return f":{longname}:_files"
         return ""
 
     def getDescription(self, longname):
@@ -622,7 +622,7 @@ class ZshArgumentsGenerator:
         These will be defined by 'opt_foo' methods of the Options subclass
         @return: L{None}
         """
-        methodsDict = {}  # type: Dict[str, MethodType]
+        methodsDict: Dict[str, MethodType] = {}
         reflect.accumulateMethods(self.options, methodsDict, "opt_")
         methodToShort = {}
         for name in methodsDict.copy():

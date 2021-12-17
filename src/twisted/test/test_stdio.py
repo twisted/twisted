@@ -9,19 +9,17 @@ Tests for L{twisted.internet.stdio}.
 """
 
 
+import itertools
 import os
 import sys
-import itertools
-
 from unittest import skipIf
 
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.internet import defer, error, protocol, reactor, stdio
 from twisted.python import filepath, log
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.internet import error, defer, protocol, stdio, reactor
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
-
+from twisted.trial.unittest import SkipTest, TestCase
 
 # A short string which is intended to appear here and nowhere else,
 # particularly not in any random garbage output CPython unavoidable
@@ -113,7 +111,7 @@ class StandardInputOutputTests(TestCase):
 
     def _requireFailure(self, d, callback):
         def cb(result):
-            self.fail("Process terminated with non-Failure: %r" % (result,))
+            self.fail(f"Process terminated with non-Failure: {result!r}")
 
         def eb(err):
             return callback(err)
@@ -133,7 +131,7 @@ class StandardInputOutputTests(TestCase):
 
         def processEnded(reason):
             # Copy the child's log to ours so it's more visible.
-            with open(errorLogFile, "r") as f:
+            with open(errorLogFile) as f:
                 for line in f:
                     log.msg("Child logged: " + line.rstrip())
 
@@ -201,7 +199,7 @@ class StandardInputOutputTests(TestCase):
             """
             self.assertTrue(
                 p.data[1].endswith(UNIQUE_LAST_WRITE_STRING),
-                "Received %r from child, did not find expected bytes." % (p.data,),
+                f"Received {p.data!r} from child, did not find expected bytes.",
             )
             reason.trap(error.ProcessDone)
 

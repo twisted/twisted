@@ -14,7 +14,7 @@ import random
 import time
 from hashlib import md5
 
-from zope.interface import Interface, Attribute, implementer
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import networkString
 
@@ -126,7 +126,7 @@ class DigestMD5:
             challenge.
         @type username: C{unicode}
 
-        @param username: The authentication password to use to respond to a
+        @param password: The authentication password to use to respond to a
             challenge.
         @type password: C{unicode}
         """
@@ -134,9 +134,9 @@ class DigestMD5:
         self.password = password
         self.defaultRealm = host
 
-        self.digest_uri = "%s/%s" % (serv_type, host)
+        self.digest_uri = f"{serv_type}/{host}"
         if serv_name is not None:
-            self.digest_uri += "/%s" % (serv_name,)
+            self.digest_uri += f"/{serv_name}"
 
     def getInitialResponse(self):
         return None
@@ -278,7 +278,7 @@ class DigestMD5:
             # TODO - add error checking
             raise
 
-        nc = networkString("%08x" % (1,))  # TODO: support subsequent auth.
+        nc = networkString(f"{1:08x}")  # TODO: support subsequent auth.
         cnonce = self._gen_nonce()
         qop = b"auth"
 

@@ -8,7 +8,6 @@ Tests for L{twisted.python.threadable}.
 
 import pickle
 import sys
-
 from unittest import skipIf
 
 try:
@@ -18,9 +17,8 @@ except ImportError:
 else:
     threadingSkip = False
 
-from twisted.trial.unittest import SynchronousTestCase, FailTest
-
 from twisted.python import threadable
+from twisted.trial.unittest import FailTest, SynchronousTestCase
 
 
 class TestObject:

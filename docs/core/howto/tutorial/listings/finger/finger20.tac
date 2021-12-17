@@ -1,15 +1,17 @@
 # Do everything properly, and componentize
+import cgi
+
+from zope.interface import Interface, implementer
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
-from zope.interface import Interface, implementer
-import cgi
+from twisted.words.protocols import irc
+
 
 class IFingerService(Interface):
-
     def getUser(user):
         """
         Return a deferred returning L{bytes}.
@@ -22,7 +24,6 @@ class IFingerService(Interface):
 
 
 class IFingerSetterService(Interface):
-
     def setUser(user, status):
         """
         Set the user's status to something.
@@ -34,18 +35,18 @@ def catchError(err):
 
 
 class FingerProtocol(basic.LineReceiver):
-
     def lineReceived(self, user):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
+
         def writeValue(value):
-            self.transport.write(value + b'\r\n')
+            self.transport.write(value + b"\r\n")
             self.transport.loseConnection()
+
         d.addCallback(writeValue)
 
 
 class IFingerFactory(Interface):
-
     def getUser(user):
         """
         Return a deferred returning a string.
@@ -68,13 +69,11 @@ class FingerFactoryFromService(protocol.ServerFactory):
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(FingerFactoryFromService,
-                           IFingerService,
-                           IFingerFactory)
+
+components.registerAdapter(FingerFactoryFromService, IFingerService, IFingerFactory)
 
 
 class FingerSetterProtocol(basic.LineReceiver):
-
     def connectionMade(self):
         self.lines = []
 
@@ -87,7 +86,6 @@ class FingerSetterProtocol(basic.LineReceiver):
 
 
 class IFingerSetterFactory(Interface):
-
     def setUser(user, status):
         """
         Return a deferred returning a string.
@@ -111,23 +109,22 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
         self.service.setUser(user, status)
 
 
-components.registerAdapter(FingerSetterFactoryFromService,
-                           IFingerSetterService,
-                           IFingerSetterFactory)
+components.registerAdapter(
+    FingerSetterFactoryFromService, IFingerSetterService, IFingerSetterFactory
+)
 
 
 class IRCReplyBot(irc.IRCClient):
-
     def connectionMade(self):
         self.nickname = self.factory.nickname
         irc.IRCClient.connectionMade(self)
 
     def privmsg(self, user, channel, msg):
-        user = user.split('!')[0]
+        user = user.split("!")[0]
         if self.nickname.lower() == channel.lower():
             d = self.factory.getUser(msg)
             d.addErrback(catchError)
-            d.addCallback(lambda m: "Status of %s: %s" % (msg, m))
+            d.addCallback(lambda m: f"Status of {msg}: {m}")
             d.addCallback(lambda m: self.msg(user, m))
 
 
@@ -160,16 +157,16 @@ class IRCClientFactoryFromService(protocol.ClientFactory):
     def getUser(self, user):
         return self.service.getUser(user)
 
-components.registerAdapter(IRCClientFactoryFromService,
-                           IFingerService,
-                           IIRCClientFactory)
+
+components.registerAdapter(
+    IRCClientFactoryFromService, IFingerService, IIRCClientFactory
+)
 
 
 class UserStatusTree(resource.Resource):
-
     def __init__(self, service):
         resource.Resource.__init__(self)
-        self.service=service
+        self.service = service
 
         # add a specific child for the path "RPC2"
         self.putChild(b"RPC2", UserStatusXR(self.service))
@@ -178,14 +175,18 @@ class UserStatusTree(resource.Resource):
         self.putChild(b"", self)
 
     def _cb_render_GET(self, users, request):
-        userOutput = ''.join(["<li><a href=\"%s\">%s</a></li>" % (user, user)
-                for user in users])
-        request.write("""
+        userOutput = "".join(
+            [f'<li><a href="{user}">{user}</a></li>' for user in users]
+        )
+        request.write(
+            """
             <html><head><title>Users</title></head><body>
             <h1>Users</h1>
             <ul>
             %s
-            </ul></body></html>""" % userOutput)
+            </ul></body></html>"""
+            % userOutput
+        )
         request.finish()
 
     def render_GET(self, request):
@@ -198,21 +199,24 @@ class UserStatusTree(resource.Resource):
     def getChild(self, path, request):
         return UserStatus(user=path, service=self.service)
 
+
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
 
 class UserStatus(resource.Resource):
-
     def __init__(self, user, service):
         resource.Resource.__init__(self)
         self.user = user
         self.service = service
 
     def _cb_render_GET(self, status, request):
-        request.write(b"""<html><head><title>%s</title></head>
+        request.write(
+            b"""<html><head><title>%s</title></head>
         <body><h1>%s</h1>
         <p>%s</p>
-        </body></html>""" % (self.user, self.user, status))
+        </body></html>"""
+            % (self.user, self.user, status)
+        )
         request.finish()
 
     def render_GET(self, request):
@@ -224,7 +228,6 @@ class UserStatus(resource.Resource):
 
 
 class UserStatusXR(xmlrpc.XMLRPC):
-
     def __init__(self, service):
         xmlrpc.XMLRPC.__init__(self)
         self.service = service
@@ -238,7 +241,6 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 @implementer(IFingerService)
 class FingerService(service.Service):
-
     def __init__(self, filename):
         self.filename = filename
         self.users = {}
@@ -247,7 +249,7 @@ class FingerService(service.Service):
         self.users.clear()
         with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(b':', 1)
+                user, status = line.split(b":", 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
@@ -268,16 +270,16 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-application = service.Application('finger', uid=1, gid=1)
-f = FingerService('/etc/users')
+application = service.Application("finger", uid=1, gid=1)
+f = FingerService("/etc/users")
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-strports.service("tcp:79", IFingerFactory(f)
-                   ).setServiceParent(serviceCollection)
-strports.service("tcp:8000", server.Site(resource.IResource(f))
-                   ).setServiceParent(serviceCollection)
+strports.service("tcp:79", IFingerFactory(f)).setServiceParent(serviceCollection)
+strports.service("tcp:8000", server.Site(resource.IResource(f))).setServiceParent(
+    serviceCollection
+)
 i = IIRCClientFactory(f)
-i.nickname = 'fingerbot'
+i.nickname = "fingerbot"
 internet.ClientService(
-    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"),
-    i).setServiceParent(serviceCollection)
+    endpoints.clientFromString(reactor, "tcp:irc.freenode.org:6667"), i
+).setServiceParent(serviceCollection)

@@ -14,14 +14,14 @@ headers for each of the allowed authentication schemes.
 """
 
 
+from zope.interface import implementer
+
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
+from twisted.logger import Logger
 from twisted.python.components import proxyForInterface
 from twisted.web import util
 from twisted.web.resource import ErrorPage, IResource
-from twisted.logger import Logger
-
-from zope.interface import implementer
 
 
 @implementer(IResource)
@@ -123,7 +123,7 @@ class HTTPAuthSessionWrapper:
             credentials = factory.decode(respString, request)
         except error.LoginFailed:
             return UnauthorizedResource(self._credentialFactories)
-        except:
+        except BaseException:
             self._log.failure("Unexpected failure from credentials factory")
             return ErrorPage(500, None, None)
         else:
@@ -195,7 +195,7 @@ class HTTPAuthSessionWrapper:
                 called.
                 """
                 request.notifyFinish().addBoth(lambda ign: logout())
-                return super(ResourceWrapper, self).render(request)
+                return super().render(request)
 
         return ResourceWrapper(avatar)
 

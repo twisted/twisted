@@ -11,12 +11,11 @@ import sys
 import time
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
-from twisted.internet import reactor, protocol, error, abstract, defer
-from twisted.internet import interfaces, base
+from twisted.internet import abstract, base, defer, error, interfaces, protocol, reactor
 from twisted.internet.defer import Deferred, passthru
 from twisted.internet.tcp import Connector
 from twisted.python import util
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet import ssl as _ssl
@@ -740,7 +739,7 @@ class TimeTests(TestCase):
         def check():
             try:
                 self.assertEqual(called, [])
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -768,7 +767,7 @@ class TimeTests(TestCase):
         def later():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -786,7 +785,7 @@ class TimeTests(TestCase):
         def check():
             try:
                 self.assertRaises(error.AlreadyCalled, call.cancel)
-            except:
+            except BaseException:
                 d.errback()
             else:
                 d.callback(None)
@@ -873,7 +872,7 @@ class CallFromThreadStopsAndWakeUpTests(TestCase):
     def _callFromThreadCallback2(self, d):
         try:
             self.assertTrue(self.stopped)
-        except:
+        except BaseException:
             # Send the error to the deferred
             d.errback()
         else:
@@ -1229,13 +1228,13 @@ class ReentrantProducer(DummyProducer):
     """
 
     def __init__(self, consumer, methodName, *methodArgs):
-        super(ReentrantProducer, self).__init__()
+        super().__init__()
         self.consumer = consumer
         self.methodName = methodName
         self.methodArgs = methodArgs
 
     def resumeProducing(self):
-        super(ReentrantProducer, self).resumeProducing()
+        super().resumeProducing()
         getattr(self.consumer, self.methodName)(*self.methodArgs)
 
 

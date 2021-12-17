@@ -6,11 +6,10 @@ Tests for L{twisted.internet.task}.
 """
 
 
-from twisted.trial import unittest
-
-from twisted.internet import interfaces, task, reactor, defer, error
+from twisted.internet import defer, error, interfaces, reactor, task
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 # Be compatible with any jerks who used our private stuff
 Clock = task.Clock
@@ -20,7 +19,7 @@ from twisted.python import failure
 
 class TestableLoopingCall(task.LoopingCall):
     def __init__(self, clock, *a, **kw):
-        super(TestableLoopingCall, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.clock = clock
 
 
@@ -150,7 +149,7 @@ class ClockTests(unittest.TestCase):
 
         calls = c.getDelayedCalls()
 
-        self.assertEqual(set([call, call2]), set(calls))
+        self.assertEqual({call, call2}, set(calls))
 
     def test_getDelayedCallsEmpty(self):
         """
@@ -479,14 +478,12 @@ class LoopTests(unittest.TestCase):
         # valid.  First, the "epsilon" value here measures the floating-point
         # inaccuracy in question, and so if it doesn't exist then we are not
         # triggering an interesting condition.
-        self.assertTrue(
-            abs(epsilon) > 0.0, "{0} should be greater than zero".format(epsilon)
-        )
+        self.assertTrue(abs(epsilon) > 0.0, f"{epsilon} should be greater than zero")
         # Secondly, task.Clock should behave in such a way that once we have
         # advanced to this point, it has reached or exceeded the timespan.
         self.assertTrue(
             secondsValue >= timespan,
-            "{0} should be greater than or equal to {1}".format(secondsValue, timespan),
+            f"{secondsValue} should be greater than or equal to {timespan}",
         )
 
         self.assertEqual(sum(accumulator), count)

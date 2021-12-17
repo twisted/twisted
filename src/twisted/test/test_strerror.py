@@ -5,15 +5,14 @@
 Test strerror
 """
 
-import socket
 import os
-
+import socket
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.tcp import ECONNABORTED
-from twisted.python.win32 import _ErrorFormatter, formatError
 from twisted.python.runtime import platform
+from twisted.python.win32 import _ErrorFormatter, formatError
+from twisted.trial.unittest import TestCase
 
 
 class _MyWindowsException(OSError):
@@ -118,7 +117,7 @@ class ErrorFormatingTests(TestCase):
             formatter.winError = None
 
         if formatter.formatMessage is not None:
-            from win32api import FormatMessage
+            from win32api import FormatMessage  # type: ignore[import]
 
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),

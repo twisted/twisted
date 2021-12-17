@@ -11,7 +11,7 @@ See doc/examples/pyuidemo.py for example usage.
 """
 
 # System imports
-import pyui
+import pyui  # type: ignore[import]
 
 
 def _guiUpdate(reactor, delay):

@@ -7,33 +7,55 @@ Object-oriented filesystem path representation.
 """
 
 
+import base64
+import errno
 import os
 import sys
-import errno
-import base64
+from os import listdir, stat, utime
+from os.path import (
+    abspath,
+    basename,
+    dirname,
+    exists,
+    isabs,
+    join as joinpath,
+    normpath,
+    splitext,
+)
+from stat import (
+    S_IMODE,
+    S_IRGRP,
+    S_IROTH,
+    S_IRUSR,
+    S_ISBLK,
+    S_ISDIR,
+    S_ISREG,
+    S_ISSOCK,
+    S_IWGRP,
+    S_IWOTH,
+    S_IWUSR,
+    S_IXGRP,
+    S_IXOTH,
+    S_IXUSR,
+)
+from typing import IO, Union, cast
 
-from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname, join as joinpath
-from os import listdir, utime, stat
+from zope.interface import Attribute, Interface, implementer
 
-from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
-from stat import S_IRUSR, S_IWUSR, S_IXUSR
-from stat import S_IRGRP, S_IWGRP, S_IXGRP
-from stat import S_IROTH, S_IWOTH, S_IXOTH
-from typing import Union
-
-from zope.interface import Interface, Attribute, implementer
+from twisted.python.compat import cmp, comparable
+from twisted.python.runtime import platform
+from twisted.python.util import FancyEqMixin
+from twisted.python.win32 import (
+    ERROR_DIRECTORY,
+    ERROR_FILE_NOT_FOUND,
+    ERROR_INVALID_NAME,
+    ERROR_PATH_NOT_FOUND,
+    O_BINARY,
+)
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
-
-from twisted.python.compat import comparable, cmp
-from twisted.python.runtime import platform
-from twisted.python.util import FancyEqMixin
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
-from twisted.python.win32 import WindowsError
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
@@ -224,11 +246,10 @@ class UnlistableError(OSError):
     This error will try to look as much like the original error as possible,
     while still being catchable as an independent type.
 
-    @ivar originalException: the actual original exception instance, either an
-        L{OSError} or a L{WindowsError}.
+    @ivar originalException: the actual original exception instance.
     """
 
-    def __init__(self, originalException):
+    def __init__(self, originalException: OSError):
         """
         Create an UnlistableError exception.
 
@@ -236,17 +257,6 @@ class UnlistableError(OSError):
         """
         self.__dict__.update(originalException.__dict__)
         self.originalException = originalException
-
-
-class _WindowsUnlistableError(UnlistableError, WindowsError):
-    """
-    This exception is raised on Windows, for compatibility with previous
-    releases of FilePath where unportable programs may have done "except
-    WindowsError:" around a call to children().
-
-    It is private because all application code may portably catch
-    L{UnlistableError} instead.
-    """
 
 
 def _secureEnoughString(path):
@@ -315,56 +325,30 @@ class AbstractFilePath:
         """
         try:
             subnames = self.listdir()
-        except WindowsError as winErrObj:
+        except OSError as ose:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
             # errno attribute.
-
-            # Under Python 2, WindowsError is an OSError subclass.
-
-            # Under Python 2.5 and higher on Windows, WindowsError has a
-            # winerror attribute and an errno attribute.
-
+            #
             # The winerror attribute is bound to the Windows error code while
             # the errno attribute is bound to a translation of that code to a
             # perhaps equivalent POSIX error number.
             #
             # For further details, refer to:
             # https://docs.python.org/3/library/exceptions.html#OSError
-
-            # If not for this clause OSError would be handling all of these
-            # errors on Windows.  The errno attribute contains a POSIX error
-            # code while the winerror attribute contains a Windows error code.
-            # Windows error codes aren't the same as POSIX error codes,
-            # so we need to handle them differently.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
-            winerror = getattr(winErrObj, "winerror", winErrObj.errno)
-            if winerror not in (
+            if getattr(ose, "winerror", None) in (
                 ERROR_PATH_NOT_FOUND,
                 ERROR_FILE_NOT_FOUND,
                 ERROR_INVALID_NAME,
                 ERROR_DIRECTORY,
             ):
-                raise
-            raise _WindowsUnlistableError(winErrObj)
-        except OSError as ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
-                # Other possible errors here, according to linux manpages:
-                # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
-                # sort of thing which should be handled normally. -glyph
-                raise
-            raise UnlistableError(ose)
+                raise UnlistableError(ose)
+            if ose.errno in (errno.ENOENT, errno.ENOTDIR):
+                raise UnlistableError(ose)
+            # Other possible errors here, according to linux manpages:
+            # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
+            # sort of thing which should be handled normally. -glyph
+            raise
         return [self.child(name) for name in subnames]
 
     def walk(self, descend=None):
@@ -439,7 +423,7 @@ class AbstractFilePath:
         @param ancestor: an instance of the same class as self, ostensibly an
         ancestor of self.
 
-        @raise: ValueError if the 'ancestor' parameter is not actually an
+        @raise ValueError: If the C{ancestor} parameter is not actually an
         ancestor, i.e. a path for /x/y/z is passed as an ancestor for /a/b/c/d.
 
         @return: a list of strs
@@ -456,7 +440,7 @@ class AbstractFilePath:
             p = p.parent()
         if f == ancestor and segments:
             return segments
-        raise ValueError("%r not parent of %r" % (ancestor, self))
+        raise ValueError(f"{ancestor!r} not parent of {self!r}")
 
     # new in 8.0
     def __hash__(self):
@@ -511,7 +495,7 @@ class RWX(FancyEqMixin):
         self.execute = executable
 
     def __repr__(self) -> str:
-        return "RWX(read=%s, write=%s, execute=%s)" % (
+        return "RWX(read={}, write={}, execute={})".format(
             self.read,
             self.write,
             self.execute,
@@ -555,17 +539,17 @@ class Permissions(FancyEqMixin):
     compareAttributes = ("user", "group", "other")
 
     def __init__(self, statModeInt):
-        self.user, self.group, self.other = [
-            RWX(*[statModeInt & bit > 0 for bit in bitGroup])
+        self.user, self.group, self.other = (
+            RWX(*(statModeInt & bit > 0 for bit in bitGroup))
             for bitGroup in [
                 [S_IRUSR, S_IWUSR, S_IXUSR],
                 [S_IRGRP, S_IWGRP, S_IXGRP],
                 [S_IROTH, S_IWOTH, S_IXOTH],
             ]
-        ]
+        )
 
     def __repr__(self) -> str:
-        return "[%s | %s | %s]" % (str(self.user), str(self.group), str(self.other))
+        return f"[{str(self.user)} | {str(self.group)} | {str(self.other)}]"
 
     def shorthand(self):
         """
@@ -653,13 +637,6 @@ class FilePath(AbstractFilePath):
     Even if you pass me a relative path, I will convert that to an absolute
     path internally.
 
-    Note: although time-related methods do return floating-point results, they
-    may still be only second resolution depending on the platform and the last
-    value passed to L{os.stat_float_times}.  If you want greater-than-second
-    precision, call C{os.stat_float_times(True)}, or use Python 2.5.
-    Greater-than-second precision is only available in Windows on Python2.5 and
-    later.
-
     The type of C{path} when instantiating decides the mode of the L{FilePath}.
     That is, C{FilePath(b"/")} will return a L{bytes} mode L{FilePath}, and
     C{FilePath(u"/")} will return a L{unicode} mode L{FilePath}.
@@ -674,12 +651,11 @@ class FilePath(AbstractFilePath):
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
 
-    @type path: L{bytes} or L{unicode}
     @ivar path: The path from which 'downward' traversal is permitted.
     """
 
     _statinfo = None
-    path = None
+    path: Union[bytes, str] = None  # type: ignore[assignment]
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -791,15 +767,15 @@ class FilePath(AbstractFilePath):
 
         if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
-            raise InsecurePath("%r contains a colon." % (path,))
+            raise InsecurePath(f"{path!r} contains a colon.")
 
         norm = normpath(path)
         if sep in norm:
-            raise InsecurePath("%r contains one or more directory separators" % (path,))
+            raise InsecurePath(f"{path!r} contains one or more directory separators")
 
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%r is not a child of %s" % (newpath, ourPath))
+            raise InsecurePath(f"{newpath!r} is not a child of {ourPath}")
         return self.clonePath(newpath)
 
     def preauthChild(self, path):
@@ -817,7 +793,7 @@ class FilePath(AbstractFilePath):
 
         newpath = abspath(joinpath(ourPath, normpath(path)))
         if not newpath.startswith(ourPath):
-            raise InsecurePath("%s is not a child of %s" % (newpath, ourPath))
+            raise InsecurePath(f"{newpath} is not a child of {ourPath}")
         return self.clonePath(newpath)
 
     def childSearchPreauth(self, *paths):
@@ -922,7 +898,7 @@ class FilePath(AbstractFilePath):
         """
         os.symlink(self.path, linkFilePath.path)
 
-    def open(self, mode="r"):
+    def open(self, mode: str = "r") -> IO[bytes]:
         """
         Open this file using C{mode} or for writing if C{alwaysCreate} is
         C{True}.
@@ -931,19 +907,16 @@ class FilePath(AbstractFilePath):
         to include C{"b"} in C{mode}.
 
         @param mode: The mode to open the file in.  Default is C{"r"}.
-        @type mode: L{str}
         @raises AssertionError: If C{"a"} is included in the mode and
             C{alwaysCreate} is C{True}.
-        @rtype: L{file}
-        @return: An open L{file} object.
+        @return: An open file-like object.
         """
         if self.alwaysCreate:
             assert "a" not in mode, (
                 "Appending not supported when " "alwaysCreate == True"
             )
             return self.create()
-        # This hack is necessary because of a bug in Python 2.7 on Windows:
-        # http://bugs.python.org/issue7686
+        # Make sure we open with exactly one "b" in the mode.
         mode = mode.replace("b", "")
         return open(self.path, mode + "b")
 
@@ -1276,8 +1249,8 @@ class FilePath(AbstractFilePath):
             are relative to this L{FilePath}.
         @rtype: L{list}
 
-        @raise: Anything the platform L{os.listdir} implementation might raise
-            (typically L{OSError}).
+        @raise OSError: Any exception the platform L{os.listdir} implementation
+            may raise.
         """
         return listdir(self.path)
 
@@ -1293,7 +1266,7 @@ class FilePath(AbstractFilePath):
         return splitext(self.path)
 
     def __repr__(self) -> str:
-        return "FilePath(%r)" % (self.path,)
+        return f"FilePath({self.path!r})"
 
     def touch(self):
         """
@@ -1306,7 +1279,7 @@ class FilePath(AbstractFilePath):
         """
         try:
             self.open("a").close()
-        except IOError:
+        except OSError:
             pass
         utime(self.path, None)
 
@@ -1473,7 +1446,7 @@ class FilePath(AbstractFilePath):
         """
         self.alwaysCreate = val
 
-    def create(self):
+    def create(self) -> IO[bytes]:
         """
         Exclusively create a file, only if this file previously did not exist.
 
@@ -1485,7 +1458,7 @@ class FilePath(AbstractFilePath):
         # settable via fdopen, so this file is slightly less functional than the
         # one returned from 'open' by default.  send a patch to Python...
 
-        return os.fdopen(fdint, "w+b")
+        return cast(IO[bytes], os.fdopen(fdint, "w+b"))
 
     def temporarySibling(self, extension=b""):
         """

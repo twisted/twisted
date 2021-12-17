@@ -6,10 +6,10 @@ Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
+from twisted.trial.unittest import TestCase
 
 skipSockets = None
 try:
@@ -18,8 +18,8 @@ try:
 except ImportError:
     skipSockets = "Platform does not support AF_UNIX sockets"
 
-from twisted.internet.tcp import Port
 from twisted.internet import reactor
+from twisted.internet.tcp import Port
 
 
 class TrivialReactor(PosixReactorBase):
@@ -84,7 +84,7 @@ class PosixReactorBaseTests(TestCase):
         reactor.addReader(reader)
         reactor.addWriter(writer)
         removed = reactor._removeAll(reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
+        self.assertEqual(set(removed), {reader, writer})
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
 
@@ -289,3 +289,12 @@ class ConnectedDatagramPortTests(TestCase):
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
         self.assertTrue(self.called)
+
+
+class WakerTests(TestCase):
+    def test_noWakerConstructionWarnings(self):
+        waker = _Waker(reactor=None)
+        warnings = self.flushWarnings()
+        # explicitly close the sockets
+        waker.connectionLost(None)
+        self.assertEqual(len(warnings), 0)

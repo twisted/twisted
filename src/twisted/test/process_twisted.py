@@ -14,15 +14,15 @@ sys.path.insert(0, os.curdir)
 # end of preamble
 
 
-from twisted.python import log  # noqa
-from zope.interface import implementer  # noqa
-from twisted.internet import interfaces  # noqa
+from zope.interface import implementer
 
+from twisted.internet import interfaces
+from twisted.python import log
 
 log.startLogging(sys.stderr)
 
 
-from twisted.internet import protocol, reactor, stdio  # noqa
+from twisted.internet import protocol, reactor, stdio
 
 
 @implementer(interfaces.IHalfCloseableProtocol)

@@ -20,9 +20,9 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 
-import os
 import base64
 import glob
+import os
 import pickle
 
 from twisted.python.filepath import FilePath
@@ -134,7 +134,7 @@ class DirDBM:
             new = old.siblingExtension(".new")  # New entry
         try:
             self._writeFile(new, v)
-        except:
+        except BaseException:
             new.remove()
             raise
         else:
@@ -158,7 +158,7 @@ class DirDBM:
         path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
-        except (EnvironmentError):
+        except (OSError):
             raise KeyError(k)
 
     def __delitem__(self, k):
@@ -176,7 +176,7 @@ class DirDBM:
         k = self._encode(k)
         try:
             self._dnamePath.child(k).remove()
-        except (EnvironmentError):
+        except (OSError):
             raise KeyError(self._decode(k))
 
     def keys(self):

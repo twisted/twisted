@@ -13,18 +13,17 @@ from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python import filepath
-from twisted.internet.interfaces import IProcessTransport
 from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
+from twisted.python import filepath
 from twisted.python.failure import Failure
-
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial import util
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial.util import (
     DirtyReactorAggregateError,
     _Janitor,
-    excInfoOrFailureToExcInfo,
     acquireAttribute,
+    excInfoOrFailureToExcInfo,
 )
 
 
@@ -466,7 +465,7 @@ class ExcInfoTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             f = Failure()
         self.assertEqual((f.type, f.value, f.tb), excInfoOrFailureToExcInfo(f))
 
@@ -593,8 +592,7 @@ class ListToPhraseTests(SynchronousTestCase):
         """
 
         def sample():
-            for i in range(2):
-                yield i
+            yield from range(2)
 
         error = self.assertRaises(TypeError, util._listToPhrase, sample, "and")
         self.assertEqual(str(error), "Things must be a list or a tuple")

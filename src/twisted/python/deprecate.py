@@ -91,12 +91,12 @@ __all__ = [
 ]
 
 
+import inspect
+import sys
 from dis import findlinestarts
 from functools import wraps
-import inspect
 from types import ModuleType
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
-import sys
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -106,6 +106,8 @@ DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 # Notionally, part of twisted.python.reflect, but defining it there causes a
 # cyclic dependency between this module and that module.  Define it here,
 # instead, and let reflect import it to re-expose to the public.
+
+
 def _fullyQualifiedName(obj):
     """
     Return the fully qualified name of a module, class, method or function.
@@ -121,17 +123,17 @@ def _fullyQualifiedName(obj):
 
     if inspect.isclass(obj) or inspect.isfunction(obj):
         moduleName = obj.__module__
-        return "%s.%s" % (moduleName, name)
+        return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
         try:
             cls = obj.im_class
         except AttributeError:
             # Python 3 eliminates im_class, substitutes __module__ and
             # __qualname__ to provide similar information.
-            return "%s.%s" % (obj.__module__, obj.__qualname__)
+            return f"{obj.__module__}.{obj.__qualname__}"
         else:
             className = _fullyQualifiedName(cls)
-            return "%s.%s" % (className, name)
+            return f"{className}.{name}"
     return name
 
 
@@ -153,7 +155,7 @@ def _getReplacementString(replacement):
     """
     if callable(replacement):
         replacement = _fullyQualifiedName(replacement)
-    return "please use %s instead" % (replacement,)
+    return f"please use {replacement} instead"
 
 
 def _getDeprecationDocstring(version, replacement=None):
@@ -170,9 +172,9 @@ def _getDeprecationDocstring(version, replacement=None):
     @return: a string like "Deprecated in Twisted 27.2.0; please use
         twisted.timestream.tachyon.flux instead."
     """
-    doc = "Deprecated in %s" % (getVersionString(version),)
+    doc = f"Deprecated in {getVersionString(version)}"
     if replacement:
-        doc = "%s; %s" % (doc, _getReplacementString(replacement))
+        doc = f"{doc}; {_getReplacementString(replacement)}"
     return doc + "."
 
 
@@ -205,7 +207,9 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
         format = DEPRECATION_WARNING_FORMAT
     warningString = format % {"fqpn": fqpn, "version": getVersionString(version)}
     if replacement:
-        warningString = "%s; %s" % (warningString, _getReplacementString(replacement))
+        warningString = "{}; {}".format(
+            warningString, _getReplacementString(replacement)
+        )
     return warningString
 
 
@@ -218,18 +222,13 @@ def getDeprecationWarningString(callableThing, version, format=None, replacement
     @param callableThing: Callable object to be deprecated
 
     @type version: L{incremental.Version}
-    @param version: Version that C{callableThing} was deprecated in
+    @param version: Version that C{callableThing} was deprecated in.
 
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
-
-    @param callableThing: A callable to be deprecated.
-
-    @param version: The L{incremental.Version} that the callable
-        was deprecated in.
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -279,9 +278,6 @@ def deprecated(version, replacement=None):
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
-
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
@@ -320,9 +316,6 @@ def deprecatedProperty(version, replacement=None):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
-
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable.
         Either pass in a string, which will be inserted into the warning
@@ -455,7 +448,7 @@ class _ModuleProxy:
         representation of the wrapped module object.
         """
         state = _InternalState(self)
-        return "<%s module=%r>" % (type(self).__name__, state._module)
+        return f"<{type(self).__name__} module={state._module!r}>"
 
     def __setattr__(self, name, value):
         """
@@ -601,7 +594,7 @@ def warnAboutFunction(offender, warningString):
     from L{warnings.warn} in that it is not limited to deprecating the behavior
     of a function currently on the call stack.
 
-    @param function: The function that is being deprecated.
+    @param offender: The function that is being deprecated.
 
     @param warningString: The string that should be emitted by this warning.
     @type warningString: C{str}
@@ -611,21 +604,15 @@ def warnAboutFunction(offender, warningString):
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
     offenderModule = sys.modules[offender.__module__]
-    filename = inspect.getabsfile(offenderModule)
-    lineStarts = list(findlinestarts(offender.__code__))
-    lastLineNo = lineStarts[-1][1]
-    globals = offender.__globals__
-
-    kwargs = dict(
+    warn_explicit(
+        warningString,
         category=DeprecationWarning,
-        filename=filename,
-        lineno=lastLineNo,
+        filename=inspect.getabsfile(offenderModule),
+        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
         module=offenderModule.__name__,
-        registry=globals.setdefault("__warningregistry__", {}),
+        registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,
     )
-
-    warn_explicit(warningString, **kwargs)
 
 
 def _passedArgSpec(argspec, positional, keyword):
@@ -647,7 +634,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}  # type: Dict[str, object]
+    result: Dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}
@@ -710,13 +697,11 @@ def _passedSignature(signature, positional, keyword):
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
             if name not in keyword:
                 if param.default == inspect.Parameter.empty:
-                    raise TypeError("missing keyword arg {}".format(name))
+                    raise TypeError(f"missing keyword arg {name}")
                 else:
                     result[name] = param.default
         else:
-            raise TypeError(
-                "'{}' parameter is invalid kind: {}".format(name, param.kind)
-            )
+            raise TypeError(f"'{name}' parameter is invalid kind: {param.kind}")
 
     if len(positional) > numPositional:
         raise TypeError("Too many arguments.")
@@ -793,17 +778,17 @@ def deprecatedKeywordParameter(
     @param replacement: Optional text indicating what should be used in
         place of the deprecated parameter.
 
-    @since: Twisted NEXT
+    @since: Twisted 21.2.0
     """
 
     def wrapper(wrappee: _Tc) -> _Tc:
         warningString = _getDeprecationWarningString(
-            "The %r parameter to %s" % (name, _fullyQualifiedName(wrappee)),
+            f"The {name!r} parameter to {_fullyQualifiedName(wrappee)}",
             version,
             replacement=replacement,
         )
 
-        doc = "The %r parameter was deprecated in %s" % (
+        doc = "The {!r} parameter was deprecated in {}".format(
             name,
             getVersionString(version),
         )

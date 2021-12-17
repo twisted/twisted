@@ -11,16 +11,27 @@ listeners or connectors are added)::
     epollreactor.install()
 """
 
-
-from select import epoll, EPOLLHUP, EPOLLERR, EPOLLIN, EPOLLOUT
 import errno
+import select
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-
-from twisted.python import log
 from twisted.internet import posixbase
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.python import log
+
+try:
+    # This is to keep mypy from complaining
+    # We don't use type: ignore[attr-defined] on import, because mypy only complains
+    # on on some platforms, and then the unused ignore is an issue if the undefined
+    # attribute isn't.
+    epoll = getattr(select, "epoll")
+    EPOLLHUP = getattr(select, "EPOLLHUP")
+    EPOLLERR = getattr(select, "EPOLLERR")
+    EPOLLIN = getattr(select, "EPOLLIN")
+    EPOLLOUT = getattr(select, "EPOLLOUT")
+except AttributeError as e:
+    raise ImportError(e)
 
 
 @implementer(IReactorFDSet)
@@ -106,7 +117,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._add(
                 reader, self._reads, self._writes, self._selectables, EPOLLIN, EPOLLOUT
             )
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -123,7 +134,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             self._add(
                 writer, self._writes, self._reads, self._selectables, EPOLLOUT, EPOLLIN
             )
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.EPERM:
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
@@ -214,7 +225,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # the amount of time we block to the value specified by our
             # caller.
             l = self._poller.poll(timeout, len(self._selectables))
-        except IOError as err:
+        except OSError as err:
             if err.errno == errno.EINTR:
                 return
             # See epoll_wait(2) for documentation on the other conditions

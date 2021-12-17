@@ -8,16 +8,16 @@ Simple example of a db checker: define a L{ICredentialsChecker} implementation
 that deals with a database backend to authenticate a user.
 """
 
-from twisted.cred import error
-from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
-from twisted.cred.checkers import ICredentialsChecker
-from twisted.internet.defer import Deferred
-
 from zope.interface import implementer
+
+from twisted.cred import error
+from twisted.cred.checkers import ICredentialsChecker
+from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
+from twisted.internet.defer import Deferred
 
 
 @implementer(ICredentialsChecker)
-class DBCredentialsChecker(object):
+class DBCredentialsChecker:
     """
     This class checks the credentials of incoming connections
     against a user table in a database.
@@ -147,6 +147,7 @@ def main():
     You can test it running C{pbechoclient.py}.
     """
     import sys
+
     from twisted.python import log
 
     log.startLogging(sys.stdout)
@@ -173,9 +174,9 @@ def main():
     checker = DBCredentialsChecker(
         pool.runQuery, query="SELECT username, password FROM user WHERE username = ?"
     )
-    from twisted.cred.portal import Portal
-
     import pbecho
+
+    from twisted.cred.portal import Portal
     from twisted.spread import pb
 
     portal = Portal(pbecho.SimpleRealm())

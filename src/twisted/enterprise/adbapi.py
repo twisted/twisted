@@ -7,10 +7,9 @@ An asynchronous mapping to U{DB-API
 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-import sys
 
 from twisted.internet import threads
-from twisted.python import reflect, log, compat
+from twisted.python import log, reflect
 
 
 class ConnectionLost(Exception):
@@ -56,7 +55,7 @@ class Connection:
             curs.close()
             self._connection.commit()
             return
-        except:
+        except BaseException:
             log.err(None, "Rollback failed")
 
         self._pool.disconnect(self._connection)
@@ -104,7 +103,7 @@ class Transaction:
         try:
             self._cursor = self._connection.cursor()
             return
-        except:
+        except BaseException:
             if not self._pool.reconnect:
                 raise
             else:
@@ -173,27 +172,27 @@ class ConnectionPool:
         @param dbapiName: an import string to use to obtain a DB-API compatible
             module (e.g. C{'pyPgSQL.PgSQL'})
 
-        @param cp_min: the minimum number of connections in pool (default 3)
+        @keyword cp_min: the minimum number of connections in pool (default 3)
 
-        @param cp_max: the maximum number of connections in pool (default 5)
+        @keyword cp_max: the maximum number of connections in pool (default 5)
 
-        @param cp_noisy: generate informational log messages during operation
+        @keyword cp_noisy: generate informational log messages during operation
             (default C{False})
 
-        @param cp_openfun: a callback invoked after every C{connect()} on the
+        @keyword cp_openfun: a callback invoked after every C{connect()} on the
             underlying DB-API object. The callback is passed a new DB-API
             connection object. This callback can setup per-connection state
             such as charset, timezone, etc.
 
-        @param cp_reconnect: detect connections which have failed and reconnect
+        @keyword cp_reconnect: detect connections which have failed and reconnect
             (default C{False}). Failed connections may result in
             L{ConnectionLost} exceptions, which indicate the query may need to
             be re-sent.
 
-        @param cp_good_sql: an sql query which should always succeed and change
+        @keyword cp_good_sql: an sql query which should always succeed and change
             no state (default C{'select 1'})
 
-        @param cp_reactor: use this reactor instead of the global reactor
+        @keyword cp_reactor: use this reactor instead of the global reactor
             (added in Twisted 10.2).
         @type cp_reactor: L{IReactorCore} provider
         """
@@ -215,7 +214,7 @@ class ConnectionPool:
         self.connkw = connkw
 
         for arg in self.CP_ARGS:
-            cpArg = "cp_%s" % (arg,)
+            cpArg = f"cp_{arg}"
             if cpArg in connkw:
                 setattr(self, arg, connkw[cpArg])
                 del connkw[cpArg]
@@ -227,8 +226,7 @@ class ConnectionPool:
         self.connections = {}
 
         # These are optional so import them here
-        from twisted.python import threadpool
-        from twisted.python import threadable
+        from twisted.python import threadable, threadpool
 
         self.threadID = threadable.getThreadID
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
@@ -266,9 +264,9 @@ class ConnectionPool:
             B{Note} that this function is B{not} run in the main thread: it
             must be threadsafe.
 
-        @param *args: positional arguments to be passed to func
+        @param args: positional arguments to be passed to func
 
-        @param **kw: keyword arguments to be passed to func
+        @param kw: keyword arguments to be passed to func
 
         @return: a L{Deferred} which will fire the return value of
             C{func(Transaction(...), *args, **kw)}, or a
@@ -284,13 +282,12 @@ class ConnectionPool:
             result = func(conn, *args, **kw)
             conn.commit()
             return result
-        except:
-            excType, excValue, excTraceback = sys.exc_info()
+        except BaseException:
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def runInteraction(self, interaction, *args, **kw):
         """
@@ -311,10 +308,10 @@ class ConnectionPool:
         @param interaction: a callable object whose first argument is an
             L{adbapi.Transaction}.
 
-        @param *args: additional positional arguments to be passed to
+        @param args: additional positional arguments to be passed to
             interaction
 
-        @param **kw: keyword arguments to be passed to interaction
+        @param kw: keyword arguments to be passed to interaction
 
         @return: a Deferred which will fire the return value of
             C{interaction(Transaction(...), *args, **kw)}, or a
@@ -409,7 +406,7 @@ class ConnectionPool:
         conn = self.connections.get(tid)
         if conn is None:
             if self.noisy:
-                log.msg("adbapi connecting: %s" % (self.dbapiName,))
+                log.msg(f"adbapi connecting: {self.dbapiName}")
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
             if self.openfun is not None:
                 self.openfun(conn)
@@ -433,10 +430,10 @@ class ConnectionPool:
 
     def _close(self, conn):
         if self.noisy:
-            log.msg("adbapi closing: %s" % (self.dbapiName,))
+            log.msg(f"adbapi closing: {self.dbapiName}")
         try:
             conn.close()
-        except:
+        except BaseException:
             log.err(None, "Connection close failed")
 
     def _runInteraction(self, interaction, *args, **kw):
@@ -447,13 +444,12 @@ class ConnectionPool:
             trans.close()
             conn.commit()
             return result
-        except:
-            excType, excValue, excTraceback = sys.exc_info()
+        except BaseException:
             try:
                 conn.rollback()
-            except:
+            except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def _runQuery(self, trans, *args, **kw):
         trans.execute(*args, **kw)

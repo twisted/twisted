@@ -6,34 +6,32 @@
 Tests for L{twisted.conch.scripts.cftp}.
 """
 
-import locale
 import getpass
+import locale
 import operator
 import os
 import struct
 import sys
 import time
-from unittest import skipIf
 from io import BytesIO
+from unittest import skipIf
 
-from twisted.python.filepath import FilePath
-from twisted.python.procutils import which
-from twisted.python.reflect import requireModule
 from zope.interface import implementer
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
-from twisted.conch.test.test_filetransfer import SFTPTestBase
-from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer, error
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.internet.task import Clock
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import StringTransport
-from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
-
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
@@ -44,9 +42,9 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test import test_conch, test_ssh
         from twisted.conch.test.test_conch import FakeStdio
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError:
         pass
 
@@ -248,7 +246,7 @@ class InMemorySSHChannel(StringTransport):
         """
         self.conn = conn
         self.localClosed = 0
-        super(InMemorySSHChannel, self).__init__()
+        super().__init__()
 
 
 class FilesystemAccessExpectations:
@@ -584,8 +582,8 @@ class StdioClientTests(TestCase):
             # ends with the final message informing that file was transferred.
             expectedTransfer = []
             for line in expected:
-                expectedTransfer.append("%s %s" % (local, line))
-            expectedTransfer.append("Transferred %s to %s" % (local, remote))
+                expectedTransfer.append(f"{local} {line}")
+            expectedTransfer.append(f"Transferred {local} to {remote}")
             expectedOutput.append(expectedTransfer)
 
             progressParts = output.pop(0).strip("\r").split("\r")
@@ -608,7 +606,7 @@ class StdioClientTests(TestCase):
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
                 line = line.strip().split(" ", 1)
-                actualTransfer.append("%s %s" % (line[0], line[1].strip()))
+                actualTransfer.append(f"{line[0]} {line[1].strip()}")
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
@@ -659,7 +657,7 @@ class StdioClientTests(TestCase):
         remoteFile = InMemoryRemoteFile(remoteName)
         self.fakeFilesystem.put(remoteName, flags, defer.succeed(remoteFile))
 
-        deferred = self.client.cmd_PUT("%s %s ignored" % (localPath, remoteName))
+        deferred = self.client.cmd_PUT(f"{localPath} {remoteName} ignored")
         self.successResultOf(deferred)
 
         self.checkPutMessage([(localPath, remoteName, ["100% 0.0B"])])
@@ -677,8 +675,8 @@ class StdioClientTests(TestCase):
         parent = os.path.dirname(first)
         second = self.makeFile(path=os.path.join(parent, secondName))
         flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
-        firstRemotePath = "/%s" % (firstName,)
-        secondRemotePath = "/%s" % (secondName,)
+        firstRemotePath = f"/{firstName}"
+        secondRemotePath = f"/{secondName}"
         firstRemoteFile = InMemoryRemoteFile(firstRemotePath)
         secondRemoteFile = InMemoryRemoteFile(secondRemotePath)
         self.fakeFilesystem.put(firstRemotePath, flags, defer.succeed(firstRemoteFile))
@@ -716,14 +714,14 @@ class StdioClientTests(TestCase):
         flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
         firstRemoteFile = InMemoryRemoteFile(firstName)
         secondRemoteFile = InMemoryRemoteFile(secondName)
-        firstRemotePath = "/remote/%s" % (firstName,)
-        secondRemotePath = "/remote/%s" % (secondName,)
+        firstRemotePath = f"/remote/{firstName}"
+        secondRemotePath = f"/remote/{secondName}"
         self.fakeFilesystem.put(firstRemotePath, flags, defer.succeed(firstRemoteFile))
         self.fakeFilesystem.put(
             secondRemotePath, flags, defer.succeed(secondRemoteFile)
         )
 
-        deferred = self.client.cmd_PUT("%s remote" % (os.path.join(parent, "*"),))
+        deferred = self.client.cmd_PUT("{} remote".format(os.path.join(parent, "*")))
         self.successResultOf(deferred)
 
         self.assertTrue(firstRemoteFile._closed)
@@ -905,7 +903,7 @@ class CFTPClientTestBase(SFTPTestBase):
         for f in ["dsa_test.pub", "dsa_test", "kh_test"]:
             try:
                 os.remove(f)
-            except:
+            except BaseException:
                 pass
         return SFTPTestBase.tearDown(self)
 
@@ -936,7 +934,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         )
         port = self.server.getHost().port
         cmds = test_conch._makeArgs((cmds % port).split(), mod="cftp")
-        log.msg("running %s %s" % (sys.executable, cmds))
+        log.msg(f"running {sys.executable} {cmds}")
         d = defer.Deferred()
         self.processProtocol = SFTPTestProcess(d)
         d.addCallback(lambda _: self.processProtocol.clearBuffer())
@@ -1094,7 +1092,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         the file.
         """
         # XXX - not actually a unit test
-        expectedOutput = "Transferred %s/testfile1 to %s/test file2" % (
+        expectedOutput = "Transferred {}/testfile1 to {}/test file2".format(
             self.testDir.path,
             self.testDir.path,
         )
@@ -1110,7 +1108,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             )
             return self.runCommand('rm "test file2"')
 
-        d = self.runCommand('get testfile1 "%s/test file2"' % (self.testDir.path,))
+        d = self.runCommand(f'get testfile1 "{self.testDir.path}/test file2"')
         d.addCallback(_checkGet)
         d.addCallback(
             lambda _: self.assertFalse(self.testDir.child("test file2").exists())
@@ -1158,7 +1156,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             self.assertTrue(result.endswith(expectedOutput))
             return self.runCommand('rm "test\\"file2"')
 
-        d = self.runCommand('put %s/testfile1 "test\\"file2"' % (self.testDir.path,))
+        d = self.runCommand(f'put {self.testDir.path}/testfile1 "test\\"file2"')
         d.addCallback(_checkPut)
         d.addCallback(
             lambda _: self.assertFalse(self.testDir.child('test"file2').exists())
@@ -1181,7 +1179,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
                 self.testDir.child("shorterFile"), self.testDir.child("longerFile")
             )
 
-        d = self.runCommand("put %s/shorterFile longerFile" % (self.testDir.path,))
+        d = self.runCommand(f"put {self.testDir.path}/shorterFile longerFile")
         d.addCallback(_checkPut)
         return d
 
@@ -1201,7 +1199,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         def _checkPut(result):
             self.assertFilesEqual(someDir.child("file"), self.testDir.child("file"))
 
-        d = self.runCommand("put %s/dir/*" % (self.testDir.path,))
+        d = self.runCommand(f"put {self.testDir.path}/dir/*")
         d.addCallback(_checkPut)
         return d
 
@@ -1229,7 +1227,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
 
         d = self.runScript(
             "cd ..",
-            "put %s/testR*" % (self.testDir.path,),
+            f"put {self.testDir.path}/testR*",
             "cd %s" % self.testDir.basename(),
         )
         d.addCallback(check)
@@ -1287,7 +1285,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         cftp client. This test works because the 'remote' server is running
         out of a local directory.
         """
-        d = self.runCommand("lmkdir %s/testLocalDirectory" % (self.testDir.path,))
+        d = self.runCommand(f"lmkdir {self.testDir.path}/testLocalDirectory")
         d.addCallback(self.assertEqual, b"")
         d.addCallback(lambda _: self.runCommand("rmdir testLocalDirectory"))
         d.addCallback(self.assertEqual, b"")
@@ -1339,7 +1337,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
             "-v -b %s 127.0.0.1"
         ) % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod="cftp")[1:]
-        log.msg("running %s %s" % (sys.executable, cmds))
+        log.msg(f"running {sys.executable} {cmds}")
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
 

@@ -6,10 +6,8 @@
 Tests for L{twisted.python.url}.
 """
 
-from ..url import URL
-
 from twisted.trial.unittest import SynchronousTestCase
-
+from ..url import URL
 
 theurl = "http://www.foo.com/a/nice/path/?zot=23&zut"
 
@@ -174,7 +172,7 @@ class TestURL(SynchronousTestCase):
                     fragment="frob",
                 )
             ),
-            "URL.from_text(%s)" % (repr("http://foo/bar?baz&k=v#frob"),),
+            "URL.from_text({})".format(repr("http://foo/bar?baz&k=v#frob")),
         )
 
     def test_fromText(self):
@@ -503,7 +501,7 @@ class TestURL(SynchronousTestCase):
         """
         u1 = URL.fromText("http://localhost/a")
         u2 = URL.fromText("http://localhost/b")
-        self.assertFalse(u1 == u2, "%r != %r" % (u1, u2))
+        self.assertFalse(u1 == u2, f"{u1!r} != {u2!r}")
         self.assertNotEqual(u1, u2)
 
     def test_otherTypesNotEqual(self):
@@ -529,7 +527,7 @@ class TestURL(SynchronousTestCase):
         """
         u1 = URL.fromText("http://localhost/")
         u2 = URL.fromText("http://localhost/")
-        self.assertFalse(u1 != u2, "%r == %r" % (u1, u2))
+        self.assertFalse(u1 != u2, f"{u1!r} == {u2!r}")
 
     def test_differentUnequal(self):
         """
@@ -537,7 +535,7 @@ class TestURL(SynchronousTestCase):
         """
         u1 = URL.fromText("http://localhost/a")
         u2 = URL.fromText("http://localhost/b")
-        self.assertTrue(u1 != u2, "%r == %r" % (u1, u2))
+        self.assertTrue(u1 != u2, f"{u1!r} == {u2!r}")
 
     def test_otherTypesUnequal(self):
         """
@@ -568,7 +566,7 @@ class TestURL(SynchronousTestCase):
         self.assertEqual(iri.asText(), unicodey)
         expectedURI = "http://xn--9ca.com/%C3%A9?%C3%A1=%C3%AD#%C3%BA"
         actualURI = uri.asText()
-        self.assertEqual(actualURI, expectedURI, "%r != %r" % (actualURI, expectedURI))
+        self.assertEqual(actualURI, expectedURI, f"{actualURI!r} != {expectedURI!r}")
 
     def test_asIRI(self):
         """
@@ -589,7 +587,7 @@ class TestURL(SynchronousTestCase):
             "#\N{LATIN SMALL LETTER U WITH ACUTE}"
         )
         actualIRI = iri.asText()
-        self.assertEqual(actualIRI, expectedIRI, "%r != %r" % (actualIRI, expectedIRI))
+        self.assertEqual(actualIRI, expectedIRI, f"{actualIRI!r} != {expectedIRI!r}")
 
     def test_badUTF8AsIRI(self):
         """
@@ -605,7 +603,7 @@ class TestURL(SynchronousTestCase):
             "\N{LATIN SMALL LETTER E WITH ACUTE}"
         )
         actualIRI = iri.asText()
-        self.assertEqual(actualIRI, expectedIRI, "%r != %r" % (actualIRI, expectedIRI))
+        self.assertEqual(actualIRI, expectedIRI, f"{actualIRI!r} != {expectedIRI!r}")
 
     def test_alreadyIRIAsIRI(self):
         """

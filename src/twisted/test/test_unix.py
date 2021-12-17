@@ -7,18 +7,16 @@ Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 
 
 import os
-import sys
 import socket
+import sys
 from unittest import skipIf
 
-from twisted.internet import interfaces, reactor, protocol, error, address
-from twisted.internet import defer, utils
+from twisted.internet import address, defer, error, interfaces, protocol, reactor, utils
 from twisted.python import lockfile
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
+from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.trial import unittest
-
-from twisted.test.test_tcp import MyServerFactory, MyClientFactory
 
 
 class FailedConnectionClientFactory(protocol.ClientFactory):
@@ -219,14 +217,14 @@ class UnixSocketTests(unittest.TestCase):
         filename = self.mktemp()
         unixPort = reactor.listenUNIX(filename, serverFactory)
 
-        connectedString = "<%s on %r>" % (factoryName, filename)
+        connectedString = f"<{factoryName} on {filename!r}>"
         self.assertEqual(repr(unixPort), connectedString)
         self.assertEqual(str(unixPort), connectedString)
 
         d = defer.maybeDeferred(unixPort.stopListening)
 
         def stoppedListening(ign):
-            unconnectedString = "<%s (not listening)>" % (factoryName,)
+            unconnectedString = f"<{factoryName} (not listening)>"
             self.assertEqual(repr(unixPort), unconnectedString)
             self.assertEqual(str(unixPort), unconnectedString)
 
@@ -359,14 +357,14 @@ class DatagramUnixSocketTests(unittest.TestCase):
         filename = self.mktemp()
         unixPort = reactor.listenUNIXDatagram(filename, serverProto)
 
-        connectedString = "<%s on %r>" % (protocolName, filename)
+        connectedString = f"<{protocolName} on {filename!r}>"
         self.assertEqual(repr(unixPort), connectedString)
         self.assertEqual(str(unixPort), connectedString)
 
         stopDeferred = defer.maybeDeferred(unixPort.stopListening)
 
         def stoppedListening(ign):
-            unconnectedString = "<%s (not listening)>" % (protocolName,)
+            unconnectedString = f"<{protocolName} (not listening)>"
             self.assertEqual(repr(unixPort), unconnectedString)
             self.assertEqual(str(unixPort), unconnectedString)
 

@@ -21,7 +21,8 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 # the same true of os.times?
 from time import time
 from typing import Optional
-from zope.interface import implementer, Interface
+
+from zope.interface import Interface, implementer
 
 from twisted.protocols import pcp
 
@@ -42,8 +43,8 @@ class Bucket:
     @type rate: C{int}
     """
 
-    maxburst = None  # type: Optional[int]
-    rate = None  # type: Optional[int]
+    maxburst: Optional[int] = None
+    rate: Optional[int] = None
 
     _refcount = 0
 
@@ -129,7 +130,7 @@ class HierarchicalBucketFilter:
     """
 
     bucketFactory = Bucket
-    sweepInterval = None  # type: Optional[int]
+    sweepInterval: Optional[int] = None
 
     def __init__(self, parentFilter=None):
         self.buckets = {}

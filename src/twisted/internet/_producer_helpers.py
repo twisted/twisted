@@ -7,6 +7,7 @@ Helpers for working with producers.
 """
 
 from typing import List
+
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
@@ -14,9 +15,8 @@ from twisted.internet.task import cooperate
 from twisted.python import log
 from twisted.python.reflect import safe_str
 
-
 # This module exports nothing public, it's for internal Twisted use only.
-__all__ = []  # type: List[str]
+__all__: List[str] = []
 
 
 @implementer(IPushProducer)
@@ -62,7 +62,7 @@ class _PullToPush:
         while True:
             try:
                 self._producer.resumeProducing()
-            except:
+            except BaseException:
                 log.err(
                     None,
                     "%s failed, producing will be stopped:"
@@ -72,7 +72,7 @@ class _PullToPush:
                     self._consumer.unregisterProducer()
                     # The consumer should now call stopStreaming() on us,
                     # thus stopping the streaming.
-                except:
+                except BaseException:
                     # Since the consumer blew up, we may not have had
                     # stopStreaming() called, so we just stop on our own:
                     log.err(

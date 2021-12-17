@@ -5,14 +5,11 @@
 Tests for implementations of L{IReactorTime}.
 """
 
-__metaclass__ = type
-
+from twisted.internet.interfaces import IReactorThreads, IReactorTime
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg
 from twisted.python.runtime import platform
-
 from twisted.trial.unittest import SkipTest
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.interfaces import IReactorTime, IReactorThreads
 
 
 class TimeTestsBuilder(ReactorBuilder):
@@ -98,7 +95,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        import gobject
+        import gobject  # type: ignore[import]
 
         reactor = self.buildReactor()
 

@@ -7,42 +7,46 @@ HTTP client.
 """
 
 
-import os
 import collections
+import os
 import warnings
-
-from urllib.parse import urljoin, urldefrag
-from urllib.parse import urlunparse as _urlunparse
-
 import zlib
 from functools import wraps
+from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
 
-from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecatedModuleAttribute, deprecated
-from twisted.python.failure import Failure
 from incremental import Version
 
-from twisted.web.iweb import IPolicyForHTTPS, IAgentEndpointFactory
-from twisted.python.deprecate import getDeprecationWarningString
-from twisted.web import http
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
-from twisted.internet.interfaces import IProtocol, IOpenSSLContextFactory
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
-from twisted.python.util import InsensitiveDict
-from twisted.python.components import proxyForInterface
-from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
-from twisted.web.http_headers import Headers
+from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
 from twisted.logger import Logger
-
-from twisted.web._newclient import _ensureValidURI, _ensureValidMethod
+from twisted.python.compat import nativeString, networkString
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import (
+    deprecated,
+    deprecatedModuleAttribute,
+    getDeprecationWarningString,
+)
+from twisted.python.failure import Failure
+from twisted.python.util import InsensitiveDict
+from twisted.web import error, http
+from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
+)
 
 
 def urlunparse(parts):
-    result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
+    result = _urlunparse(tuple(p.decode("charmap") for p in parts))
     return result.encode("charmap")
 
 
@@ -76,9 +80,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     _completelyDone = True
 
-    _specialHeaders = set(
-        (b"host", b"user-agent", b"cookie", b"content-length"),
-    )
+    _specialHeaders = {b"host", b"user-agent", b"cookie", b"content-length"}
 
     def connectionMade(self):
         method = _ensureValidMethod(getattr(self.factory, "method", b"GET"))
@@ -394,7 +396,7 @@ class HTTPClientFactory(protocol.ClientFactory):
         return self._disconnectedDeferred
 
     def __repr__(self) -> str:
-        return "<%s: %s>" % (self.__class__.__name__, self.url)
+        return f"<{self.__class__.__name__}: {self.url}>"
 
     def setURL(self, url):
         _ensureValidURI(url.strip())
@@ -562,7 +564,7 @@ class HTTPDownloader(HTTPClientFactory):
             try:
                 if not self.file:
                     self.file = self.openFile(partialContent)
-            except IOError:
+            except OSError:
                 # raise
                 self.deferred.errback(Failure())
 
@@ -571,7 +573,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.write(data)
-        except IOError:
+        except OSError:
             # raise
             self.file = None
             self.deferred.errback(Failure())
@@ -586,7 +588,7 @@ class HTTPDownloader(HTTPClientFactory):
             if self.file:
                 try:
                     self.file.close()
-                except:
+                except BaseException:
                     self._log.failure("Error closing HTTPDownloader file")
             self.deferred.errback(reason)
 
@@ -596,7 +598,7 @@ class HTTPDownloader(HTTPClientFactory):
             return
         try:
             self.file.close()
-        except IOError:
+        except OSError:
             self.deferred.errback(Failure())
             return
         self.deferred.callback(self.value)
@@ -735,7 +737,7 @@ def _urljoin(base, url):
     @return: An absolute URL resulting from the combination of C{base} and
         C{url}.
 
-    @see: L{urlparse.urljoin}
+    @see: L{urllib.parse.urljoin()}
 
     @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
     """
@@ -837,7 +839,6 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # should be significantly better than anything above, though it is not yet
 # feature equivalent.
 
-from twisted.web.error import SchemeNotSupported
 from twisted.web._newclient import (
     HTTP11ClientProtocol,
     PotentialDataLoss,
@@ -851,17 +852,17 @@ from twisted.web._newclient import (
     ResponseNeverReceived,
     _WrapperException,
 )
-
+from twisted.web.error import SchemeNotSupported
 
 try:
     from OpenSSL import SSL
 except ImportError:
-    SSL = None
+    SSL = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import (
         CertificateOptions,
-        platformTrust,
         optionsForClientTLS,
+        platformTrust,
     )
 
 
@@ -879,7 +880,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
+        @wraps(decoratee)  # type: ignore[unreachable]
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
@@ -949,9 +950,6 @@ class BrowserLikePolicyForHTTPS:
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
         given network location.
-
-        @param tls: The TLS protocol to create a connection for.
-        @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
 
         @param hostname: The hostname part of the URI.
         @type hostname: L{bytes}
@@ -1069,7 +1067,7 @@ class _ContextFactoryWithContext:
         L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
 
         @return: A context.
-        @rtype context: L{OpenSSL.SSL.Context}
+        @rtype: L{OpenSSL.SSL.Context}
         """
         return self._context
 
@@ -1437,7 +1435,7 @@ class HTTPConnectionPool:
                 raise RuntimeError(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )
-            except:
+            except BaseException:
                 self._log.failure(
                     "BUG: Non-quiescent protocol added to connection pool."
                 )
@@ -1507,9 +1505,7 @@ class _AgentBase:
         the request.
         """
         if not isinstance(method, bytes):
-            raise TypeError(
-                "method={!r} is {}, but must be bytes".format(method, type(method))
-            )
+            raise TypeError(f"method={method!r} is {type(method)}, but must be bytes")
 
         method = _ensureValidMethod(method)
 
@@ -1615,7 +1611,7 @@ class _StandardEndpointFactory:
             )
             return wrapClientTLS(connectionCreator, endpoint)
         else:
-            raise SchemeNotSupported("Unsupported scheme: %r" % (uri.scheme,))
+            raise SchemeNotSupported(f"Unsupported scheme: {uri.scheme!r}")
 
 
 @implementer(IAgent)

@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.kqueuereactor}.
 """
 
-
 import errno
 
 from zope.interface import implementer

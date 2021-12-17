@@ -22,51 +22,67 @@ cumbersome.
 """
 
 
+from inspect import iscoroutine, isgenerator
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from warnings import warn
+
+import attr
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable
+
+
+@attr.s(hash=False, eq=False, auto_attribs=True)
 class slot:
     """
     Marker for markup insertion in a template.
-
-    @type name: C{str}
-    @ivar name: The name of this slot.  The key which must be used in
-        L{Tag.fillSlots} to fill it.
-
-    @type children: C{list}
-    @ivar children: The L{Tag} objects included in this L{slot}'s template.
-
-    @type default: anything flattenable, or L{None}
-    @ivar default: The default contents of this slot, if it is left unfilled.
-        If this is L{None}, an L{UnfilledSlot} will be raised, rather than
-        L{None} actually being used.
-
-    @type filename: C{str} or L{None}
-    @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, L{None}.
-
-    @type lineNumber: C{int} or L{None}
-    @ivar lineNumber: The line number on which this tag was encountered in the
-        XML file from which it was parsed.  If it was not parsed from an XML
-        file, L{None}.
-
-    @type columnNumber: C{int} or L{None}
-    @ivar columnNumber: The column number at which this tag was encountered in
-        the XML file from which it was parsed.  If it was not parsed from an
-        XML file, L{None}.
     """
 
-    def __init__(
-        self, name, default=None, filename=None, lineNumber=None, columnNumber=None
-    ):
-        self.name = name
-        self.children = []
-        self.default = default
-        self.filename = filename
-        self.lineNumber = lineNumber
-        self.columnNumber = columnNumber
+    name: str
+    """
+    The name of this slot.
 
-    def __repr__(self) -> str:
-        return "slot(%r)" % (self.name,)
+    The key which must be used in L{Tag.fillSlots} to fill it.
+    """
+
+    children: List["Tag"] = attr.ib(init=False, factory=list)
+    """
+    The L{Tag} objects included in this L{slot}'s template.
+    """
+
+    default: Optional["Flattenable"] = None
+    """
+    The default contents of this slot, if it is left unfilled.
+
+    If this is L{None}, an L{UnfilledSlot} will be raised, rather than
+    L{None} actually being used.
+    """
+
+    filename: Optional[str] = None
+    """
+    The name of the XML file from which this tag was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    lineNumber: Optional[int] = None
+    """
+    The line number on which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    columnNumber: Optional[int] = None
+    """
+    The column number at which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
@@ -74,78 +90,64 @@ class Tag:
     object, or it may be constructed directly with a tag name. L{Tag}s have a
     special method, C{__call__}, which makes representing trees of XML natural
     using pure python syntax.
-
-    @ivar tagName: The name of the represented element.  For a tag like
-        C{<div></div>}, this would be C{"div"}.
-    @type tagName: C{str}
-
-    @ivar attributes: The attributes of the element.
-    @type attributes: C{dict} mapping C{str} to renderable objects.
-
-    @ivar children: The child L{Tag}s of this C{Tag}.
-    @type children: C{list} of renderable objects.
-
-    @ivar render: The name of the render method to use for this L{Tag}.  This
-        name will be looked up at render time by the
-        L{twisted.web.template.Element} doing the rendering, via
-        L{twisted.web.template.Element.lookupRenderMethod}, to determine which
-        method to call.
-    @type render: C{str}
-
-    @type filename: C{str} or L{None}
-    @ivar filename: The name of the XML file from which this tag was parsed.
-        If it was not parsed from an XML file, L{None}.
-
-    @type lineNumber: C{int} or L{None}
-    @ivar lineNumber: The line number on which this tag was encountered in the
-        XML file from which it was parsed.  If it was not parsed from an XML
-        file, L{None}.
-
-    @type columnNumber: C{int} or L{None}
-    @ivar columnNumber: The column number at which this tag was encountered in
-        the XML file from which it was parsed.  If it was not parsed from an
-        XML file, L{None}.
-
-    @type slotData: C{dict} or L{None}
-    @ivar slotData: The data which can fill slots.  If present, a dictionary
-        mapping slot names to renderable values.  The values in this dict might
-        be anything that can be present as the child of a L{Tag}; strings,
-        lists, L{Tag}s, generators, etc.
     """
 
-    slotData = None
-    filename = None
-    lineNumber = None
-    columnNumber = None
+    tagName: Union[bytes, str]
+    """
+    The name of the represented element.
 
-    def __init__(
-        self,
-        tagName,
-        attributes=None,
-        children=None,
-        render=None,
-        filename=None,
-        lineNumber=None,
-        columnNumber=None,
-    ):
-        self.tagName = tagName
-        self.render = render
-        if attributes is None:
-            self.attributes = {}
-        else:
-            self.attributes = attributes
-        if children is None:
-            self.children = []
-        else:
-            self.children = children
-        if filename is not None:
-            self.filename = filename
-        if lineNumber is not None:
-            self.lineNumber = lineNumber
-        if columnNumber is not None:
-            self.columnNumber = columnNumber
+    For a tag like C{<div></div>}, this would be C{"div"}.
+    """
 
-    def fillSlots(self, **slots):
+    attributes: Dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
+    """The attributes of the element."""
+
+    children: List["Flattenable"] = attr.ib(factory=list)
+    """The contents of this C{Tag}."""
+
+    render: Optional[str] = None
+    """
+    The name of the render method to use for this L{Tag}.
+
+    This name will be looked up at render time by the
+    L{twisted.web.template.Element} doing the rendering,
+    via L{twisted.web.template.Element.lookupRenderMethod},
+    to determine which method to call.
+    """
+
+    filename: Optional[str] = None
+    """
+    The name of the XML file from which this tag was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    lineNumber: Optional[int] = None
+    """
+    The line number on which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    columnNumber: Optional[int] = None
+    """
+    The column number at which this tag was encountered in the XML file
+    from which it was parsed.
+
+    If it was not parsed from an XML file, L{None}.
+    """
+
+    slotData: Optional[Dict[str, "Flattenable"]] = attr.ib(init=False, default=None)
+    """
+    The data which can fill slots.
+
+    If present, a dictionary mapping slot names to renderable values.
+    The values in this dict might be anything that can be present as
+    the child of a L{Tag}: strings, lists, L{Tag}s, generators, etc.
+    """
+
+    def fillSlots(self, **slots: "Flattenable") -> "Tag":
         """
         Remember the slots provided at this position in the DOM.
 
@@ -160,7 +162,7 @@ class Tag:
         self.slotData.update(slots)
         return self
 
-    def __call__(self, *children, **kw):
+    def __call__(self, *children: "Flattenable", **kw: "Flattenable") -> "Tag":
         """
         Add children and change attributes on this tag.
 
@@ -192,14 +194,20 @@ class Tag:
                 k = k[:-1]
 
             if k == "render":
+                if not isinstance(v, str):
+                    raise TypeError(
+                        f'Value for "render" attribute must be str, got {v!r}'
+                    )
                 self.render = v
             else:
                 self.attributes[k] = v
         return self
 
-    def _clone(self, obj, deep):
+    def _clone(self, obj: "Flattenable", deep: bool) -> "Flattenable":
         """
-        Clone an arbitrary object; used by L{Tag.clone}.
+        Clone a C{Flattenable} object; used by L{Tag.clone}.
+
+        Note that both lists and tuples are cloned into lists.
 
         @param obj: an object with a clone method, a list or tuple, or something
             which should be immutable.
@@ -210,13 +218,31 @@ class Tag:
         @return: a clone of C{obj}.
         """
         if hasattr(obj, "clone"):
-            return obj.clone(deep)
+            return obj.clone(deep)  # type: ignore[union-attr]
         elif isinstance(obj, (list, tuple)):
             return [self._clone(x, deep) for x in obj]
+        elif isgenerator(obj):
+            warn(
+                "Cloning a Tag which contains a generator is unsafe, "
+                "since the generator can be consumed only once; "
+                "this is deprecated since Twisted 21.7.0 and will raise "
+                "an exception in the future",
+                DeprecationWarning,
+            )
+            return obj
+        elif iscoroutine(obj):
+            warn(
+                "Cloning a Tag which contains a coroutine is unsafe, "
+                "since the coroutine can run only once; "
+                "this is deprecated since Twisted 21.7.0 and will raise "
+                "an exception in the future",
+                DeprecationWarning,
+            )
+            return obj
         else:
             return obj
 
-    def clone(self, deep=True):
+    def clone(self, deep: bool = True) -> "Tag":
         """
         Return a clone of this tag. If deep is True, clone all of this tag's
         children. Otherwise, just shallow copy the children list without copying
@@ -249,7 +275,7 @@ class Tag:
 
         return newtag
 
-    def clear(self):
+    def clear(self) -> "Tag":
         """
         Clear any existing children from this tag.
         """
@@ -262,7 +288,7 @@ class Tag:
             rstr += ", attributes=%r" % self.attributes
         if self.children:
             rstr += ", children=%r" % self.children
-        return "Tag(%r%s)" % (self.tagName, rstr)
+        return f"Tag({self.tagName!r}{rstr})"
 
 
 voidElements = (
@@ -288,54 +314,47 @@ voidElements = (
 )
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
     information.
-
-    @ivar data: The data between "C{<![CDATA[}" and "C{]]>}".
-    @type data: C{unicode}
     """
 
-    def __init__(self, data):
-        self.data = data
+    data: str
+    """The data between "C{<![CDATA[}" and "C{]]>}"."""
 
     def __repr__(self) -> str:
-        return "CDATA(%r)" % (self.data,)
+        return f"CDATA({self.data!r})"
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
     the DOM so that they may be round-tripped through rendering without losing
     information.
-
-    @ivar data: The data between "C{<!--}" and "C{-->}".
-    @type data: C{unicode}
     """
 
-    def __init__(self, data):
-        self.data = data
+    data: str
+    """The data between "C{<!--}" and "C{-->}"."""
 
     def __repr__(self) -> str:
-        return "Comment(%r)" % (self.data,)
+        return f"Comment({self.data!r})"
 
 
+@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
 class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM
     so that non-ASCII characters may be output as pure ASCII.
 
-    @ivar ordinal: The ordinal value of the unicode character to which this is
-        object refers.
-    @type ordinal: C{int}
-
     @since: 12.0
     """
 
-    def __init__(self, ordinal):
-        self.ordinal = ordinal
+    ordinal: int
+    """The ordinal value of the unicode character to which this object refers."""
 
     def __repr__(self) -> str:
         return "CharRef(%d)" % (self.ordinal,)

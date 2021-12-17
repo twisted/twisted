@@ -7,33 +7,31 @@ Logging and metrics infrastructure.
 """
 
 
-from abc import ABC, abstractmethod
-from datetime import datetime
 import sys
 import time
-from typing import Dict, Optional
 import warnings
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, BinaryIO, Dict, Optional, cast
 
 from zope.interface import Interface
 
-from twisted.python import context
-from twisted.python import reflect
-from twisted.python import util
-from twisted.python import failure
-from twisted.python.threadable import synchronize
 from twisted.logger import (
-    Logger as NewLogger,
-    LogLevel as NewLogLevel,
-    STDLibLogObserver as NewSTDLibLogObserver,
     LegacyLogObserverWrapper,
+    Logger as NewLogger,
     LoggingFile,
+    LogLevel as NewLogLevel,
     LogPublisher as NewPublisher,
-    globalLogPublisher as newGlobalLogPublisher,
+    STDLibLogObserver as NewSTDLibLogObserver,
     globalLogBeginner as newGlobalLogBeginner,
+    globalLogPublisher as newGlobalLogPublisher,
 )
-
 from twisted.logger._global import LogBeginner
 from twisted.logger._legacy import publishToNewObserver as _publishNew
+from twisted.python import context, failure, reflect, util
+from twisted.python.threadable import synchronize
+
+EventDict = Dict[str, Any]
 
 
 class ILogContext:
@@ -53,11 +51,10 @@ class ILogObserver(Interface):
     explicitly declare provision of this interface.
     """
 
-    def __call__(eventDict):
+    def __call__(eventDict: EventDict) -> None:
         """
         Log an event.
 
-        @type eventDict: C{dict} with C{str} keys.
         @param eventDict: A dictionary with arbitrary keys.  However, these
             keys are often available:
               - C{message}: A C{tuple} of C{str} containing messages to be
@@ -92,14 +89,14 @@ def callWithLogger(logger, func, *args, **kw):
         lp = logger.logPrefix()
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         lp = "(buggy logPrefix method)"
         err(system=lp)
     try:
         return callWithContext({"system": lp}, func, *args, **kw)
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         err(system=lp)
 
 
@@ -177,7 +174,9 @@ class LogPublisher:
             # This default behavior is really only used for testing.
             beginnerPublisher = NewPublisher()
             beginnerPublisher.addObserver(observerPublisher)
-            logBeginner = LogBeginner(beginnerPublisher, NullFile(), sys, warnings)
+            logBeginner = LogBeginner(
+                beginnerPublisher, cast(BinaryIO, NullFile()), sys, warnings
+            )
         self._logBeginner = logBeginner
         self._warningsModule = warningsModule
         self._oldshowwarning = warningsModule.showwarning
@@ -267,7 +266,7 @@ class LogPublisher:
         >>> log.msg('Started', system='Foo')
 
         """
-        actualEventDict = (context.get(ILogContext) or {}).copy()
+        actualEventDict = cast(EventDict, (context.get(ILogContext) or {}).copy())
         actualEventDict.update(kw)
         actualEventDict["message"] = message
         actualEventDict["time"] = time.time()
@@ -354,7 +353,7 @@ if "theLogPublisher" not in globals():
         """
 
 
-def _safeFormat(fmtString, fmtDict):
+def _safeFormat(fmtString: str, fmtDict: Dict[str, Any]) -> str:
     """
     Try to format a string, swallowing all errors to always return a string.
 
@@ -363,11 +362,9 @@ def _safeFormat(fmtString, fmtDict):
         Python 3.
 
     @param fmtString: a C{%}-format string
-
     @param fmtDict: string formatting arguments for C{fmtString}
 
     @return: A native string, formatted from C{fmtString} and C{fmtDict}.
-    @rtype: L{str}
     """
     # There's a way we could make this if not safer at least more
     # informative: perhaps some sort of str/repr wrapper objects
@@ -379,32 +376,28 @@ def _safeFormat(fmtString, fmtDict):
         text = fmtString % fmtDict
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         try:
             text = (
                 "Invalid format string or unformattable object in "
                 "log message: %r, %s" % (fmtString, fmtDict)
             )
-        except:
+        except BaseException:
             try:
                 text = (
                     "UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, "
                     "MESSAGE LOST" % (fmtString,)
                 )
-            except:
+            except BaseException:
                 text = (
                     "PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND "
                     "MESSAGE DETAILS, MESSAGE LOST"
                 )
 
-    # Return a native string
-    if isinstance(text, bytes):
-        text = text.decode("utf-8")
-
     return text
 
 
-def textFromEventDict(eventDict):
+def textFromEventDict(eventDict: EventDict) -> Optional[str]:
     """
     Extract text from an event dict passed to a log observer. If it cannot
     handle the dict, it returns None.
@@ -425,13 +418,13 @@ def textFromEventDict(eventDict):
     edm = eventDict["message"]
     if not edm:
         if eventDict["isError"] and "failure" in eventDict:
-            why = eventDict.get("why")
+            why = cast(str, eventDict.get("why"))
             if why:
                 why = reflect.safe_str(why)
             else:
                 why = "Unhandled Error"
             try:
-                traceback = eventDict["failure"].getTraceback()
+                traceback = cast(failure.Failure, eventDict["failure"]).getTraceback()
             except Exception as e:
                 traceback = "(unable to obtain traceback): " + str(e)
             text = why + "\n" + traceback
@@ -451,7 +444,7 @@ class _GlobalStartStopObserver(ABC):
     """
 
     @abstractmethod
-    def emit(self, eventDict: Dict[str, object]) -> None:
+    def emit(self, eventDict: EventDict) -> None:
         """
         Emit the given log event.
 
@@ -479,7 +472,7 @@ class FileLogObserver(_GlobalStartStopObserver):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat = None  # type: Optional[str]
+    timeFormat: Optional[str] = None
 
     def __init__(self, f):
         # Compatibility
@@ -538,12 +531,11 @@ class FileLogObserver(_GlobalStartStopObserver):
             tzMin,
         )
 
-    def emit(self, eventDict: Dict[str, object]) -> None:
+    def emit(self, eventDict: EventDict) -> None:
         """
         Format the given log event as text and write it to the output file.
 
         @param eventDict: a log event
-        @type eventDict: L{dict} mapping L{str} (native string) to L{object}
         """
         text = textFromEventDict(eventDict)
         if text is None:
@@ -574,7 +566,7 @@ class PythonLoggingObserver(_GlobalStartStopObserver):
         """
         self._newObserver = NewSTDLibLogObserver(loggerName)
 
-    def emit(self, eventDict: Dict[str, object]) -> None:
+    def emit(self, eventDict: EventDict) -> None:
         """
         Receive a twisted log entry, format it and bridge it to python.
 
@@ -620,7 +612,7 @@ class StdioOnnaStick:
         pass
 
     def read(self):
-        raise IOError("can't read from the log!")
+        raise OSError("can't read from the log!")
 
     readline = read
     readlines = read
@@ -725,16 +717,16 @@ class DefaultObserver(_GlobalStartStopObserver):
 
     stderr = sys.stderr
 
-    def emit(self, eventDict: Dict[str, object]) -> None:
+    def emit(self, eventDict: EventDict) -> None:
         """
         Emit an event dict.
 
         @param eventDict: an event dict
-        @type eventDict: dict
         """
         if eventDict["isError"]:
             text = textFromEventDict(eventDict)
-            self.stderr.write(text)
+            if text is not None:
+                self.stderr.write(text)
             self.stderr.flush()
 
 

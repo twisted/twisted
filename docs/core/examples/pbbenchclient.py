@@ -1,9 +1,8 @@
-from __future__ import print_function
-
-from twisted.spread import pb
-from twisted.internet import defer, reactor
-from twisted.cred.credentials import UsernamePassword
 import time
+
+from twisted.cred.credentials import UsernamePassword
+from twisted.internet import defer, reactor
+from twisted.spread import pb
 
 
 class PBBenchClient:

@@ -2,9 +2,8 @@
 Tests for the insults windowing module, L{twisted.conch.insults.window}.
 """
 
+from twisted.conch.insults.window import ScrolledArea, TextOutput, TopWindow
 from twisted.trial.unittest import TestCase
-
-from twisted.conch.insults.window import TopWindow, ScrolledArea, TextOutput
 
 
 class TopWindowTests(TestCase):

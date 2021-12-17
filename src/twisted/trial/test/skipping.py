@@ -12,7 +12,7 @@ this code is arranged.
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase, TestCase, SkipTest, FailTest
+from twisted.trial.unittest import FailTest, SkipTest, SynchronousTestCase, TestCase
 
 
 class SkippingMixin:
@@ -199,7 +199,7 @@ class StrictTodoMixin:
     def test_todo2(self):
         raise RuntimeError("expected failure")
 
-    test_todo2.todo = ((RuntimeError, OSError), "todo2")  # type: ignore[attr-defined] # noqa
+    test_todo2.todo = ((RuntimeError, OSError), "todo2")  # type: ignore[attr-defined]
 
     def test_todo3(self):
         raise RuntimeError("we had no idea!")
@@ -209,7 +209,7 @@ class StrictTodoMixin:
     def test_todo4(self):
         raise RuntimeError("we had no idea!")
 
-    test_todo4.todo = ((OSError, SyntaxError), "todo4")  # type: ignore[attr-defined] # noqa
+    test_todo4.todo = ((OSError, SyntaxError), "todo4")  # type: ignore[attr-defined]
 
     def test_todo5(self):
         self.fail("deliberate failure")

@@ -13,7 +13,6 @@ from twisted.scripts import trial
 from twisted.trial import runner
 from twisted.trial.test import packages
 
-
 _noModuleError = "No module named 'frotz'"
 
 
@@ -52,14 +51,12 @@ class ImportErrorsTests(packages.SysPathManglingTest):
 
     def assertIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        super(ImportErrorsTests, self).assertIn(containee, container, *args, **kwargs)
+        super().assertIn(containee, container, *args, **kwargs)
         return container
 
     def assertNotIn(self, container, containee, *args, **kwargs):
         # redefined to be useful in callbacks
-        super(ImportErrorsTests, self).assertNotIn(
-            containee, container, *args, **kwargs
-        )
+        super().assertNotIn(containee, container, *args, **kwargs)
         return container
 
     def test_trialRun(self):

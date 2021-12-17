@@ -50,23 +50,20 @@ loop.  Shutdown functions that could be used in place of
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
 
-from functools import partial
-from threading import Thread
-
-from queue import Queue, Empty
+import select
 import sys
+from errno import EBADF, EINTR
+from functools import partial
+from queue import Empty, Queue
+from threading import Thread
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
-from twisted.internet.posixbase import _NO_FILENO, _NO_FILEDESC
-from twisted.python import log, failure, threadable
-
-import select
-from errno import EINTR, EBADF
-
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, _NO_FILENO
 from twisted.internet.selectreactor import _select
+from twisted.python import failure, log, threadable
 
 
 def dictRemove(dct, value):
@@ -124,7 +121,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
-                except:
+                except BaseException:
                     log.msg("bad descriptor %s" % selectable)
                 else:
                     selDict[selectable] = 1
@@ -136,7 +133,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 fn(*args)
         except SystemExit:
             pass  # Exception indicates this thread should exit
-        except:
+        except BaseException:
             f = failure.Failure()
             self._sendToMain("Failure", f)
 
@@ -161,7 +158,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptorsInThread()
-            except (select.error, IOError) as se:
+            except OSError as se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
@@ -273,7 +270,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 why = _NO_FILENO
             elif handfn() == -1:
                 why = _NO_FILEDESC
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:

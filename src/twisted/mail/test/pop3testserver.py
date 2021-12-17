@@ -5,10 +5,11 @@
 # See LICENSE for details.
 
 
+import sys
+
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
-from twisted.internet import reactor
-import sys
 
 USER = "test"
 PASS = "twisted"
@@ -128,7 +129,7 @@ class POP3TestServer(basic.LineReceiver):
             try:
                 self.tmpUser = line.split(" ")[1]
                 resp = VALID_RESPONSE
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)
@@ -145,7 +146,7 @@ class POP3TestServer(basic.LineReceiver):
                     self.loggedIn = True
                 else:
                     resp = AUTH_DECLINED
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)

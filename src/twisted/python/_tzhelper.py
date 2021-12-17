@@ -59,11 +59,11 @@ class FixedOffsetTimeZone(TZInfo):
             hours = -hours
             minutes = -minutes
         elif sign != "+":
-            raise ValueError("Invalid sign for timezone %r" % (sign,))
+            raise ValueError(f"Invalid sign for timezone {sign!r}")
         return cls(TimeDelta(hours=hours, minutes=minutes), name)
 
     @classmethod
-    def fromLocalTimeStamp(cls, timeStamp: int) -> "FixedOffsetTimeZone":
+    def fromLocalTimeStamp(cls, timeStamp: float) -> "FixedOffsetTimeZone":
         """
         Create a time zone with a fixed offset corresponding to a time stamp in
         the system's locally configured time zone.

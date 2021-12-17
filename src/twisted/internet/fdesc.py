@@ -7,8 +7,8 @@
 Utility functions for dealing with POSIX file descriptors.
 """
 
-import os
 import errno
+import os
 
 try:
     import fcntl as _fcntl
@@ -18,7 +18,7 @@ else:
     fcntl = _fcntl
 
 # twisted imports
-from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 
 
 def setNonBlocking(fd):
@@ -87,7 +87,7 @@ def readFromFD(fd, callback):
     """
     try:
         output = os.read(fd, 8192)
-    except (OSError, IOError) as ioe:
+    except OSError as ioe:
         if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
             return
         else:
@@ -112,7 +112,7 @@ def writeToFD(fd, data):
     """
     try:
         return os.write(fd, data)
-    except (OSError, IOError) as io:
+    except OSError as io:
         if io.errno in (errno.EAGAIN, errno.EINTR):
             return 0
         return CONNECTION_LOST

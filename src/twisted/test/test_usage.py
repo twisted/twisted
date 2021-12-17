@@ -6,8 +6,8 @@ Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
 
-from twisted.trial import unittest
 from twisted.python import usage
+from twisted.trial import unittest
 
 
 class WellBehaved(usage.Options):
@@ -34,7 +34,7 @@ class WellBehaved(usage.Options):
         self.opts["myflag"] = "PONY!"
 
     def opt_myparam(self, value):
-        self.opts["myparam"] = "%s WITH A PONY!" % (value,)
+        self.opts["myparam"] = f"{value} WITH A PONY!"
 
 
 class ParseCorrectnessTests(unittest.TestCase):
@@ -606,7 +606,7 @@ class CompleterNotImplementedTests(unittest.TestCase):
         for cls in classes:
             try:
                 action = cls()
-            except:
+            except BaseException:
                 action = cls(None)
             self.assertRaises(
                 NotImplementedError, action._shellCode, None, "bad_shell_type"

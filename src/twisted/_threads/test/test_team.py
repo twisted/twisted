@@ -6,16 +6,14 @@ Tests for L{twisted._threads._team}.
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase
-
-from twisted.python.context import call, get
 from twisted.python.components import proxyForInterface
-
+from twisted.python.context import call, get
 from twisted.python.failure import Failure
-from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
+from twisted.trial.unittest import SynchronousTestCase
+from .. import AlreadyQuit, IWorker, Team, createMemoryWorker
 
 
-class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]  # noqa
+class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: ignore[misc]
     """
     A worker implementation that supplies a context.
     """
@@ -33,7 +31,7 @@ class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):  # type: igno
 
         @param work: the work to pass on to the real worker.
         """
-        super(ContextualWorker, self).do(lambda: call(self._context, work))
+        super().do(lambda: call(self._context, work))
 
 
 class TeamTests(SynchronousTestCase):

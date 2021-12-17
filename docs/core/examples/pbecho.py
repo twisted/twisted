@@ -1,6 +1,5 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
 if __name__ == "__main__":
     # Avoid using any names defined in the "__main__" module.
@@ -10,8 +9,8 @@ if __name__ == "__main__":
 
 from zope.interface import implementer
 
-from twisted.spread import pb
 from twisted.cred.portal import IRealm
+from twisted.spread import pb
 
 
 class DefinedError(pb.Error):
@@ -41,9 +40,9 @@ class SimpleRealm:
 
 
 def main():
-    from twisted.internet import reactor
-    from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    from twisted.cred.portal import Portal
+    from twisted.internet import reactor
 
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()

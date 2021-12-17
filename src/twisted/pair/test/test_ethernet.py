@@ -1,10 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from twisted.trial import unittest
-
-from twisted.python import components
-from twisted.pair import ethernet, raw
 from zope.interface import implementer
+
+from twisted.pair import ethernet, raw
+from twisted.python import components
+from twisted.trial import unittest
 
 
 @implementer(raw.IRawPacketProtocol)

@@ -13,9 +13,9 @@ import struct
 
 from zope.interface import implementer
 
-from twisted.internet import protocol, interfaces as iinternet, defer
-from twisted.python.compat import iterbytes
+from twisted.internet import defer, interfaces as iinternet, protocol
 from twisted.logger import Logger
+from twisted.python.compat import iterbytes
 
 
 def _chr(i: int) -> bytes:
@@ -434,7 +434,7 @@ class Telnet(protocol.Protocol):
             self.him = self._Perspective()
 
         def __repr__(self) -> str:
-            return "<_OptionState us=%s him=%s>" % (self.us, self.him)
+            return f"<_OptionState us={self.us} him={self.him}>"
 
     def getOptionState(self, opt):
         return self.options.setdefault(opt, self._OptionState())
@@ -660,7 +660,9 @@ class Telnet(protocol.Protocol):
         d.callback(True)
         assert self.enableRemote(
             option
-        ), "enableRemote must return True in this context (for option %r)" % (option,)
+        ), "enableRemote must return True in this context (for option {!r})".format(
+            option
+        )
 
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
@@ -672,7 +674,7 @@ class Telnet(protocol.Protocol):
         # never be entered.
         assert (
             False
-        ), "will_yes_true can never be entered, but was called with %r, %r" % (
+        ), "will_yes_true can never be entered, but was called with {!r}, {!r}".format(
             state,
             option,
         )
@@ -752,7 +754,9 @@ class Telnet(protocol.Protocol):
     def do_yes_true(self, state, option):
         # This is a bogus state.  It is here for completeness.  It will never be
         # entered.
-        assert False, "do_yes_true can never be entered, but was called with %r, %r" % (
+        assert (
+            False
+        ), "do_yes_true can never be entered, but was called with {!r}, {!r}".format(
             state,
             option,
         )
@@ -827,7 +831,7 @@ class Telnet(protocol.Protocol):
         @raise NotImplementedError: Always raised.
         """
         raise NotImplementedError(
-            "Don't know how to disable local telnet option %r" % (option,)
+            f"Don't know how to disable local telnet option {option!r}"
         )
 
     def disableRemote(self, option):
@@ -842,7 +846,7 @@ class Telnet(protocol.Protocol):
         @raise NotImplementedError: Always raised.
         """
         raise NotImplementedError(
-            "Don't know how to disable remote telnet option %r" % (option,)
+            f"Don't know how to disable remote telnet option {option!r}"
         )
 
 
@@ -1015,12 +1019,12 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     linemodeSubcommands = {LINEMODE_SLC: "SLC"}
 
     def telnet_LINEMODE(self, data):
-        linemodeSubcommand = data[0]
-        if 0:
-            # XXX TODO: This should be enabled to parse linemode subnegotiation.
-            getattr(self, "linemode_" + self.linemodeSubcommands[linemodeSubcommand])(
-                data[1:]
-            )
+        # linemodeSubcommand = data[0]
+        # # XXX TODO: This should be enabled to parse linemode subnegotiation.
+        # getattr(self, "linemode_" + self.linemodeSubcommands[linemodeSubcommand])(
+        #     data[1:]
+        # )
+        pass
 
     def linemode_SLC(self, data):
         chunks = zip(*[iter(data)] * 3)

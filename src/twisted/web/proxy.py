@@ -23,9 +23,9 @@ from urllib.parse import quote as urlquote, urlparse, urlunparse
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
+from twisted.web.http import _QUEUED_SENTINEL, HTTPChannel, HTTPClient, Request
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import HTTPClient, Request, HTTPChannel, _QUEUED_SENTINEL
 
 
 class ProxyClient(HTTPClient):
@@ -88,7 +88,8 @@ class ProxyClientFactory(ClientFactory):
     Used by ProxyRequest to implement a simple web proxy.
     """
 
-    protocol = ProxyClient
+    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10006
+    protocol = ProxyClient  # type: ignore[assignment]
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father

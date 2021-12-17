@@ -6,26 +6,19 @@ Test cases for the L{twisted.python.failure} module.
 """
 
 
+import linecache
+import pdb
 import re
 import sys
 import traceback
-import pdb
-import linecache
-
 from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
 
-from twisted.python import reflect
-from twisted.python import failure
+from cython_test_exception_raiser import raiser  # type: ignore[import]
 
+from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
-
-
-try:
-    from twisted.test import raiser  # type: ignore[attr-defined]
-except ImportError:
-    raiser = None
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -110,7 +103,7 @@ class FailureTests(SynchronousTestCase):
         @param prefix: The string that C{s} should start with.
         @type prefix: C{str}
         """
-        self.assertTrue(s.startswith(prefix), "%r is not the start of %r" % (prefix, s))
+        self.assertTrue(s.startswith(prefix), f"{prefix!r} is not the start of {s!r}")
 
     def assertEndsWith(self, s, suffix):
         """
@@ -121,7 +114,7 @@ class FailureTests(SynchronousTestCase):
         @param suffix: The string that C{s} should end with.
         @type suffix: C{str}
         """
-        self.assertTrue(s.endswith(suffix), "%r is not the end of %r" % (suffix, s))
+        self.assertTrue(s.endswith(suffix), f"{suffix!r} is not the end of {s!r}")
 
     def assertTracebackFormat(self, tb, prefix, suffix):
         """
@@ -197,7 +190,7 @@ class FailureTests(SynchronousTestCase):
             f.count,
             (f.pickled and " (pickled) ") or " ",
         )
-        end = "%s: %s\n*--- End of Failure #%s ---\n" % (
+        end = "{}: {}\n*--- End of Failure #{} ---\n".format(
             reflect.qual(f.type),
             reflect.safe_str(f.value),
             f.count,
@@ -255,13 +248,13 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += "%s:%s:%s\n" % (filename, lineno, method)
+            stack += f"{filename}:{lineno}:{method}\n"
 
         zde = repr(ZeroDivisionError)
         self.assertTracebackFormat(
             tb,
-            "Traceback: %s: " % (zde,),
-            "%s\n%s" % (failure.EXCEPTION_CAUGHT_HERE, stack),
+            f"Traceback: {zde}: ",
+            f"{failure.EXCEPTION_CAUGHT_HERE}\n{stack}",
         )
 
         if captureVars:
@@ -302,8 +295,8 @@ class FailureTests(SynchronousTestCase):
         tb = out.getvalue()
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
-            stack += '  File "%s", line %s, in %s\n' % (filename, lineno, method)
-            stack += "    %s\n" % (linecache.getline(filename, lineno).strip(),)
+            stack += f'  File "{filename}", line {lineno}, in {method}\n'
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,
@@ -531,13 +524,12 @@ class BrokenExceptionMetaclass(type):
         raise ValueError("You cannot make a string out of me.")
 
 
-class BrokenExceptionType(Exception):
+class BrokenExceptionType(Exception, metaclass=BrokenExceptionMetaclass):
+
     """
-    The aforementioned exception type which cnanot be presented as a string via
+    The aforementioned exception type which cannot be presented as a string via
     L{str}.
     """
-
-    __metaclass__ = BrokenExceptionMetaclass
 
 
 class GetTracebackTests(SynchronousTestCase):

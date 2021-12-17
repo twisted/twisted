@@ -3,21 +3,18 @@
 
 """Demo of wxPython integration with Twisted."""
 
-from __future__ import print_function
 
 import sys
 
-from wx import Frame, DefaultPosition, Size, Menu, MenuBar, App
-from wx import EVT_MENU, EVT_CLOSE
+from wx import EVT_CLOSE, EVT_MENU, App, DefaultPosition, Frame, Menu, MenuBar, Size
 
-from twisted.python import log
 from twisted.internet import wxreactor
+from twisted.python import log
 
 wxreactor.install()
 
 # import t.i.reactor only after installing wxreactor:
 from twisted.internet import reactor
-
 
 ID_EXIT = 101
 

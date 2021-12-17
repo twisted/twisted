@@ -20,17 +20,14 @@ from typing import Optional
 from zope.interface import implementer
 
 from twisted import cred
-from twisted.internet import task
-from twisted.internet import defer
-from twisted.internet import interfaces
+from twisted.internet import defer, interfaces, task
 from twisted.mail import smtp
+from twisted.mail._except import POP3ClientError, POP3Error, _POP3MessageDeleted
 from twisted.mail.interfaces import (
-    IServerFactoryPOP3 as IServerFactory,
     IMailboxPOP3 as IMailbox,
+    IServerFactoryPOP3 as IServerFactory,
 )
-from twisted.mail._except import POP3Error, _POP3MessageDeleted, POP3ClientError
-from twisted.protocols import basic
-from twisted.protocols import policies
+from twisted.protocols import basic, policies
 from twisted.python import log
 
 
@@ -331,8 +328,7 @@ def formatListResponse(msgs):
     @return: Yields a series of strings which make up a complete LIST response.
     """
     yield successResponse(b"%d" % (len(msgs),))
-    for ele in formatListLines(msgs):
-        yield ele
+    yield from formatListLines(msgs)
     yield b".\r\n"
 
 
@@ -374,8 +370,7 @@ def formatUIDListResponse(msgs, getUidl):
     @return: Yields a series of strings which make up a complete UIDL response.
     """
     yield successResponse("")
-    for ele in formatUIDListLines(msgs, getUidl):
-        yield ele
+    yield from formatUIDListLines(msgs, getUidl)
     yield b".\r\n"
 
 
@@ -436,7 +431,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     @ivar _auth: Authorization credentials.
     """
 
-    magic = None  # type: Optional[bytes]
+    magic: Optional[bytes] = None
     _userIs = None
     _onLogout = None
 
@@ -619,7 +614,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 baseCaps.append(b"IMPLEMENTATION " + v)
@@ -630,7 +625,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 if v is None:
@@ -648,7 +643,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     v = str(v).encode("utf-8")
             except NotImplementedError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 if self.factory.perUserLoginDelay():
@@ -662,7 +657,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 v = self.factory.challengers
             except AttributeError:
                 pass
-            except:
+            except BaseException:
                 log.err()
             else:
                 baseCaps.append(b"SASL " + b" ".join(v.keys()))
@@ -770,7 +765,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         send a successful response to the client.
 
         @type result: C{tuple}
-        @param interface_avatar_logout: The first item of the tuple is a
+        @param result: The first item of the tuple is a
             C{zope.interface.Interface} which is the interface
             supported by the avatar.  The second item of the tuple is a
             L{IMailbox} provider which is the mailbox for the
@@ -1231,7 +1226,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         try:
             self.mbox.undeleteMessages()
-        except:
+        except BaseException:
             log.err()
             self.failResponse()
         else:
@@ -1439,7 +1434,7 @@ class POP3Client(basic.LineOnlyReceiver):
     @type command: L{bytes}
     @ivar command: The command most recently sent to the server.
 
-    @type welcomeRe: L{RegexObject <re.RegexObject>}
+    @type welcomeRe: L{Pattern <re.Pattern.search>}
     @ivar welcomeRe: A regular expression which matches the APOP challenge in
         the server greeting.
 
@@ -1551,7 +1546,7 @@ class POP3Client(basic.LineOnlyReceiver):
             method = getattr(self, "handle_" + command.decode("utf-8"), default)
             if method is not None:
                 method(*args)
-        except:
+        except BaseException:
             log.err()
 
     def lineReceived(self, line):
@@ -1678,12 +1673,14 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b"QUIT")
 
 
-from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
-from twisted.mail.pop3client import InsecureAuthenticationDisallowed
-from twisted.mail.pop3client import ServerErrorResponse
-from twisted.mail.pop3client import LineTooLong
-from twisted.mail.pop3client import TLSError
-from twisted.mail.pop3client import TLSNotSupportedError
+from twisted.mail._except import (
+    InsecureAuthenticationDisallowed,
+    LineTooLong,
+    ServerErrorResponse,
+    TLSError,
+    TLSNotSupportedError,
+)
+from twisted.mail._pop3client import POP3Client as AdvancedPOP3Client
 
 __all__ = [
     # Interfaces

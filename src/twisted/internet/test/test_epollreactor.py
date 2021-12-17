@@ -7,11 +7,10 @@ Tests for L{twisted.internet.epollreactor}.
 
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
+from twisted.internet.error import ConnectionDone
 from twisted.internet.posixbase import _ContinuousPolling
 from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionDone
-
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet import epollreactor
@@ -208,7 +207,7 @@ class ContinuousPollingTests(TestCase):
         self.assertEqual(poller.getReaders(), [])
         self.assertEqual(poller.getWriters(), [])
         self.assertEqual(len(removed), 3)
-        self.assertEqual(set(removed), set([reader, writer, both]))
+        self.assertEqual(set(removed), {reader, writer, both})
 
     def test_getReaders(self):
         """

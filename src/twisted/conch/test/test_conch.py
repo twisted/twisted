@@ -8,23 +8,27 @@ import subprocess
 import sys
 from itertools import count
 from unittest import skipIf
+
 from zope.interface import implementer
-from twisted.python.reflect import requireModule
+
 from twisted.conch.error import ConchError
+from twisted.conch.test.keydata import (
+    privateDSA_openssh,
+    privateRSA_openssh,
+    publicDSA_openssh,
+    publicRSA_openssh,
+)
+from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.cred import portal
-from twisted.internet import reactor, defer, protocol
+from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
-from twisted.python.compat import _PYPY
-from twisted.trial.unittest import SkipTest, TestCase
-from twisted.conch.test.test_ssh import ConchTestRealm
-from twisted.python.procutils import which
-
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
+from twisted.trial.unittest import SkipTest, TestCase
 
 try:
     from twisted.conch.test.test_ssh import (
@@ -58,7 +62,7 @@ else:
 
 
 def _has_ipv6():
-    """ Returns True if the system can bind an IPv6 address."""
+    """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
 
@@ -66,7 +70,7 @@ def _has_ipv6():
         sock = socket.socket(socket.AF_INET6)
         sock.bind(("::1", 0))
         has_ipv6 = True
-    except socket.error:
+    except OSError:
         pass
 
     if sock:
@@ -313,13 +317,6 @@ class ConchServerSetupMixin:
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
-
-    # FIXME: https://twistedmatrix.com/trac/ticket/8506
-
-    # This should be un-skipped on Travis after the ticket is fixed.  For now
-    # is enabled so that we can continue with fixing other stuff using Travis.
-    if _PYPY:
-        skip = "PyPy known_host not working yet on Travis."
 
     @staticmethod
     def realmFactory():
@@ -646,11 +643,11 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
             if not isinstance(output, str):
                 output = output.decode("utf-8")
             kexAlgorithms = output.split()
-        except:
+        except BaseException:
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:
-            raise SkipTest("{} not supported by ssh client".format(keyExchangeAlgo))
+            raise SkipTest(f"{keyExchangeAlgo} not supported by ssh client")
 
         d = self.execute(
             "echo hello",

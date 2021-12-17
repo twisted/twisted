@@ -10,9 +10,9 @@ the workers.
 @since: 12.3
 """
 
-import sys
-import os
 import errno
+import os
+import sys
 
 
 def _setupPath(environ):
@@ -30,8 +30,8 @@ _setupPath(os.environ)
 
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
-from twisted.trial._dist.options import WorkerOptions
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist.options import WorkerOptions
 
 
 class WorkerLogObserver:
@@ -63,7 +63,7 @@ def main(_fdopen=os.fdopen):
     Main function to be run if __name__ == "__main__".
 
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
-    @param _fdopen: C{callable}
+    @type _fdopen: C{callable}
     """
     config = WorkerOptions()
     config.parseOptions()
@@ -82,7 +82,7 @@ def main(_fdopen=os.fdopen):
     while True:
         try:
             r = protocolIn.read(1)
-        except IOError as e:
+        except OSError as e:
             if e.args[0] == errno.EINTR:
                 continue
             else:

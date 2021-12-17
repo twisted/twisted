@@ -8,7 +8,6 @@ from zope.interface import implementer, verify
 
 from twisted.internet import defer, interfaces
 from twisted.trial import unittest
-
 from twisted.web import client
 
 
@@ -21,7 +20,7 @@ class DummyEndPoint:
         self.someString = someString
 
     def __repr__(self) -> str:
-        return "DummyEndPoint({})".format(self.someString)
+        return f"DummyEndPoint({self.someString})"
 
     def connect(self, factory):
         return defer.succeed(dict(factory=factory))

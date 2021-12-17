@@ -5,20 +5,22 @@
 Tests for twisted SSL support.
 """
 
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet import protocol, reactor, interfaces, defer
+import os
+
+import hamcrest
+
+from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.test.proto_helpers import waitUntilAllDisconnected
-
-import os
-import hamcrest
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.trial.unittest import TestCase
 
 try:
     from OpenSSL import SSL, crypto
+
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:

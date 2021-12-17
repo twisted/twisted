@@ -1,1 +1,0 @@
-twisted.web.twcgi can now handle url parameters in python 3

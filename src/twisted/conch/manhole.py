@@ -13,11 +13,12 @@ and reasonable handling of Deferreds.
 @author: Jp Calderone
 """
 
-import code, sys, tokenize
+import code
+import sys
+import tokenize
 from io import BytesIO
 
 from twisted.conch import recvline
-
 from twisted.internet import defer
 from twisted.python.compat import _get_async_param
 from twisted.python.htmlizer import TokenPrinter
@@ -160,7 +161,7 @@ CTRL_E = b"\x05"
 
 
 class Manhole(recvline.HistoricRecvLine):
-    """
+    r"""
     Mediator between a fancy line source and an interactive interpreter.
 
     This accepts lines from its transport and passes them on to a

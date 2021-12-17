@@ -16,65 +16,63 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 import os
 import re
 import socket
-from unicodedata import normalize
 import warnings
+from unicodedata import normalize
 
-from constantly import NamedConstant, Names
+from zope.interface import directlyProvides, implementer, provider
+
+from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
-from zope.interface import implementer, directlyProvides, provider
-
-from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet import defer, error, fdesc, interfaces, threads
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.address import (
-    _ProcessAddress,
     HostnameAddress,
     IPv4Address,
     IPv6Address,
+    _ProcessAddress,
 )
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor,
-    IResolutionReceiver,
-    IReactorPluggableNameResolver,
     IHostnameResolver,
+    IReactorPluggableNameResolver,
+    IResolutionReceiver,
+    IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpointStringParser,
 )
-from twisted.internet.protocol import ClientFactory, Factory
-from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
 
 try:
-    from twisted.internet.stdio import StandardIO, PipeAddress
+    from twisted.internet.stdio import PipeAddress, StandardIO
 except ImportError:
     # fallback if pywin32 is not installed
     StandardIO = None  # type: ignore[assignment,misc]
     PipeAddress = None  # type: ignore[assignment,misc]
 
-from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
+from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import deprecate, log
-from twisted.python.compat import nativeString, _matchingString
+from twisted.python.compat import _matchingString, iterbytes, nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.python.compat import iterbytes
-from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
-
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
+    from OpenSSL.SSL import Error as SSLError
+
     from twisted.internet.ssl import (
-        optionsForClientTLS,
-        PrivateCertificate,
         Certificate,
-        KeyPair,
         CertificateOptions,
+        KeyPair,
+        PrivateCertificate,
+        optionsForClientTLS,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError
+    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -196,7 +194,8 @@ class _WrappingFactory(ClientFactory):
         that is managing the current or previous connection attempt.
     """
 
-    protocol = _WrappingProtocol
+    # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
+    protocol = _WrappingProtocol  # type: ignore[assignment]
 
     def __init__(self, wrappedFactory):
         """
@@ -262,7 +261,7 @@ class _WrappingFactory(ClientFactory):
             proto = self._wrappedFactory.buildProtocol(addr)
             if proto is None:
                 raise error.NoProtocol()
-        except:
+        except BaseException:
             self._onConnection.errback()
         else:
             return self.protocol(self._onConnection, proto)
@@ -472,7 +471,7 @@ class ProcessEndpoint:
                 self._usePTY,
                 self._childFDs,
             )
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(proto)
@@ -602,7 +601,7 @@ class TCP4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -676,7 +675,7 @@ class TCP6ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -839,7 +838,7 @@ class HostnameEndpoint:
             # constructor, which is already a native string.
             host = self._hostStr
         elif isIPv6Address(self._hostStr):
-            host = "[{}]".format(self._hostStr)
+            host = f"[{self._hostStr}]"
         else:
             # Convert the bytes representation to a native string to ensure
             # that we display the punycoded version of the hostname, which is
@@ -934,7 +933,7 @@ class HostnameEndpoint:
             or fails a connection-related error.
         """
         if self._badHostname:
-            return defer.fail(ValueError("invalid hostname: {}".format(self._hostStr)))
+            return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
 
         d = Deferred()
         addresses = []
@@ -959,9 +958,7 @@ class HostnameEndpoint:
 
         d.addErrback(
             lambda ignored: defer.fail(
-                error.DNSLookupError(
-                    "Couldn't find the hostname '{}'".format(self._hostStr)
-                )
+                error.DNSLookupError(f"Couldn't find the hostname '{self._hostStr}'")
             )
         )
 
@@ -1021,7 +1018,7 @@ class HostnameEndpoint:
             """
             if not endpoints:
                 raise error.DNSLookupError(
-                    "no results for hostname lookup: {}".format(self._hostStr)
+                    f"no results for hostname lookup: {self._hostStr}"
                 )
             iterEndpoints = iter(endpoints)
             pending = []
@@ -1189,7 +1186,7 @@ class SSL4ClientEndpoint:
                 bindAddress=self._bindAddress,
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1266,7 +1263,7 @@ class UNIXClientEndpoint:
                 self._path, wf, timeout=self._timeout, checkPID=self._checkPID
             )
             return wf._onConnection
-        except:
+        except BaseException:
             return defer.fail()
 
 
@@ -1313,7 +1310,7 @@ class AdoptedStreamServerEndpoint:
                 self.fileno, self.addressFamily, factory
             )
             self._close(self.fileno)
-        except:
+        except BaseException:
             return defer.fail()
         return defer.succeed(port)
 
@@ -1714,7 +1711,7 @@ def _matchPluginToPrefix(plugins, endpointType):
     for plugin in plugins:
         if _matchingString(plugin.prefix.lower(), endpointType) == endpointType:
             return plugin
-    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
+    raise ValueError(f"Unknown endpoint type: '{endpointType}'")
 
 
 def serverFromString(reactor, description):
@@ -1879,7 +1876,7 @@ def _loadCAsFromDir(directoryPath):
             continue
         try:
             data = child.getContent()
-        except IOError:
+        except OSError:
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
@@ -1984,15 +1981,14 @@ def _parseClientSSL(*args, **kwargs):
 
     Valid positional arguments to this function are host and port.
 
-    @param caCertsDir: The one parameter which is not part of
+    @keyword caCertsDir: The one parameter which is not part of
         L{IReactorSSL.connectSSL}'s signature, this is a path name used to
         construct a list of certificate authority certificates.  The directory
         will be scanned for files ending in C{.pem}, all of which will be
         considered valid certificate authorities for this connection.
-
     @type caCertsDir: L{str}
 
-    @param hostname: The hostname to use for validating the server's
+    @keyword hostname: The hostname to use for validating the server's
         certificate.
     @type hostname: L{unicode}
 
@@ -2226,7 +2222,7 @@ def _parseClientTLS(
     privateKey=None,
     trustRoots=None,
     endpoint=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Internal method to construct an endpoint from string parameters.

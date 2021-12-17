@@ -12,10 +12,10 @@ from hashlib import md5
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib
+from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names
+from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -159,8 +159,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError
-        from service_identity.pyopenssl import (
+        from service_identity import VerificationError  # type: ignore[import]
+        from service_identity.pyopenssl import (  # type: ignore[import]
             verify_hostname,
             verify_ip_address,
         )
@@ -327,7 +327,7 @@ class DistinguishedName(dict):
 
     def __setattr__(self, attr, value):
         if attr not in _x509names:
-            raise AttributeError("%s is not a valid OpenSSL X509 name field" % (attr,))
+            raise AttributeError(f"{attr} is not a valid OpenSSL X509 name field")
         realAttr = _x509names[attr]
         if not isinstance(value, bytes):
             value = value.encode("ascii")
@@ -408,15 +408,19 @@ def _handleattrhelper(Class, transport, methodName):
     and null certificates and raises the appropriate exception or returns the
     appropriate certificate object.
     """
-    method = getattr(transport.getHandle(), "get_%s_certificate" % (methodName,), None)
+    method = getattr(transport.getHandle(), f"get_{methodName}_certificate", None)
     if method is None:
         raise CertificateError(
-            "non-TLS transport %r did not have %s certificate" % (transport, methodName)
+            "non-TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     cert = method()
     if cert is None:
         raise CertificateError(
-            "TLS transport %r did not have %s certificate" % (transport, methodName)
+            "TLS transport {!r} did not have {} certificate".format(
+                transport, methodName
+            )
         )
     return Class(cert)
 
@@ -427,7 +431,7 @@ class Certificate(CertBase):
     """
 
     def __repr__(self) -> str:
-        return "<%s Subject=%s Issuer=%s>" % (
+        return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
             self.getSubject().commonName,
             self.getIssuer().commonName,
@@ -477,7 +481,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a peer
+        @raise CertificateError: if the given transport does not have a peer
             certificate.
         """
         return _handleattrhelper(Class, transport, "peer")
@@ -491,7 +495,7 @@ class Certificate(CertBase):
 
         @rtype: C{Class}
 
-        @raise: L{CertificateError}, if the given transport does not have a host
+        @raise CertificateError: if the given transport does not have a host
             certificate.
         """
         return _handleattrhelper(Class, transport, "host")
@@ -575,9 +579,7 @@ class CertificateRequest(CertBase):
         dn = DistinguishedName()
         dn._copyFrom(req.get_subject())
         if not req.verify(req.get_pubkey()):
-            raise VerifyError(
-                "Can't verify that request for %r is self-signed." % (dn,)
-            )
+            raise VerifyError(f"Can't verify that request for {dn!r} is self-signed.")
         return Class(req)
 
     def dump(self, format=crypto.FILETYPE_ASN1):
@@ -729,7 +731,7 @@ class PublicKey:
         return self.keyHash() == otherKey.keyHash()
 
     def __repr__(self) -> str:
-        return "<%s %s>" % (self.__class__.__name__, self.keyHash())
+        return f"<{self.__class__.__name__} {self.keyHash()}>"
 
     def keyHash(self):
         """
@@ -753,7 +755,7 @@ class PublicKey:
         return h.hexdigest()
 
     def inspect(self):
-        return "Public Key with Hash: %s" % (self.keyHash(),)
+        return f"Public Key with Hash: {self.keyHash()}"
 
 
 class KeyPair(PublicKey):
@@ -835,7 +837,9 @@ class KeyPair(PublicKey):
         def verified(value):
             if not value:
                 raise VerifyError(
-                    "DN callback %r rejected request DN %r" % (verifyDNCallback, dn)
+                    "DN callback {!r} rejected request DN {!r}".format(
+                        verifyDNCallback, dn
+                    )
                 )
             return self.signRequestObject(
                 issuerDistinguishedName,
@@ -1058,7 +1062,7 @@ def _tolerateErrors(wrapped):
     def infoCallback(connection, where, ret):
         try:
             return wrapped(connection, where, ret)
-        except:
+        except BaseException:
             f = Failure()
             log.err(f, "Error during info_callback")
             connection.get_app_data().failVerification(f)
@@ -1177,7 +1181,12 @@ class ClientTLSOptions:
 
 
 def optionsForClientTLS(
-    hostname, trustRoot=None, clientCertificate=None, acceptableProtocols=None, **kw
+    hostname,
+    trustRoot=None,
+    clientCertificate=None,
+    acceptableProtocols=None,
+    *,
+    extraCertificateOptions=None,
 ):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
@@ -1218,28 +1227,19 @@ def optionsForClientTLS(
         the list are preferred over those later in the list.
     @type acceptableProtocols: L{list} of L{bytes}
 
-    @param extraCertificateOptions: keyword-only argument; this is a dictionary
-        of additional keyword arguments to be presented to
-        L{CertificateOptions}. Please avoid using this unless you absolutely
-        need to; any time you need to pass an option here that is a bug in this
-        interface.
+    @param extraCertificateOptions: A dictionary of additional keyword arguments
+        to be presented to L{CertificateOptions}. Please avoid using this unless
+        you absolutely need to; any time you need to pass an option here that is
+        a bug in this interface.
     @type extraCertificateOptions: L{dict}
-
-    @param kw: (Backwards compatibility hack to allow keyword-only arguments on
-        Python 2. Please ignore; arbitrary keyword arguments will be errors.)
-    @type kw: L{dict}
 
     @return: A client connection creator.
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
-    extraCertificateOptions = kw.pop("extraCertificateOptions", None) or {}
+    if extraCertificateOptions is None:
+        extraCertificateOptions = {}
     if trustRoot is None:
         trustRoot = platformTrust()
-    if kw:
-        raise TypeError(
-            "optionsForClientTLS() got an unexpected keyword argument"
-            " '{arg}'".format(arg=kw.popitem()[0])
-        )
     if not isinstance(hostname, str):
         raise TypeError(
             "optionsForClientTLS requires text for host names, not "
@@ -1494,10 +1494,8 @@ class OpenSSLCertificateOptions:
             if raiseMinimumTo:
                 if lowerMaximumSecurityTo and raiseMinimumTo > lowerMaximumSecurityTo:
                     raise ValueError(
-                        (
-                            "raiseMinimumTo needs to be lower than "
-                            "lowerMaximumSecurityTo"
-                        )
+                        "raiseMinimumTo needs to be lower than "
+                        "lowerMaximumSecurityTo"
                     )
 
                 if raiseMinimumTo > self._defaultMinimumTLSVersion:
@@ -1519,10 +1517,8 @@ class OpenSSLCertificateOptions:
                 and insecurelyLowerMinimumTo > lowerMaximumSecurityTo
             ):
                 raise ValueError(
-                    (
-                        "insecurelyLowerMinimumTo needs to be lower than "
-                        "lowerMaximumSecurityTo"
-                    )
+                    "insecurelyLowerMinimumTo needs to be lower than "
+                    "lowerMaximumSecurityTo"
                 )
 
             excludedVersions = _getExcludedTLSProtocols(
@@ -1710,7 +1706,7 @@ OpenSSLCertificateOptions.__setstate__ = deprecated(
 
 
 @implementer(ICipher)
-@attr.s(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class OpenSSLCipher:
     """
     A representation of an OpenSSL cipher.
@@ -1720,7 +1716,7 @@ class OpenSSLCipher:
     @type fullName: L{unicode}
     """
 
-    fullName = attr.ib()
+    fullName: str
 
 
 @lru_cache(maxsize=32)
@@ -1779,7 +1775,7 @@ def _selectCiphers(wantedCiphers, availableCiphers):
 
     @rtype: L{tuple} of L{OpenSSLCipher}
     """
-    return tuple([cipher for cipher in wantedCiphers if cipher in availableCiphers])
+    return tuple(cipher for cipher in wantedCiphers if cipher in availableCiphers)
 
 
 @implementer(IAcceptableCiphers)
@@ -1868,7 +1864,7 @@ class _ChooseDiffieHellmanEllipticCurve:
     @see: L{OpenSSL.SSL.OPENSSL_VERSION_NUMBER}
 
     @param openSSLlib: The OpenSSL C{cffi} library module.
-    @param openSSLlib: The OpenSSL L{crypto} module.
+    @param openSSLcrypto: The OpenSSL L{crypto} module.
 
     @see: L{crypto}
     """
@@ -1910,7 +1906,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         ctxPtr = ctx._context
         try:
             self._openSSLlib.SSL_CTX_set_ecdh_auto(ctxPtr, True)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101(self, ctx):
@@ -1923,7 +1919,7 @@ class _ChooseDiffieHellmanEllipticCurve:
         """
         try:
             ctx.set_tmp_ecdh(self._ecCurve)
-        except:
+        except BaseException:
             pass
 
     def _configureOpenSSL101NoCurves(self, ctx):

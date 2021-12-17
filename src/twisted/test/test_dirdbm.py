@@ -8,10 +8,10 @@ Test cases for dirdbm module.
 import shutil
 from base64 import b64decode
 
-from twisted.trial import unittest
 from twisted.persisted import dirdbm
 from twisted.python import rebuild
 from twisted.python.filepath import FilePath
+from twisted.trial import unittest
 
 
 class DirDbmTests(unittest.TestCase):
@@ -65,17 +65,19 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(
             keys,
             dbkeys,
-            ".keys() output didn't match: %s != %s" % (repr(keys), repr(dbkeys)),
+            f".keys() output didn't match: {repr(keys)} != {repr(dbkeys)}",
         )
         self.assertEqual(
             values,
             dbvalues,
-            ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues)),
+            ".values() output didn't match: {} != {}".format(
+                repr(values), repr(dbvalues)
+            ),
         )
         self.assertEqual(
             items,
             dbitems,
-            "items() didn't match: %s != %s" % (repr(items), repr(dbitems)),
+            f"items() didn't match: {repr(items)} != {repr(dbitems)}",
         )
 
         copyPath = self.mktemp()
@@ -89,7 +91,9 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(
             dbkeys,
             copykeys,
-            ".copyTo().keys() didn't match: %s != %s" % (repr(dbkeys), repr(copykeys)),
+            ".copyTo().keys() didn't match: {} != {}".format(
+                repr(dbkeys), repr(copykeys)
+            ),
         )
         self.assertEqual(
             dbvalues,
@@ -186,7 +190,7 @@ class DirDbmTests(unittest.TestCase):
 
         def _writeFail(path, data):
             path.setContent(data)
-            raise IOError("fail to write")
+            raise OSError("fail to write")
 
         self.dbm[b"failkey"] = b"test"
         self.patch(self.dbm, "_writeFile", _writeFail)

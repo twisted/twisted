@@ -7,27 +7,22 @@
 Maildir-style mailbox support.
 """
 
+import io
 import os
-import stat
 import socket
+import stat
 from hashlib import md5
+from typing import IO
 
 from zope.interface import implementer
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
-from twisted.mail import pop3
-from twisted.mail import smtp
-from twisted.protocols import basic
-from twisted.persisted import dirdbm
-from twisted.python import log, failure
-from twisted.mail import mail
-from twisted.internet import interfaces, defer, reactor
-from twisted.cred import portal, credentials, checkers
+from twisted.cred import checkers, credentials, portal
 from twisted.cred.error import UnauthorizedLogin
+from twisted.internet import defer, interfaces, reactor
+from twisted.mail import mail, pop3, smtp
+from twisted.persisted import dirdbm
+from twisted.protocols import basic
+from twisted.python import failure, log
 
 INTERNAL_ERROR = """\
 From: Twisted.mail Internals
@@ -81,7 +76,7 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return "%s.M%sP%sQ%s.%s" % (seconds, microseconds, self.p, self.n, self.s)
+        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
@@ -94,6 +89,7 @@ def initializeMaildir(dir):
     @type dir: L{bytes}
     @param dir: The path name for a user directory.
     """
+    dir = os.fsdecode(dir)
     if not os.path.isdir(dir):
         os.mkdir(dir, 0o700)
         for subdir in ["new", "cur", "tmp", ".Trash"]:
@@ -230,7 +226,7 @@ class AbstractMaildirDomain:
             return lambda: self.startMessage(user)
         try:
             a = self.alias[user.dest.local]
-        except:
+        except BaseException:
             raise smtp.SMTPBadRcpt(user)
         else:
             aliases = a.resolve(self.alias, memo)
@@ -258,7 +254,7 @@ class AbstractMaildirDomain:
         filename = os.path.join(dir, "tmp", fname)
         fp = open(filename, "w")
         return MaildirMessage(
-            "%s@%s" % (name, domain), fp, filename, os.path.join(dir, "new", fname)
+            f"{name}@{domain}", fp, filename, os.path.join(dir, "new", fname)
         )
 
     def willRelay(self, user, protocol):
@@ -358,7 +354,7 @@ class _MaildirMailboxAppendMessageTask:
         self.defer = defer.Deferred()
         self.openCall = None
         if not hasattr(msg, "read"):
-            msg = StringIO.StringIO(msg)
+            msg = io.BytesIO(msg)
         self.msg = msg
 
     def startUp(self):
@@ -414,7 +410,7 @@ class _MaildirMailboxAppendMessageTask:
         """
         try:
             self.oswrite(self.fh, data)
-        except:
+        except BaseException:
             self.fail()
 
     def fail(self, err=None):
@@ -687,20 +683,18 @@ class StringListMailbox:
             return 0
         return len(self.msgs[i])
 
-    def getMessage(self, i):
+    def getMessage(self, i: int) -> IO[bytes]:
         """
         Return an in-memory file-like object with the contents of a message.
 
-        @type i: L{int}
         @param i: The 0-based index of a message.
 
-        @rtype: L{StringIO <cStringIO.StringIO>}
         @return: An in-memory file-like object containing the message.
 
         @raise IndexError: When the index does not correspond to a message in
             the mailbox.
         """
-        return StringIO.StringIO(self.msgs[i])
+        return io.BytesIO(self.msgs[i])
 
     def getUidl(self, i):
         """
@@ -778,8 +772,9 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             should be forwarded to the postmaster (C{True}) or
             bounced (C{False}).
         """
+        root = os.fsencode(root)
         AbstractMaildirDomain.__init__(self, service, root)
-        dbm = os.path.join(root, "passwd")
+        dbm = os.path.join(root, b"passwd")
         if not os.path.exists(dbm):
             os.makedirs(dbm)
         self.dbm = dirdbm.open(dbm)

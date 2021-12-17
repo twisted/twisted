@@ -11,7 +11,7 @@ Maintainer: Paul Swartz
 
 import struct
 
-from cryptography.utils import int_from_bytes, int_to_bytes
+from cryptography.utils import int_to_bytes
 
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
@@ -63,7 +63,7 @@ def getMP(data, count=1):
     c = 0
     for i in range(count):
         (length,) = struct.unpack(">L", data[c : c + 4])
-        mp.append(int_from_bytes(data[c + 4 : c + 4 + length], "big"))
+        mp.append(int.from_bytes(data[c + 4 : c + 4 + length], "big"))
         c += 4 + length
     return tuple(mp) + (data[c:],)
 

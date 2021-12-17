@@ -1,13 +1,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
-
-from twisted.internet import reactor
-from twisted.spread import pb
-from twisted.cred.credentials import UsernamePassword
 
 from pbecho import DefinedError
+
+from twisted.cred.credentials import UsernamePassword
+from twisted.internet import reactor
+from twisted.spread import pb
 
 
 def success(message):

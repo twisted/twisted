@@ -34,12 +34,11 @@ from io import StringIO
 from typing import Dict
 
 # zope3 imports
-from zope.interface import interface, declarations
+from zope.interface import declarations, interface
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
 from twisted.python import reflect
-
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()
@@ -67,7 +66,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     for interfaceClass in interfaceClasses:
         factory = self.registered([origInterface], interfaceClass)
         if factory is not None and not ALLOW_DUPLICATES:
-            raise ValueError("an adapter (%s) was already registered." % (factory,))
+            raise ValueError(f"an adapter ({factory}) was already registered.")
     for interfaceClass in interfaceClasses:
         self.register([origInterface], interfaceClass, "", adapterFactory)
 
@@ -333,11 +332,13 @@ def proxyForInterface(iface, originalAttribute="original"):
     def __init__(self, original):
         setattr(self, originalAttribute, original)
 
-    contents = {"__init__": __init__}  # type: Dict[str, object]
+    contents: Dict[str, object] = {"__init__": __init__}
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
-    proxy = type("(Proxy for %s)" % (reflect.qual(iface),), (object,), contents)
-    declarations.classImplements(proxy, iface)
+    proxy = type(f"(Proxy for {reflect.qual(iface)})", (object,), contents)
+    # mypy-zope declarations.classImplements only works when passing
+    # a concrete class type
+    declarations.classImplements(proxy, iface)  # type: ignore[misc]
     return proxy
 
 

@@ -11,14 +11,15 @@ Resource limiting policies.
 
 # system imports
 import sys
-
 from typing import Optional, Type
+
 from zope.interface import directlyProvides, providedBy
 
-# twisted imports
-from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
-from twisted.internet import error
+from twisted.internet import error, interfaces
 from twisted.internet.interfaces import ILoggingContext
+
+# twisted imports
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
 
@@ -32,7 +33,7 @@ def _wrappedLogPrefix(wrapper, wrapped):
         logPrefix = wrapped.logPrefix()
     else:
         logPrefix = wrapped.__class__.__name__
-    return "%s (%s)" % (logPrefix, wrapper.__class__.__name__)
+    return f"{logPrefix} ({wrapper.__class__.__name__})"
 
 
 class ProtocolWrapper(Protocol):
@@ -49,7 +50,9 @@ class ProtocolWrapper(Protocol):
 
     disconnecting = 0
 
-    def __init__(self, factory, wrappedProtocol):
+    def __init__(
+        self, factory: "WrappingFactory", wrappedProtocol: interfaces.IProtocol
+    ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
 
@@ -119,7 +122,7 @@ class WrappingFactory(ClientFactory):
     Wraps a factory and its protocols, and keeps track of them.
     """
 
-    protocol = ProtocolWrapper  # type: Type[Protocol]
+    protocol: Type[Protocol] = ProtocolWrapper
 
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory
@@ -393,7 +396,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     connectionCount = 0
     connectionLimit = None
-    overflowProtocol = None  # type: Optional[Type[Protocol]]
+    overflowProtocol: Optional[Type[Protocol]] = None
 
     def buildProtocol(self, addr):
         if self.connectionLimit is None or self.connectionCount < self.connectionLimit:
@@ -626,7 +629,7 @@ class TimeoutMixin:
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
 
-    timeOut = None  # type: Optional[int]
+    timeOut: Optional[int] = None
 
     __timeoutCall = None
 

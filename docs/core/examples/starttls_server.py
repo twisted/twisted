@@ -1,6 +1,4 @@
-from __future__ import print_function
-
-from twisted.internet import ssl, protocol, defer, task, endpoints
+from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.protocols.basic import LineReceiver
 from twisted.python.modules import getModule
 

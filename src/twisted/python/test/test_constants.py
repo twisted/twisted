@@ -13,12 +13,12 @@ from twisted.trial.unittest import TestCase
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=DeprecationWarning)
     from twisted.python.constants import (
+        FlagConstant,
+        Flags,
         NamedConstant,
         Names,
         ValueConstant,
         Values,
-        FlagConstant,
-        Flags,
     )
 
 
@@ -680,11 +680,11 @@ class FlagConstantSimpleOrTests(_FlagsTestsMixin, TestCase):
         A L{FlagConstant} instance which results from C{|} can be
         iterated upon to yield the original constants.
         """
-        self.assertEqual(set(self.FXF.WRITE & self.FXF.READ), set(()))  # No flags
-        self.assertEqual(set(self.FXF.WRITE), set((self.FXF.WRITE,)))
+        self.assertEqual(set(self.FXF.WRITE & self.FXF.READ), set())  # No flags
+        self.assertEqual(set(self.FXF.WRITE), {self.FXF.WRITE})
         self.assertEqual(
             set(self.FXF.WRITE | self.FXF.EXCLUSIVE),
-            set((self.FXF.WRITE, self.FXF.EXCLUSIVE)),
+            {self.FXF.WRITE, self.FXF.EXCLUSIVE},
         )
 
     def test_membership(self):

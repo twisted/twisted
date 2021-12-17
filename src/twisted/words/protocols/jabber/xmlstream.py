@@ -27,6 +27,7 @@ from binascii import hexlify
 from hashlib import sha1
 from sys import intern
 from typing import Optional, Tuple
+
 from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
@@ -34,10 +35,12 @@ from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
-from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
-from twisted.words.xish.xmlstream import STREAM_START_EVENT
-from twisted.words.xish.xmlstream import STREAM_END_EVENT
-from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
+from twisted.words.xish.xmlstream import (
+    STREAM_CONNECTED_EVENT,
+    STREAM_END_EVENT,
+    STREAM_ERROR_EVENT,
+    STREAM_START_EVENT,
+)
 
 try:
     from twisted.internet import ssl as _ssl
@@ -71,7 +74,7 @@ def hashPassword(sid, password):
         raise TypeError("The session identifier must be a unicode object")
     if not isinstance(password, str):
         raise TypeError("The password must be a unicode object")
-    input = "%s%s" % (sid, password)
+    input = f"{sid}{password}"
     return sha1(input.encode("utf-8")).hexdigest()
 
 
@@ -163,7 +166,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -259,7 +262,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace = None  # type: Optional[str]
+    namespace: Optional[str] = None
 
     def associateWithStream(self, xmlstream):
         """
@@ -315,7 +318,7 @@ class BaseFeatureInitiatingInitializer:
     @type required: C{bool}
     """
 
-    feature = None  # type: Optional[Tuple[str, str]]
+    feature: Optional[Tuple[str, str]] = None
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs
@@ -408,7 +411,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         @type configurationForTLS: L{IOpenSSLClientConnectionCreator} or
             C{None}
         """
-        super(TLSInitiatingInitializer, self).__init__(xs, required=required)
+        super().__init__(xs, required=required)
         self._configurationForTLS = configurationForTLS
 
     def onProceed(self, obj):
@@ -685,7 +688,8 @@ class XmlStreamServerFactory(xmlstream.BootstrapMixin, protocol.ServerFactory):
                                 with the XmlStream.
     """
 
-    protocol = XmlStream
+    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10007#ticket
+    protocol = XmlStream  # type: ignore[assignment]
 
     def __init__(self, authenticatorFactory):
         xmlstream.BootstrapMixin.__init__(self)

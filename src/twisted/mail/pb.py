@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.spread import pb
-
 import os
+
+from twisted.spread import pb
 
 
 class Maildir(pb.Referenceable):
@@ -15,13 +15,13 @@ class Maildir(pb.Referenceable):
 
     def getFolderMessage(self, folder, name):
         if "/" in name:
-            raise IOError("can only open files in '%s' directory'" % folder)
+            raise OSError("can only open files in '%s' directory'" % folder)
         with open(os.path.join(self.directory, "new", name)) as fp:
             return fp.read()
 
     def deleteFolderMessage(self, folder, name):
         if "/" in name:
-            raise IOError("can only delete files in '%s' directory'" % folder)
+            raise OSError("can only delete files in '%s' directory'" % folder)
         os.rename(
             os.path.join(self.directory, folder, name),
             os.path.join(self.rootDirectory, ".Trash", folder, name),
@@ -59,14 +59,14 @@ class Maildir(pb.Referenceable):
 
     def getSubFolder(self, name):
         if name[0] == ".":
-            raise IOError("subfolder name cannot begin with a '.'")
+            raise OSError("subfolder name cannot begin with a '.'")
         name = name.replace("/", ":")
         if self.virtualDirectoy == ".":
             name = "." + name
         else:
             name = self.virtualDirectory + ":" + name
         if not self._isSubFolder(name):
-            raise IOError("not a subfolder")
+            raise OSError("not a subfolder")
         return Maildir(name, self.rootDirectory)
 
     remote_getSubFolder = getSubFolder
@@ -88,7 +88,7 @@ class MaildirCollection(pb.Referenceable):
 
     def getSubFolder(self, name):
         if "/" in name or name[0] == ".":
-            raise IOError("invalid name")
+            raise OSError("invalid name")
         return Maildir(".", os.path.join(self.getRoot(), name))
 
     remote_getSubFolder = getSubFolder

@@ -5,19 +5,21 @@
 
 from zope.interface import implementer
 
-from twisted.cred import portal, checkers
-from twisted.spread import pb
+from twisted.cred import checkers, portal
 from twisted.internet import reactor
+from twisted.spread import pb
+
 
 class ChatServer:
     def __init__(self):
-        self.groups = {} # indexed by name
+        self.groups = {}  # indexed by name
 
     def joinGroup(self, groupname, user, allowMattress):
         if groupname not in self.groups:
             self.groups[groupname] = Group(groupname, allowMattress)
         self.groups[groupname].addUser(user)
         return self.groups[groupname]
+
 
 @implementer(portal.IRealm)
 class ChatRealm:
@@ -26,32 +28,41 @@ class ChatRealm:
         avatar = User(avatarID)
         avatar.server = self.server
         avatar.attached(mind)
-        return pb.IPerspective, avatar, lambda a=avatar:a.detached(mind)
+        return pb.IPerspective, avatar, lambda a=avatar: a.detached(mind)
+
 
 class User(pb.Avatar):
     def __init__(self, name):
         self.name = name
+
     def attached(self, mind):
         self.remote = mind
+
     def detached(self, mind):
         self.remote = None
+
     def perspective_joinGroup(self, groupname, allowMattress=True):
         return self.server.joinGroup(groupname, self, allowMattress)
+
     def send(self, message):
         self.remote.callRemote("print", message)
+
 
 class Group(pb.Viewable):
     def __init__(self, groupname, allowMattress):
         self.name = groupname
         self.allowMattress = allowMattress
         self.users = []
+
     def addUser(self, user):
         self.users.append(user)
+
     def view_send(self, from_user, message):
         if not self.allowMattress and "mattress" in message:
             raise ValueError("Don't say that word")
         for user in self.users:
-            user.send("<%s> says: %s" % (from_user.name, message))
+            user.send(f"<{from_user.name}> says: {message}")
+
 
 realm = ChatRealm()
 realm.server = ChatServer()

@@ -7,27 +7,27 @@ Tests for L{twisted.internet.testing}.
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import (
-    ITransport,
-    IPushProducer,
-    IConsumer,
-    IReactorTCP,
-    IReactorSSL,
-    IReactorUNIX,
-    IAddress,
-    IListeningPort,
-    IConnector,
-)
 from twisted.internet.address import IPv4Address
-from twisted.trial.unittest import TestCase
-from twisted.internet.testing import (
-    StringTransport,
-    MemoryReactor,
-    RaisingMemoryReactor,
-    NonStreamingProducer,
+from twisted.internet.interfaces import (
+    IAddress,
+    IConnector,
+    IConsumer,
+    IListeningPort,
+    IPushProducer,
+    IReactorSSL,
+    IReactorTCP,
+    IReactorUNIX,
+    ITransport,
 )
 from twisted.internet.protocol import ClientFactory, Factory
+from twisted.internet.testing import (
+    MemoryReactor,
+    NonStreamingProducer,
+    RaisingMemoryReactor,
+    StringTransport,
+)
 from twisted.python.reflect import namedAny
+from twisted.trial.unittest import TestCase
 
 
 class StringTransportTests(TestCase):
@@ -392,7 +392,7 @@ class DeprecationTests(TestCase):
     """
 
     def helper(self, test, obj):
-        new_path = "twisted.internet.testing.{}".format(obj.__name__)
+        new_path = f"twisted.internet.testing.{obj.__name__}"
         warnings = self.flushWarnings([test])
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(1, len(warnings))

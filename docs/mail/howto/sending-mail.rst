@@ -1,7 +1,7 @@
 Sending Mail
 ============
 
-Twisted contains many ways of sending email, but the simplest is :api:`twisted.mail.smtp.sendmail <sendmail>`.
+Twisted contains many ways of sending email, but the simplest is :py:func:`sendmail <twisted.mail.smtp.sendmail>`.
 Intended as a near drop-in replacement of :py:class:`smtplib.SMTP`\'s ``sendmail`` method, it provides the ability to send email over SMTP/ESMTP with minimal fuss or configuration.
 
 Knowledge of Twisted's Deferreds is required for making full use of this document.
@@ -85,7 +85,7 @@ Conclusion
 
 In this document, you have seen how to:
 
-#. Send an email over SMTP using :api:`twisted.mail.smtp.sendmail <sendmail>`.
-#. Send an email over encrypted & authenticated ESMTP with :api:`twisted.mail.smtp.sendmail <sendmail>`.
+#. Send an email over SMTP using :py:func:`sendmail <twisted.mail.smtp.sendmail>`.
+#. Send an email over encrypted & authenticated ESMTP with :py:func:`sendmail <twisted.mail.smtp.sendmail>`.
 #. Send a "complex" email containing a subject line using the stdlib's ``email.Message`` functionality.
-#. Enforce transport security for emails sent using :api:`twisted.mail.smtp.sendmail <sendmail>`.
+#. Enforce transport security for emails sent using :py:func:`sendmail <twisted.mail.smtp.sendmail>`.

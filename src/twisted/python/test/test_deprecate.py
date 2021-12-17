@@ -11,36 +11,34 @@ import sys
 import types
 import warnings
 from os.path import normcase
-from warnings import simplefilter, catch_warnings
+from warnings import catch_warnings, simplefilter
 
 try:
     from importlib import invalidate_caches
 except ImportError:
     invalidate_caches = None  # type: ignore[assignment,misc]
 
+from incremental import Version
+
 from twisted.python import deprecate
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
 from twisted.python.deprecate import (
-    getDeprecationWarningString,
-    deprecated,
+    DEPRECATION_WARNING_FORMAT,
     _appendToDocstring,
-    _getDeprecationDocstring,
     _fullyQualifiedName as fullyQualifiedName,
+    _getDeprecationDocstring,
+    _getDeprecationWarningString,
     _mutuallyExclusiveArguments,
-    deprecatedProperty,
-    deprecatedKeywordParameter,
     _passedArgSpec,
     _passedSignature,
+    deprecated,
+    deprecatedKeywordParameter,
+    deprecatedProperty,
+    getDeprecationWarningString,
 )
-
-from incremental import Version
-from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-
+from twisted.python.runtime import platform
 from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-
 from twisted.trial.unittest import SynchronousTestCase
 
 # Note that various tests in this module require manual encoding of paths to
@@ -133,9 +131,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
-        self.assertEqual(
-            repr(proxy), "<%s module=%r>" % (type(proxy).__name__, realModule)
-        )
+        self.assertEqual(repr(proxy), f"<{type(proxy).__name__} module={realModule!r}>")
 
 
 class DeprecatedAttributeTests(SynchronousTestCase):
@@ -307,7 +303,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module
+        from package import module  # type: ignore[import]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -377,6 +373,29 @@ def callTestFunction():
         deprecate.warnAboutFunction(testFunction, "A Warning String")
 """
         )
+        self.package.child("pep626.py").setContent(
+            b"""
+"A module string"
+
+from twisted.python import deprecate
+
+def noop():
+    pass
+
+def testFunction(a=1, b=1):
+    "A doc string"
+    if a:
+        if b:
+            noop()
+        else:
+            pass
+
+def callTestFunction():
+    b = testFunction()
+    if b is None:
+        deprecate.warnAboutFunction(testFunction, "A Warning String")
+"""
+        )
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)
@@ -414,7 +433,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module
+        from twisted_private_helper import module  # type: ignore[import]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -425,6 +444,26 @@ def callTestFunction():
         # Line number 9 is the last line in the testFunction in the helper
         # module.
         self.assertEqual(warningsShown[0]["lineno"], 9)
+        self.assertEqual(warningsShown[0]["message"], "A Warning String")
+        self.assertEqual(len(warningsShown), 1)
+
+    def test_warningLineNumberDisFindlinestarts(self):
+        """
+        L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
+        number of a line within the implementation handling the case in which
+        dis.findlinestarts returns the lines in random order.
+        """
+        from twisted_private_helper import pep626
+
+        pep626.callTestFunction()
+        warningsShown = self.flushWarnings()
+        self.assertSamePath(
+            FilePath(warningsShown[0]["filename"].encode("utf-8")),
+            self.package.sibling(b"twisted_private_helper").child(b"pep626.py"),
+        )
+        # Line number 15 is the last line in the testFunction in the helper
+        # module.
+        self.assertEqual(warningsShown[0]["lineno"], 15)
         self.assertEqual(warningsShown[0]["message"], "A Warning String")
         self.assertEqual(len(warningsShown), 1)
 
@@ -439,7 +478,8 @@ def callTestFunction():
         @raise C{self.failureType}: If the paths are not the same.
         """
         self.assertTrue(
-            normcase(first.path) == normcase(second.path), "%r != %r" % (first, second)
+            normcase(first.path) == normcase(second.path),
+            f"{first!r} != {second!r}",
         )
 
     def test_renamedFile(self):
@@ -464,7 +504,7 @@ def callTestFunction():
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -529,7 +569,7 @@ def callTestFunction():
             msg.endswith(
                 "module.py:9: DeprecationWarning: A Warning String\n" "  return a\n"
             ),
-            "Unexpected warning string: %r" % (msg,),
+            f"Unexpected warning string: {msg!r}",
         )
 
 

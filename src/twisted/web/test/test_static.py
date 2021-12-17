@@ -11,23 +11,22 @@ import os
 import re
 import sys
 import warnings
-
-
 from io import BytesIO as StringIO
 from unittest import skipIf
+
 from zope.interface.verify import verifyObject
 
 from twisted.internet import abstract, interfaces
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
 from twisted.python import compat, log
 from twisted.python.compat import networkString
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
-from twisted.web import static, http, script, resource
-from twisted.web.server import UnsupportedMethod
-from twisted.web.test.requesthelper import DummyRequest
-from twisted.web.test._util import _render
+from twisted.web import http, resource, script, static
 from twisted.web._responses import FOUND
+from twisted.web.server import UnsupportedMethod
+from twisted.web.test._util import _render
+from twisted.web.test.requesthelper import DummyRequest
 
 
 class StaticDataTests(TestCase):
@@ -260,7 +259,7 @@ class StaticFileTests(TestCase):
         markerResponse = b"custom-forbidden-response"
 
         def failingOpenForReading():
-            raise IOError(errno.EACCES, "")
+            raise OSError(errno.EACCES, "")
 
         class CustomForbiddenResource(resource.Resource):
             def render(self, request):
@@ -793,7 +792,7 @@ class StaticMakeProducerTests(TestCase):
             contentHeaders = self.contentHeaders(request)
             # The only content-* headers set are content-type and content-length.
             self.assertEqual(
-                set([b"content-length", b"content-type"]), set(contentHeaders.keys())
+                {b"content-length", b"content-type"}, set(contentHeaders.keys())
             )
             # The content-length depends on the boundary used in the response.
             expectedLength = 5
@@ -807,7 +806,8 @@ class StaticMakeProducerTests(TestCase):
             self.assertIn(b"content-type", contentHeaders)
             contentType = contentHeaders[b"content-type"]
             self.assertNotIdentical(
-                None, re.match(b'multipart/byteranges; boundary="[^"]*"\Z', contentType)
+                None,
+                re.match(br'multipart/byteranges; boundary="[^"]*"\Z', contentType),
             )
             # Content-encoding is not set in the response to a multiple range
             # response, which is a bit wussy but works well enough with the way
@@ -1161,9 +1161,7 @@ class RangeTests(TestCase):
         """
         logItem = self.catcher.pop()
         self.assertEqual(logItem["message"][0], expected)
-        self.assertEqual(
-            self.catcher, [], "An additional log occurred: %r" % (logItem,)
-        )
+        self.assertEqual(self.catcher, [], f"An additional log occurred: {logItem!r}")
 
     def test_invalidRanges(self):
         """
@@ -1263,7 +1261,7 @@ class RangeTests(TestCase):
         range = b"foobar=0-43"
         self.request.requestHeaders.addRawHeader(b"range", range)
         self.resource.render(self.request)
-        expected = "Ignoring malformed Range header %r" % (range.decode(),)
+        expected = f"Ignoring malformed Range header {range.decode()!r}"
         self._assertLogged(expected)
         self.assertEqual(b"".join(self.request.written), self.payload)
         self.assertEqual(self.request.responseCode, http.OK)
@@ -1313,7 +1311,7 @@ class RangeTests(TestCase):
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
         rangeHeaderValue = b",".join(
-            [networkString("%s-%s" % (s, e)) for (s, e) in startEnds]
+            [networkString(f"{s}-{e}") for (s, e) in startEnds]
         )
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1340,7 +1338,7 @@ class RangeTests(TestCase):
         """
         startEnds = [(0, 2), (40, len(self.payload) + 10)]
         rangeHeaderValue = b",".join(
-            [networkString("%s-%s" % (s, e)) for (s, e) in startEnds]
+            [networkString(f"{s}-{e}") for (s, e) in startEnds]
         )
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
@@ -1737,8 +1735,8 @@ class DirectoryListerTests(TestCase):
         """
         path = FilePath(self.mktemp())
         lister = static.DirectoryLister(path.path)
-        self.assertEqual(repr(lister), "<DirectoryLister of %r>" % (path.path,))
-        self.assertEqual(str(lister), "<DirectoryLister of %r>" % (path.path,))
+        self.assertEqual(repr(lister), f"<DirectoryLister of {path.path!r}>")
+        self.assertEqual(str(lister), f"<DirectoryLister of {path.path!r}>")
 
     def test_formatFileSize(self):
         """

@@ -6,12 +6,12 @@
 Support for relaying mail.
 """
 
-from twisted.mail import smtp
-from twisted.python import log
-from twisted.internet.address import UNIXAddress
-
 import os
 import pickle
+
+from twisted.internet.address import UNIXAddress
+from twisted.mail import smtp
+from twisted.python import log
 
 
 class DomainQueuer:
@@ -68,7 +68,7 @@ class DomainQueuer:
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
         with envelopeFile:
-            log.msg("Queueing mail %r -> %r" % (str(user.orig), str(user.dest)))
+            log.msg(f"Queueing mail {str(user.orig)!r} -> {str(user.dest)!r}")
             pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
         return smtpMessage
 
@@ -83,7 +83,7 @@ class RelayerMixin:
         self.messages = []
         self.names = []
         for message in messagePaths:
-            with open(message + "-H") as fp:
+            with open(message + "-H", "rb") as fp:
                 messageContents = pickle.load(fp)
             fp = open(message + "-D")
             messageContents.append(fp)

@@ -8,9 +8,11 @@ relevant fields from the format string and persisting them for later
 examination.
 """
 
-from string import Formatter
 from collections import defaultdict
+from string import Formatter
+from typing import Any, Dict, Optional
 
+from ._interfaces import LogEvent
 
 aFormatter = Formatter()
 
@@ -21,34 +23,36 @@ class KeyFlattener:
     PEP-3101-style format strings as parsed by L{string.Formatter.parse}.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize a L{KeyFlattener}.
         """
-        self.keys = defaultdict(lambda: 0)
+        self.keys: Dict[str, int] = defaultdict(lambda: 0)
 
-    def flatKey(self, fieldName, formatSpec, conversion):
+    def flatKey(
+        self, fieldName: str, formatSpec: Optional[str], conversion: Optional[str]
+    ) -> str:
         """
         Compute a string key for a given field/format/conversion.
 
         @param fieldName: A format field name.
-        @type fieldName: L{str}
-
         @param formatSpec: A format spec.
-        @type formatSpec: L{str}
-
         @param conversion: A format field conversion type.
-        @type conversion: L{str}
 
         @return: A key specific to the given field, format and conversion, as
             well as the occurrence of that combination within this
             L{KeyFlattener}'s lifetime.
-        @rtype: L{str}
         """
+        if formatSpec is None:
+            formatSpec = ""
+
+        if conversion is None:
+            conversion = ""
+
         result = "{fieldName}!{conversion}:{formatSpec}".format(
             fieldName=fieldName,
-            formatSpec=(formatSpec or ""),
-            conversion=(conversion or ""),
+            formatSpec=formatSpec,
+            conversion=conversion,
         )
         self.keys[result] += 1
         n = self.keys[result]
@@ -57,14 +61,13 @@ class KeyFlattener:
         return result
 
 
-def flattenEvent(event):
+def flattenEvent(event: LogEvent) -> None:
     """
     Flatten the given event by pre-associating format fields with specific
     objects and callable results in a L{dict} put into the C{"log_flattened"}
     key in the event.
 
     @param event: A logging event.
-    @type event: L{dict}
     """
     if event.get("log_format", None) is None:
         return
@@ -117,7 +120,7 @@ def flattenEvent(event):
         event["log_flattened"] = fields
 
 
-def extractField(field, event):
+def extractField(field: str, event: LogEvent) -> Any:
     """
     Extract a given format field from the given event.
 
@@ -125,44 +128,48 @@ def extractField(field, event):
         text that would normally fall between a pair of curly braces in a
         format string: for example, C{"key[2].attribute"}.  If a conversion is
         specified (the thing after the C{"!"} character in a format field) then
-        the result will always be L{unicode}.
-    @type field: L{str} (native string)
-
+        the result will always be str.
     @param event: A log event.
-    @type event: L{dict}
 
     @return: A value extracted from the field.
-    @rtype: L{object}
 
     @raise KeyError: if the field is not found in the given event.
     """
     keyFlattener = KeyFlattener()
+
     [[literalText, fieldName, formatSpec, conversion]] = aFormatter.parse(
         "{" + field + "}"
     )
+
+    assert fieldName is not None
+
     key = keyFlattener.flatKey(fieldName, formatSpec, conversion)
+
     if "log_flattened" not in event:
         flattenEvent(event)
+
     return event["log_flattened"][key]
 
 
-def flatFormat(event):
+def flatFormat(event: LogEvent) -> str:
     """
     Format an event which has been flattened with L{flattenEvent}.
 
     @param event: A logging event.
-    @type event: L{dict}
 
     @return: A formatted string.
-    @rtype: L{unicode}
     """
     fieldValues = event["log_flattened"]
-    s = []
     keyFlattener = KeyFlattener()
-    formatFields = aFormatter.parse(event["log_format"])
-    for literalText, fieldName, formatSpec, conversion in formatFields:
+    s = []
+
+    for literalText, fieldName, formatSpec, conversion in aFormatter.parse(
+        event["log_format"]
+    ):
         s.append(literalText)
+
         if fieldName is not None:
             key = keyFlattener.flatKey(fieldName, formatSpec, conversion or "s")
             s.append(str(fieldValues[key]))
+
     return "".join(s)

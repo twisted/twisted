@@ -14,27 +14,24 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from subprocess import STDOUT, CalledProcessError, check_output
 from typing import Dict
 
 from zope.interface import Interface, implementer
 
-from subprocess import check_output, STDOUT, CalledProcessError
-
 from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
-from twisted.python.monkey import MonkeyPatcher
 
 # Types of newsfragments.
 NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 intersphinxURLs = [
-    "https://docs.python.org/2/objects.inv",
     "https://docs.python.org/3/objects.inv",
     "https://cryptography.io/en/latest/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://twisted.github.io/incremental/docs/objects.inv",
-    "https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "https://twisted.org/constantly/docs/objects.inv",
+    "https://twisted.org/incremental/docs/objects.inv",
+    "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "https://priority.readthedocs.io/en/stable/objects.inv",
     "https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "https://automat.readthedocs.io/en/latest/objects.inv",
@@ -119,7 +116,7 @@ class GitCommand:
             runCommand(["git", "rev-parse"], cwd=path.path)
         except (CalledProcessError, OSError):
             raise NotWorkingDirectory(
-                "%s does not appear to be a Git repository." % (path.path,)
+                f"{path.path} does not appear to be a Git repository."
             )
 
     @staticmethod
@@ -194,7 +191,7 @@ def getRepositoryCommand(directory):
         # It's not Git, but that's okay, eat the error
         pass
 
-    raise NotWorkingDirectory("No supported VCS can be found in %s" % (directory.path,))
+    raise NotWorkingDirectory(f"No supported VCS can be found in {directory.path}")
 
 
 class Project:
@@ -211,14 +208,14 @@ class Project:
         self.directory = directory
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (self.__class__.__name__, self.directory)
+        return f"{self.__class__.__name__}({self.directory!r})"
 
     def getVersion(self):
         """
         @return: A L{incremental.Version} specifying the version number of the
             project based on live python modules.
         """
-        namespace = {}  # type: Dict[str, object]
+        namespace: Dict[str, object] = {}
         directory = self.directory
         while not namespace:
             if directory.path == "/":
@@ -304,24 +301,9 @@ class APIBuilder:
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
-        # Super awful monkeypatch that will selectively use our templates.
-        from pydoctor.templatewriter import util
+        from pydoctor.driver import main  # type: ignore[import]
 
-        originalTemplatefile = util.templatefile
-
-        def templatefile(filename):
-
-            if filename in ["summary.html", "index.html", "common.html"]:
-                twistedPythonDir = FilePath(__file__).parent()
-                templatesDir = twistedPythonDir.child("_pydoctortemplates")
-                return templatesDir.child(filename).path
-            else:
-                return originalTemplatefile(filename)
-
-        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
-        monkeyPatch.patch()
-
-        from pydoctor.driver import main
+        templatesPath = FilePath(__file__).parent().child("_pydoctortemplates")
 
         args = [
             "--project-name",
@@ -332,19 +314,18 @@ class APIBuilder:
             "twisted.python._pydoctor.TwistedSystem",
             "--project-base-dir",
             packagePath.parent().path,
+            "--template-dir",
+            templatesPath.path,
             "--html-viewsource-base",
             sourceURL,
-            "--add-package",
-            packagePath.path,
             "--html-output",
             outputPath.path,
-            "--html-write-function-pages",
             "--quiet",
             "--make-html",
+            "--warnings-as-errors",
         ] + intersphinxes
+        args.append(packagePath.path)
         main(args)
-
-        monkeyPatch.restore()
 
 
 class SphinxBuilder:
@@ -374,7 +355,7 @@ class SphinxBuilder:
         """
         output = self.build(FilePath(args[0]).child("docs"))
         if output:
-            sys.stdout.write("Unclean build:\n{}\n".format(output))
+            sys.stdout.write(f"Unclean build:\n{output}\n")
             raise sys.exit(1)
 
     def build(self, docDir, buildDir=None, version=""):
@@ -486,7 +467,7 @@ class BuildAPIDocsScript:
         apiBuilder = APIBuilder()
         apiBuilder.build(
             "Twisted",
-            "http://twistedmatrix.com/",
+            "https://twistedmatrix.com/",
             sourceURL,
             projectRoot.child("twisted"),
             output,
@@ -582,6 +563,17 @@ class CheckNewsfragmentScript:
                 sys.exit(1)
             else:
                 self._print("Release branch with no newsfragments, all good.")
+                sys.exit(0)
+
+        if os.environ.get("GITHUB_HEAD_REF", "") == "pre-commit-ci-update-config":
+            # The run was triggered by pre-commit.ci.
+            if newsfragments:
+                self._print(
+                    "No newsfragments should be present on an autoupdated branch."
+                )
+                sys.exit(1)
+            else:
+                self._print("Autoupdated branch with no newsfragments, all good.")
                 sys.exit(0)
 
         for change in newsfragments:

@@ -7,26 +7,32 @@ Tests for L{twisted.conch.ssh.agent}.
 
 import struct
 
-from twisted.trial import unittest
 from twisted.test import iosim
+from twisted.trial import unittest
 
 try:
-    import cryptography
+    import cryptography as _cryptography
 except ImportError:
-    cryptography = None  # type: ignore[assignment]
+    cryptography = None
+else:
+    cryptography = _cryptography
 
 try:
-    import pyasn1
+    import pyasn1 as _pyasn1  # type: ignore[import]
 except ImportError:
     pyasn1 = None
-
-if cryptography and pyasn1:
-    from twisted.conch.ssh import keys, agent
 else:
-    keys = agent = None  # type: ignore[assignment]
+    pyasn1 = _pyasn1
 
-from twisted.conch.test import keydata
+try:
+    from twisted.conch.ssh import agent as _agent, keys as _keys
+except ImportError:
+    keys = agent = None
+else:
+    keys, agent = _keys, _agent
+
 from twisted.conch.error import ConchError, MissingKeyStoreError
+from twisted.conch.test import keydata
 
 
 class StubFactory:
@@ -44,9 +50,7 @@ class AgentTestBase(unittest.TestCase):
     Tests for SSHAgentServer/Client.
     """
 
-    if iosim is None:
-        skip = "iosim requires SSL, but SSL is not available"
-    elif agent is None or keys is None:
+    if agent is None or keys is None:
         skip = "Cannot run without cryptography or PyASN1"
 
     def setUp(self):
@@ -122,7 +126,7 @@ class UnimplementedVersionOneServerTests(AgentTestBase):
 
 if agent is not None:
 
-    class CorruptServer(agent.SSHAgentServer):
+    class CorruptServer(agent.SSHAgentServer):  # type: ignore[name-defined]
         """
         A misbehaving server that returns bogus response op codes so that we can
         verify that our callbacks that deal with these op codes handle such

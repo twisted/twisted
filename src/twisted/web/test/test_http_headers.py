@@ -254,13 +254,11 @@ class BytesHeadersTests(TestCase):
         h.setRawHeaders(b"test", [b"lemurs"])
         h.setRawHeaders(b"www-authenticate", [b"basic aksljdlk="])
 
-        allHeaders = set([(k, tuple(v)) for k, v in h.getAllRawHeaders()])
+        allHeaders = {(k, tuple(v)) for k, v in h.getAllRawHeaders()}
 
         self.assertEqual(
             allHeaders,
-            set(
-                [(b"WWW-Authenticate", (b"basic aksljdlk=",)), (b"Test", (b"lemurs",))]
-            ),
+            {(b"WWW-Authenticate", (b"basic aksljdlk=",)), (b"Test", (b"lemurs",))},
         )
 
     def test_headersComparison(self):
@@ -298,7 +296,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%r: [%r, %r]})" % (foo, bar, baz),
+            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_reprWithRawBytes(self):
@@ -315,7 +313,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz\xe1"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%r: [%r, %r]})" % (foo, bar, baz),
+            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_subclassRepr(self):
@@ -332,7 +330,7 @@ class BytesHeadersTests(TestCase):
 
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            "FunnyHeaders({%r: [%r, %r]})" % (foo, bar, baz),
+            f"FunnyHeaders({{{foo!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_copy(self):
@@ -554,17 +552,15 @@ class UnicodeHeadersTests(TestCase):
         h.setRawHeaders("www-authenticate", ["basic aksljdlk="])
         h.setRawHeaders("content-md5", ["kjdfdfgdfgnsd"])
 
-        allHeaders = set([(k, tuple(v)) for k, v in h.getAllRawHeaders()])
+        allHeaders = {(k, tuple(v)) for k, v in h.getAllRawHeaders()}
 
         self.assertEqual(
             allHeaders,
-            set(
-                [
-                    (b"WWW-Authenticate", (b"basic aksljdlk=",)),
-                    (b"Content-MD5", (b"kjdfdfgdfgnsd",)),
-                    (b"Test\xe1", (b"lemurs",)),
-                ]
-            ),
+            {
+                (b"WWW-Authenticate", (b"basic aksljdlk=",)),
+                (b"Content-MD5", (b"kjdfdfgdfgnsd",)),
+                (b"Test\xe1", (b"lemurs",)),
+            },
         )
 
     def test_headersComparison(self):
@@ -620,7 +616,9 @@ class UnicodeHeadersTests(TestCase):
         barEncoded = "b" + barEncoded
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            "Headers({%s: [%s, %r]})" % (fooEncoded, barEncoded, baz.encode("utf8")),
+            "Headers({{{}: [{}, {!r}]}})".format(
+                fooEncoded, barEncoded, baz.encode("utf8")
+            ),
         )
 
     def test_subclassRepr(self):
