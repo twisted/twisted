@@ -109,7 +109,7 @@ def avpair(code, data):
     @param code: the attribute ID
     @type code: L{int}
     @param data: the value
-    @type value: L{bytes}, or L{str} which is converted UTF-16
+    @type data: L{bytes}, or L{str} which is converted UTF-16
     @rtype: L{bytes}
     """
     if isinstance(data, str):

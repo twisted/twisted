@@ -202,12 +202,12 @@ def unpack(cls, data, offset=0, remainder=IGNORE):
     @type data: L{bytes}
 
     @param remainder: what to do with remaining data if longer than required
-                      to fill C{cls}
-                      - C{IGNORE} ignore it
-                      - C{ERROR} throw a L{SMBError}
-                      - C{OFFSET} return offset into data
-                        where remainder begins as second item of tuple
-                      - C{DATA} return remaining data as second item of tuple
+    to fill C{cls}
+     - C{IGNORE} ignore it
+     - C{ERROR} throw a L{SMBError}
+     - C{OFFSET} return offset into data
+     where remainder begins as second item of tuple
+     - C{DATA} return remaining data as second item of tuple
     @type remainder: L{int}
 
     @param offset: offset into data to begin from
@@ -375,7 +375,7 @@ class SMBPacketReceiver(protocol.Protocol):
         """
         send data with 4 byte header
 
-        @param dara: packet to send
+        @param data: packet to send
         @type data: L{bytes}
         """
         size = len(data)
