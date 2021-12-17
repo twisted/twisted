@@ -5,7 +5,7 @@
 Various interfaces for realms, avatars and related objects
 """
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 
 class NoSuchShare(Exception):

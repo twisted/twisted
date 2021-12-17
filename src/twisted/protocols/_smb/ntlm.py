@@ -5,21 +5,21 @@
 protocol
  """
 
-from zope.interface import implementer
-
+import hashlib
+import hmac
+import socket
 import struct
 import time
-import socket
-import hmac
-import hashlib
+
+from zope.interface import implementer
+
 import attr
 
-from twisted.protocols._smb import base
-from twisted.protocols._smb.base import byte, short, medium, long, octets
-
 import twisted.cred.credentials
-from twisted.python.randbytes import secureRandom
 from twisted.logger import Logger
+from twisted.protocols._smb import base
+from twisted.protocols._smb.base import byte, long, medium, octets, short
+from twisted.python.randbytes import secureRandom
 
 log = Logger()
 
@@ -221,7 +221,7 @@ class ChallengeType:
     v_protocol = byte()
 
 
-class NTLMManager(object):
+class NTLMManager:
     """
     manage the NTLM subprotocol
 
@@ -416,7 +416,7 @@ ERSK            {ersk!r}
 
 
 @implementer(twisted.cred.credentials.IUsernameHashedPassword)
-class NTLMCredential(object):
+class NTLMCredential:
     """
     A NTLM credential, unverified initially
     """
@@ -429,7 +429,7 @@ class NTLMCredential(object):
         self.challenge = challenge
 
     def __repr__(self):
-        return "<NTLMCredential %s/%s>" % (self.username, self.domain)
+        return f"<NTLMCredential {self.username}/{self.domain}>"
 
     def checkPassword(self, password):
         # code adapted from pysmb ntlm.py
