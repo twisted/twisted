@@ -3,28 +3,28 @@
 # See LICENSE for details.
 """Implement Microsoft's Server Message Block protocol"""
 
-import struct
 import binascii
-from uuid import uuid4
+import enum
+import struct
 import time
 from collections import namedtuple
-import enum
+from uuid import uuid4
+
 import attr
 
+from twisted.cred.checkers import ANONYMOUS
+from twisted.internet import protocol
+from twisted.internet.defer import maybeDeferred
+from twisted.logger import Logger
 from twisted.protocols._smb import base, security_blob
-from twisted.protocols._smb.base import byte, short, medium, long, uuid, octets
+from twisted.protocols._smb.base import byte, long, medium, octets, short, uuid
 from twisted.protocols._smb.ismb import (
-    ISMBServer,
     IFilesystem,
     IPipe,
     IPrinter,
+    ISMBServer,
     NoSuchShare,
 )
-
-from twisted.internet import protocol
-from twisted.logger import Logger
-from twisted.cred.checkers import ANONYMOUS
-from twisted.internet.defer import maybeDeferred
 
 log = Logger()
 

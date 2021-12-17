@@ -10,17 +10,16 @@ which in turn encapsulate NTLMv2 challenge-response authentication
 
 much of code adapted from Mike Teo's pysmb """
 
-from pyasn1.type import tag, univ, namedtype, namedval, constraint, char
-from pyasn1.codec.der import encoder, decoder
-
-from twisted.protocols._smb import ntlm, base
+from pyasn1.codec.der import decoder, encoder
+from pyasn1.type import char, constraint, namedtype, namedval, tag, univ
 
 from twisted.logger import Logger
+from twisted.protocols._smb import base, ntlm
 
 log = Logger()
 
 
-class BlobManager(object):
+class BlobManager:
     """
     encapsulates the authentication negotiation state
     callers just send blobs in and out and get a credential

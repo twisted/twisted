@@ -1,26 +1,27 @@
 #!/usr/bin/python3
 
-import sys
-import struct
 import calendar
 import io
-import socket
-import re
-import attr
 import os
+import re
+import socket
+import struct
+import sys
 import unittest as python_unittest
 
-from twisted.protocols._smb import base, core, security_blob, ntlm
-from twisted.protocols._smb.ismb import ISMBServer, IFilesystem, NoSuchShare
-
-from twisted.cred import portal, checkers, credentials
-from twisted.trial import unittest
-from twisted.internet import reactor
-from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.defer import Deferred
-from twisted.python.failure import Failure
 from zope.interface import implementer
+
+import attr
+
+from twisted.cred import checkers, credentials, portal
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.protocol import ProcessProtocol
+from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
+from twisted.protocols._smb import base, core, ntlm, security_blob
+from twisted.protocols._smb.ismb import IFilesystem, ISMBServer, NoSuchShare
+from twisted.python.failure import Failure
+from twisted.trial import unittest
 
 log = Logger()
 observers = [textFileLogObserver(sys.stdout)]

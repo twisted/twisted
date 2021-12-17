@@ -6,8 +6,9 @@ base classes for SMB networking
 """
 
 import struct
-import attr
 import uuid as uuid_mod
+
+import attr
 
 from twisted.internet import protocol
 from twisted.logger import Logger
@@ -24,7 +25,7 @@ class SMBError(Exception):
         self.ntstatus = ntstatus
 
     def __str__(self):
-        return "%s 0x%08x" % (self.msg, self.ntstatus)
+        return f"{self.msg} 0x{self.ntstatus:08x}"
 
 
 def unixToNTTime(epoch):
@@ -49,7 +50,7 @@ def default_only(instance, attribute, value):
     """
     C{attrs} validator that only accepts the default
     """
-    assert attribute.default == value, "%s: must be %r, got %r" % (
+    assert attribute.default == value, "{}: must be {!r}, got {!r}".format(
         attribute.name,
         attribute.default,
         value,
