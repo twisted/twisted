@@ -14,7 +14,7 @@ from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import char, constraint, namedtype, namedval, tag, univ
 
 from twisted.logger import Logger
-from twisted.protocols._smb import base, ntlm
+from twisted.protocols._smb import _base, ntlm
 
 log = Logger()
 
@@ -101,7 +101,7 @@ class BlobManager:
         nt = d.getComponentByName("negTokenResp")
         token = nt.getComponentByName("responseToken")
         if not token:
-            raise base.SMBError("security blob does not contain responseToken field")
+            raise _base.SMBError("security blob does not contain responseToken field")
         self.manager.receiveToken(token.asOctets())
 
     def generateChallengeBlob(self):

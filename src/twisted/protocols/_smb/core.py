@@ -16,8 +16,8 @@ from twisted.cred.checkers import ANONYMOUS
 from twisted.internet import protocol
 from twisted.internet.defer import maybeDeferred
 from twisted.logger import Logger
-from twisted.protocols._smb import base, security_blob
-from twisted.protocols._smb.base import byte, long, medium, octets, short, uuid
+from twisted.protocols._smb import _base, security_blob
+from twisted.protocols._smb._base import byte, long, medium, octets, short, uuid
 from twisted.protocols._smb.ismb import (
     IFilesystem,
     IPipe,
@@ -289,7 +289,7 @@ def packetReceived(packet):
     method with data beyond the header.
 
     @param packet: the raw packet
-    @type packet: L{base.SMBPacket}
+    @type packet: L{_base.SMBPacket}
     """
     offset = 0
     isRelated = True
@@ -310,13 +310,13 @@ def packetReceived(packet):
             log.error("Unknown packet type")
             log.debug("packet data {data!r}", data=packet.data[offset : offset + 64])
             return
-        packet.hdr, o2 = base.unpack(HeaderSync, packet.data, offset, base.OFFSET)
+        packet.hdr, o2 = _base.unpack(HeaderSync, packet.data, offset, _base.OFFSET)
         isAsync = (packet.hdr.flags & FLAG_ASYNC) > 0
         isRelated = (packet.hdr.flags & FLAG_RELATED) > 0
         isSigned = (packet.hdr.flags & FLAG_SIGNED) > 0
         # FIXME other flags 3.1 or too obscure
         if isAsync:
-            packet.hdr = base.unpack(HeaderAsync, packet.data, offset)
+            packet.hdr = _base.unpack(HeaderAsync, packet.data, offset)
         if isRelated:
             this_packet = packet.data[offset : offset + packet.hdr.next_command]
         else:
@@ -366,7 +366,7 @@ signature       {sig}""",
             func = "smb_" + name
             try:
                 if func in globals() and req_type:
-                    req = base.unpack(req_type, packet.data, o2)
+                    req = _base.unpack(req_type, packet.data, o2)
                     new_packet = packet.clone(
                         data=this_packet, hdr=packet.hdr, body=req
                     )
@@ -377,7 +377,7 @@ signature       {sig}""",
                         cmd=COMMANDS[packet.hdr.command][0],
                     )
                     errorResponse(packet, NTStatus.NOT_IMPLEMENTED)
-            except base.SMBError as e:
+            except _base.SMBError as e:
                 log.error("SMB error: {e}", e=str(e))
                 errorResponse(packet, e.ntstatus)
             except BaseException:
@@ -399,7 +399,7 @@ def sendHeader(packet, command=None, status=NTStatus.SUCCESS):
     @type command: L{str} or L{int}
 
     @param packet: the packet, C{data} contains after-header data
-    @type packet: L{base.SMBPacket}
+    @type packet: L{_base.SMBPacket}
 
     @param status: packet status, an NTSTATUS code
     @type status: L{int} or L{NTStatus}
@@ -418,7 +418,7 @@ def sendHeader(packet, command=None, status=NTStatus.SUCCESS):
         status = status.value
     packet.hdr.status = status
     packet.hdr.credit_request = 1
-    packet.data = base.pack(packet.hdr) + packet.data
+    packet.data = _base.pack(packet.hdr) + packet.data
     packet.send()
 
 
@@ -428,7 +428,7 @@ def smb_negotiate(packet, resp_type):
     dialects = struct.unpack_from(
         "<%dH" % packet.body.dialect_count,
         packet.data,
-        offset=base.calcsize(HeaderSync) + packet.body.size,
+        offset=_base.calcsize(HeaderSync) + packet.body.size,
     )
     signing_enabled = (packet.body.security_mode & NEGOTIATE_SIGNING_ENABLED) > 0
     # by spec this should never be false
@@ -461,7 +461,7 @@ def errorResponse(packet, ntstatus):
     """
     send SMB error response
 
-    @type packet: L{base.SMBPacket}
+    @type packet: L{_base.SMBPacket}
     @type ntstatus: L{int} or L{NTStatus}
     """
     packet.data = ERROR_RESPONSE_MAGIC
@@ -473,7 +473,7 @@ def negotiateResponse(packet, dialects=None):
     """
     send negotiate response
 
-    @type packet: L{base.SMBPacket}
+    @type packet: L{_base.SMBPacket}
 
     @param dialects: dialects offered by client, if C{None}, 2.02 used
     @type dialects: L{list} of L{int}
@@ -489,7 +489,7 @@ def negotiateResponse(packet, dialects=None):
         if dialect == 0x02FF:
             dialect = 0x0202
         if dialect > MAX_DIALECT:
-            raise base.SMBError(
+            raise _base.SMBError(
                 "min client dialect %04x higher than our max %04x"
                 % (dialect, MAX_DIALECT)
             )
@@ -499,10 +499,10 @@ def negotiateResponse(packet, dialects=None):
     resp.dialect = dialect
     resp.server_uuid = packet.ctx["factory"].server_uuid
     resp.capabilities = GLOBAL_CAP_DFS
-    resp.time = base.unixToNTTime(time.time())
-    resp.boot_time = base.unixToNTTime(packet.ctx["factory"].server_start)
+    resp.time = _base.unixToNTTime(time.time())
+    resp.boot_time = _base.unixToNTTime(packet.ctx["factory"].server_start)
     resp.buflen = len(blob)
-    packet.data = base.pack(resp) + blob
+    packet.data = _base.pack(resp) + blob
     sendHeader(packet, "negotiate")
 
 
@@ -565,7 +565,7 @@ def sessionSetupResponse(packet, blob, ntstatus):
     """
     send session setup response
 
-    @type packet: L{base.SMBPacket}
+    @type packet: L{_base.SMBPacket}
 
     @param blob: the security blob to include in the response
     @type blob: L{bytes}
@@ -578,12 +578,12 @@ def sessionSetupResponse(packet, blob, ntstatus):
     if packet.ctx["blob_manager"].credential == ANONYMOUS:
         resp.flags |= SESSION_FLAG_IS_NULL
     resp.buflen = len(blob)
-    packet.data = base.pack(resp) + blob
+    packet.data = _base.pack(resp) + blob
     sendHeader(packet, "session_setup", ntstatus)
 
 
 def smb_logoff(packet, resp_type):
-    packet.data = base.pack(resp_type())
+    packet.data = _base.pack(resp_type())
     sendHeader(packet)
     logout_thunk = packet.ctx.get("logout_thunk")
     if logout_thunk:
@@ -614,7 +614,7 @@ Path   {path!r}
     def eb_tree(failure):
         if failure.check(NoSuchShare):
             errorResponse(packet, NTStatus.BAD_NETWORK_NAME)
-        elif failure.check(base.SMBError):
+        elif failure.check(_base.SMBError):
             log.error("SMB error {e}", e=str(failure.value))
             errorResponse(packet, failure.value.ntstatus)
         else:
@@ -701,8 +701,8 @@ Path   {path!r}
             log.error("unknown share object {share!r}", share=share)
             errorResponse(packet, NTStatus.UNSUCCESSFUL)
             return
-        packet.hdr.tree_id = base.int32key(packet.ctx["trees"], share)
-        packet.data = base.pack(resp)
+        packet.hdr.tree_id = _base.int32key(packet.ctx["trees"], share)
+        packet.data = _base.pack(resp)
         sendHeader(packet)
 
     d.addCallback(cb_tree)
@@ -711,7 +711,7 @@ Path   {path!r}
 
 def smb_tree_disconnect(packet, resp_type):
     del packet.ctx["trees"][packet.hdr.tree_id]
-    packet.data = base.pack(resp_type())
+    packet.data = _base.pack(resp_type())
     sendHeader(packet)
 
 
@@ -736,7 +736,7 @@ class SMBFactory(protocol.Factory):
 
     def buildProtocol(self, addr):
         log.debug("new SMB connection from {addr!r}", addr=addr)
-        return base.SMBPacketReceiver(
+        return _base.SMBPacketReceiver(
             packetReceived,
             dict(
                 addr=addr,

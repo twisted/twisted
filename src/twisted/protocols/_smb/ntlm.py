@@ -17,8 +17,8 @@ import attr
 
 import twisted.cred.credentials
 from twisted.logger import Logger
-from twisted.protocols._smb import base
-from twisted.protocols._smb.base import byte, long, medium, octets, short
+from twisted.protocols._smb import _base
+from twisted.protocols._smb._base import byte, long, medium, octets, short
 from twisted.python.randbytes import secureRandom
 
 log = Logger()
@@ -248,21 +248,21 @@ class NTLMManager:
         self.token = token
         if len(token) < 36:
             log.debug("{tok}", tok=repr(token))
-            raise base.SMBError("token too small")
-        hdr, rem = base.unpack(HeaderType, token, 0, base.DATA)
+            raise _base.SMBError("token too small")
+        hdr, rem = _base.unpack(HeaderType, token, 0, _base.DATA)
         try:
             getattr(self, "ntlm_" + NTLM_MESSAGES[hdr.packet_type])(rem)
         except IndexError:
-            raise base.SMBError("invalid message %d" % hdr.packet_type)
+            raise _base.SMBError("invalid message %d" % hdr.packet_type)
 
     def ntlm_invalid(self, data):
-        raise base.SMBError("invalid message id 0")
+        raise _base.SMBError("invalid message id 0")
 
     def ntlm_challenge(self, data):
-        raise base.SMBError("invalid to send NTLM challenge to a server")
+        raise _base.SMBError("invalid to send NTLM challenge to a server")
 
     def ntlm_negotiate(self, data):
-        neg = base.unpack(NegType, data)
+        neg = _base.unpack(NegType, data)
         flags = flags2set(neg.flags)
         log.debug(
             """
@@ -280,7 +280,7 @@ Flags           {flags!r}""",
                 proto=neg.v_protocol,
             )
         if "NegotiateUnicode" not in flags:
-            raise base.SMBError("clients must use Unicode")
+            raise _base.SMBError("clients must use Unicode")
         if "NegotiateOemDomainSupplied" in flags and neg.domain_len > 0:
             self.client_domain = self.token[
                 neg.domain_len : neg.domain_len + neg.domain_offset
@@ -322,7 +322,7 @@ Flags           {flags!r}""",
                 + avpair(AV_DNS_COMPUTER_NAME, socket.getfqdn())
                 + avpair(AV_DNS_DOMAIN_NAME, b"\0\0")
                 + avpair(
-                    AV_TIMESTAMP, struct.pack("<Q", base.unixToNTTime(time.time()))
+                    AV_TIMESTAMP, struct.pack("<Q", _base.unixToNTTime(time.time()))
                 )
                 + avpair(AV_EOL, b"")
             )
@@ -333,16 +333,16 @@ Flags           {flags!r}""",
             chal.v_major, chal.v_minor, chal.v_build = SERVER_VERSION
         chal.challenge = self.challenge = secureRandom(8)
         chal.target_len = chal.target_max_len = len(target)
-        chal.target_offset = base.calcsize(HeaderType) + base.calcsize(ChallengeType)
+        chal.target_offset = _base.calcsize(HeaderType) + _base.calcsize(ChallengeType)
         chal.targetinfo_len = chal.targetinfo_max_len = len(targetinfo)
         chal.targetinfo_offset = chal.target_offset + len(target)
         chal.flags = set2flags(self.flags)
-        return base.pack(header) + base.pack(chal) + target + targetinfo
+        return _base.pack(header) + _base.pack(chal) + target + targetinfo
 
     def ntlm_auth(self, data):
         # note authentication isn't checked here, it's just unpacked and
         # loaded into the credential object
-        a = base.unpack(AuthType, data)
+        a = _base.unpack(AuthType, data)
         flags = flags2set(a.flags)
         lm = {}
         if a.lmc_len > 0:
@@ -354,14 +354,14 @@ Flags           {flags!r}""",
         if a.ntc_len > 0:
             raw_nt_response = self.token[a.ntc_offset : a.ntc_offset + a.ntc_len]
             nt["temp"] = raw_nt_response[16:]
-            parts, nt["avpairs"] = base.unpack(NtParts, raw_nt_response, 0, base.DATA)
+            parts, nt["avpairs"] = _base.unpack(NtParts, raw_nt_response, 0, _base.DATA)
             nt["response"] = parts.response
             nt["time"] = parts.time
             nt["client_challenge"] = parts.client_challenge
             if parts.resp_type != NT_RESP_TYPE:
                 log.warn("NT response not valid type")
         if not nt and not lm:
-            raise base.SMBError("one of LM challenge or NT challenge must be provided")
+            raise _base.SMBError("one of LM challenge or NT challenge must be provided")
         if a.domain_len > 0:
             client_domain = self.token[a.domain_offset : a.domain_offset + a.domain_len]
             client_domain = client_domain.decode("utf-16le")
@@ -371,7 +371,7 @@ Flags           {flags!r}""",
             user = self.token[a.user_offset : a.user_offset + a.user_len]
             user = user.decode("utf-16le")
         else:
-            raise base.SMBError("username is required")
+            raise _base.SMBError("username is required")
         if a.workstation_len > 0:
             workstation = self.token[
                 a.workstation_offset : a.workstation_offset + a.workstation_len

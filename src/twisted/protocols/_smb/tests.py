@@ -18,7 +18,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ProcessProtocol
 from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
-from twisted.protocols._smb import base, core, ntlm, security_blob
+from twisted.protocols._smb import _base, core, ntlm, security_blob
 from twisted.protocols._smb.ismb import IFilesystem, ISMBServer, NoSuchShare
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -30,18 +30,18 @@ globalLogBeginner.beginLoggingTo(observers)
 
 @attr.s
 class FakeStruct:
-    one = base.short()
-    two = base.byte()
-    three = base.single(4.2)
-    four = base.octets(3)
-    five = base.long(424242, locked=True)
+    one = _base.short()
+    two = _base.byte()
+    three = _base.single(4.2)
+    four = _base.octets(3)
+    five = _base.long(424242, locked=True)
 
 
 @attr.s
 class FakeStruct2:
-    i = base.short()
-    b = base.byte()
-    s = base.octets(3)
+    i = _base.short()
+    b = _base.byte()
+    s = _base.octets(3)
 
 
 class TestBase(unittest.TestCase):
@@ -50,20 +50,20 @@ class TestBase(unittest.TestCase):
         r = FakeStruct(one=525)
         r.two = 42
         r.four = b"bob"
-        self.assertEqual(base.pack(r), data)
+        self.assertEqual(_base.pack(r), data)
         with self.assertRaises(AssertionError):
             r = FakeStruct(five=424243)
 
     def test_base_calcsize(self):
-        self.assertEqual(base.calcsize(FakeStruct), 18)
-        self.assertEqual(base.calcsize(FakeStruct2), 6)
+        self.assertEqual(_base.calcsize(FakeStruct), 18)
+        self.assertEqual(_base.calcsize(FakeStruct2), 6)
 
     def test_smb_packet_receiver(self):
         def recv(x):
             global rdata
             rdata = x
 
-        pr = base.SMBPacketReceiver(recv, {})
+        pr = _base.SMBPacketReceiver(recv, {})
         pr.transport = io.BytesIO()
 
         # send fake packet
@@ -76,7 +76,7 @@ class TestBase(unittest.TestCase):
 
     def test_int32key(self):
         d = {}
-        n = base.int32key(d, "123")
+        n = _base.int32key(d, "123")
         self.assertEqual(d, {n: "123"})
         self.assertIs(type(n), int)
         self.assertTrue(n > 0)
@@ -84,22 +84,22 @@ class TestBase(unittest.TestCase):
 
     def test_unpack(self):
         data = b"\x0B\x02\x0Etwisted"
-        with self.subTest(remainder=base.IGNORE):
-            r = base.unpack(FakeStruct2, data, remainder=base.IGNORE)
+        with self.subTest(remainder=_base.IGNORE):
+            r = _base.unpack(FakeStruct2, data, remainder=_base.IGNORE)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b"twi")
-        with self.subTest(remainder=base.ERROR):
-            with self.assertRaises(base.SMBError):
-                r = base.unpack(FakeStruct2, data, remainder=base.ERROR)
-        with self.subTest(remainder=base.OFFSET):
-            r, rem = base.unpack(FakeStruct2, data, remainder=base.OFFSET)
+        with self.subTest(remainder=_base.ERROR):
+            with self.assertRaises(_base.SMBError):
+                r = _base.unpack(FakeStruct2, data, remainder=_base.ERROR)
+        with self.subTest(remainder=_base.OFFSET):
+            r, rem = _base.unpack(FakeStruct2, data, remainder=_base.OFFSET)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b"twi")
             self.assertEqual(rem, 6)
-        with self.subTest(remainder=base.DATA):
-            r, rem = base.unpack(FakeStruct2, data, remainder=base.DATA)
+        with self.subTest(remainder=_base.DATA):
+            r, rem = _base.unpack(FakeStruct2, data, remainder=_base.DATA)
             self.assertEqual(r.i, 523)
             self.assertEqual(r.b, 0x0E)
             self.assertEqual(r.s, b"twi")
@@ -110,13 +110,13 @@ class TestBase(unittest.TestCase):
         (nttime,) = struct.unpack("<Q", s)
         # 2020/5/14 09:32:22.101895
         epoch = calendar.timegm((2020, 5, 14, 9, 32, 22.101895, 0, -1, 0))
-        self.assertEqual(base.unixToNTTime(epoch), nttime)
+        self.assertEqual(_base.unixToNTTime(epoch), nttime)
 
         s = b"\x24\xba\x1c\x33\x9f\x14\xd6\x01"
         (nttime,) = struct.unpack("<Q", s)
         # 2020/4/17 10:01:44.388458
         epoch = calendar.timegm((2020, 4, 17, 10, 1, 44.388458, 0, -1, 0))
-        self.assertEqual(base.unixToNTTime(epoch), nttime)
+        self.assertEqual(_base.unixToNTTime(epoch), nttime)
 
 
 # captured auth packets from Windows 10 <-> Samba session
@@ -195,11 +195,11 @@ class TestSecurity(unittest.TestCase):
 
     def test_invalid(self):
         manager = ntlm.NTLMManager("DOMAIN")
-        with self.assertRaises(base.SMBError):
+        with self.assertRaises(_base.SMBError):
             manager.receiveToken(b"I'm too short")
         with self.assertRaises(AssertionError):
             manager.receiveToken(b"I'm long enough but have an invalid header")
-        with self.assertRaises(base.SMBError):
+        with self.assertRaises(_base.SMBError):
             manager.receiveToken(
                 b"NTLMSSP\x00\xFF\0\0\0invalid message"
                 + b"type                             "
@@ -245,7 +245,6 @@ class ChatProcess(ProcessProtocol):
 
     def outReceived(self, data):
         data = data.decode("utf-8")
-        print(data)
         if self.chat:
             prompt, reply = self.chat[0]
             m = re.search(prompt, data)
@@ -262,7 +261,7 @@ class ChatProcess(ProcessProtocol):
                 del self.chat[0]
 
     def errReceived(self, data):
-        print(data.decode("utf-8"))
+        log.debug("STDERR: {data!r}", data=data)
 
     def processEnded(self, status):
         if (not self.ignoreRCode) and status.value.exitCode != 0:
