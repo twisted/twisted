@@ -359,12 +359,12 @@ class _BaseProcess(BaseProcess):
         self, path, uid, gid, executable, args, environment, kwargs
     ):
         """
-        Try to use posix_spawn instead of fork(), if possible.
+        Try to use posix_spawnp() instead of fork(), if possible.
 
         This implementation returns False because the non-PTY subclass
         implements the actual logic; we can't yet use this for pty processes.
 
-        @return: a boolean indicating whether posix_spawn was used or not.
+        @return: a boolean indicating whether posix_spawnp() was used or not.
         """
         return False
 
@@ -635,7 +635,7 @@ class Process(_BaseProcess):
     pipes connected to it.  Those pipes may represent standard input, standard
     output, and standard error, or any other file descriptor.
 
-    On UNIX, this is implemented using posix_spawn when possible (or fork(),
+    On UNIX, this is implemented using posix_spawnp() when possible (or fork(),
     exec(), pipe() and fcntl() when not).  These calls may not exist elsewhere
     so this code is not cross-platform.  (also, windows can only select on
     sockets...)
@@ -774,9 +774,9 @@ class Process(_BaseProcess):
         self, path, uid, gid, executable, args, environment, kwargs
     ):
         """
-        Try to use posix_spawn instead of fork(), if possible.
+        Try to use posix_spawnp() instead of fork(), if possible.
 
-        @return: a boolean indicating whether posix_spawn was used or not.
+        @return: a boolean indicating whether posix_spawnp() was used or not.
         """
         if (
             # no support for setuid/setgid anywhere but in QNX's
@@ -822,7 +822,7 @@ class Process(_BaseProcess):
             if signal.getsignal(everySignal) == signal.SIG_IGN
         ]
 
-        self.pid = os.posix_spawn(
+        self.pid = os.posix_spawnp(
             executable,
             args,
             environment,
@@ -832,7 +832,7 @@ class Process(_BaseProcess):
         self.status = -1
         return True
 
-    if getattr(os, "posix_spawn", None) is None:
+    if getattr(os, "posix_spawnp", None) is None:
         # If there's no posix_spawn implemented, let the superclass handle it
         del _trySpawnInsteadOfFork
 

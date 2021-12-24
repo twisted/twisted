@@ -1126,7 +1126,7 @@ class PosixProcessBase:
         oldexecvpe = os.execvpe
         os.execvpe = buggyexecvpe
         # This implementation detail only matters / is worth testing if we
-        # aren't using posix_spawn.
+        # aren't using posix_spawnp().
         reactor._neverUseSpawn = True
         try:
             reactor.spawnProcess(p, cmd, [b"false"], env=None, usePTY=self.usePTY)
@@ -1396,7 +1396,7 @@ class MockOS:
         if self.raiseExec:
             raise RuntimeError("Bar")
 
-    def posix_spawn(
+    def posix_spawnp(
         self,
         path,
         argv,
@@ -1411,11 +1411,11 @@ class MockOS:
         scheduler=None,
     ):
         """
-        Fake C{os.posix_spawn}. Save the action.
+        Fake C{os.posix_spawnp}. Save the action.
         """
-        self.actions.append("posix_spawn")
+        self.actions.append("posix_spawnp")
         if self.raiseExec:
-            # if exec() would raise, so would posix_spawn()
+            # if exec() would raise, so would posix_spawnp()
             raise RuntimeError("Bar")
 
     def pipe(self):
@@ -1646,7 +1646,7 @@ class DumbPTYProcess(PTYProcess):
 
 class ForkOrSpawn:
     def __eq__(self, other):
-        return other == ("fork", False) or other == "posix_spawn"
+        return other == ("fork", False) or other == "posix_spawnp"
 
 
 class MockProcessTests(unittest.TestCase):
@@ -1691,7 +1691,7 @@ class MockProcessTests(unittest.TestCase):
     def assertProcessLaunched(self):
         """
         A process should have been launched, but I don't care whether it was
-        with fork() or posix_spawn().
+        with fork() or posix_spawnp().
         """
         self.assertEqual(self.mockos.actions, [ForkOrSpawn(), "waitpid"])
 
