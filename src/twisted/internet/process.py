@@ -19,12 +19,16 @@ import stat
 import sys
 import traceback
 
-try:
-    from os import POSIX_SPAWN_CLOSE as _PS_CLOSE, POSIX_SPAWN_DUP2 as _PS_DUP2
-except ImportError:
-    pass
+from typing import Callable, Dict, Optional, TYPE_CHECKING
 
-from typing import Callable, Dict, Optional
+_PS_CLOSE: int
+_PS_DUP2: int
+
+if not TYPE_CHECKING:
+    try:
+        from os import POSIX_SPAWN_CLOSE as _PS_CLOSE, POSIX_SPAWN_DUP2 as _PS_DUP2
+    except ImportError:
+        pass
 
 from zope.interface import implementer
 
