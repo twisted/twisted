@@ -1646,7 +1646,11 @@ class DumbPTYProcess(PTYProcess):
 
 class ForkOrSpawn:
     def __eq__(self, other):
-        return other == ("fork", False) or other == "posix_spawnp"
+        if other == ("fork", False):
+            return True
+        if other == "posix_spawnp":
+            return True
+        return False
 
 
 class MockProcessTests(unittest.TestCase):
