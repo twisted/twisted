@@ -26,7 +26,7 @@ import os
 import signal
 import stat
 import sys
-from unittest import skipIf, SkipTest
+from unittest import SkipTest, skipIf
 
 try:
     import fcntl
