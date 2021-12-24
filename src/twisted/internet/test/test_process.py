@@ -498,8 +498,6 @@ sys.stdout.flush()""".format(
                 def childDataReceived(self, child, data):
                     if child == expectedFD:
                         output.write(data)
-                    else:
-                        print("CDC OOPS", child, data)
 
                 def processEnded(self, reason):
                     reactor.stop()
