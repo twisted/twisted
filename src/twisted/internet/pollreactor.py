@@ -14,15 +14,23 @@ listeners or connectors are added)::
 
 # System imports
 import errno
-from select import error as SelectError, poll
-from select import POLLIN, POLLOUT, POLLHUP, POLLERR, POLLNVAL
+from select import (
+    POLLERR,
+    POLLHUP,
+    POLLIN,
+    POLLNVAL,
+    POLLOUT,
+    error as SelectError,
+    poll,
+)
 
 from zope.interface import implementer
 
-# Twisted imports
-from twisted.python import log
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
+
+# Twisted imports
+from twisted.python import log
 
 
 @implementer(IReactorFDSet)
@@ -92,7 +100,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # make sure the fd is actually real.  In some situations we can get
             # -1 here.
             mdict[fd]
-        except:
+        except BaseException:
             # the hard way: necessary because fileno() may disappear at any
             # moment, thanks to python's underlying sockets impl
             for fd, fdes in self._selectables.items():

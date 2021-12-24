@@ -9,19 +9,18 @@ To run the script:
 $ python xmpp_client.py <jid> <secret>
 """
 
-from __future__ import print_function
 
 import sys
 
 from twisted.internet.defer import Deferred
 from twisted.internet.task import react
 from twisted.names.srvconnect import SRVConnector
-from twisted.words.xish import domish
-from twisted.words.protocols.jabber import xmlstream, client
+from twisted.words.protocols.jabber import client, xmlstream
 from twisted.words.protocols.jabber.jid import JID
+from twisted.words.xish import domish
 
 
-class Client(object):
+class Client:
     def __init__(self, reactor, jid, secret):
         self.reactor = reactor
         f = client.XMPPClientFactory(jid, secret)

@@ -9,7 +9,7 @@ library for writing test cases and utility functions for working with the
 Twisted environment in your tests, and a command-line utility for running your
 tests. Trial is built on the Python standard library's ``unittest``
 module. For more information on how Trial finds tests, see the
-:api:`twisted.trial.runner.TestLoader.loadModule <loadModule>` documentation.
+:py:meth:`loadModule <twisted.trial.runner.TestLoader.loadModule>` documentation.
 
 To run all the Twisted tests, do:
 
@@ -42,7 +42,7 @@ so as to avoid giving two different test-runs the same temporary directory.
 
 
 
-The :api:`twisted.python.lockfile <twisted.python.lockfile>` utility is used to lock
+The :py:mod:`twisted.python.lockfile` utility is used to lock
 the ``_trial_temp`` directories. On Linux, this results
 in symlinks to pids. On Windows, directories are created with a single file with
 a pid as the contents. These lock files will be cleaned up if Trial exits normally
@@ -93,7 +93,7 @@ The ``tearDown`` method is a good place to put cleanup code: it is
 always run regardless of whether your test passes or fails (like a ``finally``
 clause in a try-except-finally construct). Exceptions in ``tearDown``
 are flagged as errors and flunk the test.
-:api:`twisted.trial.unittest.TestCase.addCleanup <TestCase.addCleanup>` is
+:py:meth:`TestCase.addCleanup <twisted.trial.unittest.TestCase.addCleanup>` is
 another useful tool for cleaning up.  With it, you can register callables to
 clean up resources as the test allocates them.  Generally, code should be
 written so that only resources allocated in the tests need to be cleaned up in
@@ -112,11 +112,11 @@ Deferred has triggered and its callbacks have been run. Don't use
 
 
 
-Calls to ``reactor.callLater`` create :api:`twisted.internet.interfaces.IDelayedCall <IDelayedCall>` s.  These need to be run
+Calls to ``reactor.callLater`` create :py:class:`IDelayedCall <twisted.internet.interfaces.IDelayedCall>` s.  These need to be run
 or cancelled during a test, otherwise they will outlive the test.  This would
 be bad, because they could interfere with a later test, causing confusing
 failures in unrelated tests!  For this reason, Trial checks the reactor to make
-sure there are no leftover :api:`twisted.internet.interfaces.IDelayedCall <IDelayedCall>` s in the reactor after a
+sure there are no leftover :py:class:`IDelayedCall <twisted.internet.interfaces.IDelayedCall>` s in the reactor after a
 test, and will fail the test if there are.  The cleanest and simplest way to
 make sure this all works is to return a Deferred from your test.
 
@@ -126,10 +126,10 @@ make sure this all works is to return a Deferred from your test.
 Similarly, sockets created during a test should be closed by the end of the
 test.  This applies to both listening ports and client connections.  So, calls
 to ``reactor.listenTCP`` (and ``listenUNIX`` , and so on)
-return :api:`twisted.internet.interfaces.IListeningPort <IListeningPort>` s, and these should be
-cleaned up before a test ends by calling their :api:`twisted.internet.interfaces.IListeningPort.stopListening <stopListening>` method.
-Calls to ``reactor.connectTCP`` return :api:`twisted.internet.interfaces.IConnector <IConnector>` s, which should be cleaned
-up by calling their :api:`twisted.internet.interfaces.IConnector.disconnect <disconnect>` method.  Trial
+return :py:class:`IListeningPort <twisted.internet.interfaces.IListeningPort>` s, and these should be
+cleaned up before a test ends by calling their :py:meth:`stopListening <twisted.internet.interfaces.IListeningPort.stopListening>` method.
+Calls to ``reactor.connectTCP`` return :py:class:`IConnector <twisted.internet.interfaces.IConnector>` s, which should be cleaned
+up by calling their :py:meth:`disconnect <twisted.internet.interfaces.IConnector.disconnect>` method.  Trial
 will warn about unclosed sockets.
 
 
@@ -182,7 +182,7 @@ the way in which warnings reporting when a test suite is running.
 
 
 
-:api:`twisted.trial.unittest.TestCase.flushWarnings <TestCase.flushWarnings>`
+:py:meth:`TestCase.flushWarnings <twisted.trial.unittest.SynchronousTestCase.flushWarnings>`
 allows tests to be written which make assertions about what warnings have
 been emitted during a particular test method. In order to test a warning with
 ``flushWarnings`` , write a test which first invokes the code which

@@ -13,9 +13,8 @@ implementation and will be used whenever pyOpenSSL 0.10 or newer is installed
 
 from zope.interface import directlyProvides
 
-from twisted.internet.interfaces import ISSLTransport
 from twisted.internet.abstract import FileDescriptor
-
+from twisted.internet.interfaces import ISSLTransport
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 
@@ -106,7 +105,7 @@ def startTLS(transport, contextFactory, normal, bypass):
         as the underlying transport goes.  That is, if the SSL client will be
         the underlying client and the SSL server will be the underlying server.
         C{True} means it is the same, C{False} means they are switched.
-    @type param: L{bool}
+    @type normal: L{bool}
 
     @param bypass: A transport base class to call methods on to bypass the new
         SSL layer (so that the SSL layer itself can send its bytes).

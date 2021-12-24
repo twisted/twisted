@@ -9,51 +9,35 @@ Simple Mail Transfer Protocol implementation.
 """
 
 
-import time
-import re
 import base64
-import socket
+import binascii
 import os
 import random
-import binascii
+import re
+import socket
+import time
 import warnings
-from typing import Type
-
 from email.utils import parseaddr
+from io import BytesIO
+from typing import Type
 
 from zope.interface import implementer
 
 from twisted import cred
 from twisted.copyright import longversion
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import reactor
-from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet import defer, error, protocol, reactor
 from twisted.internet._idna import _idnaText
-from twisted.python import log
-from twisted.python import util
-from twisted.python.compat import networkString, nativeString, iterbytes
-from twisted.python.runtime import platform
-
-from twisted.mail.interfaces import (
-    IClientAuthentication,
-    IMessageSMTP as IMessage,
-    IMessageDeliveryFactory,
-    IMessageDelivery,
-)
+from twisted.internet.interfaces import ISSLTransport, ITLSTransport
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
     LOGINAuthenticator,
     LOGINCredentials as _lcredentials,
 )
 from twisted.mail._except import (
-    AUTHDeclinedError,
-    AUTHRequiredError,
     AddressError,
+    AUTHDeclinedError,
     AuthenticationError,
+    AUTHRequiredError,
     EHLORequiredError,
     ESMTPClientError,
     SMTPAddressError,
@@ -63,16 +47,22 @@ from twisted.mail._except import (
     SMTPConnectError,
     SMTPDeliveryError,
     SMTPError,
+    SMTPProtocolError,
     SMTPServerError,
     SMTPTimeoutError,
     SMTPTLSError as TLSError,
     TLSRequiredError,
-    SMTPProtocolError,
 )
-
-
-from io import BytesIO
-
+from twisted.mail.interfaces import (
+    IClientAuthentication,
+    IMessageDelivery,
+    IMessageDeliveryFactory,
+    IMessageSMTP as IMessage,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log, util
+from twisted.python.compat import iterbytes, nativeString, networkString
+from twisted.python.runtime import platform
 
 __all__ = [
     "AUTHDeclinedError",
@@ -225,7 +215,9 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     else:
         uniq = "." + uniq
 
-    return "<%s.%s.%s%s.%s@%s>" % (datetime, pid, rand, uniq, N(), DNSNAME)
+    return "<{}.{}.{}{}.{}@{}>".format(
+        datetime, pid, rand, uniq, N(), DNSNAME.decode()
+    ).encode()
 
 
 def quoteaddr(addr):
@@ -318,7 +310,7 @@ class Address:
                     # Now in domain
                     domain = [b""]
             elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] != b".":
-                raise AddressError("Parse error at %r of %r" % (atl[0], (addr, atl)))
+                raise AddressError(f"Parse error at {atl[0]!r} of {(addr, atl)!r}")
             else:
                 if not domain:
                     local.append(atl[0])
@@ -357,16 +349,18 @@ class Address:
         return b"".join(res)
 
     def __str__(self) -> str:
-        return nativeString(bytes(self))
+        return self.__bytes__().decode("ascii")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if self.local or self.domain:
             return b"@".join((self.local, self.domain))
         else:
             return b""
 
     def __repr__(self) -> str:
-        return "%s.%s(%s)" % (self.__module__, self.__class__.__name__, repr(str(self)))
+        return "{}.{}({})".format(
+            self.__module__, self.__class__.__name__, repr(str(self))
+        )
 
 
 class User:
@@ -403,9 +397,9 @@ class User:
         }
 
     def __str__(self) -> str:
-        return nativeString(bytes(self.dest))
+        return self.__bytes__().decode("ascii")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return bytes(self.dest)
 
 
@@ -659,7 +653,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         for msg in msgs:
             try:
                 msg.connectionLost()
-            except:
+            except BaseException:
                 log.msg("msg raised exception from connectionLost")
                 log.err()
 
@@ -688,7 +682,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 self.mode = COMMAND
                 self._disconnect(msgs)
                 return
-            except:
+            except BaseException:
                 log.err()
                 self.sendCode(550, b"Internal server error")
                 self.mode = COMMAND
@@ -713,7 +707,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 for message in self.__messages:
                     try:
                         message.connectionLost()
-                    except:
+                    except BaseException:
                         log.err()
                 del self.__messages
             except AttributeError:
@@ -782,7 +776,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             msg = "Could not send e-mail"
             resultLen = len(resultList)
             if resultLen > 1:
-                msg += " ({} failures out of {} recipients)".format(failures, resultLen)
+                msg += f" ({failures} failures out of {resultLen} recipients)"
             self.sendCode(550, networkString(msg))
         else:
             self.sendCode(250, b"Delivery in progress")
@@ -799,7 +793,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.deliveryFactory = None
             self.delivery = avatar
         else:
-            raise RuntimeError("%s is not a supported interface" % (iface.__name__,))
+            raise RuntimeError(f"{iface.__name__} is not a supported interface")
         self._onLogout = logout
         self.challenger = None
 
@@ -1002,7 +996,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             self.sendError(
                 SMTPProtocolError(
                     -1,
-                    "Invalid response from SMTP server: {}".format(line),
+                    f"Invalid response from SMTP server: {line}",
                     self.log.str(),
                 )
             )
@@ -1173,7 +1167,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         @param code: the code returned by the SMTP Server
         @param resp: The string response returned from the SMTP Server
-        @param numOK: the number of addresses accepted by the remote host.
+        @param numOk: the number of addresses accepted by the remote host.
         @param addresses: is a list of tuples (address, code, resp) listing
                           the response to each RCPT command.
         @param log: is the SMTP session log
@@ -1521,7 +1515,7 @@ class ESMTPClient(SMTPClient):
         try:
             self.transport.startTLS(self.context)
             self._tlsMode = True
-        except:
+        except BaseException:
             log.err()
             self.esmtpTLSFailed(451)
 
@@ -1836,7 +1830,7 @@ class SenderMixin:
             for addr, acode, aresp in addresses:
                 if acode not in SUCCESS:
                     errlog.append(
-                        (addr + b": " + networkString("%03d" % (acode,)) + b" " + aresp)
+                        addr + b": " + networkString("%03d" % (acode,)) + b" " + aresp
                     )
 
             errlog.append(log.str())
@@ -1869,7 +1863,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     """
 
     domain = DNSNAME
-    protocol = SMTPSender  # type: Type[SMTPClient]
+    protocol: Type[SMTPClient] = SMTPSender
 
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5, timeout=None):
         """
@@ -2131,7 +2125,7 @@ def sendmail(
 
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
-    @type to_addr: L{list} of L{bytes} or L{bytes}
+    @type to_addrs: L{list} of L{bytes} or L{bytes}
 
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
@@ -2232,7 +2226,7 @@ def xtext_encode(s, errors=None):
     for ch in iterbytes(s):
         o = ord(ch)
         if ch == "+" or ch == "=" or o < 33 or o > 126:
-            r.append(networkString("+%02X" % (o,)))
+            r.append(networkString(f"+{o:02X}"))
         else:
             r.append(bytes((o,)))
     return (b"".join(r), len(s))

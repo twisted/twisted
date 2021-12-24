@@ -2,28 +2,29 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import textwrap
 from typing import Optional, Type
 
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-
-from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import (
-    CS_UK,
-    CS_US,
-    CS_DRAWING,
+    BLINK,
     CS_ALTERNATE,
     CS_ALTERNATE_SPECIAL,
-    BLINK,
+    CS_DRAWING,
+    CS_UK,
+    CS_US,
+    G0,
+    G1,
     UNDERLINE,
+    ClientProtocol,
+    ServerProtocol,
+    modes,
+    privateModes,
 )
-from twisted.conch.insults.insults import G0, G1
-from twisted.conch.insults.insults import modes, privateModes
 from twisted.internet.protocol import Protocol
 from twisted.python.compat import iterbytes
 from twisted.python.constants import ValueConstant, Values
-
-import textwrap
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 def _getattr(mock, name):
@@ -218,7 +219,7 @@ def testByte%(groupName)s(self):
 
 
 class ByteGroupingsMixin(MockMixin):
-    protocolFactory = None  # type: Optional[Type[Protocol]]
+    protocolFactory: Optional[Type[Protocol]] = None
 
     for word, n in [
         ("Pairs", 2),
@@ -284,7 +285,7 @@ class PrintableCharactersTests(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
 
         occs = occurrences(proto)
-        self.assertFalse(occs, "%r should have been []" % (occs,))
+        self.assertFalse(occs, f"{occs!r} should have been []")
 
 
 class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
@@ -587,7 +588,7 @@ class ClientControlSequencesTests(unittest.TestCase, MockMixin):
         self.parser.dataReceived(data)
         while calls:
             self.assertCall(occs.pop(0), *calls.pop(0))
-        self.assertFalse(occs, "No other calls should happen: %r" % (occs,))
+        self.assertFalse(occs, f"No other calls should happen: {occs!r}")
 
     def test_shiftInAfterApplicationData(self):
         """

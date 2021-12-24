@@ -6,25 +6,26 @@ Tests for L{twisted.cred}, now with 30% more starch.
 """
 
 
-from zope.interface import implementer, Interface
-
 from binascii import hexlify, unhexlify
 
-from twisted.trial import unittest
-from twisted.python.compat import nativeString, networkString
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, error, portal
+from twisted.internet import defer
 from twisted.python import components
 from twisted.python.versions import Version
-from twisted.internet import defer
-from twisted.cred import checkers, credentials, portal, error
+from twisted.trial import unittest
 
 try:
-    from crypt import crypt
+    from crypt import crypt as _crypt
 except ImportError:
-    crypt = None  # type: ignore[assignment,misc]
+    crypt = None
+else:
+    crypt = _crypt
 
 
 # The Twisted version in which UsernameHashedPassword is first deprecated.
-_uhpVersion = Version("Twisted", "NEXT", 0, 0)
+_uhpVersion = Version("Twisted", 21, 2, 0)
 
 
 class ITestable(Interface):
@@ -135,9 +136,7 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.assertTrue(
-            iface.providedBy(impl), "%s does not implement %s" % (impl, iface)
-        )
+        self.assertTrue(iface.providedBy(impl), f"{impl} does not implement {iface}")
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
@@ -157,9 +156,7 @@ class CredTests(unittest.TestCase):
 
         # whitebox
         self.assertEqual(iface, ITestable)
-        self.assertTrue(
-            iface.providedBy(impl), "%s does not implement %s" % (impl, iface)
-        )
+        self.assertTrue(iface.providedBy(impl), f"{impl} does not implement {iface}")
 
         # greybox
         self.assertTrue(impl.original.loggedIn)
@@ -267,8 +264,14 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         self.port = portal.Portal(r)
         self.port.registerChecker(self.db)
 
-    def hash(self, u, p, s):
-        return networkString(crypt(nativeString(p), nativeString(s)))
+    def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
+        hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
+        # workaround for pypy3 3.6.9 and above which returns bytes from crypt.crypt()
+        # This is fixed in pypy3 7.3.5.
+        # See L{https://foss.heptapod.net/pypy/pypy/-/issues/3395}
+        if isinstance(hashed_password, bytes):
+            return hashed_password
+        return hashed_password.encode("ascii")
 
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
@@ -287,7 +290,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def testBadCredentials(self):
         badCreds = [
-            credentials.UsernamePassword(u, "wrong password") for u, p in self.users
+            credentials.UsernamePassword(u, b"wrong password") for u, p in self.users
         ]
         d = defer.DeferredList(
             [self.port.login(c, None, ITestable) for c in badCreds], consumeErrors=True

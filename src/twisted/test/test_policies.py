@@ -6,19 +6,15 @@ Test code for policies.
 """
 
 
+import builtins
 from io import StringIO
 
-from zope.interface import Interface, implementer, implementedBy
+from zope.interface import Interface, implementedBy, implementer
 
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-from twisted.test.proto_helpers import StringTransportWithDisconnection
-
-from twisted.internet import protocol, reactor, address, defer, task
+from twisted.internet import address, defer, protocol, reactor, task
 from twisted.protocols import policies
-
-
-import builtins
+from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
+from twisted.trial import unittest
 
 
 class SimpleProtocol(protocol.Protocol):
@@ -355,9 +351,12 @@ class ThrottlingTests(unittest.TestCase):
     def test_limit(self):
         """
         Full test using a custom server limiting number of connections.
+
+        FIXME: https://twistedmatrix.com/trac/ticket/10012
+        This is a flaky test.
         """
         server = Server()
-        c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
+        c1, c2, c3, c4 = (SimpleProtocol() for i in range(4))
         tServer = policies.ThrottlingFactory(server, 2)
         wrapTServer = WrappingFactory(tServer)
         wrapTServer.deferred = defer.Deferred()
@@ -932,14 +931,14 @@ class LoggingFactoryTests(unittest.TestCase):
         p.dataReceived(b"here are some bytes")
 
         v = f.openFile.getvalue()
-        self.assertIn("C 1: %r" % (b"here are some bytes",), v)
-        self.assertIn("S 1: %r" % (b"here are some bytes",), v)
+        self.assertIn("C 1: {!r}".format(b"here are some bytes"), v)
+        self.assertIn("S 1: {!r}".format(b"here are some bytes"), v)
         self.assertEqual(t.value(), b"here are some bytes")
 
         t.clear()
         p.dataReceived(b"prepare for vector! to the extreme")
         v = f.openFile.getvalue()
-        self.assertIn("SV 1: %r" % ([b"prepare for vector! to the extreme"],), v)
+        self.assertIn("SV 1: {!r}".format([b"prepare for vector! to the extreme"]), v)
         self.assertEqual(t.value(), b"prepare for vector! to the extreme")
 
         p.loseConnection()

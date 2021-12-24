@@ -9,57 +9,48 @@ Test HTTP support.
 import base64
 import calendar
 import random
+import sys
+from io import BytesIO
+from itertools import cycle
+from typing import Sequence, Union
+from unittest import skipIf
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from urllib.parse import parse_qs, urlparse, urlunsplit
+
+from zope.interface import directlyProvides, providedBy, provider
+from zope.interface.verify import verifyObject
 
 import hamcrest
 
-from urllib.parse import urlparse, urlunsplit, parse_qs
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from unittest import skipIf
-from typing import Sequence, Union
-
-from io import BytesIO
-from itertools import cycle
-from zope.interface import (
-    provider,
-    directlyProvides,
-    providedBy,
-)
-from zope.interface.verify import verifyObject
-
+from twisted.internet import address
+from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.task import Clock
+from twisted.logger import globalLogPublisher
+from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.test.proto_helpers import (
+    EventLoggingObserver,
+    NonStreamingProducer,
+    StringTransport,
+)
+from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
-from twisted.web.http import PotentialDataLoss, _DataLoss
-from twisted.web.http import _IdentityTransferDecoder
-from twisted.internet import address
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionLost, ConnectionDone
-from twisted.protocols import loopback
-from twisted.test.proto_helpers import (
-    StringTransport,
-    NonStreamingProducer,
-    EventLoggingObserver,
-)
-from twisted.test.test_internet import DummyProducer
+from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
     textLinearWhitespaceComponents,
 )
-
-from twisted.logger import globalLogPublisher
-
-from ._util import (
-    assertIsFilesystemTemporary,
-)
+from ._util import assertIsFilesystemTemporary
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]  # noqa
+    proxyForInterface(  # type: ignore[misc]
         http._IDeprecatedHTTPChannelToRequestInterface
     )
 ):
@@ -264,7 +255,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response = [
+    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -273,7 +264,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
             b"Content-Length: 13",
             b"'''\nNone\n'''\n",
         )
-    ]  # type: Union[Sequence[Sequence[bytes]], bytes]
+    ]
 
     def test_buffer(self):
         """
@@ -1137,7 +1128,7 @@ class IdentityTransferEncodingTests(TestCase):
         def finish(bytes):
             try:
                 decoder.dataReceived(b"foo")
-            except:
+            except BaseException:
                 failures.append(Failure())
 
         decoder = _IdentityTransferDecoder(5, self.data.append, finish)
@@ -1239,6 +1230,35 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
 
+    def test_long(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} delivers partial chunk data as
+        soon as it is received.
+        """
+        data = []
+        finished = []
+        p = http._ChunkedTransferDecoder(data.append, finished.append)
+        p.dataReceived(b"a;\r\n12345")
+        p.dataReceived(b"67890")
+        p.dataReceived(b"\r\n0;\r\n\r\n...")
+        self.assertEqual(data, [b"12345", b"67890"])
+        self.assertEqual(finished, [b"..."])
+
+    def test_empty(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} is robust against receiving
+        a zero-length input.
+        """
+        chunks = []
+        finished = []
+        p = http._ChunkedTransferDecoder(chunks.append, finished.append)
+        p.dataReceived(b"")
+        for s in iterbytes(b"3\r\nabc\r\n5\r\n12345\r\n0\r\n\r\n"):
+            p.dataReceived(s)
+            p.dataReceived(b"")
+        self.assertEqual(chunks, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
+        self.assertEqual(finished, [b""])
+
     def test_newlines(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} doesn't treat CR LF pairs
@@ -1258,6 +1278,89 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p = http._ChunkedTransferDecoder(L.append, None)
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
+
+    def test_oversizedChunkSizeLine(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size line exceeds 4 KiB.
+        This applies even when the data has already been received and buffered
+        so that behavior is consistent regardless of how bytes are framed.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3;" + b"." * http.maxChunkSizeLineLength + b"\r\nabc\r\n",
+        )
+
+    def test_oversizedChunkSizeLinePartial(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the amount of data buffered while
+        looking for the end of the chunk size line exceeds 4 KiB so
+        that buffering does not continue without bound.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"." * (http.maxChunkSizeLineLength + 1),
+        )
+
+    def test_malformedChunkSize(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size can't be decoded as
+        a base-16 integer.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"bloop\r\nabc\r\n"
+        )
+
+    def test_malformedChunkSizeNegative(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size is negative.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
+        )
+
+    def test_malformedChunkEnd(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk is followed by characters
+        other than C{\r\n}.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
+        )
+
+    def test_malformedChunkEndFinal(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the terminal zero-length chunk is
+        followed by characters other than C{\r\n}.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
+        )
 
     def test_finish(self):
         """
@@ -1323,7 +1426,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         def finished(extra):
             try:
                 parser.noMoreData()
-            except:
+            except BaseException:
                 errors.append(Failure())
             else:
                 successes.append(True)
@@ -1655,7 +1758,7 @@ class ParsingTests(unittest.TestCase):
         """
         requestLines = [b"GET / HTTP/1.0"]
         for i in range(http.HTTPChannel.maxHeaders + 2):
-            requestLines.append(networkString("%s: foo" % (i,)))
+            requestLines.append(networkString(f"{i}: foo"))
         requestLines.extend([b"", b""])
 
         self.assertRequestRejected(requestLines)
@@ -1994,6 +2097,33 @@ abasdfg
         channel = self.runRequest(req, http.Request, success=False)
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
+    def test_multipartEmptyHeaderProcessingFailure(self):
+        """
+        When the multipart does not contain a header is should be skipped
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.write(b"done")
+                self.finish()
+
+        # The parsing failure is encoding a NoneType key when name is not
+        # defined in Content-Disposition
+        req = b"""\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaBb1313
+Content-Length: 14
+
+--AaBb1313
+
+--AaBb1313--
+"""
+        channel = self.runRequest(req, MyRequest, success=False)
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(processed[0].args, {})
+
     def test_multipartFormData(self):
         """
         If the request has a Content-Type of C{multipart/form-data}, and the
@@ -2292,6 +2422,9 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
+    # FIXME: https://twistedmatrix.com/trac/ticket/10096
+    # Re-enable once the implementation is updated.
+    @skipIf(sys.version_info >= (3, 6, 13), "newer py3.6 parse_qs treat ; differently")
     def testParseqs(self):
         self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
         self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)
@@ -3668,7 +3801,7 @@ def sub(keys, d):
         corresponding values in C{d}.
     @rtype: L{dict}
     """
-    return dict([(k, d[k]) for k in keys])
+    return {k: d[k] for k in keys}
 
 
 class DeprecatedRequestAttributesTests(unittest.TestCase):

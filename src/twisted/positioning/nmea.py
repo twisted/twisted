@@ -20,17 +20,18 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 """
 
 
-import operator
 import datetime
+import operator
 from functools import reduce
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant
 
-from twisted.positioning import base, ipositioning, _sentence
+from constantly import ValueConstant, Values  # type: ignore[import]
+
+from twisted.positioning import _sentence, base, ipositioning
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import nativeString, iterbytes
+from twisted.python.compat import iterbytes, nativeString
 
 
 class GPGGAFixQualities(Values):
@@ -120,7 +121,7 @@ def _split(sentence):
     elif sentence[-1:] == b"*":  # Sentence without checksum
         return sentence[1:-1].split(b",")
     else:
-        raise base.InvalidSentence("malformed sentence %s" % (sentence,))
+        raise base.InvalidSentence(f"malformed sentence {sentence}")
 
 
 def _validateChecksum(sentence):
@@ -139,7 +140,7 @@ def _validateChecksum(sentence):
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, [ord(x) for x in iterbytes(source)])
         if computed != reference:
-            raise base.InvalidChecksum("%02x != %02x" % (computed, reference))
+            raise base.InvalidChecksum(f"{computed:02x} != {reference:02x}")
 
 
 class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
@@ -155,12 +156,12 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
     @cvar _SENTENCE_CONTENTS: Has the field names in an NMEA sentence for each
         sentence type (in order, obviously).
     @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
-    @param _receiver: A receiver for NMEAProtocol sentence objects.
-    @type _receiver: L{INMEAReceiver}
-    @param _sentenceCallback: A function that will be called with a new
+    @param receiver: A receiver for NMEAProtocol sentence objects.
+    @type receiver: L{INMEAReceiver}
+    @param sentenceCallback: A function that will be called with a new
         L{NMEASentence} when it is created. Useful for massaging data from
         particularly misbehaving NMEA receivers.
-    @type _sentenceCallback: unary callable
+    @type sentenceCallback: unary callable
     """
 
     def __init__(self, receiver, sentenceCallback=None):
@@ -482,7 +483,7 @@ class NMEAAdapter:
 
         left, right = nmeaCoordinate.split(".")
 
-        degrees, minutes = int(left[:-2]), float("%s.%s" % (left[-2:], right))
+        degrees, minutes = int(left[:-2]), float(f"{left[-2:]}.{right}")
         angle = degrees + minutes / 60
         coordinate = base.Coordinate(angle, coordinateType)
         self._sentenceData[coordinateName] = coordinate
@@ -527,7 +528,7 @@ class NMEAAdapter:
         elif coordinateType is Angles.VARIATION:
             hemisphereKey = "magneticVariationDirection"
         else:
-            raise ValueError("unknown coordinate type %s" % (coordinateType,))
+            raise ValueError(f"unknown coordinate type {coordinateType}")
 
         hemisphere = getattr(self.currentSentence, hemisphereKey).upper()
 
@@ -536,7 +537,7 @@ class NMEAAdapter:
         elif hemisphere in "SW":
             return -1
         else:
-            raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
+            raise ValueError(f"bad hemisphere/direction: {hemisphere}")
 
     def _convert(self, key, converter):
         """
@@ -668,10 +669,10 @@ class NMEAAdapter:
 
         keys = "satellitePRN", "azimuth", "elevation", "signalToNoiseRatio"
         for index in range(4):
-            prn, azimuth, elevation, snr = [
+            prn, azimuth, elevation, snr = (
                 getattr(self.currentSentence, attr)
                 for attr in ("%s_%i" % (key, index) for key in keys)
-            ]
+            )
 
             if prn is None or snr is None:
                 # The peephole optimizer optimizes the jump away, meaning that
@@ -865,9 +866,9 @@ class NMEAAdapter:
 
         If the adapter state has no beacon information, does nothing.
 
-        @param beaconInformation: The beacon information object that beacon
+        @param newBeaconInformation: The beacon information object that beacon
             information will be merged into (if necessary).
-        @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
+        @type newBeaconInformation: L{twisted.positioning.base.BeaconInformation}
         """
         old = self._state.get("_partialBeaconInformation")
         if old is None:
@@ -888,10 +889,10 @@ class NMEAAdapter:
             # nothing new to combine here.
             return
 
-        date, time = [
+        date, time = (
             self._sentenceData.get(key) or self._state.get(key)
             for key in ("_date", "_time")
-        ]
+        )
 
         if date is None or time is None:
             return

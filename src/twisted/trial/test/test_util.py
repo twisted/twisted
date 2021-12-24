@@ -13,19 +13,17 @@ from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python import filepath
-from twisted.internet.interfaces import IProcessTransport
-from twisted.internet import defer
 from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
+from twisted.python import filepath
 from twisted.python.failure import Failure
-
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial import util
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial.util import (
     DirtyReactorAggregateError,
     _Janitor,
-    excInfoOrFailureToExcInfo,
     acquireAttribute,
+    excInfoOrFailureToExcInfo,
 )
 
 
@@ -68,135 +66,6 @@ class MktempTests(SynchronousTestCase):
         """
         path = os.path.abspath(self.mktemp())
         self.assertTrue(path.startswith(os.getcwd()))
-
-
-class RunSequentiallyTests(SynchronousTestCase):
-    """
-    Sometimes it is useful to be able to run an arbitrary list of callables,
-    one after the other.
-
-    When some of those callables can return Deferreds, things become complex.
-    """
-
-    def assertDeferredResult(self, deferred, assertFunction, *args, **kwargs):
-        """
-        Call the given assertion function against the current result of a
-        Deferred.
-        """
-        result = []
-        deferred.addCallback(result.append)
-        assertFunction(result[0], *args, **kwargs)
-
-    def test_emptyList(self):
-        """
-        When asked to run an empty list of callables, runSequentially returns a
-        successful Deferred that fires an empty list.
-        """
-        d = util._runSequentially([])
-        self.assertDeferredResult(d, self.assertEqual, [])
-
-    def test_singleSynchronousSuccess(self):
-        """
-        When given a callable that succeeds without returning a Deferred,
-        include the return value in the results list, tagged with a SUCCESS
-        flag.
-        """
-        d = util._runSequentially([lambda: None])
-        self.assertDeferredResult(d, self.assertEqual, [(defer.SUCCESS, None)])
-
-    def test_singleSynchronousFailure(self):
-        """
-        When given a callable that raises an exception, include a Failure for
-        that exception in the results list, tagged with a FAILURE flag.
-        """
-        d = util._runSequentially([lambda: self.fail("foo")])
-
-        def check(results):
-            [(flag, fail)] = results
-            fail.trap(self.failureException)
-            self.assertEqual(fail.getErrorMessage(), "foo")
-            self.assertEqual(flag, defer.FAILURE)
-
-        self.assertDeferredResult(d, check)
-
-    def test_singleAsynchronousSuccess(self):
-        """
-        When given a callable that returns a successful Deferred, include the
-        result of the Deferred in the results list, tagged with a SUCCESS flag.
-        """
-        d = util._runSequentially([lambda: defer.succeed(None)])
-        self.assertDeferredResult(d, self.assertEqual, [(defer.SUCCESS, None)])
-
-    def test_singleAsynchronousFailure(self):
-        """
-        When given a callable that returns a failing Deferred, include the
-        failure the results list, tagged with a FAILURE flag.
-        """
-        d = util._runSequentially([lambda: defer.fail(ValueError("foo"))])
-
-        def check(results):
-            [(flag, fail)] = results
-            fail.trap(ValueError)
-            self.assertEqual(fail.getErrorMessage(), "foo")
-            self.assertEqual(flag, defer.FAILURE)
-
-        self.assertDeferredResult(d, check)
-
-    def test_callablesCalledInOrder(self):
-        """
-        Check that the callables are called in the given order, one after the
-        other.
-        """
-        log = []
-        deferreds = []
-
-        def append(value):
-            d = defer.Deferred()
-            log.append(value)
-            deferreds.append(d)
-            return d
-
-        util._runSequentially([lambda: append("foo"), lambda: append("bar")])
-
-        # runSequentially should wait until the Deferred has fired before
-        # running the second callable.
-        self.assertEqual(log, ["foo"])
-        deferreds[-1].callback(None)
-        self.assertEqual(log, ["foo", "bar"])
-
-    def test_continuesAfterError(self):
-        """
-        If one of the callables raises an error, then runSequentially continues
-        to run the remaining callables.
-        """
-        d = util._runSequentially([lambda: self.fail("foo"), lambda: "bar"])
-
-        def check(results):
-            [(flag1, fail), (flag2, result)] = results
-            fail.trap(self.failureException)
-            self.assertEqual(flag1, defer.FAILURE)
-            self.assertEqual(fail.getErrorMessage(), "foo")
-            self.assertEqual(flag2, defer.SUCCESS)
-            self.assertEqual(result, "bar")
-
-        self.assertDeferredResult(d, check)
-
-    def test_stopOnFirstError(self):
-        """
-        If the C{stopOnFirstError} option is passed to C{runSequentially}, then
-        no further callables are called after the first exception is raised.
-        """
-        d = util._runSequentially(
-            [lambda: self.fail("foo"), lambda: "bar"], stopOnFirstError=True
-        )
-
-        def check(results):
-            [(flag1, fail)] = results
-            fail.trap(self.failureException)
-            self.assertEqual(flag1, defer.FAILURE)
-            self.assertEqual(fail.getErrorMessage(), "foo")
-
-        self.assertDeferredResult(d, check)
 
 
 class DirtyReactorAggregateErrorTests(SynchronousTestCase):
@@ -596,7 +465,7 @@ class ExcInfoTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             f = Failure()
         self.assertEqual((f.type, f.value, f.tb), excInfoOrFailureToExcInfo(f))
 
@@ -723,8 +592,7 @@ class ListToPhraseTests(SynchronousTestCase):
         """
 
         def sample():
-            for i in range(2):
-                yield i
+            yield from range(2)
 
         error = self.assertRaises(TypeError, util._listToPhrase, sample, "and")
         self.assertEqual(str(error), "Things must be a list or a tuple")

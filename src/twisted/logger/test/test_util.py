@@ -5,8 +5,10 @@
 Test cases for L{twisted.logger._util}.
 """
 
-from twisted.trial import unittest
+from zope.interface import implementer
 
+from twisted.trial import unittest
+from .._interfaces import ILogObserver, LogEvent
 from .._observer import LogPublisher
 from .._util import formatTrace
 
@@ -16,17 +18,20 @@ class UtilTests(unittest.TestCase):
     Utility tests.
     """
 
-    def test_trace(self):
+    def test_trace(self) -> None:
         """
         Tracing keeps track of forwarding done by the publisher.
         """
         publisher = LogPublisher()
 
-        event = dict(log_trace=[])
+        event: LogEvent = dict(log_trace=[])
 
-        o1 = lambda e: None
+        @implementer(ILogObserver)
+        def o1(e: LogEvent) -> None:
+            pass
 
-        def o2(e):
+        @implementer(ILogObserver)
+        def o2(e: LogEvent) -> None:
             self.assertIs(e, event)
             self.assertEqual(
                 e["log_trace"],
@@ -37,7 +42,8 @@ class UtilTests(unittest.TestCase):
                 ],
             )
 
-        def o3(e):
+        @implementer(ILogObserver)
+        def o3(e: LogEvent) -> None:
             self.assertIs(e, event)
             self.assertEqual(
                 e["log_trace"],
@@ -53,24 +59,40 @@ class UtilTests(unittest.TestCase):
         publisher.addObserver(o3)
         publisher(event)
 
-    def test_formatTrace(self):
+    def test_formatTrace(self) -> None:
         """
         Format trace as string.
         """
-        event = dict(log_trace=[])
+        event: LogEvent = dict(log_trace=[])
 
-        def noOp(e):
+        @implementer(ILogObserver)
+        def o1(e: LogEvent) -> None:
             pass
 
-        o1, o2, o3, o4, o5 = noOp, noOp, noOp, noOp, noOp
+        @implementer(ILogObserver)
+        def o2(e: LogEvent) -> None:
+            pass
 
-        o1.name = "root/o1"
+        @implementer(ILogObserver)
+        def o3(e: LogEvent) -> None:
+            pass
+
+        @implementer(ILogObserver)
+        def o4(e: LogEvent) -> None:
+            pass
+
+        @implementer(ILogObserver)
+        def o5(e: LogEvent) -> None:
+            pass
+
+        o1.name = "root/o1"  # type: ignore[attr-defined]
         o2.name = "root/p1/o2"
         o3.name = "root/p1/o3"
         o4.name = "root/p1/p2/o4"
         o5.name = "root/o5"
 
-        def testObserver(e):
+        @implementer(ILogObserver)
+        def testObserver(e: LogEvent) -> None:
             self.assertIs(e, event)
             trace = formatTrace(e["log_trace"])
             self.assertEqual(
@@ -103,9 +125,9 @@ class UtilTests(unittest.TestCase):
         p2 = LogPublisher(o4)
         p1 = LogPublisher(o2, o3, p2)
 
-        p2.name = "root/p1/p2/"
-        p1.name = "root/p1/"
+        p2.name = "root/p1/p2/"  # type: ignore[attr-defined]
+        p1.name = "root/p1/"  # type: ignore[attr-defined]
 
         root = LogPublisher(o1, p1, o5, oTest)
-        root.name = "root/"
+        root.name = "root/"  # type: ignore[attr-defined]
         root(event)

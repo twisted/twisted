@@ -6,20 +6,24 @@ Tests for L{twisted.python.fakepwd}.
 """
 
 try:
-    import pwd
+    import pwd as _pwd
 except ImportError:
-    pwd = None  # type: ignore[assignment]
+    pwd = None
+else:
+    pwd = _pwd
 
 try:
-    import spwd
+    import spwd as _spwd
 except ImportError:
-    spwd = None  # type: ignore[assignment]
+    spwd = None
+else:
+    spwd = _spwd
 
 import os
 from operator import getitem
 
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.trial.unittest import TestCase
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 
 SYSTEM_UID_MAX = 999
 

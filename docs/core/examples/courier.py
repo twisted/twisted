@@ -19,23 +19,24 @@ sys.stderr = log.logfile
 
 # Twisted imports
 from twisted.internet import reactor, stdio
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols import basic
 
 FILTERS = "/var/lib/courier/filters"
 ALLFILTERS = "/var/lib/courier/allfilters"
 FILTERNAME = "twistedfilter"
 
-import email.parser
 import email.message
-import os, os.path
-from syslog import syslog, openlog, LOG_MAIL
+import email.parser
+import os
+import os.path
+from syslog import LOG_MAIL, openlog, syslog
 
 
 def trace_dump():
     t, v, tb = sys.exc_info()
     openlog(FILTERNAME, 0, LOG_MAIL)
-    syslog("Unhandled exception: {} - {}".format(v, t))
+    syslog(f"Unhandled exception: {v} - {t}")
     while tb:
         syslog(
             "Trace: {}:{} {}".format(
@@ -73,7 +74,7 @@ class MailProcessor(basic.LineReceiver):
     delimiter = "\n"
 
     def connectionMade(self):
-        log.msg("Connection from {}".format(self.transport))
+        log.msg(f"Connection from {self.transport}")
         self.state = "connected"
         self.metaInfo = []
 
@@ -100,7 +101,7 @@ class MailProcessor(basic.LineReceiver):
             with open(self.messageFilename) as f:
                 emailParser.parse(f)
             self.sendLine(b"200 Ok")
-        except:
+        except BaseException:
             trace_dump()
             self.sendLine(b"435 " + FILTERNAME.encode("ascii") + b" processing error")
 
@@ -109,8 +110,8 @@ def main():
     # Listen on the UNIX socket
     f = Factory()
     f.protocol = MailProcessor
-    safe_del("{}/{}".format(ALLFILTERS, FILTERNAME))
-    reactor.listenUNIX("{}/{}".format(ALLFILTERS, FILTERNAME), f, 10)
+    safe_del(f"{ALLFILTERS}/{FILTERNAME}")
+    reactor.listenUNIX(f"{ALLFILTERS}/{FILTERNAME}", f, 10)
 
     # Once started, close fd 3 to let Courier know we're ready
     reactor.callLater(0, os.close, 3)

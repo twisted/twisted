@@ -51,53 +51,42 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
     ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]],
     ['dereference', 1]]
 
-The C{set} builtin and the C{sets.Set} class are serialized to the same
-thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
-that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set}.
-
-The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
+The Python 2.x C{sets.Set} and C{sets.ImmutableSet} classes are
+serialized to the same thing as the builtin C{set} and C{frozenset}
+classes.  (This is only relevant if you are communicating with a
+version of jelly running on an older version of Python.)
 
 @author: Glyph Lefkowitz
+
 """
+
+import copy
+import datetime
+import decimal
 
 # System Imports
 import types
 import warnings
-import decimal
 from functools import reduce
-import copy
-import datetime
+
 from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.persisted.crefutil import (
+    NotKnown,
+    _Container,
+    _Dereference,
+    _DictKeyAndValue,
+    _InstanceMethod,
+    _Tuple,
+)
 
 # Twisted Imports
 from twisted.python.compat import nativeString
-from twisted.python.reflect import namedObject, qual, namedAny
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
-from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
-from twisted.persisted.crefutil import _Container
-
-from twisted.spread.interfaces import IJellyable, IUnjellyable
-
 from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
-
-
-_SetTypes = [set]
-_ImmutableSetTypes = [frozenset]
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    try:
-        import sets as _sets
-    except ImportError:
-        # sets module is deprecated in Python 2.6, and gone in
-        # Python 3
-        _sets = None
-    else:
-        _SetTypes.append(_sets.Set)
-        _ImmutableSetTypes.append(_sets.ImmutableSet)
-
+from twisted.python.reflect import namedAny, namedObject, qual
+from twisted.spread.interfaces import IJellyable, IUnjellyable
 
 DictTypes = (dict,)
 
@@ -267,7 +256,7 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
             "It's not a class."
         else:
             if yes:
-                setUnjellyableForClass("%s%s" % (prefix, name), loaded)
+                setUnjellyableForClass(f"{prefix}{name}", loaded)
 
 
 def getInstanceState(inst, jellier):
@@ -551,9 +540,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType in _SetTypes:
+                elif objType is set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType in _ImmutableSetTypes:
+                elif objType is frozenset:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__).encode("utf-8")
@@ -578,7 +567,7 @@ class _Jellier:
                         )
                 return self.preserve(obj, sxp)
         else:
-            raise InsecureJelly("Type not allowed for object: %s %s" % (objType, obj))
+            raise InsecureJelly(f"Type not allowed for object: {objType} {obj}")
 
     def _jellyIterable(self, atom, obj):
         """
@@ -677,7 +666,7 @@ class _Unjellier:
             modName = ".".join(nameSplit[:-1])
             if not self.taster.isModuleAllowed(modName):
                 raise InsecureJelly(
-                    "Module {} not allowed (in type {}).".format(modName, jelTypeText)
+                    f"Module {modName} not allowed (in type {jelTypeText})."
                 )
             clz = namedObject(jelTypeText)
             if not self.taster.isClassAllowed(clz):
@@ -721,11 +710,8 @@ class _Unjellier:
         return decimal.Decimal((sign, guts, exponent))
 
     def _unjelly_boolean(self, exp):
-        if bool:
-            assert exp[0] in (b"true", b"false")
-            return exp[0] == b"true"
-        else:
-            return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
+        assert exp[0] in (b"true", b"false")
+        return exp[0] == b"true"
 
     def _unjelly_datetime(self, exp):
         return datetime.datetime(*map(int, exp[0].split()))
@@ -832,7 +818,7 @@ class _Unjellier:
         if type(moduleName) != str:
             raise InsecureJelly("Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
-            raise InsecureJelly("Attempted to unjelly module named %r" % (moduleName,))
+            raise InsecureJelly(f"Attempted to unjelly module named {moduleName!r}")
         mod = __import__(moduleName, {}, {}, "x")
         return mod
 
@@ -892,7 +878,7 @@ class _Unjellier:
         return self._genericUnjelly(clz, rest[1])
 
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable("Unpersistable data: %s" % (rest[0],))
+        return Unpersistable(f"Unpersistable data: {rest[0]}")
 
     def _unjelly_method(self, rest):
         """

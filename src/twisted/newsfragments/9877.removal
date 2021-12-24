@@ -1,1 +1,0 @@
-twisted.pair.ethernet.IEthernetProtocol.addProto()'s interface was changed to match the existing implementations in the Twisted source code.

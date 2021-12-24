@@ -9,7 +9,7 @@ SSH key exchange handling.
 
 from hashlib import sha1, sha256, sha384, sha512
 
-from zope.interface import Attribute, implementer, Interface
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.conch import error
 
@@ -92,6 +92,12 @@ class _ECDH256:
     """
     Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
+
+    Note that C{ecdh-sha2-nistp256} takes priority over nistp384 or nistp512.
+    This is the same priority from OpenSSH.
+
+    C{ecdh-sha2-nistp256} is considered preety good cryptography.
+    If you need something better consider using C{curve25519-sha256}.
     """
 
     preference = 3
@@ -195,9 +201,7 @@ def getKex(kexAlgorithm):
     @raises ConchError: if the key exchange algorithm is not found.
     """
     if kexAlgorithm not in _kexAlgorithms:
-        raise error.ConchError(
-            "Unsupported key exchange algorithm: %s" % (kexAlgorithm,)
-        )
+        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm}")
     return _kexAlgorithms[kexAlgorithm]
 
 
@@ -267,6 +271,7 @@ def getSupportedKeyExchanges():
     """
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
+
     from twisted.conch.ssh.keys import _curveTable
 
     backend = default_backend()

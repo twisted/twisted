@@ -6,9 +6,8 @@
 Test cases for formmethod module.
 """
 
-from twisted.trial import unittest
-
 from twisted.python import formmethod
+from twisted.trial import unittest
 
 
 class ArgumentTests(unittest.TestCase):

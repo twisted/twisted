@@ -6,17 +6,18 @@
 An FTP protocol implementation
 """
 
-# System Imports
-import os
-import time
-import re
-import stat
 import errno
 import fnmatch
 
+# System Imports
+import os
+import re
+import stat
+import time
+
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pwd = grp = None  # type: ignore[assignment]
 
@@ -24,11 +25,10 @@ from zope.interface import Interface, implementer
 
 # Twisted Imports
 from twisted import copyright
-from twisted.internet import reactor, interfaces, protocol, error, defer
+from twisted.cred import checkers, credentials, error as cred_error, portal
+from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.protocols import basic, policies
-
-from twisted.python import log, failure, filepath
-from twisted.cred import error as cred_error, portal, credentials, checkers
+from twisted.python import failure, filepath, log
 
 # constants
 # response codes
@@ -513,7 +513,7 @@ class DTP(protocol.Protocol):
     def _conswrite(self, bytes):
         try:
             self._cons.write(bytes)
-        except:
+        except BaseException:
             self._onConnLost.errback()
 
     def dataReceived(self, bytes):
@@ -769,7 +769,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         """
         if isinstance(line, str):
             line = line.encode(self._encoding)
-        super(FTP, self).sendLine(line)
+        super().sendLine(line)
 
     def connectionMade(self):
         self.state = self.UNAUTH
@@ -801,12 +801,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             if err.check(FTPCmdError):
                 self.sendLine(err.value.response())
             elif err.check(TypeError) and any(
-                (
-                    msg in err.value.args[0]
-                    for msg in ("takes exactly", "required positional argument")
-                )
+                msg in err.value.args[0]
+                for msg in ("takes exactly", "required positional argument")
             ):
-                self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
+                self.reply(SYNTAX_ERR, f"{cmd} requires an argument.")
             else:
                 log.msg("Unexpected FTP error")
                 log.err(err)
@@ -888,7 +886,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 return dtpPort
         raise error.CannotListenError(
-            "", portn, "No port available in range %s" % (self.passivePortRange,)
+            "", portn, f"No port available in range {self.passivePortRange}"
         )
 
     def ftp_USER(self, username):
@@ -1314,7 +1312,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         def cbSent(result):
             """
-            Called from data transport when tranfer is done.
+            Called from data transport when transfer is done.
             """
             return (TXFR_COMPLETE_OK,)
 
@@ -1564,7 +1562,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
     userAnonymous = "anonymous"
     timeOut = 600
 
-    welcomeMessage = "Twisted %s FTP Server" % (copyright.version,)
+    welcomeMessage = f"Twisted {copyright.version} FTP Server"
 
     passivePortRange = range(0, 1)
 
@@ -1810,7 +1808,7 @@ def _testPermissions(uid, gid, spath, mode="r"):
         oth = stat.S_IWOTH
         amode = os.W_OK
     else:
-        raise ValueError("Invalid mode %r: must specify 'r' or 'w'" % (mode,))
+        raise ValueError(f"Invalid mode {mode!r}: must specify 'r' or 'w'")
 
     access = False
     if os.path.exists(spath):
@@ -1885,9 +1883,9 @@ class FTPAnonymousShell:
             return defer.fail(IsADirectoryError(path))
         try:
             f = p.open("r")
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(_FileReader(f))
@@ -1908,9 +1906,9 @@ class FTPAnonymousShell:
         # For now, just see if we can os.listdir() it
         try:
             p.listdir()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -1920,9 +1918,9 @@ class FTPAnonymousShell:
         if p.isdir():
             try:
                 statResult = self._statNode(p, keys)
-            except (IOError, OSError) as e:
+            except OSError as e:
                 return errnoToFailure(e.errno, path)
-            except:
+            except BaseException:
                 return defer.fail()
             else:
                 return defer.succeed(statResult)
@@ -1957,9 +1955,9 @@ class FTPAnonymousShell:
             if keys:
                 try:
                     ent.extend(self._statNode(filePath, keys))
-                except (IOError, OSError) as e:
+                except OSError as e:
                     return errnoToFailure(e.errno, fileName)
-                except:
+                except BaseException:
                     return defer.fail()
 
         return defer.succeed(results)
@@ -2107,9 +2105,9 @@ class FTPShell(FTPAnonymousShell):
         p = self._path(path)
         try:
             p.makedirs()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2123,9 +2121,9 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsNotADirectoryError(path))
         try:
             os.rmdir(p.path)
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2139,9 +2137,9 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             p.remove()
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2151,9 +2149,9 @@ class FTPShell(FTPAnonymousShell):
         tp = self._path(toPath)
         try:
             os.rename(fp.path, tp.path)
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, fromPath)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(None)
@@ -2176,9 +2174,9 @@ class FTPShell(FTPAnonymousShell):
             return defer.fail(IsADirectoryError(path))
         try:
             fObj = p.open("w")
-        except (IOError, OSError) as e:
+        except OSError as e:
             return errnoToFailure(e.errno, path)
-        except:
+        except BaseException:
             return defer.fail()
         return defer.succeed(_FileWriter(fObj))
 
@@ -2220,7 +2218,7 @@ class BaseFTPRealm:
         @rtype: L{FilePath}
         """
         raise NotImplementedError(
-            "%r did not override getHomeDirectory" % (self.__class__,)
+            f"{self.__class__!r} did not override getHomeDirectory"
         )
 
     def requestAvatar(self, avatarId, mind, *interfaces):
@@ -2413,7 +2411,7 @@ def decodeHostPort(line):
         if x < 0 or x > 255:
             raise ValueError("Out of range", line, x)
     a, b, c, d, e, f = parsed
-    host = "%s.%s.%s.%s" % (a, b, c, d)
+    host = f"{a}.{b}.{c}.{d}"
     port = (int(e) << 8) + int(f)
     return host, port
 
@@ -2650,7 +2648,7 @@ class FTPClientBasic(basic.LineReceiver):
             self.nextDeferred.errback(failure.Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
-            log.msg("Server sent invalid response code %s" % (code,))
+            log.msg(f"Server sent invalid response code {code}")
             self.nextDeferred.errback(failure.Failure(BadResponse(response)))
 
         # Run the next command
@@ -2928,10 +2926,10 @@ class FTPClient(FTPClientBasic):
         This method issues the I{RNFR}/I{RNTO} command sequence to rename
         C{pathFrom} to C{pathTo}.
 
-        @param: pathFrom: the absolute path to the file to be renamed
+        @param pathFrom: the absolute path to the file to be renamed
         @type pathFrom: C{str}
 
-        @param: pathTo: the absolute path to rename the file to.
+        @param pathTo: the absolute path to rename the file to.
         @type pathTo: C{str}
 
         @return: A L{Deferred} which fires when the rename operation has

@@ -8,14 +8,12 @@ L{twisted.python.threadpool}.
 """
 
 
-from threading import Thread, Lock, local as LocalStorage
 from queue import Queue
+from threading import Lock, Thread, local as LocalStorage
 
 from twisted.python.log import err
-
-from ._threadworker import LockWorker
 from ._team import Team
-from ._threadworker import ThreadWorker
+from ._threadworker import LockWorker, ThreadWorker
 
 
 def pool(currentLimit, threadFactory=Thread):
@@ -40,9 +38,9 @@ def pool(currentLimit, threadFactory=Thread):
         created.
     @type currentLimit: 0-argument callable returning L{int}
 
-    @param reactor: If passed, the L{IReactorFromThreads} / L{IReactorCore} to
-        be used to coordinate actions on the L{Team} itself.  Otherwise, a
-        L{LockWorker} will be used.
+    @param threadFactory: Factory that, when given a C{target} keyword argument,
+        returns a L{threading.Thread} that will run that target.
+    @type threadFactory: callable returning a L{threading.Thread}
 
     @return: a new L{Team}.
     """

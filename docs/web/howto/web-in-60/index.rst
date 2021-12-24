@@ -30,7 +30,7 @@ Twisted Web In 60 Seconds
    session-endings
 
 
-This set of examples contains short, complete applications of :api:`twisted.web <twisted.web>`.
+This set of examples contains short, complete applications of :py:mod:`twisted.web`.
 For subjects not covered here, see the :doc:`Twisted Web tutorial <../using-twistedweb>` and the API documentation.
 
 #. :doc:`Serving static content from a directory <static-content>`

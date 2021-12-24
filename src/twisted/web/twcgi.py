@@ -32,7 +32,6 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
             return CGIDirectory(fnp.path)
         else:
             return CGIScript(fnp.path)
-        return resource.NoResource()
 
     def render(self, request):
         notFound = resource.NoResource(
@@ -284,7 +283,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                             try:
                                 # "XXX <description>" sometimes happens.
                                 statusNum = int(headerText[:3])
-                            except:
+                            except BaseException:
                                 self._log.error("malformed status header")
                             else:
                                 self.request.setResponseCode(statusNum)

@@ -6,16 +6,17 @@ Test the memcache client protocol.
 """
 
 
+from twisted.internet.defer import Deferred, DeferredList, TimeoutError, gatherResults
 from twisted.internet.error import ConnectionDone
-
-from twisted.protocols.memcache import MemCacheProtocol, NoSuchCommand
-from twisted.protocols.memcache import ClientError, ServerError
-
-from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.internet.task import Clock
-from twisted.internet.defer import Deferred, gatherResults, TimeoutError
-from twisted.internet.defer import DeferredList
+from twisted.protocols.memcache import (
+    ClientError,
+    MemCacheProtocol,
+    NoSuchCommand,
+    ServerError,
+)
+from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.trial.unittest import TestCase
 
 
 class CommandMixin:

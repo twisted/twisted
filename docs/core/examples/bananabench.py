@@ -4,9 +4,10 @@
 import time
 from io import BytesIO
 
+from twisted.internet import protocol
+
 # Twisted Imports
 from twisted.spread import banana
-from twisted.internet import protocol
 
 iterationCount = 10000
 
@@ -34,7 +35,7 @@ class BananaBench:
             self.enc.sendEncoded(value)
             self.io.truncate(0)
         endtime = time.time()
-        print("    Encode took {} seconds".format(endtime - starttime))
+        print(f"    Encode took {endtime - starttime} seconds")
         return endtime - starttime
 
     def testDecode(self, value):
@@ -44,7 +45,7 @@ class BananaBench:
         for i in self.r:
             self.enc.dataReceived(encoded)
         endtime = time.time()
-        print("    Decode took {} seconds".format(endtime - starttime))
+        print(f"    Decode took {endtime - starttime} seconds")
         return endtime - starttime
 
     def performTest(self, method, data, encClass):
@@ -53,14 +54,14 @@ class BananaBench:
         self.tearDown()
 
     def runTests(self, testData):
-        print("Test data is: {}".format(testData))
+        print(f"Test data is: {testData}")
         print("  Using Pure Python Banana:")
         self.performTest(self.testEncode, testData, banana.Banana)
         self.performTest(self.testDecode, testData, banana.Banana)
 
 
 bench = BananaBench()
-print("Doing {} iterations of each test.".format(iterationCount))
+print(f"Doing {iterationCount} iterations of each test.")
 print("")
 testData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 bench.runTests(testData)

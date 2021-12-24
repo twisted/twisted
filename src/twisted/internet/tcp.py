@@ -8,34 +8,36 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
+import os
+
 # System Imports
 import socket
-import sys
-import operator
-import os
 import struct
-
-import attr
+import sys
+from typing import Callable, ClassVar, List, Optional
 
 from zope.interface import Interface, implementer
 
-from twisted.logger import Logger
+import attr
+import typing_extensions
+
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
-    ITCPTransport,
-    ISystemHandle,
     IListeningPort,
+    ISystemHandle,
+    ITCPTransport,
 )
+from twisted.logger import ILogObserver, LogEvent, Logger
+from twisted.python import deprecate, versions
 from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
-from twisted.python import versions, deprecate
 
 try:
     # Try to get the memory BIO based startTLS implementation, available since
     # pyOpenSSL 0.10
     from twisted.internet._newtls import (
-        ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
+        ConnectionMixin as _TLSConnectionMixin,
         ServerMixin as _TLSServerMixin,
     )
     from twisted.internet.interfaces import ITLSTransport
@@ -57,13 +59,15 @@ if platformType == "win32":
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINPROGRESS as EINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
-    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
-    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
-    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEALREADY as EALREADY,
+        WSAEINPROGRESS as EINPROGRESS,
+        WSAEINVAL as EINVAL,
+        WSAEISCONN as EISCONN,
+        WSAEMFILE as EMFILE,
+        WSAENOBUFS as ENOBUFS,
+        WSAEWOULDBLOCK as EWOULDBLOCK,
+    )
 
     # No such thing as WSAENFILE, either.
     ENFILE = object()
@@ -89,17 +93,15 @@ else:
 
     from os import strerror
 
-
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import base, address, fdesc
-from twisted.internet.task import deferLater
-from twisted.python import log, failure, reflect
-from twisted.python.util import untilConcludes
+from twisted.internet import abstract, address, base, error, fdesc, main
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import deferLater
+from twisted.python import failure, log, reflect
+from twisted.python.util import untilConcludes
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
@@ -166,11 +168,11 @@ class _SocketCloser:
                     socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
                 )
 
-        except socket.error:
+        except OSError:
             pass
         try:
             skt.close()
-        except socket.error:
+        except OSError:
             pass
 
 
@@ -237,7 +239,7 @@ class Connection(
         """
         try:
             data = self.socket.recv(self.bufferSize)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
@@ -275,7 +277,7 @@ class Connection(
 
         try:
             return untilConcludes(self.socket.send, limitedData)
-        except socket.error as se:
+        except OSError as se:
             if se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
@@ -284,13 +286,13 @@ class Connection(
     def _closeWriteConnection(self):
         try:
             self.socket.shutdown(1)
-        except socket.error:
+        except OSError:
             pass
         p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
                 p.writeConnectionLost()
-            except:
+            except BaseException:
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
@@ -300,7 +302,7 @@ class Connection(
         if p:
             try:
                 p.readConnectionLost()
-            except:
+            except BaseException:
                 log.err()
                 self.connectionLost(failure.Failure())
         else:
@@ -330,17 +332,13 @@ class Connection(
         return self.logstr
 
     def getTcpNoDelay(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        )
+        return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
     def getTcpKeepAlive(self):
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
 
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
@@ -588,7 +586,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         # cleaned up some day, though.
         try:
             connectResult = self.socket.connect_ex(self.realAddress)
-        except socket.error as se:
+        except OSError as se:
             connectResult = se.args[0]
         if connectResult:
             if connectResult == EISCONN:
@@ -722,7 +720,7 @@ class _BaseTCPClient:
             self._requiresResolution = True
         try:
             skt = self.createInternetSocket()
-        except socket.error as se:
+        except OSError as se:
             err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
@@ -732,7 +730,7 @@ class _BaseTCPClient:
                 else:
                     bindinfo = bindAddress
                 skt.bind(bindinfo)
-            except socket.error as se:
+            except OSError as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
                 whenDone = None
         self._finishInit(whenDone, skt, err, reactor)
@@ -754,7 +752,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<%s to %s at %x>" % (self.__class__, self.addr, id(self))
+        s = f"<{self.__class__} to {self.addr} at {id(self):x}>"
         return s
 
 
@@ -802,9 +800,9 @@ class Server(_TLSServerMixin, Connection):
         self.hostname = client[0]
 
         logPrefix = self._getLogPrefix(self.protocol)
-        self.logstr = "%s,%s,%s" % (logPrefix, sessionno, self.hostname)
+        self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
-            self.repstr = "<%s #%s on %s>" % (
+            self.repstr = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
                 self.sessionno,
                 self.server._realPortNumber,
@@ -851,7 +849,7 @@ class Server(_TLSServerMixin, Connection):
             return
 
         self = cls(skt, protocol, addr, None, addr[1], reactor)
-        self.repstr = "<%s #%s on %s>" % (
+        self.repstr = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             localPort,
@@ -917,8 +915,8 @@ class _IFileDescriptorReservation(Interface):
         because of C{EMFILE}, internal state is reset so that another
         reservation attempt can be made.
 
-        @raises: Any exception except an L{OSError} or L{IOError}
-            whose errno is L{EMFILE}.
+        @raises Exception: Any exception except an L{OSError} whose
+            errno is L{EMFILE}.
         """
 
     def __enter__():
@@ -938,8 +936,13 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
+class _HasClose(typing_extensions.Protocol):
+    def close(self) -> object:
+        ...
+
+
 @implementer(_IFileDescriptorReservation)
-@attr.s
+@attr.s(auto_attribs=True)
 class _FileDescriptorReservation:
     """
     L{_IFileDescriptorReservation} implementation.
@@ -950,10 +953,10 @@ class _FileDescriptorReservation:
         returns an object with a C{close} method.
     """
 
-    _log = Logger()
+    _log: ClassVar[Logger] = Logger()
 
-    _fileFactory = attr.ib()
-    _fileDescriptor = attr.ib(init=False, default=None)
+    _fileFactory: Callable[[], _HasClose]
+    _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
 
     def available(self):
         """
@@ -972,7 +975,7 @@ class _FileDescriptorReservation:
         if self._fileDescriptor is None:
             try:
                 fileDescriptor = self._fileFactory()
-            except (IOError, OSError) as e:
+            except OSError as e:
                 if e.errno == EMFILE:
                     self._log.failure(
                         "Could not reserve EMFILE recovery file descriptor."
@@ -1068,7 +1071,7 @@ class _NullFileDescriptorReservation:
 if platformType == "win32":
     _reservedFD = _NullFileDescriptorReservation()
 else:
-    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment] # noqa
+    _reservedFD = _FileDescriptorReservation(lambda: open(os.devnull))  # type: ignore[assignment]
 
 
 # Linux and other UNIX-like operating systems return EMFILE when a
@@ -1089,7 +1092,7 @@ else:
 _ACCEPT_ERRORS = (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class _BuffersLogs:
     """
     A context manager that buffers any log events until after its
@@ -1103,9 +1106,9 @@ class _BuffersLogs:
     @type _observer: L{twisted.logger.ILogObserver}.
     """
 
-    _namespace = attr.ib()
-    _observer = attr.ib()
-    _logs = attr.ib(default=attr.Factory(list))
+    _namespace: str
+    _observer: ILogObserver
+    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
@@ -1158,7 +1161,7 @@ def _accept(logger, accepts, listener, reservedFD):
     for _ in accepts:
         try:
             client, address = listener.accept()
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] in (EWOULDBLOCK, EAGAIN):
                 # No more clients.
                 return
@@ -1250,7 +1253,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber: Optional[int] = None
 
     # An externally initialized socket that we will use, rather than creating
     # our own.
@@ -1296,13 +1299,13 @@ class Port(base.BasePort, _SocketCloser):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s of %s on %s>" % (
+            return "<{} of {} on {}>".format(
                 self.__class__,
                 self.factory.__class__,
                 self._realPortNumber,
             )
         else:
-            return "<%s of %s (not listening)>" % (
+            return "<{} of {} (not listening)>".format(
                 self.__class__,
                 self.factory.__class__,
             )
@@ -1329,7 +1332,7 @@ class Port(base.BasePort, _SocketCloser):
                 else:
                     addr = (self.interface, self.port)
                 skt.bind(addr)
-            except socket.error as le:
+            except OSError as le:
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
@@ -1446,7 +1449,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg("(%s Port %s Closed)" % (self._type, self._realPortNumber))
+        log.msg(f"({self._type} Port {self._realPortNumber} Closed)")
 
     def connectionLost(self, reason):
         """
@@ -1496,8 +1499,8 @@ class Connector(base.BaseConnector):
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
-            except socket.error as e:
-                raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
+            except OSError as e:
+                raise error.ServiceNameUnknownError(string=f"{e} ({port!r})")
         self.host, self.port = host, port
         if abstract.isIPv6Address(host):
             self._addressType = address.IPv6Address

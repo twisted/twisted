@@ -6,31 +6,28 @@ Test cases for L{twisted.mail.pop3} module.
 """
 
 
-import hmac
 import base64
+import hmac
 import itertools
-
-from hashlib import md5
 from collections import OrderedDict
+from hashlib import md5
 from io import BytesIO
 
 from zope.interface import implementer
 
-from twisted import cred
-from twisted import internet
-from twisted import mail
-from twisted.internet import defer
-from twisted.mail import pop3
-from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.test.proto_helpers import LineSendingProtocol
-from twisted.trial import unittest, util
 import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 import twisted.internet.protocol
 import twisted.mail.pop3
 import twisted.mail.protocols
+from twisted import cred, internet, mail
+from twisted.internet import defer
+from twisted.mail import pop3
+from twisted.protocols import loopback
+from twisted.python import failure
+from twisted.test.proto_helpers import LineSendingProtocol
+from twisted.trial import unittest, util
 
 
 class UtilityTests(unittest.TestCase):
@@ -265,7 +262,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         parts = line.split()
         code = parts[0]
         if code != b"+OK":
-            raise AssertionError("code is: %s , parts is: %s " % (code, parts))
+            raise AssertionError(f"code is: {code} , parts is: {parts} ")
         self.lines = []
         self.retr(1)
 
@@ -1422,7 +1419,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_LISTWithBadArgument(self)
 
-    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_UIDLWithBadArgument(self):
         """
@@ -1432,7 +1429,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_UIDLWithBadArgument(self)
 
-    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]  # noqa
+    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]
 
     def test_TOPWithBadArgument(self):
         """
@@ -1442,7 +1439,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_TOPWithBadArgument(self)
 
-    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_RETRWithBadArgument(self):
         """
@@ -1452,7 +1449,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         """
         return CommandMixin.test_RETRWithBadArgument(self)
 
-    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]  # noqa
+    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
 
 class ValueErrorCommandTests(CommandMixin, unittest.TestCase):
@@ -1578,3 +1575,29 @@ class POP3MiscTests(unittest.TestCase):
         mod = twisted.mail.pop3
         for attr in mod.__all__:
             self.assertTrue(hasattr(mod, attr))
+
+
+class POP3ClientDeprecationTests(unittest.TestCase):
+    """
+    Tests for the now deprecated L{twisted.mail.pop3client} module.
+    """
+
+    def test_deprecation(self):
+        """
+        A deprecation warning is emitted when directly importing the now
+        deprected pop3client module.
+
+        This test might fail is some other code has already imported it.
+        No code should use the deprected module.
+        """
+        from twisted.mail import pop3client
+
+        warningsShown = self.flushWarnings(offendingFunctions=[self.test_deprecation])
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]["message"],
+            "twisted.mail.pop3client was deprecated in Twisted 21.2.0. "
+            "Use twisted.mail.pop3 instead.",
+        )
+        self.assertEqual(len(warningsShown), 1)
+        pop3client  # Fake usage to please pyflakes.

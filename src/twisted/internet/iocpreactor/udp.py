@@ -5,19 +5,24 @@
 UDP support for IOCP reactor
 """
 
-import socket, operator, struct, warnings, errno
+import errno
+import socket
+import struct
+import warnings
+from typing import Optional
 
 from zope.interface import implementer
 
-from twisted.internet import defer, address, error, interfaces
+from twisted.internet import address, defer, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log, failure
-
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_PORT_UNREACHABLE,
+)
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from twisted.python import failure, log
 
 
 @implementer(
@@ -40,7 +45,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber = None
+    _realPortNumber: Optional[int] = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
         """
@@ -77,9 +82,9 @@ class Port(abstract.FileHandle):
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
-            return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
+            return f"<{self.protocol.__class__} on {self._realPortNumber}>"
         else:
-            return "<%s not connected>" % (self.protocol.__class__,)
+            return f"<{self.protocol.__class__} not connected>"
 
     def getHandle(self):
         """
@@ -104,7 +109,7 @@ class Port(abstract.FileHandle):
         try:
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
-        except socket.error as le:
+        except OSError as le:
             raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
@@ -149,7 +154,7 @@ class Port(abstract.FileHandle):
                 self.protocol.datagramReceived(
                     bytes(evt.buff[:data]), _iocp.makesockaddr(evt.addr_buff)
                 )
-            except:
+            except BaseException:
                 log.err()
 
     def doRead(self):
@@ -176,7 +181,7 @@ class Port(abstract.FileHandle):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
@@ -211,7 +216,7 @@ class Port(abstract.FileHandle):
                 )
             try:
                 return self.socket.sendto(datagram, addr)
-            except socket.error as se:
+            except OSError as se:
                 no = se.args[0]
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
@@ -326,9 +331,7 @@ class Port(abstract.FileHandle):
         @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
-        return operator.truth(
-            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST)
-        )
+        return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
 class MulticastMixin:
@@ -355,7 +358,7 @@ class MulticastMixin:
         return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
 
     def setLoopbackMode(self, mode):
-        mode = struct.pack("b", operator.truth(mode))
+        mode = struct.pack("b", bool(mode))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
 
     def getTTL(self):
@@ -383,7 +386,7 @@ class MulticastMixin:
             cmd = socket.IP_DROP_MEMBERSHIP
         try:
             self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except socket.error as e:
+        except OSError as e:
             return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
     def leaveGroup(self, addr, interface=""):

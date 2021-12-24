@@ -9,7 +9,7 @@ Twisted's Legacy Logging System: ``twisted.python.log``
 
 .. note::
 
-    There is now a new logging system in Twisted (:doc:`you can read about how to use it here <logger>` and :api:`twisted.logger <its API reference here>`) which is a replacement for :api:`twisted.python.log <twisted.python.log>`.
+    There is now a new logging system in Twisted (:doc:`you can read about how to use it here <logger>` and :py:mod:`its API reference here <twisted.logger>`) which is a replacement for :py:mod:`twisted.python.log`.
 
     The old logging API, described here, remains for compatibility, and is now implemented as a client of the new logging system.
 
@@ -18,10 +18,10 @@ Twisted's Legacy Logging System: ``twisted.python.log``
 Basic usage
 -----------
     
-Twisted provides a simple and flexible logging system in the :api:`twisted.python.log <twisted.python.log>` module.  It has three commonly used
+Twisted provides a simple and flexible logging system in the :py:mod:`twisted.python.log` module.  It has three commonly used
 functions:
       
-:api:`twisted.python.log.LogPublisher.msg <msg>` 
+:py:meth:`msg <twisted.python.log.LogPublisher.msg>` 
       
   Logs a new message.  For example:
   
@@ -30,10 +30,10 @@ functions:
       from twisted.python import log
       log.msg('Hello, world.')
 
-:api:`twisted.python.log.err <err>` 
+:py:func:`err <twisted.python.log.err>` 
       
   Writes a failure to the log, including traceback information (if any).
-  You can pass it a :api:`twisted.python.failure.Failure <Failure>` or Exception instance, or
+  You can pass it a :py:class:`Failure <twisted.python.failure.Failure>` or Exception instance, or
   nothing.  If you pass something else, it will be converted to a string
   with ``repr`` and logged.
   
@@ -44,10 +44,10 @@ functions:
   
       try:
           x = 1 / 0
-      except:
+      except BaseException:
           log.err()   # will log the ZeroDivisionError
 
-:api:`twisted.python.log.startLogging <startLogging>` 
+:py:func:`startLogging <twisted.python.log.startLogging>` 
       
   Starts logging to a given file-like object.  For example:
   
@@ -91,9 +91,9 @@ twistd.
 Log files
 ~~~~~~~~~
     
-The :api:`twisted.python.logfile <twisted.python.logfile>` module provides
+The :py:mod:`twisted.python.logfile` module provides
 some standard classes suitable for use with ``startLogging`` , such
-as :api:`twisted.python.logfile.DailyLogFile <DailyLogFile>` ,
+as :py:class:`DailyLogFile <twisted.python.logfile.DailyLogFile>` ,
 which will rotate the log to a new file once per day.
 
 
@@ -103,7 +103,7 @@ Using the standard library logging module
 If your application uses the
 Python `standard    library logging module <http://docs.python.org/library/logging.html>`_ or you want to use its easy configuration but
 don't want to lose twisted-produced messages, the observer
-:api:`twisted.python.log.PythonLoggingObserver <PythonLoggingObserver>` 
+:py:class:`PythonLoggingObserver <twisted.python.log.PythonLoggingObserver>` 
 should be useful to you.
 
 You just start it like any other observer:
@@ -141,7 +141,7 @@ event is emitted.  The event is passed to each observer which has been
 registered.  There can be any number of observers, and each can treat
 the event in any way desired.
 An example of
-a log observer in Twisted is the ``emit`` method of :api:`twisted.python.log.FileLogObserver <FileLogObserver>` .
+a log observer in Twisted is the ``emit`` method of :py:class:`FileLogObserver <twisted.python.log.FileLogObserver>` .
 ``FileLogObserver`` , used by
 ``startLogging`` , writes events to a log file.  A log observer
 is just a callable that accepts a dictionary as its only argument.  You can

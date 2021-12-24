@@ -1,7 +1,8 @@
 def successCallback(result):
     myResult = result + 1
-    print myResult
+    print(myResult)
     return myResult
+
 
 ...
 

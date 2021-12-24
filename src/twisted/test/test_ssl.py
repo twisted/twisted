@@ -5,20 +5,22 @@
 Tests for twisted SSL support.
 """
 
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet import protocol, reactor, interfaces, defer
+import os
+
+import hamcrest
+
+from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet.error import ConnectionDone
 from twisted.protocols import basic
+from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.test.proto_helpers import waitUntilAllDisconnected
-
-import os
-import hamcrest
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.trial.unittest import TestCase
 
 try:
     from OpenSSL import SSL, crypto
+
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:
@@ -161,7 +163,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     @return: a tuple of (key, request, certificate) objects.
     """
     pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 1024)
+    pkey.generate_key(crypto.TYPE_RSA, 2048)
     req = crypto.X509Req()
     subject = req.get_subject()
     subject.O = organization
@@ -244,13 +246,13 @@ if SSL is not None:
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """
         A context factory with a default method set to
-        L{OpenSSL.SSL.TLSv1_METHOD}.
+        L{OpenSSL.SSL.SSLv23_METHOD}.
         """
 
         isClient = False
 
         def __init__(self, *args, **kw):
-            kw["sslmethod"] = SSL.TLSv1_METHOD
+            kw["sslmethod"] = SSL.SSLv23_METHOD
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 

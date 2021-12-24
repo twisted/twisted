@@ -18,7 +18,7 @@ Examples:
 import sys
 from typing import Optional, Sequence, Type
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 from twisted.plugin import getPlugins
 from twisted.python import usage
@@ -142,7 +142,7 @@ class AuthOptionMixin:
         will send all help-related output. Default: L{sys.stdout}
     """
 
-    supportedInterfaces = None  # type: Optional[Sequence[Type[Interface]]]
+    supportedInterfaces: Optional[Sequence[Type[Interface]]] = None
     authOutput = sys.stdout
 
     def supportsInterface(self, interface):

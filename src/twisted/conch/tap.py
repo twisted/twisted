@@ -6,12 +6,11 @@
 Support module for making SSH servers with twistd.
 """
 
-from twisted.conch import unix
-from twisted.conch import checkers as conch_checkers
+from twisted.application import strports
+from twisted.conch import checkers as conch_checkers, unix
 from twisted.conch.openssh_compat import factory
 from twisted.cred import portal, strcred
 from twisted.python import usage
-from twisted.application import strports
 
 
 class Options(usage.Options, strcred.AuthOptionMixin):
@@ -48,8 +47,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         # be used if no --auth option is provided - note that conch's
         # UNIXPasswordDatabase is used, instead of twisted.plugins.cred_unix's
         # checker
-        super(Options, self).addChecker(conch_checkers.UNIXPasswordDatabase())
-        super(Options, self).addChecker(
+        super().addChecker(conch_checkers.UNIXPasswordDatabase())
+        super().addChecker(
             conch_checkers.SSHPublicKeyChecker(conch_checkers.UNIXAuthorizedKeysFiles())
         )
         self._usingDefaultAuth = True
@@ -64,7 +63,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
             self["credCheckers"] = []
             self["credInterfaces"] = {}
             self._usingDefaultAuth = False
-        super(Options, self).addChecker(checker)
+        super().addChecker(checker)
 
 
 def makeService(config):

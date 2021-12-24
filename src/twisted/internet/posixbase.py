@@ -7,33 +7,32 @@ Posix reactor base class
 """
 
 
-import socket
+import contextlib
 import errno
 import os
+import socket
 import sys
-
 from typing import Sequence
 
-from zope.interface import Attribute, Interface, implementer, classImplements
+from zope.interface import Attribute, Interface, classImplements, implementer
 
-from twisted.internet import error, udp, tcp
+from twisted.internet import error, tcp, udp
 from twisted.internet.base import ReactorBase, _SignalReactorMixin
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.interfaces import (
-    IReactorUNIX,
-    IReactorUNIXDatagram,
+    IHalfCloseableDescriptor,
+    IReactorFDSet,
+    IReactorMulticast,
+    IReactorProcess,
+    IReactorSocket,
+    IReactorSSL,
     IReactorTCP,
     IReactorUDP,
-    IReactorSSL,
-    IReactorSocket,
-    IHalfCloseableDescriptor,
-    IReactorProcess,
-    IReactorMulticast,
-    IReactorFDSet,
+    IReactorUNIX,
+    IReactorUNIXDatagram,
 )
-
-from twisted.python import log, failure, util
-from twisted.python.runtime import platformType, platform
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import failure, log, util
+from twisted.python.runtime import platform, platformType
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")
@@ -58,15 +57,14 @@ unixEnabled = platformType == "posix"
 
 processEnabled = False
 if unixEnabled:
-    from twisted.internet import fdesc, unix
-    from twisted.internet import process, _signals
+    from twisted.internet import _signals, fdesc, process, unix
 
     processEnabled = True
 
 
 if platform.isWindows():
     try:
-        import win32process
+        import win32process  # type: ignore[import]
 
         processEnabled = True
     except ImportError:
@@ -117,13 +115,15 @@ class _SocketWaker(log.Logger):
         """Initialize."""
         self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        server.bind(("127.0.0.1", 0))
-        server.listen(1)
-        client.connect(server.getsockname())
-        reader, clientaddr = server.accept()
+        with contextlib.closing(
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ) as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen(1)
+            client.connect(server.getsockname())
+            reader, clientaddr = server.accept()
         client.setblocking(0)
         reader.setblocking(0)
         self.r = reader
@@ -134,7 +134,7 @@ class _SocketWaker(log.Logger):
         """Send a byte to my connection."""
         try:
             util.untilConcludes(self.w.send, b"x")
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] != errno.WSAEWOULDBLOCK:
                 raise
 
@@ -144,7 +144,7 @@ class _SocketWaker(log.Logger):
         """
         try:
             self.r.recv(8192)
-        except socket.error:
+        except OSError:
             pass
 
     def connectionLost(self, reason):
@@ -195,7 +195,7 @@ class _FDWaker(log.Logger):
         for fd in self.i, self.o:
             try:
                 os.close(fd)
-            except IOError:
+            except OSError:
                 pass
         del self.i, self.o
 
@@ -380,7 +380,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         usePTY=0,
         childFDs=None,
     ):
-        args, env = self._checkProcessArgs(args, env)
         if platformType == "posix":
             if usePTY:
                 if childFDs is not None:
@@ -500,11 +499,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
     # IReactorSocket (no AF_UNIX on Windows)
 
     if unixEnabled:
-        _supportedAddressFamilies = (
+        _supportedAddressFamilies: Sequence[socket.AddressFamily] = (
             socket.AF_INET,
             socket.AF_INET6,
             socket.AF_UNIX,
-        )  # type: Sequence[socket.AddressFamily]
+        )
     else:
         _supportedAddressFamilies = (
             socket.AF_INET,
@@ -688,7 +687,7 @@ class _PollLikeMixin:
                         # disconnect us.
                         why = selectable.doWrite()
                         inRead = False
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = sys.exc_info()[1]
@@ -738,7 +737,7 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         """
         if self._readers or self._writers:
             if self._loop is None:
-                from twisted.internet.task import LoopingCall, _EPSILON
+                from twisted.internet.task import _EPSILON, LoopingCall
 
                 self._loop = LoopingCall(self.iterate)
                 self._loop.clock = self._reactor

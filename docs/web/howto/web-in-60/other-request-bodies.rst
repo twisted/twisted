@@ -15,7 +15,7 @@ a ``POST`` carrying HTML form data.  What about ``POST``
 requests with data in some other format?  Or even ``PUT`` requests?
 Here is an example which demonstrates how to get *any* request body,
 regardless of its format - using the request's
-:api:`twisted.web.iweb.IRequest.content <content>` attribute.
+:py:attr:`content <twisted.web.iweb.IRequest.content>` attribute.
 
 
 

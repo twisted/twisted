@@ -8,11 +8,12 @@ The point of integration of application and authentication.
 """
 
 
+from zope.interface import Interface, providedBy
+
+from twisted.cred import error
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import failure, reflect
-from twisted.cred import error
-from zope.interface import providedBy, Interface
 
 
 class IRealm(Interface):

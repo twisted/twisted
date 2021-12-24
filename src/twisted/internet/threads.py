@@ -9,8 +9,9 @@ For basic support see reactor threading API docs.
 
 
 import queue as Queue
-from twisted.python import failure
+
 from twisted.internet import defer
+from twisted.python import failure
 
 
 def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
@@ -29,8 +30,8 @@ def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
         method of C{twisted.python.threadpool.ThreadPool}.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f, or an
         errback with a L{twisted.python.failure.Failure} if f throws an
@@ -54,8 +55,8 @@ def deferToThread(f, *args, **kwargs):
     Run a function in a thread and return the result as a Deferred.
 
     @param f: The function to call.
-    @param *args: positional arguments to pass to f.
-    @param **kwargs: keyword arguments to pass to f.
+    @param args: positional arguments to pass to f.
+    @param kwargs: keyword arguments to pass to f.
 
     @return: A Deferred which fires a callback with the result of f,
     or an errback with a L{twisted.python.failure.Failure} if f throws
@@ -101,7 +102,7 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     @return: the result of the L{Deferred} returned by C{f}, or the result
         of C{f} if it returns anything other than a L{Deferred}.
 
-    @raise: If C{f} raises a synchronous exception,
+    @raise Exception: If C{f} raises a synchronous exception,
         C{blockingCallFromThread} will raise that exception.  If C{f}
         returns a L{Deferred} which fires with a L{Failure},
         C{blockingCallFromThread} will raise that failure's exception (see

@@ -2,19 +2,14 @@
 # See LICENSE for details.
 
 
-from __future__ import print_function
-
 import sys
-from zope.interface import implementer, Interface
 
-from twisted.protocols import basic
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, error, portal
 from twisted.internet import protocol
+from twisted.protocols import basic
 from twisted.python import log
-
-from twisted.cred import error
-from twisted.cred import portal
-from twisted.cred import checkers
-from twisted.cred import credentials
 
 
 class IProtocolUser(Interface):
@@ -75,7 +70,7 @@ class Protocol(basic.LineReceiver):
                 f(*line.split()[1:])
             except TypeError:
                 self.sendLine(b"Wrong number of arguments.")
-            except:
+            except BaseException:
                 self.sendLine(b"Server error (probably your fault)")
 
     def cmd_ANON(self):

@@ -3,13 +3,12 @@
 
 
 """Server for PB benchmark."""
-from __future__ import print_function
 
 from zope.interface import implementer
 
-from twisted.spread import pb
-from twisted.internet import reactor
 from twisted.cred.portal import IRealm
+from twisted.internet import reactor
+from twisted.spread import pb
 
 
 class PBBenchPerspective(pb.Avatar):
@@ -43,8 +42,8 @@ class SimpleRealm:
 
 
 def main():
-    from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    from twisted.cred.portal import Portal
 
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()

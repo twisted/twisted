@@ -5,16 +5,12 @@
 
 __all__ = ["SecondaryAuthority", "SecondaryAuthorityService"]
 
-from twisted.internet import task, defer
-from twisted.names import dns
-from twisted.names import common
-from twisted.names import client
-from twisted.names import resolve
-from twisted.names.authority import FileAuthority
-
-from twisted.python import log, failure
-from twisted.python.compat import nativeString
 from twisted.application import service
+from twisted.internet import defer, task
+from twisted.names import client, common, dns, resolve
+from twisted.names.authority import FileAuthority
+from twisted.python import failure, log
+from twisted.python.compat import nativeString
 
 
 class SecondaryAuthorityService(service.Service):
@@ -58,7 +54,8 @@ class SecondaryAuthorityService(service.Service):
             C{int} giving a port number.  Together, these define where zone
             transfers will be attempted from.
 
-        @param domain: A C{bytes} giving the domain to transfer.
+        @param domains: Domain names for which to perform zone transfers.
+        @type domains: sequence of L{bytes}
 
         @return: A new instance of L{SecondaryAuthorityService}.
         """

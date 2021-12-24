@@ -30,7 +30,7 @@ AccountManager
 ~~~~~~~~~~~~~~
 
 		
-The control flow starts at the relevant subclass of :api:`twisted.words.im.baseaccount.AccountManager <baseaccount.AccountManager>` .
+The control flow starts at the relevant subclass of :py:class:`baseaccount.AccountManager <twisted.words.im.baseaccount.AccountManager>` .
 The AccountManager is responsible for, well, managing accounts
 - remembering what accounts are available, their
 settings, adding and removal of accounts, and making accounts
@@ -41,7 +41,7 @@ log on at startup.
 
 This would be a good place to start your interface, load a
 list of accounts from disk and tell them to login. Most of the
-method names in :api:`twisted.words.im.baseaccount.AccountManager <AccountManager>` 
+method names in :py:class:`AccountManager <twisted.words.im.baseaccount.AccountManager>` 
 are pretty self-explanatory, and your subclass can override
 whatever it wants, but you *need* to override ``__init__`` . Something like
 this:
@@ -68,7 +68,7 @@ ChatUI
 ~~~~~~
 
 		
-Account objects talk to the user via a subclass of :api:`twisted.words.im.basechat.ChatUI <basechat.ChatUI>` .
+Account objects talk to the user via a subclass of :py:class:`basechat.ChatUI <twisted.words.im.basechat.ChatUI>` .
 This class keeps track of all the various conversations that
 are currently active, so that when an account receives and
 incoming message, it can put that message in its correct
@@ -92,7 +92,7 @@ The main problem with the default versions of the above
 routines is that they take a parameter, ``Class`` ,
 which defaults to an abstract implementation of that class -
 for example, ``getConversation`` has a
-``Class`` parameter that defaults to :api:`twisted.words.im.basechat.Conversation <basechat.Conversation>` which
+``Class`` parameter that defaults to :py:class:`basechat.Conversation <twisted.words.im.basechat.Conversation>` which
 raises a lot of ``NotImplementedError`` s. In your
 subclass, override the method with a new method whose Class
 parameter defaults to your own implementation of
@@ -130,7 +130,7 @@ Accounts
 ~~~~~~~~
 
 		
-An account is an instance of a subclass of :api:`twisted.words.im.basesupport.AbstractAccount <basesupport.AbstractAccount>` .
+An account is an instance of a subclass of :py:class:`basesupport.AbstractAccount <twisted.words.im.basesupport.AbstractAccount>` .
 For more details and sample code, see the various
 ``*support`` files in ``twisted.words.im`` .
 

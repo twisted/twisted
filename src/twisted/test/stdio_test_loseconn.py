@@ -11,9 +11,9 @@ test that ITransport.loseConnection() works for process transports.
 
 import sys
 
+from twisted.internet import protocol, stdio
 from twisted.internet.error import ConnectionDone
-from twisted.internet import stdio, protocol
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 
 
 class LoseConnChild(protocol.Protocol):
@@ -32,7 +32,7 @@ class LoseConnChild(protocol.Protocol):
         try:
             try:
                 reason.trap(ConnectionDone)
-            except:
+            except BaseException:
                 log.err(None, "Problem with reason passed to connectionLost")
                 self.exitCode = 1
         finally:

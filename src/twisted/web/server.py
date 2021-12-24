@@ -17,29 +17,27 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
+import zlib
+from binascii import hexlify
 from html import escape
 from typing import List, Optional
 from urllib.parse import quote as _quote
 
-import zlib
-from binascii import hexlify
-
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString
-from twisted.spread.pb import Copyable, ViewPoint
+from incremental import Version
+
+from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from twisted.web import iweb, http, util
-from twisted.web.http import unquote
-from twisted.python import reflect, failure, components
-from twisted import copyright
-from twisted.web import resource
-from twisted.web.error import UnsupportedMethod
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
+from twisted.python import components, failure, reflect
+from twisted.python.compat import nativeString, networkString
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.spread.pb import Copyable, ViewPoint
+from twisted.web import http, iweb, resource, util
+from twisted.web.error import UnsupportedMethod
+from twisted.web.http import unquote
 
 NOT_DONE_YET = 1
 
@@ -107,8 +105,8 @@ class Request(Copyable, http.Request, components.Componentized):
 
     site = None
     appRootURL = None
-    prepath = None  # type: Optional[List[bytes]]
-    postpath = None  # type: Optional[bytes]
+    prepath: Optional[List[bytes]] = None
+    postpath: Optional[List[bytes]] = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None
@@ -227,7 +225,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 if encoder is not None:
                     self._encoder = encoder
             self.render(resrc)
-        except:
+        except BaseException:
             self.processingFailed(failure.Failure())
 
     def write(self, data):
@@ -686,12 +684,23 @@ class Session(components.Componentized):
     This utility class contains no functionality, but is used to
     represent a session.
 
+    @ivar site: The L{Site} that generated the session.
+    @type site: L{Site}
+
     @ivar uid: A unique identifier for the session.
     @type uid: L{bytes}
 
     @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
         expiration.
-    @ivar sessionTimeout: timeout of a session, in seconds.
+
+    @ivar sessionTimeout: Time after last modification the session will expire,
+        in seconds.
+    @type sessionTimeout: L{float}
+
+    @ivar lastModified: Time the C{touch()} method was last called (or time the
+        session was created). A UNIX timestamp as returned by
+        L{IReactorTime.seconds()}.
+    @type lastModified: L{float}
     """
 
     sessionTimeout = 900
@@ -701,11 +710,14 @@ class Session(components.Componentized):
     def __init__(self, site, uid, reactor=None):
         """
         Initialize a session with a unique ID for that session.
+
+        @param reactor: L{IReactorTime} used to schedule expiration of the
+            session. If C{None}, the reactor associated with I{site} is used.
         """
-        components.Componentized.__init__(self)
+        super().__init__()
 
         if reactor is None:
-            from twisted.internet import reactor
+            reactor = site.reactor
         self._reactor = reactor
 
         self.site = site
@@ -743,14 +755,14 @@ class Session(components.Componentized):
 
     def touch(self):
         """
-        Notify session modification.
+        Mark the session as modified, which resets expiration timer.
         """
         self.lastModified = self._reactor.seconds()
         if self._expireCall is not None:
             self._expireCall.reset(self.sessionTimeout)
 
 
-version = networkString("TwistedWeb/%s" % (copyright.version,))
+version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
@@ -758,13 +770,24 @@ class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 
-    @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: A factory which is called with (channel)
         and creates L{Request} instances. Default to L{Request}.
+
     @ivar displayTracebacks: If set, unhandled exceptions raised during
         rendering are returned to the client as HTML. Default to C{False}.
+
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
-    @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
+
+    @ivar sessions: Mapping of session IDs to objects returned by
+        C{sessionFactory}.
+    @type sessions: L{dict} mapping L{bytes} to L{Session} given the default
+        C{sessionFactory}
+
+    @ivar counter: The number of sessions that have been generated.
+    @type counter: L{int}
+
+    @ivar sessionCheckTime: Deprecated and unused. See
+        L{Session.sessionTimeout} instead.
     """
 
     counter = 0
@@ -785,7 +808,7 @@ class Site(http.HTTPFactory):
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
-        http.HTTPFactory.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.sessions = {}
         self.resource = resource
         if requestFactory is not None:
@@ -824,7 +847,7 @@ class Site(http.HTTPFactory):
         @param uid: Unique ID of the session.
         @type uid: L{bytes}.
 
-        @raise: L{KeyError} if the session is not found.
+        @raise KeyError: If the session is not found.
         """
         return self.sessions[uid]
 
@@ -832,7 +855,7 @@ class Site(http.HTTPFactory):
         """
         Generate a channel attached to this site.
         """
-        channel = http.HTTPFactory.buildProtocol(self, addr)
+        channel = super().buildProtocol(addr)
         channel.requestFactory = self.requestFactory
         channel.site = self
         return channel

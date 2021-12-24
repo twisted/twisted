@@ -11,10 +11,10 @@ Run this example by typing in:
 
 Select "Quit" button to exit demo.
 """
-from __future__ import print_function
 
 import pyui
-from twisted.internet import reactor, pyuisupport
+
+from twisted.internet import pyuisupport, reactor
 
 
 def onButton(self):

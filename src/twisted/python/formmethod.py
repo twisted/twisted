@@ -32,7 +32,7 @@ class Argument:
     """Base class for form arguments."""
 
     # default value for argument, if no other default is given
-    defaultDefault = None  # type: Any
+    defaultDefault: Any = None
 
     def __init__(
         self, name, default=None, shortDesc=None, longDesc=None, hints=None, allowNone=1
@@ -68,7 +68,7 @@ class Argument:
 class String(Argument):
     """A single string."""
 
-    defaultDefault = ""  # type: str
+    defaultDefault: str = ""
     min = 0
     max = None
 
@@ -99,7 +99,7 @@ class String(Argument):
         s = str(val)
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return str(val)
 
@@ -121,7 +121,7 @@ class VerifiedPassword(String):
         s = str(vals[0])
         if len(s) < self.min:
             raise InputError("Value must be at least %s characters long" % self.min)
-        if self.max != None and len(s) > self.max:
+        if self.max is not None and len(s) > self.max:
             raise InputError("Value must be at most %s characters long" % self.max)
         return s
 
@@ -136,7 +136,7 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer."""
 
-    defaultDefault = None  # type: Optional[int]
+    defaultDefault: Optional[int] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -189,18 +189,22 @@ class IntegerRange(Integer):
             return result
         if result < self.min:
             raise InputError(
-                "Value %s is too small, it should be at least %s" % (result, self.min)
+                "Value {} is too small, it should be at least {}".format(
+                    result, self.min
+                )
             )
         if result > self.max:
             raise InputError(
-                "Value %s is too large, it should be at most %s" % (result, self.max)
+                "Value {} is too large, it should be at most {}".format(
+                    result, self.max
+                )
             )
         return result
 
 
 class Float(Argument):
 
-    defaultDefault = None  # type: Optional[float]
+    defaultDefault: Optional[float] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -340,7 +344,7 @@ def positiveInt(x):
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault = None  # type: Optional[Tuple[int, int, int]]
+    defaultDefault: Optional[Tuple[int, int, int]] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None

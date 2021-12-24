@@ -8,8 +8,7 @@ Tests for interrupting tests with Control-C.
 
 from io import StringIO
 
-from twisted.trial import unittest
-from twisted.trial import reporter, runner
+from twisted.trial import reporter, runner, unittest
 
 
 class TrialTest(unittest.SynchronousTestCase):
@@ -31,7 +30,7 @@ class InterruptInTestTests(TrialTest):
             InterruptInTestTests.test_03_doNothing_run = True
 
     def setUp(self):
-        super(InterruptInTestTests, self).setUp()
+        super().setUp()
         self.suite = self.loader.loadClass(InterruptInTestTests.InterruptedTest)
         InterruptInTestTests.test_03_doNothing_run = None
 
@@ -65,7 +64,7 @@ class InterruptInSetUpTests(TrialTest):
             InterruptInSetUpTests.test_02_run = True
 
     def setUp(self):
-        super(InterruptInSetUpTests, self).setUp()
+        super().setUp()
         self.suite = self.loader.loadClass(InterruptInSetUpTests.InterruptedTest)
         InterruptInSetUpTests.test_02_run = False
         InterruptInSetUpTests.testsRun = 0
@@ -99,7 +98,7 @@ class InterruptInTearDownTests(TrialTest):
             InterruptInTearDownTests.test_02_run = True
 
     def setUp(self):
-        super(InterruptInTearDownTests, self).setUp()
+        super().setUp()
         self.suite = self.loader.loadClass(InterruptInTearDownTests.InterruptedTest)
         InterruptInTearDownTests.testsRun = 0
         InterruptInTearDownTests.test_02_run = False

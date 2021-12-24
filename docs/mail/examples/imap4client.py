@@ -9,20 +9,13 @@ Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
-from __future__ import print_function
 
 import sys
 
-from twisted.internet import endpoints
-from twisted.internet import protocol
-from twisted.internet import ssl
-from twisted.internet import defer
-from twisted.internet import stdio
+from twisted.internet import defer, endpoints, protocol, ssl, stdio
 from twisted.mail import imap4
 from twisted.protocols import basic
-from twisted.python import util
-from twisted.python import log
-
+from twisted.python import log, util
 
 try:
     raw_input
@@ -207,7 +200,7 @@ def cbFetch(result, proto):
     if result:
         keys = sorted(result)
         for k in keys:
-            proto.display("%s %s" % (k, result[k][0][2]))
+            proto.display(f"{k} {result[k][0][2]}")
     else:
         print("Hey, an empty mailbox!")
 

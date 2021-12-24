@@ -59,7 +59,7 @@ class StubUnixConchUser:
     """
 
     def __init__(self, homeDirectory):
-        from .test_session import StubConnection, StubClient
+        from .test_session import StubClient, StubConnection
 
         self._homeDirectory = homeDirectory
         self.conn = StubConnection(transport=StubClient())

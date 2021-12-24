@@ -2,27 +2,26 @@
 # See LICENSE for details.
 
 
-from __future__ import print_function
-
 from twisted.internet import _threadedselect
 
 _threadedselect.install()
 
+from itertools import count
+
+from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
-from twisted.internet import reactor
 from twisted.python.runtime import seconds
-from itertools import count
 
 try:
     # Python 3
-    from queue import Queue, Empty
+    from queue import Empty, Queue
 except ImportError:
     # Python 2
-    from Queue import Queue, Empty
+    from Queue import Empty, Queue
 
 
-class TwistedManager(object):
+class TwistedManager:
     def __init__(self):
         self.twistedQueue = Queue()
         self.key = count()

@@ -8,45 +8,64 @@ L{twisted.internet.endpoints}.
 """
 
 from errno import EPERM
-from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP, gaierror
+from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, gaierror
+from types import FunctionType
 from unicodedata import normalize
 from unittest import skipIf
-from types import FunctionType
 
 from zope.interface import implementer, providedBy, provider
 from zope.interface.interface import InterfaceClass
-from zope.interface.verify import verifyObject, verifyClass
-
-from twisted.trial import unittest
-from twisted.internet.testing import MemoryReactorClock as MemoryReactor
-from twisted.internet.testing import RaisingMemoryReactor, StringTransport
-from twisted.internet.testing import StringTransportWithDisconnection
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted import plugins
-from twisted.internet import error, interfaces, defer, endpoints, protocol
-from twisted.internet import reactor, threads, stdio
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.address import _ProcessAddress, HostnameAddress
+from twisted.internet import (
+    defer,
+    endpoints,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+    stdio,
+    threads,
+)
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.address import (
+    HostnameAddress,
+    IPv4Address,
+    IPv6Address,
+    UNIXAddress,
+    _ProcessAddress,
+)
 from twisted.internet.endpoints import StandardErrorBehavior
-from twisted.internet.interfaces import IConsumer, IPushProducer, ITransport
-from twisted.internet.protocol import ClientFactory, Protocol, Factory
+from twisted.internet.error import ConnectingCancelledError
+from twisted.internet.interfaces import (
+    IConsumer,
+    IHostnameResolver,
+    IPushProducer,
+    IReactorPluggableNameResolver,
+    ITransport,
+)
+from twisted.internet.protocol import ClientFactory, Factory, Protocol
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.internet.testing import (
+    MemoryReactorClock as MemoryReactor,
+    RaisingMemoryReactor,
+    StringTransport,
+    StringTransportWithDisconnection,
+)
 from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
+from twisted.protocols import basic, policies
 from twisted.python import log
+from twisted.python.compat import nativeString
+from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
-from twisted.protocols import basic, policies
-from twisted.test.iosim import connectedServerAndClient, connectableEndpoint
-from twisted.internet.error import ConnectingCancelledError
-from twisted.python.compat import nativeString
-from twisted.internet.interfaces import IHostnameResolver
-from twisted.internet.interfaces import IReactorPluggableNameResolver
-from twisted.python.components import proxyForInterface
-from twisted.internet.abstract import isIPv6Address
+from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
+from twisted.trial import unittest
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
@@ -69,16 +88,22 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 
 try:
-    from twisted.test.test_sslverify import makeCertificate
+    from OpenSSL.SSL import (
+        Context as ContextType,
+        OP_NO_SSLv3,
+        SSLv23_METHOD,
+        TLSv1_METHOD,
+    )
+
     from twisted.internet.ssl import (
-        PrivateCertificate,
         Certificate,
         CertificateOptions,
-        KeyPair,
         DiffieHellmanParameters,
+        KeyPair,
+        PrivateCertificate,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3
+    from twisted.test.test_sslverify import makeCertificate
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -785,9 +810,7 @@ class MemoryProcessTransport(StringTransportWithDisconnection):
     """
 
     def __init__(self, protocol=None):
-        super(MemoryProcessTransport, self).__init__(
-            hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress()
-        )
+        super().__init__(hostAddress=_ProcessAddress(), peerAddress=_ProcessAddress())
         self.signals = []
         self.closedChildFDs = set()
         self.protocol = Protocol()
@@ -1323,9 +1346,6 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         address = IPv4Address("TCP", "0.0.0.0", 0)
 
-        if listenArgs is None:
-            listenArgs = {}
-
         return (
             endpoints.TCP4ServerEndpoint(reactor, address.port, **listenArgs),
             (
@@ -1437,9 +1457,6 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         interface = listenArgs.get("interface", "::")
         address = IPv6Address("TCP", interface, 0)
-
-        if listenArgs is None:
-            listenArgs = {}
 
         return (
             endpoints.TCP6ServerEndpoint(reactor, address.port, **listenArgs),
@@ -1853,7 +1870,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         """
         try:
             result = f(*args, **kwargs)
-        except:
+        except BaseException:
             return defer.fail()
         else:
             return defer.succeed(result)
@@ -2811,9 +2828,6 @@ class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         address = IPv4Address("TCP", "localhost", 80)
 
-        if connectArgs is None:
-            connectArgs = {}
-
         return (
             endpoints.SSL4ClientEndpoint(
                 reactor,
@@ -3127,7 +3141,7 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,)
+            reactor, f"ssl:4321:privateKey={escapedPEMPathName}"
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
@@ -3216,7 +3230,7 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:4321:privateKey={0}:certKey={1}:dhParameters={2}".format(
+            "ssl:4321:privateKey={}:certKey={}:dhParameters={}".format(
                 escapedPEMPathName, escapedPEMPathName, fileName
             ),
         )
@@ -3293,7 +3307,7 @@ class ServerStringTests(unittest.TestCase):
         fakeEndpoint = endpoints.serverFromString(
             notAReactor, "fake:hello:world:yes=no:up=down"
         )
-        from twisted.plugins.fakeendpoint import fake
+        from twisted.plugins.fakeendpoint import fake  # type: ignore[import]
 
         self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, "hello", "world"))
@@ -3599,7 +3613,7 @@ class SSLClientStringTests(unittest.TestCase):
                 # There is a duplicate of thing2.pem, so ignore anything that
                 # looks like it.
                 if data == casPath.child("thing2.pem").getContent():
-                    raise IOError(EPERM)
+                    raise OSError(EPERM)
                 else:
                     return data
 
@@ -3760,7 +3774,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find systemd parser in %r" % (parsers,))
+            self.fail(f"Did not find systemd parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3842,7 +3856,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find TCP6ServerEndpoint parser in %r" % (parsers,))
+            self.fail(f"Did not find TCP6ServerEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3860,7 +3874,7 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         'tcp6' endpoint string description.
         """
         ep = endpoints.serverFromString(
-            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1"
+            MemoryReactor(), r"tcp6:8080:backlog=12:interface=\:\:1"
         )
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
@@ -3886,7 +3900,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
             if isinstance(p, self._parserClass):
                 break
         else:
-            self.fail("Did not find StandardIOEndpoint parser in %r" % (parsers,))
+            self.fail(f"Did not find StandardIOEndpoint parser in {parsers!r}")
 
     def test_interface(self):
         """
@@ -3961,7 +3975,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).dataReceived(data.upper())
+        super().dataReceived(data.upper())
 
     def write(self, data):
         """
@@ -3970,7 +3984,7 @@ class UppercaseWrapperProtocol(policies.ProtocolWrapper):
         @param data: The string to uppercase.
         @type data: L{bytes}
         """
-        super(UppercaseWrapperProtocol, self).write(data.upper())
+        super().write(data.upper())
 
     def writeSequence(self, seq):
         """

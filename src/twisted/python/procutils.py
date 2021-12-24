@@ -28,7 +28,7 @@ def which(name, flags=os.X_OK):
     @param flags: Arguments to L{os.access}.
 
     @rtype: C{list}
-    @param: A list of the full paths to files found, in the order in which they
+    @return: A list of the full paths to files found, in the order in which they
     were found.
     """
     result = []

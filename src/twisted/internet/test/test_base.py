@@ -7,19 +7,19 @@ Tests for L{twisted.internet.base}.
 
 import socket
 from queue import Queue
-from unittest import skipIf
 from typing import Any, Callable
+from unittest import skipIf
 
 from zope.interface import implementer
 
-from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import IReactorTime, IReactorThreads, IResolverSimple
-from twisted.internet.error import DNSLookupError
 from twisted.internet._resolver import FirstOneWins
+from twisted.internet.base import DelayedCall, ReactorBase, ThreadedResolver
 from twisted.internet.defer import Deferred
-from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
+from twisted.internet.error import DNSLookupError
+from twisted.internet.interfaces import IReactorThreads, IReactorTime, IResolverSimple
 from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.python.threadpool import ThreadPool
+from twisted.trial.unittest import SkipTest, TestCase
 
 try:
     import signal as _signal
@@ -124,7 +124,7 @@ class ThreadedResolverTests(TestCase):
         self.addCleanup(reactor._stop)
 
         def fakeGetHostByName(name):
-            raise IOError("ENOBUFS (this is a funny joke)")
+            raise OSError("ENOBUFS (this is a funny joke)")
 
         self.patch(socket, "gethostbyname", fakeGetHostByName)
 

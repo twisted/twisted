@@ -8,9 +8,9 @@ VT102 and VT220 terminal manipulation.
 @author: Jp Calderone
 """
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
-from twisted.internet import protocol, defer, interfaces as iinternet
+from twisted.internet import defer, interfaces as iinternet, protocol
 from twisted.python.compat import iterbytes, networkString
 
 
@@ -437,13 +437,13 @@ class _const:
     @ivar name: A string naming this constant
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def __repr__(self) -> str:
         return "[" + self.name + "]"
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return ("[" + self.name + "]").encode("ascii")
 
 

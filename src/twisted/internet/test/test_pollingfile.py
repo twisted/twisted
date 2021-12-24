@@ -6,6 +6,7 @@ Tests for L{twisted.internet._pollingfile}.
 """
 
 from unittest import skipIf
+
 from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
 

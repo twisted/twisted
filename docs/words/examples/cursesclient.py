@@ -41,7 +41,7 @@ class CursesStdIO:
     Curses classes needing input should extend this"""
 
     def fileno(self):
-        """ We want to select on FD 0 """
+        """We want to select on FD 0"""
         return 0
 
     def doRead(self):
@@ -53,7 +53,7 @@ class CursesStdIO:
 
 class IRC(IRCClient):
 
-    """ A protocol object for IRC """
+    """A protocol object for IRC"""
 
     nickname = "testcurses"
 
@@ -64,7 +64,7 @@ class IRC(IRCClient):
         self.screenObj.irc = self
 
     def lineReceived(self, line):
-        """ When receiving a line, add it to the output buffer """
+        """When receiving a line, add it to the output buffer"""
         self.screenObj.addLine(line)
 
     def connectionMade(self):
@@ -121,7 +121,7 @@ class Screen(CursesStdIO):
         self.close()
 
     def addLine(self, text):
-        """ add a line to the internal list of lines"""
+        """add a line to the internal list of lines"""
 
         self.lines.append(text)
         self.redisplayLines()
@@ -152,7 +152,7 @@ class Screen(CursesStdIO):
         self.stdscr.move(self.rows - 1, self.cols - 1)
 
     def doRead(self):
-        """ Input is ready! """
+        """Input is ready!"""
         curses.noecho()
         self.timer = self.timer + 1
         c = self.stdscr.getch()  # read a character
@@ -165,7 +165,7 @@ class Screen(CursesStdIO):
             # for testing too
             try:
                 self.irc.sendLine(self.searchText)
-            except:
+            except BaseException:
                 pass
             self.stdscr.refresh()
             self.searchText = ""
@@ -185,7 +185,7 @@ class Screen(CursesStdIO):
         self.stdscr.refresh()
 
     def close(self):
-        """ clean up """
+        """clean up"""
 
         curses.nocbreak()
         self.stdscr.keypad(0)

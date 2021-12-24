@@ -15,7 +15,6 @@ import warnings
 
 from twisted.trial import unittest, util
 
-
 METHOD_WARNING_MSG = "method warning message"
 CLASS_WARNING_MSG = "class warning message"
 MODULE_WARNING_MSG = "module warning message"
@@ -50,7 +49,7 @@ class SuppressionMixin(EmitMixin):
     def testSuppressMethod(self):
         self._emit()
 
-    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]  # type: ignore[attr-defined] # noqa
+    testSuppressMethod.suppress = [util.suppress(message=METHOD_WARNING_MSG)]  # type: ignore[attr-defined]
 
     def testSuppressClass(self):
         self._emit()

@@ -13,7 +13,7 @@ The target audience of this document are those that have developed a Twisted app
 
 There are a few prerequisites to understanding this document:
 
-- A basic understanding of the Twisted Plugin System (i.e., the :api:`twisted.plugin <twisted.plugin>` module) is necessary,
+- A basic understanding of the Twisted Plugin System (i.e., the :py:mod:`twisted.plugin` module) is necessary,
   however, step-by-step instructions will be given.
   Reading :doc:`The Twisted Plugin System <plugin>` is recommended,
   in particular the "Extending an Existing Program" section.
@@ -59,12 +59,12 @@ Note that you must *not* add any ``__init__.py`` files to this directory structu
 and the plugin file should *not* be named ``myproject.py``
 (because that would conflict with your project's module name).
 
-In this file, define an object which *provides* the interfaces :api:`twisted.plugin.IPlugin <twisted.plugin.IPlugin>`
-and :api:`twisted.application.service.IServiceMaker <twisted.application.service.IServiceMaker>` .
+In this file, define an object which *provides* the interfaces :py:class:`twisted.plugin.IPlugin`
+and :py:class:`twisted.application.service.IServiceMaker` .
 
 The ``tapname`` attribute of your IServiceMaker provider will be used as the subcommand name in a command like ``twistd [subcommand] [args...]`` ,
 and the ``options`` attribute
-(which should be a :api:`twisted.python.usage.Options <usage.Options>` subclass)
+(which should be a :py:class:`usage.Options <twisted.python.usage.Options>` subclass)
 will be used to parse the given args.
 
 
@@ -120,7 +120,7 @@ read up on it first.
 
 If you are building a twistd plugin and you want to support a wide variety of authentication patterns,
 Twisted provides an easy-to-use mixin for your Options subclass:
-:api:`twisted.cred.strcred.AuthOptionMixin <strcred.AuthOptionMixin>` .
+:py:class:`strcred.AuthOptionMixin <twisted.cred.strcred.AuthOptionMixin>` .
 The following code is an example of using this mixin:
 
 .. code-block:: python
@@ -188,7 +188,7 @@ Here is an example of starting your server using the ``/etc/passwd`` file for au
 
 
 For a full list of cred plugins supported,
-see :api:`twisted.plugins <twisted.plugins>` ,
+see :py:mod:`twisted.plugins` ,
 or use the command-line help:
 
 .. code-block:: console

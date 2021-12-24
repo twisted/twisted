@@ -41,21 +41,20 @@ reactor.listen/connect* methods for more information.
 from random import random as _goodEnoughRandom
 from typing import List
 
-from twisted.python import log
-from twisted.logger import Logger
+from automat import MethodicalMachine  # type: ignore[import]
 
 from twisted.application import service
 from twisted.internet import task
-from twisted.python.failure import Failure
 from twisted.internet.defer import (
     CancelledError,
     Deferred,
-    succeed,
     fail,
     maybeDeferred,
+    succeed,
 )
-
-from automat import MethodicalMachine
+from twisted.logger import Logger
+from twisted.python import log
+from twisted.python.failure import Failure
 
 
 def _maybeGlobalReactor(maybeReactor):
@@ -72,7 +71,7 @@ def _maybeGlobalReactor(maybeReactor):
 
 class _VolatileDataService(service.Service):
 
-    volatile = []  # type: List[str]
+    volatile: List[str] = []
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)
@@ -100,7 +99,7 @@ class _AbstractServer(_VolatileDataService):
     """
 
     volatile = ["_port"]
-    method = ""  # type: str
+    method: str = ""
     reactor = None
 
     _port = None
@@ -163,7 +162,7 @@ class _AbstractClient(_VolatileDataService):
     """
 
     volatile = ["_connection"]
-    method = ""  # type: str
+    method: str = ""
     reactor = None
 
     _connection = None
@@ -191,7 +190,7 @@ class _AbstractClient(_VolatileDataService):
         @return: the port object returned by the connect method.
         @rtype: an object providing L{twisted.internet.interfaces.IConnector}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor), "connect%s" % (self.method,))(
+        return getattr(_maybeGlobalReactor(self.reactor), f"connect{self.method}")(
             *self.args, **self.kwargs
         )
 
@@ -470,7 +469,7 @@ class _ReconnectingProtocolProxy:
         return getattr(self._protocol, item)
 
     def __repr__(self) -> str:
-        return "<%s wrapping %r>" % (self.__class__.__name__, self._protocol)
+        return f"<{self.__class__.__name__} wrapping {self._protocol!r}>"
 
 
 class _DisconnectFactory:
@@ -501,7 +500,9 @@ class _DisconnectFactory:
         return getattr(self._protocolFactory, item)
 
     def __repr__(self) -> str:
-        return "<%s wrapping %r>" % (self.__class__.__name__, self._protocolFactory)
+        return "<{} wrapping {!r}>".format(
+            self.__class__.__name__, self._protocolFactory
+        )
 
 
 def backoffPolicy(
@@ -569,6 +570,10 @@ class _ClientMachine:
     """
     State machine for maintaining a single outgoing connection to an endpoint.
 
+    @ivar _awaitingConnected: notifications to make when connection
+        succeeds, fails, or is cancelled
+    @type _awaitingConnected: list of (Deferred, count) tuples
+
     @see: L{ClientService}
     """
 
@@ -581,10 +586,6 @@ class _ClientMachine:
         @param log: The logger for the L{ClientService} instance this state
             machine is associated to.
         @type log: L{Logger}
-
-        @ivar _awaitingConnected: notifications to make when connection
-            succeeds, fails, or is cancelled
-        @type _awaitingConnected: list of (Deferred, count) tuples
         """
         self._endpoint = endpoint
         self._failedAttempts = 0
@@ -1173,7 +1174,7 @@ class ClientService(service.Service):
         if self.running:
             self._log.warn("Duplicate ClientService.startService {log_source}")
             return
-        super(ClientService, self).startService()
+        super().startService()
         self._machine.start()
 
     def stopService(self):
@@ -1183,7 +1184,7 @@ class ClientService(service.Service):
         @return: a L{Deferred} that fires when all outstanding connections are
             closed and all in-progress connection attempts halted.
         """
-        super(ClientService, self).stopService()
+        super().stopService()
         return self._machine.stop()
 
 

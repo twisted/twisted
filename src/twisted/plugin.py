@@ -12,16 +12,17 @@ Plugin system for Twisted.
 
 
 import os
+import pickle
 import sys
+import types
+from typing import Iterable, Optional, Type, TypeVar
 
 from zope.interface import Interface, providedBy
 
-import pickle
-
-from twisted.python.components import getAdapterFactory
-from twisted.python.reflect import namedAny
 from twisted.python import log
+from twisted.python.components import getAdapterFactory
 from twisted.python.modules import getModule
+from twisted.python.reflect import namedAny
 
 
 class IPlugin(Interface):
@@ -43,7 +44,7 @@ class CachedPlugin:
         self.dropin.plugins.append(self)
 
     def __repr__(self) -> str:
-        return "<CachedPlugin %r/%r (provides %r)>" % (
+        return "<CachedPlugin {!r}/{!r} (provides {!r})>".format(
             self.name,
             self.dropin.moduleName,
             ", ".join([i.__name__ for i in self.provided]),
@@ -141,7 +142,7 @@ def getCache(module):
             lastCached = dropinPath.getModificationTime()
             with dropinPath.open("r") as f:
                 dropinDotCache = pickle.load(f)
-        except:
+        except BaseException:
             dropinDotCache = {}
             lastCached = 0
 
@@ -156,7 +157,7 @@ def getCache(module):
                 needsWrite = True
                 try:
                     provider = pluginModule.load()
-                except:
+                except BaseException:
                     # dropinDotCache.pop(pluginKey, None)
                     log.err()
                 else:
@@ -179,13 +180,24 @@ def getCache(module):
                     path=dropinPath.path,
                     errno=e.errno,
                 )
-            except:
+            except BaseException:
                 log.err(None, "Unexpected error while writing cache file")
         allCachesCombined.update(dropinDotCache)
     return allCachesCombined
 
 
-def getPlugins(interface, package=None):
+def _pluginsPackage() -> types.ModuleType:
+    import twisted.plugins as package
+
+    return package
+
+
+_TInterface = TypeVar("_TInterface", bound=Interface)
+
+
+def getPlugins(
+    interface: Type[_TInterface], package: Optional[types.ModuleType] = None
+) -> Iterable[_TInterface]:
     """
     Retrieve all plugins implementing the given interface beneath the given module.
 
@@ -198,13 +210,13 @@ def getPlugins(interface, package=None):
     @return: An iterator of plugins.
     """
     if package is None:
-        import twisted.plugins as package
+        package = _pluginsPackage()
     allDropins = getCache(package)
     for key, dropin in allDropins.items():
         for plugin in dropin.plugins:
             try:
                 adapted = interface(plugin, None)
-            except:
+            except BaseException:
                 log.err()
             else:
                 if adapted is not None:

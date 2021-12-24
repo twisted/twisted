@@ -11,27 +11,26 @@ import codecs
 import io
 import sys
 import traceback
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
-    execfile,
     _PYPY,
-    comparable,
+    _get_async_param,
+    bytesEnviron,
     cmp,
-    nativeString,
-    networkString,
-    lazyByteSlice,
-    reraise,
-    iterbytes,
+    comparable,
+    execfile,
     intToBytes,
     ioType,
-    bytesEnviron,
-    _get_async_param,
+    iterbytes,
+    lazyByteSlice,
+    nativeString,
+    networkString,
+    reraise,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class IOTypeTests(SynchronousTestCase):
@@ -55,14 +54,14 @@ class IOTypeTests(SynchronousTestCase):
         """
         A file opened via 'io.open' in text mode accepts and returns text.
         """
-        with io.open(self.mktemp(), "w") as f:
+        with open(self.mktemp(), "w") as f:
             self.assertEqual(ioType(f), str)
 
     def test_3openBinaryMode(self):
         """
         A file opened via 'io.open' in binary mode accepts and returns bytes.
         """
-        with io.open(self.mktemp(), "wb") as f:
+        with open(self.mktemp(), "wb") as f:
             self.assertEqual(ioType(f), bytes)
 
     def test_codecsOpenBytes(self):
@@ -112,7 +111,7 @@ class CompatTests(SynchronousTestCase):
 
         a.discard("d")
 
-        b = set(["r", "s"])
+        b = {"r", "s"}
         d = a.union(b)
         b = list(d)
         b.sort()
@@ -447,11 +446,11 @@ class ReraiseTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             typ, value, tb = sys.exc_info()
         try:
             reraise(value, None)
-        except:
+        except BaseException:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)
@@ -468,11 +467,11 @@ class ReraiseTests(SynchronousTestCase):
         """
         try:
             1 / 0
-        except:
+        except BaseException:
             typ, value, tb = sys.exc_info()
         try:
             reraise(value, tb)
-        except:
+        except BaseException:
             typ2, value2, tb2 = sys.exc_info()
             self.assertEqual(typ2, ZeroDivisionError)
             self.assertIs(value, value2)

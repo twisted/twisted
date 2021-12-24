@@ -6,13 +6,13 @@ Tests for implementations of L{IReactorUNIX}.
 """
 
 
-from stat import S_IMODE
-from os import stat, close, urandom, unlink, fstat
-from tempfile import mktemp, mkstemp
-from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket, error
-from pprint import pformat
 from hashlib import md5
+from os import close, fstat, stat, unlink, urandom
+from pprint import pformat
+from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
+from stat import S_IMODE
 from struct import pack
+from tempfile import mkstemp, mktemp
 from typing import Optional, Sequence, Type
 from unittest import skipIf
 
@@ -25,43 +25,44 @@ else:
 
 from zope.interface import Interface, implementer
 
-from twisted.internet import interfaces, base
+from twisted.internet import base, interfaces
 from twisted.internet.address import UNIXAddress
 from twisted.internet.defer import Deferred, fail, gatherResults
-from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
+from twisted.internet.endpoints import UNIXClientEndpoint, UNIXServerEndpoint
 from twisted.internet.error import (
+    CannotListenError,
     ConnectionClosed,
     FileDescriptorOverrun,
-    CannotListenError,
 )
 from twisted.internet.interfaces import (
     IFileDescriptorReceiver,
-    IReactorUNIX,
-    IReactorSocket,
     IReactorFDSet,
+    IReactorSocket,
+    IReactorUNIX,
 )
-from twisted.internet.protocol import DatagramProtocol
-from twisted.internet.protocol import ServerFactory, ClientFactory
+from twisted.internet.protocol import ClientFactory, DatagramProtocol, ServerFactory
 from twisted.internet.task import LoopingCall
-from twisted.internet.test.connectionmixins import EndpointCreator
+from twisted.internet.test.connectionmixins import (
+    ConnectableProtocol,
+    ConnectionTestsMixin,
+    EndpointCreator,
+    StreamClientTestsMixin,
+    runProtocolsWithReactor,
+)
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
-    StreamTransportTestsMixin,
-    WriteSequenceTestsMixin,
     MyClientFactory,
     MyServerFactory,
+    StreamTransportTestsMixin,
+    WriteSequenceTestsMixin,
 )
-from twisted.internet.test.connectionmixins import ConnectableProtocol
-from twisted.internet.test.connectionmixins import ConnectionTestsMixin
-from twisted.internet.test.connectionmixins import StreamClientTestsMixin
-from twisted.internet.test.connectionmixins import runProtocolsWithReactor
 from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
-from twisted.python.log import addObserver, removeObserver, err
-from twisted.python.runtime import platform
-from twisted.python.reflect import requireModule
 from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.log import addObserver, err, removeObserver
+from twisted.python.reflect import requireModule
+from twisted.python.runtime import platform
 
 sendmsg = requireModule("twisted.python.sendmsg")
 sendmsgSkipReason = ""
@@ -100,9 +101,7 @@ class UNIXCreator(EndpointCreator):
     Create UNIX socket end points.
     """
 
-    requiredInterfaces = (
-        interfaces.IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (interfaces.IReactorUNIX,)
 
     def server(self, reactor):
         """
@@ -203,7 +202,7 @@ class ReceiveFileDescriptor(ConnectableProtocol):
         """
         if self.waiting is not None:
             self.waiting.errback(
-                Failure(Exception("Received bytes (%r) before descriptor." % (data,)))
+                Failure(Exception(f"Received bytes ({data!r}) before descriptor."))
             )
             self.waiting = None
 
@@ -258,7 +257,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         """
 
         def raiseSocketError(self):
-            raise error("FakeBasePort forced socket.error")
+            raise OSError("FakeBasePort forced socket.error")
 
         self.patch(base.BasePort, "createInternetSocket", raiseSocketError)
         reactor = self.buildReactor()
@@ -439,6 +438,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         # implemented; see https://twistedmatrix.com/trac/ticket/5573.
 
         from socket import socketpair
+
         from twisted.internet.unix import _SendmsgMixin
         from twisted.python.sendmsg import sendmsg
 
@@ -567,7 +567,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             data = b"some data"
             ancillary = [(None, None, b"")]
             flags = 0
-            return sendmsg.RecievedMessage(data, ancillary, flags)
+            return sendmsg.ReceivedMessage(data, ancillary, flags)
 
         events = []
         addObserver(events.append)
@@ -727,10 +727,10 @@ class SocketUNIXMixin:
     UNIX ports.
     """
 
-    requiredInterfaces = (
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (
         IReactorUNIX,
         IReactorSocket,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    )
 
     def getListeningPort(self, reactor, factory):
         """
@@ -799,21 +799,19 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces = (
-        IReactorUNIX,
-    )  # type: Optional[Sequence[Type[Interface]]]  # noqa
+    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
         Get the message expected to be logged when a UNIX port starts listening.
         """
-        return "%s starting on %r" % (factory, nativeString(port.getHost().name))
+        return f"{factory} starting on {nativeString(port.getHost().name)!r}"
 
     def getExpectedConnectionLostLogMsg(self, port):
         """
         Get the expected connection lost message for a UNIX port
         """
-        return "(UNIX Port %s Closed)" % (nativeString(port.getHost().name),)
+        return f"(UNIX Port {nativeString(port.getHost().name)} Closed)"
 
 
 class UNIXPortTestsBuilder(

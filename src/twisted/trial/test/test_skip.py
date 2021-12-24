@@ -6,8 +6,9 @@
 Tests for L{twisted.trial.util}
 """
 
-from twisted.trial.unittest import TestCase
 from unittest import skipIf
+
+from twisted.trial.unittest import TestCase
 
 
 @skipIf(True, "Skip all tests when @skipIf is used on a class")
@@ -86,7 +87,7 @@ class SkipAttributeOnMethods(TestCase):
     def test_one(self):
         raise Exception("Should never reach here")
 
-    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]  # noqa
+    test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
 
     def test_shouldNotSkip(self):
         self.assertTrue(True, "Test should run and not be skipped")

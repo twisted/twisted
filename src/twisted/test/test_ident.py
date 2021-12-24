@@ -10,13 +10,11 @@ import builtins
 import struct
 from io import StringIO
 
+from twisted.internet import defer, error
 from twisted.protocols import ident
 from twisted.python import failure
-from twisted.internet import error
-from twisted.internet import defer
-
-from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 class ClassParserTests(unittest.TestCase):

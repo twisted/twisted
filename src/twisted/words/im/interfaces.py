@@ -6,7 +6,7 @@
 Pan-protocol chat client.
 """
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 # (Random musings, may not reflect on current state of code:)
 #

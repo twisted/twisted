@@ -4,9 +4,9 @@
 """
 Support module for making a port forwarder with twistd.
 """
+from twisted.application import strports
 from twisted.protocols import portforward
 from twisted.python import usage
-from twisted.application import strports
 
 
 class Options(usage.Options):

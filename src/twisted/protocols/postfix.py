@@ -10,9 +10,8 @@ import sys
 from collections import UserDict
 from urllib.parse import quote as _quote, unquote as _unquote
 
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol, defer
+from twisted.internet import defer, protocol
+from twisted.protocols import basic, policies
 from twisted.python import log
 
 
@@ -72,7 +71,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         else:
             try:
                 f(params)
-            except:
+            except BaseException:
                 excInfo = str(sys.exc_info()[1]).encode("ascii")
                 self.sendCode(400, b"Command " + request + b" failed: " + excInfo)
 

@@ -14,9 +14,9 @@ import sys
 
 from zope.interface import implementer
 
+from twisted.internet import protocol, stdio
 from twisted.internet.interfaces import IHalfCloseableProtocol
-from twisted.internet import stdio, protocol
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 
 
 @implementer(IHalfCloseableProtocol)

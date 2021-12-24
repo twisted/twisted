@@ -8,10 +8,11 @@ Dict client protocol implementation.
 @author: Pavel Pergamenshchik
 """
 
-from twisted.protocols import basic
-from twisted.internet import defer, protocol
-from twisted.python import log
 from io import BytesIO
+
+from twisted.internet import defer, protocol
+from twisted.protocols import basic
+from twisted.python import log
 
 
 def parseParam(line):
@@ -122,9 +123,7 @@ class DictClient(basic.LineReceiver):
                 return
             code = int(line[:3])
             line = line[4:]
-        method = getattr(
-            self, "dictCode_%s_%s" % (code, self.state), self.dictCode_default
-        )
+        method = getattr(self, f"dictCode_{code}_{self.state}", self.dictCode_default)
         method(line)
 
     def dictCode_default(self, line):
@@ -164,7 +163,7 @@ class DictClient(basic.LineReceiver):
         )
         self.data = None  # should be None
         self.state = "define"
-        command = "DEFINE %s %s" % (
+        command = "DEFINE {} {}".format(
             makeAtom(database.encode("UTF-8")),
             makeWord(word.encode("UTF-8")),
         )
@@ -178,7 +177,7 @@ class DictClient(basic.LineReceiver):
         self.result = None
         self.data = None
         self.state = "match"
-        command = "MATCH %s %s %s" % (
+        command = "MATCH {} {} {}".format(
             makeAtom(database),
             makeAtom(strategy),
             makeAtom(word),
@@ -290,7 +289,7 @@ class DictClient(basic.LineReceiver):
         pass
 
     def matchFailed(self, reason):
-        """override to catch resonable failure responses to MATCH"""
+        """override to catch reasonable failure responses to MATCH"""
         pass
 
     def matchDone(self, result):

@@ -12,45 +12,38 @@ import codecs
 import functools
 import locale
 import os
-from io import BytesIO
-from typing import List, Optional, Tuple, Type
 import uuid
-
-from itertools import chain
 from collections import OrderedDict
+from io import BytesIO
+from itertools import chain
+from typing import List, Optional, Tuple, Type
 from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import interfaces
-from twisted.internet import reactor
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.credentials import (
+    CramMD5Credentials,
+    IUsernameHashedPassword,
+    IUsernamePassword,
+)
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import defer, error, interfaces, reactor
 from twisted.internet.task import Clock
 from twisted.mail import imap4
+from twisted.mail.imap4 import MessageSet
 from twisted.mail.interfaces import (
     IChallengeResponse,
     IClientAuthentication,
     ICloseableMailboxIMAP,
 )
-from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.python import util, log
-from twisted.python.compat import nativeString, networkString, iterbytes
-from twisted.trial.unittest import SynchronousTestCase, TestCase
-
-from twisted.cred.portal import Portal, IRealm
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.error import UnauthorizedLogin
-from twisted.cred.credentials import (
-    IUsernameHashedPassword,
-    IUsernamePassword,
-    CramMD5Credentials,
-)
-
+from twisted.python import failure, log, util
+from twisted.python.compat import iterbytes, nativeString, networkString
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -866,8 +859,8 @@ class IMAP4HelperTests(TestCase):
             b'"oo \t oo"',
             b"oo \\t oo",
             b'"oo \\t oo"',
-            b"oo \o oo",
-            b'"oo \o oo"',
+            br"oo \o oo",
+            br'"oo \o oo"',
             b"oo \\o oo",
             b'"oo \\o oo"',
         ]
@@ -888,8 +881,8 @@ class IMAP4HelperTests(TestCase):
             [b"oo \t oo"],
             [b"oo", b"\\t", b"oo"],
             [b"oo \\t oo"],
-            [b"oo", b"\o", b"oo"],
-            [b"oo \o oo"],
+            [b"oo", br"\o", b"oo"],
+            [br"oo \o oo"],
             [b"oo", b"\\o", b"oo"],
             [b"oo \\o oo"],
         ]
@@ -1006,8 +999,8 @@ class IMAP4HelperTests(TestCase):
         check(b'("oo \\ oo")', [b"oo \\ oo"])
 
         check(b'("oo \\o")', [b"oo \\o"])
-        check(b'("oo \o")', [b"oo \o"])
-        check(b"(oo \o)", [b"oo", b"\o"])
+        check(br'("oo \o")', [br"oo \o"])
+        check(br"(oo \o)", [b"oo", br"\o"])
         check(b"(oo \\o)", [b"oo", b"\\o"])
 
     def test_fetchParserSimple(self):
@@ -1401,13 +1394,13 @@ class IMAP4HelperTests(TestCase):
         """
         # Check all the printable exclusions
         self.assertEqual(
-            "(%s twistedrocks)" % (keyword.upper(),),
+            f"({keyword.upper()} twistedrocks)",
             imap4.Query(**{keyword: r'twisted (){%*"\] rocks'}),
         )
 
         # Check all the non-printable exclusions
         self.assertEqual(
-            "(%s twistedrocks)" % (keyword.upper(),),
+            f"({keyword.upper()} twistedrocks)",
             imap4.Query(
                 **{
                     keyword: "twisted %s rocks"
@@ -1417,7 +1410,7 @@ class IMAP4HelperTests(TestCase):
         )
 
     def test_queryKeywordFlag(self):
-        """
+        r"""
         When passed the C{keyword} argument, L{imap4.Query} returns an
         C{atom} that consists of one or more non-special characters.
 
@@ -1432,7 +1425,7 @@ class IMAP4HelperTests(TestCase):
         self._keywordFilteringTest("keyword")
 
     def test_queryUnkeywordFlag(self):
-        """
+        r"""
         When passed the C{unkeyword} argument, L{imap4.Query} returns an
         C{atom} that consists of one or more non-special characters.
 
@@ -1520,9 +1513,7 @@ class IMAP4HelperTests(TestCase):
                 self.assertRaises(TypeError, len, imap4.parseIdList(input))
             else:
                 L = len(imap4.parseIdList(input))
-                self.assertEqual(
-                    L, expected, "len(%r) = %r != %r" % (input, L, expected)
-                )
+                self.assertEqual(L, expected, f"len({input!r}) = {L!r} != {expected!r}")
 
     def test_parseTimeInvalidFormat(self):
         """
@@ -1568,7 +1559,7 @@ class IMAP4HelperTests(TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages = []  # type: List[Tuple[bytes, list, bytes, int]]
+    messages: List[Tuple[bytes, list, bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1656,7 +1647,7 @@ class UncloseableMailbox:
     """
 
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages = []  # type:List[Tuple[bytes, list, bytes, int]]
+    messages: List[Tuple[bytes, list, bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1870,8 +1861,8 @@ class SimpleClient(imap4.IMAP4Client):
 
 class IMAP4HelperMixin:
 
-    serverCTX = None  # type: Optional[ServerTLSContext]
-    clientCTX = None  # type: Optional[ClientTLSContext]
+    serverCTX: Optional[ServerTLSContext] = None
+    clientCTX: Optional[ClientTLSContext] = None
 
     def setUp(self):
         d = defer.Deferred()
@@ -2589,7 +2580,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
                     expectedContents,
                 )
 
-            self.assertFalse(listed, "More results than expected: {!r}".format(listed))
+            self.assertFalse(listed, f"More results than expected: {listed!r}")
 
         return d
 
@@ -4263,7 +4254,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
             c.dataReceived(b"Subject: Suprise for your woman...\r\n")
             c.dataReceived(b"\r\n")
             c.dataReceived(b")\r\n")
-            c.dataReceived(b"* 1 FETCH (FLAGS (\Seen))\r\n")
+            c.dataReceived(b"* 1 FETCH (FLAGS (\\Seen))\r\n")
             c.dataReceived(b'* 2 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {75}\r\n')
             c.dataReceived(
                 b"Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n"
@@ -4492,8 +4483,8 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
             d = c.fetchMessage("1:*")
             c.dataReceived(b"* 1 FETCH (RFC822 {24}\r\n")
             c.dataReceived(b"Subject: first subject\r\n")
-            c.dataReceived(b" FLAGS (\Seen))\r\n")
-            c.dataReceived(b"* 2 FETCH (FLAGS (\Recent \Seen) RFC822 {25}\r\n")
+            c.dataReceived(b" FLAGS (\\Seen))\r\n")
+            c.dataReceived(b"* 2 FETCH (FLAGS (\\Recent \\Seen) RFC822 {25}\r\n")
             c.dataReceived(b"Subject: second subject\r\n")
             c.dataReceived(b")\r\n")
             c.dataReceived(b"0003 OK FETCH completed\r\n")
@@ -4567,7 +4558,7 @@ class PreauthIMAP4ClientMixin:
         C{transport}.
     """
 
-    clientProtocol = imap4.IMAP4Client  # type: Type[imap4.IMAP4Client]
+    clientProtocol: Type[imap4.IMAP4Client] = imap4.IMAP4Client
 
     def setUp(self):
         """
@@ -4801,7 +4792,7 @@ class IMAP4ClientExamineTests(SelectionTestsMixin, SynchronousTestCase):
 
 
 class IMAP4ClientSelectTests(SelectionTestsMixin, SynchronousTestCase):
-    """
+    r"""
     Tests for the L{IMAP4Client.select} method.
 
     An example of usage of the SELECT command from RFC 3501, section 6.3.1::
@@ -4843,7 +4834,7 @@ class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, SynchronousTestCase):
 
     def _response(self, sequenceNumbers):
         for number in sequenceNumbers:
-            self.client.lineReceived(networkString("* %s EXPUNGE" % (number,)))
+            self.client.lineReceived(networkString(f"* {number} EXPUNGE"))
         self.client.lineReceived(b"0001 OK EXPUNGE COMPLETED")
 
     def test_expunge(self):
@@ -5205,7 +5196,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, SynchronousTestCase):
 
 
 class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, TestCase):
-    """
+    r"""
     Tests for the L{IMAP4Client.setFlags}, L{IMAP4Client.addFlags}, and
     L{IMAP4Client.removeFlags} methods.
 
@@ -5371,7 +5362,7 @@ class IMAP4ClientStatusTests(PreauthIMAP4ClientMixin, SynchronousTestCase):
             "ignored",
             "IMPOSSIBLE?!",
         )
-        self.assertEqual(str(exc), "Unknown names: " + repr(set(["IMPOSSIBLE?!"])))
+        self.assertEqual(str(exc), "Unknown names: " + repr({"IMPOSSIBLE?!"}))
 
     def testUndecodableName(self):
         """

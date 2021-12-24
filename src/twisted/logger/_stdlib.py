@@ -7,17 +7,19 @@ Integration with Python standard library logging.
 """
 
 import logging as stdlibLogging
+from typing import Mapping, Tuple
 
 from zope.interface import implementer
 
-from twisted.python.compat import currentframe
-from ._levels import LogLevel
-from ._format import formatEvent
-from ._observer import ILogObserver
+from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.python.compat import currentframe
+from ._format import formatEvent
+from ._interfaces import ILogObserver, LogEvent
+from ._levels import LogLevel
 
 # Mappings to Python's logging module
-toStdlibLogLevelMapping = {
+toStdlibLogLevelMapping: Mapping[NamedConstant, int] = {
     LogLevel.debug: stdlibLogging.DEBUG,
     LogLevel.info: stdlibLogging.INFO,
     LogLevel.warn: stdlibLogging.WARNING,
@@ -26,7 +28,7 @@ toStdlibLogLevelMapping = {
 }
 
 
-def _reverseLogLevelMapping():
+def _reverseLogLevelMapping() -> Mapping[int, NamedConstant]:
     """
     Reverse the above mapping, adding both the numerical keys used above and
     the corresponding string keys also used by python logging.
@@ -64,42 +66,39 @@ class STDLibLogObserver:
 
     defaultStackDepth = 4
 
-    def __init__(self, name="twisted", stackDepth=defaultStackDepth):
+    def __init__(
+        self, name: str = "twisted", stackDepth: int = defaultStackDepth
+    ) -> None:
         """
-        @param loggerName: logger identifier.
-        @type loggerName: C{str}
-
+        @param name: logger identifier.
         @param stackDepth: The depth of the stack to investigate for caller
             metadata.
-        @type stackDepth: L{int}
         """
         self.logger = stdlibLogging.getLogger(name)
-        self.logger.findCaller = self._findCaller
+        self.logger.findCaller = self._findCaller  # type: ignore[assignment]
         self.stackDepth = stackDepth
 
-    def _findCaller(self, stackInfo=False, stackLevel=1):
+    def _findCaller(
+        self, stackInfo: bool = False, stackLevel: int = 1
+    ) -> Tuple[str, int, str, None]:
         """
         Based on the stack depth passed to this L{STDLibLogObserver}, identify
         the calling function.
 
         @param stackInfo: Whether or not to construct stack information.
             (Currently ignored.)
-        @type stackInfo: L{bool}
-
         @param stackLevel: The number of stack frames to skip when determining
             the caller (currently ignored; use stackDepth on the instance).
-        @type stackLevel: L{int}
 
         @return: Depending on Python version, either a 3-tuple of (filename,
             lineno, name) or a 4-tuple of that plus stack information.
-        @rtype: L{tuple}
         """
         f = currentframe(self.stackDepth)
         co = f.f_code
         extra = (None,)
         return (co.co_filename, f.f_lineno, co.co_name) + extra
 
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         Format an event and bridge it to Python logging.
         """
@@ -119,17 +118,14 @@ class StringifiableFromEvent:
     formatting until it's converted into a C{str}.
     """
 
-    def __init__(self, event):
+    def __init__(self, event: LogEvent) -> None:
         """
         @param event: An event.
-        @type event: L{dict}
         """
         self.event = event
 
-    def __unicode__(self):
+    def __str__(self) -> str:
         return formatEvent(self.event)
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return str(self).encode("utf-8")
-
-    __str__ = __unicode__

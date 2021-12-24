@@ -1,8 +1,6 @@
-from __future__ import print_function
-
+from twisted.cred import checkers, credentials, portal
 from twisted.python import util
 from twisted.spread import pb
-from twisted.cred import portal, checkers, credentials
 
 
 class Avatar(pb.Avatar):
