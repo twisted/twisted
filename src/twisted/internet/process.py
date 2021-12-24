@@ -18,7 +18,12 @@ import signal
 import stat
 import sys
 import traceback
-from os import POSIX_SPAWN_CLOSE, POSIX_SPAWN_DUP2
+
+try:
+    from os import POSIX_SPAWN_CLOSE as _PS_CLOSE, POSIX_SPAWN_DUP2 as _PS_DUP2
+except ImportError:
+    pass
+
 from typing import Callable, Dict, Optional
 
 from zope.interface import implementer
@@ -795,7 +800,7 @@ class Process(_BaseProcess):
             else:
                 if eachFD not in fdmap and not isCloseOnExec:
                     (closeAfterDup if eachFD in dupSources else closeBeforeDup).append(
-                        (POSIX_SPAWN_CLOSE, eachFD)
+                        (_PS_CLOSE, eachFD)
                     )
 
         if environment is None:
@@ -804,7 +809,7 @@ class Process(_BaseProcess):
         fileActions = (
             closeBeforeDup
             + [
-                (POSIX_SPAWN_DUP2, parentFD, childFD)
+                (_PS_DUP2, parentFD, childFD)
                 for (childFD, parentFD) in fdmap.items()
                 if childFD != parentFD
             ]
@@ -826,6 +831,10 @@ class Process(_BaseProcess):
         )
         self.status = -1
         return True
+
+    if getattr(os, "posix_spawn", None) is None:
+        # If there's no posix_spawn implemented, let the superclass handle it
+        del _trySpawnInsteadOfFork
 
     def _setupChild(self, fdmap):
         """
