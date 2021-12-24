@@ -483,17 +483,28 @@ sys.stdout.flush()""".format(
         self.patch(sys, "getfilesystemencoding", lambda: "ascii")
 
         reactor = self.buildReactor()
+
+        # execvpe() is not called unless posix_spawn is unavailable
+        reactor._neverUseSpawn = True
         output = io.BytesIO()
+
+        # if we're using a PTY, we want stdout (since they're the same in that
+        # specific case); normally it's stderr.
+        expectedFD = 1 if self.usePTY else 2
 
         @reactor.callWhenRunning
         def whenRunning():
             class TracebackCatcher(ProcessProtocol):
-                errReceived = output.write
+                def childDataReceived(self, child, data):
+                    if child == expectedFD:
+                        output.write(data)
+                    else:
+                        print("CDC OOPS", child, data)
 
                 def processEnded(self, reason):
                     reactor.stop()
 
-            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
+            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY)
 
         self.runReactor(reactor, timeout=30)
         self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())

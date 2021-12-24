@@ -669,6 +669,7 @@ class Process(_BaseProcess):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
+        self._reactor = reactor
         if not proto:
             assert "r" not in childFDs.values()
             assert "w" not in childFDs.values()
@@ -769,6 +770,7 @@ class Process(_BaseProcess):
     ):
         """
         Try to use posix_spawn instead of fork(), if possible.
+
         @return: a boolean indicating whether posix_spawn was used or not.
         """
         if (
@@ -777,6 +779,7 @@ class Process(_BaseProcess):
             (uid is not None)
             or (gid is not None)
             or ((path is not None) and (os.path.abspath(path) != os.path.abspath(".")))
+            or getattr(self._reactor, "_neverUseSpawn", False)
         ):
             return False
         fdmap = kwargs.get("fdmap")
