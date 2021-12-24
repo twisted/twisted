@@ -504,7 +504,9 @@ sys.stdout.flush()""".format(
                 def processEnded(self, reason):
                     reactor.stop()
 
-            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY)
+            reactor.spawnProcess(
+                TracebackCatcher(), pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
 
         self.runReactor(reactor, timeout=30)
         self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
