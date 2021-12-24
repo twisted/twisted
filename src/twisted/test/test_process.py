@@ -1414,9 +1414,6 @@ class MockOS:
         Fake C{os.posix_spawnp}. Save the action.
         """
         self.actions.append("posix_spawnp")
-        if self.raiseExec:
-            # if exec() would raise, so would posix_spawnp()
-            raise RuntimeError("Bar")
 
     def pipe(self):
         """
