@@ -18,8 +18,7 @@ import signal
 import stat
 import sys
 import traceback
-
-from typing import Callable, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 _PS_CLOSE: int
 _PS_DUP2: int
