@@ -26,7 +26,7 @@ import os
 import signal
 import stat
 import sys
-from unittest import skipIf
+from unittest import skipIf, SkipTest
 
 try:
     import fcntl
@@ -1108,11 +1108,13 @@ class PosixProcessBase:
         # Now do the test.
         return self._testSignal(signal.SIGUSR1)
 
-    @skipIf(runtime.platform.isMacOSX(), "Test is flaky from a Darwin bug. See #8840.")
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
         """
+        if runtime.platform.isMacOSX() and self.usePTY:
+            raise SkipTest("Test is flaky from a Darwin bug. See #8840.")
+
         cmd = self.getCommand("false")
 
         d = defer.Deferred()
@@ -1123,6 +1125,9 @@ class PosixProcessBase:
 
         oldexecvpe = os.execvpe
         os.execvpe = buggyexecvpe
+        # This implementation detail only matters / is worth testing if we
+        # aren't using posix_spawn.
+        reactor._neverUseSpawn = True
         try:
             reactor.spawnProcess(p, cmd, [b"false"], env=None, usePTY=self.usePTY)
 
