@@ -159,30 +159,31 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
     skip = euidSkip or dependencySkip
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.checker = checkers.SSHPublicKeyDatabase()
         self.key1 = encodebytes(b"foobar")
         self.key2 = encodebytes(b"eggspam")
         self.content = b"t1 " + self.key1 + b" foo\nt2 " + self.key2 + b" egg\n"
 
         self.mockos = MockOS()
-        self.mockos.path = FilePath(self.mktemp())
-        self.mockos.path.makedirs()
         self.patch(util, "os", self.mockos)
-        self.sshDir = self.mockos.path.child(".ssh")
+
+        self.path = FilePath(self.mktemp())
+        assert isinstance(self.path.path, str)  # text mode
+        self.sshDir = self.path.child(".ssh")
         self.sshDir.makedirs()
 
         userdb = UserDatabase()
         userdb.addUser(
-            b"user",
-            b"password",
+            "user",
+            "password",
             1,
             2,
-            b"first last",
-            self.mockos.path.path,
-            b"/bin/shell",
+            "first last",
+            self.path.path,
+            "/bin/shell",
         )
-        self.checker._userdb = userdb
+        self.checker._userdb = userdb  # type: ignore
 
     def test_deprecated(self):
         """
@@ -722,23 +723,23 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
 
     skip = dependencySkip
 
-    def setUp(self):
-        mockos = MockOS()
-        mockos.path = FilePath(self.mktemp())
-        mockos.path.makedirs()
+    def setUp(self) -> None:
+        self.path = FilePath(self.mktemp())
+        assert isinstance(self.path.path, str)
+        self.path.makedirs()
 
         self.userdb = UserDatabase()
         self.userdb.addUser(
-            b"alice",
-            b"password",
+            "alice",
+            "password",
             1,
             2,
-            b"alice lastname",
-            mockos.path.path,
-            b"/bin/shell",
+            "alice lastname",
+            self.path.path,
+            "/bin/shell",
         )
 
-        self.sshDir = mockos.path.child(".ssh")
+        self.sshDir = self.path.child(".ssh")
         self.sshDir.makedirs()
         authorizedKeys = self.sshDir.child("authorized_keys")
         authorizedKeys.setContent(b"key 1\nkey 2")
@@ -760,7 +761,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}.
         """
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
-        self.assertEqual([], list(keydb.getAuthorizedKeys("bob")))
+        self.assertEqual([], list(keydb.getAuthorizedKeys(b"bob")))
 
     def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
         """
