@@ -22,6 +22,7 @@ else:
 import os
 from operator import getitem
 
+from twisted.python.compat import _PYPY
 from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.trial.unittest import TestCase
 
@@ -110,9 +111,14 @@ class UserDatabaseTestsMixin:
 
     def test_getpwnamRejectsBytes(self):
         """
-        L{getpwnam} rejects a non-L{str} username with L{TypeError}.
+        L{getpwnam} rejects a non-L{str} username with an exception.
         """
-        self.assertRaises(TypeError, self.database.getpwnam, b"i-am-bytes")
+        exc_type = TypeError
+        if _PYPY:
+            # PyPy raises KeyError instead of TypeError. See
+            # https://foss.heptapod.net/pypy/pypy/-/issues/3624
+            exc_type = Exception
+        self.assertRaises(exc_type, self.database.getpwnam, b"i-am-bytes")
 
     def test_noSuchName(self):
         """
