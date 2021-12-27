@@ -108,6 +108,12 @@ class UserDatabaseTestsMixin:
             self.assertEqual(entry.pw_dir, dir)
             self.assertEqual(entry.pw_shell, shell)
 
+    def test_getpwnamRejectsBytes(self):
+        """
+        L{getpwnam} rejects a non-L{str} username with L{TypeError}.
+        """
+        self.assertRaises(TypeError, self.database.getpwnam, b"i-am-bytes")
+
     def test_noSuchName(self):
         """
         I{getpwnam} raises L{KeyError} when passed a username which does not
@@ -298,6 +304,13 @@ class ShadowDatabaseTestsMixin:
         exist in the user database.
         """
         self.assertRaises(KeyError, self.database.getspnam, "alice")
+
+    def test_getspnamBytes(self):
+        """
+        I{getspnam} raises L{TypeError} when passed a L{bytes}, just like
+        L{spwd.getspnam}.
+        """
+        self.assertRaises(TypeError, self.database.getspnam, b"i-am-bytes")
 
     def test_recordLength(self):
         """
