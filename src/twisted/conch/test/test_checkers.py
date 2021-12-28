@@ -30,8 +30,8 @@ from twisted.cred.credentials import (
     UsernamePassword,
 )
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.internet.defer import Deferred
 from twisted.python import util
-from twisted.python.failure import Failure
 from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
@@ -451,24 +451,14 @@ class UNIXPasswordDatabaseTests(TestCase):
 
     skip = cryptSkip or dependencySkip
 
-    def assertLoggedIn(self, d, username):
+    def assertLoggedIn(self, d: Deferred[bytes], username: bytes) -> None:
         """
         Assert that the L{Deferred} passed in is called back with the value
         'username'.  This represents a valid login for this TestCase.
 
-        NOTE: To work, this method's return value must be returned from the
-        test method, or otherwise hooked up to the test machinery.
-
         @param d: a L{Deferred} from an L{IChecker.requestAvatarId} method.
-        @type d: L{Deferred}
-        @rtype: L{Deferred}
         """
-        result = []
-        d.addBoth(result.append)
-        self.assertEqual(len(result), 1, "login incomplete")
-        if isinstance(result[0], Failure):
-            result[0].raiseException()
-        self.assertEqual(result[0], username)
+        self.assertEqual(self.successResultOf(d), username)
 
     def test_defaultCheckers(self):
         """
@@ -523,9 +513,7 @@ class UNIXPasswordDatabaseTests(TestCase):
         @type d: L{Deferred}
         @rtype: L{None}
         """
-        self.assertRaises(
-            checkers.UnauthorizedLogin, self.assertLoggedIn, d, "bogus value"
-        )
+        self.failureResultOf(d, checkers.UnauthorizedLogin)
 
     def test_passInCheckers(self):
         """
