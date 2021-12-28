@@ -6,17 +6,19 @@ Tests for L{twisted.conch.checkers}.
 """
 
 
+import os
+from base64 import encodebytes
+from collections import namedtuple
+from io import BytesIO
+from typing import Optional
+
+cryptSkip: Optional[str]
 try:
     import crypt
 except ImportError:
     cryptSkip = "cannot run without crypt module"
 else:
-    cryptSkip = ""
-
-import os
-from base64 import encodebytes
-from collections import namedtuple
-from io import BytesIO
+    cryptSkip = None
 
 from zope.interface.verify import verifyObject
 
@@ -37,7 +39,7 @@ from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
-    dependencySkip = ""
+    dependencySkip = None
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.ssh import keys
@@ -45,10 +47,10 @@ if requireModule("cryptography") and requireModule("pyasn1"):
 else:
     dependencySkip = "can't run without cryptography and PyASN1"
 
-if getattr(os, "geteuid", None) is None:
-    euidSkip = "Cannot run without effective UIDs (questionable)"
+if getattr(os, "geteuid", None) is not None:
+    euidSkip = None
 else:
-    euidSkip = ""
+    euidSkip = "Cannot run without effective UIDs (questionable)"
 
 
 class HelperTests(TestCase):
