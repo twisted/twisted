@@ -11,7 +11,7 @@ import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import BinaryIO, Callable, Iterator
+from typing import IO, Callable, Iterable, Iterator, Mapping
 
 try:
     import pwd as _pwd
@@ -129,6 +129,9 @@ class SSHPublicKeyDatabase:
 
     _userdb = pwd
 
+    def _lookupUser(self, username: bytes):
+        return self._userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
+
     def requestAvatarId(self, credentials):
         d = defer.maybeDeferred(self.checkKey, credentials)
         d.addCallback(self._cbRequestAvatarId, credentials)
@@ -186,7 +189,7 @@ class SSHPublicKeyDatabase:
 
         @return: A list of L{FilePath} instances to files with the authorized keys.
         """
-        pwent = self._userdb.getpwnam(credentials.username)
+        pwent = self._lookupUser(credentials.username)
         root = FilePath(pwent.pw_dir).child(".ssh")
         files = ["authorized_keys", "authorized_keys2"]
         return [root.child(f) for f in files]
@@ -196,7 +199,7 @@ class SSHPublicKeyDatabase:
         Retrieve files containing authorized keys and check against user
         credentials.
         """
-        ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
+        ouid, ogid = self._lookupUser(credentials.username)[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
             if not filepath.exists():
                 continue
@@ -339,7 +342,7 @@ class IAuthorizedKeysDB(Interface):
 
 
 def readAuthorizedKeyFile(
-    fileobj: BinaryIO, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString
+    fileobj: IO[bytes], parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString
 ) -> Iterator[keys.Key]:
     """
     Reads keys from an authorized keys file.  Any non-comment line that cannot
@@ -367,7 +370,9 @@ def readAuthorizedKeyFile(
                 )
 
 
-def _keysFromFilepaths(filepaths, parseKey):
+def _keysFromFilepaths(
+    filepaths: Iterable[FilePath], parseKey: Callable[[bytes], keys.Key]
+) -> Iterable[keys.Key]:
     """
     Helper function that turns an iterable of filepaths into a generator of
     keys.  If any file cannot be read, a message is logged but it is
@@ -381,7 +386,6 @@ def _keysFromFilepaths(filepaths, parseKey):
     @type parseKey: L{callable}
 
     @return: generator of L{twisted.conch.ssh.keys.Key}
-    @rtype: generator
 
     @since: 15.0
     """
@@ -403,18 +407,17 @@ class InMemorySSHKeyDB:
     @since: 15.0
     """
 
-    def __init__(self, mapping):
+    def __init__(self, mapping: Mapping[bytes, Iterable[bytes]]):
         """
         Initializes a new L{InMemorySSHKeyDB}.
 
         @param mapping: mapping of usernames to iterables of
             L{twisted.conch.ssh.keys.Key}s
-        @type mapping: L{dict}
 
         """
         self._mapping = mapping
 
-    def getAuthorizedKeys(self, username):
+    def getAuthorizedKeys(self, username: bytes):
         return self._mapping.get(username, [])
 
 
@@ -429,7 +432,9 @@ class UNIXAuthorizedKeysFiles:
     @since: 15.0
     """
 
-    def __init__(self, userdb=None, parseKey=keys.Key.fromString):
+    def __init__(
+        self, userdb=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString
+    ):
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
 
@@ -447,9 +452,9 @@ class UNIXAuthorizedKeysFiles:
         if userdb is None:
             self._userdb = pwd
 
-    def getAuthorizedKeys(self, username):
+    def getAuthorizedKeys(self, username: bytes) -> Iterable[keys.Key]:
         try:
-            passwd = self._userdb.getpwnam(username)
+            passwd = self._userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
         except KeyError:
             return ()
 

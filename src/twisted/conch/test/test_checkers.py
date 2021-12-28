@@ -556,7 +556,7 @@ class UNIXPasswordDatabaseTests(TestCase):
             raise KeyError(username)
 
         checker = checkers.UNIXPasswordDatabase([getpwnam])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertUnauthorizedLogin(checker.requestAvatarId(credential))
 
     def test_failOnBadPassword(self):
@@ -569,11 +569,11 @@ class UNIXPasswordDatabaseTests(TestCase):
             return False
 
         def getpwnam(username):
-            return [username, username]
+            return [username, b"password"]
 
         self.patch(checkers, "verifyCryptedPassword", verifyCryptedPassword)
         checker = checkers.UNIXPasswordDatabase([getpwnam])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertUnauthorizedLogin(checker.requestAvatarId(credential))
 
     def test_loopThroughFunctions(self):
@@ -591,11 +591,11 @@ class UNIXPasswordDatabaseTests(TestCase):
             return [username, "not the password"]
 
         def getpwnam2(username):
-            return [username, username]
+            return [username, "password"]
 
         self.patch(checkers, "verifyCryptedPassword", verifyCryptedPassword)
         checker = checkers.UNIXPasswordDatabase([getpwnam1, getpwnam2])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertLoggedIn(checker.requestAvatarId(credential), b"username")
 
     def test_failOnSpecial(self):
