@@ -416,7 +416,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         with self.assertRaises(ValueError) as context:
             raise exception
 
-        self.assertIs(exception, context.exception)  # type: ignore[unreachable]
+        self.assertIs(exception, context.exception)
 
     def test_assertRaisesContextUnexpected(self):
         """
@@ -439,7 +439,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
                 "{}".format(message),
             )
         else:
-            self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
+            self.fail("Mismatched exception type should have caused test failure.")
 
     def test_assertRaisesContextNoException(self):
         """
@@ -481,7 +481,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             if errors:
                 self.fail("; ".join(errors), f"message = {message}")
         else:
-            self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
+            self.fail("Mismatched exception type should have caused test failure.")
 
     def test_failIfEqual_basic(self):
         x, y, z = [1], [2], [1]

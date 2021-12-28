@@ -3006,7 +3006,7 @@ class BuffersLogsTests(SynchronousTestCase):
                 self.assertFalse(self.events)
                 raise TestException()
 
-        self.assertEqual(1, len(self.events))  # type: ignore[unreachable]
+        self.assertEqual(1, len(self.events))
         [event] = self.events
         self.assertEqual(event["log_format"], "An event")
         self.assertEqual(event["log_namespace"], self.namespace)
@@ -3162,7 +3162,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with reservedFD:
                 raise AllowedException()
 
-        errors = self.flushLoggedErrors(SuppressedException)  # type: ignore[unreachable]
+        errors = self.flushLoggedErrors(SuppressedException)
         self.assertEqual(len(errors), 1)
 
 

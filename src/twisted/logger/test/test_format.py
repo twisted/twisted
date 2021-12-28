@@ -13,7 +13,7 @@ try:
     # We should upgrade to a version of pyflakes that does not require this.
     tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment,misc]
+    tzset = None  # type: ignore[assignment]
 
 from twisted.python.failure import Failure
 from twisted.python.test.test_tzhelper import addTZCleanup, mktime, setTZ
