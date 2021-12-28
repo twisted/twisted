@@ -421,7 +421,9 @@ class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
 
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    networkHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return hexlify(x)
 
     class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):
