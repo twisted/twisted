@@ -11,25 +11,22 @@ import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import IO, Callable, Iterable, Iterator, Mapping
-
-try:
-    import pwd as _pwd
-except ImportError:
-    pwd = None
-else:
-    pwd = _pwd
-
-try:
-    import spwd as _spwd
-except ImportError:
-    spwd = None
-else:
-    spwd = _spwd
+from typing import (
+    IO,
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Optional,
+    Protocol,
+    Tuple,
+    cast,
+)
 
 from zope.interface import Interface, implementer, providedBy
 
 from incremental import Version
+from typing_extensions import Literal
 
 from twisted.conch import error
 from twisted.conch.ssh import keys
@@ -47,21 +44,96 @@ from twisted.python.util import runAsEffectiveUser
 _log = Logger()
 
 
-def _pwdGetByName(username):
+class UserRecord(Tuple[str, str, int, int, str, str, str]):
+    """
+    A record in a UNIX-style password database. See L{pwd} for field details.
+
+    This corresponds to the undocumented type L{pwd.struct_passwd}, but lacks named
+    field accessors.
+    """
+
+    @property
+    def pw_dir(self) -> str:
+        ...
+
+
+class UserDB(Protocol):
+    """
+    A database of users by name, like the stdlib L{pwd} module.
+
+    See L{twisted.python.fakepwd} for an in-memory implementation.
+    """
+
+    def getpwnam(self, username: str) -> UserRecord:
+        """
+        Lookup a user record by name.
+
+        @raises KeyError: when no such user exists
+        """
+
+
+pwd: Optional[UserDB]
+try:
+    import pwd as _pwd
+except ImportError:
+    pwd = None
+else:
+    pwd = cast(UserDB, _pwd)
+
+
+try:
+    import spwd as _spwd
+except ImportError:
+    spwd = None
+else:
+    spwd = _spwd
+
+
+class CryptedPasswordRecord(Protocol):
+    """
+    A sequence where the item at index 1 may be a crypted password.
+
+    Both L{pwd.struct_passwd} and L{spwd.struct_spwd} conform to this protocol.
+    """
+
+    def __getitem__(self, index: Literal[1]) -> str:
+        """
+        Get the crypted password.
+        """
+
+
+def _lookupUser(userdb: UserDB, username: bytes) -> UserRecord:
+    """
+    Lookup a user by name in a L{pwd}-style database.
+
+    @param userdb: The user database.
+
+    @param username: Identifying name in bytes. This will be decoded according to the filesystem encoding, as the L{pwd} module does internally.
+
+    @raises KeyError: when the user doesn't exist
+    """
+    return userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
+
+
+def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     """
     Look up a user in the /etc/passwd database using the pwd module.  If the
     pwd module is not available, return None.
 
     @param username: the username of the user to return the passwd database
         information for.
-    @type username: L{str}
+
+    @returns: A L{pwd.struct_passwd}, where field 1 may contain a crypted
+        password, or L{None} when the L{pwd} database is unavailable.
+
+    @raises KeyError: when no such user exists
     """
     if pwd is None:
         return None
-    return pwd.getpwnam(username)
+    return cast(CryptedPasswordRecord, pwd.getpwnam(username))
 
 
-def _shadowGetByName(username):
+def _shadowGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     """
     Look up a user in the /etc/shadow database using the spwd module. If it is
     not available, return L{None}.
@@ -69,12 +141,17 @@ def _shadowGetByName(username):
     @param username: the username of the user to return the shadow database
         information for.
     @type username: L{str}
+
+    @returns: A L{spwd.struct_spwd}, where field 1 may contain a crypted
+        password, or L{None} when the L{spwd} database is unavailable.
+
+    @raises KeyError: when no such user exists
     """
     if spwd is not None:
-        f = spwd.getspnam
+        f = spwd.getspnam  # type: ignore
     else:
         return None
-    return runAsEffectiveUser(0, 0, f, username)
+    return cast(CryptedPasswordRecord, runAsEffectiveUser(0, 0, f, username))
 
 
 @implementer(ICredentialsChecker)
@@ -84,7 +161,7 @@ class UNIXPasswordDatabase:
     databases of a compatible format.
 
     @ivar _getByNameFunctions: a C{list} of functions which are called in order
-        to valid a user.  The default value is such that the C{/etc/passwd}
+        to validate a user.  The default value is such that the C{/etc/passwd}
         database will be tried first, followed by the C{/etc/shadow} database.
     """
 
@@ -127,10 +204,7 @@ class SSHPublicKeyDatabase:
 
     credentialInterfaces = (ISSHPrivateKey,)
 
-    _userdb = pwd
-
-    def _lookupUser(self, username: bytes):
-        return self._userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
+    _userdb: UserDB = cast(UserDB, pwd)
 
     def requestAvatarId(self, credentials):
         d = defer.maybeDeferred(self.checkKey, credentials)
@@ -189,7 +263,7 @@ class SSHPublicKeyDatabase:
 
         @return: A list of L{FilePath} instances to files with the authorized keys.
         """
-        pwent = self._lookupUser(credentials.username)
+        pwent = _lookupUser(self._userdb, credentials.username)
         root = FilePath(pwent.pw_dir).child(".ssh")
         files = ["authorized_keys", "authorized_keys2"]
         return [root.child(f) for f in files]
@@ -199,7 +273,7 @@ class SSHPublicKeyDatabase:
         Retrieve files containing authorized keys and check against user
         credentials.
         """
-        ouid, ogid = self._lookupUser(credentials.username)[2:4]
+        ouid, ogid = _lookupUser(self._userdb, credentials.username)[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
             if not filepath.exists():
                 continue
@@ -407,7 +481,7 @@ class InMemorySSHKeyDB:
     @since: 15.0
     """
 
-    def __init__(self, mapping: Mapping[bytes, Iterable[bytes]]):
+    def __init__(self, mapping: Mapping[bytes, Iterable[keys.Key]]) -> None:
         """
         Initializes a new L{InMemorySSHKeyDB}.
 
@@ -417,7 +491,12 @@ class InMemorySSHKeyDB:
         """
         self._mapping = mapping
 
-    def getAuthorizedKeys(self, username: bytes):
+    def getAuthorizedKeys(self, username: bytes) -> Iterable[keys.Key]:
+        """
+        Look up the authorized keys for a user.
+
+        @param username: Name of the user
+        """
         return self._mapping.get(username, [])
 
 
@@ -432,29 +511,34 @@ class UNIXAuthorizedKeysFiles:
     @since: 15.0
     """
 
+    _userdb: UserDB
+
     def __init__(
-        self, userdb=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString
+        self,
+        userdb: Optional[UserDB] = None,
+        parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString,
     ):
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
 
         @param userdb: access to the Unix user account and password database
-            (default is the Python module L{pwd})
-        @type userdb: L{pwd}-like object
+            (default is the Python module L{pwd}, if available)
 
         @param parseKey: a callable that takes a string and returns a
             L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
             default is L{twisted.conch.ssh.keys.Key.fromString}.
-        @type parseKey: L{callable}
         """
-        self._userdb = userdb
-        self._parseKey = parseKey
-        if userdb is None:
+        if userdb is not None:
+            self._userdb = userdb
+        elif pwd is not None:
             self._userdb = pwd
+        else:
+            raise ValueError("No pwd module found, and no userdb argument passed.")
+        self._parseKey = parseKey
 
     def getAuthorizedKeys(self, username: bytes) -> Iterable[keys.Key]:
         try:
-            passwd = self._userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
+            passwd = _lookupUser(self._userdb, username)
         except KeyError:
             return ()
 
@@ -477,12 +561,11 @@ class SSHPublicKeyChecker:
 
     credentialInterfaces = (ISSHPrivateKey,)
 
-    def __init__(self, keydb):
+    def __init__(self, keydb: IAuthorizedKeysDB) -> None:
         """
         Initializes a L{SSHPublicKeyChecker}.
 
         @param keydb: a provider of L{IAuthorizedKeysDB}
-        @type keydb: L{IAuthorizedKeysDB} provider
         """
         self._keydb = keydb
 
