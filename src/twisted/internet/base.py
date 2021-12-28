@@ -1330,7 +1330,7 @@ class _SignalReactorMixin:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
-                log.msg("Main loop terminated.")
+                log.msg("Main loop terminated.")  # type:ignore[unreachable]
 
 
 __all__: List[str] = []
