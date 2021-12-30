@@ -10,7 +10,7 @@ which in turn encapsulate NTLMv2 challenge-response authentication
 
 much of code adapted from Mike Teo's pysmb """
 
-from typing import cast, Optional
+from typing import Optional, cast
 
 from pyasn1.codec.der import decoder, encoder  # type: ignore
 from pyasn1.type import char, constraint, namedtype, namedval, tag, univ  # type: ignore

@@ -10,7 +10,7 @@ import hmac
 import socket
 import struct
 import time
-from typing import Union, Dict, Any, NoReturn, Optional
+from typing import Any, Dict, NoReturn, Optional, Union
 
 from zope.interface import implementer
 

@@ -5,10 +5,10 @@
 base classes for SMB networking
 """
 
-import struct
 import enum
+import struct
 import uuid as uuid_mod
-from typing import Callable, Any, Optional, Union, Dict, List, cast
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import attr
 

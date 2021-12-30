@@ -9,16 +9,16 @@ import struct
 import sys
 import unittest as python_unittest
 from typing import (
-    List,
-    Tuple,
-    cast,
     Any,
-    Union,
-    Sequence,
-    Optional,
-    Dict,
-    Match,
     Callable,
+    Dict,
+    List,
+    Match,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
     get_type_hints,
 )
 
@@ -28,8 +28,8 @@ import attr
 
 from twisted.cred import checkers, credentials, portal
 from twisted.internet import reactor
-from twisted.internet.interfaces import IProcessTransport, IReactorProcess, IReactorTCP
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IProcessTransport, IReactorProcess, IReactorTCP
 from twisted.internet.protocol import ProcessProtocol
 from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
 from twisted.protocols._smb import _base, core, ntlm, security_blob

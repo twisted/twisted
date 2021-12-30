@@ -8,8 +8,8 @@ import enum
 import struct
 import time
 from collections import namedtuple
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 from uuid import uuid4
-from typing import Tuple, Any, Optional, Sequence, Union, Callable
 
 import attr
 
@@ -18,7 +18,6 @@ from twisted.cred.portal import Portal
 from twisted.internet import protocol
 from twisted.internet.defer import maybeDeferred
 from twisted.internet.interfaces import IAddress
-from twisted.python.failure import Failure
 from twisted.logger import Logger
 from twisted.protocols._smb import _base, security_blob
 from twisted.protocols._smb._base import byte, long, medium, octets, short, uuid
@@ -29,6 +28,7 @@ from twisted.protocols._smb.ismb import (
     ISMBServer,
     NoSuchShare,
 )
+from twisted.python.failure import Failure
 
 log = Logger()
 
