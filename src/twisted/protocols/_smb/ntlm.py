@@ -10,6 +10,7 @@ import hmac
 import socket
 import struct
 import time
+from typing import Union, Dict, Any, NoReturn, Optional
 
 from zope.interface import implementer
 
@@ -104,7 +105,7 @@ def set2flags(s):
     return flags
 
 
-def avpair(code, data):
+def avpair(code: int, data: Union[str, bytes]) -> bytes:
     """make an AVPAIR structure
     @param code: the attribute ID
     @type code: L{int}
@@ -113,10 +114,12 @@ def avpair(code, data):
     @rtype: L{bytes}
     """
     if isinstance(data, str):
-        data = data.encode("utf-16le")
-    elif len(data) % 2 > 0:
-        data += b"\0"
-    return struct.pack("<HH", code, len(data)) + data
+        bdata = data.encode("utf-16le")
+    else:
+        bdata = data
+        if len(bdata) % 2 > 0:
+            bdata += b"\0"
+    return struct.pack("<HH", code, len(bdata)) + bdata
 
 
 AV_EOL = 0x0000
@@ -230,16 +233,16 @@ class NTLMManager:
     @type credential: L{IUsernameHashedPassword}
     """
 
-    def __init__(self, domain):
+    def __init__(self, domain: str) -> None:
         """
         @param domain: the server NetBIOS domain
         @type domain: L{str}
         """
-        self.credential = None
+        self.credential: Optional[NTLMCredential] = None
         self.flags = DEFAULT_FLAGS
         self.server_domain = domain
 
-    def receiveToken(self, token):
+    def receiveToken(self, token: bytes) -> None:
         """
         receive client token once unpacked from overlying protocol
 
@@ -255,13 +258,13 @@ class NTLMManager:
         except IndexError:
             raise _base.SMBError("invalid message %d" % hdr.packet_type)
 
-    def ntlm_invalid(self, data):
+    def ntlm_invalid(self, data: bytes) -> NoReturn:
         raise _base.SMBError("invalid message id 0")
 
-    def ntlm_challenge(self, data):
+    def ntlm_challenge(self, data: bytes) -> NoReturn:
         raise _base.SMBError("invalid to send NTLM challenge to a server")
 
-    def ntlm_negotiate(self, data):
+    def ntlm_negotiate(self, data: bytes) -> None:
         neg = _base.unpack(NegType, data)
         flags = flags2set(neg.flags)
         log.debug(
@@ -282,14 +285,14 @@ Flags           {flags!r}""",
         if "NegotiateUnicode" not in flags:
             raise _base.SMBError("clients must use Unicode")
         if "NegotiateOemDomainSupplied" in flags and neg.domain_len > 0:
-            self.client_domain = self.token[
+            self.client_domain: Optional[str] = self.token[
                 neg.domain_len : neg.domain_len + neg.domain_offset
             ].decode("utf-16le")
             log.debug("Client domain   {cd!r}", cd=self.client_domain)
         else:
             self.client_domain = None
         if "NegotiateOemWorkstationSupplied" in flags and neg.workstation_len > 0:
-            self.workstation = self.token[
+            self.workstation: Optional[str] = self.token[
                 neg.workstation_len : neg.workstation_len + neg.workstation_offset
             ].decode("utf-16le")
             log.debug("Workstation     {wkstn!r}", wkstn=self.workstation)
@@ -304,12 +307,12 @@ Flags           {flags!r}""",
         if "RequestTarget" in self.flags:
             self.flags.add("TargetTypeServer")
 
-    def getChallengeToken(self):
+    def getChallengeToken(self) -> bytes:
         """generate NTLM CHALLENGE token
 
         @rtype: L{bytes}
         """
-        header = HeaderType(packet_type=2)
+        header = HeaderType(packet_type=2)  # type: ignore
         chal = ChallengeType()
         if "RequestTarget" in self.flags:
             target = socket.gethostname().upper().encode("utf-16le")
@@ -339,7 +342,7 @@ Flags           {flags!r}""",
         chal.flags = set2flags(self.flags)
         return _base.pack(header) + _base.pack(chal) + target + targetinfo
 
-    def ntlm_auth(self, data):
+    def ntlm_auth(self, data: bytes) -> None:
         # note authentication isn't checked here, it's just unpacked and
         # loaded into the credential object
         a = _base.unpack(AuthType, data)
@@ -363,24 +366,27 @@ Flags           {flags!r}""",
         if not nt and not lm:
             raise _base.SMBError("one of LM challenge or NT challenge must be provided")
         if a.domain_len > 0:
-            client_domain = self.token[a.domain_offset : a.domain_offset + a.domain_len]
-            client_domain = client_domain.decode("utf-16le")
+            client_domain: Optional[str] = self.token[
+                a.domain_offset : a.domain_offset + a.domain_len
+            ].decode("utf-16le")
         else:
             client_domain = None
         if a.user_len > 0:
-            user = self.token[a.user_offset : a.user_offset + a.user_len]
-            user = user.decode("utf-16le")
+            user = self.token[a.user_offset : a.user_offset + a.user_len].decode(
+                "utf-16le"
+            )
         else:
             raise _base.SMBError("username is required")
         if a.workstation_len > 0:
-            workstation = self.token[
+            workstation: Optional[str] = self.token[
                 a.workstation_offset : a.workstation_offset + a.workstation_len
-            ]
-            workstation = workstation.decode("utf-16le")
+            ].decode("utf-16le")
         else:
             workstation = None
         if a.ersk_len > 0 and "NegotiateKeyExchange" in flags:
-            ersk = self.token[a.ersk_offset : a.ersk_offset + a.ersk_len]
+            ersk: Optional[bytes] = self.token[
+                a.ersk_offset : a.ersk_offset + a.ersk_len
+            ]
         else:
             ersk = None
         self.ersk = ersk
@@ -421,17 +427,24 @@ class NTLMCredential:
     A NTLM credential, unverified initially
     """
 
-    def __init__(self, user, domain, lm, nt, challenge):
+    def __init__(
+        self,
+        user: str,
+        domain: Optional[str],
+        lm: Dict[str, Any],
+        nt: Dict[str, Any],
+        challenge: bytes,
+    ) -> None:
         self.username = user
         self.domain = domain
         self.lm = lm
         self.nt = nt
         self.challenge = challenge
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<NTLMCredential {self.username}/{self.domain}>"
 
-    def checkPassword(self, password):
+    def checkPassword(self, password: str) -> bool:
         # code adapted from pysmb ntlm.py
         d = hashlib.new("md4")
         d.update(password.encode("UTF-16LE"))
@@ -439,7 +452,9 @@ class NTLMCredential:
         # The NTLMv2 password hash. In [MS-NLMP], this is the result of NTOWFv2
         # and LMOWFv2 functions
         response_key = hmac.new(
-            ntlm_hash, (self.username.upper() + self.domain).encode("UTF-16LE"), "md5"
+            ntlm_hash,
+            (self.username.upper() + (self.domain or "")).encode("UTF-16LE"),
+            "md5",
         ).digest()
         if self.lm and self.lm["response"] != b"\0" * 16:
             new_resp = hmac.new(

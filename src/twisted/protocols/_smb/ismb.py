@@ -5,6 +5,8 @@
 Various interfaces for realms, avatars and related objects
 """
 
+from typing import Union, List
+
 from zope.interface import Attribute, Interface
 
 
@@ -20,7 +22,7 @@ class ISMBServer(Interface):
 
     session_id = Attribute("the assigned int64 session ID")
 
-    def getShare(name):
+    def getShare(name: str) -> Union["IFilesystem", "IPipe", "IPrinter"]:
         """
         get a share object by name
 
@@ -31,7 +33,7 @@ class ISMBServer(Interface):
                 L{IPipe}
         """
 
-    def listShares():
+    def listShares() -> List[str]:
         """
         list shares available on the server.
         Note servers are free to have different lists for different users

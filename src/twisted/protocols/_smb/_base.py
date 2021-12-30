@@ -6,11 +6,14 @@ base classes for SMB networking
 """
 
 import struct
+import enum
 import uuid as uuid_mod
+from typing import Callable, Any, Optional, Union, Dict, List, cast
 
 import attr
 
 from twisted.internet import protocol
+from twisted.internet.interfaces import ITransport
 from twisted.logger import Logger
 from twisted.python.randbytes import secureRandom
 
@@ -20,15 +23,15 @@ log = Logger()
 class SMBError(Exception):
     """SMB specific errors"""
 
-    def __init__(self, msg, ntstatus=0xC0000001):
+    def __init__(self, msg: str, ntstatus: int = 0xC0000001) -> None:
         self.msg = msg
         self.ntstatus = ntstatus
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.msg} 0x{self.ntstatus:08x}"
 
 
-def unixToNTTime(epoch):
+def unixToNTTime(epoch: float) -> int:
     """
     Convert UNIX epoch time to NT filestamp
     quoting from spec: The FILETIME structure is a 64-bit value
@@ -46,7 +49,7 @@ def unixToNTTime(epoch):
 SMB_METADATA = "__smb_metadata"
 
 
-def default_only(instance, attribute, value):
+def default_only(instance: Any, attribute: attr.Attribute, value: Any) -> None:
     """
     C{attrs} validator that only accepts the default
     """
@@ -57,7 +60,7 @@ def default_only(instance, attribute, value):
     )
 
 
-def byte(default=0, locked=False):
+def byte(default: int = 0, locked: bool = False) -> Any:
     """an 8-bit unsigned integer
 
     wraps L{attr.ib} with appropriate metadata for use with L{pack} and
@@ -75,7 +78,7 @@ def byte(default=0, locked=False):
     )
 
 
-def short(default=0, locked=False):
+def short(default: int = 0, locked: bool = False) -> Any:
     """a 16-bit unsigned integer"""
     return attr.ib(
         default=default,
@@ -85,7 +88,7 @@ def short(default=0, locked=False):
     )
 
 
-def medium(default=0, locked=False):
+def medium(default: int = 0, locked: bool = False) -> Any:
     """a 32-bit unsigned integer"""
     return attr.ib(
         default=default,
@@ -95,7 +98,7 @@ def medium(default=0, locked=False):
     )
 
 
-def long(default=0, locked=False):
+def long(default: int = 0, locked: bool = False) -> Any:
     """an 64-bit unsigned integer"""
     return attr.ib(
         default=default,
@@ -105,17 +108,19 @@ def long(default=0, locked=False):
     )
 
 
-def single(default=0.0):
+def single(default: float = 0.0) -> Any:
     """a 32-bit float"""
     return attr.ib(default=default, type=float, metadata={SMB_METADATA: "f"})
 
 
-def double(default=0.0):
+def double(default: float = 0.0) -> Any:
     """a 64-bit float"""
     return attr.ib(default=default, type=float, metadata={SMB_METADATA: "d"})
 
 
-def octets(length=None, default=None, locked=False):
+def octets(
+    length: Optional[int] = None, default: Optional[bytes] = None, locked: bool = False
+) -> Any:
     """
     a group of octets (bytes). Either a length or a default must be given.
     If a length, the default is all zeros, if a default, the length is taken
@@ -128,7 +133,7 @@ def octets(length=None, default=None, locked=False):
     """
     assert length or default
     if length is None:
-        length = len(default)
+        length = len(cast(bytes, default))
     if default is None:
         default = b"\0" * length
     return attr.ib(
@@ -143,7 +148,7 @@ NULL_UUID = uuid_mod.UUID("00000000-0000-0000-0000-000000000000")
 NEW_UUID = attr.Factory(uuid_mod.uuid4)
 
 
-def uuid(default=NULL_UUID, locked=False):
+def uuid(default: uuid_mod.UUID = NULL_UUID, locked: bool = False) -> Any:
     """a universial unique ID"""
     default = _conv_uuid(default)
     return attr.ib(
@@ -155,16 +160,16 @@ def uuid(default=NULL_UUID, locked=False):
     )
 
 
-def _conv_uuid(x):
+def _conv_uuid(x: Union[str, bytes, uuid_mod.UUID]) -> uuid_mod.UUID:
     if type(x) is str:
         return uuid_mod.UUID(x)
     elif type(x) is bytes:
         return uuid_mod.UUID(bytes_le=x)
     else:
-        return x
+        return cast(uuid_mod.UUID, x)
 
 
-def pack(obj):
+def pack(obj: Any) -> bytes:
     """
     pack an object into binary data. The object must have been decorated
     with L{attr.s} and the fields set with the appropriate metadata using
@@ -174,13 +179,16 @@ def pack(obj):
     """
     strct = _get_struct(type(obj))
     args = tuple(_conv_arg(obj, i) for i in smb_fields(type(obj)))
+    log.debug("about to pack {strct!r} {args}", strct=strct, args=args)
     return strct.pack(*args)
 
 
-def _conv_arg(obj, attrib):
+def _conv_arg(obj: Any, attrib: attr.Attribute) -> Any:
     val = getattr(obj, attrib.name)
     if type(val) is uuid_mod.UUID:
         val = val.bytes_le
+    if isinstance(val, enum.Enum):
+        val = val.value
     return val
 
 
@@ -190,7 +198,7 @@ OFFSET = 2
 DATA = 3
 
 
-def unpack(cls, data, offset=0, remainder=IGNORE):
+def unpack(cls: Any, data: bytes, offset: int = 0, remainder: int = IGNORE) -> Any:
     """
     unpack binary data into an object.
 
@@ -238,15 +246,15 @@ def unpack(cls, data, offset=0, remainder=IGNORE):
         return (obj, data[offset + strct.size :])
 
 
-def smb_fields(cls):
+def smb_fields(cls: Any) -> List[Any]:
     return [i for i in attr.fields(cls) if SMB_METADATA in i.metadata]
 
 
-def _get_struct(cls):
+def _get_struct(cls: Any) -> struct.Struct:
     try:
         # we use classes to hold cache of Structs as precompiling is more
         # efficient
-        strct = cls._struct
+        strct = cast(struct.Struct, cls._struct)
     except AttributeError:
         strct = struct.Struct(
             "<" + "".join(i.metadata[SMB_METADATA] for i in smb_fields(cls))
@@ -255,7 +263,7 @@ def _get_struct(cls):
     return strct
 
 
-def calcsize(cls):
+def calcsize(cls: Any) -> int:
     """
     return the size of a structure.
     @param cls: C{attr} decorated class
@@ -268,7 +276,7 @@ def calcsize(cls):
 _leint = struct.Struct("<I")
 
 
-def int32key(d, val):
+def int32key(d: Dict[int, Any], val: Any) -> int:
     """
     generate a new random key for a dictionary
     @param d: dictionary with 32-bit int keys
@@ -297,13 +305,13 @@ class SMBPacket:
     @ivar body: the parsed body
     """
 
-    data = attr.ib()
-    _proto = attr.ib()
-    hdr = attr.ib(default=None)
-    body = attr.ib(default=None)
+    data: bytes = attr.ib()
+    _proto: "SMBPacketReceiver" = attr.ib()
+    hdr: Any = attr.ib(default=None)
+    body: Any = attr.ib(default=None)
 
     @property
-    def ctx(self):
+    def ctx(self) -> Dict[str, Any]:
         """
         the connection context: objects that need to persist scross
         packets
@@ -311,19 +319,19 @@ class SMBPacket:
         """
         return self._proto.ctx
 
-    def send(self):
+    def send(self) -> None:
         """
         transmit the packet's data
         """
         self._proto.sendPacket(self.data)
 
-    def close(self):
+    def close(self) -> None:
         """
         close the underlying connection
         """
-        self._proto.transport.close()
+        cast(ITransport, self._proto.transport).loseConnection()
 
-    def clone(self, **kwargs):
+    def clone(self, **kwargs: Any) -> "SMBPacket":
         """
         a new packet associated with the same connection
         @rtype: L{SMBPacket}
@@ -342,7 +350,9 @@ class SMBPacketReceiver(protocol.Protocol):
     and a 24-bit length field.
     """
 
-    def __init__(self, packetReceived, ctx):
+    def __init__(
+        self, packetReceived: Callable[[SMBPacket], None], ctx: Dict[str, Any]
+    ) -> None:
         """
         @param ctx: context objects for connection
         @type ctx: L{dict}
@@ -354,11 +364,11 @@ class SMBPacketReceiver(protocol.Protocol):
         self.ctx = ctx
         self.packetReceived = packetReceived
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.data += data
         self._processData()
 
-    def _processData(self):
+    def _processData(self) -> None:
         if len(self.data) < BASE_HEADER.size + 1:
             return
         x, y = BASE_HEADER.unpack_from(self.data)
@@ -372,7 +382,7 @@ class SMBPacketReceiver(protocol.Protocol):
         self.data = self.data[BASE_HEADER.size + size :]
         self._processData()
 
-    def sendPacket(self, data):
+    def sendPacket(self, data: bytes) -> None:
         """
         send data with 4 byte header
 
@@ -383,4 +393,4 @@ class SMBPacketReceiver(protocol.Protocol):
         assert size < 0xFFFFFF
         x = (size & 0xFF0000) >> 16
         y = size & 0xFFFF
-        self.transport.write(BASE_HEADER.pack(x, y) + data)
+        cast(ITransport, self.transport).write(BASE_HEADER.pack(x, y) + data)

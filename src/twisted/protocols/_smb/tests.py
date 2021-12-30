@@ -8,6 +8,19 @@ import socket
 import struct
 import sys
 import unittest as python_unittest
+from typing import (
+    List,
+    Tuple,
+    cast,
+    Any,
+    Union,
+    Sequence,
+    Optional,
+    Dict,
+    Match,
+    Callable,
+    get_type_hints,
+)
 
 from zope.interface import implementer
 
@@ -15,11 +28,18 @@ import attr
 
 from twisted.cred import checkers, credentials, portal
 from twisted.internet import reactor
+from twisted.internet.interfaces import IProcessTransport, IReactorProcess, IReactorTCP
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ProcessProtocol
 from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
 from twisted.protocols._smb import _base, core, ntlm, security_blob
-from twisted.protocols._smb.ismb import IFilesystem, ISMBServer, NoSuchShare
+from twisted.protocols._smb.ismb import (
+    IFilesystem,
+    IPipe,
+    IPrinter,
+    ISMBServer,
+    NoSuchShare,
+)
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 
@@ -45,44 +65,47 @@ class FakeStruct2:
 
 
 class TestBase(unittest.TestCase):
-    def test_base_pack(self):
+    def test_base_pack(self) -> None:
         data = struct.pack("<HBf3sQ", 525, 42, 4.2, b"bob", 424242)
-        r = FakeStruct(one=525)
+        r = FakeStruct(one=525)  # type: ignore
         r.two = 42
         r.four = b"bob"
         self.assertEqual(_base.pack(r), data)
         with self.assertRaises(AssertionError):
-            r = FakeStruct(five=424243)
+            r = FakeStruct(five=424243)  # type: ignore
 
-    def test_base_calcsize(self):
+    def test_base_calcsize(self) -> None:
         self.assertEqual(_base.calcsize(FakeStruct), 18)
         self.assertEqual(_base.calcsize(FakeStruct2), 6)
 
-    def test_smb_packet_receiver(self):
-        def recv(x):
-            global rdata
+    def test_smb_packet_receiver(self) -> None:
+        rdata: Optional[_base.SMBPacket] = None
+
+        def recv(x: _base.SMBPacket) -> None:
+
             rdata = x
 
         pr = _base.SMBPacketReceiver(recv, {})
-        pr.transport = io.BytesIO()
+        pr.transport = io.BytesIO()  # type: ignore
 
         # send fake packet
         pr.sendPacket(b"bur ble")
-        r = pr.transport.getvalue()
+        r = pr.transport.getvalue()  # type: ignore
         self.assertEqual(r, b"\0\0\0\x07bur ble")
         # receive fake packet
         pr.dataReceived(b"\0\0\0\x03abc")
-        self.assertEqual(rdata.data, b"abc")
+        if rdata is not None:
+            self.assertEqual(rdata.data, b"abc")
 
-    def test_int32key(self):
-        d = {}
+    def test_int32key(self) -> None:
+        d: Dict[int, str] = {}
         n = _base.int32key(d, "123")
         self.assertEqual(d, {n: "123"})
         self.assertIs(type(n), int)
         self.assertTrue(n > 0)
         self.assertTrue(n < 2 ** 32)
 
-    def test_unpack(self):
+    def test_unpack(self) -> None:
         data = b"\x0B\x02\x0Etwisted"
         with self.subTest(remainder=_base.IGNORE):
             r = _base.unpack(FakeStruct2, data, remainder=_base.IGNORE)
@@ -105,17 +128,17 @@ class TestBase(unittest.TestCase):
             self.assertEqual(r.s, b"twi")
             self.assertEqual(rem, b"sted")
 
-    def test_unixToNTTime(self):
+    def test_unixToNTTime(self) -> None:
         s = b"\x46\x63\xdc\x91\xd2\x29\xd6\x01"
         (nttime,) = struct.unpack("<Q", s)
         # 2020/5/14 09:32:22.101895
-        epoch = calendar.timegm((2020, 5, 14, 9, 32, 22.101895, 0, -1, 0))
+        epoch = calendar.timegm((2020, 5, 14, 9, 32, 22, 0, -1, 0)) + 0.101895
         self.assertEqual(_base.unixToNTTime(epoch), nttime)
 
         s = b"\x24\xba\x1c\x33\x9f\x14\xd6\x01"
         (nttime,) = struct.unpack("<Q", s)
         # 2020/4/17 10:01:44.388458
-        epoch = calendar.timegm((2020, 4, 17, 10, 1, 44.388458, 0, -1, 0))
+        epoch = calendar.timegm((2020, 4, 17, 10, 1, 44, 0, -1, 0)) + 0.388458
         self.assertEqual(_base.unixToNTTime(epoch), nttime)
 
 
@@ -161,7 +184,7 @@ CHALLENGE = b"&z\xd3>Cu\xdd+"
 
 
 class TestSecurity(unittest.TestCase):
-    def test_negotiate(self):
+    def test_negotiate(self) -> None:
         blob_manager = security_blob.BlobManager("DOMAIN")
         blob_manager.receiveInitialBlob(NEG_PACKET)
         flags = {
@@ -182,18 +205,19 @@ class TestSecurity(unittest.TestCase):
         self.assertIsNone(blob_manager.manager.client_domain)
         self.assertIsNone(blob_manager.manager.workstation)
 
-    def test_auth(self):
+    def test_auth(self) -> None:
         blob_manager = security_blob.BlobManager("DOMAIN")
         blob_manager.receiveInitialBlob(NEG_PACKET)
         blob_manager.generateChallengeBlob()
         blob_manager.manager.challenge = CHALLENGE
         blob_manager.receiveResp(AUTH_PACKET)
-        self.assertEqual(blob_manager.credential.domain, "MicrosoftAccount")
-        self.assertEqual(blob_manager.credential.username, "user")
-        self.assertTrue(blob_manager.credential.checkPassword("password"))
-        self.assertFalse(blob_manager.credential.checkPassword("wrong"))
+        if blob_manager.credential is not None:
+            self.assertEqual(blob_manager.credential.domain, "MicrosoftAccount")
+            self.assertEqual(blob_manager.credential.username, "user")
+            self.assertTrue(blob_manager.credential.checkPassword("password"))
+            self.assertFalse(blob_manager.credential.checkPassword("wrong"))
 
-    def test_invalid(self):
+    def test_invalid(self) -> None:
         manager = ntlm.NTLMManager("DOMAIN")
         with self.assertRaises(_base.SMBError):
             manager.receiveToken(b"I'm too short")
@@ -213,21 +237,23 @@ class TestDisc:
 
 @implementer(ISMBServer)
 class TestAvatar:
-    def getShare(self, name):
+    def getShare(self, name: str) -> Union[IFilesystem, IPipe, IPrinter]:
         if name == "share":
             return TestDisc()
         else:
             raise NoSuchShare(name)
 
-    def listShares(self):
+    def listShares(self) -> List[str]:
         return ["share"]
 
-    session_id = 0
+    session_id: int = 0
 
 
 @implementer(portal.IRealm)
 class TestRealm:
-    def requestAvatar(self, avatarId, mind, *interfaces):
+    def requestAvatar(
+        self, avatarId: str, mind: core.SMBMind, *interfaces: Any
+    ) -> Tuple[type, ISMBServer, Callable[[], None]]:
         log.debug("avatarId={a!r} mind={m!r}", a=avatarId, m=mind)
         return (ISMBServer, TestAvatar(), lambda: None)
 
@@ -236,15 +262,18 @@ class ChatNotFinished(Exception):
     pass
 
 
+ChatType = List[Tuple[str, Optional[str]]]
+
+
 class ChatProcess(ProcessProtocol):
-    def __init__(self, chat, ignoreRCode):
+    def __init__(self, chat: ChatType, ignoreRCode: bool) -> None:
         self.chat = chat
-        self.d = Deferred()
-        self.matches = []
+        self.d: Deferred = Deferred()
+        self.matches: List[Match] = []
         self.ignoreRCode = ignoreRCode
 
-    def outReceived(self, data):
-        data = data.decode("utf-8")
+    def outReceived(self, bdata: bytes) -> None:
+        data = bdata.decode("utf-8")
         if self.chat:
             prompt, reply = self.chat[0]
             m = re.search(prompt, data)
@@ -255,15 +284,16 @@ class ChatProcess(ProcessProtocol):
                         t = "\\%d" % i
                         if t in reply:
                             reply = reply.replace(t, m.group(i))
-                    self.transport.write(reply.encode("utf-8"))
+                    if self.transport is not None:
+                        self.transport.write(reply.encode("utf-8"))
                 else:
-                    self.transport.closeStdin()
+                    cast(IProcessTransport, self.transport).closeStdin()
                 del self.chat[0]
 
-    def errReceived(self, data):
+    def errReceived(self, data: bytes) -> None:
         log.debug("STDERR: {data!r}", data=data)
 
-    def processEnded(self, status):
+    def processEnded(self, status: Failure) -> None:
         if (not self.ignoreRCode) and status.value.exitCode != 0:
             self.d.errback(status)
         elif self.chat:
@@ -275,9 +305,11 @@ class ChatProcess(ProcessProtocol):
             self.d.callback(self.matches)
 
 
-def spawn(chat, args, ignoreRCode=False, usePTY=True):
+def spawn(
+    chat: ChatType, args: Sequence[str], ignoreRCode: bool = False, usePTY: bool = True
+) -> Deferred:
     pro = ChatProcess(chat, ignoreRCode)
-    reactor.spawnProcess(pro, args[0], args, usePTY=usePTY)
+    cast(IReactorProcess, reactor).spawnProcess(pro, args[0], args, usePTY=usePTY)  # type: ignore
     return pro.d
 
 
@@ -287,7 +319,7 @@ SMBCLIENT = "/usr/bin/smbclient"
 
 @python_unittest.skipUnless(os.access(SMBCLIENT, os.X_OK), "smbclient unavailable")
 class SambaClientTests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         # Start the server
         r = TestRealm()
         p = portal.Portal(r)
@@ -296,11 +328,12 @@ class SambaClientTests(unittest.TestCase):
         self.password = "test-password"
         users_checker.addUser(self.username, self.password)
         p.registerChecker(users_checker, credentials.IUsernameHashedPassword)
+        log.error("reactor type {t}", t=get_type_hints(reactor))
         self.factory = core.SMBFactory(p)
-        self.port = port = reactor.listenTCP(TESTPORT, self.factory)
+        self.port = port = cast(IReactorTCP, reactor).listenTCP(TESTPORT, self.factory)  # type: ignore
         self.addCleanup(port.stopListening)
 
-    def smbclient(self, chat, ignoreRCode=False):
+    def smbclient(self, chat: ChatType, ignoreRCode: bool = False) -> Deferred:
         return spawn(
             chat,
             [
@@ -322,5 +355,5 @@ class SambaClientTests(unittest.TestCase):
             usePTY=True,
         )
 
-    def test_logon(self):
+    def test_logon(self) -> Deferred:
         return self.smbclient([("session setup ok", None)], ignoreRCode=True)

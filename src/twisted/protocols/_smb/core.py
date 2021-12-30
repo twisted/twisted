@@ -9,12 +9,16 @@ import struct
 import time
 from collections import namedtuple
 from uuid import uuid4
+from typing import Tuple, Any, Optional, Sequence, Union, Callable
 
 import attr
 
 from twisted.cred.checkers import ANONYMOUS
+from twisted.cred.portal import Portal
 from twisted.internet import protocol
 from twisted.internet.defer import maybeDeferred
+from twisted.internet.interfaces import IAddress
+from twisted.python.failure import Failure
 from twisted.logger import Logger
 from twisted.protocols._smb import _base, security_blob
 from twisted.protocols._smb._base import byte, long, medium, octets, short, uuid
@@ -262,7 +266,7 @@ class HeaderSync:
     tree_id = medium()
     session_id = long()
     signature = octets(16)
-    async_id = attr.ib(default=0)
+    async_id: int = attr.ib(default=0)
 
 
 @attr.s
@@ -279,10 +283,10 @@ class HeaderAsync:
     async_id = long()
     session_id = long()
     signature = octets(16)
-    tree_id = attr.ib(default=0)
+    tree_id: int = attr.ib(default=0)
 
 
-def packetReceived(packet):
+def packetReceived(packet: _base.SMBPacket) -> None:
     """
     receive a SMB packet with header. Unpacks the
     header then calls the appropriate smb_XXX
@@ -390,7 +394,11 @@ signature       {sig}""",
         offset += packet.hdr.next_command
 
 
-def sendHeader(packet, command=None, status=NTStatus.SUCCESS):
+def sendHeader(
+    packet: _base.SMBPacket,
+    command: Optional[Union[int, str]] = None,
+    status: Union[NTStatus, int] = NTStatus.SUCCESS,
+) -> None:
     """
     prepare and transmit a SMB header and payload
     so actually a full packet but focus of function on header construction
@@ -409,20 +417,20 @@ def sendHeader(packet, command=None, status=NTStatus.SUCCESS):
         packet.hdr = HeaderSync()
     packet.hdr.flags |= FLAG_SERVER
     packet.hdr.flags &= ~FLAG_RELATED
-    if isinstance(command, str):
-        cmds = [c[0] for c in COMMANDS]
-        command = cmds.index(command)
     if command is not None:
-        packet.hdr.command = command
-    if isinstance(status, NTStatus):
-        status = status.value
+        if isinstance(command, str):
+            cmds = [c[0] for c in COMMANDS]
+            icommand = cmds.index(command)
+        elif isinstance(command, int):
+            icommand = command
+        packet.hdr.command = icommand
     packet.hdr.status = status
     packet.hdr.credit_request = 1
     packet.data = _base.pack(packet.hdr) + packet.data
     packet.send()
 
 
-def smb_negotiate(packet, resp_type):
+def smb_negotiate(packet: _base.SMBPacket, resp_type: type) -> None:
     # capabilities is ignored as a 3.1 feature
     # as are final field complex around "negotiate contexts"
     dialects = struct.unpack_from(
@@ -457,7 +465,7 @@ dialects        {dlt!r}""",
     negotiateResponse(packet, dialects)
 
 
-def errorResponse(packet, ntstatus):
+def errorResponse(packet: _base.SMBPacket, ntstatus: Union[NTStatus, int]) -> None:
     """
     send SMB error response
 
@@ -469,7 +477,9 @@ def errorResponse(packet, ntstatus):
     # pre 3.1.1 no variation in structure
 
 
-def negotiateResponse(packet, dialects=None):
+def negotiateResponse(
+    packet: _base.SMBPacket, dialects: Optional[Sequence[int]] = None
+) -> None:
     """
     send negotiate response
 
@@ -506,7 +516,7 @@ def negotiateResponse(packet, dialects=None):
     sendHeader(packet, "negotiate")
 
 
-def smb_session_setup(packet, resp_type):
+def smb_session_setup(packet: _base.SMBPacket, resp_type: type) -> None:
     blob = packet.data[packet.body.offset : packet.body.offset + packet.body.buflen]
     log.debug(
         """
@@ -543,13 +553,13 @@ Prev. session ID 0x{pid:016x}""",
                 ISMBServer,
             )
 
-            def cb_login(t):
+            def cb_login(t: Tuple[Any, ISMBServer, Callable[[], None]]) -> None:
                 _, packet.ctx["avatar"], packet.ctx["logout_thunk"] = t
                 blob = blob_manager.generateAuthResponseBlob(True)
                 log.debug("successful login")
                 sessionSetupResponse(packet, blob, NTStatus.SUCCESS)
 
-            def eb_login(failure):
+            def eb_login(failure: Failure) -> None:
                 log.debug(failure.getTraceback())
                 blob = blob_manager.generateAuthResponseBlob(False)
                 sessionSetupResponse(packet, blob, NTStatus.LOGON_FAILURE)
@@ -561,7 +571,9 @@ Prev. session ID 0x{pid:016x}""",
             sessionSetupResponse(packet, blob, NTStatus.MORE_PROCESSING)
 
 
-def sessionSetupResponse(packet, blob, ntstatus):
+def sessionSetupResponse(
+    packet: _base.SMBPacket, blob: bytes, ntstatus: Union[NTStatus, int]
+) -> None:
     """
     send session setup response
 
@@ -582,7 +594,7 @@ def sessionSetupResponse(packet, blob, ntstatus):
     sendHeader(packet, "session_setup", ntstatus)
 
 
-def smb_logoff(packet, resp_type):
+def smb_logoff(packet: _base.SMBPacket, resp_type: type) -> None:
     packet.data = _base.pack(resp_type())
     sendHeader(packet)
     logout_thunk = packet.ctx.get("logout_thunk")
@@ -591,13 +603,14 @@ def smb_logoff(packet, resp_type):
         d.addErrback(lambda f: log.error(f.getTraceback()))
 
 
-def smb_tree_connect(packet, resp_type):
+def smb_tree_connect(packet: _base.SMBPacket, resp_type: type) -> None:
     avatar = packet.ctx.get("avatar")
     if avatar is None:
         errorResponse(packet, NTStatus.ACCESS_DENIED)
         return
-    path = packet.data[packet.body.offset : packet.body.offset + packet.body.buflen]
-    path = path.decode("utf-16le")
+    path = packet.data[
+        packet.body.offset : packet.body.offset + packet.body.buflen
+    ].decode("utf-16le")
     log.debug(
         """
 TREE CONNECT
@@ -611,7 +624,7 @@ Path   {path!r}
     path = path.split("\\")[-1]
     d = maybeDeferred(avatar.getShare, path)
 
-    def eb_tree(failure):
+    def eb_tree(failure: Failure) -> None:
         if failure.check(NoSuchShare):
             errorResponse(packet, NTStatus.BAD_NETWORK_NAME)
         elif failure.check(_base.SMBError):
@@ -621,7 +634,7 @@ Path   {path!r}
             log.error(failure.getTraceback())
             errorResponse(packet, NTStatus.UNSUCCESSFUL)
 
-    def cb_tree(share):
+    def cb_tree(share: Union[IFilesystem, IPipe, IPrinter]) -> None:
         resp = None
         if IFilesystem.providedBy(share):
             resp = resp_type(
@@ -709,7 +722,7 @@ Path   {path!r}
     d.addErrback(eb_tree)
 
 
-def smb_tree_disconnect(packet, resp_type):
+def smb_tree_disconnect(packet: _base.SMBPacket, resp_type: type) -> None:
     del packet.ctx["trees"][packet.hdr.tree_id]
     packet.data = _base.pack(resp_type())
     sendHeader(packet)
@@ -720,7 +733,7 @@ class SMBFactory(protocol.Factory):
     Factory for SMB servers
     """
 
-    def __init__(self, portal, domain="WORKGROUP"):
+    def __init__(self, portal: Portal, domain: str = "WORKGROUP") -> None:
         """
         @param portal: the configured portal
         @type portal: L{twisted.cred.portal.Portal}
@@ -734,7 +747,7 @@ class SMBFactory(protocol.Factory):
         self.server_uuid = uuid4()
         self.server_start = time.time()
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> _base.SMBPacketReceiver:
         log.debug("new SMB connection from {addr!r}", addr=addr)
         return _base.SMBPacketReceiver(
             packetReceived,

@@ -10,8 +10,10 @@ which in turn encapsulate NTLMv2 challenge-response authentication
 
 much of code adapted from Mike Teo's pysmb """
 
-from pyasn1.codec.der import decoder, encoder
-from pyasn1.type import char, constraint, namedtype, namedval, tag, univ
+from typing import cast, Optional
+
+from pyasn1.codec.der import decoder, encoder  # type: ignore
+from pyasn1.type import char, constraint, namedtype, namedval, tag, univ  # type: ignore
 
 from twisted.logger import Logger
 from twisted.protocols._smb import _base, ntlm
@@ -29,14 +31,14 @@ class BlobManager:
     may be added over time
     """
 
-    def __init__(self, domain):
+    def __init__(self, domain: str) -> None:
         """
         @param domain: the server NetBIOS domain
         @type domain: L{str}
         """
         self.domain = domain
 
-    def generateInitialBlob(self):
+    def generateInitialBlob(self) -> bytes:
         """
         generate greeting blob, fixed data essentially an advertisement
         we only support NTLM
@@ -73,9 +75,9 @@ class BlobManager:
         ct.setComponentByName("thisMech", univ.ObjectIdentifier("1.3.6.1.5.5.2"))
         ct.setComponentByName("innerContextToken", nt)
 
-        return encoder.encode(ct)
+        return cast(bytes, encoder.encode(ct))
 
-    def receiveInitialBlob(self, blob):
+    def receiveInitialBlob(self, blob: bytes) -> None:
         """
         process first blob from client
 
@@ -91,7 +93,7 @@ class BlobManager:
         else:
             log.warn("initial security blob has no token data.")
 
-    def receiveResp(self, blob):
+    def receiveResp(self, blob: bytes) -> None:
         """
         process subsequent blobs from the client
 
@@ -104,7 +106,7 @@ class BlobManager:
             raise _base.SMBError("security blob does not contain responseToken field")
         self.manager.receiveToken(token.asOctets())
 
-    def generateChallengeBlob(self):
+    def generateChallengeBlob(self) -> bytes:
         """
         generates a blob response once initial negotiation is complete
 
@@ -129,9 +131,9 @@ class BlobManager:
         nt = NegotiationToken()
         nt.setComponentByName("negTokenResp", n)
 
-        return encoder.encode(nt)
+        return cast(bytes, encoder.encode(nt))
 
-    def generateAuthResponseBlob(self, login_status):
+    def generateAuthResponseBlob(self, login_status: bool) -> bytes:
         """
         generate the final blob indicating login status
 
@@ -149,10 +151,10 @@ class BlobManager:
         nt = NegotiationToken()
         nt.setComponentByName("negTokenResp", n)
 
-        return encoder.encode(nt)
+        return cast(bytes, encoder.encode(nt))
 
     @property
-    def credential(self):
+    def credential(self) -> Optional[ntlm.NTLMCredential]:
         return self.manager.credential
 
 
