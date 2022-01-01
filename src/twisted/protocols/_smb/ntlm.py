@@ -10,6 +10,7 @@ import hmac
 import socket
 import struct
 import time
+import enum
 from typing import Union, Dict, Any, NoReturn, Optional
 
 from zope.interface import implementer
@@ -25,84 +26,56 @@ from twisted.python.randbytes import secureRandom
 log = Logger()
 
 NTLM_MESSAGES = ["invalid", "negotiate", "challenge", "auth"]
-FLAGS = {
-    "NegotiateUnicode": 0x00000001,
-    "NegotiateOEM": 0x00000002,
-    "RequestTarget": 0x00000004,
-    "Unknown9": 0x00000008,
-    "NegotiateSign": 0x00000010,
-    "NegotiateSeal": 0x00000020,
-    "NegotiateDatagram": 0x00000040,
-    "NegotiateLanManagerKey": 0x00000080,
-    "Unknown8": 0x00000100,
-    "NegotiateNTLM": 0x00000200,
-    "NegotiateNTOnly": 0x00000400,
-    "Anonymous": 0x00000800,
-    "NegotiateOemDomainSupplied": 0x00001000,
-    "NegotiateOemWorkstationSupplied": 0x00002000,
-    "Unknown6": 0x00004000,
-    "NegotiateAlwaysSign": 0x00008000,
-    "TargetTypeDomain": 0x00010000,
-    "TargetTypeServer": 0x00020000,
-    "TargetTypeShare": 0x00040000,
-    "NegotiateExtendedSecurity": 0x00080000,
-    "NegotiateIdentify": 0x00100000,
-    "Unknown5": 0x00200000,
-    "RequestNonNTSessionKey": 0x00400000,
-    "NegotiateTargetInfo": 0x00800000,
-    "Unknown4": 0x01000000,
-    "NegotiateVersion": 0x02000000,
-    "Unknown3": 0x04000000,
-    "Unknown2": 0x08000000,
-    "Unknown1": 0x10000000,
-    "Negotiate128": 0x20000000,
-    "NegotiateKeyExchange": 0x40000000,
-    "Negotiate56": 0x80000000,
-}
-
-DEFAULT_FLAGS = {
-    "NegotiateUnicode",
-    "NegotiateSign",
-    "RequestTarget",
-    "NegotiateNTLM",
-    "NegotiateAlwaysSign",
-    "NegotiateExtendedSecurity",
-    "NegotiateTargetInfo",
-    "NegotiateVersion",
-    "Negotiate128",
-    "NegotiateKeyExchange",
-    "Negotiate56",
-}
 
 
-def flags2set(flags):
-    """
-    convert C-style flags to Python set
+class NTLMFlag(enum.IntFlag):
+    NegotiateUnicode = 0x00000001
+    NegotiateOEM = 0x00000002
+    RequestTarget = 0x00000004
+    Unknown9 = 0x00000008
+    NegotiateSign = 0x00000010
+    NegotiateSeal = 0x00000020
+    NegotiateDatagram = 0x00000040
+    NegotiateLanManagerKey = 0x00000080
+    Unknown8 = 0x00000100
+    NegotiateNTLM = 0x00000200
+    NegotiateNTOnly = 0x00000400
+    Anonymous = 0x00000800
+    NegotiateOemDomainSupplied = 0x00001000
+    NegotiateOemWorkstationSupplied = 0x00002000
+    Unknown6 = 0x00004000
+    NegotiateAlwaysSign = 0x00008000
+    TargetTypeDomain = 0x00010000
+    TargetTypeServer = 0x00020000
+    TargetTypeShare = 0x00040000
+    NegotiateExtendedSecurity = 0x00080000
+    NegotiateIdentify = 0x00100000
+    Unknown5 = 0x00200000
+    RequestNonNTSessionKey = 0x00400000
+    NegotiateTargetInfo = 0x00800000
+    Unknown4 = 0x01000000
+    NegotiateVersion = 0x02000000
+    Unknown3 = 0x04000000
+    Unknown2 = 0x08000000
+    Unknown1 = 0x10000000
+    Negotiate128 = 0x20000000
+    NegotiateKeyExchange = 0x40000000
+    Negotiate56 = 0x80000000
 
-    @param flags: the flags
-    @type flags: L{int}
 
-    @rtype: L{set} of L{str}
-    """
-    r = set()
-    for k, v in FLAGS.items():
-        if v | flags > 0:
-            r.add(k)
-    return r
-
-
-def set2flags(s):
-    """
-    convert set to C-style flags
-
-    @rtype: L{int}
-
-    @type s: L{set} of L{str}
-    """
-    flags = 0
-    for i in s:
-        flags |= FLAGS[i]
-    return flags
+DEFAULT_FLAGS = (
+    NTLMFlag.NegotiateUnicode
+    | NTLMFlag.NegotiateSign
+    | NTLMFlag.RequestTarget
+    | NTLMFlag.NegotiateNTLM
+    | NTLMFlag.NegotiateAlwaysSign
+    | NTLMFlag.NegotiateExtendedSecurity
+    | NTLMFlag.NegotiateTargetInfo
+    | NTLMFlag.NegotiateVersion
+    | NTLMFlag.Negotiate128
+    | NTLMFlag.NegotiateKeyExchange
+    | NTLMFlag.Negotiate56
+)
 
 
 def avpair(code: int, data: Union[str, bytes]) -> bytes:
@@ -266,7 +239,7 @@ class NTLMManager:
 
     def ntlm_negotiate(self, data: bytes) -> None:
         neg = _base.unpack(NegType, data)
-        flags = flags2set(neg.flags)
+        flags = NTLMFlag(neg.flags)
         log.debug(
             """
 NTLM NEGOTIATE
@@ -274,7 +247,7 @@ NTLM NEGOTIATE
 Flags           {flags!r}""",
             flags=flags,
         )
-        if "NegotiateVersion" in flags:
+        if NTLMFlag.NegotiateVersion & flags:
             log.debug(
                 "Version         {major}.{minor} ({build}) {proto:x}",
                 major=neg.v_major,
@@ -282,30 +255,28 @@ Flags           {flags!r}""",
                 build=neg.v_build,
                 proto=neg.v_protocol,
             )
-        if "NegotiateUnicode" not in flags:
+        if not NTLMFlag.NegotiateUnicode & flags:
             raise _base.SMBError("clients must use Unicode")
-        if "NegotiateOemDomainSupplied" in flags and neg.domain_len > 0:
+        if NTLMFlag.NegotiateOemDomainSupplied & flags and neg.domain_len > 0:
             self.client_domain: Optional[str] = self.token[
                 neg.domain_len : neg.domain_len + neg.domain_offset
             ].decode("utf-16le")
             log.debug("Client domain   {cd!r}", cd=self.client_domain)
         else:
             self.client_domain = None
-        if "NegotiateOemWorkstationSupplied" in flags and neg.workstation_len > 0:
+        if NTLMFlag.NegotiateOemWorkstationSupplied & flags and neg.workstation_len > 0:
             self.workstation: Optional[str] = self.token[
                 neg.workstation_len : neg.workstation_len + neg.workstation_offset
             ].decode("utf-16le")
             log.debug("Workstation     {wkstn!r}", wkstn=self.workstation)
         else:
             self.workstation = None
-        self.flags = DEFAULT_FLAGS & flags
-        if (
-            "NegotiateAlwaysSign" not in self.flags
-            and "NegotiateSign" not in self.flags
-        ):
-            self.flags -= {"Negotiate128", "Negotiate56"}
-        if "RequestTarget" in self.flags:
-            self.flags.add("TargetTypeServer")
+        self.flags = DEFAULT_FLAGS | flags
+        if not (NTLMFlag.NegotiateAlwaysSign | NTLMFlag.NegotiateSign) & self.flags:
+            self.flags &= ~NTLMFlag.Negotiate128
+            self.flags &= ~NTLMFlag.Negotiate56
+        if NTLMFlag.RequestTarget & self.flags:
+            self.flags |= NTLMFlag.TargetTypeServer
 
     def getChallengeToken(self) -> bytes:
         """generate NTLM CHALLENGE token
@@ -314,11 +285,11 @@ Flags           {flags!r}""",
         """
         header = HeaderType(packet_type=2)  # type: ignore
         chal = ChallengeType()
-        if "RequestTarget" in self.flags:
+        if NTLMFlag.RequestTarget & self.flags:
             target = socket.gethostname().upper().encode("utf-16le")
         else:
             target = b""
-        if "NegotiateTargetInfo" in self.flags:
+        if NTLMFlag.NegotiateTargetInfo & self.flags:
             targetinfo = (
                 avpair(AV_COMPUTER_NAME, socket.gethostname().upper())
                 + avpair(AV_DOMAIN_NAME, self.server_domain)
@@ -331,7 +302,7 @@ Flags           {flags!r}""",
             )
         else:
             targetinfo = b""
-        if "NegotiateVersion" in self.flags:
+        if NTLMFlag.NegotiateVersion & self.flags:
             chal.v_protocol = PROTOCOL_VERSION
             chal.v_major, chal.v_minor, chal.v_build = SERVER_VERSION
         chal.challenge = self.challenge = secureRandom(8)
@@ -339,14 +310,14 @@ Flags           {flags!r}""",
         chal.target_offset = _base.calcsize(HeaderType) + _base.calcsize(ChallengeType)
         chal.targetinfo_len = chal.targetinfo_max_len = len(targetinfo)
         chal.targetinfo_offset = chal.target_offset + len(target)
-        chal.flags = set2flags(self.flags)
+        chal.flags = self.flags.value
         return _base.pack(header) + _base.pack(chal) + target + targetinfo
 
     def ntlm_auth(self, data: bytes) -> None:
         # note authentication isn't checked here, it's just unpacked and
         # loaded into the credential object
         a = _base.unpack(AuthType, data)
-        flags = flags2set(a.flags)
+        flags = NTLMFlag(a.flags)
         lm = {}
         if a.lmc_len > 0:
             raw_lm_response = self.token[a.lmc_offset : a.lmc_offset + a.lmc_len]
@@ -383,7 +354,7 @@ Flags           {flags!r}""",
             ].decode("utf-16le")
         else:
             workstation = None
-        if a.ersk_len > 0 and "NegotiateKeyExchange" in flags:
+        if a.ersk_len > 0 and NTLMFlag.NegotiateKeyExchange & flags:
             ersk: Optional[bytes] = self.token[
                 a.ersk_offset : a.ersk_offset + a.ersk_len
             ]
@@ -410,7 +381,7 @@ ERSK            {ersk!r}
             nt=nt,
             ersk=ersk,
         )
-        if "NegotiateVersion" in flags:
+        if NTLMFlag.NegotiateVersion & flags:
             log.debug(
                 "Version         {major}.{minor} ({build}) {proto:x}",
                 major=a.v_major,

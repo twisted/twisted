@@ -33,6 +33,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ProcessProtocol
 from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
 from twisted.protocols._smb import _base, core, ntlm, security_blob
+from twisted.protocols._smb.ntlm import NTLMFlag
 from twisted.protocols._smb.ismb import (
     IFilesystem,
     IPipe,
@@ -187,20 +188,23 @@ class TestSecurity(unittest.TestCase):
     def test_negotiate(self) -> None:
         blob_manager = security_blob.BlobManager("DOMAIN")
         blob_manager.receiveInitialBlob(NEG_PACKET)
-        flags = {
-            "Negotiate128",
-            "TargetTypeServer",
-            "RequestTarget",
-            "NegotiateVersion",
-            "NegotiateUnicode",
-            "NegotiateAlwaysSign",
-            "NegotiateSign",
-            "Negotiate56",
-            "NegotiateKeyExchange",
-            "NegotiateExtendedSecurity",
-            "NegotiateNTLM",
-            "NegotiateTargetInfo",
-        }
+        flags = (
+            NTLMFlag.Negotiate128
+            | NTLMFlag.TargetTypeServer
+            | NTLMFlag.RequestTarget
+            | NTLMFlag.NegotiateVersion
+            | NTLMFlag.NegotiateUnicode
+            | NTLMFlag.NegotiateAlwaysSign
+            | NTLMFlag.NegotiateSign
+            | NTLMFlag.Negotiate56
+            | NTLMFlag.NegotiateKeyExchange
+            | NTLMFlag.NegotiateExtendedSecurity
+            | NTLMFlag.NegotiateNTLM
+            | NTLMFlag.NegotiateTargetInfo
+            | NTLMFlag.NegotiateLanManagerKey
+            | NTLMFlag.NegotiateOEM
+        )
+        log.debug("blob_manager.flags ={flags!r}", flags=blob_manager.manager.flags)
         self.assertEqual(blob_manager.manager.flags, flags)
         self.assertIsNone(blob_manager.manager.client_domain)
         self.assertIsNone(blob_manager.manager.workstation)
