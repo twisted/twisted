@@ -5,12 +5,12 @@
 protocol
  """
 
+import enum
 import hashlib
 import hmac
 import socket
 import struct
 import time
-import enum
 from typing import Any, Dict, NoReturn, Optional, Union
 
 from zope.interface import implementer

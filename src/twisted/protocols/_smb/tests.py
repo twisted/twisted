@@ -33,7 +33,6 @@ from twisted.internet.interfaces import IProcessTransport, IReactorProcess, IRea
 from twisted.internet.protocol import ProcessProtocol
 from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
 from twisted.protocols._smb import _base, core, ntlm, security_blob
-from twisted.protocols._smb.ntlm import NTLMFlag
 from twisted.protocols._smb.ismb import (
     IFilesystem,
     IPipe,
@@ -41,6 +40,7 @@ from twisted.protocols._smb.ismb import (
     ISMBServer,
     NoSuchShare,
 )
+from twisted.protocols._smb.ntlm import NTLMFlag
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 
