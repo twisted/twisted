@@ -5,7 +5,7 @@
 Various interfaces for realms, avatars and related objects
 """
 
-from typing import Union, List
+from typing import List, Union
 
 from zope.interface import Attribute, Interface
 
