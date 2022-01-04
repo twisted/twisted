@@ -92,10 +92,7 @@ class NoCurrentExceptionError(Exception):
 
 def _Traceback(stackFrames, tbFrames):
     """
-    Construct a fake traceback object using a list of frames. Note that
-    although frames generally include locals and globals, this information
-    is not kept by this method, since locals and globals are not used in
-    standard tracebacks.
+    Construct a fake traceback object using a list of frames.
 
     @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
     @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
@@ -163,8 +160,8 @@ class _Frame:
         name, filename, lineno, localz, globalz = frameinfo
         self.f_code = _Code(name, filename)
         self.f_lineno = lineno
-        self.f_globals = {}
-        self.f_locals = {}
+        self.f_globals = dict(globalz or {})
+        self.f_locals = dict(localz or {})
         self.f_back = back
 
 
