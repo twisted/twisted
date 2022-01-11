@@ -1311,6 +1311,9 @@ class MockOS:
         self.setegidCalls = []
 
     def fcntl(self, op, fl, arg):
+        """
+        Fake fcntl.fcntl for CLOEXEC file descriptor enumeration.
+        """
         return 0
 
     def open(self, dev, flags):
