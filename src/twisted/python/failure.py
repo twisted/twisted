@@ -125,6 +125,9 @@ def _Traceback(stackFrames, tbFrames):
     return firstTb
 
 
+# The set of attributes for _TracebackFrame, _Frame and _Code were taken from
+# https://docs.python.org/3.10/library/inspect.html Other Pythons may have a
+# few more attributes that should be added if needed.
 class _TracebackFrame:
     """
     Fake traceback object which can be passed to functions in the standard
@@ -137,6 +140,7 @@ class _TracebackFrame:
         """
         self.tb_frame = frame
         self.tb_lineno = frame.f_lineno
+        self.tb_lasti = frame.f_lasti
         self.tb_next = None
 
 
@@ -163,6 +167,9 @@ class _Frame:
         self.f_globals = dict(globalz or {})
         self.f_locals = dict(localz or {})
         self.f_back = back
+        self.f_lasti = 0
+        self.f_builtins = __builtins__.copy()
+        self.f_trace = None
 
 
 class _Code:
@@ -173,6 +180,20 @@ class _Code:
     def __init__(self, name, filename):
         self.co_name = name
         self.co_filename = filename
+        self.co_lnotab = b""
+        self.co_firstlineno = 0
+        self.co_argcount = 0
+        self.co_varnames = []
+        self.co_code = b""
+        self.co_cellvars = ()
+        self.co_consts = ()
+        self.co_flags = 0
+        self.co_freevars = ()
+        self.co_posonlyargcount = 0
+        self.co_kwonlyargcount = 0
+        self.co_names = ()
+        self.co_nlocals = 0
+        self.co_stacksize = 0
 
 
 _inlineCallbacksExtraneous = []
