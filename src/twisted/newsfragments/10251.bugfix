@@ -1,0 +1,1 @@
+The type annotation of the host parameter to twisted.internet.interfaces.IReactorTCP.connectTCP has been corrected from bytes to str.

@@ -707,7 +707,7 @@ class IReactorTCP(Interface):
         """
 
     def connectTCP(
-        host: bytes,
+        host: str,
         port: int,
         factory: "ClientFactory",
         timeout: float,
