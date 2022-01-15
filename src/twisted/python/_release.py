@@ -21,7 +21,6 @@ from zope.interface import Interface, implementer
 
 from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
-from twisted.python.monkey import MonkeyPatcher
 
 # Types of newsfragments.
 NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
@@ -302,24 +301,9 @@ class APIBuilder:
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
-        # Super awful monkeypatch that will selectively use our templates.
-        from pydoctor.templatewriter import util  # type: ignore[import]
-
-        originalTemplatefile = util.templatefile
-
-        def templatefile(filename):
-
-            if filename in ["summary.html", "index.html", "common.html"]:
-                twistedPythonDir = FilePath(__file__).parent()
-                templatesDir = twistedPythonDir.child("_pydoctortemplates")
-                return templatesDir.child(filename).path
-            else:
-                return originalTemplatefile(filename)
-
-        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
-        monkeyPatch.patch()
-
         from pydoctor.driver import main  # type: ignore[import]
+
+        templatesPath = FilePath(__file__).parent().child("_pydoctortemplates")
 
         args = [
             "--project-name",
@@ -330,6 +314,8 @@ class APIBuilder:
             "twisted.python._pydoctor.TwistedSystem",
             "--project-base-dir",
             packagePath.parent().path,
+            "--template-dir",
+            templatesPath.path,
             "--html-viewsource-base",
             sourceURL,
             "--html-output",
@@ -340,8 +326,6 @@ class APIBuilder:
         ] + intersphinxes
         args.append(packagePath.path)
         main(args)
-
-        monkeyPatch.restore()
 
 
 class SphinxBuilder:
