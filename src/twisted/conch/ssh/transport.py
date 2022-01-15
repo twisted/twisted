@@ -882,7 +882,7 @@ class SSHTransportBase(protocol.Protocol):
         ) = (s.split(b",") for s in strings)
         # These are the server directions
         outs = [encSC, macSC, compSC]
-        ins = [encCS, macSC, compCS]
+        ins = [encCS, macCS, compCS]
         if self.isClient:
             outs, ins = ins, outs  # Switch directions
         server = (
