@@ -12,13 +12,11 @@ from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
 from constantly import NamedConstant  # type: ignore[import]
 
+from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
-from twisted.python._tzhelper import FixedOffsetTimeZone
-
-from ._flatten import flatFormat, aFormatter
+from ._flatten import aFormatter, flatFormat
 from ._interfaces import LogEvent
-
 
 timeFormatRFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 

@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-from slides import Lecture, Slide, Image, Bullet, PRE, URL, SubBullet, NumSlide, toHTML
 import os
+
+from slides import PRE, URL, Bullet, Image, Lecture, NumSlide, Slide, SubBullet, toHTML
 
 
 class Bad:

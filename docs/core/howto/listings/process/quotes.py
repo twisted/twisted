@@ -1,6 +1,7 @@
-from twisted.internet import protocol, utils, reactor
-from twisted.python import failure
 from cStringIO import StringIO
+
+from twisted.internet import protocol, reactor, utils
+from twisted.python import failure
 
 
 class FortuneQuoter(protocol.Protocol):

@@ -15,8 +15,12 @@ from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
 from twisted.trial._dist.disttrial import DistTrialRunner
-from twisted.trial.runner import TestLoader
-from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
+from twisted.trial.runner import (
+    DestructiveTestSuite,
+    TestLoader,
+    TestSuite,
+    TrialRunner,
+)
 from twisted.trial.test.test_loader import testNames
 
 pyunit = __import__("unittest")

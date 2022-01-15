@@ -12,17 +12,16 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 
-from twisted.python.filepath import FilePath
-from twisted.python.modules import theSystemPath
 from twisted.internet.defer import DeferredList
 from twisted.internet.task import cooperate
-
-from twisted.trial.util import _unusedTestDirectory
+from twisted.python.filepath import FilePath
+from twisted.python.modules import theSystemPath
 from twisted.trial._asyncrunner import _iterateTests
-from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
-from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist.distreporter import DistReporter
+from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
+from twisted.trial.reporter import UncleanWarningsReporterWrapper
+from twisted.trial.util import _unusedTestDirectory
 
 
 class DistTrialRunner:

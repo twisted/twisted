@@ -20,22 +20,22 @@ from zope.interface import implementer
 from twisted.conch import ttymodes
 from twisted.conch.avatar import ConchUser
 from twisted.conch.error import ConchError
+from twisted.conch.interfaces import ISession, ISFTPFile, ISFTPServer
 from twisted.conch.ls import lsLine
-from twisted.conch.ssh import session, forwarding, filetransfer
+from twisted.conch.ssh import filetransfer, forwarding, session
 from twisted.conch.ssh.filetransfer import (
-    FXF_READ,
-    FXF_WRITE,
     FXF_APPEND,
     FXF_CREAT,
-    FXF_TRUNC,
     FXF_EXCL,
+    FXF_READ,
+    FXF_TRUNC,
+    FXF_WRITE,
 )
-from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
+from twisted.logger import Logger
 from twisted.python import components
 from twisted.python.compat import nativeString
-from twisted.logger import Logger
 
 try:
     import utmp  # type: ignore[import]

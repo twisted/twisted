@@ -12,8 +12,9 @@ test is over.
 """
 
 from zope.interface import implementer
-from twisted.trial.itrial import IReporter
+
 from twisted.python.components import proxyForInterface
+from twisted.trial.itrial import IReporter
 
 
 @implementer(IReporter)

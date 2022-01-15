@@ -7,28 +7,32 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
 
-from twisted.python.compat import nativeString, networkString
+import datetime
 from io import BytesIO, StringIO
 from unittest import skipIf
 
-import datetime
-
-from twisted.trial import unittest
-from twisted.web import xmlrpc
-from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
-from twisted.web.xmlrpc import QueryFactory, withRequest, xmlrpclib
-from twisted.web import server, client, http, static
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
 from twisted.internet.error import ConnectionDone
-from twisted.python import failure
-from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import MemoryReactor, EventLoggingObserver
-from twisted.web.test.test_web import DummyRequest
 from twisted.logger import (
-    globalLogPublisher,
     FilteringLogObserver,
-    LogLevelFilterPredicate,
     LogLevel,
+    LogLevelFilterPredicate,
+    globalLogPublisher,
+)
+from twisted.python import failure
+from twisted.python.compat import nativeString, networkString
+from twisted.python.reflect import namedModule
+from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactor
+from twisted.trial import unittest
+from twisted.web import client, http, server, static, xmlrpc
+from twisted.web.test.test_web import DummyRequest
+from twisted.web.xmlrpc import (
+    XMLRPC,
+    QueryFactory,
+    addIntrospection,
+    payloadTemplate,
+    withRequest,
+    xmlrpclib,
 )
 
 try:

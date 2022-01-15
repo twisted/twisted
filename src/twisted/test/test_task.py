@@ -6,11 +6,10 @@ Tests for L{twisted.internet.task}.
 """
 
 
-from twisted.trial import unittest
-
-from twisted.internet import interfaces, task, reactor, defer, error
+from twisted.internet import defer, error, interfaces, reactor, task
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 # Be compatible with any jerks who used our private stuff
 Clock = task.Clock

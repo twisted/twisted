@@ -20,18 +20,19 @@ if __name__ == "__main__":
 
     raise SystemExit(recvfd.main())
 
-import os, sys
+import os
+import sys
 
 from zope.interface import implementer
 
-from twisted.python.log import startLogging
-from twisted.python.filepath import FilePath
+from twisted.internet import reactor
 from twisted.internet.defer import Deferred
+from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
-from twisted.internet.endpoints import UNIXClientEndpoint
-from twisted.internet import reactor
+from twisted.python.filepath import FilePath
+from twisted.python.log import startLogging
 
 
 @implementer(IFileDescriptorReceiver)

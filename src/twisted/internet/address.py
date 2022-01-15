@@ -6,16 +6,17 @@ Address objects for network connections.
 """
 
 
-import attr
 import os
 from typing import Optional, Union
 from warnings import warn
 
-from typing_extensions import Literal
 from zope.interface import implementer
+
+import attr
+from typing_extensions import Literal
+
 from twisted.internet.interfaces import IAddress
-from twisted.python.filepath import _asFilesystemBytes
-from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.filepath import _asFilesystemBytes, _coerceToFilesystemEncoding
 from twisted.python.runtime import platform
 
 

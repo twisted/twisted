@@ -10,9 +10,9 @@ import datetime
 import decimal
 
 from twisted.spread import banana, jelly, pb
+from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransport
 
 
 class TestNode(jelly.Jellyable):

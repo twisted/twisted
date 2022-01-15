@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from slides import Slide, Bullet, SubBullet, URL
+from slides import URL, Bullet, Slide, SubBullet
 from twslides import Lecture
 
 lecture = Lecture(

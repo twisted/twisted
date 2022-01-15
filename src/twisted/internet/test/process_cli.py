@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 try:
     # On Windows, stdout is not opened in binary mode by default,
