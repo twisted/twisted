@@ -9,44 +9,40 @@ only ever performed on Linux.
 """
 
 
-import glob
 import functools
+import glob
 import operator
 import os
-import sys
-import textwrap
-import tempfile
 import shutil
-
+import sys
+import tempfile
+import textwrap
 from io import BytesIO, StringIO
+from subprocess import CalledProcessError
 from unittest import skipIf
-
-from twisted.trial.unittest import TestCase, FailTest, SkipTest
-
-from twisted.python.procutils import which
-from twisted.python import release
-from twisted.python.filepath import FilePath
-from twisted.python.reflect import requireModule
 
 from incremental import Version
 
-from subprocess import CalledProcessError
-
+from twisted.python import release
 from twisted.python._release import (
-    findTwistedProjects,
-    replaceInFile,
-    Project,
-    filePathDelta,
     APIBuilder,
     BuildAPIDocsScript,
     CheckNewsfragmentScript,
-    runCommand,
-    NotWorkingDirectory,
-    SphinxBuilder,
     GitCommand,
-    getRepositoryCommand,
     IVCSCommand,
+    NotWorkingDirectory,
+    Project,
+    SphinxBuilder,
+    filePathDelta,
+    findTwistedProjects,
+    getRepositoryCommand,
+    replaceInFile,
+    runCommand,
 )
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
+from twisted.trial.unittest import FailTest, SkipTest, TestCase
 
 if sys.platform != "win32":
     skip = None
@@ -427,7 +423,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), f"API index {outputPath.path!r} did not exist."
         )
         self.assertIn(
-            f'<a href="{projectURL}">{projectName}</a>',
+            f'<a href="{projectURL}" class="projecthome">{projectName}</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -443,11 +439,12 @@ class APIBuilderTests(ExternalTempdirTestCase):
             "Docstring not in package documentation file.",
         )
         self.assertIn(
-            f'<a href="{sourceURL}/{packageName}/__init__.py">(source)</a>',
+            f'<a href="{sourceURL}/{packageName}/__init__.py" class="sourceLink">'
+            f"(source)</a>",
             quuxPath.getContent().decode(),
         )
         self.assertIn(
-            '<a class="functionSourceLink" href="%s/%s/__init__.py#L1">'
+            '<a class="sourceLink" href="%s/%s/__init__.py#L1">'
             % (sourceURL, packageName),
             quuxPath.getContent().decode(),
         )
@@ -484,7 +481,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
             indexPath.exists(), f"API index {outputPath.path} did not exist."
         )
         self.assertIn(
-            '<a href="https://twistedmatrix.com/">Twisted</a>',
+            '<a href="https://twistedmatrix.com/" class="projecthome">Twisted</a>',
             indexPath.getContent().decode(),
             "Project name/location not in file contents.",
         )
@@ -503,7 +500,7 @@ class APIBuilderTests(ExternalTempdirTestCase):
         # source code.
         self.assertIn(
             '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted/__init__.py">(source)</a>',
+            'twisted-1.0.0/src/twisted/__init__.py" class="sourceLink">(source)</a>',
             twistedPath.getContent().decode(),
         )
 

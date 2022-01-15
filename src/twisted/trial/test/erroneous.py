@@ -12,8 +12,9 @@ this code is arranged.
 
 
 from unittest import skipIf
+
+from twisted.internet import defer, protocol, reactor
 from twisted.trial import unittest, util
-from twisted.internet import reactor, protocol, defer
 
 
 class FoolishError(Exception):

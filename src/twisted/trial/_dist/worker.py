@@ -13,17 +13,21 @@ import os
 
 from zope.interface import implementer
 
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IAddress, ITransport
+from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.reflect import namedObject
-from twisted.trial.unittest import Todo
-from twisted.trial.runner import TrialSuite, TestLoader
-from twisted.trial._dist import workercommands, managercommands
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist import (
+    _WORKER_AMP_STDIN,
+    _WORKER_AMP_STDOUT,
+    managercommands,
+    workercommands,
+)
 from twisted.trial._dist.workerreporter import WorkerReporter
+from twisted.trial.runner import TestLoader, TrialSuite
+from twisted.trial.unittest import Todo
 
 
 class WorkerProtocol(AMP):

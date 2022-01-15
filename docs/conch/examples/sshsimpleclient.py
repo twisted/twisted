@@ -2,10 +2,14 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
+import getpass
+import os
+import struct
+import sys
+
+from twisted.conch.ssh import channel, common, connection, keys, transport, userauth
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log
-import struct, sys, getpass, os
 
 """
 Example of using a simple SSH client.

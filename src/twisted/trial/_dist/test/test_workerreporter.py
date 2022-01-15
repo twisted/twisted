@@ -6,9 +6,9 @@ Tests for L{twisted.trial._dist.workerreporter}.
 """
 
 from twisted.python.failure import Failure
-from twisted.trial.unittest import TestCase, Todo
-from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial._dist import managercommands
+from twisted.trial._dist.workerreporter import WorkerReporter
+from twisted.trial.unittest import TestCase, Todo
 
 
 class FakeAMProtocol:

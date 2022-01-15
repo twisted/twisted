@@ -6,65 +6,64 @@ Tests for L{twisted.conch.endpoints}.
 """
 
 import os.path
-from struct import pack
 from errno import ENOSYS
+from struct import pack
+
+from zope.interface import implementer
+from zope.interface.verify import verifyClass, verifyObject
 
 import hamcrest
 
-from zope.interface.verify import verifyObject, verifyClass
-from zope.interface import implementer
-
-from twisted.logger import globalLogPublisher, LogLevel
+from twisted.conch.error import ConchError, HostKeyChanged, UserRejectedKey
+from twisted.conch.interfaces import IConchUser
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.portal import Portal
+from twisted.internet.address import IPv4Address
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
+from twisted.internet.error import (
+    ConnectingCancelledError,
+    ConnectionDone,
+    ConnectionRefusedError,
+    ProcessTerminated,
+)
+from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
+from twisted.internet.protocol import Factory, Protocol
+from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.python.reflect import requireModule
-from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import CancelledError, Deferred, succeed, fail
-from twisted.internet.error import ConnectionDone, ConnectionRefusedError
-from twisted.internet.address import IPv4Address
-from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactorClock
-from twisted.internet.error import ProcessTerminated, ConnectingCancelledError
-
-from twisted.cred.portal import Portal
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-
-from twisted.conch.interfaces import IConchUser
-from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
+from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1.type"):
-    from twisted.conch.ssh import common
-    from twisted.conch.ssh.factory import SSHFactory
-    from twisted.conch.ssh.userauth import SSHUserAuthServer
-    from twisted.conch.ssh.connection import SSHConnection
-    from twisted.conch.ssh.keys import Key
-    from twisted.conch.ssh.channel import SSHChannel
-    from twisted.conch.ssh.agent import SSHAgentServer
-    from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-    from twisted.conch.checkers import SSHPublicKeyChecker, InMemorySSHKeyDB
     from twisted.conch.avatar import ConchUser
-
-    from twisted.conch.test.keydata import (
-        publicRSA_openssh,
-        privateRSA_openssh,
-        privateRSA_openssh_encrypted_aes,
-        privateDSA_openssh,
-    )
-
+    from twisted.conch.checkers import InMemorySSHKeyDB, SSHPublicKeyChecker
+    from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
     from twisted.conch.endpoints import (
-        _ISSHConnectionCreator,
         AuthenticationFailed,
         SSHCommandAddress,
         SSHCommandClientEndpoint,
-        _ReadFile,
-        _NewConnectionHelper,
         _ExistingConnectionHelper,
+        _ISSHConnectionCreator,
+        _NewConnectionHelper,
+        _ReadFile,
     )
-
+    from twisted.conch.ssh import common
+    from twisted.conch.ssh.agent import SSHAgentServer
+    from twisted.conch.ssh.channel import SSHChannel
+    from twisted.conch.ssh.connection import SSHConnection
+    from twisted.conch.ssh.factory import SSHFactory
+    from twisted.conch.ssh.keys import Key
     from twisted.conch.ssh.transport import SSHClientTransport
+    from twisted.conch.ssh.userauth import SSHUserAuthServer
+    from twisted.conch.test.keydata import (
+        privateDSA_openssh,
+        privateRSA_openssh,
+        privateRSA_openssh_encrypted_aes,
+        publicRSA_openssh,
+    )
 else:
     skip = "can't run w/o cryptography and pyasn1"
     SSHFactory = object  # type: ignore[assignment,misc]
@@ -77,8 +76,8 @@ else:
     SSHPublicKeyChecker = object  # type: ignore[assignment,misc]
     ConchUser = object  # type: ignore[assignment,misc]
 
-from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
+from twisted.test.proto_helpers import StringTransport
 
 
 class AbortableFakeTransport(FakeTransport):

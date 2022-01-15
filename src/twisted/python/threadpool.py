@@ -13,9 +13,8 @@ from threading import Thread, currentThread
 from typing import List
 
 from twisted._threads import pool as _pool
-from twisted.python import log, context
+from twisted.python import context, log
 from twisted.python.failure import Failure
-
 
 WorkerStop = object()
 

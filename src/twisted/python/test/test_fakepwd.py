@@ -22,8 +22,8 @@ else:
 import os
 from operator import getitem
 
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.trial.unittest import TestCase
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 
 SYSTEM_UID_MAX = 999
 

@@ -9,10 +9,9 @@ Tests for L{twisted.python.runtime}.
 import sys
 
 from twisted.python.reflect import namedModule
-from twisted.trial.util import suppress as SUPRESS
-from twisted.trial.unittest import SynchronousTestCase
-
 from twisted.python.runtime import Platform, shortPythonVersion
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.util import suppress as SUPRESS
 
 
 class PythonVersionTests(SynchronousTestCase):

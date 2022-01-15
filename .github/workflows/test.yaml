@@ -11,6 +11,15 @@ on:
     branches: [ trunk ]
 
 
+# Only have a run a single parallel for each branch.
+# Runs for trunk are queues.
+# Older runs for non-trunk branches are cancelled and the jobs are executed
+# only for the latest push to the branch.
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/trunk' }}
+
+
 defaults:
   run:
     shell: bash
@@ -32,7 +41,7 @@ jobs:
         # When updating the minimum Python version here, also update the
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-beta.4]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-rc.1]
         os: ["ubuntu-20.04", "windows-2019"]
         tox-env: ['alldeps-withcov-posix']
         # By default, tests are executed without disabling IPv6.
@@ -60,8 +69,6 @@ jobs:
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: pypy-3.6
-            tox-env: alldeps-nocov-posix
           - python-version: pypy-3.7
             tox-env: alldeps-nocov-posix
           # We still run some tests with coverage
@@ -111,7 +118,7 @@ jobs:
         tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
@@ -121,7 +128,7 @@ jobs:
         python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v1
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       with:
         files: coverage.xml
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
@@ -129,48 +136,14 @@ jobs:
         functionalities: gcov,search
 
     - name: Publish to Coveralls
-      if: always() && contains(matrix['tox-env'], 'withcov')
+      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
       continue-on-error: true
       run: |
         python -m coveralls -v
       env:
         COVERALLS_REPO_TOKEN: 'JFDTIRUVOQ8jCM3zcajrZALlpKXyiXGAX'
 
-
-  pypi-publish:
-    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
-    name: Check release and publish on twisted-* tag
-    runs-on: ubuntu-20.04
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-
-    - name: Test
-      run: |
-        python -m pip install --upgrade pip tox pep517
-        rm -rf dist/*
-        tox -e release-prepare
-
-    - uses: twisted/python-info-action@v1
-
-    - name: Display structure of files to be pushed
-      run: ls -R dist/
-
-    - name: Check matched tag version and branch version - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
-      run: python admin/check_tag_version_match.py "${{ github.ref }}"
-
-    - name: Publish to PyPI - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1.3.1
-      with:
-        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
-
-  StaticChecks:
+  static-checks:
     runs-on: ubuntu-20.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
@@ -208,10 +181,73 @@ jobs:
       run: |
         tox -q -e newsfragment
 
+
+  # Used for various release automation.
+  # This is also executed for each PR to exercise the release as much
+  # as possible and reduce the possibility of finding bugs in the release
+  # process late in the release cycle,
+  # The files are published only when a tag is created.
+  release-publish:
+    name: Check release and publish on twisted-* tag
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Test
+      run: |
+        python -m pip install --upgrade pip tox pep517
+        rm -rf dist/*
+        tox -e release-prepare
+
+    - uses: twisted/python-info-action@v1
+
+    - name: Files to be pushed to PyPi
+      run: ls -R dist/
+
+    - name: Check matched tag version and branch version - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+
+    - name: Publish to PyPI - on tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+
+    - name: Update stable branch - on stable tag
+      if: startsWith(github.ref, 'refs/tags/twisted-')
+      env:
+        STABLE_BRANCH: stable
+        STABLE_REF_RE: '.*twisted-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$'
+      run: |
+          if [[ $GITUB_REF =~ $STABLE_REF_RE ]]; then
+            echo "Pushing current tag to stable branch..."
+            git config --global user.name '$GITHUB_ACTOR'
+            git config --global user.email '$GITHUB_ACTOR@users.noreply.github.com'
+
+            echo '::group::git fetch'
+            git fetch origin
+            echo '::endgroup::'
+
+            git log -1
+            git checkout -b $STABLE_BRANCH origin/$STABLE_BRANCH
+            git reset --hard $GITHUB_SHA
+            git push --force
+            echo "Done"
+          else
+            echo "Branch not updated for not stable releases: $GITUB_REF"
+          fi
+
+
   all-successful:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
     runs-on: ubuntu-latest
-    needs: [testing, StaticChecks, pypi-publish]
+    needs: [testing, static-checks, release-publish]
     steps:
     - name: note that all tests succeeded
       run: echo "🎉"

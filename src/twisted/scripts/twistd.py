@@ -10,7 +10,6 @@ The Twisted Daemon: platform-independent interface.
 
 
 from twisted.application import app
-
 from twisted.python.runtime import platformType
 
 if platformType == "win32":

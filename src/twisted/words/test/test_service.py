@@ -7,7 +7,7 @@ Tests for L{twisted.words.service}.
 
 import time
 
-from twisted.cred import portal, credentials, checkers
+from twisted.cred import checkers, credentials, portal
 from twisted.internet import address, defer, reactor
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
 from twisted.spread import pb

@@ -50,23 +50,20 @@ loop.  Shutdown functions that could be used in place of
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
 
-from functools import partial
-from threading import Thread
-
-from queue import Queue, Empty
+import select
 import sys
+from errno import EBADF, EINTR
+from functools import partial
+from queue import Empty, Queue
+from threading import Thread
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
-from twisted.internet.posixbase import _NO_FILENO, _NO_FILEDESC
-from twisted.python import log, failure, threadable
-
-import select
-from errno import EINTR, EBADF
-
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, _NO_FILENO
 from twisted.internet.selectreactor import _select
+from twisted.python import failure, log, threadable
 
 
 def dictRemove(dct, value):

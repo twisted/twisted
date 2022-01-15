@@ -6,25 +6,24 @@ Tests for L{twisted.python.log}.
 """
 
 
+import calendar
+import logging
 import os
 import sys
 import time
-import logging
 import warnings
-import calendar
 from io import IOBase, StringIO
 
-from twisted.trial import unittest
-
-from twisted.python import log, failure
-from twisted.logger.test.test_stdlib import handlerAndBytesIO
-from twisted.python.log import LogPublisher
 from twisted.logger import (
+    LogBeginner,
     LoggingFile,
     LogLevel as NewLogLevel,
-    LogBeginner,
     LogPublisher as NewLogPublisher,
 )
+from twisted.logger.test.test_stdlib import handlerAndBytesIO
+from twisted.python import failure, log
+from twisted.python.log import LogPublisher
+from twisted.trial import unittest
 
 
 class FakeWarning(Warning):

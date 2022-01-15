@@ -21,11 +21,12 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
-from twisted.internet.error import ReactorAlreadyRunning
-from twisted.internet import _glibbase
-from twisted.python import runtime
 import gi.pygtkcompat  # type: ignore[import]
 from gi.repository import GLib  # type: ignore[import]
+
+from twisted.internet import _glibbase
+from twisted.internet.error import ReactorAlreadyRunning
+from twisted.python import runtime
 
 # We require a sufficiently new version of pygobject, so always exists:
 _pygtkcompatPresent = True

@@ -10,8 +10,8 @@ implementation.
 import sys
 from typing import NoReturn
 
-from twisted.web.template import Comment, CDATA, CharRef, Flattenable, Tag
 from twisted.trial.unittest import TestCase
+from twisted.web.template import CDATA, CharRef, Comment, Flattenable, Tag
 
 
 def proto(*a: Flattenable, **kw: Flattenable) -> Tag:

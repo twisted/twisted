@@ -8,27 +8,25 @@ POSIX implementation of local network interface enumeration.
 
 import socket
 import sys
-
-from socket import AF_INET, AF_INET6, inet_ntop
 from ctypes import (
     CDLL,
     POINTER,
     Structure,
     c_char_p,
-    c_ushort,
     c_int,
-    c_uint32,
-    c_uint8,
-    c_void_p,
     c_ubyte,
-    pointer,
+    c_uint8,
+    c_uint32,
+    c_ushort,
+    c_void_p,
     cast,
+    pointer,
 )
 from ctypes.util import find_library
+from socket import AF_INET, AF_INET6, inet_ntop
 from typing import Any, List, Tuple
 
 from twisted.python.compat import nativeString
-
 
 libc = CDLL(find_library("c") or "")
 
