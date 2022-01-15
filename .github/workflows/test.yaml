@@ -68,8 +68,6 @@ jobs:
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: pypy-3.6
-            tox-env: alldeps-nocov-posix
           - python-version: pypy-3.7
             tox-env: alldeps-nocov-posix
           # We still run some tests with coverage
