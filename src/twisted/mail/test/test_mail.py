@@ -8,13 +8,9 @@ Tests for large portions of L{twisted.mail}.
 import email.message
 import email.parser
 import errno
+import glob
 import io
 import os
-import glob
-import sys
-import textwrap
-import errno
-import shutil
 import pickle
 import shutil
 import signal
