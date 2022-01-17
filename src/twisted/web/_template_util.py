@@ -390,9 +390,9 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
     Document Object Model.
     """
 
-    def __init__(self, sourceFilename: str):
+    def __init__(self, sourceFilename: Optional[str]):
         """
-        @param sourceFilename: the filename to load the XML out of.
+        @param sourceFilename: the filename the XML was loaded out of.
         """
         self.sourceFilename = sourceFilename
         self.prefixMap = _NSContext()
@@ -632,7 +632,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.current.append(Comment(content))
 
 
-def _flatsaxParse(fl: Union[FilePath, IO[AnyStr], str]) -> List["Flattenable"]:
+def _flatsaxParse(fl: Union[IO[AnyStr], str]) -> List["Flattenable"]:
     """
     Perform a SAX parse of an XML document with the _ToStan class.
 
