@@ -108,7 +108,8 @@ def _lookupUser(userdb: UserDB, username: bytes) -> UserRecord:
 
     @param userdb: The user database.
 
-    @param username: Identifying name in bytes. This will be decoded according to the filesystem encoding, as the L{pwd} module does internally.
+    @param username: Identifying name in bytes. This will be decoded according
+    to the filesystem encoding, as the L{pwd} module does internally.
 
     @raises KeyError: when the user doesn't exist
     """
