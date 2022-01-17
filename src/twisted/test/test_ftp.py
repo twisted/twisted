@@ -25,7 +25,6 @@ from twisted.python import failure, filepath, runtime
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
 
-
 if not runtime.platform.isWindows():
     nonPOSIXSkip = None
 else:
@@ -2979,6 +2978,7 @@ class SystemFTPRealmTests(TestCase):
     """
     Tests for L{ftp.SystemFTPRealm}.
     """
+
     skip = nonPOSIXSkip
 
     def test_getHomeDirectory(self):
