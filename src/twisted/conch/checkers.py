@@ -148,7 +148,7 @@ def _shadowGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     @raises KeyError: when no such user exists
     """
     if spwd is not None:
-        f = spwd.getspnam  # type: ignore
+        f = spwd.getspnam
     else:
         return None
     return cast(CryptedPasswordRecord, runAsEffectiveUser(0, 0, f, username))
