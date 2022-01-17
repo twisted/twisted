@@ -11,7 +11,6 @@ import inspect
 import re
 from io import BytesIO
 from typing import Any, List, Optional, Tuple, Type
-from unittest import skipIf
 
 from zope.interface import directlyProvides, implementer
 
@@ -32,12 +31,13 @@ from twisted.python.util import LineLog
 from twisted.test.proto_helpers import MemoryReactor, StringTransport
 from twisted.trial.unittest import TestCase
 
+sslSkip: Optional[str]
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     sslSkip = "OpenSSL not present"
 else:
-    sslSkip = ""
+    sslSkip = None
 
 
 if not interfaces.IReactorSSL.providedBy(reactor):
@@ -653,8 +653,9 @@ class NoticeTLSClient(MyESMTPClient):
         self.tls = True
 
 
-@skipIf(sslSkip, sslSkip)
 class TLSTests(TestCase, LoopbackMixin):
+    skip = sslSkip
+
     def testTLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
@@ -1595,11 +1596,12 @@ class ESMTPDowngradeTestCase(TestCase):
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
-@skipIf(sslSkip, sslSkip)
 class SSLTestCase(TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
     """
+
+    skip = sslSkip
 
     SERVER_GREETING = b"220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
     EHLO_RESPONSE = b"250-localhost Hello 127.0.0.1, nice to meet you\r\n"
