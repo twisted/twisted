@@ -880,7 +880,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)  # type: ignore[unreachable]
+        @wraps(decoratee)
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
@@ -2288,7 +2288,7 @@ class _ReadBodyProtocol(protocol.Protocol):
             self.deferred.errback(reason)
 
 
-def readBody(response):
+def readBody(response: IResponse) -> defer.Deferred[bytes]:
     """
     Get the body of an L{IResponse} and return it as a byte string.
 
@@ -2302,7 +2302,7 @@ def readBody(response):
         Cancelling it will close the connection to the server immediately.
     """
 
-    def cancel(deferred):
+    def cancel(deferred: defer.Deferred) -> None:
         """
         Cancel a L{readBody} call, close the connection to the HTTP server
         immediately, if it is still open.
@@ -2313,7 +2313,7 @@ def readBody(response):
         if abort is not None:
             abort()
 
-    d = defer.Deferred(cancel)
+    d: defer.Deferred[bytes] = defer.Deferred(cancel)
     protocol = _ReadBodyProtocol(response.code, response.phrase, d)
 
     def getAbort():

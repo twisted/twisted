@@ -1364,7 +1364,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             setattr,
             warnings,
             "filters",
-            warnings.filters,  # type: ignore[attr-defined]
+            warnings.filters,
         )
         warnings.filterwarnings("error", category=DeprecationWarning)
         d: Deferred[str] = Deferred()

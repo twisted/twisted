@@ -1,0 +1,1 @@
+Remove twisted.internet.test.test_core.ObjectModelIntegrationTests, which is no longer necessary.
