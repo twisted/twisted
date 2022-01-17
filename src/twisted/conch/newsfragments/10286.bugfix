@@ -1,0 +1,1 @@
+twisted.conc.checkers.UNIXAuthorizedKeysFiles now uses the filesystem encoding to decode usernames before looking them up in the password database, so it works on CPython 3.
