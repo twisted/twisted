@@ -880,7 +880,7 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)  # type: ignore[unreachable]
+        @wraps(decoratee)
         def raiseNotImplemented(*a, **kw):
             """
             pyOpenSSL is not available.
