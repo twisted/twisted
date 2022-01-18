@@ -1099,7 +1099,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
         # type note: Subclass of "Generator[Deferred[_T], object, _T]" and "GeneratorType" cannot exist
-        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):  # type: ignore[unreachable]
+        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
             raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
@@ -1897,15 +1897,12 @@ def inlineCallbacks(
                 "inlineCallbacks requires %r to produce a generator; instead"
                 "caught returnValue being used in a non-generator" % (f,)
             )
-        # type note: FIXME: error suggests type of gen is wrong:
-        #     Subclass of "Generator[Deferred, object, None]" and "GeneratorType"
-        #     cannot exist: would have incompatible method signatures
-        if not isinstance(gen, GeneratorType):  # type: ignore[unreachable]
+        if not isinstance(gen, GeneratorType):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen)
             )
-        return _cancellableInlineCallbacks(gen)  # type: ignore[unreachable]
+        return _cancellableInlineCallbacks(gen)
 
     return unwindGenerator
 
