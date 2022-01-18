@@ -18,5 +18,5 @@ from typing import List
 
 from twisted.plugin import pluginPackagePaths
 
-__path__.extend(pluginPackagePaths(__name__))  # type: ignore[name-defined]
+__path__.extend(pluginPackagePaths(__name__))
 __all__: List[str] = []  # nothing to see here, move along, move along

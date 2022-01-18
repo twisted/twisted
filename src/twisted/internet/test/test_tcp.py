@@ -80,7 +80,6 @@ from twisted.internet.test.reactormixins import (
     needsRunningReactor,
     stopOnError,
 )
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.failure import Failure
@@ -1389,15 +1388,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
 
         self.assertIn(expectedMessage, loggedMessages)
 
-    def test_allNewStyle(self):
-        """
-        The L{IListeningPort} object is an instance of a class with no
-        classic classes in its hierarchy.
-        """
-        reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory())
-        self.assertFullyNewStyle(port)
-
     @skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
     def test_closePeerOnEMFILE(self):
         """
@@ -1765,7 +1755,6 @@ class TCPPortTestsBuilder(
     ReactorBuilder,
     ListenTCPMixin,
     TCPPortTestsMixin,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     pass
@@ -1775,7 +1764,6 @@ class TCPFDPortTestsBuilder(
     ReactorBuilder,
     SocketTCPMixin,
     TCPPortTestsMixin,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     pass
@@ -3006,7 +2994,7 @@ class BuffersLogsTests(SynchronousTestCase):
                 self.assertFalse(self.events)
                 raise TestException()
 
-        self.assertEqual(1, len(self.events))  # type: ignore[unreachable]
+        self.assertEqual(1, len(self.events))
         [event] = self.events
         self.assertEqual(event["log_format"], "An event")
         self.assertEqual(event["log_namespace"], self.namespace)
@@ -3162,7 +3150,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with reservedFD:
                 raise AllowedException()
 
-        errors = self.flushLoggedErrors(SuppressedException)  # type: ignore[unreachable]
+        errors = self.flushLoggedErrors(SuppressedException)
         self.assertEqual(len(errors), 1)
 
 
