@@ -29,8 +29,9 @@ from twisted.trial.unittest import TestCase
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
+dependencySkip: Optional[str]
 if pyasn1 and cryptography:
-    dependencySkip = ""
+    dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization

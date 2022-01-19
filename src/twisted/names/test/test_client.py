@@ -26,10 +26,10 @@ from twisted.python.runtime import platform
 from twisted.test import proto_helpers
 from twisted.trial import unittest
 
-if platform.isWindows():
-    windowsSkip = "These tests need more work before they'll work on Windows."
+if not platform.isWindows():
+    windowsSkip = None
 else:
-    windowsSkip = ""
+    windowsSkip = "These tests need more work before they'll work on Windows."
 
 
 class FakeResolver(ResolverBase):
@@ -99,8 +99,7 @@ class GetResolverTests(unittest.TestCase):
     Tests for L{client.getResolver}.
     """
 
-    if windowsSkip:
-        skip = windowsSkip
+    skip = windowsSkip
 
     def test_interface(self):
         """
@@ -126,8 +125,7 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
     Tests for L{client.createResolver}.
     """
 
-    if windowsSkip:
-        skip = windowsSkip
+    skip = windowsSkip
 
     def _hostsTest(self, resolver, filename):
         res = [r for r in resolver.resolvers if isinstance(r, hosts.Resolver)]
