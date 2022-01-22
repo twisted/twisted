@@ -52,7 +52,10 @@ class ArrowsTests(TestCase):
         RIGHT_ARROW keystroke it moves the cursor left or right
         in the current line buffer, respectively.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
+
         for ch in iterbytes(b"xyz"):
             kR(ch)
 
@@ -90,7 +93,9 @@ class ArrowsTests(TestCase):
         When {HistoricRecvLine} receives a newline, it adds the current
         line buffer to the end of its history buffer.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz\nabc\n123\n"):
             kR(ch)
@@ -114,7 +119,9 @@ class ArrowsTests(TestCase):
         buffer up or down, and resets the current line buffer to the
         previous or next line in history, respectively for each.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz\nabc\n123\n"):
             kR(ch)
@@ -147,7 +154,9 @@ class ArrowsTests(TestCase):
         When L{HistoricRecvLine} receives a HOME keystroke it moves the
         cursor to the beginning of the current line buffer.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"hello, world"):
             kR(ch)
@@ -161,7 +170,9 @@ class ArrowsTests(TestCase):
         When L{HistoricRecvLine} receives an END keystroke it moves the cursor
         to the end of the current line buffer.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"hello, world"):
             kR(ch)
@@ -176,7 +187,9 @@ class ArrowsTests(TestCase):
         When L{HistoricRecvLine} receives a BACKSPACE keystroke it deletes
         the character immediately before the cursor.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz"):
             kR(ch)
@@ -197,7 +210,9 @@ class ArrowsTests(TestCase):
         When L{HistoricRecvLine} receives a DELETE keystroke, it
         delets the character immediately after the cursor.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz"):
             kR(ch)
@@ -226,7 +241,9 @@ class ArrowsTests(TestCase):
         When not in INSERT mode, L{HistoricRecvLine} inserts the typed
         character at the cursor before the next character.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz"):
             kR(ch)
@@ -246,7 +263,9 @@ class ArrowsTests(TestCase):
         the cursor with the typed character rather than inserting before.
         Ah, the ironies of INSERT mode.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
 
         for ch in iterbytes(b"xyz"):
             kR(ch)
@@ -266,7 +285,10 @@ class ArrowsTests(TestCase):
         When L{HistoricRecvLine} receives a keystroke for an unprintable
         function key with no assigned behavior, the line buffer is unmodified.
         """
-        kR = lambda ch: self.p.keystrokeReceived(ch, None)
+
+        def kR(ch):
+            return self.p.keystrokeReceived(ch, None)
+
         pt = self.pt
 
         for ch in (

@@ -801,7 +801,9 @@ class AdditionalProcessingTests(unittest.TestCase):
         # RRHeader instances aren't inherently ordered.  Impose an ordering
         # that's good enough for the purposes of these tests - in which we
         # never have more than one record of a particular type.
-        key = lambda rr: rr.type
+        def key(rr):
+            return rr.type
+
         self.assertEqual(sorted(expected, key=key), sorted(computed, key=key))
 
     def _additionalTest(self, method, makeRecord, addresses):

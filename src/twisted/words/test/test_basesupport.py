@@ -85,7 +85,9 @@ class ClientMsgTests(unittest.TestCase):
                 not ui.clientRegistered, "Client shouldn't be registered in the UI"
             )
 
-        cb = lambda r: self.assertTrue(False, "Shouldn't get called back")
+        def cb(r):
+            return self.assertTrue(False, "Shouldn't get called back")
+
         d.addCallbacks(cb, err)
         return d
 

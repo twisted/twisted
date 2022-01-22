@@ -68,7 +68,8 @@ relativeLinkTestsForRFC3986 = [
 ]
 
 
-_percentenc = lambda s: "".join("%%%02X" % ord(c) for c in s)
+def _percentenc(s):
+    return "".join("%%%02X" % ord(c) for c in s)
 
 
 class TestURL(SynchronousTestCase):

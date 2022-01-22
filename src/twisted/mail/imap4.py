@@ -4702,7 +4702,9 @@ def collapseStrings(results):
     copy = []
     begun = None
 
-    pred = lambda e: isinstance(e, tuple)
+    def pred(e):
+        return isinstance(e, tuple)
+
     tran = {
         0: lambda e: splitQuoted(b"".join(e)),
         1: lambda e: [b"".join([i[0] for i in e])],
@@ -5651,35 +5653,51 @@ class _FetchParser:
         # reply-to and sender must not be None.  If not present in a message
         # they should be defaulted to the value of the from field.
         type = "envelope"
-        __str__ = lambda self: "envelope"
+
+        def __str__(self):
+            return "envelope"
 
     class Flags:
         type = "flags"
-        __str__ = lambda self: "flags"
+
+        def __str__(self):
+            return "flags"
 
     class InternalDate:
         type = "internaldate"
-        __str__ = lambda self: "internaldate"
+
+        def __str__(self):
+            return "internaldate"
 
     class RFC822Header:
         type = "rfc822header"
-        __str__ = lambda self: "rfc822.header"
+
+        def __str__(self):
+            return "rfc822.header"
 
     class RFC822Text:
         type = "rfc822text"
-        __str__ = lambda self: "rfc822.text"
+
+        def __str__(self):
+            return "rfc822.text"
 
     class RFC822Size:
         type = "rfc822size"
-        __str__ = lambda self: "rfc822.size"
+
+        def __str__(self):
+            return "rfc822.size"
 
     class RFC822:
         type = "rfc822"
-        __str__ = lambda self: "rfc822"
+
+        def __str__(self):
+            return "rfc822"
 
     class UID:
         type = "uid"
-        __str__ = lambda self: "uid"
+
+        def __str__(self):
+            return "uid"
 
     class Body:
         type = "body"
@@ -5720,7 +5738,9 @@ class _FetchParser:
 
     class BodyStructure:
         type = "bodystructure"
-        __str__ = lambda self: "bodystructure"
+
+        def __str__(self):
+            return "bodystructure"
 
     # These three aren't top-level, they don't need type indicators
     class Header:

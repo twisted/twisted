@@ -101,7 +101,9 @@ class POP3TestServer(basic.LineReceiver):
         """Error Conditions"""
 
         uline = line.upper()
-        find = lambda s: uline.find(s) != -1
+
+        def find(s):
+            return uline.find(s) != -1
 
         if TIMEOUT_RESPONSE:
             # Do not respond to clients request

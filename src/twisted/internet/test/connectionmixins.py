@@ -319,7 +319,10 @@ class ConnectionTestsMixin:
         finished = []
 
         serverConnectionLostDeferred = Deferred()
-        protocol = lambda: ClosingLaterProtocol(serverConnectionLostDeferred)
+
+        def protocol():
+            return ClosingLaterProtocol(serverConnectionLostDeferred)
+
         portDeferred = self.endpoints.server(reactor).listen(
             ServerFactory.forProtocol(protocol)
         )
@@ -329,7 +332,10 @@ class ConnectionTestsMixin:
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
-            protocol = lambda: ClosingLaterProtocol(lostConnectionDeferred)
+
+            def protocol():
+                return ClosingLaterProtocol(lostConnectionDeferred)
+
             client = endpoint.connect(ClientFactory.forProtocol(protocol))
 
             def write(proto):

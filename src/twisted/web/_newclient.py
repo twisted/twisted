@@ -515,9 +515,9 @@ class HTTPClientParser(HTTPParser):
                     self._finished(self.clearLineBuffer())
                     transferDecoder = None
                 else:
-                    transferDecoder = lambda x, y: _IdentityTransferDecoder(
-                        contentLength, x, y
-                    )
+
+                    def transferDecoder(x, y):
+                        return _IdentityTransferDecoder(contentLength, x, y)
 
             if transferDecoder is None:
                 self.response._bodyDataFinished()

@@ -126,7 +126,10 @@ else:
     try:
         from twisted.internet.test import _posixifaces
     except ImportError:
-        getLinkLocalIPv6Addresses = lambda: []
+
+        def getLinkLocalIPv6Addresses():
+            return []
+
     else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
 

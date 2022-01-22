@@ -874,9 +874,14 @@ class TrialRunner:
                 result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
-                run = lambda: self.debugger.runcall(suite.run, result)
+
+                def run():
+                    return self.debugger.runcall(suite.run, result)
+
             else:
-                run = lambda: suite.run(result)
+
+                def run():
+                    return suite.run(result)
 
             oldDir = self._setUpTestdir()
             try:

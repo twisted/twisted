@@ -6,12 +6,19 @@
 L{URLPath}, a representation of a URL.
 """
 
-from typing import cast
+from typing import cast, TypeVar
 from urllib.parse import quote as urlquote, unquote as urlunquote, urlunsplit
 
 from hyperlink import URL as _URL
 
 _allascii = b"".join([chr(x).encode("ascii") for x in range(1, 128)])
+
+
+_T = TypeVar("_T")
+
+
+def _id(x: _T) -> _T:
+    return x
 
 
 def _rereconstituter(name):
@@ -119,11 +126,8 @@ class URLPath:
         @return: The components of C{self.path}
         @rtype: L{list} of L{bytes}
         """
-        segments = self._url.path
-        mapper = lambda x: x.encode("ascii")
-        if unquote:
-            mapper = lambda x, m=mapper: m(urlunquote(x))
-        return [b""] + [mapper(segment) for segment in segments]
+        mapper = urlunquote if unquote else _id
+        return [b""] + [mapper(segment).encode("ascii")) for segment in self._url.path]
 
     @classmethod
     def fromString(klass, url):

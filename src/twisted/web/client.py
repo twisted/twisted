@@ -154,8 +154,11 @@ class HTTPPageGetter(http.HTTPClient):
     def handleStatus_200(self):
         pass
 
-    handleStatus_201 = lambda self: self.handleStatus_200()
-    handleStatus_202 = lambda self: self.handleStatus_200()
+    def handleStatus_201(self):
+        return self.handleStatus_200()
+
+    def handleStatus_202(self):
+        return self.handleStatus_200()
 
     def handleStatusDefault(self):
         self.failed = 1
@@ -829,7 +832,10 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 
     See HTTPDownloader to see what extra args can be passed.
     """
-    factoryFactory = lambda url, *a, **kw: HTTPDownloader(url, file, *a, **kw)
+
+    def factoryFactory(url, *a, **kw):
+        return HTTPDownloader(url, file, *a, **kw)
+
     return _makeGetterFactory(
         url, factoryFactory, contextFactory=contextFactory, *args, **kwargs
     ).deferred
@@ -1395,7 +1401,10 @@ class HTTPConnectionPool:
             del self._timeouts[connection]
             if connection.state == "QUIESCENT":
                 if self.retryAutomatically:
-                    newConnection = lambda: self._newConnection(key, endpoint)
+
+                    def newConnection():
+                        return self._newConnection(key, endpoint)
+
                     connection = _RetryingHTTP11ClientProtocol(
                         connection, newConnection
                     )

@@ -541,9 +541,9 @@ class _FakePort:
             ether.addProto(0x800, ip)
             datagramReceived = ether.datagramReceived
         else:
-            datagramReceived = lambda data: ip.datagramReceived(
-                data, None, None, None, None
-            )
+
+            def datagramReceived(data):
+                return ip.datagramReceived(data, None, None, None, None)
 
         dataHasPI = not (mode & TunnelFlags.IFF_NO_PI.value)
 

@@ -864,7 +864,10 @@ class SSHFactoryTests(unittest.TestCase):
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
-        gpk = lambda: {"ssh-rsa": keys.Key(None)}
+
+        def gpk():
+            return {"ssh-rsa": keys.Key(None)}
+
         sshFactory.getPrimes = lambda: primes
         sshFactory.getPublicKeys = sshFactory.getPrivateKeys = gpk
         sshFactory.startFactory()

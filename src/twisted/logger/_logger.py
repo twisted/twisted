@@ -266,4 +266,7 @@ class Logger:
 
 
 _log = Logger()
-_loggerFor = lambda obj: _log.__get__(obj, obj.__class__)
+
+
+def _loggerFor(obj):
+    return _log.__get__(obj, obj.__class__)

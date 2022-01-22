@@ -735,7 +735,9 @@ class Element(Node):
         if self.tagName in BLOCKELEMENTS:
             begin = [newl, indent] + begin
         bext = begin.extend
-        writeattr = lambda _atr, _val: bext((" ", _atr, '="', escape(_val), '"'))
+
+        def writeattr(_atr, _val):
+            return bext((" ", _atr, '="', escape(_val), '"'))
 
         # Make a local for tracking what end tag will be used.  If namespace
         # prefixes are involved, this will be changed to account for that

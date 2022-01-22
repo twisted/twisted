@@ -646,7 +646,10 @@ class SSHCommandClientEndpointTestsMixin:
 
         recorder = []
         if noArgs:
-            f = lambda: recorder.append(None)
+
+            def f():
+                return recorder.append(None)
+
         else:
             f = recorder.append
 

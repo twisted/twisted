@@ -409,11 +409,15 @@ class Options(dict):
             # in parseOptions, as it makes all option-methods have the
             # same signature.
             if takesArg:
-                fn = lambda name, value, m=method: m(value)
+
+                def fn(name, value, m=method):
+                    return m(value)
+
             else:
                 # XXX: This won't raise a TypeError if it's called
                 # with a value when it shouldn't be.
-                fn = lambda name, value=None, m=method: m()
+                def fn(name, value=None, m=method):  # type: ignore[misc]
+                    return m()
 
             dispatch[prettyName] = fn
 

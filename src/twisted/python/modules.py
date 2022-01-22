@@ -601,7 +601,10 @@ class PythonPath:
         with sys.path to miss.
         """
         if sysPath is not None:
-            sysPathFactory = lambda: sysPath
+
+            def sysPathFactory():
+                return sysPath
+
         elif sysPathFactory is None:
             sysPathFactory = _defaultSysPathFactory
         self._sysPathFactory = sysPathFactory

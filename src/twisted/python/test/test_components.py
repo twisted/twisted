@@ -371,7 +371,10 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         class or interface and verify that the adapter can be looked up with
         L{components.getAdapterFactory}.
         """
-        adapter = lambda o: None
+
+        def adapter(o):
+            return None
+
         components.registerAdapter(adapter, original, ITest)
         self.assertIs(components.getAdapterFactory(original, ITest, None), adapter)
 
@@ -398,8 +401,13 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Verify that L{components.registerAdapter} raises L{ValueError} if the
         from-type/interface and to-interface pair is not unique.
         """
-        firstAdapter = lambda o: False
-        secondAdapter = lambda o: True
+
+        def firstAdapter(o):
+            return False
+
+        def secondAdapter(o):
+            return True
+
         components.registerAdapter(firstAdapter, original, ITest)
         self.assertRaises(
             ValueError, components.registerAdapter, secondAdapter, original, ITest
@@ -431,8 +439,12 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         adapter registrations for a particular from-type/interface and
         to-interface pair replace older registrations.
         """
-        firstAdapter = lambda o: False
-        secondAdapter = lambda o: True
+
+        def firstAdapter(o):
+            return False
+
+        def secondAdapter(o):
+            return True
 
         class TheInterface(Interface):
             pass
@@ -486,7 +498,10 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         Verify that an adapter can be registered for multiple to-interfaces at a
         time.
         """
-        adapter = lambda o: None
+
+        def adapter(o):
+            return None
+
         components.registerAdapter(adapter, original, ITest, ITest2)
         self.assertIs(components.getAdapterFactory(original, ITest, None), adapter)
         self.assertIs(components.getAdapterFactory(original, ITest2, None), adapter)
@@ -516,8 +531,12 @@ class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
         adapter registered to that interface and that the subclass adapter takes
         precedence over the base class adapter.
         """
-        firstAdapter = lambda o: True
-        secondAdapter = lambda o: False
+
+        def firstAdapter(o):
+            return True
+
+        def secondAdapter(o):
+            return False
 
         class TheSubclass(original):
             pass

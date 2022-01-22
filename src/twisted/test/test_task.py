@@ -180,7 +180,9 @@ class ClockTests(unittest.TestCase):
         result = []
         expected = [("b", 2.0), ("a", 3.0)]
         clock = task.Clock()
-        logtime = lambda n: result.append((n, clock.seconds()))
+
+        def logtime(n):
+            return result.append((n, clock.seconds()))
 
         call_a = clock.callLater(1.0, logtime, "a")
         call_a.reset(3.0)
@@ -204,7 +206,9 @@ class ClockTests(unittest.TestCase):
         result = []
         expected = [("b", 2.0), ("a", 3.0)]
         clock = task.Clock()
-        logtime = lambda n: result.append((n, clock.seconds()))
+
+        def logtime(n):
+            return result.append((n, clock.seconds()))
 
         call_a = clock.callLater(1.0, logtime, "a")
         clock.callLater(2.0, logtime, "b")
@@ -223,7 +227,9 @@ class ClockTests(unittest.TestCase):
         result = []
         expected = [("c", 3.0), ("b", 4.0)]
         clock = task.Clock()
-        logtime = lambda n: result.append((n, clock.seconds()))
+
+        def logtime(n):
+            return result.append((n, clock.seconds()))
 
         call_b = clock.callLater(2.0, logtime, "b")
 
