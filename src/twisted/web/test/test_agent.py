@@ -5,22 +5,26 @@
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
+import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.proto_helpers import AccumulatingProtocol, EventLoggingObserver, MemoryReactorClock, StringTransport
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
-from typing import List, Optional, TYPE_CHECKING, Tuple, cast
+from typing import TYPE_CHECKING, List, Optional, Tuple, cast
 from unittest import SkipTest, skipIf
+
+from zope.interface.declarations import implementer
+from zope.interface.verify import verifyObject
 
 from incremental import Version
 
-import zlib
 from twisted.internet import defer, task
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.endpoints import HostnameEndpoint, TCP4ClientEndpoint
-from twisted.internet.error import ConnectionDone, ConnectionLost, ConnectionRefusedError
+from twisted.internet.error import (
+    ConnectionDone,
+    ConnectionLost,
+    ConnectionRefusedError,
+)
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
@@ -29,16 +33,50 @@ from twisted.logger import globalLogPublisher
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
-from twisted.web._newclient import HTTP11ClientProtocol, PotentialDataLoss, RequestNotSent, RequestTransmissionFailed, Response, ResponseFailed, ResponseNeverReceived
-from twisted.web.client import BrowserLikePolicyForHTTPS, FileBodyProducer, HTTPConnectionPool, HostnameCachingHTTPSPolicy, Request, ResponseDone, URI, _HTTP11ClientFactory
+from twisted.web._newclient import (
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseFailed,
+    ResponseNeverReceived,
+)
+from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
+    FileBodyProducer,
+    HostnameCachingHTTPSPolicy,
+    HTTPConnectionPool,
+    Request,
+    ResponseDone,
+    _HTTP11ClientFactory,
+)
 from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
-from twisted.web.iweb import IAgent, IAgentEndpointFactory, IBodyProducer, IPolicyForHTTPS, IRequest, IResponse, UNKNOWN_LENGTH
-from twisted.web.test.injectionhelpers import MethodInjectionTestsMixin, URIInjectionTestsMixin
-from zope.interface.declarations import implementer
-from zope.interface.verify import verifyObject
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IRequest,
+    IResponse,
+)
+from twisted.web.test.injectionhelpers import (
+    MethodInjectionTestsMixin,
+    URIInjectionTestsMixin,
+)
 
 # Creatively lie to mypy about the nature of inheritance, since dealing with
 # expectations of a mixin class is basically impossible (don't use mixins).
@@ -2966,7 +3004,10 @@ class _RedirectAgentTestsMixin(testMixinClass):
 
 
 class RedirectAgentTests(
-    FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin, runtimeTestCase,
+    FakeReactorAndConnectMixin,
+    _RedirectAgentTestsMixin,
+    AgentTestsMixin,
+    runtimeTestCase,
 ):
     """
     Tests for L{client.RedirectAgent}.
@@ -3003,7 +3044,10 @@ class RedirectAgentTests(
 
 
 class BrowserLikeRedirectAgentTests(
-    FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin, runtimeTestCase
+    FakeReactorAndConnectMixin,
+    _RedirectAgentTestsMixin,
+    AgentTestsMixin,
+    runtimeTestCase,
 ):
     """
     Tests for L{client.BrowserLikeRedirectAgent}.
