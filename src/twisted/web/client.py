@@ -10,14 +10,13 @@ HTTP client.
 import collections
 import os
 import warnings
-import zlib
 from functools import wraps
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
-
-from zope.interface import implementer
+from typing import Iterable
 
 from incremental import Version
 
+import zlib
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
@@ -25,24 +24,14 @@ from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
 from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import (
-    deprecated,
-    deprecatedModuleAttribute,
-    getDeprecationWarningString,
-)
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute, getDeprecationWarningString
 from twisted.python.failure import Failure
 from twisted.python.util import InsensitiveDict
 from twisted.web import error, http
 from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
 from twisted.web.http_headers import Headers
-from twisted.web.iweb import (
-    UNKNOWN_LENGTH,
-    IAgent,
-    IAgentEndpointFactory,
-    IBodyProducer,
-    IPolicyForHTTPS,
-    IResponse,
-)
+from twisted.web.iweb import IAgent, IAgentEndpointFactory, IBodyProducer, IPolicyForHTTPS, IResponse, UNKNOWN_LENGTH
+from zope.interface import implementer
 
 
 def urlunparse(parts):
@@ -2110,6 +2099,15 @@ class ContentDecoderAgent:
         return response
 
 
+_canonicalHeaderName = Headers()._canonicalNameCaps
+_defaultSensitiveHeaders = frozenset([
+    b"Authorization",
+    b"Cookie",
+    b"Cookie2",
+    b"Proxy-Authorization",
+    b"WWW-Authenticate",
+])
+
 @implementer(IAgent)
 class RedirectAgent:
     """
@@ -2123,6 +2121,11 @@ class RedirectAgent:
 
     @param redirectLimit: The maximum number of times the agent is allowed to
         follow redirects before failing with a L{error.InfiniteRedirection}.
+
+    @param sensitiveHeaderNames: An iterable of C{bytes} enumerating the names
+        of headers that must not be transmitted when redirecting to a different
+        origins.  These will be consulted in addition to the protocol-specified
+        set of headers that contain sensitive information.
 
     @cvar _redirectResponses: A L{list} of HTTP status codes to be redirected
         for I{GET} and I{HEAD} methods.
@@ -2141,9 +2144,17 @@ class RedirectAgent:
     ]
     _seeOtherResponses = [http.SEE_OTHER]
 
-    def __init__(self, agent, redirectLimit=20):
+    def __init__(
+        self,
+        agent: IAgent,
+        redirectLimit: int = 20,
+        sensitiveHeaderNames: Iterable[bytes] = (),
+    ):
         self._agent = agent
         self._redirectLimit = redirectLimit
+        sensitive = set(_canonicalHeaderName(each) for each in sensitiveHeaderNames)
+        sensitive.update(_defaultSensitiveHeaders)
+        self._sensitiveHeaderNames = sensitive
 
     def request(self, method, uri, headers=None, bodyProducer=None):
         """
@@ -2186,6 +2197,22 @@ class RedirectAgent:
             )
             raise ResponseFailed([Failure(err)], response)
         location = self._resolveLocation(uri, locationHeaders[0])
+        if headers:
+            parsedURI = URI.fromBytes(uri)
+            parsedLocation = URI.fromBytes(location)
+            sameOrigin = (
+                (parsedURI.scheme == parsedLocation.scheme)
+                and (parsedURI.host == parsedLocation.host)
+                and (parsedURI.port == parsedLocation.port)
+            )
+            if not sameOrigin:
+                headers = Headers(
+                    {
+                        rawName: rawValue
+                        for rawName, rawValue in headers.getAllRawHeaders()
+                        if rawName not in self._sensitiveHeaderNames
+                    }
+                )
         deferred = self._agent.request(method, location, headers)
 
         def _chainResponse(newResponse):
