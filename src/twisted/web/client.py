@@ -10,13 +10,15 @@ HTTP client.
 import collections
 import os
 import warnings
+import zlib
 from functools import wraps
-from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 from typing import Iterable
+from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
+
+from zope.interface import implementer
 
 from incremental import Version
 
-import zlib
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
@@ -24,14 +26,24 @@ from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
 from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute, getDeprecationWarningString
+from twisted.python.deprecate import (
+    deprecated,
+    deprecatedModuleAttribute,
+    getDeprecationWarningString,
+)
 from twisted.python.failure import Failure
 from twisted.python.util import InsensitiveDict
 from twisted.web import error, http
 from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
 from twisted.web.http_headers import Headers
-from twisted.web.iweb import IAgent, IAgentEndpointFactory, IBodyProducer, IPolicyForHTTPS, IResponse, UNKNOWN_LENGTH
-from zope.interface import implementer
+from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
+    IAgent,
+    IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
+)
 
 
 def urlunparse(parts):
@@ -2100,13 +2112,16 @@ class ContentDecoderAgent:
 
 
 _canonicalHeaderName = Headers()._canonicalNameCaps
-_defaultSensitiveHeaders = frozenset([
-    b"Authorization",
-    b"Cookie",
-    b"Cookie2",
-    b"Proxy-Authorization",
-    b"WWW-Authenticate",
-])
+_defaultSensitiveHeaders = frozenset(
+    [
+        b"Authorization",
+        b"Cookie",
+        b"Cookie2",
+        b"Proxy-Authorization",
+        b"WWW-Authenticate",
+    ]
+)
+
 
 @implementer(IAgent)
 class RedirectAgent:
@@ -2152,7 +2167,7 @@ class RedirectAgent:
     ):
         self._agent = agent
         self._redirectLimit = redirectLimit
-        sensitive = set(_canonicalHeaderName(each) for each in sensitiveHeaderNames)
+        sensitive = {_canonicalHeaderName(each) for each in sensitiveHeaderNames}
         sensitive.update(_defaultSensitiveHeaders)
         self._sensitiveHeaderNames = sensitive
 

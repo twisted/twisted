@@ -5,22 +5,17 @@
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
+import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.proto_helpers import (
-    AccumulatingProtocol,
-    EventLoggingObserver,
-    MemoryReactorClock,
-    StringTransport,
-)
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
-from typing import Optional, TYPE_CHECKING
-from unittest import skipIf, SkipTest
+from typing import TYPE_CHECKING, Optional
+from unittest import SkipTest, skipIf
+
+from zope.interface.declarations import implementer
+from zope.interface.verify import verifyObject
 
 from incremental import Version
 
-import zlib
 from twisted.internet import defer, task
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred, succeed
@@ -38,6 +33,14 @@ from twisted.logger import globalLogPublisher
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import (
@@ -50,33 +53,30 @@ from twisted.web._newclient import (
     ResponseNeverReceived,
 )
 from twisted.web.client import (
+    URI,
     BrowserLikePolicyForHTTPS,
     FileBodyProducer,
-    HTTPConnectionPool,
     HostnameCachingHTTPSPolicy,
+    HTTPConnectionPool,
     Request,
     ResponseDone,
-    URI,
     _HTTP11ClientFactory,
 )
 from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import (
+    UNKNOWN_LENGTH,
     IAgent,
     IAgentEndpointFactory,
     IBodyProducer,
     IPolicyForHTTPS,
     IRequest,
     IResponse,
-    UNKNOWN_LENGTH,
 )
 from twisted.web.test.injectionhelpers import (
     MethodInjectionTestsMixin,
     URIInjectionTestsMixin,
 )
-from zope.interface.declarations import implementer
-from zope.interface.verify import verifyObject
-
 
 try:
     from twisted.internet import ssl as _ssl
@@ -2674,15 +2674,13 @@ class _RedirectAgentTestsMixin(testMixinClass):
             targetScheme = b"https" if startScheme == b"http" else b"http"
             targetPort = 443 if startPort == 80 else 80
 
-        portSyntax = b''
+        portSyntax = b""
         if crossPort:
             targetPort = 8443
-            portSyntax = b':8443'
+            portSyntax = b":8443"
         targetDomain = b"example.net" if crossDomain else startDomain
         locationValue = targetScheme + b"://" + targetDomain + portSyntax + b"/bar"
-        headers = http_headers.Headers(
-            {b"location": [locationValue]}
-        )
+        headers = http_headers.Headers({b"location": [locationValue]})
         response = Response((b"HTTP", 1, 1), code, b"OK", headers, None)
         res.callback(response)
 
@@ -2728,7 +2726,9 @@ class _RedirectAgentTestsMixin(testMixinClass):
         """
         self._testRedirectDefault(308)
 
-    def _sensitiveHeadersTest(self, expectedHostHeader: bytes = b"example.com", **crossKwargs: dict) -> None:
+    def _sensitiveHeadersTest(
+        self, expectedHostHeader: bytes = b"example.com", **crossKwargs: dict
+    ) -> None:
         """
         L{client.RedirectAgent} scrubs sensitive headers when redirecting
         between differing origins.
@@ -2776,14 +2776,16 @@ class _RedirectAgentTestsMixin(testMixinClass):
         L{client.RedirectAgent} scrubs sensitive headers when redirecting
         between differing domains.
         """
-        self._sensitiveHeadersTest(crossDomain=True, expectedHostHeader=b'example.net')
+        self._sensitiveHeadersTest(crossDomain=True, expectedHostHeader=b"example.net")
 
     def test_crossPortHeaders(self) -> None:
         """
         L{client.RedirectAgent} scrubs sensitive headers when redirecting
         between differing ports.
         """
-        self._sensitiveHeadersTest(crossPort=True, expectedHostHeader=b'example.com:8443')
+        self._sensitiveHeadersTest(
+            crossPort=True, expectedHostHeader=b"example.com:8443"
+        )
 
     def test_crossSchemeHeaders(self) -> None:
         """
