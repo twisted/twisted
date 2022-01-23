@@ -8,7 +8,7 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, List, Optional, Tuple
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -70,7 +70,6 @@ from twisted.web.iweb import (
     IAgentEndpointFactory,
     IBodyProducer,
     IPolicyForHTTPS,
-    IRequest,
     IResponse,
 )
 from twisted.web.test.injectionhelpers import (
