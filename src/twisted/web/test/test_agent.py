@@ -2758,7 +2758,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         self.assertEquals(
             otherOriginHeaders,
             {
-                b"host": [b"example.com"],
+                b"host": [b"example.net"],
                 **normHeaders(Headers(otherHeaderValues)),
             },
         )
