@@ -5,26 +5,22 @@
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
-import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Optional
+from twisted.test.iosim import FakeTransport, IOPump
+from twisted.test.proto_helpers import AccumulatingProtocol, EventLoggingObserver, MemoryReactorClock, StringTransport
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+from typing import List, Optional, TYPE_CHECKING, Tuple, cast
 from unittest import SkipTest, skipIf
-
-from zope.interface.declarations import implementer
-from zope.interface.verify import verifyObject
 
 from incremental import Version
 
+import zlib
 from twisted.internet import defer, task
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.endpoints import HostnameEndpoint, TCP4ClientEndpoint
-from twisted.internet.error import (
-    ConnectionDone,
-    ConnectionLost,
-    ConnectionRefusedError,
-)
+from twisted.internet.error import ConnectionDone, ConnectionLost, ConnectionRefusedError
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
@@ -33,50 +29,25 @@ from twisted.logger import globalLogPublisher
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.failure import Failure
-from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.proto_helpers import (
-    AccumulatingProtocol,
-    EventLoggingObserver,
-    MemoryReactorClock,
-    StringTransport,
-)
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
-from twisted.web._newclient import (
-    HTTP11ClientProtocol,
-    PotentialDataLoss,
-    RequestNotSent,
-    RequestTransmissionFailed,
-    Response,
-    ResponseFailed,
-    ResponseNeverReceived,
-)
-from twisted.web.client import (
-    URI,
-    BrowserLikePolicyForHTTPS,
-    FileBodyProducer,
-    HostnameCachingHTTPSPolicy,
-    HTTPConnectionPool,
-    Request,
-    ResponseDone,
-    _HTTP11ClientFactory,
-)
+from twisted.web._newclient import HTTP11ClientProtocol, PotentialDataLoss, RequestNotSent, RequestTransmissionFailed, Response, ResponseFailed, ResponseNeverReceived
+from twisted.web.client import BrowserLikePolicyForHTTPS, FileBodyProducer, HTTPConnectionPool, HostnameCachingHTTPSPolicy, Request, ResponseDone, URI, _HTTP11ClientFactory
 from twisted.web.error import SchemeNotSupported
 from twisted.web.http_headers import Headers
-from twisted.web.iweb import (
-    UNKNOWN_LENGTH,
-    IAgent,
-    IAgentEndpointFactory,
-    IBodyProducer,
-    IPolicyForHTTPS,
-    IRequest,
-    IResponse,
-)
-from twisted.web.test.injectionhelpers import (
-    MethodInjectionTestsMixin,
-    URIInjectionTestsMixin,
-)
+from twisted.web.iweb import IAgent, IAgentEndpointFactory, IBodyProducer, IPolicyForHTTPS, IRequest, IResponse, UNKNOWN_LENGTH
+from twisted.web.test.injectionhelpers import MethodInjectionTestsMixin, URIInjectionTestsMixin
+from zope.interface.declarations import implementer
+from zope.interface.verify import verifyObject
+
+# Creatively lie to mypy about the nature of inheritance, since dealing with
+# expectations of a mixin class is basically impossible (don't use mixins).
+if TYPE_CHECKING:
+    testMixinClass = TestCase
+    runtimeTestCase = object
+else:
+    testMixinClass = object
+    runtimeTestCase = TestCase
 
 try:
     from twisted.internet import ssl as _ssl
@@ -110,8 +81,8 @@ class StubHTTPProtocol(Protocol):
         request method is appended to this list.
     """
 
-    def __init__(self):
-        self.requests = []
+    def __init__(self) -> None:
+        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):
@@ -2597,11 +2568,6 @@ SENSITIVE_HEADERS = [
     b"www-authenticate",
 ]
 
-if TYPE_CHECKING:
-    testMixinClass = TestCase
-else:
-    testMixinClass = object
-
 
 class _RedirectAgentTestsMixin(testMixinClass):
     """
@@ -2638,7 +2604,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         crossDomain: bool = False,
         crossPort: bool = False,
         requestHeaders: Optional[Headers] = None,
-    ) -> IRequest:
+    ) -> Request:
         """
         When getting a redirect, L{client.RedirectAgent} follows the URL
         specified in the L{Location} header field and make a new request.
@@ -2727,7 +2693,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         self._testRedirectDefault(308)
 
     def _sensitiveHeadersTest(
-        self, expectedHostHeader: bytes = b"example.com", **crossKwargs: dict
+        self, expectedHostHeader: bytes = b"example.com", **crossKwargs: bool
     ) -> None:
         """
         L{client.RedirectAgent} scrubs sensitive headers when redirecting
@@ -3000,7 +2966,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
 
 
 class RedirectAgentTests(
-    TestCase, FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin
+    FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin, runtimeTestCase,
 ):
     """
     Tests for L{client.RedirectAgent}.
@@ -3037,7 +3003,7 @@ class RedirectAgentTests(
 
 
 class BrowserLikeRedirectAgentTests(
-    TestCase, FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin
+    FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin, runtimeTestCase
 ):
     """
     Tests for L{client.BrowserLikeRedirectAgent}.
