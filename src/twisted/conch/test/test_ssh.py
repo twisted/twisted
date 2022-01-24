@@ -348,7 +348,7 @@ if cryptography is not None and pyasn1 is not None:
 
         def buildProtocol(self, addr):
             proto = ConchTestServer()
-            proto.supportedPublicKeys = self.privateKeys.keys()
+            proto.supportedPublicKeys = list(self.privateKeys.keys())
             proto.factory = self
 
             if hasattr(self, "expectedLoseConnection"):
