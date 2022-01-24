@@ -524,18 +524,18 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         sut = MockTransportBase()
         sut.makeConnection(self.transport)
 
-        sut.dataReceived(b"SSH-bla-bla-bla")
-
-        sut.dataReceived(b"more-bla-bla-bla" * 100)
-
+        # Data can be received over multiple chunks.
+        sut.dataReceived(b"SSH-2-Server-Identifier")
+        sut.dataReceived(b"1234567890" * 406)
+        sut.dataReceived(b"1235678")
         self.assertFalse(self.transport.disconnecting)
 
-        sut.dataReceived(b"more-bla-bla-bla" * 1000)
-
+        # Here we are going over the limit.
+        sut.dataReceived(b"1234567")
         # Once a lot of data is received without an SSH version string,
         # the transport is disconnected.
         self.assertTrue(self.transport.disconnecting)
-        self.assertIn(b"Preventing a deny of service attack", self.transport.value())
+        self.assertIn(b"Preventing a denial of service attack", self.transport.value())
 
     def test_sendPacketPlain(self):
         """

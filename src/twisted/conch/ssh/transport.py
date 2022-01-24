@@ -733,7 +733,7 @@ class SSHTransportBase(protocol.Protocol):
                 self.sendDisconnect(
                     DISCONNECT_CONNECTION_LOST,
                     b"Peer version string longer than 4KB. "
-                    b"Preventing a deny of service attack.",
+                    b"Preventing a denial of service attack.",
                 )
                 return
 
