@@ -13,6 +13,7 @@ See L{Failure}.
 
 
 # System Imports
+import builtins
 import copy
 import inspect
 import linecache
@@ -168,7 +169,7 @@ class _Frame:
         self.f_locals = dict(localz or {})
         self.f_back = back
         self.f_lasti = 0
-        self.f_builtins = __builtins__.copy()
+        self.f_builtins = vars(builtins).copy()
         self.f_trace = None
 
 
