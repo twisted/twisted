@@ -855,6 +855,7 @@ class ConstantsTests(TestCase):
             self.assertEqual(v, getattr(filetransfer, k))
 
 
+@skipIf(not cryptography, "Cannot run without cryptography")
 class RawPacketDataServerTests(TestCase):
     """
     Tests for L{filetransfer.FileTransferServer} which explicitly craft
