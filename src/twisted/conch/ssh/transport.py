@@ -728,6 +728,15 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.buf = self.buf + data
         if not self.gotVersion:
+
+            if len(self.buf) > 4096:
+                self.sendDisconnect(
+                    DISCONNECT_CONNECTION_LOST,
+                    b"Peer version string longer than 4KB. "
+                    b"Preventing a deny of service attack.",
+                )
+                return
+
             if self.buf.find(b"\n", self.buf.find(b"SSH-")) == -1:
                 return
 
