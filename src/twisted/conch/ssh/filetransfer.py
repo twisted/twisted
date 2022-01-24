@@ -45,7 +45,7 @@ class FileTransferBase(protocol.Protocol):
         while len(self.buf) >= 9:
             header = self.buf[:9]
             length, kind, reqId = struct.unpack("!LBL", header)
-            # From the draft document:
+            # From draft-ietf-secsh-filexfer-13 (the draft we implement):
             #
             #   The `length' is the length of the data area [including the
             #   kind byte], and does not include the `length' field itself.
