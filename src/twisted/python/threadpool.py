@@ -47,7 +47,7 @@ class ThreadPool:
     threadFactory = Thread
     currentThread = staticmethod(
         deprecated(
-            version=Version("Twisted", "NEXT", 0, 0),
+            version=Version("Twisted", 22, 1, 0, release_candidate=1),
             replacement="threading.current_thread",
         )(current_thread)
     )
