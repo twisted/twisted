@@ -5,18 +5,18 @@
 """
 Parser for 'haproxy:' string endpoint.
 """
-from typing import Tuple, Mapping
+from typing import Mapping, Tuple
+
 from zope.interface import implementer
-from twisted.plugin import IPlugin
 
 from twisted.internet import interfaces
 from twisted.internet.endpoints import (
-    quoteStringArgument,
-    serverFromString,
     IStreamServerEndpointStringParser,
     _WrapperServerEndpoint,
+    quoteStringArgument,
+    serverFromString,
 )
-
+from twisted.plugin import IPlugin
 from . import proxyEndpoint
 
 

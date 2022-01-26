@@ -13,16 +13,15 @@ import functools
 import os
 import sys
 import time
+from importlib import invalidate_caches as invalidateImportCaches
 from typing import Callable
 
-from importlib import invalidate_caches as invalidateImportCaches
 from zope.interface import Interface
 
-from twisted.trial import unittest
-from twisted.python.log import textFromEventDict, addObserver, removeObserver
-from twisted.python.filepath import FilePath
-
 from twisted import plugin
+from twisted.python.filepath import FilePath
+from twisted.python.log import addObserver, removeObserver, textFromEventDict
+from twisted.trial import unittest
 
 
 class ITestPlugin(Interface):

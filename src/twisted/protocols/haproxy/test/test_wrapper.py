@@ -4,14 +4,13 @@
 """
 Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 """
-from unittest import mock
 from typing import Optional
+from unittest import mock
 
-from twisted.trial import unittest
 from twisted.internet import address
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet.protocol import Factory, Protocol
 from twisted.test.proto_helpers import StringTransportWithDisconnection
-
+from twisted.trial import unittest
 from .._wrapper import HAProxyWrappingFactory
 
 

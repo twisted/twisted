@@ -6,31 +6,28 @@ Test cases for L{twisted.mail.pop3} module.
 """
 
 
-import hmac
 import base64
+import hmac
 import itertools
-
-from hashlib import md5
 from collections import OrderedDict
+from hashlib import md5
 from io import BytesIO
 
 from zope.interface import implementer
 
-from twisted import cred
-from twisted import internet
-from twisted import mail
-from twisted.internet import defer
-from twisted.mail import pop3
-from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.test.proto_helpers import LineSendingProtocol
-from twisted.trial import unittest, util
 import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 import twisted.internet.protocol
 import twisted.mail.pop3
 import twisted.mail.protocols
+from twisted import cred, internet, mail
+from twisted.internet import defer
+from twisted.mail import pop3
+from twisted.protocols import loopback
+from twisted.python import failure
+from twisted.test.proto_helpers import LineSendingProtocol
+from twisted.trial import unittest, util
 
 
 class UtilityTests(unittest.TestCase):

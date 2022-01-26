@@ -5,8 +5,8 @@
 Tests for L{twisted.python.win32}.
 """
 
-from twisted.trial import unittest
 from twisted.python import reflect, win32
+from twisted.trial import unittest
 
 
 class CommandLineQuotingTests(unittest.TestCase):

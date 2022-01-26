@@ -5,11 +5,10 @@
 Test cases for L{twisted.protocols.haproxy.V1Parser}.
 """
 
-from twisted.trial import unittest
 from twisted.internet import address
-
-from .._exceptions import InvalidProxyHeader, InvalidNetworkProtocol, MissingAddressData
+from twisted.trial import unittest
 from .. import _v1parser
+from .._exceptions import InvalidNetworkProtocol, InvalidProxyHeader, MissingAddressData
 
 
 class V1ParserTests(unittest.TestCase):

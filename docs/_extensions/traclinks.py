@@ -14,6 +14,7 @@ adapted from recipe U{here <https://stackoverflow.com/a/2111327/13564>}
 """
 
 import urllib
+
 from docutils import nodes, utils
 
 

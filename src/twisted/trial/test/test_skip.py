@@ -6,8 +6,9 @@
 Tests for L{twisted.trial.util}
 """
 
-from twisted.trial.unittest import TestCase
 from unittest import skipIf
+
+from twisted.trial.unittest import TestCase
 
 
 @skipIf(True, "Skip all tests when @skipIf is used on a class")

@@ -8,25 +8,27 @@ Tests for L{twisted.conch.ssh}.
 
 import struct
 
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
+from twisted.conch.test.keydata import (
+    privateDSA_openssh,
+    privateRSA_openssh,
+    publicDSA_openssh,
+    publicRSA_openssh,
+)
 from twisted.conch.test.loopback import LoopbackRelay
 from twisted.cred import portal
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
-from twisted.trial import unittest
-
 from twisted.python.reflect import requireModule
-
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 pyasn1 = requireModule("pyasn1")
 
 if cryptography:
-    from twisted.conch.ssh import common, forwarding, session, _kex
     from twisted.conch import avatar, error
+    from twisted.conch.ssh import _kex, common, forwarding, session
 else:
 
     class avatar:  # type: ignore[no-redef]
@@ -310,8 +312,14 @@ class SuperEchoTransport:
 
 if cryptography is not None and pyasn1 is not None:
     from twisted.conch import checkers
-    from twisted.conch.ssh import channel, connection, factory, keys
-    from twisted.conch.ssh import transport, userauth
+    from twisted.conch.ssh import (
+        channel,
+        connection,
+        factory,
+        keys,
+        transport,
+        userauth,
+    )
 
     class ConchTestPasswordChecker:
         credentialInterfaces = (checkers.IUsernamePassword,)

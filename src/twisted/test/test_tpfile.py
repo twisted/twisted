@@ -2,12 +2,11 @@
 # See LICENSE for details.
 
 
-from twisted.trial import unittest
-from twisted.protocols import loopback
-from twisted.protocols import basic
-from twisted.internet import protocol, abstract
-
 from io import BytesIO
+
+from twisted.internet import abstract, protocol
+from twisted.protocols import basic, loopback
+from twisted.trial import unittest
 
 
 class BufferingServer(protocol.Protocol):

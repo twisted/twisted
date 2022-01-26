@@ -10,13 +10,12 @@ Maintainer: Paul Swartz
 """
 
 
-from twisted.internet import protocol
-from twisted.logger import Logger
+import random
 
 from twisted.conch import error
-from twisted.conch.ssh import _kex, transport, userauth, connection
-
-import random
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.logger import Logger
 
 
 class SSHFactory(protocol.Factory):

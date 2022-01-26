@@ -7,9 +7,8 @@ Tests for L{twisted.python.text}.
 
 from io import StringIO
 
-from twisted.trial import unittest
 from twisted.python import text
-
+from twisted.trial import unittest
 
 sampleText = """Every attempt to employ mathematical methods in the study of chemical
 questions must be considered profoundly irrational and contrary to the

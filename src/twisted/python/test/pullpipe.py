@@ -4,8 +4,8 @@
 
 import os
 import socket
-from struct import unpack
 import sys
+from struct import unpack
 from typing import Tuple
 
 from twisted.python.sendmsg import recvmsg

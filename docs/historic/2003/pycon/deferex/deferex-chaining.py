@@ -1,4 +1,4 @@
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
 
 A = defer.Deferred()
 

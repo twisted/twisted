@@ -6,44 +6,38 @@ Test cases for twisted.mail.smtp module.
 """
 
 
-import inspect
 import base64
+import inspect
 import re
-
 from io import BytesIO
-from unittest import skipIf
-from typing import Any, List, Optional, Type, Tuple
+from typing import Any, List, Optional, Tuple, Type
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import directlyProvides, implementer
 
-from twisted.python.util import LineLog
-from twisted.trial.unittest import TestCase
-from twisted.protocols import basic, loopback
-from twisted.internet import defer, protocol, reactor, interfaces
-from twisted.internet import address, error, task
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
-
-from twisted.cred.portal import IRealm, Portal
-from twisted.cred.checkers import ICredentialsChecker, AllowAnonymousAccess
+import twisted.cred.error
+import twisted.cred.portal
+from twisted import cred
+from twisted.cred.checkers import AllowAnonymousAccess, ICredentialsChecker
 from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
-
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
+from twisted.protocols import basic, loopback
+from twisted.python.util import LineLog
+from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.trial.unittest import TestCase
 
-
+sslSkip: Optional[str]
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     sslSkip = "OpenSSL not present"
 else:
-    sslSkip = ""
+    sslSkip = None
 
 
 if not interfaces.IReactorSSL.providedBy(reactor):
@@ -659,8 +653,9 @@ class NoticeTLSClient(MyESMTPClient):
         self.tls = True
 
 
-@skipIf(sslSkip, sslSkip)
 class TLSTests(TestCase, LoopbackMixin):
+    skip = sslSkip
+
     def testTLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
@@ -1601,11 +1596,12 @@ class ESMTPDowngradeTestCase(TestCase):
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
-@skipIf(sslSkip, sslSkip)
 class SSLTestCase(TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
     """
+
+    skip = sslSkip
 
     SERVER_GREETING = b"220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
     EHLO_RESPONSE = b"250-localhost Hello 127.0.0.1, nice to meet you\r\n"

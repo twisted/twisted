@@ -9,7 +9,7 @@ SSH key exchange handling.
 
 from hashlib import sha1, sha256, sha384, sha512
 
-from zope.interface import Attribute, implementer, Interface
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.conch import error
 
@@ -271,6 +271,7 @@ def getSupportedKeyExchanges():
     """
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
+
     from twisted.conch.ssh.keys import _curveTable
 
     backend = default_backend()

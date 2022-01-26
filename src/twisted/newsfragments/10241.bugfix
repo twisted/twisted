@@ -1,0 +1,2 @@
+SSHTransportBase.ssh_KEXINIT now uses the remote peer preferred MAC list for negotiation. In previous versions  it was only using the local preferred MAC list.
+

@@ -8,7 +8,6 @@ from zope.interface import implementer, verify
 
 from twisted.internet import defer, interfaces
 from twisted.trial import unittest
-
 from twisted.web import client
 
 

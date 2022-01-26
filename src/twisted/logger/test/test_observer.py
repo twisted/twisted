@@ -12,7 +12,6 @@ from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
-
 from .._interfaces import ILogObserver, LogEvent
 from .._logger import Logger
 from .._observer import LogPublisher
