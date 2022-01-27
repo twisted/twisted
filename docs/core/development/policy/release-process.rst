@@ -108,7 +108,7 @@ How to do a release candidate
 -----------------------------
 
 
-This section described the required to create the first release candidate.
+This section describes the steps and requirements for creating the first release candidate.
 
 
 Prepare the branch
@@ -236,7 +236,7 @@ Announce
 
 #. Announce the release
 
-   - Send a text version of the announcement to: twisted-python@twistedmatrix.com
+   - Send a text version of the announcement to: twisted@python.com
    - Twitter, TikTok, Instagram, Snapchat if you feel like it :)
    - ``#twisted`` message on IRC
 
