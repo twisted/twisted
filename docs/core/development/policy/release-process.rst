@@ -236,7 +236,7 @@ Announce
 
 #. Announce the release
 
-   - Send a text version of the announcement to: twisted@python.com
+   - Send a text version of the announcement to: twisted@python.org
    - Twitter, TikTok, Instagram, Snapchat if you feel like it :)
    - ``#twisted`` message on IRC
 
