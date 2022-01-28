@@ -987,9 +987,9 @@ class PosixProcessBase:
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
             raise RuntimeError(
                 f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
