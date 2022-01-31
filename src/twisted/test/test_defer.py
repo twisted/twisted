@@ -3364,10 +3364,26 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         @defer.inlineCallbacks
         def yieldingDeferred() -> Generator[Deferred[Any], Any, None]:
+            # first try setting the var
+            token = var.set(3)
+
+            # after a sleep, try resetting it
             d: Deferred[int] = Deferred()
             clock.callLater(1, d.callback, True)
             yield d
-            var.set(3)
+            self.assertEqual(var.get(), 3)
+
+            var.reset(token)
+            # it should have gone back to what we started with (2)
+            self.assertEqual(var.get(), 2)
+
+            # after another sleep, set it again
+            d = Deferred()
+            clock.callLater(1, d.callback, True)
+            yield d
+
+            self.assertEqual(var.get(), 2)
+            var.set(4)
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
@@ -3419,6 +3435,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
         clock.advance(1)
 
         # Advance the clock so that yieldingDeferred triggers
+        clock.advance(1)
         clock.advance(1)
 
         self.assertEqual(self.successResultOf(d), True)
