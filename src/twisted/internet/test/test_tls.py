@@ -30,7 +30,6 @@ from twisted.internet.test.connectionmixins import (
     EndpointCreator,
 )
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
     AbortConnectionMixin,
     ConnectToTCPListenerMixin,
@@ -310,7 +309,6 @@ class SSLClientTestsMixin(
 class TLSPortTestsBuilder(
     TLSMixin,
     ContextGeneratingMixin,
-    ObjectModelIntegrationMixin,
     BadContextTestsMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,

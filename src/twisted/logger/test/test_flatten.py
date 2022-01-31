@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 try:
     from time import tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment, misc]
+    tzset = None  # type: ignore[assignment]
 
 from twisted.trial import unittest
 from .._flatten import KeyFlattener, aFormatter, extractField, flattenEvent

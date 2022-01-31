@@ -253,7 +253,7 @@ class NonePIDFile:
         return None
 
 
-nonePIDFile = NonePIDFile()
+nonePIDFile: IPIDFile = NonePIDFile()
 
 
 class AlreadyRunningError(Exception):

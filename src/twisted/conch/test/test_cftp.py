@@ -1412,6 +1412,7 @@ exit
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(not which("ssh"), "no ssh command-line client available")
 @skipIf(not which("sftp"), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
@@ -1433,6 +1434,10 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         This test is mainly here to check that
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
+        # Get the current environment to pass along so that `ssh` and `sftp`
+        # can be found on our PATH.
+        env = dict(os.environ)
+
         fn = self.mktemp()
         with open(fn, "w") as f:
             f.write("ls .\nexit")
@@ -1452,7 +1457,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         # first need to check if we can set it. If we can, -V will just print
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
-        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"))
+        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"), env)
 
         def hasPAKT(status):
             if status == 0:
@@ -1480,7 +1485,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return args
 
         def check(result):
-            self.assertEqual(result[2], 0)
+            self.assertEqual(result[2], 0, result[1].decode("ascii"))
             for i in [
                 b"testDirectory",
                 b"testRemoveFile",
@@ -1490,5 +1495,5 @@ class OurServerSftpClientTests(CFTPClientTestBase):
                 self.assertIn(i, result[0])
 
         d.addCallback(hasPAKT)
-        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args))
+        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args, env))
         return d.addCallback(check)
