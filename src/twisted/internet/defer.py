@@ -50,8 +50,7 @@ from twisted.python.failure import Failure, _extraneous
 
 
 class _Context(Protocol):
-    @staticmethod
-    def run(f: Callable[..., object], *args: object, **kwargs: object) -> object:
+    def run(self, f: Callable[..., object], *args: object, **kwargs: object) -> object:
         pass
 
 
@@ -63,7 +62,7 @@ try:
 except ImportError:
     _contextvarsSupport = False
 
-    class _NoContext(_Context):
+    class _NoContext:
         @staticmethod
         def run(f: Callable[..., object], *args: object, **kwargs: object) -> object:
             return f(*args, **kwargs)
