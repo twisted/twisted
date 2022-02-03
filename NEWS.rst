@@ -9,7 +9,7 @@ Twisted 22.1.0.rc1 (2022-01-26)
 Features
 --------
 
-- support Python 3.10b4 (#10224)
+- Python 3.10 is now a supported platform (#10224)
 - Type annotations have been added to the twisted.python.fakepwd module. (#10287)
 
 
@@ -17,13 +17,12 @@ Bugfixes
 --------
 
 - twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
-- revert changes to ``DelayedCall.__repr__`` and ``LoopingCall.__repr__`` (#10235)
-- restore .whl building (#10236)
+- ``twisted.internet.base.DelayedCall.__repr__`` and ``twisted.internet.task.LoopingCall.__repr__`` had the changes from #10155 reverted to accept non-function callables.  (#10235)
+- Revert the removal of .whl building that was done as part of #10177. (#10236)
 - SSHTransportBase.ssh_KEXINIT now uses the remote peer preferred MAC list for negotiation. In previous versions  it was only using the local preferred MAC list. (#10241)
 - The type annotation of the host parameter to twisted.internet.interfaces.IReactorTCP.connectTCP has been corrected from bytes to str. (#10251)
 - Deprecated ``twisted.python.threading.ThreadPool.currentThread()`` in favor of ``threading.current_thread()``.
   Switched ``twisted.python.threading.ThreadPool.currentThread()`` and ``twisted.python.threadable.getThreadID()`` to use `threading.current_thread()`` to avoid the deprecation warnings introduced for ``threading.currentThread()`` in Python 3.10. (#10273)
-- twisted.web.client.RedirectAgent and twisted.web.client.BrowserLikeRedirectAgent now properly remove sensitive headers when redirecting to a different origin. (#10294)
 
 
 Improved Documentation
@@ -31,7 +30,6 @@ Improved Documentation
 
 - twisted.internet.utils.runWithWarningsSupressed behavior of waiting on deferreds has been documented. (#10238)
 - Sync API docs templates with pydoctor 21.9.0 release, using new theming capabilities. (#10267)
-- Add type annotations for twisted.web.client.readBody. (#10269)
 
 
 Misc
@@ -58,6 +56,18 @@ Bugfixes
 
 Web
 ---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.RedirectAgent and twisted.web.client.BrowserLikeRedirectAgent now properly remove sensitive headers when redirecting to a different origin. (#10294)
+
+
+Improved Documentation
+----------------------
+
+- Add type annotations for twisted.web.client.readBody. (#10269)
+
 
 Deprecations and Removals
 ~~~~~~~~~~~~~~~~~~~~~~~~~
