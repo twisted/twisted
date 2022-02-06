@@ -14,7 +14,6 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
-from typing import Type, Union
 
 import bcrypt
 from cryptography import utils
@@ -27,8 +26,8 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from nacl.exceptions import BadSignatureError  # type: ignore[import]
-from nacl.signing import SigningKey, VerifyKey  # type: ignore[import]
+from nacl.exceptions import BadSignatureError
+from nacl.signing import SigningKey, VerifyKey
 from pyasn1.codec.ber import (  # type: ignore[import]
     decoder as berDecoder,
     encoder as berEncoder,
@@ -70,8 +69,24 @@ _secToNist = {
 }
 
 
-@utils.register_interface(ed25519.Ed25519PublicKey)
-class _NaClEd25519PublicKey(VerifyKey):
+class _NaClEd25519PublicKey(ed25519.Ed25519PublicKey):
+    def __init__(self, data: bytes):
+        self._key = VerifyKey(data)
+
+    def __bytes__(self) -> bytes:
+        return bytes(self._key)
+
+    def __hash__(self) -> int:
+        return hash(bytes(self))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return self._key == other._key
+
+    def __ne__(self, other: object) -> bool:
+        return not (self == other)
+
     @classmethod
     def from_public_bytes(cls, data: bytes) -> ed25519.Ed25519PublicKey:
         return cls(data)
@@ -84,27 +99,43 @@ class _NaClEd25519PublicKey(VerifyKey):
             or format is not serialization.PublicFormat.Raw
         ):
             raise ValueError("Both encoding and format must be Raw")
-        return bytes(self)
+        return bytes(self._key)
 
     def verify(self, signature: bytes, data: bytes) -> None:
         try:
-            super().verify(data, signature)
+            self._key.verify(data, signature)
         except BadSignatureError as e:
             raise InvalidSignature(str(e))
 
 
-@utils.register_interface(ed25519.Ed25519PrivateKey)
-class _NaClEd25519PrivateKey(SigningKey):
+class _NaClEd25519PrivateKey(ed25519.Ed25519PrivateKey):
+    def __init__(self, data: bytes):
+        self._key = SigningKey(data)
+
+    def __bytes__(self) -> bytes:
+        return bytes(self._key)
+
+    def __hash__(self) -> int:
+        return hash(bytes(self))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return self._key == other._key
+
+    def __ne__(self, other: object) -> bool:
+        return not (self == other)
+
     @classmethod
     def generate(cls) -> ed25519.Ed25519PrivateKey:
-        return super().generate()
+        return cls(bytes(SigningKey.generate()))
 
     @classmethod
     def from_private_bytes(cls, data: bytes) -> ed25519.Ed25519PrivateKey:
         return cls(data)
 
     def public_key(self) -> ed25519.Ed25519PublicKey:
-        return _NaClEd25519PublicKey(bytes(self.verify_key))
+        return _NaClEd25519PublicKey(bytes(self._key.verify_key))
 
     def private_bytes(
         self,
@@ -121,24 +152,17 @@ class _NaClEd25519PrivateKey(SigningKey):
                 "Encoding and format must be Raw and "
                 "encryption_algorithm must be NoEncryption"
             )
-        return bytes(self)
+        return bytes(self._key)
 
     def sign(self, data: bytes) -> bytes:
-        return super().sign(data).signature
+        return self._key.sign(data).signature
 
-
-# mypy doesn't support ABCMeta.register yet
-# (https://github.com/python/mypy/issues/2922), so we have to cheat.
-_Ed25519PublicKeyT = Union[Type[ed25519.Ed25519PublicKey], Type[_NaClEd25519PublicKey]]
-_Ed25519PrivateKeyT = Union[
-    Type[ed25519.Ed25519PrivateKey], Type[_NaClEd25519PrivateKey]
-]
 
 _ed25519_supported = default_backend().ed25519_supported()
-Ed25519PublicKey: _Ed25519PublicKeyT = (
+Ed25519PublicKey = (
     ed25519.Ed25519PublicKey if _ed25519_supported else _NaClEd25519PublicKey
 )
-Ed25519PrivateKey: _Ed25519PrivateKeyT = (
+Ed25519PrivateKey = (
     ed25519.Ed25519PrivateKey if _ed25519_supported else _NaClEd25519PrivateKey
 )
 
