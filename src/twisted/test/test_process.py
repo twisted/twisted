@@ -18,15 +18,14 @@ Test running processes.
 """
 
 
-import gzip
-import os
-import sys
-import signal
 import errno
 import gc
-import stat
+import gzip
 import operator
-
+import os
+import signal
+import stat
+import sys
 from unittest import skipIf
 
 try:
@@ -45,17 +44,16 @@ except ImportError:
 else:
     process = _process
 
-from zope.interface.verify import verifyObject
-
 from io import BytesIO
 
-from twisted.python.log import msg
-from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.trial import unittest
-from twisted.python import runtime, procutils
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.python import procutils, runtime
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
-
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable).path
@@ -609,7 +607,9 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob  # type: ignore[import]
+                import glob
+
+                import process_tester  # type: ignore[import]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -980,15 +980,20 @@ class PosixProcessBase:
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
+        for loc in procutils.which(commandName):
+            return FilePath(loc).asBytesMode().path
+
         binLoc = FilePath("/bin").child(commandName)
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
-            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
+            raise RuntimeError(
+                f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
+            )
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")

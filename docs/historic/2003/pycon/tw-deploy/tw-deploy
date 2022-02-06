@@ -2,15 +2,15 @@
 # Requires CVS Slides
 
 from slides import (
-    Lecture,
-    Slide,
-    TitleSlide,
-    Image,
-    Bullet,
     PRE,
     URL,
-    SubBullet,
+    Bullet,
+    Image,
+    Lecture,
     NumSlide,
+    Slide,
+    SubBullet,
+    TitleSlide,
     toHTML,
 )
 

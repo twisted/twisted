@@ -5,9 +5,9 @@
 Tests for L{twisted.names.resolve}.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.names.error import DomainError
 from twisted.names.resolve import ResolverChain
+from twisted.trial.unittest import TestCase
 
 
 class ResolverChainTests(TestCase):

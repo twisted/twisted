@@ -6,8 +6,7 @@
 An example client. Run simpleserv.py first before running this.
 """
 
-from twisted.internet import reactor, protocol
-
+from twisted.internet import protocol, reactor
 
 # a client protocol
 

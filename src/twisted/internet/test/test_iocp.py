@@ -9,26 +9,26 @@ import errno
 import sys
 import time
 from array import array
+from socket import AF_INET, AF_INET6, SOCK_STREAM, SOL_SOCKET, socket
 from struct import pack
-from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from unittest import skipIf
 
 from zope.interface.verify import verifyClass
 
-from twisted.trial.unittest import TestCase
-from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
+from twisted.python.log import msg
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
+    from twisted.internet.iocpreactor.abstract import FileHandle
+    from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
+    from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
     from twisted.internet.iocpreactor.reactor import (
-        IOCPReactor,
         EVENTS_PER_LOOP,
         KEY_NORMAL,
+        IOCPReactor,
     )
-    from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-    from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-    from twisted.internet.iocpreactor.abstract import FileHandle
 except ImportError:
     if sys.platform == "win32":
         raise

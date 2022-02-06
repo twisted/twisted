@@ -11,32 +11,34 @@ import re
 import string
 import struct
 import types
+from hashlib import md5, sha1, sha256, sha384, sha512
 from typing import Optional, Type
 
-from hashlib import md5, sha1, sha256, sha384, sha512
 from twisted import __version__ as twisted_version
-from twisted.trial.unittest import TestCase
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.randbytes import insecureRandom
 from twisted.python.compat import iterbytes
-from twisted.conch.ssh import address, service, _kex
-from twisted.conch.error import ConchError
-from twisted.test import proto_helpers
+from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
+from twisted.test import proto_helpers
+from twisted.trial.unittest import TestCase
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
+dependencySkip: Optional[str]
 if pyasn1 and cryptography:
-    dependencySkip = ""
-    from twisted.conch.ssh import common, transport, keys, factory
-    from twisted.conch.test import keydata
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric import dh, ec
+    dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import dh, ec
+
+    from twisted.conch.ssh import common, factory, keys, transport
+    from twisted.conch.test import keydata
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
@@ -718,7 +720,9 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             buf,
         ) = common.getNS(packet[17:], 10)
 
-        self.assertEqual(keyExchanges, b",".join(self.proto.supportedKeyExchanges))
+        self.assertEqual(
+            keyExchanges, b",".join(self.proto.supportedKeyExchanges + [b"ext-info-s"])
+        )
         self.assertEqual(pubkeys, b",".join(self.proto.supportedPublicKeys))
         self.assertEqual(ciphers1, b",".join(self.proto.supportedCiphers))
         self.assertEqual(ciphers2, b",".join(self.proto.supportedCiphers))
@@ -795,6 +799,62 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         # messages which were queued above.
         self.proto._newKeys()
         self.assertEqual(self.transport.value().count(b"foo"), 2)
+
+    def test_sendExtInfo(self):
+        """
+        Test that EXT_INFO messages are sent correctly.  See RFC 8308,
+        section 2.3.
+        """
+        self.proto._peerSupportsExtensions = True
+        self.proto.sendExtInfo(
+            [
+                (b"server-sig-algs", b"ssh-rsa,rsa-sha2-256"),
+                (b"elevation", b"d"),
+            ]
+        )
+        self.assertEqual(
+            self.packets,
+            [
+                (
+                    transport.MSG_EXT_INFO,
+                    b"\x00\x00\x00\x02"
+                    + common.NS(b"server-sig-algs")
+                    + common.NS(b"ssh-rsa,rsa-sha2-256")
+                    + common.NS(b"elevation")
+                    + common.NS(b"d"),
+                )
+            ],
+        )
+
+    def test_sendExtInfoUnsupported(self):
+        """
+        If the peer has not advertised support for extension negotiation, no
+        EXT_INFO message is sent, since RFC 8308 only guarantees that the
+        peer will be prepared to accept it if it has advertised support.
+        """
+        self.proto.sendExtInfo([(b"server-sig-algs", b"ssh-rsa,rsa-sha2-256")])
+        self.assertEqual(self.packets, [])
+
+    def test_EXT_INFO(self):
+        """
+        When an EXT_INFO message is received, the transport stores a mapping
+        of the peer's advertised extensions.  See RFC 8308, section 2.3.
+        """
+        self.proto.dispatchMessage(
+            transport.MSG_EXT_INFO,
+            b"\x00\x00\x00\x02"
+            + common.NS(b"server-sig-algs")
+            + common.NS(b"ssh-rsa,rsa-sha2-256,rsa-sha2-512")
+            + common.NS(b"no-flow-control")
+            + common.NS(b"s"),
+        )
+        self.assertEqual(
+            self.proto.peerExtensions,
+            {
+                b"server-sig-algs": b"ssh-rsa,rsa-sha2-256,rsa-sha2-512",
+                b"no-flow-control": b"s",
+            },
+        )
 
     def test_sendDebug(self):
         """
@@ -1412,11 +1472,37 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.keyAlg, b"ssh-dss")
         self.assertEqual(self.proto.outgoingCompressionType, b"none")
         self.assertEqual(self.proto.incomingCompressionType, b"none")
+        self.assertFalse(self.proto._peerSupportsExtensions)
         ne = self.proto.nextEncryptions
         self.assertEqual(ne.outCipType, b"aes128-ctr")
         self.assertEqual(ne.inCipType, b"aes128-ctr")
         self.assertEqual(ne.outMACType, b"hmac-md5")
         self.assertEqual(ne.inMACType, b"hmac-md5")
+
+    def test_KEXINITExtensionNegotiation(self):
+        """
+        If the client sends "ext-info-c" in its key exchange algorithms,
+        then the server notes that the client supports extension
+        negotiation.  See RFC 8308, section 2.1.
+        """
+        kexInitPacket = (
+            b"\x00" * 16
+            + common.NS(b"diffie-hellman-group-exchange-sha256,ext-info-c")
+            + common.NS(b"ssh-rsa")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"none")
+            + common.NS(b"none")
+            + common.NS(b"")
+            + common.NS(b"")
+            + b"\x00"
+            + b"\x00\x00\x00\x00"
+        )
+        self.proto.ssh_KEXINIT(kexInitPacket)
+        self.assertEqual(self.proto.kexAlg, b"diffie-hellman-group-exchange-sha256")
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def test_ignoreGuessPacketKex(self):
         """
@@ -1617,6 +1703,31 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5], newKeys[4]),
         )
+
+    def test_keySetupWithExtInfo(self):
+        """
+        If the client advertised support for extension negotiation, then
+        _keySetup sends SSH_MSG_EXT_INFO with the "server-sig-algs"
+        extension as the next packet following the server's first
+        SSH_MSG_NEWKEYS.  See RFC 8308, sections 2.4 and 3.1.
+        """
+        self.proto.supportedPublicKeys = [b"ssh-rsa", b"rsa-sha2-256", b"rsa-sha2-512"]
+        self.proto.kexAlg = b"diffie-hellman-group14-sha1"
+        self.proto.nextEncryptions = MockCipher()
+        self.proto._peerSupportsExtensions = True
+        self.simulateKeyExchange(b"AB", b"CD")
+        self.assertEqual(self.packets[-2], (transport.MSG_NEWKEYS, b""))
+        self.assertEqual(
+            self.packets[-1],
+            (
+                transport.MSG_EXT_INFO,
+                b"\x00\x00\x00\x01"
+                + common.NS(b"server-sig-algs")
+                + common.NS(b"ssh-rsa,rsa-sha2-256,rsa-sha2-512"),
+            ),
+        )
+        self.simulateKeyExchange(b"AB", b"EF")
+        self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b""))
 
     def test_ECDH_keySetup(self):
         """
@@ -2032,6 +2143,30 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.proto.supportedKeyExchanges = [b"diffie-hellman-group24-sha1"]
         data = self.transport.value().replace(b"group14", b"group24")
         self.assertRaises(ConchError, self.proto.dataReceived, data)
+
+    def test_KEXINITExtensionNegotiation(self):
+        """
+        If the server sends "ext-info-s" in its key exchange algorithms,
+        then the client notes that the server supports extension
+        negotiation.  See RFC 8308, section 2.1.
+        """
+        kexInitPacket = (
+            b"\x00" * 16
+            + common.NS(b"diffie-hellman-group-exchange-sha256,ext-info-s")
+            + common.NS(b"ssh-rsa")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"none")
+            + common.NS(b"none")
+            + common.NS(b"")
+            + common.NS(b"")
+            + b"\x00"
+            + b"\x00\x00\x00\x00"
+        )
+        self.proto.ssh_KEXINIT(kexInitPacket)
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def begin_KEXDH_REPLY(self):
         """

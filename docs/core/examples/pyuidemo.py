@@ -13,7 +13,8 @@ Select "Quit" button to exit demo.
 """
 
 import pyui
-from twisted.internet import reactor, pyuisupport
+
+from twisted.internet import pyuisupport, reactor
 
 
 def onButton(self):

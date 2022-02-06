@@ -20,7 +20,7 @@ It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
 """
 
-from twisted.internet import ssl, protocol, endpoints, task, defer
+from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.python.filepath import FilePath
 
 # The hostname the remote server to contact.

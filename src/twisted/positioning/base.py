@@ -10,13 +10,14 @@ Generic positioning base classes.
 
 from functools import partial
 from operator import attrgetter
-from zope.interface import implementer
-from constantly import Names, NamedConstant  # type: ignore[import]
 from typing import ClassVar, Sequence
 
-from twisted.python.util import FancyEqMixin
-from twisted.positioning import ipositioning
+from zope.interface import implementer
 
+from constantly import NamedConstant, Names  # type: ignore[import]
+
+from twisted.positioning import ipositioning
+from twisted.python.util import FancyEqMixin
 
 MPS_PER_KNOT = 0.5144444444444444
 MPS_PER_KPH = 0.27777777777777777

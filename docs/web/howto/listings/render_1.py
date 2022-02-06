@@ -1,5 +1,6 @@
-from twisted.web.template import flattenString
 from element_1 import ExampleElement
+
+from twisted.web.template import flattenString
 
 
 def renderDone(output):

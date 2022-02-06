@@ -2,8 +2,8 @@
 
 __version__ = "$Revision: 1.3 $"[11:-2]
 
-from twisted.trial import unittest
 from twisted.protocols import htb
+from twisted.trial import unittest
 from .test_pcp import DummyConsumer
 
 

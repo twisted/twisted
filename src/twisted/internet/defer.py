@@ -8,12 +8,13 @@ Support for results that aren't immediately available.
 Maintainer: Glyph Lefkowitz
 """
 
+import traceback
+import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
-import traceback
 from types import GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -35,19 +36,17 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import Literal
-import warnings
 
 import attr
-
 from incremental import Version
+from typing_extensions import Literal
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
-from twisted.python.failure import Failure, _extraneous
 from twisted.python import lockfile
-from twisted.python.compat import cmp, comparable, _PYPY
+from twisted.python.compat import _PYPY, cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
+from twisted.python.failure import Failure, _extraneous
 
 try:
     from contextvars import copy_context as __copy_context
@@ -1100,7 +1099,7 @@ class Deferred(Awaitable[_DeferredResultT]):
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
         # type note: Subclass of "Generator[Deferred[_T], object, _T]" and "GeneratorType" cannot exist
-        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):  # type: ignore[unreachable]
+        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
             raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
         return _cancellableInlineCallbacks(coro)
@@ -1898,15 +1897,12 @@ def inlineCallbacks(
                 "inlineCallbacks requires %r to produce a generator; instead"
                 "caught returnValue being used in a non-generator" % (f,)
             )
-        # type note: FIXME: error suggests type of gen is wrong:
-        #     Subclass of "Generator[Deferred, object, None]" and "GeneratorType"
-        #     cannot exist: would have incompatible method signatures
-        if not isinstance(gen, GeneratorType):  # type: ignore[unreachable]
+        if not isinstance(gen, GeneratorType):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
                 "instead got %r" % (f, gen)
             )
-        return _cancellableInlineCallbacks(gen)  # type: ignore[unreachable]
+        return _cancellableInlineCallbacks(gen)
 
     return unwindGenerator
 

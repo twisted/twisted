@@ -13,8 +13,8 @@ import string
 import struct
 
 import twisted.internet.error
-from twisted.conch.ssh import service, common
 from twisted.conch import error
+from twisted.conch.ssh import common, service
 from twisted.internet import defer
 from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString

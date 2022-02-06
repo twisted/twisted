@@ -22,8 +22,9 @@ else:
 import os
 from operator import getitem
 
+from twisted.python.compat import _PYPY
+from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.trial.unittest import TestCase
-from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 
 SYSTEM_UID_MAX = 999
 
@@ -107,6 +108,17 @@ class UserDatabaseTestsMixin:
             self.assertEqual(entry.pw_gecos, gecos)
             self.assertEqual(entry.pw_dir, dir)
             self.assertEqual(entry.pw_shell, shell)
+
+    def test_getpwnamRejectsBytes(self):
+        """
+        L{getpwnam} rejects a non-L{str} username with an exception.
+        """
+        exc_type = TypeError
+        if _PYPY:
+            # PyPy raises KeyError instead of TypeError. See
+            # https://foss.heptapod.net/pypy/pypy/-/issues/3624
+            exc_type = Exception
+        self.assertRaises(exc_type, self.database.getpwnam, b"i-am-bytes")
 
     def test_noSuchName(self):
         """
@@ -298,6 +310,13 @@ class ShadowDatabaseTestsMixin:
         exist in the user database.
         """
         self.assertRaises(KeyError, self.database.getspnam, "alice")
+
+    def test_getspnamBytes(self):
+        """
+        I{getspnam} raises L{TypeError} when passed a L{bytes}, just like
+        L{spwd.getspnam}.
+        """
+        self.assertRaises(TypeError, self.database.getspnam, b"i-am-bytes")
 
     def test_recordLength(self):
         """

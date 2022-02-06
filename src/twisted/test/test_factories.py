@@ -8,10 +8,9 @@ Test code for basic Factory classes.
 
 import pickle
 
-from twisted.trial.unittest import TestCase
-
+from twisted.internet.protocol import Protocol, ReconnectingClientFactory
 from twisted.internet.task import Clock
-from twisted.internet.protocol import ReconnectingClientFactory, Protocol
+from twisted.trial.unittest import TestCase
 
 
 class FakeConnector:

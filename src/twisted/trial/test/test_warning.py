@@ -6,15 +6,14 @@ Tests for Trial's interaction with the Python warning system.
 """
 
 
-import warnings
 import sys
-
+import warnings
 from io import StringIO
 from unittest import TestResult
 
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class Mask:

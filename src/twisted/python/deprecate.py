@@ -91,12 +91,12 @@ __all__ = [
 ]
 
 
+import inspect
+import sys
 from dis import findlinestarts
 from functools import wraps
-import inspect
 from types import ModuleType
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
-import sys
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -125,15 +125,7 @@ def _fullyQualifiedName(obj):
         moduleName = obj.__module__
         return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
-        try:
-            cls = obj.im_class
-        except AttributeError:
-            # Python 3 eliminates im_class, substitutes __module__ and
-            # __qualname__ to provide similar information.
-            return f"{obj.__module__}.{obj.__qualname__}"
-        else:
-            className = _fullyQualifiedName(cls)
-            return f"{className}.{name}"
+        return f"{obj.__module__}.{obj.__qualname__}"
     return name
 
 

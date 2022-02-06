@@ -1,0 +1,1 @@
+twisted.internet.utils.runWithWarningsSupressed behavior of waiting on deferreds has been documented.

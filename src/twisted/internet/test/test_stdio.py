@@ -6,9 +6,9 @@ Tests for L{twisted.internet.stdio}.
 """
 
 
-from twisted.python.runtime import platform
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import Protocol
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.runtime import platform
 
 if not platform.isWindows():
     from twisted.internet.stdio import StandardIO

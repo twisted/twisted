@@ -11,27 +11,26 @@ import codecs
 import io
 import sys
 import traceback
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase, SynchronousTestCase
 
 from twisted.python.compat import (
-    execfile,
     _PYPY,
-    comparable,
+    _get_async_param,
+    bytesEnviron,
     cmp,
-    nativeString,
-    networkString,
-    lazyByteSlice,
-    reraise,
-    iterbytes,
+    comparable,
+    execfile,
     intToBytes,
     ioType,
-    bytesEnviron,
-    _get_async_param,
+    iterbytes,
+    lazyByteSlice,
+    nativeString,
+    networkString,
+    reraise,
 )
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class IOTypeTests(SynchronousTestCase):

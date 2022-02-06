@@ -8,10 +8,10 @@ Test cases for dirdbm module.
 import shutil
 from base64 import b64decode
 
-from twisted.trial import unittest
 from twisted.persisted import dirdbm
 from twisted.python import rebuild
 from twisted.python.filepath import FilePath
+from twisted.trial import unittest
 
 
 class DirDbmTests(unittest.TestCase):

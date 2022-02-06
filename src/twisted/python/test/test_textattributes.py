@@ -5,8 +5,8 @@
 Tests for L{twisted.python.textattributes}.
 """
 
-from twisted.trial import unittest
 from twisted.python._textattributes import DefaultFormattingState
+from twisted.trial import unittest
 
 
 class DefaultFormattingStateTests(unittest.TestCase):

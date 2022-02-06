@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from slides import Lecture, NumSlide, Slide, Bullet, SubBullet, PRE, URL
+from slides import PRE, URL, Bullet, Lecture, NumSlide, Slide, SubBullet
 
 
 class Raw:

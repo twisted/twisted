@@ -12,7 +12,7 @@ this code is arranged.
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase, TestCase, SkipTest, FailTest
+from twisted.trial.unittest import FailTest, SkipTest, SynchronousTestCase, TestCase
 
 
 class SkippingMixin:

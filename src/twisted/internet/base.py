@@ -7,13 +7,15 @@ Very basic functionality for a Reactor implementation.
 """
 
 
-from abc import ABC, abstractmethod
 import builtins
-from heapq import heappush, heappop, heapify
 import socket  # needed only for sync-dns
+import warnings
+from abc import ABC, abstractmethod
+from heapq import heapify, heappop, heappush
 from traceback import format_stack
 from types import FrameType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -23,15 +25,13 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    TYPE_CHECKING,
     Union,
     cast,
 )
-import warnings
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import fdesc, main, error, abstract, defer, threads
+from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
     ComplexResolverSimplifier as _ComplexResolverSimplifier,
     GAIResolver as _GAIResolver,
@@ -39,7 +39,6 @@ from twisted.internet._resolver import (
 )
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.interfaces import (
-    _ISupportsExitSignalCapturing,
     IAddress,
     IConnector,
     IDelayedCall,
@@ -53,11 +52,12 @@ from twisted.internet.interfaces import (
     IReadDescriptor,
     IResolverSimple,
     IWriteDescriptor,
+    _ISupportsExitSignalCapturing,
 )
 from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
-from twisted.python.runtime import seconds as runtimeSeconds, platform
+from twisted.python.runtime import platform, seconds as runtimeSeconds
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -231,14 +231,28 @@ class DelayedCall:
         """
         if self._repr is not None:
             return self._repr
+        if hasattr(self, "func"):
+            # This code should be replaced by a utility function in reflect;
+            # see ticket #6066:
+            func = getattr(self.func, "__qualname__", None)
+            if func is None:
+                func = getattr(self.func, "__name__", None)
+                if func is not None:
+                    imClass = getattr(self.func, "im_class", None)
+                    if imClass is not None:
+                        func = f"{imClass}.{func}"
+            if func is None:
+                func = reflect.safe_repr(self.func)
+        else:
+            func = None
 
         now = self.seconds()
         L = [
             "<DelayedCall 0x%x [%ss] called=%s cancelled=%s"
             % (id(self), self.time - now, self.called, self.cancelled)
         ]
-        if hasattr(self, "func"):
-            L.extend((" ", self.func.__qualname__, "("))
+        if func is not None:
+            L.extend((" ", func, "("))
             if self.args:
                 L.append(", ".join([reflect.safe_repr(e) for e in self.args]))
                 if self.kw:
@@ -921,7 +935,7 @@ class ReactorBase(PluggableResolverMixin):
         if not self._pendingTimedCalls:
             return None
 
-        delay = self._pendingTimedCalls[0].time - cast(float, self.seconds())
+        delay = self._pendingTimedCalls[0].time - self.seconds()
 
         # Pick a somewhat arbitrary maximum possible value for the timeout.
         # This value is 2 ** 31 / 1000, which is the number of seconds which can
@@ -1316,7 +1330,7 @@ class _SignalReactorMixin:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
-                log.msg("Main loop terminated.")
+                log.msg("Main loop terminated.")  # type:ignore[unreachable]
 
 
 __all__: List[str] = []

@@ -7,30 +7,30 @@ Tests for L{twisted.conch.client.knownhosts}.
 
 
 import os
-from binascii import Error as BinasciiError, b2a_base64, a2b_base64
+from binascii import Error as BinasciiError, a2b_base64, b2a_base64
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import networkString
-from twisted.python.reflect import requireModule
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred
+from twisted.conch.error import HostKeyChanged, InvalidEntry, UserRejectedKey
 from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
+from twisted.internet.defer import Deferred
+from twisted.python.compat import networkString
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
-    from twisted.conch.ssh.keys import Key, BadKeyError
+    from twisted.conch.client import default
     from twisted.conch.client.knownhosts import (
-        PlainEntry,
+        ConsoleUI,
         HashedEntry,
         KnownHostsFile,
+        PlainEntry,
         UnparsedEntry,
-        ConsoleUI,
     )
-    from twisted.conch.client import default
+    from twisted.conch.ssh.keys import BadKeyError, Key
     from twisted.conch.test import keydata
 else:
     skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
