@@ -21,6 +21,7 @@ if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
 
 pyasn1 = requireModule("pyasn1")
+_keys_pynacl = requireModule("twisted.conch.ssh._keys_pynacl")
 
 
 if cryptography and pyasn1:
@@ -28,6 +29,18 @@ if cryptography and pyasn1:
     from cryptography.hazmat.backends import default_backend
 
     from twisted.conch.ssh import common, keys, sexpy
+
+    ED25519_SUPPORTED = (
+        default_backend().ed25519_supported() or _keys_pynacl is not None
+    )
+else:
+    ED25519_SUPPORTED = False
+
+
+def skipWithoutEd25519(f):
+    if not ED25519_SUPPORTED:
+        f.skip = "ed25519 not supported on this system"
+    return f
 
 
 class KeyTests(unittest.TestCase):
@@ -71,9 +84,10 @@ class KeyTests(unittest.TestCase):
             privateValue=keydata.ECDatanistp521["privateValue"],
             curve=keydata.ECDatanistp521["curve"],
         )._keyObject
-        self.ed25519Obj = keys.Key._fromEd25519Components(
-            a=keydata.Ed25519Data["a"], k=keydata.Ed25519Data["k"]
-        )._keyObject
+        if ED25519_SUPPORTED:
+            self.ed25519Obj = keys.Key._fromEd25519Components(
+                a=keydata.Ed25519Data["a"], k=keydata.Ed25519Data["k"]
+            )._keyObject
         self.rsaSignature = (
             b"\x00\x00\x00\x07ssh-rsa\x00\x00\x01\x00~Y\xa3\xd7\xfdW\xc6pu@"
             b"\xd81\xa1S\xf3O\xdaE\xf4/\x1ex\x1d\xf1\x9a\xe1G3\xd9\xd6U\x1f"
@@ -111,7 +125,8 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj).size(), 256)
         self.assertEqual(keys.Key(self.ecObj384).size(), 384)
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
-        self.assertEqual(keys.Key(self.ed25519Obj).size(), 256)
+        if ED25519_SUPPORTED:
+            self.assertEqual(keys.Key(self.ed25519Obj).size(), 256)
 
     def test__guessStringType(self):
         """
@@ -127,10 +142,11 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicECDSA_openssh), "public_openssh"
         )
-        self.assertEqual(
-            keys.Key._guessStringType(keydata.publicEd25519_openssh),
-            "public_openssh",
-        )
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key._guessStringType(keydata.publicEd25519_openssh),
+                "public_openssh",
+            )
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh), "private_openssh"
         )
@@ -150,10 +166,11 @@ class KeyTests(unittest.TestCase):
             keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
             "private_openssh",
         )
-        self.assertEqual(
-            keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
-            "private_openssh",
-        )
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
+                "private_openssh",
+            )
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh), "public_lsh")
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh), "public_lsh")
         self.assertEqual(
@@ -197,9 +214,10 @@ class KeyTests(unittest.TestCase):
         publicECDSAKey = keys.Key.fromString(keydata.publicECDSA_openssh)
         self.assertEqual(privateECDSAKey.public(), publicECDSAKey.public())
 
-        privateEd25519Key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
-        publicEd25519Key = keys.Key.fromString(keydata.publicEd25519_openssh)
-        self.assertEqual(privateEd25519Key.public(), publicEd25519Key.public())
+        if ED25519_SUPPORTED:
+            privateEd25519Key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
+            publicEd25519Key = keys.Key.fromString(keydata.publicEd25519_openssh)
+            self.assertEqual(privateEd25519Key.public(), publicEd25519Key.public())
 
     def test_isPublic(self):
         """
@@ -209,15 +227,17 @@ class KeyTests(unittest.TestCase):
         rsaKey = keys.Key.fromString(keydata.privateRSA_openssh)
         dsaKey = keys.Key.fromString(keydata.privateDSA_openssh)
         ecdsaKey = keys.Key.fromString(keydata.privateECDSA_openssh)
-        ed25519Key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
         self.assertTrue(rsaKey.public().isPublic())
         self.assertFalse(rsaKey.isPublic())
         self.assertTrue(dsaKey.public().isPublic())
         self.assertFalse(dsaKey.isPublic())
         self.assertTrue(ecdsaKey.public().isPublic())
         self.assertFalse(ecdsaKey.isPublic())
-        self.assertTrue(ed25519Key.public().isPublic())
-        self.assertFalse(ed25519Key.isPublic())
+
+        if ED25519_SUPPORTED:
+            ed25519Key = keys.Key.fromString(keydata.privateEd25519_openssh_new)
+            self.assertTrue(ed25519Key.public().isPublic())
+            self.assertFalse(ed25519Key.isPublic())
 
     def _testPublicPrivateFromString(self, public, private, type, data):
         self._testPublicFromString(public, type, data)
@@ -269,12 +289,14 @@ class KeyTests(unittest.TestCase):
             "DSA",
             keydata.DSAData,
         )
-        self._testPublicPrivateFromString(
-            keydata.publicEd25519_openssh,
-            keydata.privateEd25519_openssh_new,
-            "Ed25519",
-            keydata.Ed25519Data,
-        )
+
+        if ED25519_SUPPORTED:
+            self._testPublicPrivateFromString(
+                keydata.publicEd25519_openssh,
+                keydata.privateEd25519_openssh_new,
+                "Ed25519",
+                keydata.Ed25519Data,
+            )
 
     def test_fromOpenSSHErrors(self):
         """
@@ -741,8 +763,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(
             keys.Key(self.ecObj).sshType(), keydata.ECDatanistp256["curve"]
         )
-        self.assertEqual(keys.Key(self.ed25519Obj).type(), "Ed25519")
-        self.assertEqual(keys.Key(self.ed25519Obj).sshType(), b"ssh-ed25519")
+        if ED25519_SUPPORTED:
+            self.assertEqual(keys.Key(self.ed25519Obj).type(), "Ed25519")
+            self.assertEqual(keys.Key(self.ed25519Obj).sshType(), b"ssh-ed25519")
         self.assertRaises(RuntimeError, keys.Key(None).type)
         self.assertRaises(RuntimeError, keys.Key(None).sshType)
         self.assertRaises(RuntimeError, keys.Key(self).type)
@@ -825,6 +848,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(eckey.isPublic())
         self.assertEqual(ecPublicData, eckey.data())
 
+    @skipWithoutEd25519
     def test_fromBlobEd25519(self):
         """
         A public Ed25519 key is correctly generated from a public key blob.
@@ -922,6 +946,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(keydata.ECDatanistp256, eckey.data())
         self.assertEqual(eckey, keys.Key._fromString_PRIVATE_BLOB(eckey.privateBlob()))
 
+    @skipWithoutEd25519
     def test_fromPrivateBlobEd25519(self):
         """
         A private Ed25519 key is correctly generated from a private key blob.
@@ -988,6 +1013,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             ),
         )
 
+    @skipWithoutEd25519
     def test_blobEd25519(self):
         """
         Return the over-the-wire SSH format of the Ed25519 public key.
@@ -1066,6 +1092,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             + common.MP(self.ecObj.private_numbers().private_value),
         )
 
+    @skipWithoutEd25519
     def test_privateBlobEd25519(self):
         """
         L{keys.Key.privateBlob} returns the SSH protocol-level format of an
@@ -1196,6 +1223,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             key, keys.Key.fromString(new_enc_key_data, passphrase="encrypted")
         )
 
+    @skipWithoutEd25519
     def test_toOpenSSHEd25519(self):
         """
         L{keys.Key.toString} serializes an Ed25519 key in OpenSSH's v1 format.
@@ -1215,6 +1243,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         )
         self.assertEqual(new_key_data, key.toString("openssh", subtype="v1"))
 
+    @skipWithoutEd25519
     def test_toOpenSSHEd25519_PEM_format(self):
         """
         L{keys.Key.toString} refuses to serialize an Ed25519 key in
@@ -1322,6 +1351,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(key521.public().verify(signature521, data))
         self.assertTrue(key521.verify(signature521, data))
 
+    @skipWithoutEd25519
     def test_signAndVerifyEd25519(self):
         """
         Signed data can be verified using Ed25519.
@@ -1511,6 +1541,7 @@ attr n:
             ).format(**keydata.ECDatanistp256),
         )
 
+    @skipWithoutEd25519
     def test_reprPublicEd25519(self):
         """
         The repr of a L{keys.Key} contains all the OpenSSH format for an
@@ -1528,6 +1559,7 @@ attr n:
             ),
         )
 
+    @skipWithoutEd25519
     def test_reprPrivateEd25519(self):
         """
         The repr of a L{keys.Key} contains all the OpenSSH format for an
@@ -1555,34 +1587,41 @@ class PyNaClKeyTests(KeyTests):
     Key tests, but forcing the use of C{PyNaCl}.
     """
 
+    if cryptography is None:
+        skip = skipCryptography
+    if _keys_pynacl is None:
+        skip = "Cannot run without PyNaCl"
+
     def setUp(self):
         super().setUp()
-        self.patch(keys, "Ed25519PublicKey", keys._NaClEd25519PublicKey)
-        self.patch(keys, "Ed25519PrivateKey", keys._NaClEd25519PrivateKey)
+        self.patch(keys, "Ed25519PublicKey", _keys_pynacl.Ed25519PublicKey)
+        self.patch(keys, "Ed25519PrivateKey", _keys_pynacl.Ed25519PrivateKey)
 
     def test_naclPrivateBytes(self):
         """
-        L{keys._NaClEd25519PrivateKey.private_bytes} and
-        L{keys._NaClEd25519PrivateKey.from_private_bytes} round-trip.
+        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} and
+        L{_keys_pynacl.Ed25519PrivateKey.from_private_bytes} round-trip.
         """
         from cryptography.hazmat.primitives import serialization
 
-        key = keys._NaClEd25519PrivateKey.generate()
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
         key_bytes = key.private_bytes(
             serialization.Encoding.Raw,
             serialization.PrivateFormat.Raw,
             serialization.NoEncryption(),
         )
         self.assertIsInstance(key_bytes, bytes)
-        self.assertEqual(key, keys._NaClEd25519PrivateKey.from_private_bytes(key_bytes))
+        self.assertEqual(
+            key, _keys_pynacl.Ed25519PrivateKey.from_private_bytes(key_bytes)
+        )
 
     def test_naclPrivateBytesInvalidParameters(self):
         """
-        L{keys._NaClEd25519PrivateKey.private_bytes} only accepts certain parameters.
+        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} only accepts certain parameters.
         """
         from cryptography.hazmat.primitives import serialization
 
-        key = keys._NaClEd25519PrivateKey.generate()
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
         self.assertRaises(
             ValueError,
             key.private_bytes,
@@ -1607,25 +1646,27 @@ class PyNaClKeyTests(KeyTests):
 
     def test_naclPublicBytes(self):
         """
-        L{keys._NaClEd25519PublicKey.public_bytes} and
-        L{keys._NaClEd25519PublicKey.from_public_bytes} round-trip.
+        L{_keys_pynacl.Ed25519PublicKey.public_bytes} and
+        L{_keys_pynacl.Ed25519PublicKey.from_public_bytes} round-trip.
         """
         from cryptography.hazmat.primitives import serialization
 
-        key = keys._NaClEd25519PrivateKey.generate().public_key()
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
         key_bytes = key.public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
         )
         self.assertIsInstance(key_bytes, bytes)
-        self.assertEqual(key, keys._NaClEd25519PublicKey.from_public_bytes(key_bytes))
+        self.assertEqual(
+            key, _keys_pynacl.Ed25519PublicKey.from_public_bytes(key_bytes)
+        )
 
     def test_naclPublicBytesInvalidParameters(self):
         """
-        L{keys._NaClEd25519PublicKey.public_bytes} only accepts certain parameters.
+        L{_keys_pynacl.Ed25519PublicKey.public_bytes} only accepts certain parameters.
         """
         from cryptography.hazmat.primitives import serialization
 
-        key = keys._NaClEd25519PrivateKey.generate().public_key()
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
         self.assertRaises(
             ValueError,
             key.public_bytes,
@@ -1641,9 +1682,9 @@ class PyNaClKeyTests(KeyTests):
 
     def test_naclVerify(self):
         """
-        L{keys._NaClEd25519PublicKey.verify} raises appropriate exceptions.
+        L{_keys_pynacl.Ed25519PublicKey.verify} raises appropriate exceptions.
         """
-        key = keys._NaClEd25519PrivateKey.generate()
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
         self.assertIsInstance(key, keys.Ed25519PrivateKey)
         signature = key.sign(b"test data")
         self.assertIsNone(key.public_key().verify(signature, b"test data"))

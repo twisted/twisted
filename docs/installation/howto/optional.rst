@@ -42,7 +42,7 @@ The following optional dependencies are supported:
 
 * **serial** - the `pyserial`_ package to work with serial data.
 
-* **all_non_platform** - installs **tls**, **conch_nacl**, **soap**, and **serial** options.
+* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
 
 * **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 

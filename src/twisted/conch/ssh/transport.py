@@ -458,7 +458,9 @@ class SSHTransportBase(protocol.Protocol):
         if eckey.find(b"ecdh") != -1:
             supportedPublicKeys += [eckey.replace(b"ecdh", b"ecdsa")]
 
-    supportedPublicKeys += [b"ssh-rsa", b"ssh-dss", b"ssh-ed25519"]
+    supportedPublicKeys += [b"ssh-rsa", b"ssh-dss"]
+    if default_backend().ed25519_supported():
+        supportedPublicKeys.append(b"ssh-ed25519")
 
     supportedCompressions = [b"none", b"zlib"]
     supportedLanguages = ()
