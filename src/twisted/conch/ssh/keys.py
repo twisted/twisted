@@ -921,15 +921,21 @@ class Key:
 
         return cls(keyObject)
 
-    def __init__(self, keyObject):
+    def __init__(self, keyObject, hashAlgorithm=None):
         """
         Initialize with a private or public
         C{cryptography.hazmat.primitives.asymmetric} key.
 
         @param keyObject: Low level key.
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
+
+        @param hashAlgorithm: The hash algorithm to use when signing and
+        verifying using this key, or L{None} to use a default appropriate
+        for the key type.
+        @type hashAlgorithm: L{hashes.HashAlgorithm} or L{None}
         """
         self._keyObject = keyObject
+        self.hashAlgorithm = hashAlgorithm
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1012,7 +1018,7 @@ class Key:
         if self.isPublic():
             return self
         else:
-            return Key(self._keyObject.public_key())
+            return Key(self._keyObject.public_key(), hashAlgorithm=self.hashAlgorithm)
 
     def fingerprint(self, format=FingerprintFormats.MD5_HEX):
         """
@@ -1080,8 +1086,9 @@ class Key:
     def sshType(self):
         """
         Get the type of the object we wrap as defined in the SSH protocol,
-        defined in RFC 4253, Section 6.6. Currently this can only be b'ssh-rsa',
-        b'ssh-dss' or b'ecdsa-sha2-[identifier]'.
+        defined in RFC 4253, Section 6.6. Currently this can only be
+        b'ssh-rsa', b'rsa-sha2-256', b'rsa-sha2-512', b'ssh-dss' or
+        b'ecdsa-sha2-[identifier]'.
 
         identifier is the standard NIST curve name
 
@@ -1094,10 +1101,33 @@ class Key:
             )
         else:
             return {
-                "RSA": b"ssh-rsa",
-                "DSA": b"ssh-dss",
-                "Ed25519": b"ssh-ed25519",
-            }[self.type()]
+                ("RSA", "sha1"): b"ssh-rsa",
+                ("RSA", "sha256"): b"rsa-sha2-256",
+                ("RSA", "sha512"): b"rsa-sha2-512",
+                ("DSA", "sha1"): b"ssh-dss",
+                ("Ed25519", "sha512"): b"ssh-ed25519",
+            }[(self.type(), self.hashAlgorithm.name)]
+
+    def _getHashAlgorithm(self, signatureType):
+        """
+        Return a hash algorithm for this key type given an SSH signature
+        algorithm name, or L{None} if no such hash algorithm is defined for
+        this key type.
+        """
+        if self.type() == "EC":
+            # Hash algorithm depends on key size
+            if signatureType == self.sshType():
+                return self.hashAlgorithm
+            else:
+                return None
+        else:
+            return {
+                ("RSA", b"ssh-rsa"): hashes.SHA1(),
+                ("RSA", b"rsa-sha2-256"): hashes.SHA256(),
+                ("RSA", b"rsa-sha2-512"): hashes.SHA512(),
+                ("DSA", b"ssh-dss"): hashes.SHA1(),
+                ("Ed25519", b"ssh-ed25519"): hashes.SHA512(),
+            }.get((self.type(), signatureType))
 
     def size(self):
         """
@@ -1113,6 +1143,59 @@ class Key:
         elif self.type() == "Ed25519":
             return 256
         return self._keyObject.key_size
+
+    @property
+    def hashAlgorithm(self):
+        """
+        The hash algorithm to use for signing and verifying.
+        """
+        if self._hashAlgorithm is None:
+            keyType = self.type()
+            if keyType in ("RSA", "DSA"):
+                return hashes.SHA1()
+            elif keyType == "EC":
+                # Hash size depends on key size
+                keySize = self.size()
+                if keySize <= 256:
+                    return hashes.SHA256()
+                elif keySize <= 384:
+                    return hashes.SHA384()
+                else:
+                    return hashes.SHA512()
+            elif keyType == "Ed25519":
+                return hashes.SHA512()
+        return self._hashAlgorithm
+
+    @hashAlgorithm.setter
+    def hashAlgorithm(self, value):
+        """
+        Set the hash algorithm to use for signing and verifying.
+
+        @param value: The hash algorithm to use when signing and verifying
+        using this key, or L{None} to use a default appropriate for the key
+        type.
+        @type value: L{hashes.HashAlgorithm} or L{None}
+        """
+        if value is not None:
+            # We only support certain combinations of key type and hash
+            # algorithm.
+            keyType = self.type()
+            if (keyType, value.name) not in (
+                ("RSA", "sha1"),
+                ("RSA", "sha256"),
+                ("RSA", "sha512"),
+                ("DSA", "sha1"),
+                ("EC", "sha256"),
+                ("EC", "sha384"),
+                ("EC", "sha512"),
+                ("Ed25519", "sha512"),
+            ):
+                raise ValueError(
+                    "Hash algorithm '{}' not allowed with '{}' keys".format(
+                        value.name, keyType
+                    )
+                )
+        self._hashAlgorithm = value
 
     def data(self):
         """
@@ -1713,11 +1796,11 @@ class Key:
         """
         keyType = self.type()
         if keyType == "RSA":
-            sig = self._keyObject.sign(data, padding.PKCS1v15(), hashes.SHA1())
+            sig = self._keyObject.sign(data, padding.PKCS1v15(), self.hashAlgorithm)
             ret = common.NS(sig)
 
         elif keyType == "DSA":
-            sig = self._keyObject.sign(data, hashes.SHA1())
+            sig = self._keyObject.sign(data, self.hashAlgorithm)
             (r, s) = decode_dss_signature(sig)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
@@ -1726,15 +1809,7 @@ class Key:
             ret = common.NS(int_to_bytes(r, 20) + int_to_bytes(s, 20))
 
         elif keyType == "EC":  # Pragma: no branch
-            # Hash size depends on key size
-            keySize = self.size()
-            if keySize <= 256:
-                hashSize = hashes.SHA256()
-            elif keySize <= 384:
-                hashSize = hashes.SHA384()
-            else:
-                hashSize = hashes.SHA512()
-            signature = self._keyObject.sign(data, ec.ECDSA(hashSize))
+            signature = self._keyObject.sign(data, ec.ECDSA(self.hashAlgorithm))
             (r, s) = decode_dss_signature(signature)
 
             rb = int_to_bytes(r)
@@ -1784,7 +1859,8 @@ class Key:
         else:
             signatureType, signature = common.getNS(signature)
 
-        if signatureType != self.sshType():
+        hashAlgorithm = self._getHashAlgorithm(signatureType)
+        if hashAlgorithm is None:
             return False
 
         keyType = self.type()
@@ -1796,7 +1872,7 @@ class Key:
                 common.getNS(signature)[0],
                 data,
                 padding.PKCS1v15(),
-                hashes.SHA1(),
+                hashAlgorithm,
             )
         elif keyType == "DSA":
             concatenatedSignature = common.getNS(signature)[0]
@@ -1806,7 +1882,7 @@ class Key:
             k = self._keyObject
             if not self.isPublic():
                 k = k.public_key()
-            args = (signature, data, hashes.SHA1())
+            args = (signature, data, hashAlgorithm)
 
         elif keyType == "EC":  # Pragma: no branch
             concatenatedSignature = common.getNS(signature)[0]
@@ -1819,14 +1895,7 @@ class Key:
             if not self.isPublic():
                 k = k.public_key()
 
-            keySize = self.size()
-            if keySize <= 256:  # Hash size depends on key size
-                hashSize = hashes.SHA256()
-            elif keySize <= 384:
-                hashSize = hashes.SHA384()
-            else:
-                hashSize = hashes.SHA512()
-            args = (signature, data, ec.ECDSA(hashSize))
+            args = (signature, data, ec.ECDSA(hashAlgorithm))
 
         elif keyType == "Ed25519":
             k = self._keyObject

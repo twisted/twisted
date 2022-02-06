@@ -25,6 +25,8 @@ pyasn1 = requireModule("pyasn1")
 
 if cryptography and pyasn1:
     from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
 
@@ -123,6 +125,36 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
         if ED25519_SUPPORTED:
             self.assertEqual(keys.Key(self.ed25519Obj).size(), 256)
+
+    def test_hashAlgorithm_defaults(self):
+        """
+        The L{keys.Key.hashAlgorithm} property defaults to the traditional
+        hash used for the corresponding key type.
+        """
+        self.assertIsInstance(keys.Key(self.rsaObj).hashAlgorithm, hashes.SHA1)
+        self.assertIsInstance(keys.Key(self.dsaObj).hashAlgorithm, hashes.SHA1)
+        self.assertIsInstance(keys.Key(self.ecObj).hashAlgorithm, hashes.SHA256)
+        self.assertIsInstance(keys.Key(self.ecObj384).hashAlgorithm, hashes.SHA384)
+        self.assertIsInstance(keys.Key(self.ecObj521).hashAlgorithm, hashes.SHA512)
+        if ED25519_SUPPORTED:
+            self.assertIsInstance(
+                keys.Key(self.ed25519Obj).hashAlgorithm, hashes.SHA512
+            )
+
+    def test_hashAlgorithm_alternative(self):
+        """
+        The L{keys.Key.hashAlgorithm} property can select an alternative
+        hash algorithm, where supported.
+        """
+        rsaSHA256 = keys.Key(self.rsaObj)
+        rsaSHA256.hashAlgorithm = hashes.SHA256()
+        self.assertIsInstance(rsaSHA256.hashAlgorithm, hashes.SHA256)
+        rsaSHA512 = keys.Key(self.rsaObj)
+        rsaSHA512.hashAlgorithm = hashes.SHA512()
+        self.assertIsInstance(rsaSHA512.hashAlgorithm, hashes.SHA512)
+        self.assertRaises(
+            ValueError, setattr, keys.Key(self.rsaObj), "hashAlgorithm", hashes.MD5()
+        )
 
     def test__guessStringType(self):
         """
@@ -753,6 +785,12 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         self.assertEqual(keys.Key(self.rsaObj).type(), "RSA")
         self.assertEqual(keys.Key(self.rsaObj).sshType(), b"ssh-rsa")
+        rsaSHA256 = keys.Key(self.rsaObj, hashAlgorithm=hashes.SHA256())
+        self.assertEqual(rsaSHA256.type(), "RSA")
+        self.assertEqual(rsaSHA256.sshType(), b"rsa-sha2-256")
+        rsaSHA512 = keys.Key(self.rsaObj, hashAlgorithm=hashes.SHA512())
+        self.assertEqual(rsaSHA512.type(), "RSA")
+        self.assertEqual(rsaSHA512.sshType(), b"rsa-sha2-512")
         self.assertEqual(keys.Key(self.dsaObj).type(), "DSA")
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b"ssh-dss")
         self.assertEqual(keys.Key(self.ecObj).type(), "EC")
@@ -1308,13 +1346,59 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_signAndVerifyRSA(self):
         """
-        Signed data can be verified using RSA.
+        Signed data can be verified using RSA (with SHA-1, the default).
         """
         data = b"some-data"
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-1.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"ssh-rsa")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA1()
+            )
+        )
+
+    def test_signAndVerifyRSASHA256(self):
+        """
+        Signed data can be verified using RSA with SHA-256.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        key.hashAlgorithm = hashes.SHA256()
+        signature = key.sign(data)
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-256.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-256")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA256()
+            )
+        )
+
+    def test_signAndVerifyRSASHA512(self):
+        """
+        Signed data can be verified using RSA with SHA-512.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        key.hashAlgorithm = hashes.SHA512()
+        signature = key.sign(data)
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-512.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-512")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA512()
+            )
+        )
 
     def test_signAndVerifyDSA(self):
         """

@@ -864,11 +864,36 @@ class SSHFactoryTests(unittest.TestCase):
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
-        gpk = lambda: {"ssh-rsa": keys.Key(None)}
         sshFactory.getPrimes = lambda: primes
-        sshFactory.getPublicKeys = sshFactory.getPrivateKeys = gpk
+        sshFactory.getPublicKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(publicRSA_openssh)
+        }
+        sshFactory.getPrivateKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(privateRSA_openssh)
+        }
         sshFactory.startFactory()
         return sshFactory
+
+    def test_keys(self):
+        """
+        startFactory() adds some key variants using stronger hash
+        algorithms.
+        """
+        factory = self.makeSSHFactory()
+        self.assertEqual(
+            {b"ssh-rsa": "sha1", b"rsa-sha2-256": "sha256", b"rsa-sha2-512": "sha512"},
+            {
+                keyAlgorithm: key.hashAlgorithm.name
+                for keyAlgorithm, key in factory.publicKeys.items()
+            },
+        )
+        self.assertEqual(
+            {b"ssh-rsa": "sha1", b"rsa-sha2-256": "sha256", b"rsa-sha2-512": "sha512"},
+            {
+                keyAlgorithm: key.hashAlgorithm.name
+                for keyAlgorithm, key in factory.privateKeys.items()
+            },
+        )
 
     def test_buildProtocol(self):
         """

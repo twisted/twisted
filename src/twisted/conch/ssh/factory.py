@@ -12,8 +12,10 @@ Maintainer: Paul Swartz
 
 import random
 
+from cryptography.hazmat.primitives import hashes
+
 from twisted.conch import error
-from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.conch.ssh import _kex, connection, keys, transport, userauth
 from twisted.internet import protocol
 from twisted.logger import Logger
 
@@ -31,14 +33,35 @@ class SSHFactory(protocol.Factory):
         b"ssh-connection": connection.SSHConnection,
     }
 
+    # For convenience and wider protocol compatibility, add some key variants
+    # using stronger hash algorithms.
+    _extraHashAlgorithms = [
+        (b"ssh-rsa", b"rsa-sha2-256", hashes.SHA256()),
+        (b"ssh-rsa", b"rsa-sha2-512", hashes.SHA512()),
+    ]
+
     def startFactory(self):
         """
         Check for public and private keys.
         """
         if not hasattr(self, "publicKeys"):
-            self.publicKeys = self.getPublicKeys()
+            self.publicKeys = dict(self.getPublicKeys())
+            for source, target, hashAlgorithm in self._extraHashAlgorithms:
+                if source in self.publicKeys and target not in self.publicKeys:
+                    key = keys.Key.fromString(
+                        self.publicKeys[source].toString("OPENSSH")
+                    )
+                    key.hashAlgorithm = hashAlgorithm
+                    self.publicKeys[target] = key
         if not hasattr(self, "privateKeys"):
-            self.privateKeys = self.getPrivateKeys()
+            self.privateKeys = dict(self.getPrivateKeys())
+            for source, target, hashAlgorithm in self._extraHashAlgorithms:
+                if source in self.privateKeys and target not in self.privateKeys:
+                    key = keys.Key.fromString(
+                        self.privateKeys[source].toString("OPENSSH")
+                    )
+                    key.hashAlgorithm = hashAlgorithm
+                    self.privateKeys[target] = key
         if not self.publicKeys or not self.privateKeys:
             raise error.ConchError("no host keys, failing")
         if not hasattr(self, "primes"):

@@ -333,7 +333,8 @@ class SSHTransportBase(protocol.Protocol):
         key exchanges supported, in order from most-preferred to least.
 
     @ivar supportedPublicKeys:  A list of strings representing the
-        public key types supported, in order from most-preferred to least.
+        public key algorithms supported, in order from most-preferred to
+        least.
 
     @ivar supportedCompressions: A list of strings representing compression
         types supported, from most-preferred to least.
@@ -458,7 +459,7 @@ class SSHTransportBase(protocol.Protocol):
         if eckey.find(b"ecdh") != -1:
             supportedPublicKeys += [eckey.replace(b"ecdh", b"ecdsa")]
 
-    supportedPublicKeys += [b"ssh-rsa", b"ssh-dss"]
+    supportedPublicKeys += [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa", b"ssh-dss"]
     if default_backend().ed25519_supported():
         supportedPublicKeys.append(b"ssh-ed25519")
 
