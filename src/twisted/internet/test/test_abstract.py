@@ -7,9 +7,8 @@ reactors.
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase
-
 from twisted.internet.abstract import isIPv6Address
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class IPv6AddressTests(SynchronousTestCase):

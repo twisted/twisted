@@ -13,14 +13,12 @@ Support for aliases(5) configuration files.
 import os
 import tempfile
 
+from zope.interface import implementer
+
+from twisted.internet import defer, protocol, reactor
 from twisted.mail import smtp
 from twisted.mail.interfaces import IAlias
-from twisted.internet import reactor
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.python import failure
-from twisted.python import log
-from zope.interface import implementer
+from twisted.python import failure, log
 
 
 def handle(result, line, filename, lineNo):
@@ -658,7 +656,7 @@ class MultiWrapper:
         @rtype: L{bytes}
         @return: A string containing a list of the message receivers.
         """
-        return "<GroupWrapper {!r}>".format(map(str, self.objs))
+        return f"<GroupWrapper {map(str, self.objs)!r}>"
 
 
 @implementer(IAlias)
@@ -699,7 +697,7 @@ class AliasGroup(AliasBase):
                 try:
                     f = open(addr[1:])
                 except BaseException:
-                    log.err("Invalid filename in alias file {!r}".format(addr[1:]))
+                    log.err(f"Invalid filename in alias file {addr[1:]!r}")
                 else:
                     with f:
                         addr = " ".join([l.strip() for l in f])

@@ -10,53 +10,43 @@ import base64
 import calendar
 import random
 import sys
+from io import BytesIO
+from itertools import cycle
+from typing import Sequence, Union
+from unittest import skipIf
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from urllib.parse import parse_qs, urlparse, urlunsplit
+
+from zope.interface import directlyProvides, providedBy, provider
+from zope.interface.verify import verifyObject
 
 import hamcrest
 
-from urllib.parse import urlparse, urlunsplit, parse_qs
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from unittest import skipIf
-from typing import Sequence, Union
-
-from io import BytesIO
-from itertools import cycle
-from zope.interface import (
-    provider,
-    directlyProvides,
-    providedBy,
-)
-from zope.interface.verify import verifyObject
-
+from twisted.internet import address
+from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.task import Clock
+from twisted.logger import globalLogPublisher
+from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.test.proto_helpers import (
+    EventLoggingObserver,
+    NonStreamingProducer,
+    StringTransport,
+)
+from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
-from twisted.web.http import PotentialDataLoss, _DataLoss
-from twisted.web.http import _IdentityTransferDecoder
-from twisted.internet import address
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionLost, ConnectionDone
-from twisted.protocols import loopback
-from twisted.test.proto_helpers import (
-    StringTransport,
-    NonStreamingProducer,
-    EventLoggingObserver,
-)
-from twisted.test.test_internet import DummyProducer
+from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
     textLinearWhitespaceComponents,
 )
-
-from twisted.logger import globalLogPublisher
-
-from ._util import (
-    assertIsFilesystemTemporary,
-)
+from ._util import assertIsFilesystemTemporary
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
@@ -1288,6 +1278,34 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p = http._ChunkedTransferDecoder(L.append, None)
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
+
+    def test_oversizedChunkSizeLine(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size line exceeds 4 KiB.
+        This applies even when the data has already been received and buffered
+        so that behavior is consistent regardless of how bytes are framed.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3;" + b"." * http.maxChunkSizeLineLength + b"\r\nabc\r\n",
+        )
+
+    def test_oversizedChunkSizeLinePartial(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the amount of data buffered while
+        looking for the end of the chunk size line exceeds 4 KiB so
+        that buffering does not continue without bound.
+        """
+        p = http._ChunkedTransferDecoder(None, None)
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"." * (http.maxChunkSizeLineLength + 1),
+        )
 
     def test_malformedChunkSize(self):
         """

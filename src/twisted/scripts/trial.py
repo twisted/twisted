@@ -12,14 +12,13 @@ import sys
 import time
 import warnings
 
-from twisted.internet import defer
+from twisted import plugin
 from twisted.application import app
-from twisted.python import usage, reflect, failure
+from twisted.internet import defer
+from twisted.python import failure, reflect, usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
-from twisted import plugin
-from twisted.trial import runner, itrial, reporter
-
+from twisted.trial import itrial, reporter, runner
 
 # Yea, this is stupid.  Leave it for command-line compatibility for a
 # while, though.
@@ -640,13 +639,13 @@ def run():
     try:
         config.parseOptions()
     except usage.error as ue:
-        raise SystemExit("{}: {}".format(sys.argv[0], ue))
+        raise SystemExit(f"{sys.argv[0]}: {ue}")
     _initialDebugSetup(config)
 
     try:
         trialRunner = _makeRunner(config)
     except _DebuggerNotFound as e:
-        raise SystemExit("{}: {}".format(sys.argv[0], str(e)))
+        raise SystemExit(f"{sys.argv[0]}: {str(e)}")
 
     suite = _getSuite(config)
     if config["until-failure"]:

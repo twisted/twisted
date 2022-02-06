@@ -8,8 +8,9 @@ Exceptions and errors for use in twisted.internet modules.
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
+
+from twisted.python import deprecate
 
 
 class BindError(Exception):
@@ -94,7 +95,7 @@ class ConnectError(Exception):
         if self.osError:
             s = f"{s}: {self.osError}"
         if self.args[0]:
-            s = "{}: {}".format(s, self.args[0])
+            s = f"{s}: {self.args[0]}"
         s = "%s." % s
         return s
 

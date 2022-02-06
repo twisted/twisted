@@ -11,11 +11,11 @@ import copyreg as copy_reg
 import inspect
 import pickle
 import types
-from typing import Dict
-from twisted.python.compat import _PYPY
-from twisted.python import log, reflect
 from io import StringIO as _cStringIO
+from typing import Dict
 
+from twisted.python import log, reflect
+from twisted.python.compat import _PYPY
 
 oldModules: Dict[str, types.ModuleType] = {}
 
@@ -321,7 +321,7 @@ class Versioned:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
                 dct[
-                    "{}.persistenceVersion".format(reflect.qual(base))
+                    f"{reflect.qual(base)}.persistenceVersion"
                 ] = base.persistenceVersion
         return dct
 

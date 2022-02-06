@@ -11,7 +11,7 @@ import time
 
 from twisted.internet import protocol, task
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
+from twisted.test.proto_helpers import StringIOWithoutClosing, StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
@@ -1364,7 +1364,7 @@ class ClientImplementationTests(IRCTestCase):
             self.assertEqual(method, "modeChanged")
             self.assertEqual(data["user"], "Wolf!~wolf@yok.utu.fi")
             self.assertEqual(data["channel"], target)
-            results[n] = tuple([data[key] for key in ("set", "modes", "args")])
+            results[n] = tuple(data[key] for key in ("set", "modes", "args"))
         return results
 
     def _checkModeChange(self, expected, target=None):

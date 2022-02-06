@@ -2,28 +2,29 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import textwrap
 from typing import Optional, Type
 
-from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-
-from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import (
-    CS_UK,
-    CS_US,
-    CS_DRAWING,
+    BLINK,
     CS_ALTERNATE,
     CS_ALTERNATE_SPECIAL,
-    BLINK,
+    CS_DRAWING,
+    CS_UK,
+    CS_US,
+    G0,
+    G1,
     UNDERLINE,
+    ClientProtocol,
+    ServerProtocol,
+    modes,
+    privateModes,
 )
-from twisted.conch.insults.insults import G0, G1
-from twisted.conch.insults.insults import modes, privateModes
 from twisted.internet.protocol import Protocol
 from twisted.python.compat import iterbytes
 from twisted.python.constants import ValueConstant, Values
-
-import textwrap
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 def _getattr(mock, name):

@@ -9,14 +9,17 @@ Interface definitions for L{twisted.web}.
     L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
-from typing import Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
+from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
-from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
 
 
 class IRequest(Interface):
@@ -508,11 +511,12 @@ class IRenderable(Interface):
     L{twisted.web.template} templating system.
     """
 
-    def lookupRenderMethod(name):
+    def lookupRenderMethod(
+        name: str,
+    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
         """
         Look up and return the render method associated with the given name.
 
-        @type name: L{str}
         @param name: The value of a render directive encountered in the
             document returned by a call to L{IRenderable.render}.
 
@@ -521,11 +525,10 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request):
+    def render(request: Optional[IRequest]) -> "Flattenable":
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or L{None}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -539,12 +542,12 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load():
+    def load() -> List["Flattenable"]:
         """
         Load a template suitable for rendering.
 
-        @return: a L{list} of L{list}s, L{unicode} objects, C{Element}s and
-            other L{IRenderable} providers.
+        @return: a L{list} of flattenable objects, such as byte and unicode
+            strings, L{twisted.web.template.Element}s and L{IRenderable} providers.
         """
 
 
@@ -710,12 +713,12 @@ class IAgent(Interface):
     obtained by combining a number of (hypothetical) implementations::
 
         baseAgent = Agent(reactor)
-        redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
+        decode = ContentDecoderAgent(baseAgent, [(b"gzip", GzipDecoder())])
+        cookie = CookieAgent(decode, diskStore.cookie)
         authenticate = AuthenticateAgent(
-            redirect, [diskStore.credentials, GtkAuthInterface()])
-        cookie = CookieAgent(authenticate, diskStore.cookie)
-        decode = ContentDecoderAgent(cookie, [(b"gzip", GzipDecoder())])
-        cache = CacheAgent(decode, diskStore.cache)
+            cookie, [diskStore.credentials, GtkAuthInterface()])
+        cache = CacheAgent(authenticate, diskStore.cache)
+        redirect = BrowserLikeRedirectAgent(cache, limit=10)
 
         doSomeRequests(cache)
     """

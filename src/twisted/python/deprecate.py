@@ -91,12 +91,12 @@ __all__ = [
 ]
 
 
+import inspect
+import sys
 from dis import findlinestarts
 from functools import wraps
-import inspect
 from types import ModuleType
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
-import sys
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -125,15 +125,7 @@ def _fullyQualifiedName(obj):
         moduleName = obj.__module__
         return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
-        try:
-            cls = obj.im_class
-        except AttributeError:
-            # Python 3 eliminates im_class, substitutes __module__ and
-            # __qualname__ to provide similar information.
-            return f"{obj.__module__}.{obj.__qualname__}"
-        else:
-            className = _fullyQualifiedName(cls)
-            return f"{className}.{name}"
+        return f"{obj.__module__}.{obj.__qualname__}"
     return name
 
 
@@ -172,9 +164,9 @@ def _getDeprecationDocstring(version, replacement=None):
     @return: a string like "Deprecated in Twisted 27.2.0; please use
         twisted.timestream.tachyon.flux instead."
     """
-    doc = "Deprecated in {}".format(getVersionString(version))
+    doc = f"Deprecated in {getVersionString(version)}"
     if replacement:
-        doc = "{}; {}".format(doc, _getReplacementString(replacement))
+        doc = f"{doc}; {_getReplacementString(replacement)}"
     return doc + "."
 
 
@@ -448,7 +440,7 @@ class _ModuleProxy:
         representation of the wrapped module object.
         """
         state = _InternalState(self)
-        return "<{} module={!r}>".format(type(self).__name__, state._module)
+        return f"<{type(self).__name__} module={state._module!r}>"
 
     def __setattr__(self, name, value):
         """
@@ -783,7 +775,7 @@ def deprecatedKeywordParameter(
 
     def wrapper(wrappee: _Tc) -> _Tc:
         warningString = _getDeprecationWarningString(
-            "The {!r} parameter to {}".format(name, _fullyQualifiedName(wrappee)),
+            f"The {name!r} parameter to {_fullyQualifiedName(wrappee)}",
             version,
             replacement=replacement,
         )

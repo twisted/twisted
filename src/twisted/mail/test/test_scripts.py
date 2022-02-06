@@ -5,8 +5,8 @@
 Tests for the command-line mailer tool provided by Twisted Mail.
 """
 
-from twisted.trial.unittest import TestCase
 from twisted.scripts.test.test_scripts import ScriptTestsMixin
+from twisted.trial.unittest import TestCase
 
 
 class ScriptTests(TestCase, ScriptTestsMixin):

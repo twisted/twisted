@@ -8,16 +8,16 @@ Tests for C{await} support in Deferreds.
 
 import types
 
-from twisted.python.failure import Failure
 from twisted.internet.defer import (
     Deferred,
-    maybeDeferred,
     ensureDeferred,
     fail,
+    maybeDeferred,
     succeed,
 )
-from twisted.trial.unittest import TestCase
 from twisted.internet.task import Clock
+from twisted.python.failure import Failure
+from twisted.trial.unittest import TestCase
 
 
 class SampleException(Exception):

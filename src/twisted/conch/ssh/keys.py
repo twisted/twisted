@@ -26,10 +26,13 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from pyasn1.codec.ber import decoder as berDecoder
-from pyasn1.codec.ber import encoder as berEncoder
-from pyasn1.error import PyAsn1Error
-from pyasn1.type import univ
+from pyasn1.codec.ber import (  # type: ignore[import]
+    decoder as berDecoder,
+    encoder as berEncoder,
+)
+from pyasn1.error import PyAsn1Error  # type: ignore[import]
+from pyasn1.type import univ  # type: ignore[import]
+
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
@@ -40,13 +43,13 @@ from twisted.python.deprecate import _mutuallyExclusiveArguments
 try:
 
     from cryptography.hazmat.primitives.asymmetric.utils import (
-        encode_dss_signature,
         decode_dss_signature,
+        encode_dss_signature,
     )
 except ImportError:
     from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]
-        encode_rfc6979_signature as encode_dss_signature,
         decode_rfc6979_signature as decode_dss_signature,
+        encode_rfc6979_signature as encode_dss_signature,
     )
 
 
@@ -502,7 +505,7 @@ class Key:
                 _, cipherIVInfo = lines[2].split(b" ", 1)
                 cipher, ivdata = cipherIVInfo.rstrip().split(b",", 1)
             except ValueError:
-                raise BadKeyError("invalid DEK-info {!r}".format(lines[2]))
+                raise BadKeyError(f"invalid DEK-info {lines[2]!r}")
 
             if cipher in (b"AES-128-CBC", b"AES-256-CBC"):
                 algorithmClass = algorithms.AES
@@ -519,9 +522,7 @@ class Key:
 
             # Extract keyData for decoding
             iv = bytes(
-                bytearray(
-                    [int(ivdata[i : i + 2], 16) for i in range(0, len(ivdata), 2)]
-                )
+                bytearray(int(ivdata[i : i + 2], 16) for i in range(0, len(ivdata), 2))
             )
             ba = md5(passphrase + iv[:8]).digest()
             bb = md5(ba + passphrase + iv[:8]).digest()
@@ -553,7 +554,7 @@ class Key:
             if len(decodedKey) < 6:
                 raise BadKeyError("RSA key failed to decode properly")
 
-            n, e, d, p, q, dmp1, dmq1, iqmp = [int(value) for value in decodedKey[1:9]]
+            n, e, d, p, q, dmp1, dmq1, iqmp = (int(value) for value in decodedKey[1:9])
             return cls(
                 rsa.RSAPrivateNumbers(
                     p=p,
@@ -566,7 +567,7 @@ class Key:
                 ).private_key(default_backend())
             )
         elif kind == b"DSA":
-            p, q, g, y, x = [int(value) for value in decodedKey[1:6]]
+            p, q, g, y, x = (int(value) for value in decodedKey[1:6])
             if len(decodedKey) < 6:
                 raise BadKeyError("DSA key failed to decode properly")
             return cls(
@@ -639,7 +640,7 @@ class Key:
         elif sexp[1][0] == b"rsa-pkcs1-sha1":
             return cls._fromRSAComponents(n=kd[b"n"], e=kd[b"e"])
         else:
-            raise BadKeyError("unknown lsh key type {}".format(sexp[1][0]))
+            raise BadKeyError(f"unknown lsh key type {sexp[1][0]}")
 
     @classmethod
     def _fromString_PRIVATE_LSH(cls, data):
@@ -677,7 +678,7 @@ class Key:
             )
 
         else:
-            raise BadKeyError("unknown lsh key type {}".format(sexp[1][0]))
+            raise BadKeyError(f"unknown lsh key type {sexp[1][0]}")
 
     @classmethod
     def _fromString_AGENTV3(cls, data):
@@ -948,9 +949,9 @@ class Key:
             name = data["curve"].decode("utf-8")
 
             if self.isPublic():
-                out = "<Elliptic Curve Public Key ({} bits)".format(name[-3:])
+                out = f"<Elliptic Curve Public Key ({name[-3:]} bits)"
             else:
-                out = "<Elliptic Curve Private Key ({} bits)".format(name[-3:])
+                out = f"<Elliptic Curve Private Key ({name[-3:]} bits)"
 
             for k, v in sorted(data.items()):
                 if k == "curve":
@@ -976,7 +977,7 @@ class Key:
                     by = by[15:]
                     o = ""
                     for c in iterbytes(m):
-                        o = o + "{:02x}:".format(ord(c))
+                        o = o + f"{ord(c):02x}:"
                     if len(m) < 15:
                         o = o[:-1]
                     lines.append("\t" + o)
@@ -1542,7 +1543,7 @@ class Key:
         asn1Data = berEncoder.encode(asn1Sequence)
         if passphrase:
             iv = randbytes.secureRandom(8)
-            hexiv = "".join(["{:02X}".format(ord(x)) for x in iterbytes(iv)])
+            hexiv = "".join([f"{ord(x):02X}" for x in iterbytes(iv)])
             hexiv = hexiv.encode("ascii")
             lines.append(b"Proc-Type: 4,ENCRYPTED")
             lines.append(b"DEK-Info: DES-EDE3-CBC," + hexiv + b"\n")

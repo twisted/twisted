@@ -9,16 +9,16 @@ Documented in RFC 2543.
 [Superseded by 3261]
 """
 
-from collections import OrderedDict
 import socket
 import time
-from typing import Dict, List
 import warnings
+from collections import OrderedDict
+from typing import Dict, List
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
 from twisted import cred
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import log
 
@@ -364,7 +364,7 @@ class URL:
             w(
                 "&".join(
                     [
-                        ("{}={}".format(specialCases.get(h) or dashCapitalize(h), v))
+                        (f"{specialCases.get(h) or dashCapitalize(h)}={v}")
                         for (h, v) in self.headers.items()
                     ]
                 )
@@ -530,7 +530,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "{}: {}\r\n".format(specialCases.get(n) or dashCapitalize(n), v)
+                s += f"{specialCases.get(n) or dashCapitalize(n)}: {v}\r\n"
         s += "\r\n"
         s += self.body
         return s

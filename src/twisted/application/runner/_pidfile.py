@@ -104,7 +104,7 @@ class PIDFile:
 
         @return: Formatted PID file contents.
         """
-        return "{}\n".format(int(pid)).encode("utf-8")
+        return f"{int(pid)}\n".encode()
 
     def __init__(self, filePath: FilePath) -> None:
         """
@@ -253,7 +253,7 @@ class NonePIDFile:
         return None
 
 
-nonePIDFile = NonePIDFile()
+nonePIDFile: IPIDFile = NonePIDFile()
 
 
 class AlreadyRunningError(Exception):

@@ -15,8 +15,12 @@ from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
 from twisted.trial._dist.disttrial import DistTrialRunner
-from twisted.trial.runner import TestLoader
-from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
+from twisted.trial.runner import (
+    DestructiveTestSuite,
+    TestLoader,
+    TestSuite,
+    TrialRunner,
+)
 from twisted.trial.test.test_loader import testNames
 
 pyunit = __import__("unittest")
@@ -802,7 +806,7 @@ class OrderTests(unittest.TestCase):
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_toptobottom_temp import test_missing
+        from twisted_toptobottom_temp import test_missing  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_toptobottom_temp")
         self.addCleanup(sys.modules.pop, test_missing.__name__)
@@ -855,7 +859,7 @@ class HelpOrderTests(unittest.TestCase):
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "{}.*{}".format(re.escape(orderName), re.escape(orderDesc)),
+                f"{re.escape(orderName)}.*{re.escape(orderDesc)}",
                 output,
             )
 

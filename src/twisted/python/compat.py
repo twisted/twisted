@@ -33,19 +33,15 @@ from collections.abc import Sequence
 from functools import reduce
 from html import escape
 from http import cookiejar as cookielib
-from io import IOBase
-from io import StringIO as NativeStringIO
-from io import TextIOBase
+from io import IOBase, StringIO as NativeStringIO, TextIOBase
 from sys import intern
 from types import FrameType, MethodType as _MethodType
 from typing import Any, AnyStr, cast
-from urllib.parse import quote as urlquote
-from urllib.parse import unquote as urlunquote
+from urllib.parse import quote as urlquote, unquote as urlunquote
 
 from incremental import Version
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-
 
 if sys.version_info >= (3, 7, 0):
     _PY37PLUS = True
@@ -481,10 +477,10 @@ def bytesEnviron():
     This function is POSIX only; environment variables are always text strings
     on Windows.
     """
-    encodekey = os.environ.encodekey  # type: ignore[attr-defined]
-    encodevalue = os.environ.encodevalue  # type: ignore[attr-defined]
+    encodekey = os.environ.encodekey
+    encodevalue = os.environ.encodevalue
 
-    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}  # type: ignore[call-arg]
 
 
 def _constructMethod(cls, name, self):
@@ -542,7 +538,7 @@ def _pypy3BlockingHack():
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:
-        from fcntl import fcntl, F_GETFL, F_SETFL
+        from fcntl import F_GETFL, F_SETFL, fcntl
     except ImportError:
         return
     if not _PYPY:

@@ -12,22 +12,20 @@ from typing import Any, Callable, Optional
 
 from zope.interface.verify import verifyObject
 
+import twisted.trial.unittest
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
+from twisted.trial.unittest import SkipTest
 from ...runner import _pidfile
 from .._pidfile import (
-    IPIDFile,
-    PIDFile,
-    NonePIDFile,
     AlreadyRunningError,
     InvalidPIDFileError,
-    StalePIDFileError,
+    IPIDFile,
+    NonePIDFile,
     NoPIDFound,
+    PIDFile,
+    StalePIDFileError,
 )
-
-import twisted.trial.unittest
-from twisted.trial.unittest import SkipTest
 
 
 def ifPlatformSupported(f: Callable[..., Any]) -> Callable[..., Any]:

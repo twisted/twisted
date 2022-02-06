@@ -13,17 +13,21 @@ import os
 
 from zope.interface import implementer
 
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.interfaces import ITransport, IAddress
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IAddress, ITransport
+from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.reflect import namedObject
-from twisted.trial.unittest import Todo
-from twisted.trial.runner import TrialSuite, TestLoader
-from twisted.trial._dist import workercommands, managercommands
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist import (
+    _WORKER_AMP_STDIN,
+    _WORKER_AMP_STDOUT,
+    managercommands,
+    workercommands,
+)
 from twisted.trial._dist.workerreporter import WorkerReporter
+from twisted.trial.runner import TestLoader, TrialSuite
+from twisted.trial.unittest import Todo
 
 
 class WorkerProtocol(AMP):
@@ -255,7 +259,15 @@ class LocalWorker(ProcessProtocol):
             os.makedirs(self._logDirectory)
         self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
         self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
-        self._testLog = open(os.path.join(self._logDirectory, self._logFile), "w")
+        # Log data is received via AMP which is UTF-8 unicode.
+        # The log file should be written using a Unicode encoding, and not
+        # the default system encoding which might not be Unicode compatible.
+        self._testLog = open(
+            os.path.join(self._logDirectory, self._logFile),
+            "w",
+            encoding="utf-8",
+            errors="strict",
+        )
         self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory
         d = self._ampProtocol.callRemote(workercommands.Start, directory=logDirectory)

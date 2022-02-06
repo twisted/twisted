@@ -14,14 +14,15 @@ See L{Failure}.
 
 # System Imports
 import copy
-import sys
-import linecache
 import inspect
-import opcode
+import linecache
+import sys
 from inspect import getmro
+from io import StringIO
+
+import opcode
 
 from twisted.python import reflect
-from io import StringIO
 
 count = 0
 traceupLength = 4
@@ -71,10 +72,10 @@ def format_frames(frames, write, detail="default"):
             w(" [ Locals ]\n")
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
             w(" ( Globals )\n")
             for name, val in globalVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
 
 
 # slyphon: i have a need to check for this value in trial
@@ -466,24 +467,12 @@ class Failure(BaseException):
                 return error
         return None
 
-    # It would be nice to use twisted.python.compat.reraise, but that breaks
-    # the stack exploration in _findFailure; possibly this can be fixed in
-    # #5931.
-    if getattr(BaseException, "with_traceback", None):
-        # Python 3
-        def raiseException(self):
-            raise self.value.with_traceback(self.tb)
-
-    else:
-        exec(
-            """def raiseException(self):
-    raise self.type, self.value, self.tb"""
-        )
-
-    raiseException.__doc__ = """
+    def raiseException(self):
+        """
         raise the original exception, preserving traceback
         information if available.
         """
+        raise self.value.with_traceback(self.tb)
 
     @_extraneous
     def throwExceptionIntoGenerator(self, g):
@@ -713,7 +702,7 @@ class Failure(BaseException):
 
         # Postamble, if any
         if not detail == "brief":
-            w("{}: {}\n".format(reflect.qual(self.type), reflect.safe_str(self.value)))
+            w(f"{reflect.qual(self.type)}: {reflect.safe_str(self.value)}\n")
 
         # Chaining
         if isinstance(self.value, Failure):

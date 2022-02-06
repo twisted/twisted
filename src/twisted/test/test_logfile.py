@@ -7,10 +7,10 @@ import errno
 import os
 import stat
 import time
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase
+
 from twisted.python import logfile, runtime
+from twisted.trial.unittest import TestCase
 
 
 class LogFileTests(TestCase):
@@ -443,7 +443,7 @@ class DailyLogFileTests(TestCase):
 
         # Build a new file with the same name as the file which would be created
         # if the log file is to be rotated.
-        newFilePath = "{}.{}".format(log.path, log.suffix(log.lastDate))
+        newFilePath = f"{log.path}.{log.suffix(log.lastDate)}"
         with open(newFilePath, "w") as fp:
             fp.write("123")
         previousFile = log._file

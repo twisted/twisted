@@ -7,13 +7,14 @@ Test ssh/channel.py.
 
 
 from unittest import skipIf
+
 from zope.interface.verify import verifyObject
 
 try:
     from twisted.conch.ssh import channel
     from twisted.conch.ssh.address import SSHTransportAddress
-    from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.conch.ssh.service import SSHService
+    from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.internet import interfaces
     from twisted.internet.address import IPv4Address
     from twisted.test.proto_helpers import StringTransport

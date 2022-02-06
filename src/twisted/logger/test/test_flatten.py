@@ -5,18 +5,17 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from itertools import count
 import json
+from itertools import count
 from typing import Any, Callable, Optional
 
 try:
     from time import tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment, misc]
+    tzset = None  # type: ignore[assignment]
 
 from twisted.trial import unittest
-
-from .._flatten import flattenEvent, extractField, KeyFlattener, aFormatter
+from .._flatten import KeyFlattener, aFormatter, extractField, flattenEvent
 from .._format import formatEvent
 from .._interfaces import LogEvent
 

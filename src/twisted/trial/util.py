@@ -21,7 +21,7 @@ Maintainer: Jonathan Lange
 
 from random import randrange
 
-from twisted.internet import utils, interfaces
+from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -376,7 +376,7 @@ def _listToPhrase(things, finalDelimiter, delimiter=", "):
     if len(things) == 1:
         return str(things[0])
     if len(things) == 2:
-        return "{} {} {}".format(str(things[0]), finalDelimiter, str(things[1]))
+        return f"{str(things[0])} {finalDelimiter} {str(things[1])}"
     else:
         strThings = []
         for thing in things:

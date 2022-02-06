@@ -6,69 +6,85 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
 import zlib
-
 from http.cookiejar import CookieJar
 from io import BytesIO
-from unittest import skipIf
+from typing import TYPE_CHECKING, List, Optional, Tuple
+from unittest import SkipTest, skipIf
+
+from zope.interface.declarations import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase, SynchronousTestCase
-from twisted.web import client, error, http_headers
-from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
-from twisted.web._newclient import PotentialDataLoss
-from twisted.internet import defer, task
-from twisted.python.failure import Failure
-from twisted.python.components import proxyForInterface
-from twisted.test.proto_helpers import (
-    StringTransport,
-    MemoryReactorClock,
-    EventLoggingObserver,
-)
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionRefusedError, ConnectionDone
-from twisted.internet.error import ConnectionLost
-from twisted.internet.protocol import Protocol, Factory
-from twisted.internet.defer import Deferred, succeed, CancelledError
-from twisted.internet.endpoints import TCP4ClientEndpoint
-from twisted.internet.address import IPv4Address, IPv6Address
+from incremental import Version
 
+from twisted.internet import defer, task
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import CancelledError, Deferred, succeed
+from twisted.internet.endpoints import HostnameEndpoint, TCP4ClientEndpoint
+from twisted.internet.error import (
+    ConnectionDone,
+    ConnectionLost,
+    ConnectionRefusedError,
+)
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.task import Clock
+from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+from twisted.logger import globalLogPublisher
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
+from twisted.test.proto_helpers import (
+    AccumulatingProtocol,
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+from twisted.trial.unittest import SynchronousTestCase, TestCase
+from twisted.web import client, error, http_headers
+from twisted.web._newclient import (
+    HTTP11ClientProtocol,
+    PotentialDataLoss,
+    RequestNotSent,
+    RequestTransmissionFailed,
+    Response,
+    ResponseFailed,
+    ResponseNeverReceived,
+)
 from twisted.web.client import (
+    URI,
+    BrowserLikePolicyForHTTPS,
     FileBodyProducer,
-    Request,
+    HostnameCachingHTTPSPolicy,
     HTTPConnectionPool,
+    Request,
     ResponseDone,
     _HTTP11ClientFactory,
-    URI,
 )
-
+from twisted.web.error import SchemeNotSupported
+from twisted.web.http_headers import Headers
 from twisted.web.iweb import (
     UNKNOWN_LENGTH,
     IAgent,
-    IBodyProducer,
-    IResponse,
     IAgentEndpointFactory,
+    IBodyProducer,
+    IPolicyForHTTPS,
+    IResponse,
 )
-from twisted.web.http_headers import Headers
-from twisted.web._newclient import HTTP11ClientProtocol, Response
-
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
-from zope.interface.declarations import implementer
-from twisted.web.iweb import IPolicyForHTTPS
-from twisted.python.deprecate import getDeprecationWarningString
-from incremental import Version
-from twisted.web.client import BrowserLikePolicyForHTTPS, HostnameCachingHTTPSPolicy
-from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.internet.endpoints import HostnameEndpoint
-from twisted.test.proto_helpers import AccumulatingProtocol
-from twisted.test.iosim import IOPump, FakeTransport
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.web.test.injectionhelpers import (
     MethodInjectionTestsMixin,
     URIInjectionTestsMixin,
 )
-from twisted.web.error import SchemeNotSupported
-from twisted.logger import globalLogPublisher
+
+# Creatively lie to mypy about the nature of inheritance, since dealing with
+# expectations of a mixin class is basically impossible (don't use mixins).
+if TYPE_CHECKING:
+    testMixinClass = TestCase
+    runtimeTestCase = object
+else:
+    testMixinClass = object
+    runtimeTestCase = TestCase
 
 try:
     from twisted.internet import ssl as _ssl
@@ -80,7 +96,7 @@ else:
     sslPresent = True
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
-    from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot:
@@ -102,8 +118,8 @@ class StubHTTPProtocol(Protocol):
         request method is appended to this list.
     """
 
-    def __init__(self):
-        self.requests = []
+    def __init__(self) -> None:
+        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):
@@ -1559,8 +1575,9 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             return TLSMemoryBIOFactory(server.options(), False, serverFactory)
 
         def tlsagent(reactor):
-            from twisted.web.iweb import IPolicyForHTTPS
             from zope.interface import implementer
+
+            from twisted.web.iweb import IPolicyForHTTPS
 
             @implementer(IPolicyForHTTPS)
             class Policy:
@@ -2580,11 +2597,24 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertEqual(agent._pool.connected, True)
 
 
-class _RedirectAgentTestsMixin:
+SENSITIVE_HEADERS = [
+    b"authorization",
+    b"cookie",
+    b"cookie2",
+    b"proxy-authorization",
+    b"www-authenticate",
+]
+
+
+class _RedirectAgentTestsMixin(testMixinClass):
     """
     Test cases mixin for L{RedirectAgentTests} and
     L{BrowserLikeRedirectAgentTests}.
     """
+
+    agent: IAgent
+    reactor: MemoryReactorClock
+    protocol: StubHTTPProtocol
 
     def test_noRedirect(self):
         """
@@ -2604,32 +2634,56 @@ class _RedirectAgentTestsMixin:
         self.assertIdentical(response, result)
         self.assertIdentical(result.previousResponse, None)
 
-    def _testRedirectDefault(self, code):
+    def _testRedirectDefault(
+        self,
+        code: int,
+        crossScheme: bool = False,
+        crossDomain: bool = False,
+        crossPort: bool = False,
+        requestHeaders: Optional[Headers] = None,
+    ) -> Request:
         """
         When getting a redirect, L{client.RedirectAgent} follows the URL
         specified in the L{Location} header field and make a new request.
 
         @param code: HTTP status code.
         """
-        self.agent.request(b"GET", b"http://example.com/foo")
+        startDomain = b"example.com"
+        startScheme = b"https" if ssl is not None else b"http"
+        startPort = 80 if startScheme == b"http" else 443
+        self.agent.request(
+            b"GET", startScheme + b"://" + startDomain + b"/foo", headers=requestHeaders
+        )
 
         host, port = self.reactor.tcpClients.pop()[:2]
         self.assertEqual(EXAMPLE_COM_IP, host)
-        self.assertEqual(80, port)
+        self.assertEqual(startPort, port)
 
         req, res = self.protocol.requests.pop()
 
-        # If possible (i.e.: SSL support is present), run the test with a
+        # If possible (i.e.: TLS support is present), run the test with a
         # cross-scheme redirect to verify that the scheme is honored; if not,
         # let's just make sure it works at all.
-        if ssl is None:
-            scheme = b"http"
-            expectedPort = 80
-        else:
-            scheme = b"https"
-            expectedPort = 443
 
-        headers = http_headers.Headers({b"location": [scheme + b"://example.com/bar"]})
+        targetScheme = startScheme
+        targetDomain = startDomain
+        targetPort = startPort
+
+        if crossScheme:
+            if ssl is None:
+                raise SkipTest(
+                    "Cross-scheme redirects can't be tested without TLS support."
+                )
+            targetScheme = b"https" if startScheme == b"http" else b"http"
+            targetPort = 443 if startPort == 80 else 80
+
+        portSyntax = b""
+        if crossPort:
+            targetPort = 8443
+            portSyntax = b":8443"
+        targetDomain = b"example.net" if crossDomain else startDomain
+        locationValue = targetScheme + b"://" + targetDomain + portSyntax + b"/bar"
+        headers = http_headers.Headers({b"location": [locationValue]})
         response = Response((b"HTTP", 1, 1), code, b"OK", headers, None)
         res.callback(response)
 
@@ -2638,14 +2692,24 @@ class _RedirectAgentTestsMixin:
         self.assertEqual(b"/bar", req2.uri)
 
         host, port = self.reactor.tcpClients.pop()[:2]
-        self.assertEqual(EXAMPLE_COM_IP, host)
-        self.assertEqual(expectedPort, port)
+        self.assertEqual(EXAMPLE_NET_IP if crossDomain else EXAMPLE_COM_IP, host)
+        self.assertEqual(targetPort, port)
+        return req2
 
     def test_redirect301(self):
         """
         L{client.RedirectAgent} follows redirects on status code 301.
         """
         self._testRedirectDefault(301)
+
+    def test_redirect301Scheme(self):
+        """
+        L{client.RedirectAgent} follows cross-scheme redirects.
+        """
+        self._testRedirectDefault(
+            301,
+            crossScheme=True,
+        )
 
     def test_redirect302(self):
         """
@@ -2664,6 +2728,74 @@ class _RedirectAgentTestsMixin:
         L{client.RedirectAgent} follows redirects on status code 308.
         """
         self._testRedirectDefault(308)
+
+    def _sensitiveHeadersTest(
+        self, expectedHostHeader: bytes = b"example.com", **crossKwargs: bool
+    ) -> None:
+        """
+        L{client.RedirectAgent} scrubs sensitive headers when redirecting
+        between differing origins.
+        """
+        sensitiveHeaderValues = {
+            b"authorization": [b"sensitive-authnz"],
+            b"cookie": [b"sensitive-cookie-data"],
+            b"cookie2": [b"sensitive-cookie2-data"],
+            b"proxy-authorization": [b"sensitive-proxy-auth"],
+            b"wWw-auThentiCate": [b"sensitive-authn"],
+            b"x-custom-sensitive": [b"sensitive-custom"],
+        }
+        otherHeaderValues = {b"x-random-header": [b"x-random-value"]}
+        allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
+        redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
+
+        def normHeaders(headers: Headers) -> dict:
+            return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
+
+        sameOriginHeaders = normHeaders(redirected.headers)
+        self.assertEquals(
+            sameOriginHeaders,
+            {
+                b"host": [b"example.com"],
+                **normHeaders(allHeaders),
+            },
+        )
+
+        redirectedElsewhere = self._testRedirectDefault(
+            301,
+            **crossKwargs,
+            requestHeaders=Headers({**sensitiveHeaderValues, **otherHeaderValues}),
+        )
+        otherOriginHeaders = normHeaders(redirectedElsewhere.headers)
+        self.assertEquals(
+            otherOriginHeaders,
+            {
+                b"host": [expectedHostHeader],
+                **normHeaders(Headers(otherHeaderValues)),
+            },
+        )
+
+    def test_crossDomainHeaders(self) -> None:
+        """
+        L{client.RedirectAgent} scrubs sensitive headers when redirecting
+        between differing domains.
+        """
+        self._sensitiveHeadersTest(crossDomain=True, expectedHostHeader=b"example.net")
+
+    def test_crossPortHeaders(self) -> None:
+        """
+        L{client.RedirectAgent} scrubs sensitive headers when redirecting
+        between differing ports.
+        """
+        self._sensitiveHeadersTest(
+            crossPort=True, expectedHostHeader=b"example.com:8443"
+        )
+
+    def test_crossSchemeHeaders(self) -> None:
+        """
+        L{client.RedirectAgent} scrubs sensitive headers when redirecting
+        between differing schemes.
+        """
+        self._sensitiveHeadersTest(crossScheme=True)
 
     def _testRedirectToGet(self, code, method):
         """
@@ -2871,7 +3003,10 @@ class _RedirectAgentTestsMixin:
 
 
 class RedirectAgentTests(
-    TestCase, FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin
+    FakeReactorAndConnectMixin,
+    _RedirectAgentTestsMixin,
+    AgentTestsMixin,
+    runtimeTestCase,
 ):
     """
     Tests for L{client.RedirectAgent}.
@@ -2881,7 +3016,10 @@ class RedirectAgentTests(
         """
         @return: a new L{twisted.web.client.RedirectAgent}
         """
-        return client.RedirectAgent(self.buildAgentForWrapperTest(self.reactor))
+        return client.RedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor),
+            sensitiveHeaderNames=[b"X-Custom-sensitive"],
+        )
 
     def setUp(self):
         self.reactor = self.createReactor()
@@ -2905,7 +3043,10 @@ class RedirectAgentTests(
 
 
 class BrowserLikeRedirectAgentTests(
-    TestCase, FakeReactorAndConnectMixin, _RedirectAgentTestsMixin, AgentTestsMixin
+    FakeReactorAndConnectMixin,
+    _RedirectAgentTestsMixin,
+    AgentTestsMixin,
+    runtimeTestCase,
 ):
     """
     Tests for L{client.BrowserLikeRedirectAgent}.
@@ -2916,7 +3057,8 @@ class BrowserLikeRedirectAgentTests(
         @return: a new L{twisted.web.client.BrowserLikeRedirectAgent}
         """
         return client.BrowserLikeRedirectAgent(
-            self.buildAgentForWrapperTest(self.reactor)
+            self.buildAgentForWrapperTest(self.reactor),
+            sensitiveHeaderNames=[b"x-Custom-sensitive"],
         )
 
     def setUp(self):

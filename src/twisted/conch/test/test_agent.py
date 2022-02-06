@@ -7,8 +7,8 @@ Tests for L{twisted.conch.ssh.agent}.
 
 import struct
 
-from twisted.trial import unittest
 from twisted.test import iosim
+from twisted.trial import unittest
 
 try:
     import cryptography as _cryptography
@@ -18,21 +18,21 @@ else:
     cryptography = _cryptography
 
 try:
-    import pyasn1 as _pyasn1
+    import pyasn1 as _pyasn1  # type: ignore[import]
 except ImportError:
     pyasn1 = None
 else:
     pyasn1 = _pyasn1
 
 try:
-    from twisted.conch.ssh import keys as _keys, agent as _agent
+    from twisted.conch.ssh import agent as _agent, keys as _keys
 except ImportError:
     keys = agent = None
 else:
     keys, agent = _keys, _agent
 
-from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
+from twisted.conch.test import keydata
 
 
 class StubFactory:

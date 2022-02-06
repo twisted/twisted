@@ -8,7 +8,7 @@ Demonstration of sending bytes over a TCP connection using sendmsg.
 
 from socket import socketpair
 
-from twisted.python.sendmsg import sendmsg, recvmsg
+from twisted.python.sendmsg import recvmsg, sendmsg
 
 
 def main():

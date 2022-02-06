@@ -8,8 +8,7 @@ Tests for interrupting tests with Control-C.
 
 from io import StringIO
 
-from twisted.trial import unittest
-from twisted.trial import reporter, runner
+from twisted.trial import reporter, runner, unittest
 
 
 class TrialTest(unittest.SynchronousTestCase):

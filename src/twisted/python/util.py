@@ -19,7 +19,7 @@ else:
     pwd = _pwd
 
 try:
-    from os import setgroups as _setgroups, getgroups as _getgroups
+    from os import getgroups as _getgroups, setgroups as _setgroups
 except ImportError:
     setgroups = None
     getgroups = None
@@ -27,22 +27,22 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
+# For backwards compatibility, some things import this, so just link it
+from collections import OrderedDict
 from typing import (
     Callable,
     ClassVar,
     Mapping,
     MutableMapping,
     Sequence,
-    Union,
     Tuple,
+    Union,
     cast,
 )
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 
-# For backwards compatibility, some things import this, so just link it
-from collections import OrderedDict
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
@@ -386,7 +386,7 @@ def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
+        result = f"[{doneChar * done}{currentChar}{undoneChar * toDo}]"
         if force:
             last[0] = result
             return result
@@ -424,7 +424,7 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
+        print(f"method {frame.f_code.co_name} of {k} at {id(se)}")
     else:
         print(
             "function %s in %s, line %s"
@@ -620,10 +620,10 @@ class FancyStrMixin:
         #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(" {}={!r}".format(attr, getattr(self, attr)))
+                r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
                 attr = cast(Tuple[str, Callable], attr)
-                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
+                r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
                 attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
@@ -935,8 +935,9 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
     Unlike L{twisted.internet.utils.runWithWarningsSuppressed}, it has no
     special support for L{twisted.internet.defer.Deferred}.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-        Must be a sequence of 2-tuples (args, kwargs).
+    @param suppressedWarnings: A list of arguments to pass to
+        L{warnings.filterwarnings}.  Must be a sequence of 2-tuples (args,
+        kwargs).
 
     @param f: A callable.
 

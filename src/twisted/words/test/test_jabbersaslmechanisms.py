@@ -6,9 +6,8 @@ Tests for L{twisted.words.protocols.jabber.sasl_mechanisms}.
 """
 
 
-from twisted.trial import unittest
-
 from twisted.python.compat import networkString
+from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
 
 
@@ -139,7 +138,7 @@ class DigestMD5Tests(unittest.TestCase):
         """
         charset = "utf-8"
         nonce = b"OA6MG9tEQGm2hh"
-        nc = networkString("{:08x}".format(1))
+        nc = networkString(f"{1:08x}")
         cnonce = b"OA6MHXh6VqTrRk"
 
         username = "\u0418chris"

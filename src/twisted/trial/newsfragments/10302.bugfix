@@ -1,0 +1,1 @@
+_dist.test.test_workertrial now correctly compare strings via assertEqual() and pass on PyPy3

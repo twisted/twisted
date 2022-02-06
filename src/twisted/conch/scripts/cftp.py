@@ -18,11 +18,10 @@ import tty
 from typing import List, Optional, Union
 
 from twisted.conch.client import connect, default, options
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import channel, filetransfer
+from twisted.conch.ssh import channel, common, connection, filetransfer
+from twisted.internet import defer, reactor, stdio, utils
 from twisted.protocols import basic
-from twisted.internet import reactor, stdio, defer, utils
-from twisted.python import log, usage, failure
+from twisted.python import failure, log, usage
 from twisted.python.filepath import FilePath
 
 
@@ -873,7 +872,7 @@ version                         Print the SFTP version.
                     elif c == "\\":  # quoted character
                         del line[i]
                         if line[i] not in "'\"\\":
-                            raise IndexError("bad quote: \\{}".format(line[i]))
+                            raise IndexError(f"bad quote: \\{line[i]}")
                         ret.append(line[i])
                     else:
                         ret.append(line[i])

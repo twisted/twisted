@@ -8,6 +8,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     AnyStr,
     Callable,
@@ -17,25 +18,23 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TYPE_CHECKING,
     Union,
 )
+
+from zope.interface import Attribute, Interface
+
 from twisted.python.failure import Failure
-from zope.interface import Interface, Attribute
 
 if TYPE_CHECKING:
     from socket import AddressFamily
 
     try:
         from OpenSSL.SSL import (
-            Connection as _OpenSSLConnection,
-            Context as _OpenSSLContext,
+            Connection as OpenSSLConnection,
+            Context as OpenSSLContext,
         )
     except ImportError:
-        OpenSSLConnection = OpenSSLContext = object
-    else:
-        OpenSSLConnection = _OpenSSLConnection
-        OpenSSLContext = _OpenSSLContext
+        OpenSSLConnection = OpenSSLContext = object  # type: ignore[misc,assignment]
 
     from twisted.internet.abstract import FileDescriptor
     from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
@@ -50,7 +49,6 @@ if TYPE_CHECKING:
     from twisted.internet.ssl import ClientContextFactory
     from twisted.names.dns import Query, RRHeader
     from twisted.protocols.tls import TLSMemoryBIOProtocol
-
     from twisted.python.runtime import platform
 
     if platform.supportsThreads():
@@ -709,7 +707,7 @@ class IReactorTCP(Interface):
         """
 
     def connectTCP(
-        host: bytes,
+        host: str,
         port: int,
         factory: "ClientFactory",
         timeout: float,
@@ -1194,13 +1192,9 @@ class IReactorTime(Interface):
                  C{reset()} methods.
         """
 
-    def getDelayedCalls() -> List["IDelayedCall"]:
+    def getDelayedCalls() -> Sequence["IDelayedCall"]:
         """
-        Retrieve all currently scheduled delayed calls.
-
-        @return: A list of L{IDelayedCall} providers representing all
-                 currently scheduled calls. This is everything that has been
-                 returned by C{callLater} but not yet called or cancelled.
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
 
 
@@ -1601,7 +1595,7 @@ class IListeningPort(Interface):
                                   port number).
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 
@@ -2220,7 +2214,9 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def serverConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given server protocol.
 
@@ -2242,7 +2238,9 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def clientConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given client protocol.
 
@@ -2283,7 +2281,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> "OpenSSLContext":  # type: ignore[valid-type]
+    def getContext() -> "OpenSSLContext":
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection
@@ -2510,7 +2508,7 @@ class IUDPTransport(Interface):
         @return: an address describing the listening port.
         """
 
-    def stopListening() -> None:
+    def stopListening() -> Optional["Deferred"]:
         """
         Stop listening on this port.
 

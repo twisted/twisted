@@ -5,29 +5,29 @@
 Tests for L{twisted.web.wsgi}.
 """
 
-from sys import exc_info
-from urllib.parse import quote as urlquote
 import tempfile
 import traceback
 import warnings
+from sys import exc_info
+from urllib.parse import quote as urlquote
 
 from zope.interface.verify import verifyObject
 
+from twisted.internet import reactor
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.error import ConnectionLost
+from twisted.logger import Logger, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet import reactor
-from twisted.internet.error import ConnectionLost
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.trial.unittest import SkipTest, TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
-from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
-from twisted.logger import globalLogPublisher, Logger
-from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.web.wsgi import WSGIResource
 
 
 class SynchronousThreadPool:
@@ -1174,7 +1174,7 @@ class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
 
     def getFileType(self):
         try:
-            from StringIO import StringIO
+            from StringIO import StringIO  # type: ignore[import]
         except ImportError:
             raise SkipTest("StringIO.StringIO is not available.")
         else:
@@ -1191,7 +1191,7 @@ class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
 
     def getFileType(self):
         try:
-            from cStringIO import StringIO
+            from cStringIO import StringIO  # type: ignore[import]
         except ImportError:
             raise SkipTest("cStringIO.StringIO is not available.")
         else:

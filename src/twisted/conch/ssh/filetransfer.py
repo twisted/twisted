@@ -5,15 +5,16 @@
 
 
 import errno
+import os
 import struct
 import warnings
-
 from typing import Dict
+
 from zope.interface import implementer
 
-from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+from twisted.conch.interfaces import ISFTPFile, ISFTPServer
 from twisted.conch.ssh.common import NS, getNS
-from twisted.internet import defer, protocol, error
+from twisted.internet import defer, error, protocol
 from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString, networkString
@@ -35,15 +36,37 @@ class FileTransferBase(protocol.Protocol):
 
     def dataReceived(self, data):
         self.buf += data
-        while len(self.buf) > 5:
-            length, kind = struct.unpack("!LB", self.buf[:5])
+
+        # Continue processing the input buffer as long as there is a chance it
+        # could contain a complete request.  The "General Packet Format"
+        # (format all requests follow) is a 4 byte length prefix, a 1 byte
+        # type field, and a 4 byte request id.  If we have fewer than 4 + 1 +
+        # 4 == 9 bytes we cannot possibly have a complete request.
+        while len(self.buf) >= 9:
+            header = self.buf[:9]
+            length, kind, reqId = struct.unpack("!LBL", header)
+            # From draft-ietf-secsh-filexfer-13 (the draft we implement):
+            #
+            #   The `length' is the length of the data area [including the
+            #   kind byte], and does not include the `length' field itself.
+            #
+            # If the input buffer doesn't have enough bytes to satisfy the
+            # full length then we cannot process it now.  Wait until we have
+            # more bytes.
             if len(self.buf) < 4 + length:
                 return
+
+            # We parsed the request id out of the input buffer above but the
+            # interface to the `packet_TYPE` methods involves passing them a
+            # data buffer which still includes the request id ... So leave
+            # those bytes in the `data` we slice off here.
             data, self.buf = self.buf[5 : 4 + length], self.buf[4 + length :]
+
             packetType = self.packetTypes.get(kind, None)
             if not packetType:
                 self._log.info("no packet type for {kind}", kind=kind)
                 continue
+
             f = getattr(self, f"packet_{packetType}", None)
             if not f:
                 self._log.info(
@@ -51,12 +74,16 @@ class FileTransferBase(protocol.Protocol):
                     packetType=packetType,
                     data=data[4:],
                 )
-                (reqId,) = struct.unpack("!L", data[:4])
                 self._sendStatus(
                     reqId, FX_OP_UNSUPPORTED, f"don't understand {packetType}"
                 )
                 # XXX not implemented
                 continue
+            self._log.info(
+                "dispatching: {packetType} requestId={reqId}",
+                packetType=packetType,
+                reqId=reqId,
+            )
             try:
                 f(data)
             except Exception:
@@ -94,7 +121,7 @@ class FileTransferBase(protocol.Protocol):
             for i in range(extendedCount):
                 (extendedType, data) = getNS(data)
                 (extendedData, data) = getNS(data)
-                attrs["ext_{}".format(nativeString(extendedType))] = extendedData
+                attrs[f"ext_{nativeString(extendedType)}"] = extendedData
         return attrs, data
 
     def _packAttributes(self, attrs):
@@ -178,6 +205,11 @@ class FileTransferServer(FileTransferBase):
         requestId = data[:4]
         data = data[4:]
         handle, data = getNS(data)
+        self._log.info(
+            "closing: {requestId!r} {handle!r}",
+            requestId=requestId,
+            handle=handle,
+        )
         assert data == b"", f"still have data in CLOSE: {data!r}"
         if handle in self.openFiles:
             fileObj = self.openFiles[handle]
@@ -190,7 +222,10 @@ class FileTransferServer(FileTransferBase):
             d.addCallback(self._cbClose, handle, requestId, 1)
             d.addErrback(self._ebStatus, requestId, b"close failed")
         else:
-            self._ebClose(failure.Failure(KeyError()), requestId)
+            code = errno.ENOENT
+            text = os.strerror(code)
+            err = OSError(code, text)
+            self._ebStatus(failure.Failure(err), requestId)
 
     def _cbClose(self, result, handle, requestId, isDir=0):
         if isDir:

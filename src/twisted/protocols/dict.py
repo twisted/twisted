@@ -8,10 +8,11 @@ Dict client protocol implementation.
 @author: Pavel Pergamenshchik
 """
 
-from twisted.protocols import basic
-from twisted.internet import defer, protocol
-from twisted.python import log
 from io import BytesIO
+
+from twisted.internet import defer, protocol
+from twisted.protocols import basic
+from twisted.python import log
 
 
 def parseParam(line):
@@ -288,7 +289,7 @@ class DictClient(basic.LineReceiver):
         pass
 
     def matchFailed(self, reason):
-        """override to catch resonable failure responses to MATCH"""
+        """override to catch reasonable failure responses to MATCH"""
         pass
 
     def matchDone(self, result):

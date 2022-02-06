@@ -6,15 +6,14 @@ Tests for Trial's interaction with the Python warning system.
 """
 
 
-import warnings
 import sys
-
+import warnings
 from io import StringIO
 from unittest import TestResult
 
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class Mask:
@@ -296,7 +295,7 @@ def foo():
         pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_private_helper import missingsourcefile
+        from twisted_private_helper import missingsourcefile  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_private_helper")
         self.addCleanup(sys.modules.pop, missingsourcefile.__name__)
@@ -354,7 +353,7 @@ def foo():
         package.moveTo(package.sibling(b"twisted_renamed_helper"))
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)

@@ -18,15 +18,14 @@ Test running processes.
 """
 
 
-import gzip
-import os
-import sys
-import signal
 import errno
 import gc
-import stat
+import gzip
 import operator
-
+import os
+import signal
+import stat
+import sys
 from unittest import skipIf
 
 try:
@@ -45,17 +44,16 @@ except ImportError:
 else:
     process = _process
 
-from zope.interface.verify import verifyObject
-
 from io import BytesIO
 
-from twisted.python.log import msg
-from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.trial import unittest
-from twisted.python import runtime, procutils
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.python import procutils, runtime
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
-
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable).path
@@ -350,7 +348,7 @@ class SignalProtocol(protocol.ProcessProtocol):
             )
         if os.WTERMSIG(v.status) != signalValue:
             return self.deferred.errback(
-                ValueError("SIG{}: {}".format(self.signal, os.WTERMSIG(v.status)))
+                ValueError(f"SIG{self.signal}: {os.WTERMSIG(v.status)}")
             )
         self.deferred.callback(None)
 
@@ -499,13 +497,13 @@ class ProcessTests(unittest.TestCase):
         """
         L{twisted.internet.stdio} test.
         """
-        scriptPath = b"twisted.test.process_twisted"
+        scriptPath = "twisted.test.process_twisted"
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(
             p,
             pyExe,
-            [pyExe, b"-u", b"-m", scriptPath],
+            [pyExe, "-u", "-m", scriptPath],
             env=properEnv,
             path=None,
             usePTY=self.usePTY,
@@ -560,8 +558,7 @@ class ProcessTests(unittest.TestCase):
 
         self.patch(sys, "stdout", StringIO())
         self.patch(sys, "__stdout__", StringIO())
-        with self.assertRaises(ValueError):
-            return self.test_stdio()
+        return self.test_stdio()
 
     def test_unsetPid(self):
         """
@@ -610,7 +607,9 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob
+                import glob
+
+                import process_tester  # type: ignore[import]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -702,45 +701,6 @@ class ProcessTests(unittest.TestCase):
             self.assertEqual(recvdArgs, args)
 
         return d.addCallback(processEnded)
-
-    def test_wrongArguments(self):
-        """
-        Test invalid arguments to spawnProcess: arguments and environment
-        must only contains string or unicode, and not null bytes.
-        """
-        p = protocol.ProcessProtocol()
-
-        badEnvs = [{b"foo": 2}, {b"foo": b"egg\0a"}, {3: b"bar"}, {b"bar\0foo": b"bar"}]
-
-        badArgs = [[pyExe, 2], b"spam", [pyExe, b"foo\0bar"]]
-
-        # Sanity check - this will fail for people who have mucked with
-        # their site configuration in a stupid way, but there's nothing we
-        # can do about that.
-        badUnicode = "\N{SNOWMAN}"
-        try:
-            badUnicode.encode(sys.stdout.encoding)
-        except UnicodeEncodeError:
-            # Okay, that unicode doesn't encode, put it in as a bad environment
-            # key.
-            badEnvs.append({badUnicode: "value for bad unicode key"})
-            badEnvs.append({"key for bad unicode value": badUnicode})
-            badArgs.append([pyExe, badUnicode])
-        else:
-            # It _did_ encode.  Most likely, Gtk2 is being used and the
-            # default system encoding is UTF-8, which can encode anything.
-            # In any case, if implicit unicode -> str conversion works for
-            # that string, we can't test that TypeError gets raised instead,
-            # so just leave it off.
-            pass
-
-        for env in badEnvs:
-            self.assertRaises(
-                TypeError, reactor.spawnProcess, p, pyExe, [pyExe, b"-c", b""], env=env
-            )
-
-        for args in badArgs:
-            self.assertRaises(TypeError, reactor.spawnProcess, p, pyExe, args, env=None)
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
@@ -1020,15 +980,20 @@ class PosixProcessBase:
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
+        for loc in procutils.which(commandName):
+            return FilePath(loc).asBytesMode().path
+
         binLoc = FilePath("/bin").child(commandName)
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
-            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
+            raise RuntimeError(
+                f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
+            )
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -2257,7 +2222,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api
+        import win32api  # type: ignore[import]
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

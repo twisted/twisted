@@ -6,8 +6,8 @@ Tests for L{twisted.internet.error}
 """
 
 
-from twisted.trial.unittest import SynchronousTestCase
 from twisted.internet import error
+from twisted.trial.unittest import SynchronousTestCase
 
 
 class ConnectionAbortedTests(SynchronousTestCase):

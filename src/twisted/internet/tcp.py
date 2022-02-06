@@ -8,35 +8,36 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
+import os
+
 # System Imports
 import socket
-import sys
-import os
 import struct
-from typing import Optional, Callable, List, ClassVar
-
-import attr
+import sys
+from typing import Callable, ClassVar, List, Optional
 
 from zope.interface import Interface, implementer
+
+import attr
 import typing_extensions
 
-from twisted.logger import Logger, ILogObserver, LogEvent
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
-    ITCPTransport,
-    ISystemHandle,
     IListeningPort,
+    ISystemHandle,
+    ITCPTransport,
 )
+from twisted.logger import ILogObserver, LogEvent, Logger
+from twisted.python import deprecate, versions
 from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
-from twisted.python import versions, deprecate
 
 try:
     # Try to get the memory BIO based startTLS implementation, available since
     # pyOpenSSL 0.10
     from twisted.internet._newtls import (
-        ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
+        ConnectionMixin as _TLSConnectionMixin,
         ServerMixin as _TLSServerMixin,
     )
     from twisted.internet.interfaces import ITLSTransport
@@ -58,13 +59,15 @@ if platformType == "win32":
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()
-    from errno import WSAEINVAL as EINVAL  # type: ignore[attr-defined]
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINPROGRESS as EINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAEALREADY as EALREADY  # type: ignore[attr-defined]
-    from errno import WSAEISCONN as EISCONN  # type: ignore[attr-defined]
-    from errno import WSAENOBUFS as ENOBUFS  # type: ignore[attr-defined]
-    from errno import WSAEMFILE as EMFILE  # type: ignore[attr-defined]
+    from errno import (  # type: ignore[attr-defined]
+        WSAEALREADY as EALREADY,
+        WSAEINPROGRESS as EINPROGRESS,
+        WSAEINVAL as EINVAL,
+        WSAEISCONN as EISCONN,
+        WSAEMFILE as EMFILE,
+        WSAENOBUFS as ENOBUFS,
+        WSAEWOULDBLOCK as EWOULDBLOCK,
+    )
 
     # No such thing as WSAENFILE, either.
     ENFILE = object()
@@ -90,17 +93,15 @@ else:
 
     from os import strerror
 
-
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import base, address, fdesc
-from twisted.internet.task import deferLater
-from twisted.python import log, failure, reflect
-from twisted.python.util import untilConcludes
+from twisted.internet import abstract, address, base, error, fdesc, main
 from twisted.internet.error import CannotListenError
-from twisted.internet import abstract, main, error
 from twisted.internet.protocol import Protocol
+from twisted.internet.task import deferLater
+from twisted.python import failure, log, reflect
+from twisted.python.util import untilConcludes
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
@@ -751,7 +752,7 @@ class _BaseTCPClient:
         return self._addressType("TCP", *self.realAddress)
 
     def __repr__(self) -> str:
-        s = "<{} to {} at {:x}>".format(self.__class__, self.addr, id(self))
+        s = f"<{self.__class__} to {self.addr} at {id(self):x}>"
         return s
 
 

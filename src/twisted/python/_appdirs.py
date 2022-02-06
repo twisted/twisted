@@ -6,9 +6,10 @@
 Application data directory support.
 """
 
-import appdirs
 import inspect
 from typing import cast
+
+import appdirs  # type: ignore[import]
 
 from twisted.python.compat import currentframe
 

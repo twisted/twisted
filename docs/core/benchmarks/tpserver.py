@@ -2,8 +2,8 @@
 
 import sys
 
-from twisted.protocols.wire import Discard
 from twisted.internet import protocol, reactor
+from twisted.protocols.wire import Discard
 from twisted.python import log
 
 

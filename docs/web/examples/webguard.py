@@ -15,11 +15,11 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.internet import reactor
-from twisted.web import server, resource, guard
-from twisted.cred.portal import IRealm, Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import reactor
+from twisted.python import log
+from twisted.web import guard, resource, server
 
 
 class GuardedResource(resource.Resource):
