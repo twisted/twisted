@@ -1,1 +1,1 @@
-twisted.internet.glibbase.simulate no longer raises TypeError with no timeout on Python 3.
+twisted.internet._glibbase.PortableGlibReactorBase.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python3 in which the builtin `min` function no longer accepts `None` as an argument.
