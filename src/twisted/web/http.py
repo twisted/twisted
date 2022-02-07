@@ -1176,6 +1176,8 @@ class Request:
             self.startedWriting = 1
             version = self.clientproto
             code = b"%d" % (self.code,)
+            isOkay = 200 <= self.code <= 299
+            isCONNECT = self.method == b"CONNECT"
             reason = self.code_message
             headers = []
 
@@ -1187,7 +1189,7 @@ class Request:
                 and (self.responseHeaders.getRawHeaders(b"content-length") is None)
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
-                and (self.method != b"CONNECT" and self.code // 100 == 2)
+                and (not isCONNECT and isOkay)
             ):
                 headers.append((b"Transfer-Encoding", b"chunked"))
                 self.chunked = 1
@@ -1208,14 +1210,11 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
-                    if (
-                        self.method == b"CONNECT"
-                        and self.code // 100 == 2
-                        and name == b"Content-Length"
-                    ):
+                    if name == b"Content-Length" and isOkay and isCONNECT:
                         self._log.info(
-                            "Warning: Removing Content-Length"
-                            " header in response to CONNECT request"
+                            "Warning: Content-Length header was"
+                            " sent in response to CONNECT request."
+                            " Dropping it."
                         )
                         continue
                     headers.append((name, value))
