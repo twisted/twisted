@@ -45,7 +45,7 @@ class Ed25519PublicKey(ed25519.Ed25519PublicKey):
             or format is not serialization.PublicFormat.Raw
         ):
             raise ValueError("Both encoding and format must be Raw")
-        return bytes(self._key)
+        return bytes(self)
 
     def verify(self, signature: bytes, data: bytes) -> None:
         try:
@@ -98,7 +98,7 @@ class Ed25519PrivateKey(ed25519.Ed25519PrivateKey):
                 "Encoding and format must be Raw and "
                 "encryption_algorithm must be NoEncryption"
             )
-        return bytes(self._key)
+        return bytes(self)
 
     def sign(self, data: bytes) -> bytes:
         return self._key.sign(data).signature

@@ -1644,6 +1644,24 @@ class PyNaClKeyTests(KeyTests):
             serialization.BestAvailableEncryption(b"password"),
         )
 
+    def test_naclPrivateHash(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey.__hash__} allows instances to be hashed.
+        """
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
+        d = {key: True}
+        self.assertTrue(d[key])
+
+    def test_naclPrivateEquality(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey} implements equality test methods.
+        """
+        key1 = _keys_pynacl.Ed25519PrivateKey.generate()
+        key2 = _keys_pynacl.Ed25519PrivateKey.generate()
+        self.assertEqual(key1, key1)
+        self.assertNotEqual(key1, key2)
+        self.assertNotEqual(key1, bytes(key1))
+
     def test_naclPublicBytes(self):
         """
         L{_keys_pynacl.Ed25519PublicKey.public_bytes} and
@@ -1679,6 +1697,24 @@ class PyNaClKeyTests(KeyTests):
             serialization.Encoding.Raw,
             serialization.PublicFormat.PKCS1,
         )
+
+    def test_naclPublicHash(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey.__hash__} allows instances to be hashed.
+        """
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        d = {key: True}
+        self.assertTrue(d[key])
+
+    def test_naclPublicEquality(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey} implements equality test methods.
+        """
+        key1 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        key2 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        self.assertEqual(key1, key1)
+        self.assertNotEqual(key1, key2)
+        self.assertNotEqual(key1, bytes(key1))
 
     def test_naclVerify(self):
         """

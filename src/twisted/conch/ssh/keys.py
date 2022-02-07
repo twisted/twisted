@@ -74,7 +74,7 @@ Ed25519PrivateKey: Optional[Type[ed25519.Ed25519PrivateKey]]
 if default_backend().ed25519_supported():
     Ed25519PublicKey = ed25519.Ed25519PublicKey
     Ed25519PrivateKey = ed25519.Ed25519PrivateKey
-else:
+else:  # pragma: no cover
     try:
         from twisted.conch.ssh._keys_pynacl import Ed25519PrivateKey, Ed25519PublicKey
     except ImportError:
