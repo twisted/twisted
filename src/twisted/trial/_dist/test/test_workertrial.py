@@ -69,7 +69,7 @@ class MainTests(TestCase):
         the stdin fd and C{self.writeStream} for the stdout fd.
         """
         if fd == _WORKER_AMP_STDIN:
-            self.assertIdentical("rb", mode)
+            self.assertEqual("rb", mode)
             return self.readStream
         elif fd == _WORKER_AMP_STDOUT:
             self.assertEqual("wb", mode)

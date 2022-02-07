@@ -2,6 +2,7 @@ Twisted
 =======
 
 |gitter|_
+|rtd|_
 |pypi|_
 |mypy|_
 
@@ -116,3 +117,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
 .. _mypy: https://github.com/twisted/twisted
+
+.. |rtd| image:: https://readthedocs.org/projects/twisted/badge/?version=latest&style=flat
+.. _rtd: https://docs.twistedmatrix.com

@@ -980,15 +980,20 @@ class PosixProcessBase:
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
+        for loc in procutils.which(commandName):
+            return FilePath(loc).asBytesMode().path
+
         binLoc = FilePath("/bin").child(commandName)
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
-            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
+            raise RuntimeError(
+                f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
+            )
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
