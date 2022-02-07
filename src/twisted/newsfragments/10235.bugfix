@@ -1,1 +1,0 @@
-revert changes to ``DelayedCall.__repr__`` and ``LoopingCall.__repr__``
