@@ -224,7 +224,7 @@ class ThreadTestsBuilder(ReactorBuilder):
     def test_threadPoolCurrentThreadDeprecated(self):
         self.callDeprecated(
             version=(
-                Version("Twisted", "NEXT", 0, 0),
+                Version("Twisted", 22, 1, 0),
                 "threading.current_thread",
             ),
             f=ThreadPool.currentThread,
