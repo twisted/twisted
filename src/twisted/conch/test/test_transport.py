@@ -515,6 +515,28 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         )
         self.assertRegex(softwareVersion, softwareVersionRegex)
 
+    def test_dataReceiveVersionNotSentMemoryDOS(self):
+        """
+        When the peer is not sending its SSH version but keeps sending data,
+        the connection is disconnected after 4KB to prevent buffering too
+        much and running our of memory.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(self.transport)
+
+        # Data can be received over multiple chunks.
+        sut.dataReceived(b"SSH-2-Server-Identifier")
+        sut.dataReceived(b"1234567890" * 406)
+        sut.dataReceived(b"1235678")
+        self.assertFalse(self.transport.disconnecting)
+
+        # Here we are going over the limit.
+        sut.dataReceived(b"1234567")
+        # Once a lot of data is received without an SSH version string,
+        # the transport is disconnected.
+        self.assertTrue(self.transport.disconnecting)
+        self.assertIn(b"Preventing a denial of service attack", self.transport.value())
+
     def test_sendPacketPlain(self):
         """
         Test that plain (unencrypted, uncompressed) packets are sent
