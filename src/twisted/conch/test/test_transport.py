@@ -518,7 +518,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
     def test_dataReceiveVersionNotSentMemoryDOS(self):
         """
         When the peer is not sending its SSH version but keeps sending data,
-        the connection is disconnected after 4KB to prevent buffering to
+        the connection is disconnected after 4KB to prevent buffering too
         much and running our of memory.
         """
         sut = MockTransportBase()
