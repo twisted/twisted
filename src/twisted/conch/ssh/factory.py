@@ -56,8 +56,8 @@ class SSHFactory(protocol.Factory):
         if not hasattr(self, "privateKeys"):
             self.privateKeys = dict(self.getPrivateKeys())
             for source, target, hashAlgorithm in self._extraHashAlgorithms:
-                 # Automatically generate SHA2 variants if they are not returned
-                 # by the user.
+                # Automatically generate SHA2 variants if they are not returned
+                # by the user.
                 if source in self.privateKeys and target not in self.privateKeys:
                     key = keys.Key.fromString(
                         self.privateKeys[source].toString("OPENSSH")
