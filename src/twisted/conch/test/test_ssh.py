@@ -874,10 +874,10 @@ class SSHFactoryTests(unittest.TestCase):
         sshFactory.startFactory()
         return sshFactory
 
-    def test_keys(self):
+    def test_startFactoryAutomaticKeyVariants(self):
         """
-        startFactory() adds some key variants using stronger hash
-        algorithms.
+        startFactory() automatically updates the internal keys to
+        add variants using stronger hash algorithms.
         """
         factory = self.makeSSHFactory()
         self.assertEqual(
