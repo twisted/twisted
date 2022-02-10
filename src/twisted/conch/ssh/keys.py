@@ -150,22 +150,6 @@ def _normalizePassphrase(passphrase):
         return passphrase
 
 
-def _getKeyFormat(keyAlg):
-    """Get the key format name from a key signature algorithm name.
-
-    The factory stores public and private keys by their key format, which is
-    not quite the same as the key signature algorithm: for example, an
-    ssh-rsa key can sign using any of the ssh-rsa, rsa-sha2-256, or
-    rsa-sha2-512 algorithms.
-
-    @type keyAlg: L{bytes}
-    @param keyAlg: A public key signature algorithm name.
-    """
-    if keyAlg in {b"rsa-sha2-256", b"rsa-sha2-512"}:
-        return b"ssh-rsa"
-    return keyAlg
-
-
 class Key:
     """
     An object representing a key.  A key can be either a public or

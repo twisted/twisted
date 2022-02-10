@@ -1440,6 +1440,31 @@ class SSHServerTransport(SSHTransportBase):
     isClient = False
     ignoreNextPacket = 0
 
+    def _getHostKeys(self, keyAlg):
+        """
+        Get the public and private host keys corresponding to the given
+        public key signature algorithm.
+
+        The factory stores public and private host keys by their key format,
+        which is not quite the same as the key signature algorithm: for
+        example, an ssh-rsa key can sign using any of the ssh-rsa,
+        rsa-sha2-256, or rsa-sha2-512 algorithms.
+
+        @type keyAlg: L{bytes}
+        @param keyAlg: A public key signature algorithm name.
+
+        @rtype: 2-L{tuple} of L{keys.Key}
+        @return: The public and private host keys.
+
+        @raises KeyError: if the factory does not have both a public and a
+        private host key for this signature algorithm.
+        """
+        if keyAlg in {b"rsa-sha2-256", b"rsa-sha2-512"}:
+            keyFormat = b"ssh-rsa"
+        else:
+            keyFormat = keyAlg
+        return self.factory.publicKeys[keyFormat], self.factory.privateKeys[keyFormat]
+
     def ssh_KEXINIT(self, packet):
         """
         Called when we receive a MSG_KEXINIT message.  For a description
@@ -1488,9 +1513,7 @@ class SSHServerTransport(SSHTransportBase):
         pktPub, packet = getNS(packet)
 
         # Get the host's public and private keys
-        keyFormat = keys._getKeyFormat(self.keyAlg)
-        pubHostKey = self.factory.publicKeys[keyFormat]
-        privHostKey = self.factory.privateKeys[keyFormat]
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
 
         # Generate the private key
         ecPriv = self._generateECPrivateKey()
@@ -1541,29 +1564,25 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        keyFormat = keys._getKeyFormat(self.keyAlg)
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[keyFormat].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(MP(clientDHpublicKey))
         h.update(self.dhSecretKeyPublicMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEXDH_REPLY,
-            NS(self.factory.publicKeys[keyFormat].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(
-                self.factory.privateKeys[keyFormat].sign(
-                    exchangeHash, signatureType=self.keyAlg
-                )
-            ),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1642,6 +1661,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         # TODO: we should also look at the value they send to us and reject
         # insecure values of f (if g==2 and f has a single '1' bit while the
         # rest are '0's, then they must have used a small y also).
@@ -1650,13 +1670,12 @@ class SSHServerTransport(SSHTransportBase):
         #  or do as openssh does and scan f for a single '1' bit instead
 
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
-        keyFormat = keys._getKeyFormat(self.keyAlg)
         h = _kex.getHashProcessor(self.kexAlg)()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[keyFormat].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(self.dhGexRequest)
         h.update(MP(self.p))
         h.update(MP(self.g))
@@ -1666,13 +1685,9 @@ class SSHServerTransport(SSHTransportBase):
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEX_DH_GEX_REPLY,
-            NS(self.factory.publicKeys[keyFormat].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(
-                self.factory.privateKeys[keyFormat].sign(
-                    exchangeHash, signatureType=self.keyAlg
-                )
-            ),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 

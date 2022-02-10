@@ -1466,6 +1466,67 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     Tests for SSHServerTransport.
     """
 
+    def test__getHostKeys(self):
+        """
+        L{transport.SSHServerTransport._getHostKeys} returns host keys from
+        the factory, looked up by public key signature algorithm.
+        """
+        self.proto.factory.publicKeys = {
+            b"ssh-rsa": keys.Key.fromString(keydata.publicRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(keydata.publicDSA_openssh),
+            b"ecdsa-sha2-nistp256": keys.Key.fromString(keydata.publicECDSA_openssh),
+            b"ssh-ed25519": keys.Key.fromString(keydata.publicEd25519_openssh),
+        }
+        self.proto.factory.privateKeys = {
+            b"ssh-rsa": keys.Key.fromString(keydata.privateRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(keydata.privateDSA_openssh),
+            b"ecdsa-sha2-nistp256": keys.Key.fromString(keydata.privateECDSA_openssh),
+            b"ssh-ed25519": keys.Key.fromString(keydata.privateEd25519_openssh_new),
+        }
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-rsa"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"rsa-sha2-256"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"rsa-sha2-512"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-dss"),
+            (
+                self.proto.factory.publicKeys[b"ssh-dss"],
+                self.proto.factory.privateKeys[b"ssh-dss"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ecdsa-sha2-nistp256"),
+            (
+                self.proto.factory.publicKeys[b"ecdsa-sha2-nistp256"],
+                self.proto.factory.privateKeys[b"ecdsa-sha2-nistp256"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-ed25519"),
+            (
+                self.proto.factory.publicKeys[b"ssh-ed25519"],
+                self.proto.factory.privateKeys[b"ssh-ed25519"],
+            ),
+        )
+        self.assertRaises(KeyError, self.proto._getHostKeys, b"ecdsa-sha2-nistp384")
+
     def test_KEXINITMultipleAlgorithms(self):
         """
         Receiving a KEXINIT packet listing multiple supported algorithms will
@@ -1637,6 +1698,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.proto.supportedPublicKeys = [keyAlgorithm]
         self.proto.dataReceived(self.transport.value())
 
+        pubHostKey, privHostKey = self.proto._getHostKeys(keyAlgorithm)
         g, p = _kex.getDHGeneratorAndPrime(kexAlgorithm)
         e = pow(g, 5000, p)
 
@@ -1646,28 +1708,23 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.dhSecretKeyPublicMP, f)
         sharedSecret = _MPpow(e, y, self.proto.p)
 
-        keyFormat = keys._getKeyFormat(keyAlgorithm)
         h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[keyFormat].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(common.MP(e))
         h.update(f)
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        signature = self.proto.factory.privateKeys[keyFormat].sign(
-            exchangeHash, signatureType=keyAlgorithm
-        )
+        signature = privHostKey.sign(exchangeHash, signatureType=keyAlgorithm)
 
         self.assertEqual(
             self.packets,
             [
                 (
                     transport.MSG_KEXDH_REPLY,
-                    common.NS(self.proto.factory.publicKeys[keyFormat].blob())
-                    + f
-                    + common.NS(signature),
+                    common.NS(pubHostKey.blob()) + f + common.NS(signature),
                 ),
                 (transport.MSG_NEWKEYS, b""),
             ],
@@ -1916,6 +1973,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         message with a public key and signature.
         """
         self.test_KEX_DH_GEX_REQUEST_OLD()
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 512)[0]
         self.assertEqual(self.proto.dhSecretKey.private_numbers().x, y)
@@ -1925,7 +1983,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         h = self.hashProcessor()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(b"\x00\x00\x04\x00")
         h.update(common.MP(self.proto.p))
         h.update(common.MP(self.proto.g))
@@ -1939,11 +1997,9 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             [
                 (
                     transport.MSG_KEX_DH_GEX_REPLY,
-                    common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
+                    common.NS(pubHostKey.blob())
                     + f
-                    + common.NS(
-                        self.proto.factory.privateKeys[b"ssh-rsa"].sign(exchangeHash)
-                    ),
+                    + common.NS(privHostKey.sign(exchangeHash)),
                 ),
                 (transport.MSG_NEWKEYS, b""),
             ],
@@ -1956,6 +2012,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         with a public key and signature.
         """
         self.test_KEX_DH_GEX_REQUEST()
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 256)[0]
         f = _MPpow(self.proto.g, y, self.proto.p)
@@ -1965,7 +2022,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
 
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(b"\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x0c\x00")
         h.update(common.MP(self.proto.p))
         h.update(common.MP(self.proto.g))
@@ -1978,11 +2035,9 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             self.packets[1],
             (
                 transport.MSG_KEX_DH_GEX_REPLY,
-                common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
+                common.NS(pubHostKey.blob())
                 + f
-                + common.NS(
-                    self.proto.factory.privateKeys[b"ssh-rsa"].sign(exchangeHash)
-                ),
+                + common.NS(privHostKey.sign(exchangeHash)),
             ),
         )
 
@@ -1994,6 +2049,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         KEX_DH_GEX_INIT message with a public key and signature.
         """
         self.test_KEX_DH_GEX_REQUEST(keyAlgorithm=b"rsa-sha2-512")
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"rsa-sha2-512")
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 256)[0]
         f = _MPpow(self.proto.g, y, self.proto.p)
@@ -2003,7 +2059,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
 
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(b"\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x0c\x00")
         h.update(common.MP(self.proto.p))
         h.update(common.MP(self.proto.g))
@@ -2016,12 +2072,10 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             self.packets[1],
             (
                 transport.MSG_KEX_DH_GEX_REPLY,
-                common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
+                common.NS(pubHostKey.blob())
                 + f
                 + common.NS(
-                    self.proto.factory.privateKeys[b"ssh-rsa"].sign(
-                        exchangeHash, signatureType=b"rsa-sha2-512"
-                    )
+                    privHostKey.sign(exchangeHash, signatureType=b"rsa-sha2-512")
                 ),
             ),
         )
@@ -2061,8 +2115,7 @@ class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
         self.proto.supportedPublicKeys = [b"ssh-rsa"]
         self.proto.dataReceived(self.transport.value())
 
-        privKey = self.proto.factory.privateKeys[b"ssh-rsa"]
-        pubKey = self.proto.factory.publicKeys[b"ssh-rsa"]
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         ecPriv = self.proto._generateECPrivateKey()
         ecPub = ecPriv.public_key()
         encPub = self.proto._encodeECPublicKey(ecPub)
@@ -2078,20 +2131,20 @@ class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
         h.update(common.NS(self.proto.ourVersionString))
         h.update(common.NS(self.proto.otherKexInitPayload))
         h.update(common.NS(self.proto.ourKexInitPayload))
-        h.update(common.NS(pubKey.blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(common.NS(encPub))
         h.update(common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)))
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        signature = privKey.sign(exchangeHash)
+        signature = privHostKey.sign(exchangeHash)
 
         self.assertEqual(
             self.packets,
             [
                 (
                     transport.MSG_KEXDH_REPLY,
-                    common.NS(pubKey.blob())
+                    common.NS(pubHostKey.blob())
                     + common.NS(self.proto._encodeECPublicKey(self.proto.ecPub))
                     + common.NS(signature),
                 ),

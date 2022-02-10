@@ -41,61 +41,6 @@ def skipWithoutEd25519(f):
     return f
 
 
-class GetKeyFormatTests(unittest.TestCase):
-    """
-    Test the L{keys._getKeyFormat} helper method.
-    """
-
-    if cryptography is None:
-        skip = skipCryptography
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
-    def test_ssh_rsa(self):
-        """
-        The ssh-rsa public key signature algorithm corresponds to the
-        ssh-rsa public key format.
-        """
-        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"ssh-rsa"))
-
-    def test_rsa_sha2_256(self):
-        """
-        The rsa-sha2-256 public key signature algorithm corresponds to the
-        ssh-rsa public key format.
-        """
-        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"rsa-sha2-256"))
-
-    def test_rsa_sha2_512(self):
-        """
-        The rsa-sha2-512 public key signature algorithm corresponds to the
-        ssh-rsa public key format.
-        """
-        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"rsa-sha2-512"))
-
-    def test_ssh_dss(self):
-        """
-        The ssh-dss public key signature algorithm corresponds to the
-        ssh-dss public key format.
-        """
-        self.assertEqual(b"ssh-dss", keys._getKeyFormat(b"ssh-dss"))
-
-    def test_ecdsa_sha2_nistp256(self):
-        """
-        The ecdsa-sha2-nistp256 public key signature algorithm corresponds
-        to the ecdsa-sha2-nistp256 public key format.
-        """
-        self.assertEqual(
-            b"ecdsa-sha2-nistp256", keys._getKeyFormat(b"ecdsa-sha2-nistp256")
-        )
-
-    def test_ssh_ed25519(self):
-        """
-        The ssh-ed25519 public key signature algorithm corresponds to the
-        ssh-ed25519 public key format.
-        """
-        self.assertEqual(b"ssh-ed25519", keys._getKeyFormat(b"ssh-ed25519"))
-
-
 class KeyTests(unittest.TestCase):
 
     if cryptography is None:
