@@ -46,6 +46,11 @@ class GetKeyFormatTests(unittest.TestCase):
     Test the L{keys._getKeyFormat} helper method.
     """
 
+    if cryptography is None:
+        skip = skipCryptography
+    if pyasn1 is None:
+        skip = "Cannot run without PyASN1"
+
     def test_ssh_rsa(self):
         """
         The ssh-rsa public key signature algorithm corresponds to the
