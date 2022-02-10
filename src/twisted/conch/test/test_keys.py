@@ -41,6 +41,56 @@ def skipWithoutEd25519(f):
     return f
 
 
+class GetKeyFormatTests(unittest.TestCase):
+    """
+    Test the L{keys._getKeyFormat} helper method.
+    """
+
+    def test_ssh_rsa(self):
+        """
+        The ssh-rsa public key signature algorithm corresponds to the
+        ssh-rsa public key format.
+        """
+        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"ssh-rsa"))
+
+    def test_rsa_sha2_256(self):
+        """
+        The rsa-sha2-256 public key signature algorithm corresponds to the
+        ssh-rsa public key format.
+        """
+        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"rsa-sha2-256"))
+
+    def test_rsa_sha2_512(self):
+        """
+        The rsa-sha2-512 public key signature algorithm corresponds to the
+        ssh-rsa public key format.
+        """
+        self.assertEqual(b"ssh-rsa", keys._getKeyFormat(b"rsa-sha2-512"))
+
+    def test_ssh_dss(self):
+        """
+        The ssh-dss public key signature algorithm corresponds to the
+        ssh-dss public key format.
+        """
+        self.assertEqual(b"ssh-dss", keys._getKeyFormat(b"ssh-dss"))
+
+    def test_ecdsa_sha2_nistp256(self):
+        """
+        The ecdsa-sha2-nistp256 public key signature algorithm corresponds
+        to the ecdsa-sha2-nistp256 public key format.
+        """
+        self.assertEqual(
+            b"ecdsa-sha2-nistp256", keys._getKeyFormat(b"ecdsa-sha2-nistp256")
+        )
+
+    def test_ssh_ed25519(self):
+        """
+        The ssh-ed25519 public key signature algorithm corresponds to the
+        ssh-ed25519 public key format.
+        """
+        self.assertEqual(b"ssh-ed25519", keys._getKeyFormat(b"ssh-ed25519"))
+
+
 class KeyTests(unittest.TestCase):
 
     if cryptography is None:
@@ -125,36 +175,6 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(keys.Key(self.ecObj521).size(), 521)
         if ED25519_SUPPORTED:
             self.assertEqual(keys.Key(self.ed25519Obj).size(), 256)
-
-    def test_hashAlgorithm_defaults(self):
-        """
-        The L{keys.Key.hashAlgorithm} property defaults to the traditional
-        hash used for the corresponding key type.
-        """
-        self.assertIsInstance(keys.Key(self.rsaObj).hashAlgorithm, hashes.SHA1)
-        self.assertIsInstance(keys.Key(self.dsaObj).hashAlgorithm, hashes.SHA1)
-        self.assertIsInstance(keys.Key(self.ecObj).hashAlgorithm, hashes.SHA256)
-        self.assertIsInstance(keys.Key(self.ecObj384).hashAlgorithm, hashes.SHA384)
-        self.assertIsInstance(keys.Key(self.ecObj521).hashAlgorithm, hashes.SHA512)
-        if ED25519_SUPPORTED:
-            self.assertIsInstance(
-                keys.Key(self.ed25519Obj).hashAlgorithm, hashes.SHA512
-            )
-
-    def test_hashAlgorithm_alternative(self):
-        """
-        The L{keys.Key.hashAlgorithm} property can select an alternative
-        hash algorithm, where supported.
-        """
-        rsaSHA256 = keys.Key(self.rsaObj)
-        rsaSHA256.hashAlgorithm = hashes.SHA256()
-        self.assertIsInstance(rsaSHA256.hashAlgorithm, hashes.SHA256)
-        rsaSHA512 = keys.Key(self.rsaObj)
-        rsaSHA512.hashAlgorithm = hashes.SHA512()
-        self.assertIsInstance(rsaSHA512.hashAlgorithm, hashes.SHA512)
-        self.assertRaises(
-            ValueError, setattr, keys.Key(self.rsaObj), "hashAlgorithm", hashes.MD5()
-        )
 
     def test__guessStringType(self):
         """
@@ -785,12 +805,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         self.assertEqual(keys.Key(self.rsaObj).type(), "RSA")
         self.assertEqual(keys.Key(self.rsaObj).sshType(), b"ssh-rsa")
-        rsaSHA256 = keys.Key(self.rsaObj, hashAlgorithm=hashes.SHA256())
-        self.assertEqual(rsaSHA256.type(), "RSA")
-        self.assertEqual(rsaSHA256.sshType(), b"rsa-sha2-256")
-        rsaSHA512 = keys.Key(self.rsaObj, hashAlgorithm=hashes.SHA512())
-        self.assertEqual(rsaSHA512.type(), "RSA")
-        self.assertEqual(rsaSHA512.sshType(), b"rsa-sha2-512")
         self.assertEqual(keys.Key(self.dsaObj).type(), "DSA")
         self.assertEqual(keys.Key(self.dsaObj).sshType(), b"ssh-dss")
         self.assertEqual(keys.Key(self.ecObj).type(), "EC")
@@ -804,6 +818,30 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertRaises(RuntimeError, keys.Key(None).sshType)
         self.assertRaises(RuntimeError, keys.Key(self).type)
         self.assertRaises(RuntimeError, keys.Key(self).sshType)
+
+    def test_supportedSignatureAlgorithms(self):
+        """
+        L{keys.Key.supportedSignatureAlgorithms} returns the appropriate
+        public key signature algorithms for each key type.
+        """
+        self.assertEqual(
+            keys.Key(self.rsaObj).supportedSignatureAlgorithms(),
+            [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa"],
+        )
+        self.assertEqual(
+            keys.Key(self.dsaObj).supportedSignatureAlgorithms(), [b"ssh-dss"]
+        )
+        self.assertEqual(
+            keys.Key(self.ecObj).supportedSignatureAlgorithms(),
+            [b"ecdsa-sha2-nistp256"],
+        )
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key(self.ed25519Obj).supportedSignatureAlgorithms(),
+                [b"ssh-ed25519"],
+            )
+        self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
+        self.assertRaises(RuntimeError, keys.Key(self).supportedSignatureAlgorithms)
 
     def test_fromBlobUnsupportedType(self):
         """
@@ -1368,8 +1406,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         data = b"some-data"
         key = keys.Key.fromString(keydata.privateRSA_openssh)
-        key.hashAlgorithm = hashes.SHA256()
-        signature = key.sign(data)
+        signature = key.sign(data, signatureType=b"rsa-sha2-256")
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
         # Verify that the signature uses SHA-256.
@@ -1387,8 +1424,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         data = b"some-data"
         key = keys.Key.fromString(keydata.privateRSA_openssh)
-        key.hashAlgorithm = hashes.SHA512()
-        signature = key.sign(data)
+        signature = key.sign(data, signatureType=b"rsa-sha2-512")
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
         # Verify that the signature uses SHA-512.
@@ -1441,6 +1477,20 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+
+    def test_signWithWrongAlgorithm(self):
+        """
+        L{keys.Key.sign} raises L{keys.BadSignatureAlgorithmError} when
+        asked to sign with a public key algorithm that doesn't make sense
+        with the given key.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
 
     def test_verifyRSA(self):
         """
