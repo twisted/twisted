@@ -1,2 +1,0 @@
-Deprecated ``twisted.python.threading.ThreadPool.currentThread()`` in favor of ``threading.current_thread()``.
-Switched ``twisted.python.threading.ThreadPool.currentThread()`` and ``twisted.python.threadable.getThreadID()`` to use `threading.current_thread()`` to avoid the deprecation warnings introduced for ``threading.currentThread()`` in Python 3.10.
