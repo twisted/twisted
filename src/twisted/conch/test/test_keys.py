@@ -1496,6 +1496,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             b"some data",
             signatureType=b"ssh-dss",
         )
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
 
     def test_verifyRSA(self):
         """
