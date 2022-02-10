@@ -514,7 +514,7 @@ class _SSHMixin(_BaseMixin):
         sshFactory = ConchFactory(ptl)
 
         sshKey = keys._getPersistentRSAKey(
-            filepath.FilePath(self.mktemp()), keySize=512
+            filepath.FilePath(self.mktemp()), keySize=1024
         )
         sshFactory.publicKeys[b"ssh-rsa"] = sshKey
         sshFactory.privateKeys[b"ssh-rsa"] = sshKey
