@@ -14,6 +14,7 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
+from typing import Optional, Type
 
 import bcrypt
 from cryptography import utils
@@ -65,6 +66,20 @@ _secToNist = {
     b"secp384r1": b"nistp384",
     b"secp521r1": b"nistp521",
 }
+
+
+Ed25519PublicKey: Optional[Type[ed25519.Ed25519PublicKey]]
+Ed25519PrivateKey: Optional[Type[ed25519.Ed25519PrivateKey]]
+
+if default_backend().ed25519_supported():
+    Ed25519PublicKey = ed25519.Ed25519PublicKey
+    Ed25519PrivateKey = ed25519.Ed25519PrivateKey
+else:  # pragma: no cover
+    try:
+        from twisted.conch.ssh._keys_pynacl import Ed25519PrivateKey, Ed25519PublicKey
+    except ImportError:
+        Ed25519PublicKey = None
+        Ed25519PrivateKey = None
 
 
 class BadKeyError(Exception):
@@ -921,10 +936,13 @@ class Key:
         @type k: L{bytes}
         """
 
+        if Ed25519PublicKey is None or Ed25519PrivateKey is None:
+            raise BadKeyError("Ed25519 keys not supported on this system")
+
         if k is None:
-            keyObject = ed25519.Ed25519PublicKey.from_public_bytes(a)
+            keyObject = Ed25519PublicKey.from_public_bytes(a)
         else:
-            keyObject = ed25519.Ed25519PrivateKey.from_private_bytes(k)
+            keyObject = Ed25519PrivateKey.from_private_bytes(k)
 
         return cls(keyObject)
 
