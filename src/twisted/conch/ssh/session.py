@@ -186,7 +186,7 @@ class SSHSession(channel.SSHChannel):
             self.session.eofReceived()
 
     def closed(self):
-        if self.client:
+        if self.client and self.client.transport:
             self.client.transport.loseConnection()
         if self.session:
             self.session.closed()
