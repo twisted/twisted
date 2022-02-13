@@ -9,9 +9,10 @@ Twisted 22.2.0.rc1 (2022-02-08)
 Bugfixes
 --------
 
-- twisted.internet.gireactor.PortableGIReactor.simulate and twisted.internet.gtk2reactor.PortableGtkReactor.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python3 in which the builtin `min` function no longer accepts `None` as an argument. (#9660)
+- twisted.internet.gireactor.PortableGIReactor.simulate and twisted.internet.gtk2reactor.PortableGtkReactor.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python 3 in which the builtin `min` function no longer accepts `None` as an argument. (#9660)
 - twisted.conch.ssh.transport.SSHTransportBase now disconnects the remote peer if the
-  SSH version string is not sent in the first 4096 bytes. (#10284)
+  SSH version string is not sent in the first 4096 bytes. (#10284, CVE-2022-21716,
+  GHSA-rv6r-3f5q-9rgx)
 
 
 Improved Documentation
