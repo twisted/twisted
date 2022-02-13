@@ -180,16 +180,16 @@ class SSHSession(channel.SSHChannel):
             log.warn("Weird extended data: {dataType}", dataType=dataType)
 
     def eofReceived(self):
+        if self.client:
+            self.conn.sendClose(self)
         if self.session:
             self.session.eofReceived()
-        elif self.client:
-            self.conn.sendClose(self)
 
     def closed(self):
+        if self.client:
+            self.client.transport.loseConnection()
         if self.session:
             self.session.closed()
-        elif self.client:
-            self.client.transport.loseConnection()
 
     # def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
