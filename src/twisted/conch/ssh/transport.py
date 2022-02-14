@@ -730,34 +730,56 @@ class SSHTransportBase(protocol.Protocol):
         self.buf = self.buf + data
         if not self.gotVersion:
 
-            if len(self.buf) > 4096:
+            if len(self.buf) >= 255 and b"\n" not in self.buf:
+                # Looks like we have already received enough data,
+                # yet it doesn't look like the version string line
+                # is in the received data.
+                # RFC 4253 section 4.2
+                # The maximum length of the string is 255 characters,
+                # including the Carriage Return and Line Feed.
                 self.sendDisconnect(
                     DISCONNECT_CONNECTION_LOST,
-                    b"Peer version string longer than 4KB. "
-                    b"Preventing a denial of service attack.",
+                    b"Invalid peer version. Long value. Preventing a denial of service attack.",
                 )
                 return
 
-            if self.buf.find(b"\n", self.buf.find(b"SSH-")) == -1:
+            if b"\n" not in self.buf:
+                # We don't have yet the full version string.
+                return
+
+            if not self.buf.startswith(b"SSH-"):
+                # The identification string MUST be
+                # SSH-protoversion-softwareversion SP comments CR LF
+                self.sendDisconnect(
+                    DISCONNECT_CONNECTION_LOST, b"Invalid peer version format."
+                )
                 return
 
             # RFC 4253 section 4.2 ask for strict `\r\n` line ending.
             # Here we are a bit more relaxed and accept implementations ending
             # only in '\n'.
             # https://tools.ietf.org/html/rfc4253#section-4.2
-            lines = self.buf.split(b"\n")
-            for p in lines:
-                if p.startswith(b"SSH-"):
-                    self.gotVersion = True
-                    # Since the line was split on '\n' and most of the time
-                    # it uses '\r\n' we may get an extra '\r'.
-                    self.otherVersionString = p.rstrip(b"\r")
-                    remoteVersion = p.split(b"-")[1]
-                    if remoteVersion not in self.supportedVersions:
-                        self._unsupportedVersionReceived(remoteVersion)
-                        return
-                    i = lines.index(p)
-                    self.buf = b"\n".join(lines[i + 1 :])
+            version_line, self.buf = self.buf.split(b"\n", 1)
+            # Since the line was split on '\n' and most of the time
+            # it uses '\r\n' we may get an extra '\r'.
+            version_line = version_line.rstrip(b"\r")
+
+            if b"\x00" in version_line:
+                # RFC 4253 Section 4.2: The null character MUST NOT be sent.
+                self.sendDisconnect(
+                    DISCONNECT_CONNECTION_LOST,
+                    b"Invalid peer version. Null character found.",
+                )
+                return
+
+            self.otherVersionString = version_line
+            self.gotVersion = True
+
+            remoteVersion = self.otherVersionString.split(b"-")[1]
+            if remoteVersion not in self.supportedVersions:
+                self._unsupportedVersionReceived(remoteVersion)
+                return
+
         packet = self.getPacket()
         while packet:
             messageNum = ord(packet[0:1])

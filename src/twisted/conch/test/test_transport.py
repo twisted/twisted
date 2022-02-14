@@ -515,10 +515,48 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         )
         self.assertRegex(softwareVersion, softwareVersionRegex)
 
+    def test_dataReceiveVersionNullCharacter(self):
+        """
+        It will reject the connection when null characters are found in the
+        peer's SSH version string.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(self.transport)
+
+        # White the new line is not received, all looks fine so far.
+        sut.dataReceived(b"SSH-2-to-be-continued-")
+        self.assertFalse(self.transport.disconnecting)
+
+        # Once the new line is received the version string is validated.
+        sut.dataReceived(b"with-\x00-character\r\nmore-data-ignored")
+
+        self.assertTrue(self.transport.disconnecting)
+        self.assertIn(
+            b"Invalid peer version. Null character found.", self.transport.value()
+        )
+
+    def test_dataReceiveVersionInvalidVersionFormat(self):
+        """
+        It will reject the connection when remote peer SSH format doesn't start
+        with `SSH-`.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(self.transport)
+
+        # As soon as the receive.
+        sut.dataReceived(b"GET / HTTP/1.1")
+        self.assertFalse(self.transport.disconnecting)
+
+        # Once the new line is received the version string is validated.
+        sut.dataReceived(b"\n")
+
+        self.assertTrue(self.transport.disconnecting)
+        self.assertIn(b"Invalid peer version format.", self.transport.value())
+
     def test_dataReceiveVersionNotSentMemoryDOS(self):
         """
         When the peer is not sending its SSH version but keeps sending data,
-        the connection is disconnected after 4KB to prevent buffering too
+        the connection is disconnected after 255B to prevent buffering too
         much and running our of memory.
         """
         sut = MockTransportBase()
@@ -526,11 +564,11 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
 
         # Data can be received over multiple chunks.
         sut.dataReceived(b"SSH-2-Server-Identifier")
-        sut.dataReceived(b"1234567890" * 406)
+        sut.dataReceived(b"1234567890" * 22)
         sut.dataReceived(b"1235678")
         self.assertFalse(self.transport.disconnecting)
 
-        # Here we are going over the limit.
+        # Here we are going over the limit and without a new line character.
         sut.dataReceived(b"1234567")
         # Once a lot of data is received without an SSH version string,
         # the transport is disconnected.
@@ -1116,24 +1154,20 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
 
         testBad(b"SSH-1.5-OpenSSH")
         testBad(b"SSH-3.0-Twisted")
-        testBad(b"GET / HTTP/1.1")
 
     def test_dataBeforeVersion(self):
         """
-        Test that the transport ignores data sent before the version string.
+        Any data sent before the version string, is considered a protocol
+        violation and will disconnect the peer.
         """
+        transport = proto_helpers.StringTransport()
         proto = MockTransportBase()
-        proto.makeConnection(proto_helpers.StringTransport())
-        data = (
-            b"""here's some stuff beforehand
-here's some other stuff
-"""
-            + proto.ourVersionString
-            + b"\r\n"
-        )
-        [proto.dataReceived(c) for c in iterbytes(data)]
-        self.assertTrue(proto.gotVersion)
-        self.assertEqual(proto.otherVersionString, proto.ourVersionString)
+        proto.makeConnection(transport)
+
+        proto.dataReceived(b"here's some stuff before\r\nSSH-2.0 Test")
+
+        self.assertTrue(transport.disconnecting)
+        self.assertIn(b"Invalid peer version format.", transport.value())
 
     def test_compatabilityVersion(self):
         """

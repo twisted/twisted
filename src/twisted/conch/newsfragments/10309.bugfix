@@ -1,0 +1,5 @@
+twisted.conch.ssh.SSHTransportBase now implements stricter checks for
+the peer SSH version string as defined in RFC 4253 section 4.2.
+The version string length is limited to 255 character and null characters are not allowed.
+It also rejects any connection that doesn't start with `SSH-` and no longer
+ignores the lines received before the version string.
