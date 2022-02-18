@@ -1238,6 +1238,9 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
+    decode_codecs = ["utf-8"]  # IRC protocol doesn't specify encoding
+    decode_fallback_errorhandling = "replace"  # see bytes.decode
+
     def _reallySendLine(self, line):
         quoteLine = lowQuote(line)
         if isinstance(quoteLine, str):
@@ -2617,8 +2620,17 @@ class IRCClient(basic.LineReceiver):
 
     def lineReceived(self, line):
         if bytes != str and isinstance(line, bytes):
-            # decode bytes from transport to unicode
-            line = line.decode("utf-8")
+            # decode bytes from transport to str
+            for codec in self.decode_codecs:
+                try:
+                    line = line.decode(codec)
+                    break
+                except ValueError:
+                    log.msg(f"Couldn't decode line '{line}' with codec {codec}")
+            else:
+                line = line.decode(
+                    self.decode_codecs[0], self.decode_fallback_errorhandling
+                )
 
         line = lowDequote(line)
         try:
