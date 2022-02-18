@@ -542,6 +542,25 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertTrue(self.session.client.transport.close)
         self.session.client.transport.close = False
 
+    def test_client_closed_with_env_subsystem(self):
+        """
+        If the peer requests an environment variable in its setup process
+        followed by requesting a subsystem, SSHSession.closed() should tell
+        the transport connected to the client that the connection was lost.
+        """
+        self.assertTrue(
+            self.session.requestReceived(b"env", common.NS(b"FOO") + common.NS(b"bar"))
+        )
+        self.assertTrue(
+            self.session.requestReceived(
+                b"subsystem", common.NS(b"TestSubsystem") + b"data"
+            )
+        )
+        self.session.client = StubClient()
+        self.session.closed()
+        self.assertTrue(self.session.client.transport.close)
+        self.session.client.transport.close = False
+
     def test_badSubsystemDoesNotCreateClient(self):
         """
         When a subsystem request fails, SSHSession.client should not be set.
