@@ -34,6 +34,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
+import enum
 import errno
 import operator
 import os
@@ -67,6 +68,9 @@ SPC = chr(0o40)
 MAX_COMMAND_LENGTH = 512
 
 CHANNEL_PREFIXES = "&#!+"
+
+
+MSG_OR_NOTICE = enum.Enum("MSG_OR_NOTICE", "PRIVMSG NOTICE")
 
 
 class IRCBadMessage(Exception):
@@ -1713,6 +1717,46 @@ class IRCClient(basic.LineReceiver):
         fudge = 10
         return MAX_COMMAND_LENGTH - len(theoretical) - fudge
 
+    def _send_msg_or_notice(self, msg_or_notice, user, message, length=None):
+        """
+        Send a message or notice to a user or channel.
+
+        The message will be split into multiple commands to the server if:
+         - The message contains any newline characters
+         - Any span between newline characters is longer than the given
+           line-length.
+
+        @param msg_or_notice: Whether a PRIVMSG or NOTICE should be sent.
+        @type msg_or_notice: L{MSG_OR_NOTICE}
+
+        @param user: Username or channel name to which to direct the
+            message.
+        @type user: C{str}
+
+        @param message: Text to send.
+        @type message: C{str}
+
+        @param length: Maximum number of octets to send in a single
+            command, including the IRC protocol framing. If L{None} is given
+            then L{IRCClient._safeMaximumLineLength} is used to determine a
+            value.
+        @type length: C{int}
+        """
+        fmt = f"{msg_or_notice.name} {user} :"
+
+        if length is None:
+            length = self._safeMaximumLineLength(fmt)
+
+        # Account for the line terminator.
+        minimumLength = len(fmt) + 2
+        if length <= minimumLength:
+            raise ValueError(
+                "Maximum length must exceed %d for message "
+                "to %s" % (minimumLength, user)
+            )
+        for line in split(message, length - minimumLength):
+            self.sendLine(fmt + line)
+
     def msg(self, user, message, length=None):
         """
         Send a message to a user or channel.
@@ -1735,22 +1779,9 @@ class IRCClient(basic.LineReceiver):
             value.
         @type length: C{int}
         """
-        fmt = f"PRIVMSG {user} :"
+        self._send_msg_or_notice(MSG_OR_NOTICE.PRIVMSG, user, message, length)
 
-        if length is None:
-            length = self._safeMaximumLineLength(fmt)
-
-        # Account for the line terminator.
-        minimumLength = len(fmt) + 2
-        if length <= minimumLength:
-            raise ValueError(
-                "Maximum length must exceed %d for message "
-                "to %s" % (minimumLength, user)
-            )
-        for line in split(message, length - minimumLength):
-            self.sendLine(fmt + line)
-
-    def notice(self, user, message):
+    def notice(self, user, message, length=None):
         """
         Send a notice to a user.
 
@@ -1759,10 +1790,17 @@ class IRCClient(basic.LineReceiver):
 
         @type user: C{str}
         @param user: The user to send a notice to.
+
         @type message: C{str}
         @param message: The contents of the notice to send.
+
+        @param length: Maximum number of octets to send in a single
+            command, including the IRC protocol framing. If L{None} is given
+            then L{IRCClient._safeMaximumLineLength} is used to determine a
+            value.
+        @type length: C{int}
         """
-        self.sendLine(f"NOTICE {user} :{message}")
+        self._send_msg_or_notice(MSG_OR_NOTICE.NOTICE, user, message, length)
 
     def away(self, message=""):
         """
