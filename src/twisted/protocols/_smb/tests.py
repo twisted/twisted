@@ -83,8 +83,8 @@ class TestBase(unittest.TestCase):
         rdata: Optional[_base.SMBPacket] = None
 
         def recv(x: _base.SMBPacket) -> None:
-
             rdata = x
+            self.assertTrue(bool(rdata))  # must use rdata
 
         pr = _base.SMBPacketReceiver(recv, {})
         pr.transport = io.BytesIO()  # type: ignore
