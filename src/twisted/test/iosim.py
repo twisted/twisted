@@ -60,7 +60,7 @@ class FakeTransport:
     and is thus useful mainly as a utility for debugging protocols.
     """
 
-    _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
+    _nextserial = staticmethod(lambda counter=itertools.count(): int(next(counter)))
     closed = 0
     disconnecting = 0
     disconnected = 0

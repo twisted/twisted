@@ -139,7 +139,7 @@ class CooperatorTests(unittest.TestCase):
 
         def myiter():
             if False:
-                yield None  # type: ignore[unreachable]
+                yield None
             else:
                 raise RuntimeError()
 

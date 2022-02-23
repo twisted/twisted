@@ -361,7 +361,10 @@ class CheckersMixin:
 class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
     diskHash = None
-    networkHash = staticmethod(lambda x: x)
+
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return x
 
     _validCredentials = [
         (b"user1", b"password1"),
@@ -418,7 +421,9 @@ class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
 
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    networkHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return hexlify(x)
 
     class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):

@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import Callable
+from typing import AnyStr, Callable, Optional
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -815,7 +815,7 @@ class Request:
         self.client = self.channel.getPeer()
         self.host = self.channel.getHost()
 
-        self.requestHeaders = Headers()
+        self.requestHeaders: Headers = Headers()
         self.received_cookies = {}
         self.responseHeaders = Headers()
         self.cookies = []  # outgoing cookies
@@ -1051,7 +1051,7 @@ class Request:
 
     # The following is the public interface that people should be
     # writing to.
-    def getHeader(self, key):
+    def getHeader(self, key: AnyStr) -> Optional[AnyStr]:
         """
         Get an HTTP request header.
 
@@ -1066,6 +1066,7 @@ class Request:
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:
             return value[-1]
+        return None
 
     def getCookie(self, key):
         """
