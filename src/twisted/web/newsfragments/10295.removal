@@ -1,1 +1,0 @@
-twisted.web.client.getPage, twisted.web.client.downladPage, and the associated implementation classes (HTTPPageGetter, HTTPPageDownloader, HTTPClientFactory, HTTPDownloader) have been removed because they do not segregate cookies by domain. They were deprecated in Twisted 16.7.0 in favor of twisted.web.client.Agent. GHSA-92x2-jw7w-xvvx.

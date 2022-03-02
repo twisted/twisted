@@ -3,6 +3,109 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 22.1.0 (2022-02-03)
+===========================
+
+Features
+--------
+
+- Python 3.10 is now a supported platform (#10224)
+- Type annotations have been added to the twisted.python.fakepwd module. (#10287)
+
+
+Bugfixes
+--------
+
+- twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
+- ``twisted.internet.base.DelayedCall.__repr__`` and ``twisted.internet.task.LoopingCall.__repr__`` had the changes from #10155 reverted to accept non-function callables.  (#10235)
+- Revert the removal of .whl building that was done as part of #10177. (#10236)
+- The type annotation of the host parameter to twisted.internet.interfaces.IReactorTCP.connectTCP has been corrected from bytes to str. (#10251)
+- Deprecated ``twisted.python.threading.ThreadPool.currentThread()`` in favor of ``threading.current_thread()``.
+  Switched ``twisted.python.threading.ThreadPool.currentThread()`` and ``twisted.python.threadable.getThreadID()`` to use `threading.current_thread()`` to avoid the deprecation warnings introduced for ``threading.currentThread()`` in Python 3.10. (#10273)
+
+
+Improved Documentation
+----------------------
+
+- twisted.internet.utils.runWithWarningsSupressed behavior of waiting on deferreds has been documented. (#10238)
+- Sync API docs templates with pydoctor 21.9.0 release, using new theming capabilities. (#10267)
+
+
+Misc
+----
+
+- #1681, #9944, #10198, #10218, #10219, #10228, #10229, #10234, #10239, #10240, #10245, #10246, #10248, #10250, #10255, #10277, #10288, #10292
+
+
+Conch
+-----
+
+Bugfixes
+--------
+
+- SSHTransportBase.ssh_KEXINIT now uses the remote peer preferred MAC list for negotiation. In previous versions  it was only using the local preferred MAC list. (#10241)
+
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports SSH extension negotiation (RFC 8308). (#10266)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch now uses constant-time comparisons for MACs. (#8199)
+- twisted.conch.ssh.filetransfer.FileTransferServer will now return an ENOENT error status if an SFTP client tries to close an unrecognized file handle. (#10293)
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.RedirectAgent and twisted.web.client.BrowserLikeRedirectAgent now properly remove sensitive headers when redirecting to a different origin. (#10294)
+
+
+Improved Documentation
+----------------------
+
+- Add type annotations for twisted.web.client.readBody. (#10269)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.client.getPage, twisted.web.client.downladPage, and the associated implementation classes (HTTPPageGetter, HTTPPageDownloader, HTTPClientFactory, HTTPDownloader) have been removed because they do not segregate cookies by domain. They were deprecated in Twisted 16.7.0 in favor of twisted.web.client.Agent. GHSA-92x2-jw7w-xvvx. (#10295)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Bugfixes
+~~~~~~~~
+
+- trial.runner.filenameToModule now sets the correct module.__name__ and sys.modules key (#10230)
+
 
 Twisted 21.7.0 (2021-07-26)
 ===========================
