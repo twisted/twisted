@@ -263,7 +263,7 @@ class SSHUserAuthServer(service.SSHService):
         algName, blob, rest = getNS(packet[1:], 2)
 
         try:
-            pubKey = keys.Key.fromString(blob)
+            keys.Key.fromString(blob)
         except keys.BadKeyError:
             error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
@@ -278,7 +278,7 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(self.nextService)
                 + NS(b"publickey")
                 + bytes((hasSig,))
-                + NS(pubKey.sshType())
+                + NS(algName)
                 + NS(blob)
             )
             c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
