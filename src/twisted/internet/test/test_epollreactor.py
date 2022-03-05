@@ -15,7 +15,7 @@ from twisted.trial.unittest import TestCase
 try:
     from twisted.internet import epollreactor
 except ImportError:
-    epollreactor = None  # type: ignore[assignment,misc]
+    epollreactor = None  # type: ignore[assignment]
 
 
 class Descriptor:

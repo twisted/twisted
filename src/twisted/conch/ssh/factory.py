@@ -11,6 +11,7 @@ Maintainer: Paul Swartz
 
 
 import random
+from itertools import chain
 
 from twisted.conch import error
 from twisted.conch.ssh import _kex, connection, transport, userauth
@@ -55,7 +56,11 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+        t.supportedPublicKeys = list(
+            chain.from_iterable(
+                key.supportedSignatureAlgorithms() for key in self.privateKeys.values()
+            )
+        )
         if not self.primes:
             self._log.info(
                 "disabling non-fixed-group key exchange algorithms "
