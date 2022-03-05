@@ -11,6 +11,7 @@ import pdb
 import re
 import sys
 import traceback
+from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
@@ -489,6 +490,19 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
+
+    def test_distb(self):
+        """
+        The traceback captured by a L{Failure} is compatible with the stdlib
+        L{dis.distb} function as used in post-mortem debuggers. Specifically,
+        it doesn't cause that function to raise an exception.
+        """
+        f = getDivisionFailure()
+        buf = StringIO()
+        distb(f.getTracebackObject(), file=buf)
+        # The bytecode details vary across Python versions, so we only check
+        # that the arrow pointing at the source of the exception is present.
+        self.assertIn(" --> ", buf.getvalue())
 
     def test_repr(self):
         """
