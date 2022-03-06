@@ -3,6 +3,78 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 22.2.0 (2022-03-01)
+===========================
+
+Bugfixes
+--------
+
+- twisted.internet.gireactor.PortableGIReactor.simulate and twisted.internet.gtk2reactor.PortableGtkReactor.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python 3 in which the builtin `min` function no longer accepts `None` as an argument. (#9660)
+- twisted.conch.ssh.transport.SSHTransportBase now disconnects the remote peer if the
+  SSH version string is not sent in the first 4096 bytes. (#10284, CVE-2022-21716,
+  GHSA-rv6r-3f5q-9rgx)
+
+
+Improved Documentation
+----------------------
+
+- Add type annotations for twisted.web.http.Request.getHeader. (#10270)
+
+
+Deprecations and Removals
+-------------------------
+
+- Support for Python 3.6, which is EoL as of 2021-09-04, has been deprecated. (#10303)
+
+
+Misc
+----
+
+- #10216, #10299, #10300
+
+
+Conch
+-----
+
+Misc
+~~~~
+
+- #10298
+
+
+Web
+---
+
+No significant changes.
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Bugfixes
+~~~~~~~~
+
+- _dist.test.test_workertrial now correctly compare strings via assertEqual() and pass on PyPy3 (#10302)
+
+
 Twisted 22.1.0 (2022-02-03)
 ===========================
 
