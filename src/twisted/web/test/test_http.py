@@ -1751,6 +1751,56 @@ class ParsingTests(unittest.TestCase):
             [b"t \ta \tb"],
         )
 
+    def test_headerStripWhitespace(self):
+        """
+        Leading and trailing space and tab characters are stripped from
+        headers. Other forms of whitespace are preserved.
+
+        See RFC 7230 section 3.2.3 and 3.2.4.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        requestLines = [
+            b"GET / HTTP/1.0",
+            b"spaces:   spaces were stripped   ",
+            b"tabs: \t\ttabs were stripped\t\t",
+            b"spaces-and-tabs: \t \t spaces and tabs were stripped\t \t",
+            b"line-tab:   \v vertical tab was preserved\v\t",
+            b"form-feed: \f form feed was preserved \f  ",
+            b"",
+            b"",
+        ]
+
+        self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces"),
+            [b"spaces were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"tabs"),
+            [b"tabs were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces-and-tabs"),
+            [b"spaces and tabs were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"line-tab"),
+            [b"\v vertical tab was preserved\v"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"form-feed"),
+            [b"\f form feed was preserved \f"],
+        )
+
     def test_tooManyHeaders(self):
         """
         C{HTTPChannel} enforces a limit of C{HTTPChannel.maxHeaders} on the
@@ -2312,6 +2362,58 @@ Hello,
                 b"Host: host.invalid",
                 b"",
                 b"",
+            ]
+        )
+
+    def test_contentLengthMalformed(self):
+        """
+        A request with a non-integer C{Content-Length} header fails with a 400
+        response without calling L{Request.process}.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: MORE THAN NINE THOUSAND!",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 9001,
+            ]
+        )
+
+    def test_contentLengthTooPositive(self):
+        """
+        A request with a C{Content-Length} header that begins with a L{+} fails
+        with a 400 response without calling L{Request.process}.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: +100",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 100,
+            ]
+        )
+
+    def test_contentLengthNegative(self):
+        """
+        A request with a C{Content-Length} header that is negative fails with
+        a 400 response without calling L{Request.process}.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: -100",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 200,
             ]
         )
 
