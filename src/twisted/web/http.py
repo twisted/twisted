@@ -2327,7 +2327,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         header = header.lower()
-        data = data.strip()
+        data = data.strip(b" \t")
 
         if not self._maybeChooseTransferDecoder(header, data):
             return False
