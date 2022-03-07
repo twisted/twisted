@@ -2274,6 +2274,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # Can this header determine the length?
         if header == b"content-length":
+            if not data.isdigit():
+                return fail()
             try:
                 length = int(data)
             except ValueError:
