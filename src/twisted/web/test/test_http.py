@@ -1703,7 +1703,12 @@ class ParsingTests(unittest.TestCase):
         Line folded headers are handled by L{HTTPChannel} by replacing each
         fold with a single space by the time they are made available to the
         L{Request}. Any leading whitespace in the folded lines of the header
-        value is preserved.
+        value is replaced with a single space, per:
+
+            A server that receives an obs-fold in a request message ... MUST
+            ... replace each received obs-fold with one or more SP octets prior
+            to interpreting the field value or forwarding the message
+            downstream.
 
         See RFC 7230 section 3.2.4.
         """
@@ -1740,15 +1745,15 @@ class ParsingTests(unittest.TestCase):
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"space"),
-            [b"space  space"],
+            [b"space space"],
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"spaces"),
-            [b"spaces   spaces    spaces"],
+            [b"spaces spaces spaces"],
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"tab"),
-            [b"t \ta \tb"],
+            [b"t a b"],
         )
 
     def test_headerStripWhitespace(self):

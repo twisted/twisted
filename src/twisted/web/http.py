@@ -2246,7 +2246,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setRawMode()
         elif line[0] in b" \t":
             # Continuation of a multi line header.
-            self.__header = self.__header + b"\n" + line
+            self.__header += b" " + line.lstrip(b" \t")
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
