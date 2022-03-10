@@ -214,14 +214,16 @@ class DistTrialRunner:
 
         stopping = []
 
-        def nextRun(ign):
+        def nextRun(ign, n):
+            if untilFailure:
+                self._stream.write("Test Pass %d\n" % (n,))
             self.writeResults(result)
             if not untilFailure:
                 return
             if not result.wasSuccessful():
                 return
             d = runTests()
-            return d.addCallback(nextRun)
+            return d.addCallback(nextRun, n + 1)
 
         def stop(ign):
             testDirLock.unlock()
@@ -240,7 +242,7 @@ class DistTrialRunner:
             return ign
 
         d = runTests()
-        d.addCallback(nextRun)
+        d.addCallback(nextRun, 1)
         d.addBoth(stop)
 
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutDown)
