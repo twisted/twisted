@@ -6,7 +6,6 @@ Tests for L{twisted.trial._dist.workertrial}.
 """
 
 import errno
-import os
 import sys
 from io import BytesIO
 
