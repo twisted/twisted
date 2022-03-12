@@ -508,4 +508,4 @@ class DistTrialRunnerTests(TestCase):
         self.assertIn("PASSED", output)
         self.assertIn("FAIL", output)
         for i in range(1, 5):
-            self.assertIn("Test Pass {}".format(i), output)
+            self.assertIn(f"Test Pass {i}", output)
