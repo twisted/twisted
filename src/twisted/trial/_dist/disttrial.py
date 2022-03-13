@@ -122,10 +122,9 @@ class DistTrialRunner:
             _WORKER_AMP_STDOUT: "r",
         }
         environ = os.environ.copy()
-        # Add an environment variable containing the raw sys.path, to be used by
-        # subprocesses to make sure it's identical to the parent. See
-        # workertrial._setupPath.
-        environ["TRIAL_PYTHONPATH"] = os.pathsep.join(sys.path)
+        # Add an environment variable containing the raw sys.path, to be used
+        # by subprocesses to try to make it identical to the parent's.
+        environ["PYTHONPATH"] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)

@@ -6,7 +6,6 @@ Tests for L{twisted.trial._dist.workertrial}.
 """
 
 import errno
-import os
 import sys
 from io import BytesIO
 
@@ -19,7 +18,7 @@ from twisted.trial._dist import (
     workercommands,
     workertrial,
 )
-from twisted.trial._dist.workertrial import WorkerLogObserver, _setupPath, main
+from twisted.trial._dist.workertrial import WorkerLogObserver, main
 from twisted.trial.unittest import TestCase
 
 
@@ -144,30 +143,3 @@ class MainTests(TestCase):
 
         self.readStream = FakeStream()
         self.assertRaises(IOError, main, self.fdopen)
-
-
-class SetupPathTests(TestCase):
-    """
-    Tests for L{_setupPath} C{sys.path} manipulation.
-    """
-
-    def setUp(self):
-        self.addCleanup(setattr, sys, "path", sys.path[:])
-
-    def test_overridePath(self):
-        """
-        L{_setupPath} overrides C{sys.path} if B{TRIAL_PYTHONPATH} is specified
-        in the environment.
-        """
-        environ = {"TRIAL_PYTHONPATH": os.pathsep.join(["foo", "bar"])}
-        _setupPath(environ)
-        self.assertEqual(["foo", "bar"], sys.path)
-
-    def test_noVariable(self):
-        """
-        L{_setupPath} doesn't change C{sys.path} if B{TRIAL_PYTHONPATH} is not
-        present in the environment.
-        """
-        originalPath = sys.path[:]
-        _setupPath({})
-        self.assertEqual(originalPath, sys.path)
