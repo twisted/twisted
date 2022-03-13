@@ -8,8 +8,7 @@ from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.python.modules import getModule
 
 
-@defer.inlineCallbacks
-def main(reactor):
+async def main(reactor):
     factory = protocol.Factory.forProtocol(echoclient.EchoClient)
     certData = getModule(__name__).filePath.sibling("public.pem").getContent()
     authData = getModule(__name__).filePath.sibling("server.pem").getContent()
@@ -17,11 +16,11 @@ def main(reactor):
     authority = ssl.Certificate.loadPEM(certData)
     options = ssl.optionsForClientTLS("example.com", authority, clientCertificate)
     endpoint = endpoints.SSL4ClientEndpoint(reactor, "localhost", 8000, options)
-    echoClient = yield endpoint.connect(factory)
+    echoClient = await endpoint.connect(factory)
 
     done = defer.Deferred()
     echoClient.connectionLost = lambda reason: done.callback(None)
-    yield done
+    await done
 
 
 if __name__ == "__main__":

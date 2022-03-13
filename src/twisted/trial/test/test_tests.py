@@ -1415,6 +1415,43 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
             result.errors[0][1].value.args[0],
         )
 
+    def test_errorOnAsyncGeneratorFunction(self):
+        """
+        In a TestCase, a test method which is an async generator function is reported
+        as an error, as such a method will never run assertions.
+        """
+
+        class AsyncGeneratorTestCase(unittest.TestCase):
+            """
+            A fake TestCase for testing purposes.
+            """
+
+            async def test_async_generator(self):  # pragma: no cover
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.fail("this should never be reached")
+                yield
+
+        testCase = AsyncGeneratorTestCase("test_async_generator")
+        result = reporter.TestResult()
+        testCase.run(result)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertIn(
+            "AsyncGeneratorTestCase.test_async_generator",
+            result.errors[0][1].value.args[0],
+        )
+        self.assertIn(
+            "AsyncGeneratorTestCase testMethod=test_async_generator",
+            result.errors[0][1].value.args[0],
+        )
+        self.assertIn(
+            "is an async generator function and therefore will never run",
+            result.errors[0][1].value.args[0],
+        )
+
     def test_synchronousTestCaseErrorOnGeneratorFunction(self):
         """
         In a SynchronousTestCase, a test method which is a generator function
@@ -1449,5 +1486,42 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
         )
         self.assertIn(
             "is a generator function and therefore will never run",
+            result.errors[0][1].value.args[0],
+        )
+
+    def test_synchronousTestCaseErrorOnAsyncGeneratorFunction(self):
+        """
+        In a SynchronousTestCase, a test method which is a generator function
+        is reported as an error, as such a method will never run assertions.
+        """
+
+        class AsyncGeneratorSynchronousTestCase(unittest.SynchronousTestCase):
+            """
+            A fake SynchronousTestCase for testing purposes.
+            """
+
+            async def test_async_generator(self):  # pragma: no cover
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.fail("this should never be reached")
+                yield
+
+        testCase = AsyncGeneratorSynchronousTestCase("test_async_generator")
+        result = reporter.TestResult()
+        testCase.run(result)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertIn(
+            "AsyncGeneratorSynchronousTestCase.test_async_generator",
+            result.errors[0][1].value.args[0],
+        )
+        self.assertIn(
+            "AsyncGeneratorSynchronousTestCase testMethod=test_async_generator",
+            result.errors[0][1].value.args[0],
+        )
+        self.assertIn(
+            "is an async generator function and therefore will never run",
             result.errors[0][1].value.args[0],
         )

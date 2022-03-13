@@ -23,7 +23,7 @@ else:
 from unittest import skipIf
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python.filepath import FilePath
@@ -272,15 +272,14 @@ class SendmsgTests(TestCase):
                 "or maybe send1msg blocked for a while"
             )
 
-    @inlineCallbacks
-    def test_sendSubProcessFD(self):
+    async def test_sendSubProcessFD(self):
         """
         Calling L{sendmsg} with SOL_SOCKET, SCM_RIGHTS, and a platform-endian
         packed file descriptor number should send that file descriptor to a
         different process, where it can be retrieved by using L{recv1msg}.
         """
         sspp = _spawn("pullpipe", self.output.fileno())
-        yield sspp.started
+        await sspp.started
         pipeOut, pipeIn = _makePipe()
         self.addCleanup(pipeOut.close)
         self.addCleanup(pipeIn.close)
@@ -292,7 +291,7 @@ class SendmsgTests(TestCase):
                 [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
             )
 
-        yield sspp.stopped
+        await sspp.stopped
         self.assertEqual(read(pipeOut.fileno(), 1024), b"Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
         self.assertEqual(read(pipeOut.fileno(), 1024), b"")

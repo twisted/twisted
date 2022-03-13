@@ -9,6 +9,7 @@ Test case for twisted.mail.imap4
 
 import base64
 import codecs
+import contextlib
 import functools
 import locale
 import os
@@ -1888,6 +1889,17 @@ class IMAP4HelperMixin:
         self.server.transport.loseConnection()
         log.err(failure, "Problem with " + str(self))
 
+    @contextlib.contextmanager
+    def clientCmgr(self):
+        try:
+            try:
+                yield
+            finally:
+                self._cbStopClient(None)
+        except Exception:
+            self._ebGeneral(failure.Failure())
+            raise  # pragma: no cover
+
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
 
@@ -2648,34 +2660,30 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         self.assertEqual(self.statused, None)
         self.assertEqual(self.failure.value.args, (b"Could not open mailbox",))
 
-    def testFullAppend(self):
+    async def aloopback(self):
+        return await self.loopback()
+
+    async def testFullAppend(self):
         infile = util.sibpath(__file__, "rfc822.message")
         SimpleServer.theAccount.addMailbox("root/subthing")
 
-        def login():
-            return self.client.login(b"testuser", b"password-test")
-
-        @defer.inlineCallbacks
-        def append():
+        async def fullAppend():
+            await self.connected
+            await self.client.login(b"testuser", b"password-test")
             with open(infile, "rb") as message:
-                result = yield self.client.append(
+                await self.client.append(
                     "root/subthing",
                     message,
                     ("\\SEEN", "\\DELETED"),
                     "Tue, 17 Jun 2003 11:22:16 -0600 (MDT)",
                 )
-                defer.returnValue(result)
 
-        d1 = self.connected.addCallback(strip(login))
-        d1.addCallbacks(strip(append), self._ebGeneral)
-        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
-        d2 = self.loopback()
+        with self.clientCmgr():
+            await defer.gatherResults(
+                defer.Deferred.fromCoroutine(fullAppend()),
+                defer.Deferred.fromCoroutine(self.aloopback()),
+            )
 
-        d = defer.gatherResults([d1, d2])
-
-        return d.addCallback(self._cbTestFullAppend, infile)
-
-    def _cbTestFullAppend(self, ignored, infile):
         mb = SimpleServer.theAccount.mailboxes["ROOT/SUBTHING"]
         self.assertEqual(1, len(mb.messages))
         self.assertEqual(
@@ -2685,17 +2693,15 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         with open(infile, "rb") as f:
             self.assertEqual(f.read(), mb.messages[0][0].getvalue())
 
-    def testPartialAppend(self):
+    async def testPartialAppend(self):
         infile = util.sibpath(__file__, "rfc822.message")
         SimpleServer.theAccount.addMailbox("PARTIAL/SUBTHING")
 
-        def login():
-            return self.client.login(b"testuser", b"password-test")
-
-        @defer.inlineCallbacks
-        def append():
+        async def partialAppend():
+            await self.connected
+            await self.client.login(b"testuser", b"password-test")
             with open(infile, "rb") as message:
-                result = yield self.client.sendCommand(
+                await self.client.sendCommand(
                     imap4.Command(
                         b"APPEND",
                         # Using networkString is cheating!  In this
@@ -2712,16 +2718,13 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
                         message,
                     )
                 )
-                defer.returnValue(result)
 
-        d1 = self.connected.addCallback(strip(login))
-        d1.addCallbacks(strip(append), self._ebGeneral)
-        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
-        d2 = self.loopback()
-        d = defer.gatherResults([d1, d2])
-        return d.addCallback(self._cbTestPartialAppend, infile)
+        with self.clientCmgr():
+            await defer.gatherResults(
+                defer.Deferred.fromCoroutine(partialAppend()),
+                defer.Deferred.fromCoroutine(self.aloopback()),
+            )
 
-    def _cbTestPartialAppend(self, ignored, infile):
         mb = SimpleServer.theAccount.mailboxes["PARTIAL/SUBTHING"]
         self.assertEqual(1, len(mb.messages))
         self.assertEqual((["\\SEEN"], b"Right now", 0), mb.messages[0][1:])
@@ -7243,18 +7246,20 @@ class TLSTests(IMAP4HelperMixin, TestCase):
             b"PLAIN": imap4.PLAINCredentials,
         }
 
-        @defer.inlineCallbacks
-        def assertLOGINandPLAIN():
-            capabilities = yield self.client.getCapabilities()
+        async def _assertLOGINandPLAIN():
+            capabilities = await self.client.getCapabilities()
             self.assertIn(b"AUTH", capabilities)
             self.assertIn(b"LOGIN", capabilities[b"AUTH"])
             self.assertIn(b"PLAIN", capabilities[b"AUTH"])
 
-        self.connected.addCallback(strip(assertLOGINandPLAIN))
+        def assertLOGINandPLAIN(ignore):
+            return defer.Deferred.fromCoroutine(_assertLOGINandPLAIN())
+
+        self.connected.addCallback(assertLOGINandPLAIN)
 
         disconnected = self.startTLSAndAssertSession()
 
-        self.connected.addCallback(strip(assertLOGINandPLAIN))
+        self.connected.addCallback(assertLOGINandPLAIN)
 
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)

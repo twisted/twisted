@@ -23,6 +23,7 @@ from typing import Optional, Tuple
 from unittest import SkipTest
 
 from twisted.internet.defer import ensureDeferred
+from twisted.internet.utils import suppressWarningsCM
 from twisted.python import failure, log, monkey
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
@@ -1353,8 +1354,18 @@ class SynchronousTestCase(_Assertions):
             )
             result.addError(self, failure.Failure(exc))
             return True
+
+        if inspect.isasyncgenfunction(method):
+            exc = TypeError(
+                "{!r} is an async generator function and therefore will never run".format(
+                    method
+                )
+            )
+            result.addError(self, failure.Failure(exc))
+            return True
         try:
-            runWithWarningsSuppressed(suppress, method)
+            with suppressWarningsCM(suppress):
+                method()
         except SkipTest as e:
             result.addSkip(self, self._getSkipReason(method, e))
         except BaseException:

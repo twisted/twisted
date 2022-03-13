@@ -815,28 +815,27 @@ class PBProtocolTests(unittest.TestCase):
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
 
-    @defer.inlineCallbacks
-    def testGroups(self):
+    async def testGroups(self):
         mindone = TestMind()
-        one = yield self._loggedInAvatar("one", b"p1", mindone)
+        one = await self._loggedInAvatar("one", b"p1", mindone)
 
         mindtwo = TestMind()
-        two = yield self._loggedInAvatar("two", b"p2", mindtwo)
+        two = await self._loggedInAvatar("two", b"p2", mindtwo)
 
         mindThree = TestMind()
-        three = yield self._loggedInAvatar(b"three", b"p3", mindThree)
+        three = await self._loggedInAvatar(b"three", b"p3", mindThree)
 
-        yield self.realm.createGroup("foobar")
-        yield self.realm.createGroup(b"barfoo")
+        await self.realm.createGroup("foobar")
+        await self.realm.createGroup(b"barfoo")
 
-        groupone = yield one.join("foobar")
-        grouptwo = yield two.join(b"barfoo")
+        groupone = await one.join("foobar")
+        grouptwo = await two.join(b"barfoo")
 
-        yield two.join("foobar")
-        yield two.join(b"barfoo")
-        yield three.join("foobar")
+        await two.join("foobar")
+        await two.join(b"barfoo")
+        await three.join("foobar")
 
-        yield groupone.send({b"text": b"hello, monkeys"})
+        await groupone.send({b"text": b"hello, monkeys"})
 
-        yield groupone.leave()
-        yield grouptwo.leave()
+        await groupone.leave()
+        await grouptwo.leave()

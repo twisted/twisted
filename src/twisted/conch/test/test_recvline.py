@@ -633,19 +633,21 @@ class _StdioMixin(_BaseMixin):
             filter(None, [processClient.onConnection, testTerminal.expect(b">>> ")])
         )
 
-    def tearDown(self):
+    async def tearDown(self):
         # Kill the child process.  We're done with it.
         try:
             self.clientTransport.signalProcess("KILL")
         except (error.ProcessExitedAlready, OSError):
             pass
 
-        def trap(failure):
-            failure.trap(error.ProcessTerminated)
-            self.assertIsNone(failure.value.exitCode)
-            self.assertEqual(failure.value.status, 9)
-
-        return self.testTerminal.onDisconnection.addErrback(trap)
+        try:
+            await self.testTerminal.onDisconnection
+        except error.ProcessTerminated as e:
+            self.assertIsNone(e.exitCode)
+            self.assertEqual(e.status, 9)
+        except error.ProcessDone as e:
+            self.assertEqual(e.exitCode, 0)
+            self.assertEqual(e.status, 0)
 
     def _testwrite(self, data):
         self.clientTransport.write(data)
