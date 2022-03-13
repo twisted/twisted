@@ -7,6 +7,7 @@ Utility methods.
 """
 
 
+import contextlib
 import sys
 import warnings
 from functools import wraps
@@ -188,6 +189,17 @@ def _resetWarningFilters(passthrough, addedFilters):
         except ValueError:
             pass
     return passthrough
+
+
+@contextlib.contextmanager
+def suppressedWarnings(suppressedWarnings):
+    for args, kwargs in suppressedWarnings:
+        warnings.filterwarnings(*args, **kwargs)
+    addedFilters = warnings.filters[: len(suppressedWarnings)]
+    try:
+        yield
+    finally:
+        _resetWarningFilters(None, addedFilters)
 
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):

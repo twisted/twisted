@@ -19,7 +19,7 @@ from unittest import TestCase as StdlibTestCase, expectedFailure
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
-from twisted.trial import itrial, reporter, runner, unittest, util
+from twisted.trial import _frames, itrial, reporter, runner, unittest, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 from twisted.trial.test import erroneous, sample
 from twisted.trial.unittest import SkipTest, Todo, makeTodo
@@ -265,7 +265,7 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         bads = result.failures + result.errors
         self.assertEqual(len(bads), 1)
         self.assertEqual(bads[0][0], test)
-        return result._trimFrames(bads[0][1].frames)
+        return _frames._trimFrames(bads[0][1].frames)
 
     def checkFrames(self, observedFrames, expectedFrames):
         for observed, expected in zip(observedFrames, expectedFrames):
@@ -301,12 +301,10 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         self.checkFrames(frames, [("_later", "twisted/trial/test/erroneous")])
 
     def test_noFrames(self):
-        result = reporter.Reporter(None)
-        self.assertEqual([], result._trimFrames([]))
+        self.assertEqual([], _frames._trimFrames([]))
 
     def test_oneFrame(self):
-        result = reporter.Reporter(None)
-        self.assertEqual(["fake frame"], result._trimFrames(["fake frame"]))
+        self.assertEqual(["fake frame"], _frames._trimFrames(["fake frame"]))
 
     def test_exception(self):
         """

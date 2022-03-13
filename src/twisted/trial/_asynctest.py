@@ -11,6 +11,7 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
+from collections.abc import Awaitable
 from typing import List
 
 from zope.interface import implementer
@@ -79,36 +80,14 @@ class TestCase(SynchronousTestCase):
 
     failUnlessFailure = assertFailure
 
+    async def _runCorofnWithWarningsSuppressed(self, method):
+        with utils.suppressedWarnings(self._getSuppress()):
+            v = method()
+            return (await v) if isinstance(v, Awaitable) else v
+
     def _run(self, methodName, result):
         from twisted.internet import reactor
 
-        timeout = self.getTimeout()
-
-        def onTimeout(d):
-            e = defer.TimeoutError(
-                f"{self!r} ({methodName}) still running at {timeout} secs"
-            )
-            f = failure.Failure(e)
-            # try to errback the deferred that the test returns (for no gorram
-            # reason) (see issue1005 and test_errorPropagation in
-            # test_deferred)
-            try:
-                d.errback(f)
-            except defer.AlreadyCalledError:
-                # if the deferred has been called already but the *back chain
-                # is still unfinished, crash the reactor and report timeout
-                # error ourself.
-                reactor.crash()
-                self._timedOut = True  # see self._wait
-                todo = self.getTodo()
-                if todo is not None and todo.expected(f):
-                    result.addExpectedFailure(self, f, todo)
-                else:
-                    result.addError(self, f)
-
-        onTimeout = utils.suppressWarnings(
-            onTimeout, util.suppress(category=DeprecationWarning)
-        )
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
             exc = TypeError(
@@ -117,12 +96,32 @@ class TestCase(SynchronousTestCase):
                 )
             )
             return defer.fail(exc)
-        d = defer.maybeDeferred(
-            utils.runWithWarningsSuppressed, self._getSuppress(), method
+
+        if inspect.isasyncgenfunction(method):
+            exc = TypeError(
+                "{!r} is an async generator function and therefore will never run".format(
+                    method
+                )
+            )
+            return defer.fail(exc)
+
+        def _cancelledToTimedOutError(value, timeout):
+            if isinstance(value, failure.Failure):
+                value.trap(defer.CancelledError)
+                raise defer.TimeoutError(
+                    f"{self!r} ({methodName}) still running at {timeout} secs"
+                )
+            raise defer.TimeoutError(
+                f"{self!r} ({methodName}) ignored timeout at {timeout} secs"
+            )
+
+        return defer.Deferred.fromCoroutine(
+            self._runCorofnWithWarningsSuppressed(method)
+        ).addTimeout(
+            timeout=self.getTimeout(),
+            clock=reactor,
+            onTimeoutCancel=_cancelledToTimedOutError,
         )
-        call = reactor.callLater(timeout, onTimeout, d)
-        d.addBoth(lambda x: call.active() and call.cancel() or x)
-        return d
 
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
@@ -192,22 +191,27 @@ class TestCase(SynchronousTestCase):
             result.stop()
         self._passed = False
 
-    @defer.inlineCallbacks
     def deferRunCleanups(self, ignored, result):
         """
         Run any scheduled cleanups and report errors (if any) to the result.
         object.
         """
-        failures = []
-        for func, args, kwargs in self._cleanups[::-1]:
-            try:
-                yield func(*args, **kwargs)
-            except Exception:
-                failures.append(failure.Failure())
 
-        for f in failures:
-            result.addError(self, f)
-            self._passed = False
+        async def deferRunCleanups():
+            failures = []
+            for func, args, kwargs in self._cleanups[::-1]:
+                try:
+                    aw = func(*args, **kwargs)
+                    if isinstance(aw, Awaitable):
+                        await aw
+                except Exception:
+                    failures.append(failure.Failure())
+
+            for f in failures:
+                result.addError(self, f)
+                self._passed = False
+
+        return defer.Deferred.fromCoroutine(deferRunCleanups())
 
     def _cleanUp(self, result):
         try:

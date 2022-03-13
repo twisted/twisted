@@ -6,7 +6,7 @@ Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
 
 
-from twisted.internet import defer, reactor, threads
+from twisted.internet import defer, reactor, task, threads
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
@@ -126,8 +126,15 @@ class DeferredTests(unittest.TestCase):
         """
         Test case that is decorated with L{defer.inlineCallbacks}.
         """
-        self._touchClass(None)
         yield None
+        self._touchClass(None)
+
+    async def test_passCoroutineFunction(self):
+        """
+        Test case that is a coroutine function
+        """
+        await defer.succeed(None)
+        self._touchClass(None)
 
     def test_fail(self):
         return defer.fail(self.failureException("I fail"))
@@ -207,6 +214,36 @@ class TimeoutTests(unittest.TestCase):
         return d
 
     test_errorPropagation.timeout = 0.1  # type: ignore[attr-defined]
+
+    async def test_cancelSuppression(self):
+        """Test case that ignores its timeout"""
+
+        async def sleep(delay):
+            await task.deferLater(clock=reactor, delay=delay)
+
+        try:
+            await sleep(0.2)
+        except defer.CancelledError:
+            await sleep(0.1)
+
+    test_cancelSuppression.timeout = 0.1  # type: ignore[attr-defined]
+
+    class MyError(Exception):
+        pass
+
+    async def test_cancelReplacement(self):
+        """Test case that replaces its CancelledError"""
+
+        async def sleep(delay):
+            await task.deferLater(clock=reactor, delay=delay)
+
+        try:
+            await sleep(0.2)
+        except defer.CancelledError:
+            await sleep(0.1)
+            raise self.MyError("replaced error")
+
+    test_cancelReplacement.timeout = 0.1  # type: ignore[attr-defined]
 
     def test_calledButNeverCallback(self):
         d = defer.Deferred()
