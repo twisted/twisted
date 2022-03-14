@@ -440,6 +440,9 @@ def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
     """
     Convert chunk to string.
 
+    Note that this function is not specification compliant: it doesn't handle
+    chunk extensions.
+
     @type data: C{bytes}
 
     @return: tuple of (result, remaining) - both C{bytes}.
