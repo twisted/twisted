@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import AnyStr, Callable, Optional
+from typing import AnyStr, Callable, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -410,7 +410,33 @@ def toChunk(data):
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
-def fromChunk(data):
+def _ishexdigits(b: bytes) -> bool:
+    """
+    Is the string case-insensitively hexidecimal?
+
+    It must be composed of one or more characters in the ranges a-f, A-F
+    and 0-9.
+    """
+    for c in b:
+        if c not in b'0123456789abcdefABCDEF':
+            return False
+    return bool(b)
+
+
+def _hexint(b: bytes) -> int:
+    """
+    Decode a hexadecimal integer.
+
+    Unlike L{int(b, 16)}, this raises L{ValueError} when the integer has
+    a prefix like C{b'0x'}, C{b'+'}, or C{b'-'}, which is desirable when
+    parsing network protocols.
+    """
+    if not _ishexdigits(b):
+        raise ValueError(b)
+    return int(b, 16)
+
+
+def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
     """
     Convert chunk to string.
 
@@ -422,7 +448,7 @@ def fromChunk(data):
         byte string.
     """
     prefix, rest = data.split(b"\r\n", 1)
-    length = int(prefix, 16)
+    length = _hexint(prefix)
     if length < 0:
         raise ValueError("Chunk length must be >= 0, not %d" % (length,))
     if rest[length : length + 2] != b"\r\n":
@@ -1883,8 +1909,9 @@ class _ChunkedTransferDecoder:
         endOfLengthIndex = self._buffer.find(b";", 0, eolIndex)
         if endOfLengthIndex == -1:
             endOfLengthIndex = eolIndex
+        rawLength = self._buffer[0:endOfLengthIndex]
         try:
-            length = int(self._buffer[0:endOfLengthIndex], 16)
+            length = _hexint(rawLength)
         except ValueError:
             raise _MalformedChunkedDataError("Chunk-size must be an integer.")
 
