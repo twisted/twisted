@@ -1279,6 +1279,22 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
 
+    def test_extensionsMalformed(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk extension fields contain
+        invalid characters.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        for b in [*range(0, 0x09), *range(0x10, 0x21), *range(0x74, 0x80)]:
+            data = b"3; " + bytes((b,)) + b"\r\nabc\r\n"
+            p = http._ChunkedTransferDecoder(
+                lambda b: None,  # pragma: nocov
+                lambda b: None,  # pragma: nocov
+            )
+            self.assertRaises(http._MalformedChunkedDataError, p.dataReceived, data)
+
     def test_oversizedChunkSizeLine(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} raises
@@ -1332,6 +1348,22 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         )
         self.assertRaises(
             http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
+        )
+
+    def test_malformedChunkSizeHex(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size is prefixed with
+        "0x", as if it were a Python integer literal.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"0x3\r\nabc\r\n"
         )
 
     def test_malformedChunkEnd(self):
@@ -1446,6 +1478,8 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
             chunked = b"".join(http.toChunk(s))
             self.assertEqual((s, b""), http.fromChunk(chunked))
         self.assertRaises(ValueError, http.fromChunk, b"-5\r\nmalformed!\r\n")
+        self.assertRaises(ValueError, http.fromChunk, b"0xa\r\nmalformed!\r\n")
+        self.assertRaises(ValueError, http.fromChunk, b"0XA\r\nmalformed!\r\n")
 
     def testConcatenatedChunks(self):
         chunked = b"".join([b"".join(http.toChunk(t)) for t in self.strings])
