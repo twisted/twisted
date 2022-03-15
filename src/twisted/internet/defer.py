@@ -1909,8 +1909,8 @@ def inlineCallbacks(
 
 @inlineCallbacks
 def bracket(
-    before: Callable[[], Deferred],
-    after: Callable[[], Deferred],
+    first: Callable[[], Deferred],
+    last: Callable[[], Deferred],
     between: Callable[[], Deferred[_T]],
 ) -> Deferred[_T]:
     """
@@ -1928,16 +1928,16 @@ def bracket(
     :return Deferred: A ``Deferred`` which fires with the result of
         ``between``.
     """
-    yield before()
+    yield first()
     try:
         result = yield between()
     except GeneratorExit:
         raise
     except BaseException:
-        yield after()
+        yield last()
         raise
     else:
-        yield after()
+        yield last()
         return result
 
 
