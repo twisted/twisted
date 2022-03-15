@@ -6,6 +6,7 @@ Tests for ``twisted.internet.defer.bracket``.
 """
 
 from functools import partial
+from typing import Any
 
 from hamcrest import assert_that, equal_to, instance_of, is_
 
@@ -18,13 +19,25 @@ class _BracketTestMixin:
     Tests for ``bracket``.
     """
 
-    def test_success(self):
+    def wrap_success(self, result: Any) -> Any:
+        """
+        :see: ``make_bracket_test``
+        """
+        raise NotImplementedError()
+
+    def wrap_failure(self, exception: Any) -> Any:
+        """
+        :see: ``make_bracket_test``
+        """
+        raise NotImplementedError()
+
+    def test_success(self) -> None:
         """
         ``bracket`` calls ``first`` then ``between`` then ``last`` and returns a
         ``Deferred`` that fires with the result of ``between``.
         """
         expected = object()
-        actions = []
+        actions: list[str] = []
         first = partial(actions.append, "first")
 
         def between():
@@ -42,7 +55,7 @@ class _BracketTestMixin:
             equal_to(["first", "between", "last"]),
         )
 
-    def test_failure(self):
+    def test_failure(self) -> None:
         """
         ``bracket`` calls ``first`` then ``between`` then ``last`` and returns a
         ``Deferred`` that fires with the failure result of ``between``.
@@ -69,7 +82,7 @@ class _BracketTestMixin:
             equal_to(["first", "between", "last"]),
         )
 
-    def test_success_with_failing_last(self):
+    def test_success_with_failing_last(self) -> None:
         """
         If the ``between`` action succeeds and the ``last`` action fails then
         ``bracket`` fails the same way as the ``last`` action.
@@ -99,7 +112,7 @@ class _BracketTestMixin:
             equal_to(["first", "between", "last"]),
         )
 
-    def test_failure_with_failing_last(self):
+    def test_failure_with_failing_last(self) -> None:
         """
         If both the ``between`` and ``last`` actions fail then ``bracket`` fails
         the same way as the ``last`` action.
@@ -161,42 +174,27 @@ class _BracketTestMixin:
         )
 
 
-def make_bracket_test(wrap_success, wrap_failure):
-    """
-    Create a new ``bracket`` test case that uses the given wrappers.
-
-    :param wrap_success: A callable to wrap a success result suitably for this
-        case.
-
-    :param wrap_failure: A callable to wrap a failure result suitably for this
-        case.
-    """
-
-    class BracketTests(_BracketTestMixin, SynchronousTestCase):
-        pass
-
-    BracketTests.wrap_success = staticmethod(wrap_success)
-    BracketTests.wrap_failure = staticmethod(wrap_failure)
-
-    return BracketTests
-
-
-def noop_wrap_failure(exception):
-    """
-    Turn an exception object into a raised exception.
-    """
-    raise exception
-
-
-class BracketTests(make_bracket_test(lambda x: x, noop_wrap_failure)):
+class BracketTests(_BracketTestMixin, SynchronousTestCase):
     """
     Tests for ``bracket`` when used with actions that return a value or raise
     an exception directly.
     """
 
+    def wrap_success(self, result):
+        return result
 
-class SynchronousDeferredBracketTests(make_bracket_test(succeed, fail)):
+    def wrap_failure(self, exception):
+        raise exception
+
+
+class SynchronousDeferredBracketTests(_BracketTestMixin, SynchronousTestCase):
     """
     Tests for ``bracket`` when used with actions that return a value or raise
     an exception wrapped in a ``Deferred``.
     """
+
+    def wrap_success(self, result):
+        return succeed(result)
+
+    def wrap_failure(self, exception):
+        return fail(exception)

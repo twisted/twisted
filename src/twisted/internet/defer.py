@@ -71,6 +71,8 @@ else:
 log = Logger()
 
 
+_A = TypeVar("_A")
+_B = TypeVar("_B")
 _T = TypeVar("_T")
 
 
@@ -1907,12 +1909,11 @@ def inlineCallbacks(
     return unwindGenerator
 
 
-@inlineCallbacks
-def bracket(
-    first: Callable[[], Deferred],
-    last: Callable[[], Deferred],
-    between: Callable[[], Deferred[_T]],
-) -> Deferred[_T]:
+async def bracket(
+    first: Callable[[], Union[_A, Awaitable[_A]]],
+    last: Callable[[], Union[_B, Awaitable[_B]]],
+    between: Callable[[], Union[_T, Awaitable[_T]]],
+) -> _T:
     """
     Invoke an action between two other actions.
 
@@ -1928,17 +1929,19 @@ def bracket(
     :return Deferred: A ``Deferred`` which fires with the result of
         ``between``.
     """
-    yield first()
+    x = first()
+    if isinstance(x, Awaitable):
+        await x
     try:
-        result = yield between()
-    except GeneratorExit:
-        raise
-    except BaseException:
-        yield last()
-        raise
-    else:
-        yield last()
-        return result
+        result = between()
+        if isinstance(result, Awaitable):
+            return await result
+        else:
+            return result
+    finally:
+        x = last()
+        if isinstance(x, Awaitable):
+            await x
 
 
 ## DeferredLock/DeferredQueue
