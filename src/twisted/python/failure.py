@@ -94,6 +94,9 @@ class NoCurrentExceptionError(Exception):
 def _Traceback(stackFrames, tbFrames):
     """
     Construct a fake traceback object using a list of frames.
+    
+    It should have the same API as stdlib to allow interaction with
+    other tools.
 
     @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
     @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
