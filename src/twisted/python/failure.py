@@ -94,7 +94,7 @@ class NoCurrentExceptionError(Exception):
 def _Traceback(stackFrames, tbFrames):
     """
     Construct a fake traceback object using a list of frames.
-    
+
     It should have the same API as stdlib to allow interaction with
     other tools.
 
@@ -179,6 +179,9 @@ class _Frame:
 class _Code:
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
+
+    It is intended to have the same API as the stdlib code type to allow
+    interoperation with other tools based on that interface.
     """
 
     def __init__(self, name, filename):
