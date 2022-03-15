@@ -805,6 +805,9 @@ class FakeAttributesTests(SynchronousTestCase):
         self.assertIsInstance(frame.f_trace, type(None))
 
     def test_fakeCodeAttributes(self):
+        """
+        See L{FakeAttributesTests} for more details about this test.
+        """
         code = failure._Code("dummyname", "dummyfilename")
         self.assertEqual(code.co_name, "dummyname")
         self.assertEqual(code.co_filename, "dummyfilename")
