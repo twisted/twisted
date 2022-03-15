@@ -827,6 +827,9 @@ class FakeAttributesTests(SynchronousTestCase):
         self.assertIsInstance(code.co_varnames, list)
 
     def test_fakeTracebackFrame(self):
+        """
+        See L{FakeAttributesTests} for more details about this test.
+        """
         frame = failure._Frame(
             ("dummyname", "dummyfilename", 42, {}, {}),
             None,
