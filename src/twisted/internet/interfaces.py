@@ -762,7 +762,7 @@ class IReactorSSL(Interface):
         contextFactory: "IOpenSSLContextFactory",
         backlog: int,
         interface: str,
-    ) -> int:
+    ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context

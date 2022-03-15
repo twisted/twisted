@@ -262,7 +262,10 @@ class DistTrialRunnerTests(TestCase):
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
-        self.assertEqual(os.pathsep.join(sys.path), environment["TRIAL_PYTHONPATH"])
+        # The child process runs with PYTHONPATH set to exactly the parent's
+        # import search path so that the child has a good chance of finding
+        # the same source files the parent would have found.
+        self.assertEqual(os.pathsep.join(sys.path), environment["PYTHONPATH"])
 
     def test_run(self):
         """
@@ -507,3 +510,5 @@ class DistTrialRunnerTests(TestCase):
         output = self.runner._stream.getvalue()
         self.assertIn("PASSED", output)
         self.assertIn("FAIL", output)
+        for i in range(1, 5):
+            self.assertIn(f"Test Pass {i}", output)

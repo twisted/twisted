@@ -2,6 +2,7 @@ Twisted
 =======
 
 |gitter|_
+|rtd|_
 |pypi|_
 |mypy|_
 
@@ -86,7 +87,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2022 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -116,3 +117,6 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
 .. _mypy: https://github.com/twisted/twisted
+
+.. |rtd| image:: https://readthedocs.org/projects/twisted/badge/?version=latest&style=flat
+.. _rtd: https://docs.twistedmatrix.com
