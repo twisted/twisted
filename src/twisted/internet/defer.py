@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer -*-
+# -*- test-case-name: twisted.test.test_defer,twisted.test.test_bracket -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -1905,6 +1905,40 @@ def inlineCallbacks(
         return _cancellableInlineCallbacks(gen)
 
     return unwindGenerator
+
+
+@inlineCallbacks
+def bracket(
+    before: Callable[[], Deferred],
+    after: Callable[[], Deferred],
+    between: Callable[[], Deferred[_T]],
+) -> Deferred[_T]:
+    """
+    Invoke an action between two other actions.
+
+    :param first: A no-argument function that may return a Deferred.  It is
+        called first.
+
+    :param between: A no-argument function that may return a Deferred.  It is
+        called after ``first`` is done and completes before ``last`` is called.
+
+    :param last: A no-argument function that may return a Deferred.  It is
+        called last.
+
+    :return Deferred: A ``Deferred`` which fires with the result of
+        ``between``.
+    """
+    yield before()
+    try:
+        result = yield between()
+    except GeneratorExit:
+        raise
+    except BaseException:
+        yield after()
+        raise
+    else:
+        yield after()
+        return result
 
 
 ## DeferredLock/DeferredQueue
