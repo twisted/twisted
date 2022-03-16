@@ -6,7 +6,7 @@ Tests for ``twisted.internet.defer.bracket``.
 """
 
 from functools import partial
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable
 
 from attrs import define
 from hamcrest import assert_that, equal_to, instance_of, is_
@@ -167,9 +167,6 @@ class BracketTests:
             actions,
             equal_to(["first"]),
         )
-
-
-_T = TypeVar("_T")
 
 
 class UnwrappedBracketTests(SynchronousTestCase, BracketTests):
