@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for ``twisted.internet.defer.bracket``.
+Tests for ``twisted.trial._dist.control.bracket``.
 """
 
 from functools import partial
@@ -11,9 +11,10 @@ from typing import Any, Callable
 from attrs import define
 from hamcrest import assert_that, equal_to, instance_of, is_
 
-from ...trial.runner import TestLoader, TrialSuite
-from ...trial.unittest import SynchronousTestCase
-from ..defer import bracket, fail, succeed
+from ....internet.defer import fail, succeed
+from ...runner import TestLoader, TrialSuite
+from ...unittest import SynchronousTestCase
+from ..control import bracket
 
 
 @define
