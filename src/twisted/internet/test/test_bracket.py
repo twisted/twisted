@@ -214,7 +214,7 @@ def _loadParameterizedCases(base: type, testCaseClasses: list[type]) -> TrialSui
 
 def testSuite() -> TrialSuite:
     """
-    Load
+    Load all permutations of the bracket test cases.
     """
     return _loadParameterizedCases(
         BracketTests,
