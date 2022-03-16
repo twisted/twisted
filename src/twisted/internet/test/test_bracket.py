@@ -6,12 +6,12 @@ Tests for ``twisted.internet.defer.bracket``.
 """
 
 from functools import partial
-from typing import Any
+from typing import Any, Awaitable, TypeVar
 
 from hamcrest import assert_that, equal_to, instance_of, is_
 
 from ...trial.unittest import SynchronousTestCase
-from ..defer import bracket, fail, succeed
+from ..defer import Deferred, bracket, fail, succeed
 
 
 class _BracketTestMixin:
@@ -40,7 +40,7 @@ class _BracketTestMixin:
         actions: list[str] = []
         first = partial(actions.append, "first")
 
-        def between():
+        def between() -> Any:
             actions.append("between")
             return self.wrap_success(expected)
 
@@ -64,10 +64,10 @@ class _BracketTestMixin:
         class SomeException(Exception):
             pass
 
-        actions = []
+        actions: list[str] = []
         first = partial(actions.append, "first")
 
-        def between():
+        def between() -> Any:
             actions.append("between")
             return self.wrap_failure(SomeException())
 
@@ -91,14 +91,14 @@ class _BracketTestMixin:
         class SomeException(Exception):
             pass
 
-        actions = []
+        actions: list[str] = []
         first = partial(actions.append, "first")
 
-        def between():
+        def between() -> Any:
             actions.append("between")
             return self.wrap_success(None)
 
-        def last():
+        def last() -> Any:
             actions.append("last")
             return self.wrap_failure(SomeException())
 
@@ -124,14 +124,14 @@ class _BracketTestMixin:
         class AnotherException(Exception):
             pass
 
-        actions = []
+        actions: list[str] = []
         first = partial(actions.append, "first")
 
-        def between():
+        def between() -> Any:
             actions.append("between")
             return self.wrap_failure(SomeException())
 
-        def last():
+        def last() -> Any:
             actions.append("last")
             return self.wrap_failure(AnotherException())
 
@@ -145,7 +145,7 @@ class _BracketTestMixin:
             equal_to(["first", "between", "last"]),
         )
 
-    def test_first_failure(self):
+    def test_first_failure(self) -> None:
         """
         If the ``first`` action fails then ``bracket`` fails the same way and
         runs neither the ``between`` nor ``last`` actions.
@@ -154,9 +154,9 @@ class _BracketTestMixin:
         class SomeException(Exception):
             pass
 
-        actions = []
+        actions: list[str] = []
 
-        def first():
+        def first() -> Any:
             actions.append("first")
             return self.wrap_failure(SomeException())
 
@@ -174,16 +174,19 @@ class _BracketTestMixin:
         )
 
 
+_T = TypeVar("_T")
+
+
 class BracketTests(_BracketTestMixin, SynchronousTestCase):
     """
     Tests for ``bracket`` when used with actions that return a value or raise
     an exception directly.
     """
 
-    def wrap_success(self, result):
+    def wrap_success(self, result: _T) -> _T:
         return result
 
-    def wrap_failure(self, exception):
+    def wrap_failure(self, exception: Exception) -> Any:
         raise exception
 
 
@@ -193,8 +196,8 @@ class SynchronousDeferredBracketTests(_BracketTestMixin, SynchronousTestCase):
     an exception wrapped in a ``Deferred``.
     """
 
-    def wrap_success(self, result):
+    def wrap_success(self, result: _T) -> Awaitable[_T]:
         return succeed(result)
 
-    def wrap_failure(self, exception):
+    def wrap_failure(self, exception: Exception) -> Deferred[_T]:
         return fail(exception)

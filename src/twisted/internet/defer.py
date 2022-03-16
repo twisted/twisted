@@ -1935,13 +1935,12 @@ async def bracket(
     try:
         result = between()
         if isinstance(result, Awaitable):
-            return await result
-        else:
-            return result
+            return await cast(Awaitable[_T], result)
+        return result
     finally:
-        x = last()
-        if isinstance(x, Awaitable):
-            await x
+        y = last()
+        if isinstance(y, Awaitable):
+            await y
 
 
 ## DeferredLock/DeferredQueue
