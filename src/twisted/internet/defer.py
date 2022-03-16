@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_bracket -*-
+# -*- test-case-name: twisted.test.test_defer -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -71,8 +71,6 @@ else:
 log = Logger()
 
 
-_A = TypeVar("_A")
-_B = TypeVar("_B")
 _T = TypeVar("_T")
 
 
