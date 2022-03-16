@@ -6,30 +6,25 @@ Tests for ``twisted.internet.defer.bracket``.
 """
 
 from functools import partial
-from typing import Any, Awaitable, TypeVar
+from typing import Any, Callable, TypeVar
 
+from attrs import define
 from hamcrest import assert_that, equal_to, instance_of, is_
 
+from ...trial.runner import TestLoader, TrialSuite
 from ...trial.unittest import SynchronousTestCase
-from ..defer import Deferred, bracket, fail, succeed
+from ..defer import bracket, fail, succeed
 
 
-class _BracketTestMixin:
+@define
+class BracketTests:
     """
     Tests for ``bracket``.
     """
 
-    def wrap_success(self, result: Any) -> Any:
-        """
-        :see: ``make_bracket_test``
-        """
-        raise NotImplementedError()
-
-    def wrap_failure(self, exception: Any) -> Any:
-        """
-        :see: ``make_bracket_test``
-        """
-        raise NotImplementedError()
+    case: SynchronousTestCase
+    wrap_success: Callable
+    wrap_failure: Callable
 
     def test_success(self) -> None:
         """
@@ -45,7 +40,7 @@ class _BracketTestMixin:
             return self.wrap_success(expected)
 
         last = partial(actions.append, "last")
-        actual = self.successResultOf(bracket(first, last, between))
+        actual = self.case.successResultOf(bracket(first, last, between))
         assert_that(
             actual,
             is_(expected),
@@ -72,7 +67,7 @@ class _BracketTestMixin:
             return self.wrap_failure(SomeException())
 
         last = partial(actions.append, "last")
-        result = self.failureResultOf(bracket(first, last, between)).value
+        result = self.case.failureResultOf(bracket(first, last, between)).value
         assert_that(
             result,
             instance_of(SomeException),
@@ -102,7 +97,7 @@ class _BracketTestMixin:
             actions.append("last")
             return self.wrap_failure(SomeException())
 
-        result = self.failureResultOf(bracket(first, last, between)).value
+        result = self.case.failureResultOf(bracket(first, last, between)).value
         assert_that(
             result,
             instance_of(SomeException),
@@ -135,7 +130,7 @@ class _BracketTestMixin:
             actions.append("last")
             return self.wrap_failure(AnotherException())
 
-        result = self.failureResultOf(bracket(first, last, between)).value
+        result = self.case.failureResultOf(bracket(first, last, between)).value
         assert_that(
             result,
             instance_of(AnotherException),
@@ -163,7 +158,7 @@ class _BracketTestMixin:
         between = partial(actions.append, "between")
         last = partial(actions.append, "last")
 
-        value = self.failureResultOf(bracket(first, last, between)).value
+        value = self.case.failureResultOf(bracket(first, last, between)).value
         assert_that(
             value,
             instance_of(SomeException),
@@ -177,27 +172,57 @@ class _BracketTestMixin:
 _T = TypeVar("_T")
 
 
-class BracketTests(_BracketTestMixin, SynchronousTestCase):
+class UnwrappedBracketTests(SynchronousTestCase, BracketTests):
     """
     Tests for ``bracket`` when used with actions that return a value or raise
     an exception directly.
     """
 
-    def wrap_success(self, result: _T) -> _T:
-        return result
+    def __init__(self, name: str) -> None:
+        def raise_(exc: BaseException) -> None:
+            raise exc
 
-    def wrap_failure(self, exception: Exception) -> Any:
-        raise exception
+        SynchronousTestCase.__init__(self, name)
+        BracketTests.__init__(self, self, lambda x: x, raise_)
+        return None
 
 
-class SynchronousDeferredBracketTests(_BracketTestMixin, SynchronousTestCase):
+class SynchronousDeferredBracketTests(SynchronousTestCase, BracketTests):
     """
     Tests for ``bracket`` when used with actions that return a value or raise
     an exception wrapped in a ``Deferred``.
     """
 
-    def wrap_success(self, result: _T) -> Awaitable[_T]:
-        return succeed(result)
+    def __init__(self, name: str) -> None:
+        def raise_(exc: BaseException) -> None:
+            raise exc
 
-    def wrap_failure(self, exception: Exception) -> Deferred[_T]:
-        return fail(exception)
+        SynchronousTestCase.__init__(self, name)
+        BracketTests.__init__(self, self, succeed, fail)
+        return None
+
+
+def _loadParameterizedCases(base: type, testCaseClasses: list[type]) -> TrialSuite:
+    """
+    Discover test case names from a base type and return a suite containing a
+    test case for each case for each test case class.
+    """
+    loader = TestLoader()
+    methods = [loader.methodPrefix + name for name in loader.getTestCaseNames(base)]
+    cases: list[SynchronousTestCase] = []
+    for cls in testCaseClasses:
+        cases.extend([cls(name) for name in methods])
+    return TrialSuite(cases)
+
+
+def testSuite() -> TrialSuite:
+    """
+    Load
+    """
+    return _loadParameterizedCases(
+        BracketTests,
+        [
+            UnwrappedBracketTests,
+            SynchronousDeferredBracketTests,
+        ],
+    )
