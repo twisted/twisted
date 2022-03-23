@@ -6,7 +6,7 @@ Tests for ``twisted.trial._dist.control.bracket``.
 """
 
 from functools import partial
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from attrs import define
 from hamcrest import assert_that, equal_to, instance_of, is_
@@ -33,7 +33,7 @@ class BracketTests:
         ``Deferred`` that fires with the result of ``between``.
         """
         expected = object()
-        actions: list[str] = []
+        actions: List[str] = []
         first = partial(actions.append, "first")
 
         def between() -> Any:
@@ -60,7 +60,7 @@ class BracketTests:
         class SomeException(Exception):
             pass
 
-        actions: list[str] = []
+        actions: List[str] = []
         first = partial(actions.append, "first")
 
         def between() -> Any:
@@ -87,7 +87,7 @@ class BracketTests:
         class SomeException(Exception):
             pass
 
-        actions: list[str] = []
+        actions: List[str] = []
         first = partial(actions.append, "first")
 
         def between() -> Any:
@@ -120,7 +120,7 @@ class BracketTests:
         class AnotherException(Exception):
             pass
 
-        actions: list[str] = []
+        actions: List[str] = []
         first = partial(actions.append, "first")
 
         def between() -> Any:
@@ -150,7 +150,7 @@ class BracketTests:
         class SomeException(Exception):
             pass
 
-        actions: list[str] = []
+        actions: List[str] = []
 
         def first() -> Any:
             actions.append("first")
@@ -200,14 +200,14 @@ class SynchronousDeferredBracketTests(SynchronousTestCase, BracketTests):
         return None
 
 
-def _loadParameterizedCases(base: type, testCaseClasses: list[type]) -> TrialSuite:
+def _loadParameterizedCases(base: type, testCaseClasses: List[type]) -> TrialSuite:
     """
     Discover test case names from a base type and return a suite containing a
     test case for each case for each test case class.
     """
     loader = TestLoader()
     methods = [loader.methodPrefix + name for name in loader.getTestCaseNames(base)]
-    cases: list[SynchronousTestCase] = []
+    cases: List[SynchronousTestCase] = []
     for cls in testCaseClasses:
         cases.extend([cls(name) for name in methods])
     return TrialSuite(cases)
