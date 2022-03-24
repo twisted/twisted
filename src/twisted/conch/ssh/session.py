@@ -180,10 +180,14 @@ class SSHSession(channel.SSHChannel):
             log.warn("Weird extended data: {dataType}", dataType=dataType)
 
     def eofReceived(self):
-        if self.client:
-            self.conn.sendClose(self)
+        # If we have a session, tell it that EOF has been received and
+        # expect it to send a close message (it may need to send other
+        # messages such as exit-status or exit-signal first).  If we don't
+        # have a session, then just send a close message directly.
         if self.session:
             self.session.eofReceived()
+        elif self.client:
+            self.conn.sendClose(self)
 
     def closed(self):
         if self.client and self.client.transport:
