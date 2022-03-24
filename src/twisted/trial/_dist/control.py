@@ -21,22 +21,21 @@ async def bracket(
     """
     Invoke an action between two other actions.
 
-    This is a functional version of `async with ...` that is convenient to use
-    when setup and teardown are already defined as functions, when a partially
-    applied form of the async context manager is useful, and for other
-    functional-style composition purposes.
+    This is a functional version of C{async with ...} that is convenient to
+    use when setup and teardown are already defined as functions, when a
+    partially applied form of the async context manager is useful, and for
+    other functional-style composition purposes.
 
-    :param first: A no-argument function that may return a Deferred.  It is
+    @param first: A no-argument function that may return a Deferred.  It is
         called first.
 
-    :param between: A no-argument function that may return a Deferred.  It is
-        called after ``first`` is done and completes before ``last`` is called.
+    @param between: A no-argument function that may return a Deferred.  It is
+        called after C{first} is done and completes before C{last} is called.
 
-    :param last: A no-argument function that may return a Deferred.  It is
+    @param last: A no-argument function that may return a Deferred.  It is
         called last.
 
-    :return Deferred: A ``Deferred`` which fires with the result of
-        ``between``.
+    @return: An awaitable which completes with the result of C{between}.
     """
     x = first()
     if isinstance(x, Awaitable):
