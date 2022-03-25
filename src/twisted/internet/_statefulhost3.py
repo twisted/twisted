@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import count
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Dict,
     FrozenSet,
@@ -13,9 +14,10 @@ from typing import (
     List,
     Optional,
     Set,
-    TYPE_CHECKING,
     TypeVar,
 )
+
+from zope.interface import implementer
 
 from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred
@@ -32,9 +34,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import Protocol as TwistedProtocol
 from twisted.python.failure import Failure
-from zope.interface import implementer
 from ._shutil import CallWhenAll, Outstanding
-
 
 if TYPE_CHECKING:
     from twisted.internet.endpoints import HostnameEndpoint
@@ -53,10 +53,10 @@ class ConnectionFailedParts(Enum):
 
 @implementer(IResolutionReceiver)
 @dataclass
-class Resolution(object):
+class Resolution:
     allCall: CallWhenAll[ConnectionFailedParts]
     enq: Callable[[IAddress], None]
-    inProgress: Optional[IHostResolution] = None
+    inProgress: IHostResolution | None = None
 
     def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
         """
@@ -85,13 +85,12 @@ class Resolution(object):
 def addr2endpoint(
     hostnameEndpoint: HostnameEndpoint,
     address: IAddress,
-) -> Optional[IStreamClientEndpoint]:
+) -> IStreamClientEndpoint | None:
     """
     Convert an address into an endpoint
     """
     # Circular imports.
-    from twisted.internet.endpoints import TCP6ClientEndpoint
-    from twisted.internet.endpoints import TCP4ClientEndpoint
+    from twisted.internet.endpoints import TCP4ClientEndpoint, TCP6ClientEndpoint
 
     reactor = hostnameEndpoint._reactor
     timeout = hostnameEndpoint._timeout
@@ -109,7 +108,7 @@ def addr2endpoint(
 
 
 @dataclass
-class Attempts(object):
+class Attempts:
     """
     Object managing outgoing connection attempts.
     """
@@ -119,13 +118,13 @@ class Attempts(object):
     clock: IReactorTime
     attemptDelay: float
     established: Callable[[TwistedProtocol], None]
-    lastAttemptTime: Optional[float] = None
-    delayedCall: Optional[IDelayedCall] = None
+    lastAttemptTime: float | None = None
+    delayedCall: IDelayedCall | None = None
     attemptsInProgress: Outstanding[TwistedProtocol] = field(
         default_factory=Outstanding
     )
-    endpointQueue: List[IStreamClientEndpoint] = field(default_factory=list)
-    failures: List[Failure] = field(default_factory=list)
+    endpointQueue: list[IStreamClientEndpoint] = field(default_factory=list)
+    failures: list[Failure] = field(default_factory=list)
 
     def invariants(self):
         C = ConnectionFailedParts
