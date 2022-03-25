@@ -1,57 +1,46 @@
 # -*- test-case-name: twisted.internet.test.test_endpoints -*-
 
 from functools import wraps
-from twisted.internet.interfaces import IResolutionReceiver
-from twisted.internet.defer import Deferred
 
-from twisted.internet.address import IPv6Address
-from twisted.internet.address import IPv4Address
-from twisted.internet.error import ConnectingCancelledError
-
-from automat import MethodicalMachine as _automat
-from twisted.internet.error import DNSLookupError
-from twisted.python.failure import Failure
-from twisted.internet.address import HostnameAddress
 from zope.interface import implementer
 
+from automat import MethodicalMachine as _automat
 
-class _FeedbackInput(object):
+from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectingCancelledError, DNSLookupError
+from twisted.internet.interfaces import IResolutionReceiver
+from twisted.python.failure import Failure
+
+
+class _FeedbackInput:
     """
     This feature really belongs in automat.
     """
+
     def __init__(self, machine):
-        """
-        
-        """
+        """ """
         self.machine = machine
 
     def __call__(self, method):
-        """
-        
-        """
+        """ """
         anInput = self.machine.input()(method)
         return _FeedbackInputOnClass(method, anInput)
 
 
+class _FeedbackInputOnClass:
 
-class _FeedbackInputOnClass(object):
-    
-    """
-    
-    """
+    """ """
+
     def __init__(self, function, input):
-        """
-        
-        """
+        """ """
         self.function = function
         self.input = input
 
-
     def __get__(self, oself, type=None):
-        """
-        
-        """
+        """ """
         theInput = self.input.__get__(oself, type)
+
         @wraps(self.function)
         def function(ooself, *a, **kw):
             wasProcessingFeedback = ooself._isProcessingFeedback
@@ -59,7 +48,7 @@ class _FeedbackInputOnClass(object):
             try:
                 try:
                     if not wasProcessingFeedback:
-                        assert getattr(ooself, '_pendingFeedback', None) is None
+                        assert getattr(ooself, "_pendingFeedback", None) is None
                         ooself._pendingFeedback = []
                     result = theInput(*a, **kw)
                     if not wasProcessingFeedback:
@@ -75,24 +64,22 @@ class _FeedbackInputOnClass(object):
                         del ooself._pendingFeedback
             except:
                 import traceback
+
                 traceback.print_exc()
                 raise
+
         function.input = theInput
         return function.__get__(oself, type)
 
 
-
 @implementer(IResolutionReceiver)
-class _HostnameConnectionAttempt(object):
-    """
-    
-    """
+class _HostnameConnectionAttempt:
+    """ """
 
     machine = _automat()
+
     def __init__(self, hostnameEndpoint, protocolFactory):
-        """
-        
-        """
+        """ """
         self.hostnameEndpoint = hostnameEndpoint
         self.protocolFactory = protocolFactory
         self.deferred = Deferred(self.cancel)
@@ -101,17 +88,16 @@ class _HostnameConnectionAttempt(object):
         self._pendingConnectionAttempts = []
         self._isProcessingFeedback = False
 
-
     def cancel(self, deferred):
-        """
-        
-        """
-        self.failures.append(ConnectingCancelledError(
-            HostnameAddress(self.hostnameEndpoint._hostBytes,
-                            self.hostnameEndpoint._port)
-        ))
+        """ """
+        self.failures.append(
+            ConnectingCancelledError(
+                HostnameAddress(
+                    self.hostnameEndpoint._hostBytes, self.hostnameEndpoint._port
+                )
+            )
+        )
         self.userCancellation()
-
 
     @machine.state(initial=True)
     def _idle(self):
@@ -127,10 +113,7 @@ class _HostnameConnectionAttempt(object):
 
     @machine.state()
     def _noNamesYet(self):
-        """
-        
-        """
-        
+        """ """
 
     @machine.state()
     def _resolvingNames(self):
@@ -174,7 +157,6 @@ class _HostnameConnectionAttempt(object):
         The operation is complete.
         """
 
-
     def feedback(self, thunk):
         """
         Outputs which want to produce an input to the same state machine can
@@ -186,9 +168,7 @@ class _HostnameConnectionAttempt(object):
 
     @_FeedbackInput(machine)
     def start(self):
-        """
-        
-        """
+        """ """
 
     @_FeedbackInput(machine)
     def resolutionBegan(self, resolutionInProgress):
@@ -253,20 +233,18 @@ class _HostnameConnectionAttempt(object):
         It's time to unqueue the next connection attempt.
         """
 
-
     @_FeedbackInput(machine)
     def moreQueuedEndpoints(self):
         """
         More endpoints remain in the queue.
         """
 
-
     def addr2endpoint(self, address):
         """
         Convert an address into an endpoint
         """
-        from twisted.internet.endpoints import TCP6ClientEndpoint
-        from twisted.internet.endpoints import TCP4ClientEndpoint
+        from twisted.internet.endpoints import TCP4ClientEndpoint, TCP6ClientEndpoint
+
         reactor = self.hostnameEndpoint._reactor
         timeout = self.hostnameEndpoint._timeout
         bindAddress = self.hostnameEndpoint._bindAddress
@@ -287,16 +265,18 @@ class _HostnameConnectionAttempt(object):
         """
         Start doing name resolution.
         """
+
         @self.feedback
         def doResolution():
             self.resolutionInProgress = (
                 self.hostnameEndpoint._nameResolver.resolveHostName(
-                    self, self.hostnameEndpoint._hostText,
+                    self,
+                    self.hostnameEndpoint._hostText,
                     portNumber=self.hostnameEndpoint._port,
                 )
             )
-        return self.deferred
 
+        return self.deferred
 
     @machine.output()
     def queueOneAttempt(self, endpoint):
@@ -305,14 +285,12 @@ class _HostnameConnectionAttempt(object):
         """
         self._endpointQueue.append(endpoint)
 
-
     @machine.output()
     def doOneAttempt(self, endpoint):
         """
         Make one outbound connection attempt right now.
         """
         self._doOneAttempt()
-
 
     @machine.output()
     def doOneAttempt0(self):
@@ -321,12 +299,10 @@ class _HostnameConnectionAttempt(object):
         """
         self._doOneAttempt()
 
-
     def _doOneAttempt(self):
-        """
-        
-        """
+        """ """
         self.lastAttemptTime = self.hostnameEndpoint._reactor.seconds()
+
         @self.feedback
         def oneAttempt():
             endpoint = self._endpointQueue.pop(0)
@@ -337,283 +313,255 @@ class _HostnameConnectionAttempt(object):
 
             connected = endpoint.connect(self.protocolFactory)
             self._pendingConnectionAttempts.append(connected)
+
             def removePending(result):
                 self._pendingConnectionAttempts.remove(connected)
                 return result
+
             connected.addBoth(removePending)
             connected.addCallbacks(self.established, self.failures.append)
+
             def maybeNoMoreConnections(result):
                 if not self._pendingConnectionAttempts:
                     self.noPendingConnections()
-            connected.addBoth(maybeNoMoreConnections)
 
+            connected.addBoth(maybeNoMoreConnections)
 
     @machine.output()
     def oneAttemptLater(self, endpoint):
-        """
-        
-        """
+        """ """
         self._oneAttemptLater()
-
 
     @machine.output()
     def oneAttemptLater0(self):
-        """
-        
-        """
+        """ """
         self._oneAttemptLater()
 
-
     nextAttemptCall = None
+
     def _oneAttemptLater(self):
-        """
-        
-        """
+        """ """
         assert self.nextAttemptCall is None
+
         def noneAndInput():
             self.nextAttemptCall = None
             self.attemptDelayExpired()
-        self.nextAttemptCall = self.hostnameEndpoint._reactor.callLater(
-            self.hostnameEndpoint._attemptDelay -
-            (self.hostnameEndpoint._reactor.seconds() - self.lastAttemptTime),
-            noneAndInput
-        )
 
+        self.nextAttemptCall = self.hostnameEndpoint._reactor.callLater(
+            self.hostnameEndpoint._attemptDelay
+            - (self.hostnameEndpoint._reactor.seconds() - self.lastAttemptTime),
+            noneAndInput,
+        )
 
     @machine.output()
     def cancelTimer(self, protocol):
-        """
-        
-        """
+        """ """
         call = self.nextAttemptCall
         self.nextAttemptCall = None
         self.feedback(call.cancel)
-
 
     @machine.output()
     def cancelTimer0(self):
-        """
-        
-        """
+        """ """
         call = self.nextAttemptCall
         self.nextAttemptCall = None
         self.feedback(call.cancel)
 
-
     @machine.output()
     def cancelResolution1(self, protocol):
-        """
-        
-        """
+        """ """
         self.cancelResolution0()
-
 
     @machine.output()
     def cancelResolution0(self):
-        """
-        
-        """
+        """ """
         self.resolutionInProgress.cancel()
-
 
     @machine.output()
     def cancelOtherPending1(self, protocol):
-        """
-        
-        """
+        """ """
         self.feedback(self.cancelOtherPending)
 
     @machine.output()
     def cancelOtherPending0(self):
-        """
-        
-        """
+        """ """
         self.feedback(self.cancelOtherPending)
 
-
     def cancelOtherPending(self):
-        """
-        
-        """
+        """ """
         while self._pendingConnectionAttempts:
             self._pendingConnectionAttempts[0].cancel()
 
-
     @machine.output()
     def complete(self, protocol):
-        """
-        
-        """
+        """ """
         self.feedback(lambda: self.deferred.callback(protocol))
-
 
     @machine.output()
     def connectionFailure(self):
-        """
-        
-        """
+        """ """
         self.deferred.errback(self.failures.pop())
-
 
     @machine.output()
     def resolutionFailure(self):
         """
         Name resolution yielded no results.
         """
-        self.deferred.errback(Failure(DNSLookupError(
-            "no results for hostname lookup: {}"
-            .format(self.hostnameEndpoint._hostStr)))
+        self.deferred.errback(
+            Failure(
+                DNSLookupError(
+                    "no results for hostname lookup: {}".format(
+                        self.hostnameEndpoint._hostStr
+                    )
+                )
+            )
         )
 
-
-    _idle.upon(start.input, enter=_awaitingResolution, outputs=[begin],
-               collector=lambda gen: next(iter(list(gen))))
-
-    _awaitingResolution.upon(
-        resolutionBegan.input, enter=_noNamesYet, outputs=[]
+    _idle.upon(
+        start.input,
+        enter=_awaitingResolution,
+        outputs=[begin],
+        collector=lambda gen: next(iter(list(gen))),
     )
 
+    _awaitingResolution.upon(resolutionBegan.input, enter=_noNamesYet, outputs=[])
+
     _noNamesYet.upon(
-        endpointResolved.input, enter=_resolvingWithPending,
-        outputs=[queueOneAttempt, doOneAttempt]
+        endpointResolved.input,
+        enter=_resolvingWithPending,
+        outputs=[queueOneAttempt, doOneAttempt],
     )
     _noNamesYet.upon(
-        resolutionComplete.input, enter=_done,
+        resolutionComplete.input,
+        enter=_done,
         outputs=[resolutionFailure],
     )
-    _noNamesYet.upon(
-        userCancellation.input, enter=_done,
-        outputs=[cancelResolution0]
-    )
+    _noNamesYet.upon(userCancellation.input, enter=_done, outputs=[cancelResolution0])
 
     _resolvingNames.upon(
-        endpointResolved.input, enter=_resolvingWithPending,
-        outputs=[queueOneAttempt, doOneAttempt]
+        endpointResolved.input,
+        enter=_resolvingWithPending,
+        outputs=[queueOneAttempt, doOneAttempt],
     )
     _resolvingNames.upon(
-        resolutionComplete.input, enter=_done,
+        resolutionComplete.input,
+        enter=_done,
         outputs=[connectionFailure],
     )
 
     _resolvingWithPending.upon(
-        noPendingConnections.input, enter=_resolvingNames,
+        noPendingConnections.input,
+        enter=_resolvingNames,
         outputs=[],
     )
     _resolvingWithPending.upon(
-        endpointResolved.input, enter=_resolvingWithPendingAndQueued,
+        endpointResolved.input,
+        enter=_resolvingWithPendingAndQueued,
         outputs=[queueOneAttempt, oneAttemptLater],
     )
     _resolvingWithPending.upon(
-        endpointQueueEmpty.input, enter=_resolvingWithPending,
+        endpointQueueEmpty.input,
+        enter=_resolvingWithPending,
         outputs=[],
     )
 
     _resolvingWithPendingAndQueued.upon(
-        endpointQueueEmpty.input, enter=_resolvingWithPending,
-        outputs=[]
+        endpointQueueEmpty.input, enter=_resolvingWithPending, outputs=[]
     )
     _resolvingWithPendingAndQueued.upon(
         resolutionComplete.input, enter=_pendingAndQueued, outputs=[]
     )
     _resolvingWithPendingAndQueued.upon(
-        noPendingConnections.input, enter=_resolvingWithPendingAndQueued,
-        outputs=[]
+        noPendingConnections.input, enter=_resolvingWithPendingAndQueued, outputs=[]
     )
 
-    _pendingAndQueued.upon(moreQueuedEndpoints.input, enter=_pendingAndQueued,
-                           outputs=[])
+    _pendingAndQueued.upon(
+        moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[]
+    )
     # this one's a bit weird; the queued connection will inevitably _become_ a
     # pending connection, so _pendingAndQueued is still an appropriate state
     # despite the lack of anything presently pending
     _pendingAndQueued.upon(
-        noPendingConnections.input, enter=_justQueued, outputs=[
-            cancelTimer0, doOneAttempt0
-        ],
-        collector=list
+        noPendingConnections.input,
+        enter=_justQueued,
+        outputs=[cancelTimer0, doOneAttempt0],
+        collector=list,
     )
 
     _justQueued.upon(
-        moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[
-            oneAttemptLater0
-        ],
-        collector=list
+        moreQueuedEndpoints.input,
+        enter=_pendingAndQueued,
+        outputs=[oneAttemptLater0],
+        collector=list,
     )
     _justQueued.upon(
-        noPendingConnections.input, enter=_justQueued, outputs=[
-            doOneAttempt0
-        ]
+        noPendingConnections.input, enter=_justQueued, outputs=[doOneAttempt0]
     )
     _justQueued.upon(endpointQueueEmpty.input, enter=_justPending, outputs=[])
 
     _resolvingWithPendingAndQueued.upon(
-        endpointResolved.input, enter=_resolvingWithPendingAndQueued,
-        outputs=[queueOneAttempt]
+        endpointResolved.input,
+        enter=_resolvingWithPendingAndQueued,
+        outputs=[queueOneAttempt],
     )
     _resolvingWithPendingAndQueued.upon(
-        established.input, enter=_done, outputs=[
-            cancelResolution1, cancelOtherPending1, cancelTimer,
-            complete
-        ],
-        collector=list
+        established.input,
+        enter=_done,
+        outputs=[cancelResolution1, cancelOtherPending1, cancelTimer, complete],
+        collector=list,
     )
     _resolvingWithPendingAndQueued.upon(
-        attemptDelayExpired.input, enter=_resolvingWithPending,
-        outputs=[doOneAttempt0]
+        attemptDelayExpired.input, enter=_resolvingWithPending, outputs=[doOneAttempt0]
     )
 
     _pendingAndQueued.upon(
-        attemptDelayExpired.input, enter=_pendingAndQueued,
-        outputs=[doOneAttempt0]
+        attemptDelayExpired.input, enter=_pendingAndQueued, outputs=[doOneAttempt0]
     )
+    _pendingAndQueued.upon(endpointQueueEmpty.input, enter=_justPending, outputs=[])
     _pendingAndQueued.upon(
-        endpointQueueEmpty.input, enter=_justPending, outputs=[]
-    )
-    _pendingAndQueued.upon(
-        established.input, enter=_done, outputs=[
-            cancelOtherPending1, cancelTimer, complete
-        ],
-        collector=list
+        established.input,
+        enter=_done,
+        outputs=[cancelOtherPending1, cancelTimer, complete],
+        collector=list,
     )
 
     _resolvingWithPending.upon(
-        established.input, enter=_done, outputs=[
-            cancelResolution1, complete
-        ]
+        established.input, enter=_done, outputs=[cancelResolution1, complete]
     )
     _resolvingWithPending.upon(
-        resolutionComplete.input, enter=_justPending, outputs=[],
+        resolutionComplete.input,
+        enter=_justPending,
+        outputs=[],
     )
 
     _justPending.upon(
-        moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[
+        moreQueuedEndpoints.input,
+        enter=_pendingAndQueued,
+        outputs=[
             oneAttemptLater0,
-        ]
-    )
-    _justPending.upon(
-        endpointQueueEmpty.input, enter=_justPending, outputs=[],
-    )
-    _justPending.upon(
-        noPendingConnections.input, enter=_done, outputs=[
-            connectionFailure
         ],
-        collector=list
     )
     _justPending.upon(
-        userCancellation.input, enter=_done, outputs=[
-            cancelOtherPending0, connectionFailure
-        ]
+        endpointQueueEmpty.input,
+        enter=_justPending,
+        outputs=[],
     )
     _justPending.upon(
-        established.input, enter=_done, outputs=[
-            cancelOtherPending1, complete
-        ],
-        collector=list
+        noPendingConnections.input,
+        enter=_done,
+        outputs=[connectionFailure],
+        collector=list,
+    )
+    _justPending.upon(
+        userCancellation.input,
+        enter=_done,
+        outputs=[cancelOtherPending0, connectionFailure],
+    )
+    _justPending.upon(
+        established.input,
+        enter=_done,
+        outputs=[cancelOtherPending1, complete],
+        collector=list,
     )
 
-
-    _done.upon(
-        noPendingConnections.input, enter=_done, outputs=[],
-        collector=list
-    )
-
-
+    _done.upon(noPendingConnections.input, enter=_done, outputs=[], collector=list)

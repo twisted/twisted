@@ -2745,7 +2745,6 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual(results[0].factory, clientFactory)
         self.assertEqual([], self.mreactor.getDelayedCalls())
 
-
     def test_connectQuicklyUponFailure(self):
         """
         When a connection definitively fails before its timeout, the next
@@ -2762,14 +2761,14 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual(len(clients), 1)
         (host, port, factory, timeout, bindAddress) = clients.pop(0)
 
-        self.assertEqual(host, '1.2.3.4')
+        self.assertEqual(host, "1.2.3.4")
         self.assertEqual(port, 80)
 
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
         self.assertEqual(len(clients), 1)
         (host, port, factory, timeout, bindAddress) = clients.pop(0)
 
-        self.assertEqual(host, '1:2::3:4')
+        self.assertEqual(host, "1:2::3:4")
         self.assertEqual(port, 80)
 
         fakeTransport = object()
@@ -2783,16 +2782,18 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual(results[0].factory, clientFactory)
         self.assertEqual([], self.mreactor.getDelayedCalls())
 
-
     def test_timeoutGoesFromStartToStart(self):
         """
         When a connection fails before its timeout, subsequent connection
         timeouts start from that point.
         """
         self.endpoint = endpoints.HostnameEndpoint(
-            deterministicResolvingReactor(self.mreactor,
-                                          ['1.2.3.4', '2.3.4.5', '3.4.5.6']),
-            b"www.example.com", 80)
+            deterministicResolvingReactor(
+                self.mreactor, ["1.2.3.4", "2.3.4.5", "3.4.5.6"]
+            ),
+            b"www.example.com",
+            80,
+        )
         clientFactory = protocol.Factory()
         d = self.endpoint.connect(clientFactory)
         results = []
@@ -2807,7 +2808,6 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual(len(clients), 1)
         self.mreactor.advance(0.002)
         self.assertEqual(len(clients), 2)
-
 
     def test_IPv6IsFaster(self):
         """

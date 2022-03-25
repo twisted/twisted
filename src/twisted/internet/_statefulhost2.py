@@ -1,16 +1,22 @@
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Protocol
+
+from zope.interface import implementer
 
 from automat import TypicalMachine
 
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred
 from twisted.internet.error import DNSLookupError
-from twisted.internet.interfaces import IAddress, IDelayedCall, IHostResolution, IResolutionReceiver, IStreamClientEndpoint
+from twisted.internet.interfaces import (
+    IAddress,
+    IDelayedCall,
+    IHostResolution,
+    IResolutionReceiver,
+    IStreamClientEndpoint,
+)
 from twisted.internet.protocol import Protocol as TwistedProtocol
 from twisted.python.failure import Failure
-from zope.interface import implementer
-
 
 if TYPE_CHECKING:
     from twisted.internet.endpoints import HostnameEndpoint
@@ -90,8 +96,7 @@ def addr2endpoint(
     Convert an address into an endpoint
     """
     # Circular imports.
-    from twisted.internet.endpoints import TCP6ClientEndpoint
-    from twisted.internet.endpoints import TCP4ClientEndpoint
+    from twisted.internet.endpoints import TCP4ClientEndpoint, TCP6ClientEndpoint
 
     reactor = hostnameEndpoint._reactor
     timeout = hostnameEndpoint._timeout
@@ -130,14 +135,15 @@ class ConnectionAttemptCore:
 
     def oneAttemptLater(self) -> None:
         assert self.nextAttemptCall is None
+
         def noneAndInput() -> None:
             self.nextAttemptCall = None
             self.machine.attemptDelayExpired()
 
         self.nextAttemptCall = self.endpoint._reactor.callLater(
-            self.endpoint._attemptDelay -
-            (self.endpoint._reactor.seconds() - self.lastAttemptTime),
-            noneAndInput
+            self.endpoint._attemptDelay
+            - (self.endpoint._reactor.seconds() - self.lastAttemptTime),
+            noneAndInput,
         )
 
     def resolutionFailure(self) -> None:
@@ -145,7 +151,7 @@ class ConnectionAttemptCore:
         self.deferred.errback(
             Failure(
                 DNSLookupError(
-                    "no results for hostname lookup: {}".format(self.endpoint._hostStr)
+                    f"no results for hostname lookup: {self.endpoint._hostStr}"
                 )
             )
         )
@@ -210,7 +216,7 @@ def new(hostnameEndpoint: HostnameEndpoint):
 
 
 @ConnectionAttemptImpl.state
-class Idle(object):
+class Idle:
     """
     We are idling, nothing has started yet.
     """
@@ -236,7 +242,7 @@ class Idle(object):
 
 
 @ConnectionAttemptImpl.state
-class AwaitingResolution(object):
+class AwaitingResolution:
     """
     We just started, and now we're waiting for hostnames to begin.
     """
@@ -252,7 +258,7 @@ class AwaitingResolution(object):
 
 @dataclass
 @ConnectionAttemptImpl.state
-class NoNamesYet(object):
+class NoNamesYet:
     """ """
 
     core: ConnectionAttemptCore
@@ -280,7 +286,7 @@ class NoNamesYet(object):
 
 
 @ConnectionAttemptImpl.state
-class ResolvingNames(object):
+class ResolvingNames:
     """ """
 
     @ConnectionAttemptImpl.handle(
@@ -299,7 +305,7 @@ class ResolvingNames(object):
 
 
 @ConnectionAttemptImpl.state
-class ResolvingWithPending(object):
+class ResolvingWithPending:
     """
     We are in the middle of resolving names, and also we have several pending
     connections.
@@ -347,11 +353,7 @@ class JustPending:
     #     ],
     # )
     def moreQueuedEndpoints(self) -> None:
-        """
-        
-        """
-        
-
+        """ """
 
     _justPending.upon(
         endpointQueueEmpty.input,

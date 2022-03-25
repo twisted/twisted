@@ -1,9 +1,18 @@
 from dataclasses import dataclass, field
 from itertools import count
-from typing import Callable, Dict, FrozenSet, Generic, Iterable, Iterator, Set, Tuple, TypeVar
+from typing import (
+    Callable,
+    Dict,
+    FrozenSet,
+    Generic,
+    Iterable,
+    Iterator,
+    Set,
+    Tuple,
+    TypeVar,
+)
 
 from twisted.internet.defer import Deferred
-
 
 T = TypeVar("T")
 
@@ -16,7 +25,7 @@ class CallWhenAll(Generic[T]):
     _called: bool = False
 
     def check(self, checks: Iterable[Tuple[bool, T]]) -> None:
-        for shouldAdd, item in sorted(checks, key=lambda x:x[0]):
+        for shouldAdd, item in sorted(checks, key=lambda x: x[0]):
             method = self.add if shouldAdd else self.remove
             method(item)
 
@@ -35,6 +44,7 @@ class CallWhenAll(Generic[T]):
         if item not in self._present:
             return
         self._present.remove(item)
+
 
 AttemptId = int
 
@@ -61,5 +71,3 @@ class Outstanding(Generic[T]):
 
     def empty(self) -> bool:
         return len(self._ds) == 0
-
-
