@@ -57,7 +57,6 @@ class Resolution(object):
     allCall: CallWhenAll[ConnectionFailedParts]
     enq: Callable[[IAddress], None]
     inProgress: Optional[IHostResolution] = None
-    everResolved: bool = False
 
     def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
         """
@@ -69,7 +68,6 @@ class Resolution(object):
         """
         An address was resolved.
         """
-        self.everResolved = True
         self.enq(address)
 
     def resolutionComplete(self) -> None:
@@ -164,12 +162,11 @@ class Attempts(object):
                 self.scheduleQueueDrain()
 
             def maybeNoMoreConnections(result: T) -> T:
+                self.invariants()
                 if self.attemptsInProgress.empty() and self.endpointQueue:
                     if self.delayedCall is not None:
                         self.delayedCall.cancel()
                     drainQueue()
-                else:
-                    self.invariants()
                 return result
 
             a = self.attemptsInProgress.add(endpoint.connect(self.protocolFactory))
