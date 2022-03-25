@@ -11,99 +11,172 @@ responsible for coordinating all of trial's behavior at the highest level.
 
 import os
 import sys
+from functools import partial, wraps
+from typing import (
+    Awaitable,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TextIO,
+    TypeVar,
+    Union,
+    cast,
+)
+from unittest import TestSuite
 
-from twisted.internet.defer import DeferredList
-from twisted.internet.task import cooperate
+from attrs import define
+
+from twisted.internet.defer import Deferred, gatherResults, succeed
+from twisted.internet.interfaces import IReactorCore, IReactorProcess
+from twisted.logger import Logger
+from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.python.lockfile import FilesystemLock
 from twisted.python.modules import theSystemPath
-from twisted.trial._asyncrunner import _iterateTests
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
-from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
-from twisted.trial.util import _unusedTestDirectory
+from .._asyncrunner import _iterateTests
+from ..itrial import IReporter, ITestCase
+from ..reporter import UncleanWarningsReporterWrapper
+from ..runner import TestHolder
+from ..util import _unusedTestDirectory, openTestLog
+from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from .distreporter import DistReporter
+from .worker import LocalWorker, LocalWorkerAMP
+
+_A = TypeVar("_A")
+_B = TypeVar("_B")
+_C = TypeVar("_C")
 
 
-class DistTrialRunner:
+class IDistTrialReactor(IReactorCore, IReactorProcess):
     """
-    A specialized runner for distributed trial. The runner launches a number of
-    local worker processes which will run tests.
-
-    @ivar _workerNumber: the number of workers to be spawned.
-    @type _workerNumber: C{int}
-
-    @ivar _stream: stream which the reporter will use.
-
-    @ivar _reporterFactory: the reporter class to be used.
+    The reactor interfaces required by disttrial.
     """
 
-    _distReporterFactory = DistReporter
 
-    def _makeResult(self):
-        """
-        Make reporter factory, and wrap it with a L{DistReporter}.
-        """
-        reporter = self._reporterFactory(
-            self._stream, self._tbformat, realtime=self._rterrors
-        )
-        if self._uncleanWarnings:
-            reporter = UncleanWarningsReporterWrapper(reporter)
-        return self._distReporterFactory(reporter)
+def fromOptional(default: _A, optional: Optional[_A]) -> _A:
+    """
+    Get a definite value from an optional value.
 
-    def __init__(
+    @param default: The value to return if the optional value is missing.
+
+    @param optional: The optional value to return if it exists.
+    """
+    if optional is None:
+        return default
+    return optional
+
+
+@define
+class WorkerPoolConfig:
+    """
+    Configuration parameters for a pool of test-running workers.
+
+    @ivar numWorkers: The number of workers in the pool.
+
+    @ivar workingDirectory: A directory in which working directories for each
+        of the workers will be created.
+
+    @ivar workerArguments: Extra arguments to pass the worker process in its
+        argv.
+
+    @ivar logFile: The basename of the overall test log file.
+    """
+
+    numWorkers: int
+    workingDirectory: FilePath
+    workerArguments: List[str]
+    logFile: str
+
+
+@define
+class StartedWorkerPool:
+    """
+    A pool of workers which have already been started.
+
+    @ivar workingDirectory: A directory holding the working directories for
+        each of the workers.
+
+    @ivar testDirLock: An object representing the cooperative lock this pool
+        holds on its working directory.
+
+    @ivar testLog: The open overall test log file.
+
+    @ivar workers: Objects corresponding to the worker child processes and
+        adapting between process-related interfaces and C{IProtocol}.
+
+    @ivar ampWorkers: AMP protocol instances corresponding to the worker child
+        processes.
+    """
+
+    workingDirectory: FilePath
+    testDirLock: FilesystemLock
+    testLog: TextIO
+    workers: List[LocalWorker]
+    ampWorkers: List[LocalWorkerAMP]
+
+    _logger = Logger()
+
+    async def run(self, workerAction):
+        """
+        Run an action on all of the workers in the pool.
+        """
+        await parallel(void(workerAction(worker)) for worker in self.ampWorkers)
+
+    async def join(self) -> None:
+        """
+        Shut down all of the workers in the pool.
+
+        The pool is unusable after this method is called.
+        """
+        for worker in self.workers:
+            try:
+                await worker.exit()
+            except Exception:
+                self._logger.failure("joining disttrial worker failed")
+
+        del self.workers[:]
+        del self.ampWorkers[:]
+        self.testLog.close()
+        self.testDirLock.unlock()
+
+
+@define
+class WorkerPool:
+    """
+    Manage a fixed-size collection of child processes which can run tests.
+
+    @ivar _config: Configuration for the precise way in which the pool is run.
+    """
+
+    _config: WorkerPoolConfig
+
+    def createLocalWorkers(
         self,
-        reporterFactory,
-        workerNumber,
-        workerArguments,
-        stream=None,
-        tracebackFormat="default",
-        realTimeErrors=False,
-        uncleanWarnings=False,
-        logfile="test.log",
-        workingDirectory="_trial_temp",
-    ):
-        self._workerNumber = workerNumber
-        self._workerArguments = workerArguments
-        self._reporterFactory = reporterFactory
-        if stream is None:
-            stream = sys.stdout
-        self._stream = stream
-        self._tbformat = tracebackFormat
-        self._rterrors = realTimeErrors
-        self._uncleanWarnings = uncleanWarnings
-        self._result = None
-        self._workingDirectory = workingDirectory
-        self._logFile = logfile
-        self._logFileObserver = None
-        self._logFileObject = None
-        self._logWarnings = False
-
-    def writeResults(self, result):
-        """
-        Write test run final outcome to result.
-
-        @param result: A C{TestResult} which will print errors and the summary.
-        """
-        result.done()
-
-    def createLocalWorkers(self, protocols, workingDirectory):
+        protocols: Iterable[LocalWorkerAMP],
+        workingDirectory: FilePath,
+        logFile: TextIO,
+    ) -> List[LocalWorker]:
         """
         Create local worker protocol instances and return them.
 
-        @param protocols: An iterable of L{LocalWorkerAMP} instances.
+        @param protocols: The process/protocol adapters to use for the created
+        workers.
 
         @param workingDirectory: The base path in which we should run the
             workers.
-        @type workingDirectory: C{str}
+
+        @param logFile: The test log, for workers to write to.
 
         @return: A list of C{quantity} C{LocalWorker} instances.
         """
         return [
-            LocalWorker(protocol, os.path.join(workingDirectory, str(x)), self._logFile)
+            LocalWorker(protocol, workingDirectory.child(str(x)), logFile)
             for x, protocol in enumerate(protocols)
         ]
 
-    def launchWorkerProcesses(self, spawner, protocols, arguments):
+    def _launchWorkerProcesses(self, spawner, protocols, arguments):
         """
         Spawn processes from a list of process protocols.
 
@@ -130,7 +203,217 @@ class DistTrialRunner:
             args.extend(arguments)
             spawner(worker, sys.executable, args=args, childFDs=childFDs, env=environ)
 
-    def _driveWorker(self, worker, result, testCases, cooperate):
+    async def start(self, reactor: IReactorProcess) -> StartedWorkerPool:
+        """
+        Launch all of the workers for this pool.
+
+        @return: A started pool object that can run jobs using the workers.
+        """
+        testDir, testDirLock = _unusedTestDirectory(
+            self._config.workingDirectory,
+        )
+
+        # Open a log file in the chosen working directory (not necessarily the
+        # same as our configured working directory, if that path was in use).
+        testLog = openTestLog(testDir.child(self._config.logFile))
+
+        ampWorkers = [LocalWorkerAMP() for x in range(self._config.numWorkers)]
+        workers = self.createLocalWorkers(
+            ampWorkers,
+            testDir,
+            testLog,
+        )
+        self._launchWorkerProcesses(
+            reactor.spawnProcess,
+            workers,
+            self._config.workerArguments,
+        )
+
+        return StartedWorkerPool(
+            testDir,
+            testDirLock,
+            testLog,
+            workers,
+            ampWorkers,
+        )
+
+
+async def sequence(a: Awaitable[_A], b: Awaitable[_B]) -> _B:
+    """
+    Wait for one action to complete and then another.
+
+    If either action fails, failure is propagated.  If the first action fails,
+    the second action is not waited on.
+    """
+    await a
+    return await b
+
+
+def flip(f: Callable[[_A, _B], _C]) -> Callable[[_B, _A], _C]:
+    """
+    Create a function like another but with the order of the first two
+    arguments flipped.
+    """
+
+    @wraps(f)
+    def g(b, a):
+        return f(a, b)
+
+    return g
+
+
+def compose(fx: Callable[[_B], _C], fy: Callable[[_A], _B]) -> Callable[[_A], _C]:
+    """
+    Create a function that calls one function with an argument and then
+    another function with the result of the first function.
+    """
+
+    @wraps(fx)
+    @wraps(fy)
+    def g(a):
+        return fx(fy(a))
+
+    return g
+
+
+# Discard the result of an awaitable and substitute None in its place.
+#
+# Ignore the `Cannot infer type argument 1 of "compose"`
+# https://github.com/python/mypy/issues/6220
+void: Callable[[Awaitable[_A]], Deferred[None]] = compose(  # type: ignore[misc]
+    Deferred.fromCoroutine,
+    partial(flip(sequence), succeed(None)),
+)
+
+
+async def parallel(actions: Iterable[Deferred[_A]]) -> List[_A]:
+    """
+    Await all of the awaitables at the same time.
+    """
+    return await gatherResults(actions)
+
+
+async def iterateWhile(
+    predicate: Callable[[_A], bool],
+    action: Callable[[], Awaitable[_A]],
+) -> _A:
+    """
+    Call a function repeatedly until its result fails to satisfy a predicate.
+
+    @param predicate: The check to apply.
+
+    @param action: The function to call.
+
+    @return: The result of C{action} which did not satisfy C{predicate}.
+    """
+    while True:
+        result = await action()
+        if not predicate(result):
+            return result
+
+
+def countingCalls(f: Callable[[int], _A]) -> Callable[[], _A]:
+    """
+    Wrap a function with another that automatically passes an integer counter
+    of the number of calls that have gone through the wrapper.
+    """
+    counter = 0
+
+    def g():
+        nonlocal counter
+        try:
+            result = f(counter)
+        finally:
+            counter += 1
+        return result
+
+    return g
+
+
+def shouldContinue(untilFailure: bool, result: IReporter) -> bool:
+    """
+    Determine whether the test suite should be iterated again.
+
+    @param untilFailure: C{True} if the suite is supposed to run until
+        failure.
+
+    @param result: The test result of the test suite iteration which just
+        completed.
+    """
+    return untilFailure and result.wasSuccessful()
+
+
+class DistTrialRunner:
+    """
+    A specialized runner for distributed trial. The runner launches a number of
+    local worker processes which will run tests.
+
+    @ivar _maxWorkers: the number of workers to be spawned.
+    @type _maxWorkers: C{int}
+
+    @ivar _stream: stream which the reporter will use.
+
+    @ivar _reporterFactory: the reporter class to be used.
+    """
+
+    _distReporterFactory = DistReporter
+    _logger = Logger()
+
+    def _makeResult(self) -> DistReporter:
+        """
+        Make reporter factory, and wrap it with a L{DistReporter}.
+        """
+        reporter = self._reporterFactory(
+            self._stream, self._tbformat, realtime=self._rterrors
+        )
+        if self._uncleanWarnings:
+            reporter = UncleanWarningsReporterWrapper(reporter)
+        return self._distReporterFactory(reporter)
+
+    def __init__(
+        self,
+        reporterFactory,
+        maxWorkers,
+        workerArguments,
+        stream=None,
+        tracebackFormat="default",
+        realTimeErrors=False,
+        uncleanWarnings=False,
+        logfile="test.log",
+        workingDirectory="_trial_temp",
+        workerPoolFactory=WorkerPool,
+    ):
+        self._maxWorkers = maxWorkers
+        self._workerArguments = workerArguments
+        self._reporterFactory = reporterFactory
+        if stream is None:
+            stream = sys.stdout
+        self._stream = stream
+        self._tbformat = tracebackFormat
+        self._rterrors = realTimeErrors
+        self._uncleanWarnings = uncleanWarnings
+        self._result = None
+        self._workingDirectory = workingDirectory
+        self._logFile = logfile
+        self._logFileObserver = None
+        self._logFileObject = None
+        self._logWarnings = False
+        self._workerPoolFactory = workerPoolFactory
+
+    def writeResults(self, result):
+        """
+        Write test run final outcome to result.
+
+        @param result: A C{TestResult} which will print errors and the summary.
+        """
+        result.done()
+
+    async def _driveWorker(
+        self,
+        result: DistReporter,
+        testCases: Sequence[ITestCase],
+        worker: LocalWorkerAMP,
+    ) -> None:
         """
         Drive a L{LocalWorkerAMP} instance, iterating the tests and calling
         C{run} for every one of them.
@@ -141,113 +424,158 @@ class DistTrialRunner:
 
         @param testCases: The global list of tests to iterate.
 
-        @param cooperate: The cooperate function to use, to be customized in
-            tests.
-        @type cooperate: C{function}
-
-        @return: A C{Deferred} firing when all the tests are finished.
+        @return: A coroutine that completes after all of the tests have
+            completed.
         """
 
-        def resultErrback(error, case):
-            result.original.addFailure(case, error)
-            return error
+        async def task(case):
+            try:
+                await worker.run(case, result)
+            except Exception:
+                result.original.addFailure(case, Failure())
 
-        def task(case):
-            d = worker.run(case, result)
-            d.addErrback(resultErrback, case)
-            return d
+        for case in testCases:
+            await task(case)
 
-        return cooperate(task(case) for case in testCases).whenDone()
-
-    def run(self, suite, reactor=None, cooperate=cooperate, untilFailure=False):
+    async def runAsync(
+        self,
+        suite: TestSuite,
+        reactor: IReactorProcess,
+        untilFailure: bool = False,
+    ) -> DistReporter:
         """
         Spawn local worker processes and load tests. After that, run them.
 
         @param suite: A tests suite to be run.
 
         @param reactor: The reactor to use, to be customized in tests.
-        @type reactor: A provider of
-            L{twisted.internet.interfaces.IReactorProcess}
-
-        @param cooperate: The cooperate function to use, to be customized in
-            tests.
-        @type cooperate: C{function}
 
         @param untilFailure: If C{True}, continue to run the tests until they
             fail.
-        @type untilFailure: C{bool}.
 
-        @return: The test result.
-        @rtype: L{DistReporter}
+        @return: A coroutine that completes with the test result.
         """
-        if reactor is None:
-            from twisted.internet import reactor
-        result = self._makeResult()
-        count = suite.countTestCases()
-        self._stream.write("Running %d tests.\n" % (count,))
 
-        if not count:
-            # Take a shortcut if there is no test
-            suite.run(result.original)
+        # Realize a concrete set of tests to run.
+        testCases = list(_iterateTests(suite))
+
+        # Create a worker pool to use to execute them.
+        poolStarter = self._workerPoolFactory(
+            WorkerPoolConfig(
+                # Don't make it larger than is useful or allowed.
+                min(len(testCases), self._maxWorkers),
+                FilePath(self._workingDirectory),
+                self._workerArguments,
+                self._logFile,
+            ),
+        )
+
+        async def runTests(
+            pool: StartedWorkerPool,
+            testCases: Sequence[ITestCase],
+            n: int,
+        ) -> DistReporter:
+            if untilFailure:
+                # If and only if we're running the suite more than once,
+                # provide a report about which run this is.
+                self._stream.write(f"Test Pass {n + 1}\n")
+
+            # Create a brand new test result object for this iteration and run the
+            # test suite with it.
+            result = self._makeResult()
+
+            try:
+                # Run the tests using the worker pool.
+                await pool.run(partial(self._driveWorker, result, iter(testCases)))
+            except Exception:
+                # Exceptions from test code are handled somewhere else.  An
+                # exception here is a bug in the runner itself.  The only
+                # convenient place to put it is in the result, though.
+                result.original.addError(TestHolder("<runTests>"), Failure())
+
+            # Report the result.
             self.writeResults(result)
+
+            # Make it available elsewhere, eg to determine if another run
+            # should be performed.
             return result
 
-        testDir, testDirLock = _unusedTestDirectory(FilePath(self._workingDirectory))
-        workerNumber = min(count, self._workerNumber)
-        ampWorkers = [LocalWorkerAMP() for x in range(workerNumber)]
-        workers = self.createLocalWorkers(ampWorkers, testDir.path)
-        processEndDeferreds = [worker.endDeferred for worker in workers]
-        self.launchWorkerProcesses(reactor.spawnProcess, workers, self._workerArguments)
+        # Announce that we're beginning.  countTestCases result is preferred
+        # (over len(testCases)) because testCases may contain synthetic cases
+        # for error reporting purposes.
+        self._stream.write(f"Running {suite.countTestCases()} tests.\n")
 
-        def runTests():
-            testCases = iter(list(_iterateTests(suite)))
-
-            workerDeferreds = []
-            for worker in ampWorkers:
-                workerDeferreds.append(
-                    self._driveWorker(worker, result, testCases, cooperate=cooperate)
-                )
-            return DeferredList(
-                workerDeferreds, consumeErrors=True, fireOnOneErrback=True
+        # Start the worker pool.
+        startedPool = await poolStarter.start(reactor)
+        try:
+            # Start submitting tests to workers in the pool.  Perhaps repeat
+            # the whole test suite more than once, if appropriate for our
+            # configuration.
+            return await iterateWhile(
+                partial(shouldContinue, untilFailure),
+                countingCalls(partial(runTests, startedPool, testCases)),
             )
+        finally:
+            # Shut down the worker pool.
+            await startedPool.join()
 
-        stopping = []
+    def run(
+        self,
+        suite: TestSuite,
+        reactor: Optional[IDistTrialReactor] = None,
+        *args: tuple,
+        **kwargs: dict,
+    ) -> DistReporter:
+        """
+        Run a reactor and a test suite.
 
-        def nextRun(ign, n):
-            if untilFailure:
-                self._stream.write("Test Pass %d\n" % (n,))
-            self.writeResults(result)
-            if not untilFailure:
-                return
-            if not result.wasSuccessful():
-                return
-            d = runTests()
-            return d.addCallback(nextRun, n + 1)
+        @param suite: The test suite to run.
 
-        def stop(ign):
-            testDirLock.unlock()
-            if not stopping:
-                stopping.append(None)
-                reactor.stop()
+        @param reactor: If not None, the reactor to run.  Otherwise, the
+            global reactor will be used.
+        """
+        import twisted.internet.reactor as defaultReactor
 
-        def beforeShutDown():
-            if not stopping:
-                stopping.append(None)
-                d = DeferredList(processEndDeferreds, consumeErrors=True)
-                return d.addCallback(continueShutdown)
+        defaultReactor_ = IReactorCore(IReactorProcess(defaultReactor, None), None)
+        if defaultReactor_ is not None:
+            r = fromOptional(
+                cast(IDistTrialReactor, defaultReactor),
+                reactor,
+            )
+        else:
+            raise TypeError("Reactor does not provide the right interfaces")
 
-        def continueShutdown(ign):
-            self.writeResults(result)
-            return ign
+        return self._run(
+            suite,
+            r,
+            args,
+            kwargs,
+        )
 
-        d = runTests()
-        d.addCallback(nextRun, 1)
-        d.addBoth(stop)
-
-        reactor.addSystemEventTrigger("before", "shutdown", beforeShutDown)
+    def _run(
+        self,
+        suite: TestSuite,
+        reactor: IDistTrialReactor,
+        args: tuple,
+        kwargs: dict,
+    ) -> DistReporter:
+        """
+        See ``run``.
+        """
+        result: List[Union[Failure, DistReporter]] = []
+        d = Deferred.fromCoroutine(self.runAsync(suite, reactor, *args, **kwargs))
+        d.addBoth(result.append)
+        d.addBoth(lambda ignored: reactor.stop())
         reactor.run()
 
-        return result
+        if isinstance(result[0], Failure):
+            result[0].raiseException()
+
+        # mypy can't see that raiseException raises an exception so we can
+        # only get here if result[0] is not a Failure, so tell mypy to ignore
+        # the error it sees here (of returning a Union[Failure, DistReporter]
+        # when it wants a DistReporter).
+        return result[0]  # type: ignore [return-value]
 
     def runUntilFailure(self, suite):
         """

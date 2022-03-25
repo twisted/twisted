@@ -325,7 +325,6 @@ class LocalWorkerTests(TestCase):
         """
         worker = LocalWorker(*args, **kwargs)
         worker.makeConnection(FakeTransport())
-        self.addCleanup(worker._testLog.close)
         self.addCleanup(worker._outLog.close)
         self.addCleanup(worker._errLog.close)
         return worker
@@ -337,7 +336,7 @@ class LocalWorkerTests(TestCase):
         C{ProcessProtocol.childDataReceived}.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._outLog = BytesIO()
         localWorker.childDataReceived(4, b"foo")
@@ -351,25 +350,24 @@ class LocalWorkerTests(TestCase):
         """
         amp = SpyDataLocalWorkerAMP()
         tempDir = FilePath(self.mktemp())
-        logFile = tempDir.child("test.log")
+        tempDir.makedirs()
+        logPath = tempDir.child("test.log")
 
-        worker = LocalWorker(amp, tempDir.path, "test.log")
-        worker.makeConnection(FakeTransport())
-        self.addCleanup(worker._outLog.close)
-        self.addCleanup(worker._errLog.close)
+        with open(logPath.path, "wt") as logFile:
+            worker = LocalWorker(amp, tempDir, logFile)
+            worker.makeConnection(FakeTransport())
+            self.addCleanup(worker._outLog.close)
+            self.addCleanup(worker._errLog.close)
 
-        expected = "Here comes the \N{sun}!"
-        try:
+            expected = "Here comes the \N{sun}!"
             amp.testWrite(expected)
-        finally:
-            worker._testLog.close()
 
         self.assertEqual(
             # os.linesep is the local newline.
             (expected + os.linesep),
             # getContent reads in binary mode so we'll see the bytes that
             # actually ended up in the file.
-            logFile.getContent().decode("utf-8"),
+            logPath.getContent().decode("utf-8"),
         )
 
     def test_outReceived(self):
@@ -378,7 +376,7 @@ class LocalWorkerTests(TestCase):
         file.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._outLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
@@ -391,7 +389,7 @@ class LocalWorkerTests(TestCase):
         file.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._errLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
@@ -433,16 +431,15 @@ class LocalWorkerTests(TestCase):
 
     def test_connectionLost(self):
         """
-        L{LocalWorker.connectionLost} closes the log streams.
+        L{LocalWorker.connectionLost} closes the per-worker log streams.
         """
 
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker.connectionLost(None)
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
-        self.assertTrue(localWorker._testLog.closed)
 
     def test_processEnded(self):
         """
@@ -451,12 +448,11 @@ class LocalWorkerTests(TestCase):
         """
         transport = FakeTransport()
         protocol = SpyDataLocalWorkerAMP()
-        localWorker = LocalWorker(protocol, self.mktemp(), "test.log")
+        localWorker = LocalWorker(protocol, FilePath(self.mktemp()), "test.log")
         localWorker.makeConnection(transport)
         localWorker.processEnded(Failure(CONNECTION_DONE))
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
-        self.assertTrue(localWorker._testLog.closed)
         self.assertIdentical(None, protocol.transport)
         return self.assertFailure(localWorker.endDeferred, ConnectionDone)
 
@@ -488,6 +484,5 @@ class LocalWorkerTests(TestCase):
 
         protocol = SpyDataLocalWorkerAMP()
         protocol.callRemote = failCallRemote
-        self.tidyLocalWorker(protocol, self.mktemp(), "test.log")
-
+        self.tidyLocalWorker(protocol, FilePath(self.mktemp()), "test.log")
         self.assertEqual([], self.flushLoggedErrors(RuntimeError))

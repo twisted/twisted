@@ -7,21 +7,24 @@ Tests for L{twisted.trial._dist.disttrial}.
 
 import os
 import sys
+from functools import partial
 from io import StringIO
+from typing import List
 
 from zope.interface import implementer, verify
 
-from twisted.internet import error, interfaces, reactor
-from twisted.internet.defer import fail, gatherResults, maybeDeferred, succeed
-from twisted.internet.main import CONNECTION_DONE
+from attrs import Factory, define, field
+from hamcrest import assert_that, equal_to, has_length
+
+from twisted.internet import interfaces
+from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol, Protocol
-from twisted.internet.task import Cooperator, deferLater
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 from twisted.test.proto_helpers import MemoryReactorClock
-from twisted.test.test_cooperator import FakeScheduler
 from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
 from twisted.trial._dist.worker import LocalWorker
 from twisted.trial.reporter import (
     Reporter,
@@ -30,6 +33,7 @@ from twisted.trial.reporter import (
 )
 from twisted.trial.runner import ErrorHolder, TrialSuite
 from twisted.trial.unittest import SynchronousTestCase, TestCase
+from ...test import erroneous
 
 
 class FakeTransport:
@@ -158,70 +162,21 @@ class CountingReactorTests(SynchronousTestCase):
             self.assertEqual(len(whenRunningCalls), count)
 
 
-class EternalTerminationPredicateFactory:
+class WorkerPoolTests(TestCase):
     """
-    A rigged terminationPredicateFactory for which time never pass.
-    """
-
-    def __call__(self):
-        """
-        See: L{task._Timer}
-        """
-        return False
-
-
-class DistTrialRunnerTests(TestCase):
-    """
-    Tests for L{DistTrialRunner}.
+    Tests for L{WorkerPool}.
     """
 
     def setUp(self):
-        """
-        Create a runner for testing.
-        """
-        self.runner = DistTrialRunner(
-            TreeReporter, 4, [], workingDirectory=self.mktemp()
+        self.parent = FilePath(self.mktemp())
+        self.workingDirectory = self.parent.child("_trial_temp")
+        self.config = WorkerPoolConfig(
+            numWorkers=4,
+            workingDirectory=self.workingDirectory,
+            workerArguments=[],
+            logFile="out.log",
         )
-        self.runner._stream = StringIO()
-
-    def reap(self, workers):
-        """
-        Reap the workers and trap L{ConnectionDone} failures on their
-        C{endDeferred}s.
-
-        @param workers: The workers to reap.
-        @type workers: An iterable of L{LocalWorker}
-        """
-
-        for worker in workers:
-            worker.endDeferred.addErrback(Failure.trap, error.ConnectionDone)
-            worker.processEnded(Failure(CONNECTION_DONE))
-
-    def getFakeSchedulerAndEternalCooperator(self):
-        """
-        Helper to create fake scheduler and cooperator in tests.
-
-        The cooperator has a termination timer which will never inform
-        the scheduler that the task needs to be terminated.
-
-        @return: L{tuple} of (scheduler, cooperator)
-        """
-        scheduler = FakeScheduler()
-        cooperator = Cooperator(
-            scheduler=scheduler,
-            terminationPredicateFactory=EternalTerminationPredicateFactory,
-        )
-        return scheduler, cooperator
-
-    def test_writeResults(self):
-        """
-        L{DistTrialRunner.writeResults} writes to the stream specified in the
-        init.
-        """
-        stringIO = StringIO()
-        result = DistReporter(Reporter(stringIO))
-        self.runner.writeResults(result)
-        self.assertTrue(stringIO.tell() > 0)
+        self.pool = WorkerPool(self.config)
 
     def test_createLocalWorkers(self):
         """
@@ -229,7 +184,7 @@ class DistTrialRunnerTests(TestCase):
         L{LocalWorker} for each.
         """
         protocols = [object() for x in range(4)]
-        workers = self.runner.createLocalWorkers(protocols, "path")
+        workers = self.pool.createLocalWorkers(protocols, FilePath("path"), StringIO())
         for s in workers:
             self.assertIsInstance(s, LocalWorker)
         self.assertEqual(4, len(workers))
@@ -258,7 +213,7 @@ class DistTrialRunnerTests(TestCase):
             arguments.extend(args)
             environment.update(env)
 
-        self.runner.launchWorkerProcesses(fakeSpawnProcess, protocols, ["foo"])
+        self.pool._launchWorkerProcesses(fakeSpawnProcess, protocols, ["foo"])
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
@@ -269,97 +224,123 @@ class DistTrialRunnerTests(TestCase):
 
     def test_run(self):
         """
-        C{run} starts the reactor exactly once and spawns each of the workers
-        exactly once.
+        C{run} dispatches the given action to each of its workers exactly once.
         """
-        workers = []
-        fakeReactor = CountingReactor(workers)
-        self.addCleanup(self.reap, workers)
+        # Make sure the parent of the working directory exists so
+        # manage a lock in it.
+        self.parent.makedirs()
 
-        suite = TrialSuite()
-        for i in range(10):
-            suite.addTest(TestCase())
-        self.runner.run(suite, fakeReactor)
-        self.assertEqual(fakeReactor.runCount, 1)
-        self.assertEqual(fakeReactor.spawnCount, self.runner._workerNumber)
+        workers = []
+        starting = self.pool.start(CountingReactor([]))
+        started = self.successResultOf(starting)
+        running = started.run(lambda w: succeed(workers.append(w)))
+        self.successResultOf(running)
+        assert_that(workers, has_length(self.config.numWorkers))
 
     def test_runUsedDirectory(self):
         """
-        L{DistTrialRunner} checks if the test directory is already locked, and
-        if it is generates a name based on it.
+        L{WorkerPool.start} checks if the test directory is already locked, and if
+        it is generates a name based on it.
         """
+        # Make sure the parent of the working directory exists so we can
+        # manage a lock in it.
+        self.parent.makedirs()
 
-        class CountingReactorWithLock(CountingReactor):
-            def spawnProcess(oself, worker, *args, **kwargs):
-                oself._workers.append(worker)
-                self.assertEqual(
-                    os.path.abspath(worker._logDirectory),
-                    os.path.abspath(
-                        os.path.join(workingDirectory + "-1", str(oself.spawnCount))
-                    ),
-                )
-                localLock = FilesystemLock(workingDirectory + "-1.lock")
-                self.assertFalse(localLock.lock())
-                oself.spawnCount += 1
-                worker.makeConnection(FakeTransport())
-                worker._ampProtocol.run = lambda *args: succeed(None)
-
-        newDirectory = self.mktemp()
-        os.mkdir(newDirectory)
-        workingDirectory = os.path.join(newDirectory, "_trial_temp")
-        lock = FilesystemLock(workingDirectory + ".lock")
-        lock.lock()
+        # Lock the directory the runner will expect to use.
+        lock = FilesystemLock(self.workingDirectory.path + ".lock")
+        self.assertTrue(lock.lock())
         self.addCleanup(lock.unlock)
-        self.runner._workingDirectory = workingDirectory
 
-        workers = []
+        # Start up the pool
+        fakeReactor = CountingReactor([])
+        started = self.successResultOf(self.pool.start(fakeReactor))
 
-        fakeReactor = CountingReactorWithLock(workers)
-        self.addCleanup(self.reap, workers)
+        # Verify it took a nearby directory instead.
+        self.assertEqual(
+            started.workingDirectory,
+            self.workingDirectory.sibling("_trial_temp-1"),
+        )
 
-        suite = TrialSuite()
-        for i in range(10):
-            suite.addTest(TestCase())
 
-        self.runner.run(suite, fakeReactor)
+class DistTrialRunnerTests(TestCase):
+    """
+    Tests for L{DistTrialRunner}.
+    """
+
+    def getRunner(self, **overrides):
+        """
+        Create a runner for testing.
+        """
+        args = dict(
+            reporterFactory=TreeReporter,
+            workingDirectory=self.mktemp(),
+            stream=StringIO(),
+            maxWorkers=4,
+            workerArguments=[],
+            workerPoolFactory=partial(LocalWorkerPool, autostop=True),
+        )
+        args.update(overrides)
+        return DistTrialRunner(**args)
+
+    def test_writeResults(self):
+        """
+        L{DistTrialRunner.writeResults} writes to the stream specified in the
+        init.
+        """
+        stringIO = StringIO()
+        result = DistReporter(Reporter(stringIO))
+        runner = self.getRunner()
+        runner.writeResults(result)
+        self.assertTrue(stringIO.tell() > 0)
 
     def test_minimalWorker(self):
         """
-        L{DistTrialRunner} doesn't try to start more workers than the number of
-        tests.
+        L{DistTrialRunner.runAsync} doesn't try to start more workers than the
+        number of tests.
         """
-        workers = []
-        fakeReactor = CountingReactor(workers)
-        self.addCleanup(self.reap, workers)
+        pool = None
 
-        self.runner.run(TestCase(), fakeReactor)
-        self.assertEqual(fakeReactor.runCount, 1)
-        self.assertEqual(fakeReactor.spawnCount, 1)
+        def recordingFactory(*a, **kw):
+            nonlocal pool
+            pool = LocalWorkerPool(*a, autostop=True, **kw)
+            return pool
+
+        maxWorkers = 7
+        numTests = 3
+
+        runner = self.getRunner(
+            maxWorkers=maxWorkers, workerPoolFactory=recordingFactory
+        )
+        suite = TrialSuite([TestCase() for n in range(numTests)])
+        fakeReactor = object()
+        self.successResultOf(runner.runAsync(suite, fakeReactor))
+        assert_that(pool._started[0].workers, has_length(numTests))
 
     def test_runUncleanWarnings(self):
         """
-        Running with the C{unclean-warnings} option makes L{DistTrialRunner}
-        uses the L{UncleanWarningsReporterWrapper}.
+        Running with the C{unclean-warnings} option makes L{DistTrialRunner} uses
+        the L{UncleanWarningsReporterWrapper}.
         """
-        workers = []
-        fakeReactor = CountingReactor(workers)
-        self.addCleanup(self.reap, workers)
-
-        self.runner._uncleanWarnings = True
-        result = self.runner.run(TestCase(), fakeReactor)
+        runner = self.getRunner(uncleanWarnings=True)
+        fakeReactor = object()
+        d = runner.runAsync(
+            TestCase(),
+            fakeReactor,
+        )
+        result = self.successResultOf(d)
         self.assertIsInstance(result, DistReporter)
         self.assertIsInstance(result.original, UncleanWarningsReporterWrapper)
 
     def test_runWithoutTest(self):
         """
-        When the suite contains no test, L{DistTrialRunner} takes a shortcut
-        path without launching any process or starting the reactor.
+        L{DistTrialRunner} can run an empty test suite.
         """
+        stream = StringIO()
+        runner = self.getRunner(stream=stream)
         fakeReactor = object()
-        suite = TrialSuite()
-        result = self.runner.run(suite, fakeReactor)
+        result = self.successResultOf(runner.runAsync(TrialSuite(), fakeReactor))
         self.assertIsInstance(result, DistReporter)
-        output = self.runner._stream.getvalue()
+        output = stream.getvalue()
         self.assertIn("Running 0 test", output)
         self.assertIn("PASSED", output)
 
@@ -369,11 +350,14 @@ class DistTrialRunnerTests(TestCase):
         an import error): this should make the run fail, and the error should
         be printed.
         """
-        fakeReactor = object()
-        error = ErrorHolder("an error", Failure(RuntimeError("foo bar")))
-        result = self.runner.run(error, fakeReactor)
+        err = ErrorHolder("an error", Failure(RuntimeError("foo bar")))
+        stream = StringIO()
+        runner = self.getRunner(stream=stream)
+
+        fakeReactor = CountingReactor([])
+        result = self.successResultOf(runner.runAsync(err, fakeReactor))
         self.assertIsInstance(result, DistReporter)
-        output = self.runner._stream.getvalue()
+        output = stream.getvalue()
         self.assertIn("Running 0 test", output)
         self.assertIn("foo bar", output)
         self.assertIn("an error", output)
@@ -385,130 +369,130 @@ class DistTrialRunnerTests(TestCase):
         If for some reasons we can't connect to the worker process, the test
         suite catches and fails.
         """
-
-        class CountingReactorWithFail(CountingReactor):
-            def spawnProcess(self, worker, *args, **kwargs):
-                self._workers.append(worker)
-                worker.makeConnection(FakeTransport())
-                self.spawnCount += 1
-                worker._ampProtocol.run = self.failingRun
-
-            def failingRun(self, case, result):
-                return fail(RuntimeError("oops"))
-
-        scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
-
-        workers = []
-        fakeReactor = CountingReactorWithFail(workers)
-        self.addCleanup(self.reap, workers)
-
-        result = self.runner.run(TestCase(), fakeReactor, cooperator.cooperate)
-        self.assertEqual(fakeReactor.runCount, 1)
-        self.assertEqual(fakeReactor.spawnCount, 1)
-        scheduler.pump()
-        self.assertEqual(1, len(result.original.failures))
-
-    def test_runStopAfterTests(self):
-        """
-        L{DistTrialRunner} calls C{reactor.stop} and unlocks the test directory
-        once the tests have run.
-        """
-
-        class CountingReactorWithSuccess(CountingReactor):
-            def spawnProcess(self, worker, *args, **kwargs):
-                self._workers.append(worker)
-                worker.makeConnection(FakeTransport())
-                self.spawnCount += 1
-                worker._ampProtocol.run = self.succeedingRun
-
-            def succeedingRun(self, case, result):
-                return succeed(None)
-
-        workingDirectory = self.runner._workingDirectory
-
-        workers = []
-        fakeReactor = CountingReactorWithSuccess(workers)
-
-        self.runner.run(TestCase(), fakeReactor)
-
-        def check():
-            localLock = FilesystemLock(workingDirectory + ".lock")
-            self.assertTrue(localLock.lock())
-            self.assertEqual(1, fakeReactor.stopCount)
-
-        self.assertEqual(list(fakeReactor.triggers.keys()), ["before"])
-        self.assertEqual(list(fakeReactor.triggers["before"]), ["shutdown"])
-        self.reap(workers)
-
-        return deferLater(reactor, 0, check)
+        fakeReactor = object()
+        runner = self.getRunner(workerPoolFactory=BrokenWorkerPool)
+        result = self.successResultOf(runner.runAsync(TestCase(), fakeReactor))
+        errors = result.original.errors
+        assert_that(errors, has_length(1))
+        assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
 
     def test_runWaitForProcessesDeferreds(self):
         """
-        L{DistTrialRunner} waits for the worker processes to stop when the
-        reactor is stopping, and then unlocks the test directory, not trying to
-        stop the reactor again.
+        L{DistTrialRunner} waits for the worker pool to stop.
         """
-        workers = []
-        workingDirectory = self.runner._workingDirectory
+        pool = None
 
-        fakeReactor = CountingReactor(workers)
-        self.runner.run(TestCase(), fakeReactor)
+        def recordingFactory(*a, **kw):
+            nonlocal pool
+            pool = LocalWorkerPool(*a, autostop=False, **kw)
+            return pool
 
-        def check(ign):
-            # Let the AMP deferreds fire
-            return deferLater(reactor, 0, realCheck)
-
-        def realCheck():
-            localLock = FilesystemLock(workingDirectory + ".lock")
-            self.assertTrue(localLock.lock())
-            # Stop is not called, as it ought to have been called before
-            self.assertEqual(0, fakeReactor.stopCount)
-
-        self.assertEqual(list(fakeReactor.triggers.keys()), ["before"])
-        self.assertEqual(list(fakeReactor.triggers["before"]), ["shutdown"])
-        self.reap(workers)
-
-        return gatherResults(
-            [
-                maybeDeferred(f, *a, **kw)
-                for f, a, kw in fakeReactor.triggers["before"]["shutdown"]
-            ]
-        ).addCallback(check)
+        runner = self.getRunner(
+            workerPoolFactory=recordingFactory,
+        )
+        d = Deferred.fromCoroutine(runner.runAsync(TestCase(), CountingReactor([])))
+        stopped = pool._started[0]._stopped
+        self.assertNoResult(d)
+        stopped.callback(None)
+        result = self.successResultOf(d)
+        self.assertIsInstance(result, DistReporter)
 
     def test_runUntilFailure(self):
         """
         L{DistTrialRunner} can run in C{untilFailure} mode where it will run
         the given tests until they fail.
         """
-        called = []
-
-        class CountingReactorWithSuccess(CountingReactor):
-            def spawnProcess(self, worker, *args, **kwargs):
-                self._workers.append(worker)
-                worker.makeConnection(FakeTransport())
-                self.spawnCount += 1
-                worker._ampProtocol.run = self.succeedingRun
-
-            def succeedingRun(self, case, result):
-                called.append(None)
-                if len(called) == 5:
-                    return fail(RuntimeError("oops"))
-                return succeed(None)
-
-        workers = []
-        fakeReactor = CountingReactorWithSuccess(workers)
-        self.addCleanup(self.reap, workers)
-
-        scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
-
-        result = self.runner.run(
-            TestCase(), fakeReactor, cooperate=cooperator.cooperate, untilFailure=True
+        stream = StringIO()
+        case = erroneous.EventuallyFailingTestCase("test_it")
+        runner = self.getRunner(stream=stream)
+        d = runner.runAsync(
+            case,
+            CountingReactor([]),
+            untilFailure=True,
         )
-        scheduler.pump()
-        self.assertEqual(5, len(called))
+        result = self.successResultOf(d)
+        # The case is hard-coded to fail on its 5th run.
+        self.assertEqual(5, case.n)
         self.assertFalse(result.wasSuccessful())
-        output = self.runner._stream.getvalue()
-        self.assertIn("PASSED", output)
+        output = stream.getvalue()
+
+        # It passes each time except the last.
+        self.assertEqual(
+            output.count("PASSED"),
+            case.n - 1,
+            "expected to see PASSED in output",
+        )
+        # It also fails at the end.
         self.assertIn("FAIL", output)
-        for i in range(1, 5):
+
+        # It also reports its progress.
+        for i in range(1, 6):
             self.assertIn(f"Test Pass {i}", output)
+
+        # It also reports the number of tests run as part of each iteration.
+        self.assertEqual(
+            output.count("Ran 1 tests in"),
+            case.n,
+            "expected to see per-iteration test count in output",
+        )
+
+
+class WorkerPoolBroken(Exception):
+    pass
+
+
+@define
+class BrokenWorkerPool:
+    _config: WorkerPoolConfig
+
+    async def start(self, reactor):
+        return StartedWorkerPoolBroken()
+
+
+class StartedWorkerPoolBroken:
+    async def run(self, workerAction):
+        raise WorkerPoolBroken()
+
+    async def join(self):
+        return succeed(None)
+
+
+class _LocalWorker:
+    async def run(self, case, result):
+        TrialSuite([case]).run(result)
+
+
+@define
+class StartedLocalWorkerPool:
+    workingDirectory: FilePath
+    workers: List[_LocalWorker]
+    _stopped: Deferred
+
+    async def run(self, workerAction):
+        for worker in self.workers:
+            await workerAction(worker)
+
+    async def join(self):
+        await self._stopped
+
+
+@define
+class LocalWorkerPool:
+    """
+    Implement a worker pool that runs tests in-process instead of in child
+    processes.
+    """
+
+    _config: WorkerPoolConfig
+    _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
+    _autostop: bool = False
+
+    async def start(self, reactor):
+        workers = [_LocalWorker() for i in range(self._config.numWorkers)]
+        started = StartedLocalWorkerPool(
+            self._config.workingDirectory,
+            workers,
+            (succeed(None) if self._autostop else Deferred()),
+        )
+        self._started.append(started)
+        return started

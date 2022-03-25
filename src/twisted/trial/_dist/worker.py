@@ -10,13 +10,14 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TextIO
 
 from zope.interface import implementer
 
 from attrs import frozen
 
 from twisted.internet.defer import Deferred
+from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.amp import AMP
@@ -32,7 +33,6 @@ from twisted.trial._dist import (
 from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.runner import TestLoader, TrialSuite
 from twisted.trial.unittest import Todo
-from ..util import openTestLog
 
 
 @frozen(auto_exc=False)
@@ -56,6 +56,7 @@ class WorkerProtocol(AMP):
         self._result = WorkerReporter(self)
         self._forceGarbageCollection = forceGarbageCollection
 
+    @workercommands.Run.responder
     def run(self, testCase):
         """
         Run a test case by name.
@@ -65,8 +66,7 @@ class WorkerProtocol(AMP):
         suite.run(self._result)
         return {"success": True}
 
-    workercommands.Run.responder(run)
-
+    @workercommands.Start.responder
     def start(self, directory):
         """
         Set up the worker, moving into given directory for tests to run in
@@ -74,8 +74,6 @@ class WorkerProtocol(AMP):
         """
         os.chdir(directory)
         return {"success": True}
-
-    workercommands.Start.responder(start)
 
 
 class LocalWorkerAMP(AMP):
@@ -273,6 +271,12 @@ class LocalWorkerTransport:
         return LocalWorkerAddress()
 
 
+class NotRunning(Exception):
+    """
+    An operation was attempted on a worker process which is not running.
+    """
+
+
 class LocalWorker(ProcessProtocol):
     """
     Local process worker protocol. This worker runs as a local process and
@@ -283,32 +287,47 @@ class LocalWorker(ProcessProtocol):
 
     @ivar _logDirectory: The directory where logs will reside.
 
-    @ivar _logFile: The name of the main log file for tests output.
+    @ivar _logFile: The main log file for tests output.
     """
 
-    def __init__(self, ampProtocol, logDirectory, logFile):
+    def __init__(
+        self,
+        ampProtocol: LocalWorkerAMP,
+        logDirectory: FilePath,
+        logFile: TextIO,
+    ):
         self._ampProtocol = ampProtocol
         self._logDirectory = logDirectory
         self._logFile = logFile
-        self.endDeferred = Deferred()
+        self.endDeferred: Deferred = Deferred()
+
+    async def exit(self) -> None:
+        """
+        Cause the worker process to exit.
+        """
+        if self.transport is None:
+            raise NotRunning()
+
+        endDeferred = self.endDeferred
+        self.transport.closeChildFD(_WORKER_AMP_STDIN)
+        try:
+            await endDeferred
+        except ProcessDone:
+            pass
 
     def connectionMade(self):
         """
         When connection is made, create the AMP protocol instance.
         """
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
-        if not os.path.exists(self._logDirectory):
-            os.makedirs(self._logDirectory)
-        self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
-        self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
-        self._testLog = openTestLog(
-            FilePath(
-                os.path.join(self._logDirectory, self._logFile),
-            ),
+        self._logDirectory.makedirs(ignoreExistingDirectory=True)
+        self._outLog = self._logDirectory.child("out.log").open("w")
+        self._errLog = self._logDirectory.child("err.log").open("w")
+        self._ampProtocol.setTestStream(self._logFile)
+        d = self._ampProtocol.callRemote(
+            workercommands.Start,
+            directory=self._logDirectory.path,
         )
-        self._ampProtocol.setTestStream(self._testLog)
-        logDirectory = self._logDirectory
-        d = self._ampProtocol.callRemote(workercommands.Start, directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
         # would just print garbage.
         d.addErrback(lambda x: None)
@@ -320,7 +339,6 @@ class LocalWorker(ProcessProtocol):
         """
         self._outLog.close()
         self._errLog.close()
-        self._testLog.close()
 
     def processEnded(self, reason):
         """
