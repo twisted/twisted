@@ -60,7 +60,7 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
-from ._statefulhost import _HostnameConnectionAttempt
+from ._statefulhost3 import start
 
 try:
     from OpenSSL.SSL import Error as SSLError
@@ -935,7 +935,7 @@ class HostnameEndpoint:
         """
         if self._badHostname:
             return defer.fail(ValueError(f"invalid hostname: {self._hostStr}"))
-        return _HostnameConnectionAttempt(self, protocolFactory).start()
+        return start(self, protocolFactory)
 
         d = Deferred()
         addresses = []
