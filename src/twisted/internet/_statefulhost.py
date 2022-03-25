@@ -468,9 +468,11 @@ class _HostnameConnectionAttempt(object):
 
     _idle.upon(start.input, enter=_awaitingResolution, outputs=[begin],
                collector=lambda gen: next(iter(list(gen))))
+
     _awaitingResolution.upon(
         resolutionBegan.input, enter=_noNamesYet, outputs=[]
     )
+
     _noNamesYet.upon(
         endpointResolved.input, enter=_resolvingWithPending,
         outputs=[queueOneAttempt, doOneAttempt]
@@ -483,6 +485,7 @@ class _HostnameConnectionAttempt(object):
         userCancellation.input, enter=_done,
         outputs=[cancelResolution0]
     )
+
     _resolvingNames.upon(
         endpointResolved.input, enter=_resolvingWithPending,
         outputs=[queueOneAttempt, doOneAttempt]
@@ -491,6 +494,7 @@ class _HostnameConnectionAttempt(object):
         resolutionComplete.input, enter=_done,
         outputs=[connectionFailure],
     )
+
     _resolvingWithPending.upon(
         noPendingConnections.input, enter=_resolvingNames,
         outputs=[],
@@ -503,6 +507,7 @@ class _HostnameConnectionAttempt(object):
         endpointQueueEmpty.input, enter=_resolvingWithPending,
         outputs=[],
     )
+
     _resolvingWithPendingAndQueued.upon(
         endpointQueueEmpty.input, enter=_resolvingWithPending,
         outputs=[]
@@ -514,6 +519,7 @@ class _HostnameConnectionAttempt(object):
         noPendingConnections.input, enter=_resolvingWithPendingAndQueued,
         outputs=[]
     )
+
     _pendingAndQueued.upon(moreQueuedEndpoints.input, enter=_pendingAndQueued,
                            outputs=[])
     # this one's a bit weird; the queued connection will inevitably _become_ a
@@ -525,6 +531,7 @@ class _HostnameConnectionAttempt(object):
         ],
         collector=list
     )
+
     _justQueued.upon(
         moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[
             oneAttemptLater0
@@ -537,6 +544,7 @@ class _HostnameConnectionAttempt(object):
         ]
     )
     _justQueued.upon(endpointQueueEmpty.input, enter=_justPending, outputs=[])
+
     _resolvingWithPendingAndQueued.upon(
         endpointResolved.input, enter=_resolvingWithPendingAndQueued,
         outputs=[queueOneAttempt]
@@ -552,6 +560,7 @@ class _HostnameConnectionAttempt(object):
         attemptDelayExpired.input, enter=_resolvingWithPending,
         outputs=[doOneAttempt0]
     )
+
     _pendingAndQueued.upon(
         attemptDelayExpired.input, enter=_pendingAndQueued,
         outputs=[doOneAttempt0]
@@ -559,18 +568,26 @@ class _HostnameConnectionAttempt(object):
     _pendingAndQueued.upon(
         endpointQueueEmpty.input, enter=_justPending, outputs=[]
     )
+    _pendingAndQueued.upon(
+        established.input, enter=_done, outputs=[
+            cancelOtherPending1, cancelTimer, complete
+        ],
+        collector=list
+    )
+
     _resolvingWithPending.upon(
         established.input, enter=_done, outputs=[
             cancelResolution1, complete
         ]
     )
+    _resolvingWithPending.upon(
+        resolutionComplete.input, enter=_justPending, outputs=[],
+    )
+
     _justPending.upon(
         moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[
             oneAttemptLater0,
         ]
-    )
-    _resolvingWithPending.upon(
-        resolutionComplete.input, enter=_justPending, outputs=[],
     )
     _justPending.upon(
         endpointQueueEmpty.input, enter=_justPending, outputs=[],
@@ -592,12 +609,8 @@ class _HostnameConnectionAttempt(object):
         ],
         collector=list
     )
-    _pendingAndQueued.upon(
-        established.input, enter=_done, outputs=[
-            cancelOtherPending1, cancelTimer, complete
-        ],
-        collector=list
-    )
+
+
     _done.upon(
         noPendingConnections.input, enter=_done, outputs=[],
         collector=list
