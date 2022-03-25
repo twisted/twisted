@@ -171,11 +171,8 @@ class Attempts(object):
 
             a = self.attemptsInProgress.add(endpoint.connect(self.protocolFactory))
             self.invariants()
-            (
-                a.addCallbacks(self.established, self.failures.append).addBoth(
-                    maybeNoMoreConnections
-                )
-            )
+            a.addCallbacks(self.established, self.failures.append)
+            a.addBoth(maybeNoMoreConnections)
 
         lastAttemptTime = self.lastAttemptTime
         now = self.clock.seconds()
