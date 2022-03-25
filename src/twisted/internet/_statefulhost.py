@@ -191,13 +191,6 @@ class _HostnameConnectionAttempt(object):
         """
 
     @_FeedbackInput(machine)
-    def nextAttempt(self):
-        """
-        It's time to resolve the next hostname.
-        """
-
-
-    @_FeedbackInput(machine)
     def resolutionBegan(self, resolutionInProgress):
         """
         Hostname resolution began.
