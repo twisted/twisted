@@ -130,16 +130,11 @@ class Attempts(object):
     failures: List[Failure] = field(default_factory=list)
 
     def invariants(self):
+        C = ConnectionFailedParts
         self.failer.check(
             [
-                (
-                    self.attemptsInProgress.empty(),
-                    ConnectionFailedParts.AllConnectionsFailed,
-                ),
-                (
-                    not self.endpointQueue,
-                    ConnectionFailedParts.NoResolvedNamesToAttempt,
-                ),
+                (self.attemptsInProgress.empty(), C.AllConnectionsFailed),
+                (not self.endpointQueue, C.NoResolvedNamesToAttempt),
             ]
         )
 
