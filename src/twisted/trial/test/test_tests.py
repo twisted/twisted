@@ -962,6 +962,21 @@ class AddCleanupMixin:
         self.assertEqual(error1.getErrorMessage(), "bar")
         self.assertEqual(error2.getErrorMessage(), "foo")
 
+    def test_cleanupRunsOnce(self):
+        """
+        A function registered as a cleanup is run once.
+        """
+        cleanups = []
+        self.test.addCleanup(lambda: cleanups.append(stage))
+        # It should get run this time.
+        stage = "first"
+        self.test.run(self.result)
+        # It should not get run the next time since it has not been
+        # re-registered.
+        stage = "second"
+        self.test.run(self.result)
+        self.assertEqual(cleanups, ["first"])
+
 
 class SynchronousAddCleanupTests(AddCleanupMixin, unittest.SynchronousTestCase):
     """
