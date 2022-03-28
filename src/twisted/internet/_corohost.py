@@ -1,24 +1,29 @@
-
 from twisted.internet.defer import Deferred
 
 d = Deferred()
 
+
 def push2aiter():
     each = Deferred()
     done = object()
+
     async def aiter():
         while True:
             out = await each
             if out is done:
                 return
             yield out
+
     def push(value):
         nonlocal each
         old, each = each, Deferred()
         old.callback(value)
+
     def stop():
         each.callback(done)
+
     return push, stop, aiter()
+
 
 async def x(ai) -> None:
     """
@@ -35,12 +40,12 @@ async def x(ai) -> None:
 # p(4)
 # p(5)
 
+
 async def resolver() -> TwistedProtocol:
-    """
-    
-    """
+    """ """
     p, s, ai = push2aiter()
-    class res(object):
+
+    class res:
         def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
             pass
 
@@ -67,7 +72,4 @@ async def connector():
 
 
 async def connect():
-    """
-    
-    """
-    
+    """ """
