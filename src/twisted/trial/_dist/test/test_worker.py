@@ -329,7 +329,9 @@ class LocalWorkerTests(TestCase):
         L{AMP} protocol if the right file descriptor, otherwise forwards to
         C{ProcessProtocol.childDataReceived}.
         """
-        localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+        )
         localWorker._outLog = BytesIO()
         localWorker.childDataReceived(4, b"foo")
         localWorker.childDataReceived(1, b"bar")
@@ -372,7 +374,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.outReceived} logs the output into its C{_outLog} log
         file.
         """
-        localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+        )
         localWorker._outLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
@@ -383,7 +387,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.errReceived} logs the errors into its C{_errLog} log
         file.
         """
-        localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+        )
         localWorker._errLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.errReceived(data)
@@ -427,7 +433,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.connectionLost} closes the log streams.
         """
 
-        localWorker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), self.mktemp(), "test.log"
+        )
         localWorker.connectionLost(None)
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
@@ -438,10 +446,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.processEnded} calls C{connectionLost} on itself and on
         the L{AMP} protocol.
         """
-
         transport = FakeTransport()
         protocol = SpyDataLocalWorkerAMP()
-        localWorker = LocalWorker(protocol, ".", "test.log")
+        localWorker = LocalWorker(protocol, self.mktemp(), "test.log")
         localWorker.makeConnection(transport)
         localWorker.processEnded(Failure(CONNECTION_DONE))
         self.assertTrue(localWorker._outLog.closed)
@@ -478,6 +485,6 @@ class LocalWorkerTests(TestCase):
 
         protocol = SpyDataLocalWorkerAMP()
         protocol.callRemote = failCallRemote
-        self.tidyLocalWorker(protocol, ".", "test.log")
+        self.tidyLocalWorker(protocol, self.mktemp(), "test.log")
 
         self.assertEqual([], self.flushLoggedErrors(RuntimeError))
