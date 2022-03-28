@@ -1,48 +1,72 @@
+
+from typing import AsyncIterable, Callable, TYPE_CHECKING, Tuple, TypeVar, Union
+
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IProtocolFactory, IReactorTime, IStreamClientEndpoint
 
-d = Deferred()
+
+if TYPE_CHECKING:
+    from twisted.internet.endpoints import HostnameEndpoint
+from twisted.internet.interfaces import IAddress, IHostResolution, IProtocol as TwistedProtocol
 
 
-def push2aiter():
-    each = Deferred()
+T = TypeVar("T")
+
+def push2aiter() -> Tuple[Callable[[T], None], Callable[[], None], AsyncIterable[T]]:
+    """
+    Create a Deferred coroutine which presents an async iterable, and a
+    callable that will push values into it and a callable that will stop it.
+    """
+    each: Deferred[Union[T, object]] = Deferred()
     done = object()
-
-    async def aiter():
+    async def aiter() -> AsyncIterable[T]:
         while True:
             out = await each
             if out is done:
                 return
-            yield out
-
-    def push(value):
+            # 'is done' is a type guard that mypy can't see
+            yield out           # type: ignore
+    def push(value: T) -> None:
         nonlocal each
         old, each = each, Deferred()
         old.callback(value)
-
-    def stop():
+    def stop() -> None:
         each.callback(done)
 
     return push, stop, aiter()
-
-
-async def x(ai) -> None:
+def addr2endpoint(
+    hostnameEndpoint: HostnameEndpoint,
+    address: IAddress,
+) -> IStreamClientEndpoint | None:
     """
-    blubwhat
+    Convert an address into an endpoint
     """
-    async for val in ai():
-        print("got", val)
+    # Circular imports.
+    from twisted.internet.endpoints import TCP4ClientEndpoint, TCP6ClientEndpoint
 
+    reactor = hostnameEndpoint._reactor
+    timeout = hostnameEndpoint._timeout
+    bindAddress = hostnameEndpoint._bindAddress
 
-# p, s, ai = push2aiter()
-# Deferred.fromCoroutine(x(ai))
+    if isinstance(address, IPv6Address):
+        return TCP6ClientEndpoint(
+            reactor, address.host, address.port, timeout, bindAddress
+        )
+    if isinstance(address, IPv4Address):
+        return TCP4ClientEndpoint(
+            reactor, address.host, address.port, timeout, bindAddress
+        )
+    return None
 
-# p(3)
-# p(4)
-# p(5)
+async def start(pf: IProtocolFactory, endpoint: HostnameEndpoint, reactor: IReactorTime) -> TwistedProtocol:
+    """
+    resolver coroutine that runs
+    """
+    p: Callable[[IAddress], None]
+    s: Callable[[], None]
+    ai: AsyncIterable[IAddress]
 
-
-async def resolver() -> TwistedProtocol:
-    """ """
     p, s, ai = push2aiter()
 
     class res:
@@ -55,21 +79,17 @@ async def resolver() -> TwistedProtocol:
         def resolutionComplete(self) -> None:
             s()
 
-    resolver.resolveHostName(res(), hostname)
+    resolver = endpoint._nameResolver
+    resolver.resolveHostName(res(), endpoint._hostStr)
 
     async for addr in ai:
-        ep = addr2endpoint(addr)
+        ep = addr2endpoint(endpoint, addr)
         if ep is not None:
             try:
-                result = await timeout(ep.connect(pf), attemptDelay)
+                return await ep.connect(pf).addTimeout(endpoint._attemptDelay, reactor)
             except TimeoutError:
                 pass
 
-
-async def connector():
-    async for resolved in resolver():
-        pass
+    raise RuntimeError("Failed connection")
 
 
-async def connect():
-    """ """
