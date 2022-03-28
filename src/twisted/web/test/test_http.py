@@ -1287,7 +1287,13 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
         This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
         """
-        for b in [*range(0, 0x09), *range(0x10, 0x21), *range(0x74, 0x80)]:
+        invalidControl = (
+            b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\n\x0b\x0c\r\x0e\x0f"
+            b"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+        )
+        invalidDelimiter = b"\\"
+        invalidDel = b"\x7f"
+        for b in invalidControl + invalidDelimiter + invalidDel:
             data = b"3; " + bytes((b,)) + b"\r\nabc\r\n"
             p = http._ChunkedTransferDecoder(
                 lambda b: None,  # pragma: nocov

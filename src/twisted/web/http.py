@@ -418,7 +418,7 @@ def _ishexdigits(b: bytes) -> bool:
     and 0-9.
     """
     for c in b:
-        if c not in b'0123456789abcdefABCDEF':
+        if c not in b"0123456789abcdefABCDEF":
             return False
     return bool(b)
 
@@ -1819,6 +1819,47 @@ class _IdentityTransferDecoder:
 maxChunkSizeLineLength = 1024
 
 
+_chunkExtChars = (
+    b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
+    b"abcdefghijklmnopqrstuvwxyz{|}~"
+    b"\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
+    b"\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
+    b"\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
+    b"\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
+    b"\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
+    b"\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
+    b"\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
+    b"\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
+)
+"""
+Characters that are valid in a chunk extension.
+
+See RFC 7230 section 4.1.1:
+
+     chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+
+     chunk-ext-name = token
+     chunk-ext-val  = token / quoted-string
+
+Section 3.2.6:
+
+     token          = 1*tchar
+
+     tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                    / DIGIT / ALPHA
+                    ; any VCHAR, except delimiters
+
+     quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+     qdtext         = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+     obs-text       = %x80-FF
+
+We don't check if chunk extensions are well-formed beyond validating that they
+don't contain characters outside this range.
+"""
+
+
 class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
@@ -1917,6 +1958,12 @@ class _ChunkedTransferDecoder:
             length = _hexint(rawLength)
         except ValueError:
             raise _MalformedChunkedDataError("Chunk-size must be an integer.")
+
+        ext = self._buffer[endOfLengthIndex + 1 : eolIndex]
+        if ext and ext.translate(None, _chunkExtChars) != b"":
+            raise _MalformedChunkedDataError(
+                f"Invalid characters in chunk extensions: {ext!r}."
+            )
 
         if length == 0:
             self.state = "TRAILER"
