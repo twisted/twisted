@@ -1,2 +1,1 @@
-
 twisted.trial.unittest.TestCase now discards cleanup functions after running them.  Notably, this prevents them from being run an ever growing number of times with `trial -u ...`.
