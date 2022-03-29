@@ -218,6 +218,7 @@ async def _start(
             assert result is not None
             return result
         mf.cancel()
+        raise RuntimeError("unreachable")
     finally:
         ty, v, tb = exc_info()
         if ty is not GeneratorExit:
