@@ -59,7 +59,9 @@ class Outstanding(Generic[T]):
         self._ds[nextId] = d
 
         def done(result: T) -> T:
-            del self._ds[nextId]
+            if nextId in self._ds:
+                # during cancel() we remove first
+                del self._ds[nextId]
             return result
 
         return d.addBoth(done)

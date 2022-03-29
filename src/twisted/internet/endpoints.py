@@ -60,7 +60,7 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
-from ._statefulhost3 import start
+from ._corohost import start
 
 try:
     from OpenSSL.SSL import Error as SSLError
