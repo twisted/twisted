@@ -3,38 +3,59 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import AsyncIterable, Callable, Generic, List, Literal, Optional, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    AsyncIterable,
+    Callable,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
-from ._shutil import Outstanding
 from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred, DeferredList, succeed
-from twisted.internet.error import ConnectError, ConnectingCancelledError, DNSLookupError, TimeoutError
-from twisted.internet.interfaces import IProtocolFactory, IReactorTime, IStreamClientEndpoint
+from twisted.internet.error import (
+    ConnectError,
+    ConnectingCancelledError,
+    DNSLookupError,
+    TimeoutError,
+)
+from twisted.internet.interfaces import (
+    IProtocolFactory,
+    IReactorTime,
+    IStreamClientEndpoint,
+)
 from twisted.internet.task import deferLater
 from twisted.python.failure import Failure
-
+from ._shutil import Outstanding
 
 if TYPE_CHECKING:
     from twisted.internet.endpoints import HostnameEndpoint
+
 from twisted.internet.interfaces import (
     IAddress,
     IHostResolution,
     IProtocol as TwistedProtocol,
 )
 
-
 T = TypeVar("T")
 X = TypeVar("X")
+
 
 class DoneSentinel(Enum):
     Done = auto()
 
-def push2aiter() -> Tuple[Callable[[T], None], Callable[[], None], AsyncIterable[T]]:
+
+def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable[T]]:
     """
     Create a Deferred coroutine which presents an async iterable, and a
     callable that will push values into it and a callable that will stop it.
     """
-    q: List[Deferred[Union[T, Literal[DoneSentinel.Done]]]] = []
+    q: list[Deferred[T | Literal[DoneSentinel.Done]]] = []
 
     async def aiter() -> AsyncIterable[T]:
         while True:
@@ -46,7 +67,7 @@ def push2aiter() -> Tuple[Callable[[T], None], Callable[[], None], AsyncIterable
             # 'is done' is a type guard that mypy can't see
             yield out
 
-    def push(value: Union[T, DoneSentinel]) -> None:
+    def push(value: T | DoneSentinel) -> None:
         q.append(succeed(value))
 
     def stop() -> None:
@@ -83,13 +104,13 @@ def addr2endpoint(
 @dataclass
 class MultiFirer(Generic[T]):
     deferreds: Outstanding[T] = field(default_factory=Outstanding)
-    activeTimeout: Optional[Deferred[None]] = None
-    waiting: Optional[Deferred[Tuple[bool, Optional[T]]]] = None
+    activeTimeout: Deferred[None] | None = None
+    waiting: Deferred[tuple[bool, T | None]] | None = None
     hasResult: bool = False
     hasFailure: bool = False
-    finalResult: Optional[T] = None
+    finalResult: T | None = None
     ended: bool = False
-    failures: List[Failure] = field(default_factory=list)
+    failures: list[Failure] = field(default_factory=list)
 
     def add(self, deferred: Deferred[T]) -> None:
         """
@@ -112,10 +133,10 @@ class MultiFirer(Generic[T]):
 
     def wait(
         self, clock: IReactorTime, seconds: float
-    ) -> Deferred[Union[Tuple[Literal[True], T], Tuple[Literal[False], None]]]:
+    ) -> Deferred[tuple[Literal[True], T] | tuple[Literal[False], None]]:
         assert self.waiting is None, "no waiting while waiting"
 
-        def cancel(d: Deferred[Tuple[bool, Optional[T]]]) -> None:
+        def cancel(d: Deferred[tuple[bool, T | None]]) -> None:
             self.deferreds.cancel()
 
         def timedOut(nothing: None) -> None:
@@ -153,14 +174,14 @@ class MultiFirer(Generic[T]):
             self.activeTimeout.cancel()
             self.activeTimeout = None
             it, self.waiting = self.waiting, None
-            e: Union[Failure, Exception]
+            e: Failure | Exception
             if len(self.failures) == 1:
                 e = self.failures[0]
             else:
                 e = RuntimeError(f"multiple failures {self.failures}")
             it.errback(e)
 
-    def _maybeCompleteWaiting(self, actuallyDone: bool, value: Optional[T]) -> None:
+    def _maybeCompleteWaiting(self, actuallyDone: bool, value: T | None) -> None:
         self._maybeFinallyFail()
         if self.waiting is not None and self.activeTimeout is not None:
             self.activeTimeout.cancel()
@@ -183,7 +204,7 @@ async def _start(
 
     p, s, ai = push2aiter()
 
-    class res(object):
+    class res:
         def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
             pass
 
@@ -223,7 +244,10 @@ async def _start(
         ty, v, tb = exc_info()
         if ty is not GeneratorExit:
             mf.cancel()
+
+
 from sys import exc_info
+
 
 def start(
     endpoint: HostnameEndpoint,
