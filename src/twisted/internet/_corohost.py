@@ -152,12 +152,26 @@ class MultiFirer(Generic[T]):
         self._maybeFinallyFail()
         return w
 
-    def end(self) -> None:
+    def end(self) -> Deferred[T]:
         """
         No more results will be added.
         """
+        assert self.waiting is None, "no ending while waiting"
         self.ended = True
+        self.activeTimeout = Deferred(lambda dself: dself.callback(None))
+
+        def cancel(d: Deferred[Tuple[bool, Union[T, None]]]) -> None:
+            self.deferreds.cancel()
+
+        def definitely(result: Tuple[bool, Union[T, None]]) -> T:
+            yup, actual = result
+            # T might hypothetically include None so we can't assert here
+            return actual       # type: ignore
+
+        w = self.waiting = Deferred(cancel)
+        x = w.addCallback(definitely)
         self._maybeFinallyFail()
+        return x
 
     def cancel(self) -> None:
         self.deferreds.cancel()
@@ -231,15 +245,9 @@ async def _start(
             if done:
                 assert result is not None
                 return result
-        mf.end()
         if not attempts:
             raise DNSLookupError(f"no results for hostname lookup: {endpoint._hostStr}")
-        done, result = await mf.wait(reactor, 10000)
-        if done is True:
-            assert result is not None
-            return result
-        mf.cancel()
-        raise RuntimeError("unreachable")
+        return await mf.end()
     finally:
         ty, v, tb = exc_info()
         if ty is not GeneratorExit:
