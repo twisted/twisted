@@ -55,7 +55,7 @@ def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable
     Create a Deferred coroutine which presents an async iterable, and a
     callable that will push values into it and a callable that will stop it.
     """
-    q: list[Deferred[T | Literal[DoneSentinel.Done]]] = []
+    q: list[Deferred[Union[T, Literal[DoneSentinel.Done]]]] = []
 
     async def aiter() -> AsyncIterable[T]:
         while True:
@@ -67,7 +67,7 @@ def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable
             # 'is done' is a type guard that mypy can't see
             yield out
 
-    def push(value: T | DoneSentinel) -> None:
+    def push(value: Union[T, DoneSentinel]) -> None:
         q.append(succeed(value))
 
     def stop() -> None:
@@ -79,7 +79,7 @@ def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable
 def addr2endpoint(
     hostnameEndpoint: HostnameEndpoint,
     address: IAddress,
-) -> IStreamClientEndpoint | None:
+) -> Union[IStreamClientEndpoint, None]:
     """
     Convert an address into an endpoint
     """
@@ -104,11 +104,11 @@ def addr2endpoint(
 @dataclass
 class MultiFirer(Generic[T]):
     deferreds: Outstanding[T] = field(default_factory=Outstanding)
-    activeTimeout: Deferred[None] | None = None
-    waiting: Deferred[tuple[bool, T | None]] | None = None
+    activeTimeout: Union[Deferred[None], None] = None
+    waiting: Union[Deferred[tuple[bool, Union[T, None]]], None] = None
     hasResult: bool = False
     hasFailure: bool = False
-    finalResult: T | None = None
+    finalResult: Union[T, None] = None
     ended: bool = False
     failures: list[Failure] = field(default_factory=list)
 
@@ -133,10 +133,10 @@ class MultiFirer(Generic[T]):
 
     def wait(
         self, clock: IReactorTime, seconds: float
-    ) -> Deferred[tuple[Literal[True], T] | tuple[Literal[False], None]]:
+    ) -> Deferred[Union[tuple[Literal[True], T], tuple[Literal[False], None]]]:
         assert self.waiting is None, "no waiting while waiting"
 
-        def cancel(d: Deferred[tuple[bool, T | None]]) -> None:
+        def cancel(d: Deferred[tuple[bool, Union[T, None]]]) -> None:
             self.deferreds.cancel()
 
         def timedOut(nothing: None) -> None:
@@ -174,14 +174,14 @@ class MultiFirer(Generic[T]):
             self.activeTimeout.cancel()
             self.activeTimeout = None
             it, self.waiting = self.waiting, None
-            e: Failure | Exception
+            e: Union[Failure, Exception]
             if len(self.failures) == 1:
                 e = self.failures[0]
             else:
                 e = RuntimeError(f"multiple failures {self.failures}")
             it.errback(e)
 
-    def _maybeCompleteWaiting(self, actuallyDone: bool, value: T | None) -> None:
+    def _maybeCompleteWaiting(self, actuallyDone: bool, value: Union[T, None]) -> None:
         self._maybeFinallyFail()
         if self.waiting is not None and self.activeTimeout is not None:
             self.activeTimeout.cancel()
