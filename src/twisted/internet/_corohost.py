@@ -166,7 +166,7 @@ class MultiFirer(Generic[T]):
         def definitely(result: Tuple[bool, Union[T, None]]) -> T:
             yup, actual = result
             # T might hypothetically include None so we can't assert here
-            return actual       # type: ignore
+            return actual  # type: ignore
 
         w = self.waiting = Deferred(cancel)
         x = w.addCallback(definitely)
