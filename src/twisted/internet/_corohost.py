@@ -60,6 +60,7 @@ def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable
     async def aiter() -> AsyncIterable[T]:
         while True:
             if not q:
+                assert 0
                 q.append(Deferred())
             out = await q.pop(0)
             if out is DoneSentinel.Done:
