@@ -3,9 +3,7 @@ Report a security
 
 We take security very seriously.  Your input and feedback on our security is always appreciated.
 
-You can report a security issue by creating `a security advisory using the GitHub UI <https://github.com/twisted/twisted/security/advisories/new>`_.
-
-You can also send urgent or sensitive reports directly to security@twistedmatrix.com
+You can send urgent or sensitive reports directly to security@twistedmatrix.com
 
 You may use our public key (below) to keep your message safe.
 Provide us with a secure way to respond.
@@ -28,7 +26,7 @@ Elements of it may be followed more or less strictly depending on the severity o
 
 #. Begin by filing a ticket which does not describe the issue and simply says 'security issue, description pending' and has the 'security' keyword.
 
-#. If a security advisory is not already created in GitHub, create one.
+#. Create a security advisory in GitHub using the `GitHub UI <https://github.com/twisted/twisted/security/advisories/new>`_.
    This will trigger the creation of a private repository that can be use for developing a patch.
    This automatically created private repository is also used to review the PR in private.
 
