@@ -21,3 +21,12 @@ Contents:
     :maxdepth: 1
 
     historic/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Quick links
+
+   core/development/security
+   api/index
+   GitHub <https://github.com/twisted/twisted>
+   PyPI <https://pypi.org/project/twisted>

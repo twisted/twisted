@@ -132,8 +132,11 @@ Prepare the branch
    Any serious error should be considered a blocker and should be
    fixed in a separate ticket/PR.
    Avoid making non-release changes (even minor one) as part of the release branch.
+#. Manually create a push a tag from the top of the branch and which is named `twisted-VERSION`.
+   This is an extra step since GitHub UI will not
+   allow creating a tag with this naming convention.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch.
+#. Select the created tag using the format `twisted-VERSION` based on the latest commit on the release branch.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
@@ -220,8 +223,8 @@ Prepare the branch
 #. Commit and push.
 #. Submit the ticket for the final review.
 #. Pause until the ticket is reviewed and accepted.
+#. Create and push a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is not checked.
@@ -256,6 +259,34 @@ Post release
    closing the release ticket at the same time.
 
 
+Security release
+----------------
+
+A security release is a release that contains a fix that has an associated
+security advisory.
+
+All steps for a generic release are followed.
+A few extra steps are required to communicate the security issue.
+
+These releases are done as soon as the PR for the security advisory is merged.
+
+The PR contributors and the release manager should communicate and coordinate the release.
+
+Any step blocking the release should be done by the PR contributors.
+The role of the release manager is just to make sure due process is followed.
+
+#. Make sure there is a `GitHub Security advisory <https://github.com/twisted/twisted/security/advisories>`_ opened for this ticket.
+#. Make sure the PR was approved.
+#. Make sure all the details all provided in the GitHub security advisory.
+#. The security fix will be available in the first release candidate for the new release. So the `Patched versions` will look like YEAR.MONTH.0rc1.
+#. Use the GitHub UI to merge the PR.
+#. Once committed in the main branch, create a new branch and follow the general release candidate procedures.
+
+Once the PR is merged, the fix is public, but unreleased.
+Try to do the release candidate as soon as possible after the security PR merge.
+
+If possible, try not to do the security release at the end of working week or during weekends.
+
 Release candidate fixes
 -----------------------
 
@@ -278,20 +309,7 @@ Bug fix releases
 ----------------
 
 Sometimes, bugs happen, and sometimes these are regressions in the current released version.
-This section goes over doing these "bugfix" releases.
 
-1. Ensure all bugfixes are in trunk.
+We don't do maintenance / patch releases due to lack of resources.
 
-2. Make a branch off the affected released version (not from trunk HEAD).
-
-3. Cherry-pick the merge commits that merge the bugfixes into trunk, onto the new release branch.
-
-4. Go through the rest of the process for a full release from "How to do a release candidate", merging the release branch into trunk as normal as the end of the process.
-
-   - Instead of just ``--rc`` when running the change-versions script, add the patch flag, making it ``--patch --rc``.
-   - Instead of waiting a week, a shorter pause is acceptable for a patch release.
-     You can do the release as soon as you get the confirmation from the original bug reports that the release candidate fixes the issues.
-
-5. If you are doing a security release for an older release,
-   the automated release will overwrite the `stable` branch and consider it as the latest release.
-   You will need to manually reset/rebase the `stable` branch to point to the actual latest release.
+We just do a normal release using the calendar base versioning scheme.
