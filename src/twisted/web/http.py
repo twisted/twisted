@@ -420,7 +420,7 @@ def _ishexdigits(b: bytes) -> bool:
     for c in b:
         if c not in b"0123456789abcdefABCDEF":
             return False
-    return bool(b)
+    return b != b""
 
 
 def _hexint(b: bytes) -> int:
@@ -1835,14 +1835,14 @@ _chunkExtChars = (
 """
 Characters that are valid in a chunk extension.
 
-See RFC 7230 section 4.1.1:
+See RFC 7230 section 4.1.1::
 
      chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
 
      chunk-ext-name = token
      chunk-ext-val  = token / quoted-string
 
-Section 3.2.6:
+And section 3.2.6::
 
      token          = 1*tchar
 
