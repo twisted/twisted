@@ -132,11 +132,8 @@ Prepare the branch
    Any serious error should be considered a blocker and should be
    fixed in a separate ticket/PR.
    Avoid making non-release changes (even minor one) as part of the release branch.
-#. Manually create a push a tag from the top of the branch and which is named `twisted-VERSION`.
-   This is an extra step since GitHub UI will not
-   allow creating a tag with this naming convention.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Select the created tag using the format `twisted-VERSION` based on the latest commit on the release branch.
+#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
@@ -223,8 +220,8 @@ Prepare the branch
 #. Commit and push.
 #. Submit the ticket for the final review.
 #. Pause until the ticket is reviewed and accepted.
-#. Create and push a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
+#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch that was approved after the review.
 #. Use `Twisted VERSION` as the name of the release.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is not checked.
