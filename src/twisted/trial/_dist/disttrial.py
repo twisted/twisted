@@ -122,10 +122,9 @@ class DistTrialRunner:
             _WORKER_AMP_STDOUT: "r",
         }
         environ = os.environ.copy()
-        # Add an environment variable containing the raw sys.path, to be used by
-        # subprocesses to make sure it's identical to the parent. See
-        # workertrial._setupPath.
-        environ["TRIAL_PYTHONPATH"] = os.pathsep.join(sys.path)
+        # Add an environment variable containing the raw sys.path, to be used
+        # by subprocesses to try to make it identical to the parent's.
+        environ["PYTHONPATH"] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
@@ -214,14 +213,16 @@ class DistTrialRunner:
 
         stopping = []
 
-        def nextRun(ign):
+        def nextRun(ign, n):
+            if untilFailure:
+                self._stream.write("Test Pass %d\n" % (n,))
             self.writeResults(result)
             if not untilFailure:
                 return
             if not result.wasSuccessful():
                 return
             d = runTests()
-            return d.addCallback(nextRun)
+            return d.addCallback(nextRun, n + 1)
 
         def stop(ign):
             testDirLock.unlock()
@@ -240,7 +241,7 @@ class DistTrialRunner:
             return ign
 
         d = runTests()
-        d.addCallback(nextRun)
+        d.addCallback(nextRun, 1)
         d.addBoth(stop)
 
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutDown)
