@@ -2459,6 +2459,66 @@ class DccTests(IRCTestCase):
         self.assertEqual(str(result), "Indecipherable port 'sd@d'")
 
 
+UNICODE_REPLACEMENT_CHARACTER = "\ufffd"
+
+
+class ClientDecodingTests(IRCTestCase):
+    """
+    Tests for L{IRCClient} receiving data in different encodings.
+    """
+    def setUp(self):
+        methods = ["handleCommand", "badMessage"]
+        self.client = CollectorClient(methods)
+
+    def test_decoding_unspecified_codec(self):
+        """
+        Test that message decoding doesn't fail when no fitting codec was
+        specified and default decode error handling is used. Characters that
+        can not be decoded with UTF8 will be replaced by the unicode
+        replacement character 'U+FFFD'.
+        """
+        self.client.decode_codecs = IRCClient.decode_codecs
+        self.client.decode_fallback_errorhandling = \
+            IRCClient.decode_fallback_errorhandling
+        prefix = ":foo!bar@baz"
+        line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        self.client.lineReceived(line_bytes)
+        self.assertEqual(
+            self.client.methods,
+            [("handleCommand", ("PRIVMSG", prefix[1:],
+                                ["foo", UNICODE_REPLACEMENT_CHARACTER]))]
+        )
+
+    def test_decoding_specified_codec(self):
+        """
+        Test that message decoding will try the specified codecs before using
+        the fallback errorhandling.
+        """
+        self.client.decode_codecs = ["utf-8", "latin-1"]
+        self.client.decode_fallback_errorhandling = \
+            IRCClient.decode_fallback_errorhandling
+        prefix = ":foo!bar@baz"
+        line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        self.client.lineReceived(line_bytes)
+        self.assertEqual(
+            self.client.methods,
+            [("handleCommand", ("PRIVMSG", prefix[1:],
+                                ["foo", "ä"]))]
+        )
+
+    def test_decoding_errorhandling(self):
+        """
+        Test that fallback errorhandling for message decoding can be overridden
+        by the user.
+        """
+        self.client.decode_codecs = ["utf-8"]
+        self.client.decode_fallback_errorhandling = "strict"
+        prefix = ":foo!bar@baz"
+        line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        self.assertRaises(UnicodeDecodeError, self.client.lineReceived,
+                          line_bytes)
+
+
 class ServerToClientTests(IRCTestCase):
     """
     Tests for the C{irc_*} methods sent from the server to the client.
