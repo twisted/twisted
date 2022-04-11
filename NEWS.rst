@@ -16,7 +16,7 @@ Features
 Bugfixes
 --------
 
-- Correct type annotations for IReactorSSL.listenSSL. (#10274)
+- twisted.internet.interfaces.IReactorSSL.listenSSL now has correct type annotations. (#10274)
 - twisted.internet.test.test_glibbase.GlibReactorBaseTests now passes. (#10317)
 
 
