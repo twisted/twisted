@@ -1,7 +1,8 @@
-Report a security
-=================
+Report a security issue
+=======================
 
-We take security very seriously.  Your input and feedback on our security is always appreciated.
+We take security very seriously.
+Your input and feedback on our security is always appreciated.
 
 You can send urgent or sensitive reports directly to security@twistedmatrix.com
 
@@ -12,6 +13,9 @@ We'll get back to you as soon as we can.
 Twisted is an all volunteer project and there may be some delay before we can respond.
 
 Feel free to follow up if you think an unreasonable amount of time has elapsed without a response!
+
+All releases, including security releases, are announced on the mailing list.
+Consider subscribing to receive notification about the availability of a security fix.
 
 
 Security Procedure for Developers

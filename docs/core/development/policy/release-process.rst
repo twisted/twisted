@@ -284,6 +284,7 @@ Try to do the release candidate as soon as possible after the security PR merge.
 
 If possible, try not to do the security release at the end of working week or during weekends.
 
+
 Release candidate fixes
 -----------------------
 
@@ -307,6 +308,8 @@ Bug fix releases
 
 Sometimes, bugs happen, and sometimes these are regressions in the current released version.
 
-We don't do maintenance / patch releases due to lack of resources.
+We don't do maintenance / patch releases, including for security issues, due to lack of resources.
 
 We just do a normal release using the calendar base versioning scheme.
+
+We welcome additional volunteers to help drive the release effort.
