@@ -110,7 +110,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox coverage coveralls
+        python -m pip install --upgrade pip tox coverage
 
     - name: Test
       run: |
