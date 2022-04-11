@@ -1,1 +1,0 @@
-twisted.conch.ssh.session.SSHSession now cleans up both the client transport and the ISession adapter if both are set.  Previously, a subsystem's connectionLost method was not called if a environment variable passing request was also sent on the same channel.
