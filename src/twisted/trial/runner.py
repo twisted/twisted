@@ -845,7 +845,7 @@ class TrialRunner:
         if self.logfile == "-":
             logFile = sys.stdout
         else:
-            logFile = open(self.logfile, "a")
+            logFile = util.openTestLog(filepath.FilePath(self.logfile))
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
