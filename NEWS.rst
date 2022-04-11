@@ -33,7 +33,6 @@ Features
 Bugfixes
 ~~~~~~~~
 
-- twisted.conch.ssh.session.SSHSession now cleans up both the client transport and the ISession adapter if both are set.  Previously, a subsystem's connectionLost method was not called if a environment variable passing request was also sent on the same channel. (#10308)
 -  (#10313)
 
 
@@ -49,7 +48,7 @@ Features
 Bugfixes
 ~~~~~~~~
 
-- twisted.web.http had several several defects in HTTP request parsing that could permit HTTP request smuggling. It now disallows signed Content-Length headers, forbids illegal characters in chunked extensions, forbids 0x prefix to chunk lengths, and only strips spaces and horizontal tab characters from header values. These changes address CVE-2022-24801 and GHSA-c2jg-hw38-jrqq. (#10323)
+- twisted.web.http had several several defects in HTTP request parsing that could permit HTTP request smuggling. It now disallows signed Content-Length headers, forbids illegal characters in chunked extensions, forbids a ``0x`` prefix to chunk lengths, and only strips spaces and horizontal tab characters from header values. These changes address CVE-2022-24801 and GHSA-c2jg-hw38-jrqq. (#10323)
 
 
 Mail
