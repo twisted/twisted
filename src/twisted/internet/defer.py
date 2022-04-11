@@ -172,7 +172,7 @@ def _isAsyncDefValue(o: Any) -> bool:
     Determine whether to apply "coroutine" handling to a value in
     L{maybeDeferred}.
 
-    @return: C{True} if L{o} came from a function defined using C{async def},
+    @return: C{True} if C{o} came from a function defined using C{async def},
         C{False} otherwise.
     """
     # A note on how we identify such values...
@@ -202,17 +202,18 @@ def maybeDeferred(
 
     Call the given function with the given arguments.  Then:
 
-    - If the returned object is a L{Deferred}, return it.
+      - If the returned object is a L{Deferred}, return it.
 
-    - If the returned object is a L{Failure}, wrap it with L{fail} and return it.
+      - If the returned object is a L{Failure}, wrap it with L{fail} and
+        return it.
 
-    - If the returned object is a L{types.CoroutineType}, wrap it with
-      L{Deferred.fromCoroutine} and return it.
+      - If the returned object is a L{types.CoroutineType}, wrap it with
+        L{Deferred.fromCoroutine} and return it.
 
-    - Otherwise, wrap it in L{succeed} and return it.
+      - Otherwise, wrap it in L{succeed} and return it.
 
-    - If an exception is raised, convert it to a L{Failure}, wrap it in
-      L{fail}, and then return it.
+      - If an exception is raised, convert it to a L{Failure}, wrap it in
+        L{fail}, and then return it.
 
     @param f: The callable to invoke
     @param args: The arguments to pass to C{f}
