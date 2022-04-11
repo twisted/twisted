@@ -1,3 +1,13 @@
+#
+# This is the main pipeline enabled in Azure DevOps
+# To update the name of this file you will need admin access to Azure.
+#
+# If the status failed to be reported, check the logs at
+# https://dev.azure.com/twistedmatrix/twisted/_build?view=runs
+#
+# Click on the PR description for more details.
+# Don't clock on the icon from the "Stages" column
+#
 trigger:
   batch: true
   branches:
@@ -19,22 +29,16 @@ jobs:
 - template: 'macos_test_jobs.yml'
   parameters:
     pythonVersions:
-      py37: "3.7"
-      py38: "3.8"
-      py39: "3.9"
+      py39: "3.10"
 
 - template: 'windows_test_jobs.yml'
   parameters:
     pythonVersions:
       py37: "3.7"
-      py38: "3.8"
-      py39: "3.9"
     reactor: select
 
 - template: 'windows_test_jobs.yml'
   parameters:
     pythonVersions:
-      py37: "3.7"
-      py38: "3.8"
-      py39: "3.9"
+      py39: "3.10"
     reactor: iocp

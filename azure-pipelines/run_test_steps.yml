@@ -1,3 +1,6 @@
+#
+# This is just a template, and not a main pipeline definition.
+#
 parameters:
 
 - name: platform
@@ -12,7 +15,7 @@ parameters:
   - '3.7'
   - '3.8'
   - '3.9'
-  - '3.10.0-rc.1'
+  - '3.10'
 
 - name: windowsReactor
   type: string
