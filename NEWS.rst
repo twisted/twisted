@@ -3,8 +3,8 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 22.4.0.rc1 (2022-04-04)
-===============================
+Twisted 22.4.0 (2022-04-11)
+===========================
 
 Features
 --------
