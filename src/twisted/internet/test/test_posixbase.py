@@ -34,6 +34,8 @@ class WarningCheckerTestCase(TestCase):
         # https://twistedmatrix.com/trac/ticket/10332
         # For now, try to start each test without previous warnings
         # on Windows CI environment.
+        # We still want to see failures on local Windows development environment to make it easier to fix then,
+        # rather than ignoring the errors.
         if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
             self.flushWarnings()
 
@@ -334,8 +336,7 @@ class WakerTests(WarningCheckerTestCase):
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)
 
-        # Explicitly close the sockets as a cleanup and make sure we
-        # don't get other warnings here.
+        # Explicitly close the waker to leave a clean state at the end of the test.
         waker.connectionLost(None)
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)

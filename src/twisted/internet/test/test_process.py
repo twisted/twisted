@@ -71,28 +71,6 @@ def onlyOnPOSIX(testMethod):
     return testMethod
 
 
-def onlyOnLinuxCI(testMethod):
-    """
-    Only run this test on Linux and macOS local tests and Linux CI platforms.
-
-    This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
-
-    @param testMethod: A test function, being decorated.
-
-    @return: the C{testMethod} argument.
-    """
-    if platform.isLinux():
-        return testMethod
-
-    if os.environ.get("CI", "").lower():
-        testMethod.skip = "Failing on Azure macOS CI."
-
-    if resource is None:
-        testMethod.skip = "Test only applies to POSIX platforms."
-
-    return testMethod
-
-
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
     An L{IProcessProtocol} which fires a Deferred when the process it is
@@ -404,9 +382,15 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
-    # This is failing on Azure macOS and we don't have a Twisted dev now to troubleshoot this.
-    # If you see commend and are running on macOS, try to see if this pass on your environment.
-    @onlyOnLinuxCI
+    @skipIf(platform.isWindows(), "Test only applies to POSIX platforms.")
+    # If you see this comment and are running on macOS, try to see if this pass on your environment.
+    # Only run this test on Linux and macOS local tests and Linux CI platforms.
+    # This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
+    # We still want to run it on local development macOS environments to help developers discover and fix this issue.
+    @skipIf(
+        platform.isMacOSX() and os.environ.get("CI", "").lower() == "true",
+        "Skipped on macOS CI en.",
+    )
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
