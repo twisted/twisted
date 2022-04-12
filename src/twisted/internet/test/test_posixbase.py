@@ -4,7 +4,7 @@
 """
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
-
+import os
 
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
@@ -32,15 +32,17 @@ class WarningCheckerTestCase(TestCase):
         super().setUp()
         # FIXME:
         # https://twistedmatrix.com/trac/ticket/10332
-        # For now, try to start each test without previous warnings.
-        self.flushWarnings()
+        # For now, try to start each test without previous warnings
+        # on Windows CI environment.
+        if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+            self.flushWarnings()
 
     def tearDown(self):
         try:
             super().tearDown()
         finally:
             warnings = self.flushWarnings()
-            if platform.isWindows():
+            if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
                 # FIXME:
                 # https://twistedmatrix.com/trac/ticket/10332
                 # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.

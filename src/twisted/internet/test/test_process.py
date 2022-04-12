@@ -71,16 +71,25 @@ def onlyOnPOSIX(testMethod):
     return testMethod
 
 
-def onlyOnLinux(testMethod):
+def onlyOnLinuxCI(testMethod):
     """
-    Only run this test on Linux platforms.
+    Only run this test on Linux and macOS local tests and Linux CI platforms.
+
+    This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
 
     @param testMethod: A test function, being decorated.
 
     @return: the C{testMethod} argument.
     """
-    if not platform.isLinux():
-        testMethod.skip = "Test only applies to Linux platforms."
+    if platform.isLinux():
+        return testMethod
+
+    if os.environ.get("CI", "").lower():
+        testMethod.skip = "Failing on Azure macOS CI."
+
+    if resource is None:
+        testMethod.skip = "Test only applies to POSIX platforms."
+
     return testMethod
 
 
@@ -397,7 +406,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
     # This is failing on Azure macOS and we don't have a Twisted dev now to troubleshoot this.
     # If you see commend and are running on macOS, try to see if this pass on your environment.
-    @onlyOnLinux
+    @onlyOnLinuxCI
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
