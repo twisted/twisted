@@ -34,7 +34,6 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-import enum
 import errno
 import operator
 import os
@@ -68,9 +67,6 @@ SPC = chr(0o40)
 MAX_COMMAND_LENGTH = 512
 
 CHANNEL_PREFIXES = "&#!+"
-
-
-MSG_OR_NOTICE = enum.Enum("MSG_OR_NOTICE", "PRIVMSG NOTICE")
 
 
 class IRCBadMessage(Exception):
@@ -1717,7 +1713,7 @@ class IRCClient(basic.LineReceiver):
         fudge = 10
         return MAX_COMMAND_LENGTH - len(theoretical) - fudge
 
-    def _send_msg_or_notice(self, msg_or_notice, user, message, length=None):
+    def _sendMessage(self, msgType, user, message, length=None):
         """
         Send a message or notice to a user or channel.
 
@@ -1726,8 +1722,8 @@ class IRCClient(basic.LineReceiver):
          - Any span between newline characters is longer than the given
            line-length.
 
-        @param msg_or_notice: Whether a PRIVMSG or NOTICE should be sent.
-        @type msg_or_notice: L{MSG_OR_NOTICE}
+        @param msgType: Whether a PRIVMSG or NOTICE should be sent.
+        @type msgType: C{str}
 
         @param user: Username or channel name to which to direct the
             message.
@@ -1742,7 +1738,7 @@ class IRCClient(basic.LineReceiver):
             value.
         @type length: C{int}
         """
-        fmt = f"{msg_or_notice.name} {user} :"
+        fmt = f"{msgType} {user} :"
 
         if length is None:
             length = self._safeMaximumLineLength(fmt)
@@ -1779,7 +1775,7 @@ class IRCClient(basic.LineReceiver):
             value.
         @type length: C{int}
         """
-        self._send_msg_or_notice(MSG_OR_NOTICE.PRIVMSG, user, message, length)
+        self._sendMessage("PRIVMSG", user, message, length)
 
     def notice(self, user, message, length=None):
         """
@@ -1800,7 +1796,7 @@ class IRCClient(basic.LineReceiver):
             value.
         @type length: C{int}
         """
-        self._send_msg_or_notice(MSG_OR_NOTICE.NOTICE, user, message, length)
+        self._sendMessage("NOTICE", user, message, length)
 
     def away(self, message=""):
         """
