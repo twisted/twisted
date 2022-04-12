@@ -41,7 +41,22 @@ class TrivialReactor(PosixReactorBase):
         del self._writers[writer]
 
 
-class PosixReactorBaseTests(TestCase):
+class WarningCheckerTestCase(TestCase):
+    """
+    A test case that will make sure that no warnings are left unchecked at the end of a test run.
+    """
+
+    def tearDown(self):
+        try:
+            super().tearDown()
+        finally:
+            warnings = self.flushWarnings()
+            self.assertEqual(
+                len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
+            )
+
+
+class PosixReactorBaseTests(WarningCheckerTestCase):
     """
     Tests for L{PosixReactorBase}.
     """
@@ -89,7 +104,7 @@ class PosixReactorBaseTests(TestCase):
         self.assertNotIn(writer, reactor._writers)
 
 
-class TCPPortTests(TestCase):
+class TCPPortTests(WarningCheckerTestCase):
     """
     Tests for L{twisted.internet.tcp.Port}.
     """
@@ -148,7 +163,7 @@ class TimeoutReportReactor(PosixReactorBase):
             d.callback(timeout)
 
 
-class IterationTimeoutTests(TestCase):
+class IterationTimeoutTests(WarningCheckerTestCase):
     """
     Tests for the timeout argument L{PosixReactorBase.run} calls
     L{PosixReactorBase.doIteration} with in the presence of various delayed
@@ -246,7 +261,7 @@ class IterationTimeoutTests(TestCase):
         self.assertIsNone(timeout)
 
 
-class ConnectedDatagramPortTests(TestCase):
+class ConnectedDatagramPortTests(WarningCheckerTestCase):
     """
     Test connected datagram UNIX sockets.
     """
@@ -291,15 +306,11 @@ class ConnectedDatagramPortTests(TestCase):
         self.assertTrue(self.called)
 
 
-class WakerTests(TestCase):
+class WakerTests(WarningCheckerTestCase):
     def test_noWakerConstructionWarnings(self):
         """
         No warnings are generated when constructing the waker.
         """
-        # Make sure we don't have warning from previous tests.
-        warnings = self.flushWarnings()
-        self.assertEqual(len(warnings), 0, warnings)
-
         waker = _Waker(reactor=None)
 
         warnings = self.flushWarnings()
