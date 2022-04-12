@@ -297,4 +297,4 @@ class WakerTests(TestCase):
         warnings = self.flushWarnings()
         # explicitly close the sockets
         waker.connectionLost(None)
-        self.assertEqual(len(warnings), 0)
+        self.assertEqual(len(warnings), 0, warnings)

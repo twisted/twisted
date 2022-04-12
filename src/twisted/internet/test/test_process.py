@@ -428,7 +428,8 @@ sys.stdout.flush()""".format(
         # might at least hypothetically select.)
 
         fudgeFactor = 17
-        unlikelyFD = resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor
+        # Try not to go into negative land.
+        unlikelyFD = max(9, resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor)
 
         os.dup2(w, unlikelyFD)
         self.addCleanup(os.close, unlikelyFD)
