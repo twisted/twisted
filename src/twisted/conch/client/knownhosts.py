@@ -451,7 +451,7 @@ class KnownHostsFile:
             verified or has changed.
         @rtype: L{Deferred}
         """
-        hhk = defer.maybeDeferred(self.hasHostKey, hostname, key)
+        hhk = defer.execute(self.hasHostKey, hostname, key)
 
         def gotHasKey(result):
             if result:
