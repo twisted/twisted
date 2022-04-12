@@ -1844,10 +1844,10 @@ class ClientMsgTests(IRCTestCase):
         self.assertRaises(ValueError, self.client.msg, "foo", "bar", 0)
         self.assertRaises(ValueError, self.client.msg, "foo", "bar", 3)
 
-    def test_multipleLine(self):
+    def test_multipleLine_msg(self):
         """
-        Messages and notices longer than the C{length} parameter to
-        L{IRCClient.msg} will be split and sent in multiple commands.
+        Messages longer than the C{length} parameter to L{IRCClient.msg} will
+        be split and sent in multiple commands.
         """
         maxLen_msg = len("PRIVMSG foo :") + 3 + 2  # 2 for line endings
         self.client.msg("foo", "barbazbo", maxLen_msg)
@@ -1855,7 +1855,12 @@ class ClientMsgTests(IRCTestCase):
             self.client.lines,
             ["PRIVMSG foo :bar", "PRIVMSG foo :baz", "PRIVMSG foo :bo"],
         )
-        self.client.lines = []
+
+    def test_multipleLine_notice(self):
+        """
+        Messages longer than the C{length} parameter to L{IRCClient.notice}
+        will be split and sent in multiple commands.
+        """
         maxLen_notice = len("NOTICE foo :") + 3 + 2  # 2 for line endings
         self.client.notice("foo", "barbazbo", maxLen_notice)
         self.assertEqual(
@@ -1863,82 +1868,107 @@ class ClientMsgTests(IRCTestCase):
             ["NOTICE foo :bar", "NOTICE foo :baz", "NOTICE foo :bo"],
         )
 
-    def test_sufficientWidth(self):
+    def test_sufficientWidth_msg(self):
         """
-        Messages and notices exactly equal in length to the C{length}
-        parameter to L{IRCClient.msg} are sent in a single command.
+        Messages exactly equal in length to the C{length} parameter to
+        L{IRCClient.msg} are sent in a single command.
         """
         msg = "barbazbo"
-        maxLen_msg = len(f"PRIVMSG foo :{msg}") + 2
-        self.client.msg("foo", msg, maxLen_msg)
+        maxLen = len(f"PRIVMSG foo :{msg}") + 2
+        self.client.msg("foo", msg, maxLen)
         self.assertEqual(self.client.lines, [f"PRIVMSG foo :{msg}"])
         self.client.lines = []
-        self.client.msg("foo", msg, maxLen_msg - 1)
+        self.client.msg("foo", msg, maxLen - 1)
         self.assertEqual(2, len(self.client.lines))
         self.client.lines = []
-        self.client.msg("foo", msg, maxLen_msg + 1)
-        self.assertEqual(1, len(self.client.lines))
-        # notice
-        self.client.lines = []
-        maxLen_notice = len(f"NOTICE foo :{msg}") + 2
-        self.client.notice("foo", msg, maxLen_notice)
-        self.assertEqual(self.client.lines, [f"NOTICE foo :{msg}"])
-        self.client.lines = []
-        self.client.notice("foo", msg, maxLen_notice - 1)
-        self.assertEqual(2, len(self.client.lines))
-        self.client.lines = []
-        self.client.notice("foo", msg, maxLen_notice + 1)
+        self.client.msg("foo", msg, maxLen + 1)
         self.assertEqual(1, len(self.client.lines))
 
-    def test_newlinesAtStart(self):
+    def test_sufficientWidth_notice(self):
         """
-        An LF at the beginning of the message or notice is ignored.
+        Messages exactly equal in length to the C{length} parameter to
+        L{IRCClient.notice} are sent in a single command.
+        """
+        msg = "barbazbo"
+        maxLen = len(f"NOTICE foo :{msg}") + 2
+        self.client.notice("foo", msg, maxLen)
+        self.assertEqual(self.client.lines, [f"NOTICE foo :{msg}"])
+        self.client.lines = []
+        self.client.notice("foo", msg, maxLen - 1)
+        self.assertEqual(2, len(self.client.lines))
+        self.client.lines = []
+        self.client.notice("foo", msg, maxLen + 1)
+        self.assertEqual(1, len(self.client.lines))
+
+    def test_newlinesAtStart_msg(self):
+        """
+        An LF at the beginning of the message is ignored.
         """
         self.client.lines = []
         self.client.msg("foo", "\nbar")
         self.assertEqual(self.client.lines, ["PRIVMSG foo :bar"])
+
+    def test_newlinesAtStart_notice(self):
+        """
+        An LF at the beginning of the notice is ignored.
+        """
         self.client.lines = []
         self.client.notice("foo", "\nbar")
         self.assertEqual(self.client.lines, ["NOTICE foo :bar"])
 
-    def test_newlinesAtEnd(self):
+    def test_newlinesAtEnd_msg(self):
         """
-        An LF at the end of the message or notice is ignored.
+        An LF at the end of the message is ignored.
         """
         self.client.lines = []
         self.client.msg("foo", "bar\n")
         self.assertEqual(self.client.lines, ["PRIVMSG foo :bar"])
+
+    def test_newlinesAtEnd_notice(self):
+        """
+        An LF at the end of the notice is ignored.
+        """
         self.client.lines = []
         self.client.notice("foo", "bar\n")
         self.assertEqual(self.client.lines, ["NOTICE foo :bar"])
 
-    def test_newlinesWithinMessage(self):
+    def test_newlinesWithinMessage_msg(self):
         """
-        An LF within a message or notice causes a new line.
+        An LF within a message causes a new line.
         """
         self.client.lines = []
         self.client.msg("foo", "bar\nbaz")
         self.assertEqual(self.client.lines, ["PRIVMSG foo :bar", "PRIVMSG foo :baz"])
+
+    def test_newlinesWithinMessage_notice(self):
+        """
+        An LF within a notice causes a new line.
+        """
         self.client.lines = []
         self.client.notice("foo", "bar\nbaz")
         self.assertEqual(self.client.lines, ["NOTICE foo :bar", "NOTICE foo :baz"])
 
-    def test_consecutiveNewlines(self):
+    def test_consecutiveNewlines_msg(self):
         """
-        Consecutive LFs do not cause a blank line.
+        Consecutive LFs in messages do not cause a blank line.
         """
         self.client.lines = []
         self.client.msg("foo", "bar\n\nbaz")
         self.assertEqual(self.client.lines, ["PRIVMSG foo :bar", "PRIVMSG foo :baz"])
+
+    def test_consecutiveNewlines_notice(self):
+        """
+        Consecutive LFs in notices do not cause a blank line.
+        """
         self.client.lines = []
         self.client.notice("foo", "bar\n\nbaz")
         self.assertEqual(self.client.lines, ["NOTICE foo :bar", "NOTICE foo :baz"])
 
-    def assertLongMessageSplitting(self, message, expectedNumCommands, length=None):
+    def assertLongMessageSplitting_msg(self, message, expectedNumCommands, length=None):
         """
-        Assert that messages sent by L{IRCClient.msg} and l{IRCClient.notice}
-        are split into an expected number of commands and the original message
-        is transmitted in its entirety over those commands.
+        Assert that messages sent by L{IRCClient.msg} are split into an
+        expected number of commands and the original message is transmitted in
+        its entirety over those commands.
         """
         responsePrefix = ":{}!{}@{} ".format(
             self.client.nickname,
@@ -1960,8 +1990,19 @@ class ClientMsgTests(IRCTestCase):
         # Did the long message we sent arrive as intended?
         self.assertEqual(message, receivedMessage)
 
-        # notice
-        self.client.lines = []
+    def assertLongMessageSplitting_notice(self, message, expectedNumCommands,
+                                          length=None):
+        """
+        Assert that messages sent by l{IRCClient.notice} are split into an
+        expected number of commands and the original message is transmitted in
+        its entirety over those commands.
+        """
+        responsePrefix = ":{}!{}@{} ".format(
+            self.client.nickname,
+            self.client.realname,
+            self.client.hostname,
+        )
+
         self.client.notice("foo", message, length=length)
 
         notice = []
@@ -1970,32 +2011,53 @@ class ClientMsgTests(IRCTestCase):
         for line in self.client.lines:
             self.client.lineReceived(responsePrefix + line)
 
-        self.assertEqual(len(privmsg), expectedNumCommands)
+        self.assertEqual(len(notice), expectedNumCommands)
         receivedMessage = "".join(message for user, target, message in notice)
 
         # Did the long message we sent arrive as intended?
         self.assertEqual(message, receivedMessage)
 
-    def test_splitLongMessagesWithDefault(self):
+    def test_splitLongMessagesWithDefault_msg(self):
         """
-        If a maximum message length is not provided to L{IRCClient.msg} or
-        L{IRCClient.notice} a best-guess effort is made to determine a safe
-        maximum,  messages longer than this are split into multiple commands
-        with the intent of delivering long messages without losing data due to
-        message truncation when the server relays them.
+        If a maximum message length is not provided to L{IRCClient.msg} a
+        best-guess effort is made to determine a safe maximum,  messages longer
+        than this are split into multiple commands with the intent of
+        delivering long messages without losing data due to message truncation
+        when the server relays them.
         """
         message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
-        self.assertLongMessageSplitting(message, 2)
+        self.assertLongMessageSplitting_msg(message, 2)
 
-    def test_splitLongMessagesWithOverride(self):
+    def test_splitLongMessagesWithDefault_notice(self):
         """
-        The maximum message length can be specified to L{IRCClient.msg} or
-        L{IRCClient.notice}, messages longer than this are split into multiple
-        commands with the intent of delivering long messages without losing
-        data due to message truncation when the server relays them.
+        If a maximum message length is not provided to L{IRCClient.notice} a
+        best-guess effort is made to determine a safe maximum,  messages longer
+        than this are split into multiple commands with the intent of
+        delivering long messages without losing data due to message truncation
+        when the server relays them.
         """
         message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
-        self.assertLongMessageSplitting(message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
+        self.assertLongMessageSplitting_notice(message, 2)
+
+    def test_splitLongMessagesWithOverride_msg(self):
+        """
+        The maximum message length can be specified to L{IRCClient.msg},
+        messages longer than this are split into multiple commands with the
+        intent of delivering long messages without losing data due to message
+        truncation when the server relays them.
+        """
+        message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
+        self.assertLongMessageSplitting_msg(message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
+
+    def test_splitLongMessagesWithOverride_notice(self):
+        """
+        The maximum message length can be specified to L{IRCClient.notice},
+        messages longer than this are split into multiple commands with the
+        intent of delivering long messages without losing data due to message
+        truncation when the server relays them.
+        """
+        message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
+        self.assertLongMessageSplitting_notice(message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
 
     def test_newlinesBeforeLineBreaking(self):
         """
