@@ -1990,8 +1990,9 @@ class ClientMsgTests(IRCTestCase):
         # Did the long message we sent arrive as intended?
         self.assertEqual(message, receivedMessage)
 
-    def assertLongMessageSplitting_notice(self, message, expectedNumCommands,
-                                          length=None):
+    def assertLongMessageSplitting_notice(
+        self, message, expectedNumCommands, length=None
+    ):
         """
         Assert that messages sent by l{IRCClient.notice} are split into an
         expected number of commands and the original message is transmitted in
@@ -2047,7 +2048,9 @@ class ClientMsgTests(IRCTestCase):
         truncation when the server relays them.
         """
         message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
-        self.assertLongMessageSplitting_msg(message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
+        self.assertLongMessageSplitting_msg(
+            message, 3, length=irc.MAX_COMMAND_LENGTH // 2
+        )
 
     def test_splitLongMessagesWithOverride_notice(self):
         """
@@ -2057,7 +2060,9 @@ class ClientMsgTests(IRCTestCase):
         truncation when the server relays them.
         """
         message = "o" * (irc.MAX_COMMAND_LENGTH - 2)
-        self.assertLongMessageSplitting_notice(message, 3, length=irc.MAX_COMMAND_LENGTH // 2)
+        self.assertLongMessageSplitting_notice(
+            message, 3, length=irc.MAX_COMMAND_LENGTH // 2
+        )
 
     def test_newlinesBeforeLineBreaking(self):
         """
