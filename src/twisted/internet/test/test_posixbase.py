@@ -293,8 +293,20 @@ class ConnectedDatagramPortTests(TestCase):
 
 class WakerTests(TestCase):
     def test_noWakerConstructionWarnings(self):
-        waker = _Waker(reactor=None)
+        """
+        No warnings are generated when constructing the waker.
+        """
+        # Make sure we don't have warning from previous tests.
         warnings = self.flushWarnings()
-        # explicitly close the sockets
+        self.assertEqual(len(warnings), 0, warnings)
+
+        waker = _Waker(reactor=None)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, warnings)
+
+        # Explicitly close the sockets as a cleanup and make sure we
+        # don't get other warnings here.
         waker.connectionLost(None)
+        warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)
