@@ -28,6 +28,13 @@ class WarningCheckerTestCase(TestCase):
     A test case that will make sure that no warnings are left unchecked at the end of a test run.
     """
 
+    def setUp(self):
+        super().setUp()
+        # FIXME:
+        # https://twistedmatrix.com/trac/ticket/10332
+        # For now, try to start each test without previous warnings.
+        self.flushWarnings()
+
     def tearDown(self):
         try:
             super().tearDown()

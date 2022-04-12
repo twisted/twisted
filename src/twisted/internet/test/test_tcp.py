@@ -2813,6 +2813,10 @@ class AbortConnectionMixin:
         abortConnection() is called in resumeProducing, before any bytes have
         been exchanged. The protocol should be disconnected, but
         connectionLost should not be called re-entrantly.
+
+        This test is flaky on macOS.
+        For now we will keep it as it is.
+        In the future, if it's a pain we can skip it or try to fix it.
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
@@ -2820,6 +2824,10 @@ class AbortConnectionMixin:
         """
         abortConnection() is called in resumeProducing, after some
         bytes have been exchanged. The protocol should be disconnected.
+
+        This test is flaky on macOS.
+        For now we will keep it as it is.
+        In the future, if it's a pain we can skip it or try to fix it.
         """
         return self.runAbortTest(
             ProducerAbortingClientLater, AbortServerWritingProtocol
