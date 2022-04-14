@@ -389,7 +389,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     # We still want to run it on local development macOS environments to help developers discover and fix this issue.
     @skipIf(
         platform.isMacOSX() and os.environ.get("CI", "").lower() == "true",
-        "Skipped on macOS CI en.",
+        "Skipped on macOS CI env.",
     )
     def test_openFileDescriptors(self):
         """
