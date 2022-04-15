@@ -102,6 +102,21 @@ class TestResultTests(unittest.SynchronousTestCase):
         self.assertEqual(excValue, failure.value)
         self.assertEqual(self.failureException, failure.type)
 
+    def test_somethingElse(self):
+        """
+        L{reporter.TestResult.addError} raises L{TypeError} if it is called with
+        an error that is neither a L{sys.exc_info}-like three-tuple nor a
+        L{Failure}.
+        """
+        with self.assertRaises(TypeError):
+            self.result.addError(self, "an error")
+        with self.assertRaises(TypeError):
+            self.result.addError(self, Exception("an error"))
+        with self.assertRaises(TypeError):
+            self.result.addError(self, (Exception, Exception("an error"), None, "extra"))
+        with self.assertRaises(TypeError):
+            self.result.addError(self, (Exception, Exception("an error")))
+
 
 class ReporterRealtimeTests(TestResultTests):
     def setUp(self):
