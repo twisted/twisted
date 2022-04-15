@@ -10,7 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from zope.interface import implementer
 
@@ -93,7 +93,10 @@ class LocalWorkerAMP(AMP):
     managercommands.AddSuccess.responder(addSuccess)
 
     def _buildFailure(
-        self, error: WorkerException, errorClass: str, frames: list
+        self,
+        error: WorkerException,
+        errorClass: str,
+        frames: List[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
@@ -117,7 +120,11 @@ class LocalWorkerAMP(AMP):
         return failure
 
     def addError(
-        self, testName: str, error: str, errorClass: str, frames: list
+        self,
+        testName: str,
+        error: str,
+        errorClass: str,
+        frames: List[str],
     ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
@@ -135,7 +142,11 @@ class LocalWorkerAMP(AMP):
     managercommands.AddError.responder(addError)
 
     def addFailure(
-        self, testName: str, fail: str, failClass: str, frames: list
+        self,
+        testName: str,
+        fail: str,
+        failClass: str,
+        frames: List[str],
     ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.

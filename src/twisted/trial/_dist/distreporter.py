@@ -11,7 +11,8 @@ test is over.
 @since: 12.3
 """
 
-from typing import Any, Optional, Tuple, Union
+from types import TracebackType
+from typing import Optional, Tuple, Union
 
 from zope.interface import implementer
 
@@ -19,7 +20,7 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from ..itrial import IReporter, ITestCase
 
-Traceback = Any
+Traceback = TracebackType
 ReporterFailure = Union[Failure, Tuple[type, Exception, Traceback]]
 
 
