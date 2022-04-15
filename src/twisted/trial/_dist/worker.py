@@ -10,6 +10,7 @@ This module implements the worker classes.
 """
 
 import os
+from typing import Dict, Optional
 
 from zope.interface import implementer
 
@@ -78,7 +79,9 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddSuccess.responder(addSuccess)
 
-    def _buildFailure(self, error, errorClass, frames):
+    def _buildFailure(
+        self, error: WorkerException, errorClass: str, frames: list
+    ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
 
@@ -100,9 +103,13 @@ class LocalWorkerAMP(AMP):
             )
         return failure
 
-    def addError(self, testName, error, errorClass, frames):
+    def addError(
+        self, testName: str, error: str, errorClass: str, frames: list
+    ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
+
+        :param error: A message describing the error.
         """
         failure = self._buildFailure(error, errorClass, frames)
         self._result.addError(self._testCase, failure)
@@ -110,7 +117,9 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddError.responder(addError)
 
-    def addFailure(self, testName, fail, failClass, frames):
+    def addFailure(
+        self, testName: str, fail: str, failClass: str, frames: list
+    ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
         """
@@ -129,7 +138,9 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddSkip.responder(addSkip)
 
-    def addExpectedFailure(self, testName, error, todo):
+    def addExpectedFailure(
+        self, testName: str, error: str, todo: Optional[str]
+    ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """

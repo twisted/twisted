@@ -17,12 +17,12 @@ class DistReporterTests(TestCase):
     Tests for L{DistReporter}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.stream = StringIO()
         self.distReporter = DistReporter(TreeReporter(self.stream))
         self.test = TestCase()
 
-    def test_startSuccessStop(self):
+    def test_startSuccessStop(self) -> None:
         """
         Success output only gets sent to the stream after the test has stopped.
         """
@@ -33,7 +33,7 @@ class DistReporterTests(TestCase):
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
 
-    def test_startErrorStop(self):
+    def test_startErrorStop(self) -> None:
         """
         Error output only gets sent to the stream after the test has stopped.
         """
@@ -44,7 +44,7 @@ class DistReporterTests(TestCase):
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
 
-    def test_forwardedMethods(self):
+    def test_forwardedMethods(self) -> None:
         """
         Calling methods of L{DistReporter} add calls to the running queue of
         the test.
