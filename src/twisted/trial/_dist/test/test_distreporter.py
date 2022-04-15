@@ -7,6 +7,7 @@ Tests for L{twisted.trial._dist.distreporter}.
 
 from io import StringIO
 
+from twisted.python.failure import Failure
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.reporter import TreeReporter
 from twisted.trial.unittest import TestCase
@@ -39,7 +40,7 @@ class DistReporterTests(TestCase):
         """
         self.distReporter.startTest(self.test)
         self.assertEqual(self.stream.getvalue(), "")
-        self.distReporter.addError(self.test, "error")
+        self.distReporter.addError(self.test, Failure(Exception("error")))
         self.assertEqual(self.stream.getvalue(), "")
         self.distReporter.stopTest(self.test)
         self.assertNotEqual(self.stream.getvalue(), "")
@@ -50,9 +51,11 @@ class DistReporterTests(TestCase):
         the test.
         """
         self.distReporter.startTest(self.test)
-        self.distReporter.addFailure(self.test, "foo")
-        self.distReporter.addError(self.test, "bar")
+        self.distReporter.addFailure(self.test, Failure(Exception("foo")))
+        self.distReporter.addError(self.test, Failure(Exception("bar")))
         self.distReporter.addSkip(self.test, "egg")
         self.distReporter.addUnexpectedSuccess(self.test, "spam")
-        self.distReporter.addExpectedFailure(self.test, "err", "foo")
+        self.distReporter.addExpectedFailure(
+            self.test, Failure(Exception("err")), "foo"
+        )
         self.assertEqual(len(self.distReporter.running[self.test.id()]), 6)
