@@ -124,7 +124,11 @@ class LocalWorkerAMP(AMP):
 
         :param error: A message describing the error.
         """
-        failure = self._buildFailure(error, errorClass, frames)
+        # Wrap the error message in ``WorkerException`` because it is not
+        # possible to transfer arbitrary exception values over the AMP
+        # connection to the main process but we must give *some* Exception
+        # (not a str) to the test result object.
+        failure = self._buildFailure(WorkerException(error), errorClass, frames)
         self._result.addError(self._testCase, failure)
         return {"success": True}
 
@@ -136,7 +140,8 @@ class LocalWorkerAMP(AMP):
         """
         Add a failure to the reporter.
         """
-        failure = self._buildFailure(fail, failClass, frames)
+        # See addError for info about use of WorkerException here.
+        failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
         return {"success": True}
 
