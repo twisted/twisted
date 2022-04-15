@@ -20,8 +20,7 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from ..itrial import IReporter, ITestCase
 
-Traceback = TracebackType
-ReporterFailure = Union[Failure, Tuple[type, Exception, Traceback]]
+ReporterFailure = Union[Failure, Tuple[type, Exception, TracebackType]]
 
 
 @implementer(IReporter)
