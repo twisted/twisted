@@ -36,6 +36,8 @@ The following optional dependencies are supported:
   * `pyasn1`_
   * `cryptography`_
 
+* **conch_nacl** - **conch** options and `PyNaCl`_ to support Ed25519 keys on systems with OpenSSL < 1.1.1b.
+
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
 * **serial** - the `pyserial`_ package to work with serial data.
@@ -65,6 +67,7 @@ The following optional dependencies are supported:
 .. _service_identity: https://pypi.python.org/pypi/service_identity
 .. _pyasn1: https://pypi.python.org/pypi/pyasn1
 .. _cryptography: https://pypi.python.org/pypi/cryptography
+.. _PyNaCl: https://pypi.python.org/pypi/PyNaCl
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial
 .. _pyobjc: https://pypi.python.org/pypi/pyobjc

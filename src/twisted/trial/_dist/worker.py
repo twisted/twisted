@@ -18,6 +18,7 @@ from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedObject
 from twisted.trial._dist import (
     _WORKER_AMP_STDIN,
@@ -28,6 +29,7 @@ from twisted.trial._dist import (
 from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.runner import TestLoader, TrialSuite
 from twisted.trial.unittest import Todo
+from ..util import openTestLog
 
 
 class WorkerProtocol(AMP):
@@ -259,14 +261,10 @@ class LocalWorker(ProcessProtocol):
             os.makedirs(self._logDirectory)
         self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
         self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
-        # Log data is received via AMP which is UTF-8 unicode.
-        # The log file should be written using a Unicode encoding, and not
-        # the default system encoding which might not be Unicode compatible.
-        self._testLog = open(
-            os.path.join(self._logDirectory, self._logFile),
-            "w",
-            encoding="utf-8",
-            errors="strict",
+        self._testLog = openTestLog(
+            FilePath(
+                os.path.join(self._logDirectory, self._logFile),
+            ),
         )
         self._ampProtocol.setTestStream(self._testLog)
         logDirectory = self._logDirectory

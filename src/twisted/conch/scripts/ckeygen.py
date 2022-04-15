@@ -179,9 +179,7 @@ def generateECDSAkey(options):
 
 @_keyGenerator("ed25519")
 def generateEd25519key(options):
-    from cryptography.hazmat.primitives.asymmetric import ed25519
-
-    keyPrimitive = ed25519.Ed25519PrivateKey.generate()
+    keyPrimitive = keys.Ed25519PrivateKey.generate()
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 

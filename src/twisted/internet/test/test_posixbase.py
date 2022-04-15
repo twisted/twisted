@@ -4,11 +4,12 @@
 """
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
-
+import os
 
 from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
+from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
 
 skipSockets = None
@@ -20,6 +21,40 @@ except ImportError:
 
 from twisted.internet import reactor
 from twisted.internet.tcp import Port
+
+
+class WarningCheckerTestCase(TestCase):
+    """
+    A test case that will make sure that no warnings are left unchecked at the end of a test run.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # FIXME:
+        # https://twistedmatrix.com/trac/ticket/10332
+        # For now, try to start each test without previous warnings
+        # on Windows CI environment.
+        # We still want to see failures on local Windows development environment to make it easier to fix them,
+        # rather than ignoring the errors.
+        if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+            self.flushWarnings()
+
+    def tearDown(self):
+        try:
+            super().tearDown()
+        finally:
+            warnings = self.flushWarnings()
+            if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+                # FIXME:
+                # https://twistedmatrix.com/trac/ticket/10332
+                # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
+                # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
+                # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
+                # the warnings can be generated while another test is running.
+                return
+            self.assertEqual(
+                len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
+            )
 
 
 class TrivialReactor(PosixReactorBase):
@@ -41,7 +76,7 @@ class TrivialReactor(PosixReactorBase):
         del self._writers[writer]
 
 
-class PosixReactorBaseTests(TestCase):
+class PosixReactorBaseTests(WarningCheckerTestCase):
     """
     Tests for L{PosixReactorBase}.
     """
@@ -89,7 +124,7 @@ class PosixReactorBaseTests(TestCase):
         self.assertNotIn(writer, reactor._writers)
 
 
-class TCPPortTests(TestCase):
+class TCPPortTests(WarningCheckerTestCase):
     """
     Tests for L{twisted.internet.tcp.Port}.
     """
@@ -148,7 +183,7 @@ class TimeoutReportReactor(PosixReactorBase):
             d.callback(timeout)
 
 
-class IterationTimeoutTests(TestCase):
+class IterationTimeoutTests(WarningCheckerTestCase):
     """
     Tests for the timeout argument L{PosixReactorBase.run} calls
     L{PosixReactorBase.doIteration} with in the presence of various delayed
@@ -246,7 +281,7 @@ class IterationTimeoutTests(TestCase):
         self.assertIsNone(timeout)
 
 
-class ConnectedDatagramPortTests(TestCase):
+class ConnectedDatagramPortTests(WarningCheckerTestCase):
     """
     Test connected datagram UNIX sockets.
     """
@@ -291,10 +326,17 @@ class ConnectedDatagramPortTests(TestCase):
         self.assertTrue(self.called)
 
 
-class WakerTests(TestCase):
+class WakerTests(WarningCheckerTestCase):
     def test_noWakerConstructionWarnings(self):
+        """
+        No warnings are generated when constructing the waker.
+        """
         waker = _Waker(reactor=None)
+
         warnings = self.flushWarnings()
-        # explicitly close the sockets
+        self.assertEqual(len(warnings), 0, warnings)
+
+        # Explicitly close the waker to leave a clean state at the end of the test.
         waker.connectionLost(None)
-        self.assertEqual(len(warnings), 0)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, warnings)

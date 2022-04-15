@@ -935,7 +935,7 @@ class ReactorBase(PluggableResolverMixin):
         if not self._pendingTimedCalls:
             return None
 
-        delay = self._pendingTimedCalls[0].time - cast(float, self.seconds())
+        delay = self._pendingTimedCalls[0].time - self.seconds()
 
         # Pick a somewhat arbitrary maximum possible value for the timeout.
         # This value is 2 ** 31 / 1000, which is the number of seconds which can
@@ -1330,7 +1330,7 @@ class _SignalReactorMixin:
                 log.msg("Unexpected error in main loop.")
                 log.err()
             else:
-                log.msg("Main loop terminated.")
+                log.msg("Main loop terminated.")  # type:ignore[unreachable]
 
 
 __all__: List[str] = []
