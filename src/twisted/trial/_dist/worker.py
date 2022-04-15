@@ -14,6 +14,8 @@ from typing import Dict, Optional
 
 from zope.interface import implementer
 
+from attrs import frozen
+
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
@@ -31,6 +33,17 @@ from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.runner import TestLoader, TrialSuite
 from twisted.trial.unittest import Todo
 from ..util import openTestLog
+
+
+@frozen(auto_exc=False)
+class WorkerException(Exception):
+    """
+    An exception was reported by a test running in a worker process.
+
+    :ivar message: An error message describing the exception.
+    """
+
+    message: str
 
 
 class WorkerProtocol(AMP):
