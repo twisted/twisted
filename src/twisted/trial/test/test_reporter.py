@@ -113,7 +113,9 @@ class TestResultTests(unittest.SynchronousTestCase):
         with self.assertRaises(TypeError):
             self.result.addError(self, Exception("an error"))
         with self.assertRaises(TypeError):
-            self.result.addError(self, (Exception, Exception("an error"), None, "extra"))
+            self.result.addError(
+                self, (Exception, Exception("an error"), None, "extra")
+            )
         with self.assertRaises(TypeError):
             self.result.addError(self, (Exception, Exception("an error")))
 
