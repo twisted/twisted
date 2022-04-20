@@ -1143,7 +1143,7 @@ def ensureDeferred(
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
     wrapping it in a L{Deferred} that will fire on success/failure of the
     coroutine. If a Deferred is passed to this function, it will be returned
-    directly (mimicing the L{asyncio.ensure_future} function).
+    directly (mimicking the L{asyncio.ensure_future} function).
 
     See L{Deferred.fromCoroutine} for examples of coroutines.
 
