@@ -10,8 +10,11 @@ This module implements the worker classes.
 """
 
 import os
+from typing import Dict, List, Optional
 
 from zope.interface import implementer
+
+from attrs import frozen
 
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IAddress, ITransport
@@ -30,6 +33,17 @@ from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.runner import TestLoader, TrialSuite
 from twisted.trial.unittest import Todo
 from ..util import openTestLog
+
+
+@frozen(auto_exc=False)
+class WorkerException(Exception):
+    """
+    An exception was reported by a test running in a worker process.
+
+    :ivar message: An error message describing the exception.
+    """
+
+    message: str
 
 
 class WorkerProtocol(AMP):
@@ -78,7 +92,12 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddSuccess.responder(addSuccess)
 
-    def _buildFailure(self, error, errorClass, frames):
+    def _buildFailure(
+        self,
+        error: WorkerException,
+        errorClass: str,
+        frames: List[str],
+    ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
 
@@ -100,21 +119,40 @@ class LocalWorkerAMP(AMP):
             )
         return failure
 
-    def addError(self, testName, error, errorClass, frames):
+    def addError(
+        self,
+        testName: str,
+        error: str,
+        errorClass: str,
+        frames: List[str],
+    ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
+
+        :param error: A message describing the error.
         """
-        failure = self._buildFailure(error, errorClass, frames)
+        # Wrap the error message in ``WorkerException`` because it is not
+        # possible to transfer arbitrary exception values over the AMP
+        # connection to the main process but we must give *some* Exception
+        # (not a str) to the test result object.
+        failure = self._buildFailure(WorkerException(error), errorClass, frames)
         self._result.addError(self._testCase, failure)
         return {"success": True}
 
     managercommands.AddError.responder(addError)
 
-    def addFailure(self, testName, fail, failClass, frames):
+    def addFailure(
+        self,
+        testName: str,
+        fail: str,
+        failClass: str,
+        frames: List[str],
+    ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
         """
-        failure = self._buildFailure(fail, failClass, frames)
+        # See addError for info about use of WorkerException here.
+        failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
         return {"success": True}
 
@@ -129,7 +167,9 @@ class LocalWorkerAMP(AMP):
 
     managercommands.AddSkip.responder(addSkip)
 
-    def addExpectedFailure(self, testName, error, todo):
+    def addExpectedFailure(
+        self, testName: str, error: str, todo: Optional[str]
+    ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """

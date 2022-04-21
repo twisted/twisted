@@ -25,6 +25,7 @@ from twisted.trial._dist.worker import (
     LocalWorker,
     LocalWorkerAMP,
     LocalWorkerTransport,
+    WorkerException,
     WorkerProtocol,
 )
 from twisted.trial.reporter import TestResult
@@ -157,7 +158,10 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.errors[0][0])
+        case, failure = self.result.errors[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, ValueError)
+        self.assertEqual(failure.value, WorkerException("error"))
         self.assertTrue(results)
 
     def test_runErrorWithFrames(self):
@@ -177,10 +181,11 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.errors[0][0])
-        self.assertEqual(
-            [("file.py", "invalid code", 3, [], [])], self.result.errors[0][1].frames
-        )
+        case, failure = self.result.errors[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, ValueError)
+        self.assertEqual(failure.value, WorkerException("error"))
+        self.assertEqual([("file.py", "invalid code", 3, [], [])], failure.frames)
         self.assertTrue(results)
 
     def test_runFailure(self):
@@ -199,7 +204,10 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.failures[0][0])
+        case, failure = self.result.failures[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, RuntimeError)
+        self.assertEqual(failure.value, WorkerException("fail"))
         self.assertTrue(results)
 
     def test_runSkip(self):
