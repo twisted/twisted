@@ -5,13 +5,14 @@
 Tests for L{twisted.conch.checkers}.
 """
 
+from typing import Optional
 
 try:
     import crypt
 except ImportError:
-    cryptSkip = "cannot run without crypt module"
+    cryptSkip: Optional[str] = "cannot run without crypt module"
 else:
-    cryptSkip = ""
+    cryptSkip = None
 
 import os
 from base64 import encodebytes
@@ -37,7 +38,7 @@ from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
-    dependencySkip = ""
+    dependencySkip = None
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.ssh import keys
@@ -46,9 +47,9 @@ else:
     dependencySkip = "can't run without cryptography and PyASN1"
 
 if getattr(os, "geteuid", None) is None:
-    euidSkip = "Cannot run without effective UIDs (questionable)"
+    euidSkip: Optional[str] = "Cannot run without effective UIDs (questionable)"
 else:
-    euidSkip = ""
+    euidSkip = None
 
 
 class HelperTests(TestCase):
@@ -762,7 +763,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
         self.assertEqual([], list(keydb.getAuthorizedKeys("bob")))
 
-    def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
+    def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self) -> None:
         """
         If the user is in the user database provided to
         L{checkers.UNIXAuthorizedKeysFiles}, an iterator with all the keys in

@@ -5,50 +5,20 @@
 """
 L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
+from __future__ import annotations
 
-from typing import List
+from typing import List, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from pwd import struct_passwd
+else:
+    from collections import namedtuple
+
+    struct_passwd = namedtuple(
+        "struct_passwd",
+        ["pw_name", "pw_passwd", "pw_uid", "pw_gid", "pw_gecos", "pw_dir", "pw_shell"],
+    )._make
 __all__ = ["UserDatabase", "ShadowDatabase"]
-
-
-class _UserRecord:
-    """
-    L{_UserRecord} holds the user data for a single user in L{UserDatabase}.
-    It corresponds to the C{passwd} structure from the L{pwd} module.
-    See that module for attribute documentation.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        password: str,
-        uid: int,
-        gid: int,
-        gecos: str,
-        home: str,
-        shell: str,
-    ) -> None:
-        self.pw_name = name
-        self.pw_passwd = password
-        self.pw_uid = uid
-        self.pw_gid = gid
-        self.pw_gecos = gecos
-        self.pw_dir = home
-        self.pw_shell = shell
-
-    def __len__(self) -> int:
-        return 7
-
-    def __getitem__(self, index):
-        return (
-            self.pw_name,
-            self.pw_passwd,
-            self.pw_uid,
-            self.pw_gid,
-            self.pw_gecos,
-            self.pw_dir,
-            self.pw_shell,
-        )[index]
 
 
 class UserDatabase:
@@ -56,11 +26,11 @@ class UserDatabase:
     L{UserDatabase} holds a traditional POSIX user data in memory and makes it
     available via the same API as L{pwd}.
 
-    @ivar _users: A C{list} of L{_UserRecord} instances holding all user data
+    @ivar _users: A C{list} of L{struct_passwd} instances holding all user data
         added to this database.
     """
 
-    _users: List[_UserRecord]
+    _users: List[struct_passwd]
 
     def __init__(self) -> None:
         self._users = []
@@ -100,10 +70,10 @@ class UserDatabase:
             add.
         """
         self._users.append(
-            _UserRecord(username, password, uid, gid, gecos, home, shell)
+            struct_passwd((username, password, uid, gid, gecos, home, shell))
         )
 
-    def getpwuid(self, uid: int) -> _UserRecord:
+    def getpwuid(self, uid: int) -> struct_passwd:
         """
         Return the user record corresponding to the given uid.
         """
@@ -112,18 +82,18 @@ class UserDatabase:
                 return entry
         raise KeyError()
 
-    def getpwnam(self, name: str) -> _UserRecord:
+    def getpwnam(self, name: str) -> struct_passwd:
         """
         Return the user record corresponding to the given username.
         """
         if not isinstance(name, str):
-            raise TypeError(f"getpwuam() argument must be str, not {type(name)}")
+            raise TypeError(f"getpwnam() argument must be str, not {type(name)}")
         for entry in self._users:
             if entry.pw_name == name:
                 return entry
-        raise KeyError()
+        raise KeyError(name)
 
-    def getpwall(self) -> List[_UserRecord]:
+    def getpwall(self) -> List[struct_passwd]:
         """
         Return a list of all user records.
         """

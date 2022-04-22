@@ -14,17 +14,17 @@ import hmac
 import random
 import re
 import time
-from binascii import hexlify
 from hashlib import md5
+from typing import Optional
 
-from zope.interface import Interface, implementer
-
+from binascii import hexlify
 from twisted.cred import error
 from twisted.cred._digest import calcHA1, calcHA2, calcResponse
 from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.versions import Version
+from zope.interface import Attribute, Interface, implementer
 
 
 class ICredentials(Interface):
@@ -495,6 +495,12 @@ class ISSHPrivateKey(ICredentials):
         owns the private key.
     @type signature: L{bytes} or L{None}
     """
+
+    username: bytes = Attribute("username")
+    algName: bytes = Attribute("algName")
+    blob: bytes = Attribute("blob")
+    sigData: bytes = Attribute("sigData")
+    signature: Optional[bytes] = Attribute("signature")
 
 
 @implementer(ISSHPrivateKey)

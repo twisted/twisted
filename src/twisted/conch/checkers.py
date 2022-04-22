@@ -7,11 +7,14 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
 
-import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import BinaryIO, Callable, Iterator
+from typing import Any, BinaryIO, Callable, Iterable, Iterator, List, Mapping, Optional, Union, Protocol as TypingProtocol
+
+import binascii
+from twisted.internet.defer import Deferred
+
 
 try:
     import pwd as _pwd
@@ -47,7 +50,7 @@ from twisted.python.util import runAsEffectiveUser
 _log = Logger()
 
 
-def _pwdGetByName(username):
+def _pwdGetByName(username: str) -> Optional[_pwd.struct_passwd]:
     """
     Look up a user in the /etc/passwd database using the pwd module.  If the
     pwd module is not available, return None.
@@ -58,7 +61,8 @@ def _pwdGetByName(username):
     """
     if pwd is None:
         return None
-    return pwd.getpwnam(username)
+    result: _pwd.struct_passwd = pwd.getpwnam(username)
+    return result
 
 
 def _shadowGetByName(username):
@@ -118,6 +122,14 @@ class UNIXPasswordDatabase:
         return defer.fail(UnauthorizedLogin("unable to verify password"))
 
 
+class _UserDB(TypingProtocol):
+    """
+    User database protocol from stdlib pwd module.
+    """
+
+    def getpwnam(self, username: str) -> _pwd.struct_passwd:
+        ...
+
 @implementer(ICredentialsChecker)
 class SSHPublicKeyDatabase:
     """
@@ -127,15 +139,12 @@ class SSHPublicKeyDatabase:
 
     credentialInterfaces = (ISSHPrivateKey,)
 
-    _userdb = pwd
+    _userdb: Optional[_UserDB] = pwd
 
-    def requestAvatarId(self, credentials):
-        d = defer.maybeDeferred(self.checkKey, credentials)
-        d.addCallback(self._cbRequestAvatarId, credentials)
-        d.addErrback(self._ebRequestAvatarId)
-        return d
+    def requestAvatarId(self, credentials: ISSHPrivateKey) -> Deferred[bytes]:
+        return defer.maybeDeferred(self.checkKey, credentials).addCallback(self._cbRequestAvatarId, credentials).addErrback(self._ebRequestAvatarId)
 
-    def _cbRequestAvatarId(self, validKey, credentials):
+    def _cbRequestAvatarId(self, validKey: bool, credentials: ISSHPrivateKey) -> Union[failure.Failure, bytes]:
         """
         Check whether the credentials themselves are valid, now that we know
         if the key matches the user.
@@ -170,7 +179,7 @@ class SSHPublicKeyDatabase:
                 return failure.Failure(UnauthorizedLogin("error while verifying key"))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
-    def getAuthorizedKeysFiles(self, credentials):
+    def getAuthorizedKeysFiles(self, credentials: ISSHPrivateKey) -> List[FilePath]:
         """
         Return a list of L{FilePath} instances for I{authorized_keys} files
         which might contain information about authorized keys for the given
@@ -186,17 +195,23 @@ class SSHPublicKeyDatabase:
 
         @return: A list of L{FilePath} instances to files with the authorized keys.
         """
-        pwent = self._userdb.getpwnam(credentials.username)
+        if self._userdb is None:
+            return []
+        pwent = self._userdb.getpwnam(credentials.username.decode("charmap"))
         root = FilePath(pwent.pw_dir).child(".ssh")
         files = ["authorized_keys", "authorized_keys2"]
         return [root.child(f) for f in files]
 
-    def checkKey(self, credentials):
+    def checkKey(self, credentials: ISSHPrivateKey) -> bool:
         """
         Retrieve files containing authorized keys and check against user
         credentials.
         """
-        ouid, ogid = self._userdb.getpwnam(credentials.username)[2:4]
+        if self._userdb is None:
+            # log something?
+            return False
+        pwent = self._userdb.getpwnam(credentials.username.decode("charmap"))
+        ouid, ogid = pwent[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
             if not filepath.exists():
                 continue
@@ -325,7 +340,7 @@ class IAuthorizedKeysDB(Interface):
     @since: 15.0
     """
 
-    def getAuthorizedKeys(avatarId):
+    def getAuthorizedKeys(avatarId: Union[bytes, str]) -> Iterable[keys.Key]:
         """
         Gets an iterable of authorized keys that are valid for the given
         C{avatarId}.
@@ -367,7 +382,7 @@ def readAuthorizedKeyFile(
                 )
 
 
-def _keysFromFilepaths(filepaths, parseKey):
+def _keysFromFilepaths(filepaths: Iterable[FilePath], parseKey: Callable[[bytes], keys.Key]) -> Iterable[keys.Key]:
     """
     Helper function that turns an iterable of filepaths into a generator of
     keys.  If any file cannot be read, a message is logged but it is
@@ -389,7 +404,8 @@ def _keysFromFilepaths(filepaths, parseKey):
         if fp.exists():
             try:
                 with fp.open() as f:
-                    yield from readAuthorizedKeyFile(f, parseKey)
+                    f1: BinaryIO = f  # type: ignore
+                    yield from readAuthorizedKeyFile(f1, parseKey)
             except OSError as e:
                 _log.error("Unable to read {path!r}: {error!s}", path=fp.path, error=e)
 
@@ -403,7 +419,7 @@ class InMemorySSHKeyDB:
     @since: 15.0
     """
 
-    def __init__(self, mapping):
+    def __init__(self, mapping: Mapping[str, Iterable[keys.Key]]) -> None:
         """
         Initializes a new L{InMemorySSHKeyDB}.
 
@@ -414,7 +430,9 @@ class InMemorySSHKeyDB:
         """
         self._mapping = mapping
 
-    def getAuthorizedKeys(self, username):
+    def getAuthorizedKeys(self, username: Union[bytes, str]) -> Iterable[keys.Key]:
+        if isinstance(username, bytes):
+            username = username.decode("utf-8")
         return self._mapping.get(username, [])
 
 
@@ -429,7 +447,7 @@ class UNIXAuthorizedKeysFiles:
     @since: 15.0
     """
 
-    def __init__(self, userdb=None, parseKey=keys.Key.fromString):
+    def __init__(self, userdb: Any=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString) -> None:
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
 
@@ -447,7 +465,9 @@ class UNIXAuthorizedKeysFiles:
         if userdb is None:
             self._userdb = pwd
 
-    def getAuthorizedKeys(self, username):
+    def getAuthorizedKeys(self, username: Union[bytes, str]) -> Iterable[keys.Key]:
+        if isinstance(username, bytes):
+            username = username.decode("charmap")
         try:
             passwd = self._userdb.getpwnam(username)
         except KeyError:
