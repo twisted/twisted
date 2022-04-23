@@ -207,9 +207,7 @@ class SSHPublicKeyDatabase:
         Retrieve files containing authorized keys and check against user
         credentials.
         """
-        if self._userdb is None:
-            # log something?
-            return False
+        assert self._userdb is not None, "userdb should always be set to something"
         pwent = self._userdb.getpwnam(credentials.username.decode("charmap"))
         ouid, ogid = pwent[2:4]
         for filepath in self.getAuthorizedKeysFiles(credentials):
@@ -447,7 +445,7 @@ class UNIXAuthorizedKeysFiles:
     @since: 15.0
     """
 
-    def __init__(self, userdb: Any=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString) -> None:
+    def __init__(self, userdb: Optional[_UserDB]=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString) -> None:
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
 
@@ -466,6 +464,7 @@ class UNIXAuthorizedKeysFiles:
             self._userdb = pwd
 
     def getAuthorizedKeys(self, username: Union[bytes, str]) -> Iterable[keys.Key]:
+        assert self._userdb is not None, "userdb should be set by this point"
         if isinstance(username, bytes):
             username = username.decode("charmap")
         try:

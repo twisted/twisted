@@ -5,7 +5,8 @@
 Tests for L{twisted.conch.checkers}.
 """
 
-from typing import Optional
+from typing import List, Optional, cast
+
 
 try:
     import crypt
@@ -160,7 +161,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
     skip = euidSkip or dependencySkip
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.checker = checkers.SSHPublicKeyDatabase()
         self.key1 = encodebytes(b"foobar")
         self.key2 = encodebytes(b"eggspam")
@@ -175,13 +176,13 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
         userdb = UserDatabase()
         userdb.addUser(
-            b"user",
-            b"password",
+            "user",
+            "password",
             1,
             2,
-            b"first last",
-            self.mockos.path.path,
-            b"/bin/shell",
+            "first last",
+            self.mockos.path.asTextMode().path,
+            "/bin/shell",
         )
         self.checker._userdb = userdb
 
@@ -229,7 +230,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
-    def test_checkKeyAsRoot(self):
+    def test_checkKeyAsRoot(self) -> None:
         """
         If the key file is readable, L{SSHPublicKeyDatabase.checkKey} should
         switch its uid/gid to the ones of the authenticated user.
@@ -242,7 +243,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
         # And restore the right mode when seteuid is called
         savedSeteuid = self.mockos.seteuid
 
-        def seteuid(euid):
+        def seteuid(euid: int) -> None:
             keyFile.chmod(0o777)
             return savedSeteuid(euid)
 
@@ -250,8 +251,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.mockos.egid = 1234
         self.patch(self.mockos, "seteuid", seteuid)
         self.patch(util, "os", self.mockos)
-        user = UsernamePassword(b"user", b"password")
-        user.blob = b"foobar"
+        user = SSHPrivateKey(b'user', b'fakeAlg', b'foobar', b'fake sig data', b'fake sig')
         self.assertTrue(self.checker.checkKey(user))
         self.assertEqual(self.mockos.seteuidCalls, [0, 1, 0, 2345])
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])
@@ -706,14 +706,15 @@ class InMemorySSHKeyDBTests(TestCase):
         keydb = checkers.InMemorySSHKeyDB({b"alice": [b"keys"]})
         self.assertEqual([], list(keydb.getAuthorizedKeys(b"bob")))
 
-    def test_allKeysForAuthorizedUser(self):
+    def test_allKeysForAuthorizedUser(self) -> None:
         """
         If the user is in the mapping provided to
         L{checkers.InMemorySSHKeyDB}, an iterator with all the keys
         is returned by L{checkers.InMemorySSHKeyDB.getAuthorizedKeys}
         """
-        keydb = checkers.InMemorySSHKeyDB({b"alice": [b"a", b"b"]})
-        self.assertEqual([b"a", b"b"], list(keydb.getAuthorizedKeys(b"alice")))
+        fake_keys: List[keys.Key] = [b"a", b"b"]  # type: ignore
+        keydb = checkers.InMemorySSHKeyDB({"alice": fake_keys})
+        self.assertEqual(fake_keys, list(keydb.getAuthorizedKeys(b"alice")))
 
 
 class UNIXAuthorizedKeysFilesTests(TestCase):
@@ -723,20 +724,20 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
 
     skip = dependencySkip
 
-    def setUp(self):
+    def setUp(self) -> None:
         mockos = MockOS()
         mockos.path = FilePath(self.mktemp())
         mockos.path.makedirs()
 
         self.userdb = UserDatabase()
         self.userdb.addUser(
-            b"alice",
-            b"password",
+            "alice",
+            "password",
             1,
             2,
-            b"alice lastname",
-            mockos.path.path,
-            b"/bin/shell",
+            "alice lastname",
+            mockos.path.asTextMode().path,
+            "/bin/shell",
         )
 
         self.sshDir = mockos.path.child(".ssh")
@@ -744,9 +745,15 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         authorizedKeys = self.sshDir.child("authorized_keys")
         authorizedKeys.setContent(b"key 1\nkey 2")
 
-        self.expectedKeys = [b"key 1", b"key 2"]
+        self.expectedKeys = [b"key 1 key", b"key 2 key"]
 
-    def test_implementsInterface(self):
+    def _keyParser(self, x: bytes) -> keys.Key:
+        """
+        Fake parser for keys so we can easily identify/compare them.
+        """
+        return cast(keys.Key, x + b" key")
+
+    def test_implementsInterface(self) -> None:
         """
         L{checkers.UNIXAuthorizedKeysFiles} implements
         L{checkers.IAuthorizedKeysDB}.
@@ -754,13 +761,13 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb)
         verifyObject(checkers.IAuthorizedKeysDB, keydb)
 
-    def test_noKeysForUnauthorizedUser(self):
+    def test_noKeysForUnauthorizedUser(self) -> None:
         """
         If the user is not in the user database provided to
         L{checkers.UNIXAuthorizedKeysFiles}, an empty iterator is returned
         by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}.
         """
-        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=self._keyParser)
         self.assertEqual([], list(keydb.getAuthorizedKeys("bob")))
 
     def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self) -> None:
@@ -771,28 +778,28 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}.
         """
         self.sshDir.child("authorized_keys2").setContent(b"key 3")
-        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=self._keyParser)
         self.assertEqual(
-            self.expectedKeys + [b"key 3"], list(keydb.getAuthorizedKeys(b"alice"))
+            self.expectedKeys + [b"key 3 key"], list(keydb.getAuthorizedKeys(b"alice"))
         )
 
-    def test_ignoresNonexistantFile(self):
+    def test_ignoresNonexistantFile(self) -> None:
         """
         L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys} returns only
         the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
         if they exist.
         """
-        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=self._keyParser)
         self.assertEqual(self.expectedKeys, list(keydb.getAuthorizedKeys(b"alice")))
 
-    def test_ignoresUnreadableFile(self):
+    def test_ignoresUnreadableFile(self) -> None:
         """
         L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys} returns only
         the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
         if they are readable.
         """
         self.sshDir.child("authorized_keys2").makedirs()
-        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=self._keyParser)
         self.assertEqual(self.expectedKeys, list(keydb.getAuthorizedKeys(b"alice")))
 
 

@@ -461,11 +461,11 @@ class UsernameHashedPassword:
 
 @implementer(IUsernamePassword)
 class UsernamePassword:
-    def __init__(self, username, password):
+    def __init__(self, username: bytes, password: bytes) -> None:
         self.username = username
         self.password = password
 
-    def checkPassword(self, password):
+    def checkPassword(self, password: bytes) -> bool:
         return self.password == password
 
 
@@ -505,7 +505,7 @@ class ISSHPrivateKey(ICredentials):
 
 @implementer(ISSHPrivateKey)
 class SSHPrivateKey:
-    def __init__(self, username, algName, blob, sigData, signature):
+    def __init__(self, username: bytes, algName: bytes, blob: bytes, sigData: bytes, signature: Optional[bytes]):
         self.username = username
         self.algName = algName
         self.blob = blob

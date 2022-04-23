@@ -26,7 +26,9 @@ import os
 import signal
 import stat
 import sys
+from typing import Optional
 from unittest import skipIf
+
 
 try:
     import fcntl
@@ -1287,7 +1289,7 @@ class MockOS:
     waitChild = None
     euid = 0
     egid = 0
-    path = None
+    path: Optional[FilePath] = None
     raiseKill = None
     readData = b""
 
@@ -1510,7 +1512,7 @@ class MockOS:
         """
         return self.egid
 
-    def seteuid(self, egid):
+    def seteuid(self, egid: int) -> None:
         """
         Mock C{os.seteuid}, store result.
         """
