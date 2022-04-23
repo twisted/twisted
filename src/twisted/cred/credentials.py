@@ -14,17 +14,18 @@ import hmac
 import random
 import re
 import time
+from binascii import hexlify
 from hashlib import md5
 from typing import Optional
 
-from binascii import hexlify
+from zope.interface import Attribute, Interface, implementer
+
 from twisted.cred import error
 from twisted.cred._digest import calcHA1, calcHA2, calcResponse
 from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.versions import Version
-from zope.interface import Attribute, Interface, implementer
 
 
 class ICredentials(Interface):
@@ -505,7 +506,14 @@ class ISSHPrivateKey(ICredentials):
 
 @implementer(ISSHPrivateKey)
 class SSHPrivateKey:
-    def __init__(self, username: bytes, algName: bytes, blob: bytes, sigData: bytes, signature: Optional[bytes]):
+    def __init__(
+        self,
+        username: bytes,
+        algName: bytes,
+        blob: bytes,
+        sigData: bytes,
+        signature: Optional[bytes],
+    ):
         self.username = username
         self.algName = algName
         self.blob = blob

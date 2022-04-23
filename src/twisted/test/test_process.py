@@ -29,7 +29,6 @@ import sys
 from typing import Optional
 from unittest import skipIf
 
-
 try:
     import fcntl
 except ImportError:

@@ -7,7 +7,6 @@ Tests for L{twisted.conch.checkers}.
 
 from typing import List, Optional, cast
 
-
 try:
     import crypt
 except ImportError:
@@ -251,7 +250,9 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.mockos.egid = 1234
         self.patch(self.mockos, "seteuid", seteuid)
         self.patch(util, "os", self.mockos)
-        user = SSHPrivateKey(b'user', b'fakeAlg', b'foobar', b'fake sig data', b'fake sig')
+        user = SSHPrivateKey(
+            b"user", b"fakeAlg", b"foobar", b"fake sig data", b"fake sig"
+        )
         self.assertTrue(self.checker.checkKey(user))
         self.assertEqual(self.mockos.seteuidCalls, [0, 1, 0, 2345])
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])

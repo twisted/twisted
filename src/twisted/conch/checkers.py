@@ -7,14 +7,24 @@ Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
 
+import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import Any, BinaryIO, Callable, Iterable, Iterator, List, Mapping, Optional, Union, Protocol as TypingProtocol
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Protocol as TypingProtocol,
+    Union,
+)
 
-import binascii
 from twisted.internet.defer import Deferred
-
 
 try:
     import pwd as _pwd
@@ -130,6 +140,7 @@ class _UserDB(TypingProtocol):
     def getpwnam(self, username: str) -> _pwd.struct_passwd:
         ...
 
+
 @implementer(ICredentialsChecker)
 class SSHPublicKeyDatabase:
     """
@@ -142,9 +153,15 @@ class SSHPublicKeyDatabase:
     _userdb: Optional[_UserDB] = pwd
 
     def requestAvatarId(self, credentials: ISSHPrivateKey) -> Deferred[bytes]:
-        return defer.maybeDeferred(self.checkKey, credentials).addCallback(self._cbRequestAvatarId, credentials).addErrback(self._ebRequestAvatarId)
+        return (
+            defer.maybeDeferred(self.checkKey, credentials)
+            .addCallback(self._cbRequestAvatarId, credentials)
+            .addErrback(self._ebRequestAvatarId)
+        )
 
-    def _cbRequestAvatarId(self, validKey: bool, credentials: ISSHPrivateKey) -> Union[failure.Failure, bytes]:
+    def _cbRequestAvatarId(
+        self, validKey: bool, credentials: ISSHPrivateKey
+    ) -> Union[failure.Failure, bytes]:
         """
         Check whether the credentials themselves are valid, now that we know
         if the key matches the user.
@@ -380,7 +397,9 @@ def readAuthorizedKeyFile(
                 )
 
 
-def _keysFromFilepaths(filepaths: Iterable[FilePath], parseKey: Callable[[bytes], keys.Key]) -> Iterable[keys.Key]:
+def _keysFromFilepaths(
+    filepaths: Iterable[FilePath], parseKey: Callable[[bytes], keys.Key]
+) -> Iterable[keys.Key]:
     """
     Helper function that turns an iterable of filepaths into a generator of
     keys.  If any file cannot be read, a message is logged but it is
@@ -445,7 +464,11 @@ class UNIXAuthorizedKeysFiles:
     @since: 15.0
     """
 
-    def __init__(self, userdb: Optional[_UserDB]=None, parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString) -> None:
+    def __init__(
+        self,
+        userdb: Optional[_UserDB] = None,
+        parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString,
+    ) -> None:
         """
         Initializes a new L{UNIXAuthorizedKeysFiles}.
 

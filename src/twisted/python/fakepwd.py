@@ -7,7 +7,7 @@ L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from pwd import struct_passwd
@@ -30,7 +30,7 @@ class UserDatabase:
         added to this database.
     """
 
-    _users: List[struct_passwd]
+    _users: list[struct_passwd]
 
     def __init__(self) -> None:
         self._users = []
@@ -93,7 +93,7 @@ class UserDatabase:
                 return entry
         raise KeyError(name)
 
-    def getpwall(self) -> List[struct_passwd]:
+    def getpwall(self) -> list[struct_passwd]:
         """
         Return a list of all user records.
         """
@@ -157,7 +157,7 @@ class ShadowDatabase:
     @since: 12.0
     """
 
-    _users: List[_ShadowRecord]
+    _users: list[_ShadowRecord]
 
     def __init__(self) -> None:
         self._users = []
