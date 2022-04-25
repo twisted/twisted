@@ -634,8 +634,9 @@ class OpenTestLogTests(SynchronousTestCase):
         The log file is opened in append mode so if runner configuration specifies
         an existing log file its contents are not wiped out.
         """
-        existingText = "Hello, world.\n"
+        existingText = "Hello, world.\n "
         newText = "Goodbye, world.\n"
+        expected = f"Hello, world.{os.linesep} Goodbye, world.{os.linesep}"
         p = filepath.FilePath(self.mktemp())
         with openTestLog(p) as f:
             f.write(existingText)
@@ -644,5 +645,5 @@ class OpenTestLogTests(SynchronousTestCase):
 
         assert_that(
             p.getContent().decode("utf-8"),
-            equal_to(existingText + newText),
+            equal_to(expected),
         )

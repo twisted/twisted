@@ -1126,11 +1126,10 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
-        # type note: Subclass of "Generator[Deferred[_T], object, _T]" and "GeneratorType" cannot exist
-        if not iscoroutine(coro) and not isinstance(coro, GeneratorType):
-            raise NotACoroutineError(f"{coro!r} is not a coroutine")
-
-        return _cancellableInlineCallbacks(coro)
+        # asyncio.iscoroutine identifies generators as coroutines, too.
+        if iscoroutine(coro):
+            return _cancellableInlineCallbacks(coro)
+        raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
 
 def ensureDeferred(
