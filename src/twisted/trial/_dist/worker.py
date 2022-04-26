@@ -3,6 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
 """
 This module implements the worker classes.
 
@@ -10,7 +12,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Dict, List, Optional, TextIO
+from typing import Awaitable, Callable, Dict, List, Optional, Protocol, TextIO, TypeVar
 
 from zope.interface import implementer
 
@@ -31,8 +33,9 @@ from twisted.trial._dist import (
     workercommands,
 )
 from twisted.trial._dist.workerreporter import WorkerReporter
+from twisted.trial.reporter import TestResult
 from twisted.trial.runner import TestLoader, TrialSuite
-from twisted.trial.unittest import Todo
+from twisted.trial.unittest import TestCase, Todo
 
 
 @frozen(auto_exc=False)
@@ -44,6 +47,21 @@ class WorkerException(Exception):
     """
 
     message: str
+
+
+class Worker(Protocol):
+    """
+    An object that can run actions.
+    """
+
+    async def run(self, case: TestCase, result: TestResult) -> None:
+        """
+        Run a test case.
+        """
+
+
+_T = TypeVar("_T")
+WorkerAction = Callable[[Worker], Awaitable[_T]]
 
 
 class WorkerProtocol(AMP):

@@ -12,7 +12,15 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 from functools import partial
-from typing import Iterable, List, Optional, Sequence, TextIO, Union, cast
+from typing import (
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TextIO,
+    Union,
+    cast,
+)
 from unittest import TestSuite
 
 from attrs import define
@@ -32,7 +40,7 @@ from ..util import _unusedTestDirectory, openTestLog
 from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from .distreporter import DistReporter
 from .functional import countingCalls, fromOptional, iterateWhile, parallel, void
-from .worker import LocalWorker, LocalWorkerAMP
+from .worker import WorkerAction, LocalWorker, LocalWorkerAMP
 
 
 class IDistTrialReactor(IReactorCore, IReactorProcess):
@@ -91,11 +99,12 @@ class StartedWorkerPool:
 
     _logger = Logger()
 
-    async def run(self, workerAction):
+    async def run(self, workerAction: WorkerAction) -> None:
         """
         Run an action on all of the workers in the pool.
         """
         await parallel(void(workerAction(worker)) for worker in self.ampWorkers)
+        return None
 
     async def join(self) -> None:
         """

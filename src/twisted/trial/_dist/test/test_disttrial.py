@@ -5,6 +5,8 @@
 Tests for L{twisted.trial._dist.disttrial}.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 from functools import partial
@@ -24,11 +26,16 @@ from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
+from twisted.trial._dist.disttrial import (
+    DistTrialRunner,
+    WorkerPool,
+    WorkerPoolConfig,
+)
 from twisted.trial._dist.functional import countingCalls, iterateWhile, sequence, void
-from twisted.trial._dist.worker import LocalWorker
+from twisted.trial._dist.worker import LocalWorker, WorkerAction
 from twisted.trial.reporter import (
     Reporter,
+    TestResult,
     TreeReporter,
     UncleanWarningsReporterWrapper,
 )
@@ -508,37 +515,58 @@ class FunctionalTests(TestCase):
 
 
 class WorkerPoolBroken(Exception):
-    pass
+    """
+    An exception for ``StartedWorkerPoolBroken`` to fail with to allow tests
+    to exercise exception code paths.
+    """
 
 
 @define
 class BrokenWorkerPool:
+    """
+    A worker pool that has workers with a broken ``run`` method.
+    """
+
     _config: WorkerPoolConfig
 
-    async def start(self, reactor):
+    async def start(
+        self, reactor: interfaces.IReactorProcess
+    ) -> StartedWorkerPoolBroken:
         return StartedWorkerPoolBroken()
 
 
 class StartedWorkerPoolBroken:
-    async def run(self, workerAction):
+    """
+    A broken, started worker pool.  Its workers cannot run actions.  They
+    always raise an exception.
+    """
+
+    async def run(self, workerAction: WorkerAction) -> None:
         raise WorkerPoolBroken()
 
-    async def join(self):
-        return succeed(None)
+    async def join(self) -> None:
+        return None
 
 
 class _LocalWorker:
-    async def run(self, case, result):
+    async def run(self, case: TestCase, result: TestResult) -> None:
         TrialSuite([case]).run(result)
 
 
 @define
 class StartedLocalWorkerPool:
+    """
+    A started L{LocalWorkerPool}.
+    """
+
     workingDirectory: FilePath
     workers: List[_LocalWorker]
     _stopped: Deferred
 
-    async def run(self, workerAction):
+    async def run(self, workerAction: WorkerAction) -> None:
+        """
+        Run the action with each local worker.
+        """
         for worker in self.workers:
             await workerAction(worker)
 
@@ -557,7 +585,9 @@ class LocalWorkerPool:
     _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
     _autostop: bool = False
 
-    async def start(self, reactor):
+    async def start(
+        self, reactor: interfaces.IReactorProcess
+    ) -> StartedLocalWorkerPool:
         workers = [_LocalWorker() for i in range(self._config.numWorkers)]
         started = StartedLocalWorkerPool(
             self._config.workingDirectory,
