@@ -443,20 +443,25 @@ class DistTrialRunner:
         """
         See ``run``.
         """
-        result: List[Union[Failure, DistReporter]] = []
+        result: Union[Failure, DistReporter]
+
+        def capture(r):
+            nonlocal result
+            result = r
+
         d = Deferred.fromCoroutine(self.runAsync(suite, reactor, *args, **kwargs))
-        d.addBoth(result.append)
+        d.addBoth(capture)
         d.addBoth(lambda ignored: reactor.stop())
         reactor.run()
 
-        if isinstance(result[0], Failure):
-            result[0].raiseException()
+        if isinstance(result, Failure):
+            result.raiseException()
 
         # mypy can't see that raiseException raises an exception so we can
-        # only get here if result[0] is not a Failure, so tell mypy to ignore
-        # the error it sees here (of returning a Union[Failure, DistReporter]
-        # when it wants a DistReporter).
-        return result[0]  # type: ignore [return-value]
+        # only get here if result is not a Failure, so tell mypy to ignore the
+        # error it sees here (of returning a Union[Failure, DistReporter] when
+        # it wants a DistReporter).
+        return result  # type: ignore [return-value]
 
     def runUntilFailure(self, suite):
         """
