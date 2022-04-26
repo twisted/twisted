@@ -1,3 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+General functional-style helpers for disttrial.
+"""
+
 from functools import partial, wraps
 from typing import Awaitable, Callable, Iterable, Optional, Sequence, TypeVar
 

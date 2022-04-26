@@ -14,7 +14,7 @@ from typing import List
 from zope.interface import implementer, verify
 
 from attrs import Factory, define, field
-from hamcrest import assert_that, equal_to, has_length
+from hamcrest import assert_that, equal_to, has_length, none
 
 from twisted.internet import interfaces
 from twisted.internet.defer import Deferred, succeed
@@ -25,6 +25,7 @@ from twisted.python.lockfile import FilesystemLock
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
+from twisted.trial._dist.functional import countingCalls, iterateWhile, sequence, void
 from twisted.trial._dist.worker import LocalWorker
 from twisted.trial.reporter import (
     Reporter,
@@ -435,6 +436,75 @@ class DistTrialRunnerTests(TestCase):
             case.n,
             "expected to see per-iteration test count in output",
         )
+
+
+class FunctionalTests(TestCase):
+    """
+    Tests for the functional helpers that need it.
+    """
+
+    def test_void(self) -> None:
+        """
+        ``void`` accepts an awaitable and returns a ``Deferred`` that fires with
+        ``None`` after the awaitable completes.
+        """
+        a: Deferred[str] = Deferred()
+        d = void(a)
+        self.assertNoResult(d)
+        a.callback("result")
+        assert_that(self.successResultOf(d), none())
+
+    def test_sequence(self):
+        """
+        ``sequence`` accepts two awaitables and returns an awaitable that waits
+        for the first one to complete and then completes with the result of
+        the second one.
+        """
+        a: Deferred[str] = Deferred()
+        b: Deferred[int] = Deferred()
+        c = Deferred.fromCoroutine(sequence(a, b))
+        b.callback(42)
+        self.assertNoResult(c)
+        a.callback("hello")
+        assert_that(self.successResultOf(c), equal_to(42))
+
+    def test_iterateWhile(self):
+        """
+        ``iterateWhile`` executes the actions from its factory until the predicate
+        does not match an action result.
+        """
+        actions: List[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
+
+        def predicate(value):
+            return value != 42
+
+        d: Deferred[int] = Deferred.fromCoroutine(
+            iterateWhile(predicate, list(actions).pop)
+        )
+        # Let the action it is waiting on complete
+        actions.pop().callback(7)
+
+        # It does not match the predicate so it is not done yet.
+        self.assertNoResult(d)
+
+        # Let the action it is waiting on now complete - with the result it
+        # wants.
+        actions.pop().callback(42)
+
+        assert_that(self.successResultOf(d), equal_to(42))
+
+    def test_countingCalls(self):
+        """
+        ``countingCalls`` decorates a function so that it is called with an
+        increasing counter and passes the return value through.
+        """
+
+        @countingCalls
+        def target(n: int) -> int:
+            return n + 1
+
+        for expected in range(1, 10):
+            assert_that(target(), equal_to(expected))
 
 
 class WorkerPoolBroken(Exception):
