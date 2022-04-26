@@ -60,7 +60,7 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          - python-version: '3.7.0'
+          - python-version: '3.7.1'
             tox-env: nodeps-withcov-posix
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
@@ -240,18 +240,5 @@ jobs:
     runs-on: ubuntu-latest
     needs: [testing, static-checks, release-publish]
     steps:
-
-    - name: Fail the job if testing is not success
-      if: ${{ needs.testing.result != 'success'}}
-      run: exit 1
-
-    - name: Fail the job if static-checks is not success
-      if: ${{ needs.static-checks.result != 'success'}}
-      run: exit 1
-
-    - name: Fail the job if release-publish is not success
-      if: ${{ needs.release-publish.result != 'success'}}
-      run: exit 1
-
     - name: note that all tests succeeded
       run: echo "🎉"
