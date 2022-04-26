@@ -15,7 +15,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
 from sys import exc_info, version_info
-from types import GeneratorType, MappingProxyType
+from types import CoroutineType, GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -171,13 +171,22 @@ def maybeDeferred(
     f: Callable[..., _T], *args: object, **kwargs: object
 ) -> "Deferred[_T]":
     """
-    Invoke a function that may or may not return a L{Deferred}.
+    Invoke a function that may or may not return a L{Deferred} or coroutine.
 
-    Call the given function with the given arguments.  If the returned
-    object is a L{Deferred}, return it.  If the returned object is a L{Failure},
-    wrap it with L{fail} and return it.  Otherwise, wrap it in L{succeed} and
-    return it.  If an exception is raised, convert it to a L{Failure}, wrap it
-    in L{fail}, and then return it.
+    Call the given function with the given arguments.  Then:
+
+      - If the returned object is a L{Deferred}, return it.
+
+      - If the returned object is a L{Failure}, wrap it with L{fail} and
+        return it.
+
+      - If the returned object is a L{types.CoroutineType}, wrap it with
+        L{Deferred.fromCoroutine} and return it.
+
+      - Otherwise, wrap it in L{succeed} and return it.
+
+      - If an exception is raised, convert it to a L{Failure}, wrap it in
+        L{fail}, and then return it.
 
     @param f: The callable to invoke
     @param args: The arguments to pass to C{f}
@@ -195,6 +204,25 @@ def maybeDeferred(
         return result
     elif isinstance(result, Failure):
         return fail(result)
+    elif type(result) is CoroutineType:
+        # A note on how we identify this case ...
+        #
+        # inspect.iscoroutinefunction(f) should be the simplest and easiest
+        # way to determine if we want to apply coroutine handling.  However,
+        # the value may be returned by a regular function that calls a
+        # coroutine function and returns its result.  It would be confusing if
+        # cases like this led to different handling of the coroutine (even
+        # though it is a mistake to have a regular function call a coroutine
+        # function to return its result - doing so immediately destroys a
+        # large part of the value of coroutine functions: that they can only
+        # have a coroutine result).
+        #
+        # There are many ways we could inspect ``result`` to determine if it
+        # is a "coroutine" but most of these are mistakes.  The goal is only
+        # to determine whether the value came from ``async def`` or not
+        # because these are the only values we're trying to handle with this
+        # case.  Such values always have exactly one type: CoroutineType.
+        return Deferred.fromCoroutine(result)
     else:
         return succeed(result)
 
