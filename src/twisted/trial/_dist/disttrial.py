@@ -13,6 +13,8 @@ import os
 import sys
 from functools import partial
 from typing import (
+    Callable,
+    Awaitable,
     Iterable,
     List,
     Optional,
@@ -233,6 +235,24 @@ def shouldContinue(untilFailure: bool, result: IReporter) -> bool:
     return untilFailure and result.wasSuccessful()
 
 
+async def runTests(
+    pool: StartedWorkerPool,
+    testCases: Sequence[ITestCase],
+    result: DistReporter,
+    driveWorker: Callable[
+        [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
+    ],
+) -> None:
+    try:
+        # Run the tests using the worker pool.
+        await pool.run(partial(driveWorker, result, iter(testCases)))
+    except Exception:
+        # Exceptions from test code are handled somewhere else.  An
+        # exception here is a bug in the runner itself.  The only
+        # convenient place to put it is in the result, though.
+        result.original.addError(TestHolder("<runTests>"), Failure())
+
+
 class DistTrialRunner:
     """
     A specialized runner for distributed trial. The runner launches a number of
@@ -360,36 +380,6 @@ class DistTrialRunner:
             ),
         )
 
-        async def runTests(
-            pool: StartedWorkerPool,
-            testCases: Sequence[ITestCase],
-            n: int,
-        ) -> DistReporter:
-            if untilFailure:
-                # If and only if we're running the suite more than once,
-                # provide a report about which run this is.
-                self._stream.write(f"Test Pass {n + 1}\n")
-
-            # Create a brand new test result object for this iteration and run the
-            # test suite with it.
-            result = self._makeResult()
-
-            try:
-                # Run the tests using the worker pool.
-                await pool.run(partial(self._driveWorker, result, iter(testCases)))
-            except Exception:
-                # Exceptions from test code are handled somewhere else.  An
-                # exception here is a bug in the runner itself.  The only
-                # convenient place to put it is in the result, though.
-                result.original.addError(TestHolder("<runTests>"), Failure())
-
-            # Report the result.
-            self.writeResults(result)
-
-            # Make it available elsewhere, eg to determine if another run
-            # should be performed.
-            return result
-
         # Announce that we're beginning.  countTestCases result is preferred
         # (over len(testCases)) because testCases may contain synthetic cases
         # for error reporting purposes.
@@ -397,14 +387,33 @@ class DistTrialRunner:
 
         # Start the worker pool.
         startedPool = await poolStarter.start(reactor)
+
+        # The condition that will determine whether the test run repeats.
+        condition = partial(shouldContinue, untilFailure)
+
+        # A function that will run the whole suite once.
+        @countingCalls
+        async def runAndReport(n: int) -> DistReporter:
+            if untilFailure:
+                # If and only if we're running the suite more than once,
+                # provide a report about which run this is.
+                self._stream.write(f"Test Pass {n + 1}\n")
+
+            result = self._makeResult()
+            await runTests(
+                startedPool,
+                testCases,
+                result,
+                self._driveWorker,
+            )
+            self.writeResults(result)
+            return result
+
         try:
             # Start submitting tests to workers in the pool.  Perhaps repeat
             # the whole test suite more than once, if appropriate for our
             # configuration.
-            return await iterateWhile(
-                partial(shouldContinue, untilFailure),
-                countingCalls(partial(runTests, startedPool, testCases)),
-            )
+            return await iterateWhile(condition, runAndReport)
         finally:
             # Shut down the worker pool.
             await startedPool.join()
