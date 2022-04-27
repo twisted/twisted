@@ -37,11 +37,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Run on the minimum micro Python version that we can get on CI.
-        # When updating the minimum Python version here, also update the
-        # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-rc.1]
+        python-version: ['3.8', '3.9', '3.10']
         tox-env: ['alldeps-withcov-posix']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
@@ -49,28 +46,30 @@ jobs:
         trial-target: ['']
 
         include:
-
+          # `noipv6` is created to make sure all is OK on an OS which doesn't
+          # have IPv6 available.
+          # Any supported Python version is OK for this job.
+          - python-version: '3.7'
+            tox-env: alldeps-withcov-posix
+            noipv6: -noipv6
           # `nodeps` is created to make sure we don't have import errors in the
           # runtime and production code.
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
           # Distributed test run is disabled here so that we also have
           # end to end functional test usage for non-distributed trial runs.
-          - python-version: 3.6.7
+          # When updating the minimum Python version here, also update the
+          # `python_requires` from `setup.cfg`.
+          - python-version: '3.7.1'
             tox-env: nodeps-withcov-posix
-          # `noipv6` is created to make sure all is OK on an OS which doesn't
-          # have IPv6 available.
-          # Any supported Python version is OK for this job.
-          - python-version: 3.6
-            tox-env: alldeps-withcov-posix
-            noipv6: -noipv6
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
           - python-version: pypy-3.7
             tox-env: alldeps-nocov-posix
-          # We still run some tests with coverage
+          # We still run some tests with coverage,
+          # as there are test with specific code branches for pypy.
           - python-version: pypy-3.7
             tox-env: alldeps-withcov-posix
             trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
@@ -235,7 +234,9 @@ jobs:
 
 
   all-successful:
-    # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
+    # We have this job so that the PR can be blocked on a single job.
+    # See GitHub support answer for this hack.
+    # https://gist.github.com/altendky/2e3483a1f7e1ba21cc97de75db9b7d1c
     runs-on: ubuntu-latest
     needs: [testing, static-checks, release-publish]
     steps:
