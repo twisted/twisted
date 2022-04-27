@@ -11,7 +11,6 @@ import os
 import sys
 from functools import partial
 from io import StringIO
-from typing import List
 
 from zope.interface import implementer, verify
 
