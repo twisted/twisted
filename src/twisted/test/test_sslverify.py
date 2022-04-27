@@ -3341,31 +3341,19 @@ class SelectVerifyImplementationTests(SynchronousTestCase):
             if warning["category"] == UserWarning
         )
 
-        importErrors = [
-            # Python 3.6.3
-            "'import of service_identity halted; None in sys.modules'",
-            # Python 3
-            "'import of 'service_identity' halted; None in sys.modules'",
-            # Python 2
-            "'No module named service_identity'",
-        ]
+        expectedMessage = (
+            "You do not have a working installation of the "
+            "service_identity module: "
+            "'import of service_identity halted; None in sys.modules'.  "
+            "Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> "
+            "and make sure all of its dependencies are satisfied.  "
+            "Without the service_identity module, Twisted can perform only"
+            " rudimentary TLS client hostname verification.  Many valid "
+            "certificate/hostname mappings may be rejected."
+        )
 
-        expectedMessages = []
-        for importError in importErrors:
-            expectedMessages.append(
-                "You do not have a working installation of the "
-                "service_identity module: {message}.  Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module, Twisted can perform only"
-                " rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.".format(
-                    message=importError
-                )
-            )
-
-        self.assertIn(warning["message"], expectedMessages)
-
+        self.assertEqual(warning["message"], expectedMessage)
         # Make sure we're abusing the warning system to a sufficient
         # degree: there is no filename or line number that makes sense for
         # this warning to "blame" for the problem.  It is a system
