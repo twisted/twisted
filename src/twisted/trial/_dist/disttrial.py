@@ -426,9 +426,16 @@ class DistTrialRunner:
         """
         import twisted.internet.reactor as defaultReactor
 
-        defaultReactor_ = IReactorCore(IReactorProcess(defaultReactor, None), None)
-        if defaultReactor_ is not None:
+        if all(
+            [
+                IReactorCore.providedBy(defaultReactor),
+                IReactorProcess.providedBy(defaultReactor),
+            ]
+        ):
             r = fromOptional(
+                # If it provides each of the interfaces then it provides the
+                # intersection interface.  cast it to make it easier to talk
+                # about later on.
                 cast(IDistTrialReactor, defaultReactor),
                 reactor,
             )
