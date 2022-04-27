@@ -13,8 +13,8 @@ import os
 import sys
 from functools import partial
 from typing import (
-    Callable,
     Awaitable,
+    Callable,
     Iterable,
     List,
     Optional,
@@ -42,7 +42,7 @@ from ..util import _unusedTestDirectory, openTestLog
 from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from .distreporter import DistReporter
 from .functional import countingCalls, fromOptional, iterateWhile, parallel, void
-from .worker import WorkerAction, LocalWorker, LocalWorkerAMP
+from .worker import LocalWorker, LocalWorkerAMP, WorkerAction
 
 
 class IDistTrialReactor(IReactorCore, IReactorProcess):

@@ -112,7 +112,7 @@ class LocalWorkerAMP(AMP):
         self,
         error: WorkerException,
         errorClass: str,
-        frames: List[str],
+        frames: list[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
@@ -140,8 +140,8 @@ class LocalWorkerAMP(AMP):
         testName: str,
         error: str,
         errorClass: str,
-        frames: List[str],
-    ) -> Dict[str, bool]:
+        frames: list[str],
+    ) -> dict[str, bool]:
         """
         Add an error to the reporter.
 
@@ -162,8 +162,8 @@ class LocalWorkerAMP(AMP):
         testName: str,
         fail: str,
         failClass: str,
-        frames: List[str],
-    ) -> Dict[str, bool]:
+        frames: list[str],
+    ) -> dict[str, bool]:
         """
         Add a failure to the reporter.
         """
@@ -184,8 +184,8 @@ class LocalWorkerAMP(AMP):
     managercommands.AddSkip.responder(addSkip)
 
     def addExpectedFailure(
-        self, testName: str, error: str, todo: Optional[str]
-    ) -> Dict[str, bool]:
+        self, testName: str, error: str, todo: str | None
+    ) -> dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """

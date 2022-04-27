@@ -26,11 +26,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist.distreporter import DistReporter
-from twisted.trial._dist.disttrial import (
-    DistTrialRunner,
-    WorkerPool,
-    WorkerPoolConfig,
-)
+from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
 from twisted.trial._dist.functional import countingCalls, iterateWhile, sequence, void
 from twisted.trial._dist.worker import LocalWorker, WorkerAction
 from twisted.trial.reporter import (
@@ -480,7 +476,7 @@ class FunctionalTests(TestCase):
         ``iterateWhile`` executes the actions from its factory until the predicate
         does not match an action result.
         """
-        actions: List[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
+        actions: list[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
 
         def predicate(value):
             return value != 42
@@ -560,7 +556,7 @@ class StartedLocalWorkerPool:
     """
 
     workingDirectory: FilePath
-    workers: List[_LocalWorker]
+    workers: list[_LocalWorker]
     _stopped: Deferred
 
     async def run(self, workerAction: WorkerAction) -> None:
@@ -582,7 +578,7 @@ class LocalWorkerPool:
     """
 
     _config: WorkerPoolConfig
-    _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
+    _started: list[StartedLocalWorkerPool] = field(default=Factory(list))
     _autostop: bool = False
 
     async def start(
