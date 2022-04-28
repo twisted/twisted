@@ -9,24 +9,32 @@ import os
 import sys
 from functools import partial
 from io import StringIO
-from typing import List
+from typing import Callable, List, Set
 
 from zope.interface import implementer, verify
 
 from attrs import Factory, define, field
-from hamcrest import assert_that, equal_to, has_length, none
+from hamcrest import assert_that, contains, equal_to, has_length, none
 
 from twisted.internet import interfaces
 from twisted.internet.defer import Deferred, succeed
+from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
 from twisted.test.proto_helpers import MemoryReactorClock
+from twisted.trial._dist import _WORKER_AMP_STDIN
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
-from twisted.trial._dist.functional import countingCalls, iterateWhile, sequence, void
-from twisted.trial._dist.worker import LocalWorker, WorkerAction
+from twisted.trial._dist.functional import (
+    countingCalls,
+    fromOptional,
+    iterateWhile,
+    sequence,
+    void,
+)
+from twisted.trial._dist.worker import LocalWorker, Worker, WorkerAction
 from twisted.trial.reporter import (
     Reporter,
     TestResult,
@@ -38,15 +46,24 @@ from twisted.trial.unittest import SynchronousTestCase, TestCase
 from ...test import erroneous
 
 
+@define
 class FakeTransport:
     """
     A simple fake process transport.
     """
 
+    _closed: Set[int] = field(default=Factory(set))
+
     def writeToChild(self, fd, data):
         """
         Ignore write calls.
         """
+
+    def closeChildFD(self, fd):
+        """
+        Mark one of the child descriptors as closed.
+        """
+        self._closed.add(fd)
 
 
 @implementer(interfaces.IReactorProcess)
@@ -263,6 +280,27 @@ class WorkerPoolTests(TestCase):
             self.workingDirectory.sibling("_trial_temp-1"),
         )
 
+    def test_join(self):
+        """
+        L{StartedWorkerPool.join} causes all of the workers to exit, closes the
+        log file, and unlocks the test directory.
+        """
+        self.parent.makedirs()
+
+        reactor = CountingReactor([])
+        started = self.successResultOf(self.pool.start(reactor))
+        joining = Deferred.fromCoroutine(started.join())
+        self.assertNoResult(joining)
+        for w in reactor._workers:
+            assert_that(w.transport._closed, contains(_WORKER_AMP_STDIN))
+            for fd in w.transport._closed:
+                w.childConnectionLost(fd)
+            for f in [w.processExited, w.processEnded]:
+                f(Failure(ProcessDone(0)))
+        assert_that(self.successResultOf(joining), none())
+        assert_that(started.testLog.closed, equal_to(True))
+        assert_that(started.testDirLock.locked, equal_to(False))
+
 
 class DistTrialRunnerTests(TestCase):
     """
@@ -318,7 +356,7 @@ class DistTrialRunnerTests(TestCase):
         self.successResultOf(runner.runAsync(suite, fakeReactor))
         assert_that(pool._started[0].workers, has_length(numTests))
 
-    def test_runUncleanWarnings(self):
+    def test_runUncleanWarnings(self) -> None:
         """
         Running with the C{unclean-warnings} option makes L{DistTrialRunner} uses
         the L{UncleanWarningsReporterWrapper}.
@@ -326,7 +364,7 @@ class DistTrialRunnerTests(TestCase):
         runner = self.getRunner(uncleanWarnings=True)
         fakeReactor = object()
         d = runner.runAsync(
-            TestCase(),
+            TrialSuite([TestCase()]),
             fakeReactor,
         )
         result = self.successResultOf(d)
@@ -366,19 +404,39 @@ class DistTrialRunnerTests(TestCase):
         self.assertIn("errors=1", output)
         self.assertIn("FAILED", output)
 
-    def test_runUnexpectedError(self):
+    def test_runUnexpectedError(self) -> None:
         """
-        If for some reasons we can't connect to the worker process, the test
-        suite catches and fails.
+        If for some reasons we can't connect to the worker process, the error is
+        recorded in the result object.
         """
         fakeReactor = object()
         runner = self.getRunner(workerPoolFactory=BrokenWorkerPool)
-        result = self.successResultOf(runner.runAsync(TestCase(), fakeReactor))
+        result = self.successResultOf(
+            runner.runAsync(TrialSuite([TestCase()]), fakeReactor)
+        )
         errors = result.original.errors
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
 
-    def test_runWaitForProcessesDeferreds(self):
+    def test_runUnexpectedWorkerError(self) -> None:
+        """
+        If for some reason the worker process cannot run a test, the error is
+        recorded in the result object.
+        """
+        fakeReactor = object()
+        runner = self.getRunner(
+            workerPoolFactory=partial(
+                LocalWorkerPool, workerFactory=_BrokenLocalWorker, autostop=True
+            )
+        )
+        result = self.successResultOf(
+            runner.runAsync(TrialSuite([TestCase()]), fakeReactor)
+        )
+        errors = result.original.errors
+        assert_that(errors, has_length(1))
+        assert_that(errors[0][1].type, equal_to(WorkerBroken))
+
+    def test_runWaitForProcessesDeferreds(self) -> None:
         """
         L{DistTrialRunner} waits for the worker pool to stop.
         """
@@ -392,7 +450,9 @@ class DistTrialRunnerTests(TestCase):
         runner = self.getRunner(
             workerPoolFactory=recordingFactory,
         )
-        d = Deferred.fromCoroutine(runner.runAsync(TestCase(), CountingReactor([])))
+        d = Deferred.fromCoroutine(
+            runner.runAsync(TrialSuite([TestCase()]), CountingReactor([]))
+        )
         stopped = pool._started[0]._stopped
         self.assertNoResult(d)
         stopped.callback(None)
@@ -438,11 +498,27 @@ class DistTrialRunnerTests(TestCase):
             "expected to see per-iteration test count in output",
         )
 
+    def test_run(self):
+        pass
+        # XXX right kind of reactor
+        # XXX wrong kind of reactor
+        # XXX success
+        # XXX failure
+
 
 class FunctionalTests(TestCase):
     """
     Tests for the functional helpers that need it.
     """
+
+    def test_fromOptional(self) -> None:
+        """
+        ``void`` accepts a default value and an ``Optional`` value of the same
+        type and returns the default value if the optional value is ``None``
+        or the optional value otherwise.
+        """
+        assert_that(fromOptional(1, None), equal_to(1))
+        assert_that(fromOptional(2, 2), equal_to(2))
 
     def test_void(self) -> None:
         """
@@ -547,6 +623,17 @@ class _LocalWorker:
         TrialSuite([case]).run(result)
 
 
+class WorkerBroken(Exception):
+    """
+    A worker tried to run a test case but the worker is broken.
+    """
+
+
+class _BrokenLocalWorker:
+    async def run(self, case: TestCase, result: TestResult) -> None:
+        raise WorkerBroken()
+
+
 @define
 class StartedLocalWorkerPool:
     """
@@ -554,7 +641,7 @@ class StartedLocalWorkerPool:
     """
 
     workingDirectory: FilePath
-    workers: List[_LocalWorker]
+    workers: List[Worker]
     _stopped: Deferred
 
     async def run(self, workerAction: WorkerAction) -> None:
@@ -578,11 +665,12 @@ class LocalWorkerPool:
     _config: WorkerPoolConfig
     _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
     _autostop: bool = False
+    _workerFactory: Callable[[], Worker] = _LocalWorker
 
     async def start(
         self, reactor: interfaces.IReactorProcess
     ) -> StartedLocalWorkerPool:
-        workers = [_LocalWorker() for i in range(self._config.numWorkers)]
+        workers = [self._workerFactory() for i in range(self._config.numWorkers)]
         started = StartedLocalWorkerPool(
             self._config.workingDirectory,
             workers,

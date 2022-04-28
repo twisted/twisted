@@ -27,7 +27,7 @@ from unittest import TestSuite
 
 from attrs import define
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.interfaces import IReactorCore, IReactorProcess
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -114,11 +114,13 @@ class StartedWorkerPool:
 
         The pool is unusable after this method is called.
         """
-        for worker in self.workers:
-            try:
-                await worker.exit()
-            except Exception:
-                self._logger.failure("joining disttrial worker failed")
+        results = await DeferredList(
+            [Deferred.fromCoroutine(worker.exit()) for worker in self.workers],
+            consumeErrors=True,
+        )
+        for n, (succeeded, failure) in enumerate(results):
+            if not succeeded:
+                self._logger.failure(f"joining disttrial worker #{n} failed", failure)
 
         del self.workers[:]
         del self.ampWorkers[:]
@@ -342,7 +344,7 @@ class DistTrialRunner:
             try:
                 await worker.run(case, result)
             except Exception:
-                result.original.addFailure(case, Failure())
+                result.original.addError(case, Failure())
 
         for case in testCases:
             await task(case)
