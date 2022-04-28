@@ -5,12 +5,11 @@
 Tests for L{twisted.trial._dist.disttrial}.
 """
 
-from __future__ import annotations
-
 import os
 import sys
 from functools import partial
 from io import StringIO
+from typing import List
 
 from zope.interface import implementer, verify
 
@@ -475,7 +474,7 @@ class FunctionalTests(TestCase):
         ``iterateWhile`` executes the actions from its factory until the predicate
         does not match an action result.
         """
-        actions: list[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
+        actions: List[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
 
         def predicate(value):
             return value != 42
@@ -516,6 +515,19 @@ class WorkerPoolBroken(Exception):
     """
 
 
+class StartedWorkerPoolBroken:
+    """
+    A broken, started worker pool.  Its workers cannot run actions.  They
+    always raise an exception.
+    """
+
+    async def run(self, workerAction: WorkerAction) -> None:
+        raise WorkerPoolBroken()
+
+    async def join(self) -> None:
+        return None
+
+
 @define
 class BrokenWorkerPool:
     """
@@ -530,19 +542,6 @@ class BrokenWorkerPool:
         return StartedWorkerPoolBroken()
 
 
-class StartedWorkerPoolBroken:
-    """
-    A broken, started worker pool.  Its workers cannot run actions.  They
-    always raise an exception.
-    """
-
-    async def run(self, workerAction: WorkerAction) -> None:
-        raise WorkerPoolBroken()
-
-    async def join(self) -> None:
-        return None
-
-
 class _LocalWorker:
     async def run(self, case: TestCase, result: TestResult) -> None:
         TrialSuite([case]).run(result)
@@ -555,7 +554,7 @@ class StartedLocalWorkerPool:
     """
 
     workingDirectory: FilePath
-    workers: list[_LocalWorker]
+    workers: List[_LocalWorker]
     _stopped: Deferred
 
     async def run(self, workerAction: WorkerAction) -> None:
@@ -577,7 +576,7 @@ class LocalWorkerPool:
     """
 
     _config: WorkerPoolConfig
-    _started: list[StartedLocalWorkerPool] = field(default=Factory(list))
+    _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
     _autostop: bool = False
 
     async def start(

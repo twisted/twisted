@@ -3,8 +3,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import annotations
-
 """
 This module implements the worker classes.
 
@@ -12,7 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Awaitable, Callable, TextIO, TypeVar
+from typing import Awaitable, Callable, Dict, List, TextIO, TypeVar
 
 from zope.interface import implementer
 
@@ -113,7 +111,7 @@ class LocalWorkerAMP(AMP):
         self,
         error: WorkerException,
         errorClass: str,
-        frames: list[str],
+        frames: List[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
@@ -141,8 +139,8 @@ class LocalWorkerAMP(AMP):
         testName: str,
         error: str,
         errorClass: str,
-        frames: list[str],
-    ) -> dict[str, bool]:
+        frames: List[str],
+    ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
 
@@ -163,8 +161,8 @@ class LocalWorkerAMP(AMP):
         testName: str,
         fail: str,
         failClass: str,
-        frames: list[str],
-    ) -> dict[str, bool]:
+        frames: List[str],
+    ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
         """
@@ -186,7 +184,7 @@ class LocalWorkerAMP(AMP):
 
     def addExpectedFailure(
         self, testName: str, error: str, todo: str | None
-    ) -> dict[str, bool]:
+    ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """
