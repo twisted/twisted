@@ -10,7 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Awaitable, Callable, Dict, List, TextIO, TypeVar, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
 
 from zope.interface import implementer
 
