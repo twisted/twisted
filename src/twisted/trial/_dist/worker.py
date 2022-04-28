@@ -12,11 +12,12 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Awaitable, Callable, Protocol, TextIO, TypeVar
+from typing import Awaitable, Callable, TextIO, TypeVar
 
 from zope.interface import implementer
 
 from attrs import frozen
+from typing_extensions import Protocol
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
