@@ -10,7 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Awaitable, Callable, Dict, List, TextIO, TypeVar
+from typing import Awaitable, Callable, Dict, List, TextIO, TypeVar, Optional
 
 from zope.interface import implementer
 
@@ -183,7 +183,7 @@ class LocalWorkerAMP(AMP):
     managercommands.AddSkip.responder(addSkip)
 
     def addExpectedFailure(
-        self, testName: str, error: str, todo: str | None
+        self, testName: str, error: str, todo: Optional[None]
     ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
