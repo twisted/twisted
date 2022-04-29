@@ -12,20 +12,11 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 from functools import partial
-from typing import (
-    Awaitable,
-    Callable,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    TextIO,
-    Union,
-    cast,
-)
+from typing import Awaitable, Callable, Iterable, List, Sequence, TextIO, Union, cast
 from unittest import TestResult, TestSuite
 
-from attrs import define
+from attrs import define, field, frozen
+from attrs.converters import default_if_none
 
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.interfaces import IReactorCore, IReactorProcess
@@ -41,7 +32,7 @@ from ..runner import TestHolder
 from ..util import _unusedTestDirectory, openTestLog
 from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from .distreporter import DistReporter
-from .functional import countingCalls, fromOptional, iterateWhile, parallel, void
+from .functional import countingCalls, iterateWhile, parallel, void
 from .worker import LocalWorker, LocalWorkerAMP, WorkerAction
 
 
@@ -71,7 +62,7 @@ def _defaultReactor() -> IDistTrialReactor:
     raise TypeError("Reactor does not provide the right interfaces")
 
 
-@define
+@frozen
 class WorkerPoolConfig:
     """
     Configuration parameters for a pool of test-running workers.
@@ -89,7 +80,7 @@ class WorkerPoolConfig:
 
     numWorkers: int
     workingDirectory: FilePath
-    workerArguments: List[str]
+    workerArguments: Sequence[str]
     logFile: str
 
 
@@ -148,7 +139,7 @@ class StartedWorkerPool:
         self.testDirLock.unlock()
 
 
-@define
+@frozen
 class WorkerPool:
     """
     Manage a fixed-size collection of child processes which can run tests.
@@ -275,6 +266,7 @@ async def runTests(
         result.original.addError(TestHolder("<runTests>"), Failure())
 
 
+@define
 class DistTrialRunner:
     """
     A specialized runner for distributed trial. The runner launches a number of
@@ -291,50 +283,35 @@ class DistTrialRunner:
     _distReporterFactory = DistReporter
     _logger = Logger()
 
+    # accepts a `realtime` keyword argument which we can't annotate, so punt
+    # on the argument annotation
+    _reporterFactory: Callable[..., IReporter]
+    _maxWorkers: int
+    _workerArguments: List[str]
+    _reactor: IDistTrialReactor = field(
+        # mypy doesn't understand the converter
+        default=None,
+        converter=default_if_none(factory=_defaultReactor),  # type: ignore [misc]
+    )
+    # mypy doesn't understand the converter
+    _stream: TextIO = field(default=None, converter=default_if_none(sys.stdout))  # type: ignore [misc]
+    _tracebackFormat: str = "default"
+    _realTimeErrors: bool = False
+    _uncleanWarnings: bool = False
+    _logfile: str = "test.log"
+    _workingDirectory: str = "_trial_temp"
+    _workerPoolFactory: Callable[[WorkerPoolConfig], WorkerPool] = WorkerPool
+
     def _makeResult(self) -> DistReporter:
         """
         Make reporter factory, and wrap it with a L{DistReporter}.
         """
         reporter = self._reporterFactory(
-            self._stream, self._tbformat, realtime=self._rterrors
+            self._stream, self._tracebackFormat, realtime=self._realTimeErrors
         )
         if self._uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return self._distReporterFactory(reporter)
-
-    def __init__(
-        self,
-        # accepts a `realtime` keyword argument which we can't annotate,
-        # so punt on the argument annotation
-        reporterFactory: Callable[..., IReporter],
-        maxWorkers: int,
-        workerArguments: List[str],
-        stream: Optional[TextIO] = None,
-        tracebackFormat: str = "default",
-        realTimeErrors: bool = False,
-        uncleanWarnings: bool = False,
-        logfile: str = "test.log",
-        workingDirectory: str = "_trial_temp",
-        workerPoolFactory: Callable[[WorkerPoolConfig], WorkerPool] = WorkerPool,
-        reactor: Optional[IDistTrialReactor] = None,
-    ):
-        self._maxWorkers = maxWorkers
-        self._workerArguments = workerArguments
-        self._reporterFactory = reporterFactory
-        if stream is None:
-            stream = sys.stdout
-        self._stream = stream
-        self._tbformat = tracebackFormat
-        self._rterrors = realTimeErrors
-        self._uncleanWarnings = uncleanWarnings
-        self._result = None
-        self._workingDirectory = workingDirectory
-        self._logFile = logfile
-        self._logFileObserver = None
-        self._logFileObject = None
-        self._logWarnings = False
-        self._workerPoolFactory = workerPoolFactory
-        self._reactor = fromOptional(_defaultReactor(), reactor)
 
     def writeResults(self, result):
         """
@@ -397,7 +374,7 @@ class DistTrialRunner:
                 min(len(testCases), self._maxWorkers),
                 FilePath(self._workingDirectory),
                 self._workerArguments,
-                self._logFile,
+                self._logfile,
             ),
         )
 
