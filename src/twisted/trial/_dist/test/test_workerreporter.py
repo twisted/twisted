@@ -5,129 +5,119 @@
 Tests for L{twisted.trial._dist.workerreporter}.
 """
 
-from twisted.python.failure import Failure
-from twisted.trial._dist import managercommands
-from twisted.trial._dist.workerreporter import WorkerReporter
-from twisted.trial.unittest import TestCase, Todo
+
+from unittest import TestCase
+
+from hamcrest import assert_that, equal_to, has_length, has_properties
+from hamcrest.core.matcher import Matcher
+
+from twisted.test.iosim import connectedServerAndClient
+from twisted.trial._dist.worker import LocalWorkerAMP, WorkerProtocol
+from twisted.trial.reporter import TestResult
+from twisted.trial.test import erroneous, pyunitcases, sample, skipping
+from twisted.trial.unittest import SynchronousTestCase
 
 
-class FakeAMProtocol:
+def matches_result(
+    successes=equal_to(0),
+    errors=has_length(0),
+    failures=has_length(0),
+    skips=has_length(0),
+    expectedFailures=has_length(0),
+    unexpectedSuccesses=has_length(0),
+):
     """
-    A fake C{AMP} implementations to track C{callRemote} calls.
+    Match a L{TestCase} instances with matching attributes.
     """
+    return has_properties(
+        {
+            "successes": successes,
+            "errors": errors,
+            "failures": failures,
+            "skips": skips,
+            "expectedFailures": expectedFailures,
+            "unexpectedSuccesses": unexpectedSuccesses,
+        }
+    )
 
-    id = 0
-    lastCall = None
 
-    def callRemote(self, command, **kwargs):
-        self.lastCall = command
-        self.lastArgs = kwargs
+def run(case: SynchronousTestCase, target: TestCase) -> TestResult:
+    """
+    Run C{target} and return a test result as populated by a worker reporter.
+
+    @param case: A test case to use to help run the target.
+    """
+    result = TestResult()
+    worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
+    d = local.run(target, result)
+    pump.pump()
+    pump.pump()
+    assert_that(case.successResultOf(d), equal_to({"success": True}))
+    return result
 
 
-class WorkerReporterTests(TestCase):
+class WorkerReporterTests(SynchronousTestCase):
     """
     Tests for L{WorkerReporter}.
     """
 
-    def setUp(self):
-        self.fakeAMProtocol = FakeAMProtocol()
-        self.workerReporter = WorkerReporter(self.fakeAMProtocol)
-        self.test = TestCase()
+    def _check(self, target: TestCase, **expectations: Matcher) -> None:
+        """
+        Run the given test and assert that the result matches the given
+        expectations.
+        """
+        assert_that(run(self, target), matches_result(**expectations))
 
-    def test_addSuccess(self):
+    def test_addSuccess(self) -> None:
         """
-        L{WorkerReporter.addSuccess} sends a L{managercommands.AddSuccess}
-        command.
+        L{WorkerReporter} propagates successes.
         """
-        self.workerReporter.addSuccess(self.test)
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddSuccess)
+        self._check(sample.FooTest("test_foo"), successes=equal_to(1))
 
-    def test_addError(self):
+    def test_addError(self) -> None:
         """
-        L{WorkerReporter.addError} sends a L{managercommands.AddError} command.
+        L{WorkerReporter} propagates errors from trial's TestCases.
         """
-        self.workerReporter.addError(self.test, Failure(RuntimeError("error")))
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddError)
-
-    def test_addErrorTuple(self):
-        """
-        Adding an error using L{WorkerReporter.addError} as a
-        C{sys.exc_info}-style tuple sends an L{managercommands.AddError}
-        command.
-        """
-        self.workerReporter.addError(
-            self.test, (RuntimeError, RuntimeError("error"), None)
-        )
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddError)
-
-    def test_addFailure(self):
-        """
-        L{WorkerReporter.addFailure} sends a L{managercommands.AddFailure}
-        command.
-        """
-        self.workerReporter.addFailure(self.test, Failure(RuntimeError("fail")))
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddFailure)
-
-    def test_addFailureTuple(self):
-        """
-        Adding a failure using L{WorkerReporter.addFailure} as a
-        C{sys.exc_info}-style tuple sends an L{managercommands.AddFailure}
-        message.
-        """
-        self.workerReporter.addFailure(
-            self.test, (RuntimeError, RuntimeError("fail"), None)
-        )
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddFailure)
-
-    def test_addSkip(self):
-        """
-        L{WorkerReporter.addSkip} sends a L{managercommands.AddSkip} command.
-        """
-        self.workerReporter.addSkip(self.test, "reason")
-        self.assertEqual(self.fakeAMProtocol.lastCall, managercommands.AddSkip)
-
-    def test_addExpectedFailure(self):
-        """
-        L{WorkerReporter.addExpectedFailure} sends a
-        L{managercommands.AddExpectedFailure} command.
-        protocol.
-        """
-        self.workerReporter.addExpectedFailure(
-            self.test, Failure(RuntimeError("error")), Todo("todo")
-        )
-        self.assertEqual(
-            self.fakeAMProtocol.lastCall, managercommands.AddExpectedFailure
+        self._check(
+            erroneous.TestAsynchronousFail("test_exception"), errors=has_length(1)
         )
 
-    def test_addExpectedFailureNoTodo(self):
+    def test_addErrorTuple(self) -> None:
         """
-        L{WorkerReporter.addExpectedFailure} sends a
-        L{managercommands.AddExpectedFailure} command.
-        protocol.
+        L{WorkerReporter} propagates errors from pyunit's TestCases.
         """
-        self.workerReporter.addExpectedFailure(
-            self.test, Failure(RuntimeError("error"))
-        )
-        self.assertEqual(
-            self.fakeAMProtocol.lastCall, managercommands.AddExpectedFailure
+        self._check(pyunitcases.PyUnitTest("test_error"), errors=has_length(1))
+
+    def test_addFailure(self) -> None:
+        """
+        L{WorkerReporter} propagates test failures from trial's TestCases.
+        """
+        self._check(erroneous.TestRegularFail("test_fail"), failures=has_length(1))
+
+    def test_addFailureTuple(self) -> None:
+        """
+        L{WorkerReporter} propagates test failures from pyunit's TestCases.
+        """
+        self._check(pyunitcases.PyUnitTest("test_fail"), failures=has_length(1))
+
+    def test_addSkip(self) -> None:
+        """
+        L{WorkerReporter} propagates skips.
+        """
+        self._check(skipping.SynchronousSkipping("test_skip1"), skips=has_length(1))
+
+    def test_addExpectedFailure(self) -> None:
+        """
+        L{WorkerReporter} propagates expected failures.
+        """
+        self._check(
+            skipping.SynchronousStrictTodo("test_todo1"), expectedFailures=has_length(1)
         )
 
-    def test_addUnexpectedSuccess(self):
+    def test_addUnexpectedSuccess(self) -> None:
         """
-        L{WorkerReporter.addUnexpectedSuccess} sends a
-        L{managercommands.AddUnexpectedSuccess} command.
+        L{WorkerReporter} propagates unexpected successes.
         """
-        self.workerReporter.addUnexpectedSuccess(self.test, Todo("todo"))
-        self.assertEqual(
-            self.fakeAMProtocol.lastCall, managercommands.AddUnexpectedSuccess
-        )
-
-    def test_addUnexpectedSuccessNoTodo(self):
-        """
-        L{WorkerReporter.addUnexpectedSuccess} sends a
-        L{managercommands.AddUnexpectedSuccess} command.
-        """
-        self.workerReporter.addUnexpectedSuccess(self.test)
-        self.assertEqual(
-            self.fakeAMProtocol.lastCall, managercommands.AddUnexpectedSuccess
+        self._check(
+            skipping.SynchronousTodo("test_todo3"), unexpectedSuccesses=has_length(1)
         )

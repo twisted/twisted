@@ -329,38 +329,7 @@ class RunnerTests(unittest.SynchronousTestCase):
         self.original = plugin.getPlugins
         plugin.getPlugins = getPlugins
 
-        self.standardReport = [
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-        ]
+        self.standardReport = ["startTest", "addSuccess", "stopTest"] * 10
 
     def tearDown(self):
         plugin.getPlugins = self.original
