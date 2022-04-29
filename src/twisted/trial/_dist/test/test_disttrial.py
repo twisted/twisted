@@ -17,9 +17,11 @@ from attrs import Factory, define, field
 from hamcrest import assert_that, contains, equal_to, has_length, none
 
 from twisted.internet import interfaces
+from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -43,7 +45,7 @@ from twisted.trial.reporter import (
 )
 from twisted.trial.runner import ErrorHolder, TrialSuite
 from twisted.trial.unittest import SynchronousTestCase, TestCase
-from ...test import erroneous
+from ...test import erroneous, sample
 
 
 @define
@@ -307,6 +309,8 @@ class DistTrialRunnerTests(TestCase):
     Tests for L{DistTrialRunner}.
     """
 
+    suite = TrialSuite([sample.FooTest("test_foo")])
+
     def getRunner(self, **overrides):
         """
         Create a runner for testing.
@@ -318,6 +322,7 @@ class DistTrialRunnerTests(TestCase):
             maxWorkers=4,
             workerArguments=[],
             workerPoolFactory=partial(LocalWorkerPool, autostop=True),
+            reactor=CountingReactor([]),
         )
         args.update(overrides)
         return DistTrialRunner(**args)
@@ -352,8 +357,7 @@ class DistTrialRunnerTests(TestCase):
             maxWorkers=maxWorkers, workerPoolFactory=recordingFactory
         )
         suite = TrialSuite([TestCase() for n in range(numTests)])
-        fakeReactor = object()
-        self.successResultOf(runner.runAsync(suite, fakeReactor))
+        self.successResultOf(runner.runAsync(suite))
         assert_that(pool._started[0].workers, has_length(numTests))
 
     def test_runUncleanWarnings(self) -> None:
@@ -362,11 +366,7 @@ class DistTrialRunnerTests(TestCase):
         the L{UncleanWarningsReporterWrapper}.
         """
         runner = self.getRunner(uncleanWarnings=True)
-        fakeReactor = object()
-        d = runner.runAsync(
-            TrialSuite([TestCase()]),
-            fakeReactor,
-        )
+        d = runner.runAsync(self.suite)
         result = self.successResultOf(d)
         self.assertIsInstance(result, DistReporter)
         self.assertIsInstance(result.original, UncleanWarningsReporterWrapper)
@@ -377,8 +377,7 @@ class DistTrialRunnerTests(TestCase):
         """
         stream = StringIO()
         runner = self.getRunner(stream=stream)
-        fakeReactor = object()
-        result = self.successResultOf(runner.runAsync(TrialSuite(), fakeReactor))
+        result = self.successResultOf(runner.runAsync(TrialSuite()))
         self.assertIsInstance(result, DistReporter)
         output = stream.getvalue()
         self.assertIn("Running 0 test", output)
@@ -394,8 +393,7 @@ class DistTrialRunnerTests(TestCase):
         stream = StringIO()
         runner = self.getRunner(stream=stream)
 
-        fakeReactor = CountingReactor([])
-        result = self.successResultOf(runner.runAsync(err, fakeReactor))
+        result = self.successResultOf(runner.runAsync(err))
         self.assertIsInstance(result, DistReporter)
         output = stream.getvalue()
         self.assertIn("Running 0 test", output)
@@ -409,11 +407,8 @@ class DistTrialRunnerTests(TestCase):
         If for some reasons we can't connect to the worker process, the error is
         recorded in the result object.
         """
-        fakeReactor = object()
         runner = self.getRunner(workerPoolFactory=BrokenWorkerPool)
-        result = self.successResultOf(
-            runner.runAsync(TrialSuite([TestCase()]), fakeReactor)
-        )
+        result = self.successResultOf(runner.runAsync(self.suite))
         errors = result.original.errors
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
@@ -423,15 +418,12 @@ class DistTrialRunnerTests(TestCase):
         If for some reason the worker process cannot run a test, the error is
         recorded in the result object.
         """
-        fakeReactor = object()
         runner = self.getRunner(
             workerPoolFactory=partial(
                 LocalWorkerPool, workerFactory=_BrokenLocalWorker, autostop=True
             )
         )
-        result = self.successResultOf(
-            runner.runAsync(TrialSuite([TestCase()]), fakeReactor)
-        )
+        result = self.successResultOf(runner.runAsync(self.suite))
         errors = result.original.errors
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerBroken))
@@ -450,9 +442,11 @@ class DistTrialRunnerTests(TestCase):
         runner = self.getRunner(
             workerPoolFactory=recordingFactory,
         )
-        d = Deferred.fromCoroutine(
-            runner.runAsync(TrialSuite([TestCase()]), CountingReactor([]))
-        )
+        d = Deferred.fromCoroutine(runner.runAsync(self.suite))
+        if pool is None:
+            self.fail("worker pool was never created")
+
+        assert pool is not None
         stopped = pool._started[0]._stopped
         self.assertNoResult(d)
         stopped.callback(None)
@@ -467,11 +461,7 @@ class DistTrialRunnerTests(TestCase):
         stream = StringIO()
         case = erroneous.EventuallyFailingTestCase("test_it")
         runner = self.getRunner(stream=stream)
-        d = runner.runAsync(
-            case,
-            CountingReactor([]),
-            untilFailure=True,
-        )
+        d = runner.runAsync(case, untilFailure=True)
         result = self.successResultOf(d)
         # The case is hard-coded to fail on its 5th run.
         self.assertEqual(5, case.n)
@@ -498,12 +488,93 @@ class DistTrialRunnerTests(TestCase):
             "expected to see per-iteration test count in output",
         )
 
-    def test_run(self):
-        pass
-        # XXX right kind of reactor
-        # XXX wrong kind of reactor
-        # XXX success
-        # XXX failure
+    def test_run(self) -> None:
+        """
+        L{DistTrialRunner.run} returns a L{DistReporter} containing the result of
+        the test suite run.
+        """
+        runner = self.getRunner()
+        result = runner.run(self.suite)
+        assert_that(result.wasSuccessful(), equal_to(True))
+        assert_that(result.successes, equal_to(1))
+
+    def test_installedReactor(self) -> None:
+        """
+        L{DistTrialRunner.run} uses the installed reactor L{DistTrialRunner} was
+        constructed without a reactor.
+        """
+        reactor = CountingReactor([])
+        with AlternateReactor(reactor):
+            runner = self.getRunner(reactor=None)
+        result = runner.run(self.suite)
+        assert_that(result.errors, equal_to([]))
+        assert_that(result.failures, equal_to([]))
+        assert_that(result.wasSuccessful(), equal_to(True))
+        assert_that(result.successes, equal_to(1))
+        assert_that(reactor.runCount, equal_to(1))
+        assert_that(reactor.stopCount, equal_to(1))
+
+    def test_wrongInstalledReactor(self) -> None:
+        """
+        L{DistTrialRunner} raises L{TypeError} if the installed reactor provides
+        neither L{IReactorCore} nor L{IReactorProcess} and no other reactor is
+        given.
+        """
+
+        class Core(ReactorBase):
+            def installWaker(self):
+                pass
+
+        @implementer(interfaces.IReactorProcess)
+        class Process:
+            def spawnProcess(
+                self,
+                processProtocol,
+                executable,
+                args,
+                env,
+                path,
+                uid,
+                gid,
+                usePTY,
+                childFDs,
+            ):
+                pass
+
+        class Neither:
+            pass
+
+        # It provides neither
+        with AlternateReactor(Neither()):
+            with self.assertRaises(TypeError):
+                self.getRunner(reactor=None)
+
+        # It is missing IReactorProcess
+        with AlternateReactor(Core()):
+            with self.assertRaises(TypeError):
+                self.getRunner(reactor=None)
+
+        # It is missing IReactorCore
+        with AlternateReactor(Process()):
+            with self.assertRaises(TypeError):
+                self.getRunner(reactor=None)
+
+    def test_runFailure(self):
+        """
+        If there is an unexpected exception running the test suite then it is
+        re-raised by L{DistTrialRunner.run}.
+        """
+        # Give it a broken worker pool factory.  There's no exception handling
+        # for such an error in the implementation..
+        class BrokenFactory(Exception):
+            pass
+
+        def brokenFactory(*args, **kwargs):
+            raise BrokenFactory()
+
+        runner = self.getRunner(workerPoolFactory=brokenFactory)
+        with self.assertRaises(BrokenFactory):
+            runner.run(self.suite)
 
 
 class FunctionalTests(TestCase):

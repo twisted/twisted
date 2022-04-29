@@ -23,7 +23,7 @@ from typing import (
     Union,
     cast,
 )
-from unittest import TestSuite
+from unittest import TestResult, TestSuite
 
 from attrs import define
 
@@ -49,6 +49,26 @@ class IDistTrialReactor(IReactorCore, IReactorProcess):
     """
     The reactor interfaces required by disttrial.
     """
+
+
+def _defaultReactor() -> IDistTrialReactor:
+    """
+    Get the default reactor, ensuring it is suitable for use with disttrial.
+    """
+    import twisted.internet.reactor as defaultReactor
+
+    if all(
+        [
+            IReactorCore.providedBy(defaultReactor),
+            IReactorProcess.providedBy(defaultReactor),
+        ]
+    ):
+        # If it provides each of the interfaces then it provides the
+        # intersection interface.  cast it to make it easier to talk about
+        # later on.
+        return cast(IDistTrialReactor, defaultReactor)
+
+    raise TypeError("Reactor does not provide the right interfaces")
 
 
 @define
@@ -284,16 +304,19 @@ class DistTrialRunner:
 
     def __init__(
         self,
-        reporterFactory,
-        maxWorkers,
-        workerArguments,
-        stream=None,
-        tracebackFormat="default",
-        realTimeErrors=False,
-        uncleanWarnings=False,
-        logfile="test.log",
-        workingDirectory="_trial_temp",
-        workerPoolFactory=WorkerPool,
+        # accepts a `realtime` keyword argument which we can't annotate,
+        # so punt on the argument annotation
+        reporterFactory: Callable[..., IReporter],
+        maxWorkers: int,
+        workerArguments: List[str],
+        stream: Optional[TextIO] = None,
+        tracebackFormat: str = "default",
+        realTimeErrors: bool = False,
+        uncleanWarnings: bool = False,
+        logfile: str = "test.log",
+        workingDirectory: str = "_trial_temp",
+        workerPoolFactory: Callable[[WorkerPoolConfig], WorkerPool] = WorkerPool,
+        reactor: Optional[IDistTrialReactor] = None,
     ):
         self._maxWorkers = maxWorkers
         self._workerArguments = workerArguments
@@ -311,6 +334,7 @@ class DistTrialRunner:
         self._logFileObject = None
         self._logWarnings = False
         self._workerPoolFactory = workerPoolFactory
+        self._reactor = fromOptional(_defaultReactor(), reactor)
 
     def writeResults(self, result):
         """
@@ -350,17 +374,12 @@ class DistTrialRunner:
             await task(case)
 
     async def runAsync(
-        self,
-        suite: TestSuite,
-        reactor: IReactorProcess,
-        untilFailure: bool = False,
+        self, suite: TestSuite, untilFailure: bool = False
     ) -> DistReporter:
         """
         Spawn local worker processes and load tests. After that, run them.
 
         @param suite: A tests suite to be run.
-
-        @param reactor: The reactor to use, to be customized in tests.
 
         @param untilFailure: If C{True}, continue to run the tests until they
             fail.
@@ -388,7 +407,7 @@ class DistTrialRunner:
         self._stream.write(f"Running {suite.countTestCases()} tests.\n")
 
         # Start the worker pool.
-        startedPool = await poolStarter.start(reactor)
+        startedPool = await poolStarter.start(self._reactor)
 
         # The condition that will determine whether the test run repeats.
         condition = partial(shouldContinue, untilFailure)
@@ -420,55 +439,11 @@ class DistTrialRunner:
             # Shut down the worker pool.
             await startedPool.join()
 
-    def run(
-        self,
-        suite: TestSuite,
-        reactor: Optional[IDistTrialReactor] = None,
-        *args: tuple,
-        **kwargs: dict,
-    ) -> DistReporter:
+    def run(self, suite: TestSuite, untilFailure: bool = False) -> TestResult:
         """
         Run a reactor and a test suite.
 
         @param suite: The test suite to run.
-
-        @param reactor: If not None, the reactor to run.  Otherwise, the
-            global reactor will be used.
-        """
-        import twisted.internet.reactor as defaultReactor
-
-        if all(
-            [
-                IReactorCore.providedBy(defaultReactor),
-                IReactorProcess.providedBy(defaultReactor),
-            ]
-        ):
-            r = fromOptional(
-                # If it provides each of the interfaces then it provides the
-                # intersection interface.  cast it to make it easier to talk
-                # about later on.
-                cast(IDistTrialReactor, defaultReactor),
-                reactor,
-            )
-        else:
-            raise TypeError("Reactor does not provide the right interfaces")
-
-        return self._run(
-            suite,
-            r,
-            args,
-            kwargs,
-        )
-
-    def _run(
-        self,
-        suite: TestSuite,
-        reactor: IDistTrialReactor,
-        args: tuple,
-        kwargs: dict,
-    ) -> DistReporter:
-        """
-        See ``run``.
         """
         result: Union[Failure, DistReporter]
 
@@ -476,19 +451,22 @@ class DistTrialRunner:
             nonlocal result
             result = r
 
-        d = Deferred.fromCoroutine(self.runAsync(suite, reactor, *args, **kwargs))
+        d = Deferred.fromCoroutine(self.runAsync(suite, untilFailure))
         d.addBoth(capture)
-        d.addBoth(lambda ignored: reactor.stop())
-        reactor.run()
+        d.addBoth(lambda ignored: self._reactor.stop())
+        self._reactor.run()
 
         if isinstance(result, Failure):
             result.raiseException()
 
         # mypy can't see that raiseException raises an exception so we can
-        # only get here if result is not a Failure, so tell mypy to ignore the
-        # error it sees here (of returning a Union[Failure, DistReporter] when
-        # it wants a DistReporter).
-        return result  # type: ignore [return-value]
+        # only get here if result is not a Failure, so tell mypy result is
+        # certainly a DistReporter at this point.
+        assert isinstance(result, DistReporter)
+
+        # Unwrap the DistReporter to give the caller some regular TestResult
+        # object.  DistReporter isn't type annotated correctly so fix it here.
+        return cast(TestResult, result.original)
 
     def runUntilFailure(self, suite):
         """
