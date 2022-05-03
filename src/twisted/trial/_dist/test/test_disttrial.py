@@ -701,7 +701,13 @@ class WorkerBroken(Exception):
 
 
 class _BrokenLocalWorker:
+    """
+    A L{Worker} that always fails to run test cases.
+    """
     async def run(self, case: TestCase, result: TestResult) -> None:
+        """
+        Raise an exception instead of running C{case}.
+        """
         raise WorkerBroken()
 
 
