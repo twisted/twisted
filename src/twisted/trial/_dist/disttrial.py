@@ -151,7 +151,7 @@ class WorkerPool:
 
     _config: WorkerPoolConfig
 
-    def createLocalWorkers(
+    def _createLocalWorkers(
         self,
         protocols: Iterable[LocalWorkerAMP],
         workingDirectory: FilePath,
@@ -217,7 +217,7 @@ class WorkerPool:
         testLog = openTestLog(testDir.child(self._config.logFile))
 
         ampWorkers = [LocalWorkerAMP() for x in range(self._config.numWorkers)]
-        workers = self.createLocalWorkers(
+        workers = self._createLocalWorkers(
             ampWorkers,
             testDir,
             testLog,

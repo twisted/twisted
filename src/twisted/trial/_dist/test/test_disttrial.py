@@ -201,18 +201,18 @@ class WorkerPoolTests(TestCase):
 
     def test_createLocalWorkers(self):
         """
-        C{createLocalWorkers} iterates the list of protocols and create one
+        C{_createLocalWorkers} iterates the list of protocols and create one
         L{LocalWorker} for each.
         """
         protocols = [object() for x in range(4)]
-        workers = self.pool.createLocalWorkers(protocols, FilePath("path"), StringIO())
+        workers = self.pool._createLocalWorkers(protocols, FilePath("path"), StringIO())
         for s in workers:
             self.assertIsInstance(s, LocalWorker)
         self.assertEqual(4, len(workers))
 
     def test_launchWorkerProcesses(self):
         """
-        Given a C{spawnProcess} function, C{launchWorkerProcess} launches a
+        Given a C{spawnProcess} function, C{_launchWorkerProcess} launches a
         python process with an existing path as its argument.
         """
         protocols = [ProcessProtocol() for i in range(4)]
