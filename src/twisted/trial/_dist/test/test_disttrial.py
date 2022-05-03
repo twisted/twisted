@@ -690,7 +690,17 @@ class BrokenWorkerPool:
 
 
 class _LocalWorker:
+    """
+    A L{Worker} that runs tests in this process in the usual way.
+
+    This is a test double for L{LocalWorkerAMP} which allows testing worker
+    pool logic without sending tests over an AMP connection to be run
+    somewhere else..
+    """
     async def run(self, case: TestCase, result: TestResult) -> None:
+        """
+        Directly run C{case} in the usual way.
+        """
         TrialSuite([case]).run(result)
 
 
