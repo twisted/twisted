@@ -25,7 +25,7 @@ def matches_result(
     skips=has_length(0),
     expectedFailures=has_length(0),
     unexpectedSuccesses=has_length(0),
-):
+) -> Matcher:
     """
     Match a L{TestCase} instances with matching attributes.
     """
