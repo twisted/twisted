@@ -608,7 +608,7 @@ def _makeRunner(config):
         from twisted.trial._dist.disttrial import DistTrialRunner
 
         cls = DistTrialRunner
-        args["workerNumber"] = config["jobs"]
+        args["maxWorkers"] = config["jobs"]
         args["workerArguments"] = config._getWorkerArguments()
     else:
         if config["debug"]:
