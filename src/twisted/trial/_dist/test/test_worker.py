@@ -10,10 +10,9 @@ from io import BytesIO, StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import fail, succeed
-from twisted.internet.error import ConnectionDone
+from twisted.internet.defer import fail, succeed, Deferred
+from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
-from twisted.internet.main import CONNECTION_DONE
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -22,6 +21,7 @@ from twisted.scripts import trial
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial._dist import managercommands, workercommands
 from twisted.trial._dist.worker import (
+    NotRunning,
     LocalWorker,
     LocalWorkerAMP,
     LocalWorkerTransport,
@@ -329,6 +329,29 @@ class LocalWorkerTests(TestCase):
         self.addCleanup(worker._errLog.close)
         return worker
 
+    def test_exitBeforeConnected(self):
+        """
+        L{LocalWorker.exit} fails with L{NotRunning} if it is called before the
+        protocol is connected to a transport.
+        """
+        worker = LocalWorker(SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO())
+        self.failureResultOf(worker.exit(), NotRunning)
+
+    def test_exitAfterDisconnected(self):
+        """
+        L{LocalWorker.exit} fails with L{NotRunning} if it is called after the the
+        protocol is disconnected from its transport.
+        """
+        worker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO())
+        worker.processEnded(Failure(ProcessDone(0)))
+        # Since we're not calling exit until after the process has ended, it
+        # won't consume the ProcessDone failure on the internal `endDeferred`.
+        # Swallow it here.
+        self.failureResultOf(worker.endDeferred, ProcessDone)
+
+        # Now assert that exit behaves.
+        self.failureResultOf(worker.exit(), NotRunning)
+
     def test_childDataReceived(self):
         """
         L{LocalWorker.childDataReceived} forwards the received data to linked
@@ -450,11 +473,11 @@ class LocalWorkerTests(TestCase):
         protocol = SpyDataLocalWorkerAMP()
         localWorker = LocalWorker(protocol, FilePath(self.mktemp()), "test.log")
         localWorker.makeConnection(transport)
-        localWorker.processEnded(Failure(CONNECTION_DONE))
+        localWorker.processEnded(Failure(ProcessDone(0)))
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
         self.assertIdentical(None, protocol.transport)
-        return self.assertFailure(localWorker.endDeferred, ConnectionDone)
+        return self.assertFailure(localWorker.endDeferred, ProcessDone)
 
     def test_addresses(self):
         """

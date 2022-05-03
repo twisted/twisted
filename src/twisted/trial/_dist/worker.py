@@ -356,6 +356,7 @@ class LocalWorker(ProcessProtocol):
         """
         self._outLog.close()
         self._errLog.close()
+        self.transport = None
 
     def processEnded(self, reason):
         """
