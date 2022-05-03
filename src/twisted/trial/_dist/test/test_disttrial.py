@@ -31,10 +31,10 @@ from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
 from twisted.trial._dist.functional import (
     countingCalls,
+    discardResult,
     fromOptional,
     iterateWhile,
     sequence,
-    void,
 )
 from twisted.trial._dist.worker import LocalWorker, Worker, WorkerAction
 from twisted.trial.reporter import (
@@ -584,20 +584,20 @@ class FunctionalTests(TestCase):
 
     def test_fromOptional(self) -> None:
         """
-        ``void`` accepts a default value and an ``Optional`` value of the same
-        type and returns the default value if the optional value is ``None``
-        or the optional value otherwise.
+        ``fromOptional`` accepts a default value and an ``Optional`` value of the
+        same type and returns the default value if the optional value is
+        ``None`` or the optional value otherwise.
         """
         assert_that(fromOptional(1, None), equal_to(1))
         assert_that(fromOptional(2, 2), equal_to(2))
 
-    def test_void(self) -> None:
+    def test_discardResult(self) -> None:
         """
-        ``void`` accepts an awaitable and returns a ``Deferred`` that fires with
-        ``None`` after the awaitable completes.
+        ``discardResult`` accepts an awaitable and returns a ``Deferred`` that
+        fires with ``None`` after the awaitable completes.
         """
         a: Deferred[str] = Deferred()
-        d = void(a)
+        d = discardResult(a)
         self.assertNoResult(d)
         a.callback("result")
         assert_that(self.successResultOf(d), none())

@@ -18,7 +18,7 @@ from unittest import TestResult, TestSuite
 from attrs import define, field, frozen
 from attrs.converters import default_if_none
 
-from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.defer import Deferred, DeferredList, gatherResults
 from twisted.internet.interfaces import IReactorCore, IReactorProcess
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -32,7 +32,7 @@ from ..runner import TestHolder
 from ..util import _unusedTestDirectory, openTestLog
 from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from .distreporter import DistReporter
-from .functional import countingCalls, iterateWhile, parallel, void
+from .functional import countingCalls, discardResult, iterateWhile
 from .worker import LocalWorker, LocalWorkerAMP, WorkerAction
 
 
@@ -116,7 +116,9 @@ class StartedWorkerPool:
         """
         Run an action on all of the workers in the pool.
         """
-        await parallel(void(workerAction(worker)) for worker in self.ampWorkers)
+        await gatherResults(
+            discardResult(workerAction(worker)) for worker in self.ampWorkers
+        )
         return None
 
     async def join(self) -> None:

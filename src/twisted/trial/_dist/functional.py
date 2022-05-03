@@ -70,17 +70,10 @@ def compose(fx: Callable[[_B], _C], fy: Callable[[_A], _B]) -> Callable[[_A], _C
 #
 # Ignore the `Cannot infer type argument 1 of "compose"`
 # https://github.com/python/mypy/issues/6220
-void: Callable[[Awaitable[_A]], Deferred[None]] = compose(  # type: ignore[misc]
+discardResult: Callable[[Awaitable[_A]], Deferred[None]] = compose(  # type: ignore[misc]
     Deferred.fromCoroutine,
     partial(flip(sequence), succeed(None)),
 )
-
-
-async def parallel(actions: Iterable[Deferred[_A]]) -> Sequence[_A]:
-    """
-    Await all of the awaitables at the same time.
-    """
-    return await gatherResults(actions)
 
 
 async def iterateWhile(
