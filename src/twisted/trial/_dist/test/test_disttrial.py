@@ -697,6 +697,7 @@ class _LocalWorker:
     pool logic without sending tests over an AMP connection to be run
     somewhere else..
     """
+
     async def run(self, case: TestCase, result: TestResult) -> None:
         """
         Directly run C{case} in the usual way.
@@ -714,6 +715,7 @@ class _BrokenLocalWorker:
     """
     A L{Worker} that always fails to run test cases.
     """
+
     async def run(self, case: TestCase, result: TestResult) -> None:
         """
         Raise an exception instead of running C{case}.

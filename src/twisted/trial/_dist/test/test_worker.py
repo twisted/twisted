@@ -10,7 +10,7 @@ from io import BytesIO, StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import fail, succeed, Deferred
+from twisted.internet.defer import fail, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.protocols.amp import AMP
@@ -21,10 +21,10 @@ from twisted.scripts import trial
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial._dist import managercommands, workercommands
 from twisted.trial._dist.worker import (
-    NotRunning,
     LocalWorker,
     LocalWorkerAMP,
     LocalWorkerTransport,
+    NotRunning,
     WorkerException,
     WorkerProtocol,
 )
@@ -334,7 +334,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.exit} fails with L{NotRunning} if it is called before the
         protocol is connected to a transport.
         """
-        worker = LocalWorker(SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO())
+        worker = LocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+        )
         self.failureResultOf(worker.exit(), NotRunning)
 
     def test_exitAfterDisconnected(self):
@@ -342,7 +344,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.exit} fails with L{NotRunning} if it is called after the the
         protocol is disconnected from its transport.
         """
-        worker = self.tidyLocalWorker(SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO())
+        worker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+        )
         worker.processEnded(Failure(ProcessDone(0)))
         # Since we're not calling exit until after the process has ended, it
         # won't consume the ProcessDone failure on the internal `endDeferred`.

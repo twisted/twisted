@@ -6,9 +6,9 @@ General functional-style helpers for disttrial.
 """
 
 from functools import partial, wraps
-from typing import Awaitable, Callable, Iterable, Optional, Sequence, TypeVar
+from typing import Awaitable, Callable, Optional, TypeVar
 
-from twisted.internet.defer import Deferred, gatherResults, succeed
+from twisted.internet.defer import Deferred, succeed
 
 _A = TypeVar("_A")
 _B = TypeVar("_B")
