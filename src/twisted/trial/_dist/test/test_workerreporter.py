@@ -19,12 +19,12 @@ from twisted.trial.unittest import SynchronousTestCase
 
 
 def matches_result(
-    successes=equal_to(0),
-    errors=has_length(0),
-    failures=has_length(0),
-    skips=has_length(0),
-    expectedFailures=has_length(0),
-    unexpectedSuccesses=has_length(0),
+    successes: Matcher = equal_to(0),
+    errors: Matcher = has_length(0),
+    failures: Matcher = has_length(0),
+    skips: Matcher = has_length(0),
+    expectedFailures: Matcher = has_length(0),
+    unexpectedSuccesses: Matcher = has_length(0),
 ) -> Matcher:
     """
     Match a L{TestCase} instances with matching attributes.
