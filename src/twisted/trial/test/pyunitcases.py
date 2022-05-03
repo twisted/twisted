@@ -28,8 +28,8 @@ class PyUnitTest(unittest.TestCase):
         """
         self.fail("pyunit failure")
 
+    @unittest.skip("pyunit skip")
     def test_skip(self):
         """
-        A test which uses L{unittest.TestCase.skip} to cause a skip.
+        A test which uses the L{unittest.skip} decorator to cause a skip.
         """
-        self.skip("pyunit skip")
