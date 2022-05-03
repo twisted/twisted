@@ -110,6 +110,15 @@ class WorkerReporterTests(SynchronousTestCase):
             skipping.SynchronousSkipping("test_skip1"), skips=has_length(1)
         )
 
+    def test_addSkipPyunit(self) -> None:
+        """
+        L{WorkerReporter} propagates skips from L{unittest.TestCase} cases.
+        """
+        self.assertTestRun(
+            pyunitcases.PyUnitTest("test_skip"),
+            skips=has_length(1),
+        )
+
     def test_addExpectedFailure(self) -> None:
         """
         L{WorkerReporter} propagates expected failures.
