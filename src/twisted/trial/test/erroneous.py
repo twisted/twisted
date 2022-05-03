@@ -100,6 +100,8 @@ class TestAsynchronousFail(unittest.TestCase):
     Test failures for L{unittest.TestCase} based classes.
     """
 
+    text = "I fail"
+
     def test_fail(self):
         """
         A test which fails in the callback of the returned L{defer.Deferred}.
@@ -116,7 +118,7 @@ class TestAsynchronousFail(unittest.TestCase):
         """
         A test which raises an exception synchronously.
         """
-        raise Exception("I fail")
+        raise Exception(self.text)
 
 
 class ErrorTest(unittest.SynchronousTestCase):
