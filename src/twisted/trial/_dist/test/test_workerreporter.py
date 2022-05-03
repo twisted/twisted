@@ -61,7 +61,7 @@ class WorkerReporterTests(SynchronousTestCase):
     Tests for L{WorkerReporter}.
     """
 
-    def _check(self, target: TestCase, **expectations: Matcher) -> None:
+    def assertTestRun(self, target: TestCase, **expectations: Matcher) -> None:
         """
         Run the given test and assert that the result matches the given
         expectations.
@@ -72,13 +72,13 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         L{WorkerReporter} propagates successes.
         """
-        self._check(sample.FooTest("test_foo"), successes=equal_to(1))
+        self.assertTestRun(sample.FooTest("test_foo"), successes=equal_to(1))
 
     def test_addError(self) -> None:
         """
         L{WorkerReporter} propagates errors from trial's TestCases.
         """
-        self._check(
+        self.assertTestRun(
             erroneous.TestAsynchronousFail("test_exception"), errors=has_length(1)
         )
 
@@ -86,31 +86,35 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         L{WorkerReporter} propagates errors from pyunit's TestCases.
         """
-        self._check(pyunitcases.PyUnitTest("test_error"), errors=has_length(1))
+        self.assertTestRun(pyunitcases.PyUnitTest("test_error"), errors=has_length(1))
 
     def test_addFailure(self) -> None:
         """
         L{WorkerReporter} propagates test failures from trial's TestCases.
         """
-        self._check(erroneous.TestRegularFail("test_fail"), failures=has_length(1))
+        self.assertTestRun(
+            erroneous.TestRegularFail("test_fail"), failures=has_length(1)
+        )
 
     def test_addFailureTuple(self) -> None:
         """
         L{WorkerReporter} propagates test failures from pyunit's TestCases.
         """
-        self._check(pyunitcases.PyUnitTest("test_fail"), failures=has_length(1))
+        self.assertTestRun(pyunitcases.PyUnitTest("test_fail"), failures=has_length(1))
 
     def test_addSkip(self) -> None:
         """
         L{WorkerReporter} propagates skips.
         """
-        self._check(skipping.SynchronousSkipping("test_skip1"), skips=has_length(1))
+        self.assertTestRun(
+            skipping.SynchronousSkipping("test_skip1"), skips=has_length(1)
+        )
 
     def test_addExpectedFailure(self) -> None:
         """
         L{WorkerReporter} propagates expected failures.
         """
-        self._check(
+        self.assertTestRun(
             skipping.SynchronousStrictTodo("test_todo1"), expectedFailures=has_length(1)
         )
 
@@ -118,6 +122,6 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         L{WorkerReporter} propagates unexpected successes.
         """
-        self._check(
+        self.assertTestRun(
             skipping.SynchronousTodo("test_todo3"), unexpectedSuccesses=has_length(1)
         )
