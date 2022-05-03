@@ -553,9 +553,6 @@ class TestLoader:
         """
         return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
-    def loadMethod(self, method):
-        raise NotImplementedError("Can't happen on Py3")
-
     def _makeCase(self, klass, methodName):
         return klass(methodName)
 
