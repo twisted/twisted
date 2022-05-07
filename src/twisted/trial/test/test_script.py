@@ -550,13 +550,13 @@ class MakeRunnerTests(unittest.TestCase):
     def test_jobs(self):
         """
         L{_makeRunner} returns a L{DistTrialRunner} instance when the C{--jobs}
-        option is passed, and passes the C{workerNumber} and C{workerArguments}
-        parameters to it.
+        option is passed.  The L{DistTrialRunner} knows how many workers to
+        run and the C{workerArguments} to pass to them.
         """
         self.options.parseOptions(["--jobs", "4", "--force-gc"])
         runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, DistTrialRunner)
-        self.assertEqual(4, runner._workerNumber)
+        self.assertEqual(4, runner._maxWorkers)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
     def test_dryRunWithJobs(self):
