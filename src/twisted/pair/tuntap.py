@@ -11,6 +11,7 @@ Support for Linux ethernet and IP tunnel devices.
 import errno
 import fcntl
 import os
+import platform
 import struct
 import warnings
 from collections import namedtuple
@@ -36,8 +37,17 @@ __all__ = [
 
 
 _IFNAMSIZ = 16
-_TUNSETIFF = 0x400454CA
-_TUNGETIFF = 0x800454D2
+if (
+    platform.machine() == "parisc"
+    or platform.machine().startswith("ppc")
+    or platform.machine().startswith("sparc")
+):  # pragma: no coverage
+    # We don't have CI for parisc, hence no coverage is expected.
+    _TUNSETIFF = 0x800454CA
+    _TUNGETIFF = 0x400454D2
+else:
+    _TUNSETIFF = 0x400454CA
+    _TUNGETIFF = 0x800454D2
 _TUN_KO_PATH = b"/dev/net/tun"
 
 
