@@ -30,8 +30,8 @@ def fromOptional(default: _A, optional: Optional[_A]) -> _A:
 
 def takeWhile(condition: Callable[[_A], bool], xs: Iterable[_A]) -> Iterable[_A]:
     """
-    :return: An iterable of the prefix of ``xs`` until ``condition`` returns
-        ``False``.
+    :return: An iterable over C{xs} that stops when C{condition} returns
+        ``False`` based on the value of iterated C{xs}.
     """
     for x in xs:
         if condition(x):
