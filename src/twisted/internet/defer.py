@@ -51,7 +51,7 @@ from twisted.python.failure import Failure, _extraneous
 
 class _Context(Protocol):
     def run(self, f: Callable[..., object], *args: object, **kwargs: object) -> object:
-        pass
+        ...
 
 
 try:
@@ -69,7 +69,6 @@ except ImportError:
 
     def _copy_context() -> Type[_NoContext]:
         return _NoContext
-
 
 else:
     _copy_context = __copy_context  # type: ignore[assignment]
