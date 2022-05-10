@@ -405,6 +405,8 @@ class DistTrialRunner:
                 # provide a report about which run this is.
                 self._stream.write(f"Test Pass {n + 1}\n")
 
+            result = self._makeResult()
+
             if self._exitFirst:
                 # Keep giving out tests as long as the result object has only
                 # seen success.
@@ -412,7 +414,6 @@ class DistTrialRunner:
             else:
                 casesCondition = lambda _: True
 
-            result = self._makeResult()
             await runTests(
                 startedPool,
                 takeWhile(casesCondition, testCases),
