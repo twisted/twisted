@@ -252,7 +252,7 @@ def shouldContinue(untilFailure: bool, result: IReporter) -> bool:
 
 async def runTests(
     pool: StartedWorkerPool,
-    testCases: Sequence[ITestCase],
+    testCases: Iterable[ITestCase],
     result: DistReporter,
     driveWorker: Callable[
         [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
@@ -260,7 +260,7 @@ async def runTests(
 ) -> None:
     try:
         # Run the tests using the worker pool.
-        await pool.run(partial(driveWorker, result, iter(testCases)))
+        await pool.run(partial(driveWorker, result, testCases))
     except Exception:
         # Exceptions from test code are handled somewhere else.  An
         # exception here is a bug in the runner itself.  The only
