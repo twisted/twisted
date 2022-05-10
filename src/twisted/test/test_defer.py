@@ -3410,26 +3410,10 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         @defer.inlineCallbacks
         def yieldingDeferred() -> Generator[Deferred[Any], Any, None]:
-            # first try setting the var
-            token = var.set(3)
-
-            # after a sleep, try resetting it
             d: Deferred[int] = Deferred()
             clock.callLater(1, d.callback, True)
             yield d
-            self.assertEqual(var.get(), 3)
-
-            var.reset(token)
-            # it should have gone back to what we started with (2)
-            self.assertEqual(var.get(), 2)
-
-            # after another sleep, set it again
-            d = Deferred()
-            clock.callLater(1, d.callback, True)
-            yield d
-
-            self.assertEqual(var.get(), 2)
-            var.set(4)
+            var.set(3)
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
@@ -3482,9 +3466,40 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         # Advance the clock so that yieldingDeferred triggers
         clock.advance(1)
-        clock.advance(1)
 
         self.assertEqual(self.successResultOf(d), True)
+
+    def test_resetWithInlineCallbacks(self) -> None:
+        """
+        When an inlineCallbacks function resumes, we should be able to reset() a
+        contextvar that was set when it was first called.
+        """
+        clock = Clock()
+
+        var: contextvars.ContextVar[int] = contextvars.ContextVar("testvar")
+
+        @defer.inlineCallbacks
+        def yieldingDeferred() -> Generator[Deferred[Any], Any, None]:
+            # first try setting the var
+            token = var.set(3)
+
+            # after a sleep, try resetting it
+            d: Deferred[int] = Deferred()
+            clock.callLater(1, d.callback, True)
+            yield d
+            self.assertEqual(var.get(), 3)
+
+            var.reset(token)
+            # it should have gone back to what we started with (2)
+            self.assertEqual(var.get(), 2)
+
+        # we start off with the var set to 2
+        var.set(2)
+        d = yieldingDeferred()
+
+        # Advance the clock so that yieldingDeferred triggers
+        clock.advance(1)
+        self.successResultOf(d)
 
     @ensuringDeferred
     async def test_asyncWithLock(self) -> None:
