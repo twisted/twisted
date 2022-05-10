@@ -1,1 +1,0 @@
-twisted.conch.ssh now supports using RSA keys with SHA-2 signatures (RFC 8332) when acting as a server.  The rsa-sha2-512 and rsa-sha2-256 public key signature algorithms are automatically preferred over ssh-rsa if the client advertises support for them; the actual public keys do not need to change.

@@ -623,6 +623,8 @@ class ProcessProtocol(BaseProtocol):
     stdin, stdout, and stderr file descriptors.
     """
 
+    transport: Optional[interfaces.IProcessTransport] = None
+
     def childDataReceived(self, childFD: int, data: bytes):
         if childFD == 1:
             self.outReceived(data)

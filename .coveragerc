@@ -15,6 +15,7 @@ source=
 precision = 2
 ignore_errors = True
 exclude_lines =
+    pragma: no cover
     if TYPE_CHECKING
     \s*\.\.\.$
     raise NotImplementedError

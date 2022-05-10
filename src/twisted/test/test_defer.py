@@ -30,6 +30,8 @@ from typing import (
     cast,
 )
 
+from hamcrest import assert_that, equal_to, is_
+
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
     Deferred,
@@ -846,6 +848,50 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         )
         d1.errback(Failure(RuntimeError()))
         self.assertImmediateFailure(d2, RuntimeError)
+
+    def test_maybeDeferredCoroutineSuccess(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has the same result as the coroutine returned
+        by the function.
+        """
+        result = object()
+
+        async def f() -> object:
+            return result
+
+        # Demonstrate that the function itself does not need to be a coroutine
+        # function to trigger the coroutine-handling behavior.
+        def g() -> Coroutine:
+            return f()
+
+        assert_that(
+            self.successResultOf(defer.maybeDeferred(g)),
+            is_(result),
+        )
+
+    def test_maybeDeferredCoroutineFailure(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has a L{Failure} result wrapping the exception
+        raised by the coroutine function.
+        """
+
+        class SomeException(Exception):
+            pass
+
+        async def f() -> None:
+            raise SomeException()
+
+        # Demonstrate that the function itself does not need to be a coroutine
+        # function to trigger the coroutine-handling behavior.
+        def g() -> Coroutine:
+            return f()
+
+        assert_that(
+            self.failureResultOf(defer.maybeDeferred(g)).type,
+            equal_to(SomeException),
+        )
 
     def test_innerCallbacksPreserved(self) -> None:
         """
