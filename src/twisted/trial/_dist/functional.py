@@ -6,7 +6,7 @@ General functional-style helpers for disttrial.
 """
 
 from functools import partial, wraps
-from typing import Awaitable, Callable, Optional, TypeVar
+from typing import Awaitable, Callable, Iterable, Optional, TypeVar
 
 from twisted.internet.defer import Deferred, succeed
 
@@ -26,6 +26,18 @@ def fromOptional(default: _A, optional: Optional[_A]) -> _A:
     if optional is None:
         return default
     return optional
+
+
+def takeWhile(condition: Callable[[_A], bool], xs: Iterable[_A]) -> Iterable[_A]:
+    """
+    :return: An iterable of the prefix of ``xs`` until ``condition`` returns
+        ``False``.
+    """
+    for x in xs:
+        if condition(x):
+            yield x
+        else:
+            break
 
 
 async def sequence(a: Awaitable[_A], b: Awaitable[_B]) -> _B:
