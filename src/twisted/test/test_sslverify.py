@@ -1324,9 +1324,11 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
-        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_0)
+        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_2)
 
     def test_tlsProtocolsAllSecureTLS(self):
         """
