@@ -41,7 +41,6 @@ from zope.interface import directlyProvides, implementer, providedBy
 
 from OpenSSL.SSL import (
     Connection,
-    Context,
     Error,
     SysCallError,
     WantReadError,
