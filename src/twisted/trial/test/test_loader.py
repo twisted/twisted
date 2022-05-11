@@ -12,9 +12,8 @@ import unittest as pyunit
 from hashlib import md5
 from operator import attrgetter
 from types import ModuleType
-from typing import Optional
 
-from hamcrest import assert_that, equal_to, has_properties, is_
+from hamcrest import assert_that, equal_to, has_properties
 from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
@@ -82,18 +81,18 @@ def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
         as long as it is semantically equal.
     """
     expected = module.__spec__
-    if expected is None:
-        match_spec: Matcher[Optional[object]] = is_(None)
-    else:
-        match_spec = has_properties(
-            {
-                "name": equal_to(expected.name),
-                "origin": after(
-                    filepath.FilePath,
-                    equal_to(filepath.FilePath(expected.origin)),
-                ),
-            }
-        )
+    # Technically possible but not expected in any of the tests written so
+    # far.
+    assert expected is not None
+    match_spec = has_properties(
+        {
+            "name": equal_to(expected.name),
+            "origin": after(
+                filepath.FilePath,
+                equal_to(filepath.FilePath(expected.origin)),
+            ),
+        }
+    )
     return after(attrgetter("__spec__"), match_spec)
 
 
