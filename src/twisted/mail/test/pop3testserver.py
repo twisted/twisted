@@ -185,9 +185,6 @@ class POP3TestServer(basic.LineReceiver):
             self.sendLine(UIDL)
 
     def startTLS(self):
-        if self.ctx is None:
-            self.getContext()
-
         if SSL_SUPPORT and self.ctx is not None:
             self.sendLine(b"+OK Begin TLS negotiation now")
             self.transport.startTLS(self.ctx)
@@ -196,14 +193,6 @@ class POP3TestServer(basic.LineReceiver):
 
     def disconnect(self):
         self.transport.loseConnection()
-
-    def getContext(self):
-        try:
-            from twisted.internet import ssl
-        except ImportError:
-            self.ctx = None
-        else:
-            return ssl.ClientContextFactory()
 
 
 usage = """popServer.py [arg] (default is Standard POP Server with no messages)
