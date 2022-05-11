@@ -36,7 +36,7 @@ try:
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 16.0.0 or newer required for twisted.protocol.tls"
-    TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None  # type: ignore[assignment]
+    TLS_METHOD = TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext, certPath
