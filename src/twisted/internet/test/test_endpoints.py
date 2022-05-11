@@ -89,8 +89,8 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 try:
     from OpenSSL.SSL import (
-        Context as ContextType,
         TLS_METHOD,
+        Context as ContextType,
         OP_NO_SSLv3,
         SSLv23_METHOD,
         TLSv1_2_METHOD,
