@@ -443,7 +443,7 @@ Any place we receive untrusted data, we need to be careful.
 In some cases we are not careful enough. For example, in HTTP
 there are many places where strings need to be converted to
 ints, so we use ``int()`` . The problem
-is that this well accept negative numbers as well, whereas
+is that this will accept negative or hexadecimal (`0x123`) numbers as well, whereas
 the protocol should only be accepting positive numbers.
 
 

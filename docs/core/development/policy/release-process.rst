@@ -270,7 +270,7 @@ These releases are done as soon as the PR for the security advisory is merged.
 The PR contributors and the release manager should communicate and coordinate the release.
 
 Any step blocking the release should be done by the PR contributors.
-The role of the release manager is just to make sure due process is followed.
+The role of the release manager is just to make sure this process is followed.
 
 #. Make sure there is a `GitHub Security advisory <https://github.com/twisted/twisted/security/advisories>`_ opened for this ticket.
 #. Make sure the PR was approved.
