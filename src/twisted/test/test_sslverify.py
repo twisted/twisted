@@ -997,10 +997,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(message, warnings[0]["message"])
 
-    def test_tlsv1ByDefault(self):
+    def test_tlsv12ByDefault(self):
         """
         L{sslverify.OpenSSLCertificateOptions} will make the default minimum
-        TLS version v1.0, if no C{method}, or C{insecurelyLowerMinimumTo} is
+        TLS version v1.2, if no C{method}, or C{insecurelyLowerMinimumTo} is
         given.
         """
         opts = sslverify.OpenSSLCertificateOptions(
@@ -1013,6 +1013,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
 
@@ -1080,7 +1082,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
-                method=SSL.SSLv23_METHOD,
+                method=SSL.TLS_METHOD,
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 

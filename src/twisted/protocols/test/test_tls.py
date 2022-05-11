@@ -713,7 +713,7 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
-    def hugeWrite(self, method=TLSv1_METHOD):
+    def hugeWrite(self, method=TLS_METHOD):
         """
         If a very long string is passed to L{TLSMemoryBIOProtocol.write}, any
         trailing part of it which cannot be send immediately is buffered and
@@ -751,11 +751,8 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
-    def test_hugeWrite_TLSv1(self):
+    def test_hugeWrite(self):
         return self.hugeWrite()
-
-    def test_hugeWrite_TLSv1_1(self):
-        return self.hugeWrite(method=TLSv1_1_METHOD)
 
     def test_hugeWrite_TLSv1_2(self):
         return self.hugeWrite(method=TLSv1_2_METHOD)

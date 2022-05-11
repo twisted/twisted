@@ -90,9 +90,10 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 try:
     from OpenSSL.SSL import (
         Context as ContextType,
+        TLS_METHOD,
         OP_NO_SSLv3,
         SSLv23_METHOD,
-        TLSv1_METHOD,
+        TLSv1_2_METHOD,
     )
 
     from twisted.internet.ssl import (
@@ -3121,7 +3122,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName),
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
@@ -3129,7 +3130,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3148,7 +3149,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
-        self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLS_METHOD)
         self.assertTrue(
             server._sslContextFactory._options & OP_NO_SSLv3,
         )
@@ -3248,7 +3249,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (
                 escapedNoTrailingNewlineKeyPEMPathName,
                 escapedNoTrailingNewlineCertPEMPathName,
@@ -3259,7 +3260,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3533,7 +3534,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertTrue(certOptions._options & OP_NO_SSLv3)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
@@ -3597,7 +3598,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertIsNone(certOptions.certificate)
         self.assertIsNone(certOptions.privateKey)
 

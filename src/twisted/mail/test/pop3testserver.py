@@ -203,8 +203,7 @@ class POP3TestServer(basic.LineReceiver):
         except ImportError:
             self.ctx = None
         else:
-            self.ctx = ssl.ClientContextFactory()
-            self.ctx.method = ssl.SSL.TLSv1_METHOD
+            return ssl.ClientContextFactory()
 
 
 usage = """popServer.py [arg] (default is Standard POP Server with no messages)
