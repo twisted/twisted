@@ -39,13 +39,7 @@ transports, such as UNIX sockets and stdio.
 
 from zope.interface import directlyProvides, implementer, providedBy
 
-from OpenSSL.SSL import (
-    Connection,
-    Error,
-    SysCallError,
-    WantReadError,
-    ZeroReturnError,
-)
+from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroReturnError
 
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
