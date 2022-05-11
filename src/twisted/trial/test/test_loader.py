@@ -10,6 +10,11 @@ import os
 import sys
 import unittest as pyunit
 from hashlib import md5
+from operator import attrgetter
+from types import ModuleType
+
+from hamcrest import assert_that, equal_to, has_properties
+from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
 from twisted.python.modules import getModule
@@ -18,6 +23,7 @@ from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial.itrial import ITestCase
 from twisted.trial.test import packages
+from .matchers import after
 
 
 def testNames(tests):
@@ -66,6 +72,29 @@ class FinderPy3Tests(packages.SysPathManglingTest):
         )
 
 
+def loosely_resembles(module: ModuleType) -> Matcher:
+    """
+    Match an object like the given L{ModuleSpec}.
+
+    @return: A matcher for a module spec that has the same name and origin as
+        the given module spec, though the origin may be structurally inequal
+        as long as it is semantically equal.
+    """
+    expected = module.__spec__
+    return after(
+        attrgetter("__spec__"),
+        has_properties(
+            {
+                "name": equal_to(expected.name),
+                "origin": after(
+                    filepath.FilePath,
+                    equal_to(filepath.FilePath(expected.origin + "x")),
+                ),
+            }
+        ),
+    )
+
+
 class FileTests(packages.SysPathManglingTest):
     """
     Tests for L{runner.filenameToModule}.
@@ -108,7 +137,7 @@ class FileTests(packages.SysPathManglingTest):
         from goodpackage import test_sample as sample2  # type: ignore[import]
 
         self.assertIsNot(sample1, sample2)
-        self.assertEqual(sample1.__spec__, sample2.__spec__)
+        assert_that(sample1, loosely_resembles(sample2))
 
     def test_packageInPath(self):
         """
@@ -135,7 +164,7 @@ class FileTests(packages.SysPathManglingTest):
         import goodpackage
 
         self.assertIsNot(package1, goodpackage)
-        self.assertEqual(package1.__spec__, goodpackage.__spec__)
+        assert_that(package1, loosely_resembles(goodpackage))
 
     def test_directoryNotPackage(self):
         """
