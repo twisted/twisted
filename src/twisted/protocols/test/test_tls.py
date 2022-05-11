@@ -1019,7 +1019,7 @@ class TLSMemoryBIOTests(TestCase):
                 return getattr(self._wrapped, attr)
 
             def send(self, *args):
-                raise Error("ONO!")
+                raise Error([("SSL routines", '', 'this message is probably useless')])
 
         tlsClient._tlsConnection = Wrapper(tlsClient._tlsConnection)
 
