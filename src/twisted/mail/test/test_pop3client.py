@@ -630,10 +630,6 @@ class POP3ClientModuleStructureTests(TestCase):
         ]
 
         for pc in publicClasses:
-            if sys.version_info < (3, 7) and pc == "List":
-                # typing.List shows up in publicClasses on
-                # Python < 3.7, so skip it.
-                continue
             if not pc == "POP3Client":
                 self.assertTrue(
                     hasattr(twisted.mail.pop3, pc),

@@ -9,13 +9,12 @@ Test HTTP support.
 import base64
 import calendar
 import random
-import sys
 from io import BytesIO
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
 from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from urllib.parse import parse_qs, urlparse, urlunsplit
+from urllib.parse import urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
@@ -2569,18 +2568,6 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
-    # FIXME: https://twistedmatrix.com/trac/ticket/10096
-    # Re-enable once the implementation is updated.
-    @skipIf(sys.version_info >= (3, 6, 13), "newer py3.6 parse_qs treat ; differently")
-    def testParseqs(self):
-        self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
-        self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)
-        self.assertEqual(
-            parse_qs(b"a=&b=c", keep_blank_values=1),
-            http.parse_qs(b"a=&b=c", keep_blank_values=1),
-        )
-        self.assertEqual(parse_qs(b"a=&b=c"), http.parse_qs(b"a=&b=c"))
-
     def test_urlparse(self):
         """
         For a given URL, L{http.urlparse} should behave the same as L{urlparse},

@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
-from sys import exc_info, version_info
+from sys import exc_info
 from types import CoroutineType, GeneratorType, MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -39,7 +39,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Literal
+from typing_extensions import Literal, Protocol
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -47,6 +47,12 @@ from twisted.python import lockfile
 from twisted.python.compat import _PYPY, cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
+
+
+class _Context(Protocol):
+    def run(self, f: Callable[..., object], *args: object, **kwargs: object) -> object:
+        ...
+
 
 try:
     from contextvars import copy_context as __copy_context
@@ -1644,6 +1650,7 @@ def _inlineCallbacks(
         Coroutine[Deferred[_T], object, None],
     ],
     status: _CancellationStatus,
+    context: _Context,
 ) -> None:
     """
     Carry out the work of L{inlineCallbacks}.
@@ -1662,6 +1669,8 @@ def _inlineCallbacks(
         decorated with C{@}L{inlineCallbacks}
 
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+
+    @param context: the contextvars context to run `gen` in
     """
     # This function is complicated by the need to prevent unbounded recursion
     # arising from repeatedly yielding immediately ready deferreds.  This while
@@ -1671,20 +1680,17 @@ def _inlineCallbacks(
     # waiting for result?  # result
     waiting: List[Any] = [True, None]
 
-    # Get the current contextvars Context object.
-    current_context = _copy_context()
-
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
             isFailure = isinstance(result, Failure)
 
             if isFailure:
-                result = current_context.run(
+                result = context.run(
                     cast(Failure, result).throwExceptionIntoGenerator, gen
                 )
             else:
-                result = current_context.run(gen.send, result)
+                result = context.run(gen.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
             status.deferred.callback(getattr(e, "value", None))
@@ -1708,11 +1714,7 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if version_info < (3, 7):
-                # The contextvars backport and our no-op shim add an extra frame.
-                appCodeTrace = appCodeTrace.tb_next
-                assert appCodeTrace is not None
-            elif _PYPY:
+            if _PYPY:
                 # PyPy as of 3.7 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
@@ -1774,7 +1776,7 @@ def _inlineCallbacks(
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    current_context.run(_inlineCallbacks, r, gen, status)
+                    _inlineCallbacks(r, gen, status, context)
 
             result.addBoth(gotResult)
             if waiting[0]:
@@ -1839,7 +1841,7 @@ def _cancellableInlineCallbacks(
 
         return status.deferred
 
-    _inlineCallbacks(None, gen, status)
+    _inlineCallbacks(None, gen, status, _copy_context())
 
     return deferred
 

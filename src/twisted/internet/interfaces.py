@@ -1086,8 +1086,7 @@ class IReactorProcess(Interface):
         L{bytes} using the encoding given by L{sys.getfilesystemencoding}, to be
         used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
         arguments will be decoded up to L{unicode} using the encoding given by
-        L{sys.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
-        thereafter) and given to Windows's native "wide" APIs.
+        L{sys.getfilesystemencoding} (C{utf8}) and given to Windows's native "wide" APIs.
 
         @param processProtocol: An object which will be notified of all events
             related to the created process.
