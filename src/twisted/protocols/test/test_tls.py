@@ -1168,62 +1168,6 @@ class TLSProducerTests(TestCase):
         self.assertEqual(tlsProtocol.transport.value(), b"")
         self.assertEqual(serverTLSProtocol.transport.value(), b"")
 
-    def test_producerDuringRenegotiation(self):
-        """
-        If we write some data to a TLS connection that is blocked waiting for a
-        renegotiation with its peer, it will pause and resume its registered
-        producer exactly once.
-
-        Renegotiation only works on TLSv1.2 or less.
-        """
-        clientProtocol, clientTransport, _ = self.setupStreamingProducer()
-        serverProtocol, serverTransport, serverProducer = self.setupStreamingProducer(
-            server=True, serverMethod=TLSv1_2_METHOD
-        )
-
-        # Do the initial handshake.
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        # Check the connection is working by exchanging data between client and server.
-        clientProtocol.transport.write(b"data from client")
-        serverProtocol.transport.write(b"data from server")
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        self.assertEqual([b"data from server"], clientProtocol.received)
-        self.assertEqual([b"data from client"], serverProtocol.received)
-
-        # no public API for this yet because it's (mostly) unnecessary, but we
-        # have to be prepared for a peer to do it to us
-        tlsc = clientTransport._tlsConnection
-        # Make sure we are on TLSv1.2 as otherwise renegociation is not supported
-        self.assertEqual("TLSv1.2", tlsc.get_cipher_version())
-        tlsc.renegotiate()
-
-        self.assertRaises(WantReadError, tlsc.do_handshake)
-
-        clientTransport._flushSendBIO()
-        serverTransport.dataReceived(self.drain(clientTransport.transport))
-        payload = b"payload"
-        serverProtocol.transport.write(payload)
-        serverProtocol.transport.loseConnection()
-
-        # give the client the server the client's response...
-        clientTransport.dataReceived(self.drain(serverTransport.transport))
-        messageThatUnblocksTheServer = self.drain(clientTransport.transport)
-
-        # split it into just enough chunks that it would provoke the producer
-        # with an incorrect implementation...
-        for fragment in (
-            messageThatUnblocksTheServer[0:1],
-            messageThatUnblocksTheServer[1:2],
-            messageThatUnblocksTheServer[2:],
-        ):
-            serverTransport.dataReceived(fragment)
-        self.assertEqual(serverTransport.transport.disconnecting, False)
-        serverProtocol.transport.unregisterProducer()
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        self.assertEqual(serverTransport.transport.disconnecting, True)
-        self.assertEqual([b"data from server", b"payload"], clientProtocol.received)
-        self.assertEqual(serverProducer.producerHistory, ["pause", "resume"])
-
     def test_streamingProducerPausedInNormalMode(self):
         """
         When the TLS transport is not blocked on reads, it correctly calls
