@@ -304,6 +304,7 @@ class StolenTCPTests(ProperlyCloseFilesMixin, TestCase):
                 hamcrest.any_of(
                     hamcrest.equal_to("SSL_write"),
                     hamcrest.equal_to("ssl_write_internal"),
+                    hamcrest.equal_to(""),
                 ),
                 hamcrest.equal_to("protocol is shutdown"),
             ),

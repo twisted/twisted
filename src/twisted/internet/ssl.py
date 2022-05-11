@@ -92,7 +92,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         self,
         privateKeyFileName,
         certificateFileName,
-        sslmethod=SSL.SSLv23_METHOD,
+        sslmethod=SSL.TLS_METHOD,
         _contextFactory=SSL.Context,
     ):
         """
