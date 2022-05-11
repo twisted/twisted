@@ -41,17 +41,10 @@ from OpenSSL.SSL import (
     Connection,
     Context,
     Error,
-    TLSv1_METHOD,
+    SysCallError,
     WantReadError,
     ZeroReturnError,
 )
-
-try:
-    Connection(Context(TLSv1_METHOD), None)
-except TypeError as e:
-    if str(e) != "argument must be an int, or have a fileno() method.":
-        raise
-    raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -115,6 +108,19 @@ class _ProducerMembrane:
         on.
         """
         self._producer.stopProducing()
+
+
+def _representsEOF(exceptionObject: Error) -> bool:
+    """
+    Does the given OpenSSL.SSL.Error represent an end-of-file?
+    """
+    reasonString: str
+    if isinstance(exceptionObject, SysCallError):
+        _, reasonString = exceptionObject.args
+    else:
+        errorQueue = exceptionObject.args[0]
+        _, _, reasonString = errorQueue[-1]
+    return reasonString.casefold().startswith("unexpected eof")
 
 
 @implementer(ISystemHandle, INegotiated)
@@ -365,9 +371,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             # Squash an EOF in violation of the TLS protocol into
             # ConnectionLost, so that applications which might run over
             # multiple protocols can recognize its type.
-            errorQueue = reason.value.args[0]
-            _, _, reasonString = errorQueue[-1]
-            if reasonString.startswith("unexpected eof"):
+            if _representsEOF(reason.value):
                 reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason
