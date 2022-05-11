@@ -92,7 +92,6 @@ try:
         TLS_METHOD,
         Context as ContextType,
         OP_NO_SSLv3,
-        SSLv23_METHOD,
         TLSv1_2_METHOD,
     )
 

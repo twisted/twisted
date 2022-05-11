@@ -16,7 +16,6 @@ from twisted.python.compat import iterbytes
 try:
     from OpenSSL import crypto
     from OpenSSL.SSL import (
-        SSL_CB_HANDSHAKE_DONE,
         TLS_METHOD,
         Connection,
         Context,
