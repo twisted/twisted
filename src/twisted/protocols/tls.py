@@ -365,7 +365,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             # Squash an EOF in violation of the TLS protocol into
             # ConnectionLost, so that applications which might run over
             # multiple protocols can recognize its type.
-            if tuple(reason.value.args[:2]) == (-1, "Unexpected EOF"):
+            errorQueue = reason.value.args[0]
+            _, _, reasonString = errorQueue[-1]
+            if reasonString.startswith("unexpected eof"):
                 reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason
