@@ -46,6 +46,7 @@ from twisted.trial.reporter import (
 from twisted.trial.runner import ErrorHolder, TrialSuite
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from ...test import erroneous, sample
+from .matchers import matches_result
 
 
 @define
@@ -452,6 +453,31 @@ class DistTrialRunnerTests(TestCase):
         stopped.callback(None)
         result = self.successResultOf(d)
         self.assertIsInstance(result, DistReporter)
+
+    def test_exitFirst(self):
+        """
+        L{DistTrialRunner} can run in C{exitFirst} mode where it will run until a
+        test fails and then abandon the rest of the suite.
+        """
+        stream = StringIO()
+        # Construct a suite with a failing test in the middle.
+        suite = TrialSuite(
+            [
+                sample.FooTest("test_foo"),
+                erroneous.TestRegularFail("test_fail"),
+                sample.FooTest("test_bar"),
+            ]
+        )
+        runner = self.getRunner(stream=stream, exitFirst=True, maxWorkers=2)
+        d = runner.runAsync(suite)
+        result = self.successResultOf(d)
+        assert_that(
+            result.original,
+            matches_result(
+                successes=1,
+                failures=has_length(1),
+            ),
+        )
 
     def test_runUntilFailure(self):
         """
