@@ -7216,7 +7216,6 @@ class TLSTests(IMAP4HelperMixin, TestCase):
         self.connected.addErrback(self._ebGeneral)
         return disconnected
 
-
     def test_doubleSTARTTLS(self):
         """
         A server that receives a second C{STARTTLS} sends a C{NO}
