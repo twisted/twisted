@@ -12,8 +12,9 @@ import unittest as pyunit
 from hashlib import md5
 from operator import attrgetter
 from types import ModuleType
+from typing import Optional
 
-from hamcrest import assert_that, equal_to, has_properties
+from hamcrest import assert_that, equal_to, has_properties, is_
 from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
@@ -72,27 +73,28 @@ class FinderPy3Tests(packages.SysPathManglingTest):
         )
 
 
-def loosely_resembles(module: ModuleType) -> Matcher:
+def loosely_resembles(module: ModuleType) -> Matcher[ModuleType]:
     """
-    Match an object like the given L{ModuleSpec}.
+    Match a module with a L{ModuleSpec} like that of the given module.
 
     @return: A matcher for a module spec that has the same name and origin as
         the given module spec, though the origin may be structurally inequal
         as long as it is semantically equal.
     """
     expected = module.__spec__
-    return after(
-        attrgetter("__spec__"),
-        has_properties(
+    if expected is None:
+        match_spec: Matcher[Optional[object]] = is_(None)
+    else:
+        match_spec = has_properties(
             {
                 "name": equal_to(expected.name),
                 "origin": after(
                     filepath.FilePath,
-                    equal_to(filepath.FilePath(expected.origin + "x")),
+                    equal_to(filepath.FilePath(expected.origin)),
                 ),
             }
-        ),
-    )
+        )
+    return after(attrgetter("__spec__"), match_spec)
 
 
 class FileTests(packages.SysPathManglingTest):
@@ -118,7 +120,7 @@ class FileTests(packages.SysPathManglingTest):
 
         self.assertEqual(sample2, sample1)
 
-    def test_moduleNotInPath(self):
+    def test_moduleNotInPath(self) -> None:
         """
         If passed the path to a file containing the implementation of a
         module within a package which is not on the import path,
@@ -148,7 +150,7 @@ class FileTests(packages.SysPathManglingTest):
 
         self.assertIs(package1, sys.modules["goodpackage"])
 
-    def test_packageNotInPath(self):
+    def test_packageNotInPath(self) -> None:
         """
         If passed the path to a directory which represents a package which
         is not on the import path, L{runner.filenameToModule} returns a
