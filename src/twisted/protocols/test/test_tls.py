@@ -24,6 +24,7 @@ try:
         TLSv1_2_METHOD,
         TLSv1_METHOD,
         WantReadError,
+        SSL_CB_HANDSHAKE_DONE,
     )
 
     from twisted.protocols.tls import (
@@ -94,7 +95,7 @@ class HandshakeCallbackContextFactory:
         connection.  When it indicates the handshake is complete, it will fire
         C{self._finished}.
         """
-        if where & self.SSL_CB_HANDSHAKE_DONE:
+        if where & SSL_CB_HANDSHAKE_DONE:
             self._finished.callback(None)
 
     def getContext(self):
