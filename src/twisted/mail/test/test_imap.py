@@ -31,6 +31,7 @@ from twisted.cred.credentials import (
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import defer, error, interfaces, reactor
+from twisted.internet.defer import Deferred
 from twisted.internet.task import Clock
 from twisted.mail import imap4
 from twisted.mail.imap4 import MessageSet
@@ -7199,6 +7200,18 @@ class TLSTests(IMAP4HelperMixin, TestCase):
         encryption.
         """
         disconnected = self.startTLSAndAssertSession()
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+        return disconnected
+
+    def test_startTLSDefault(self) -> Deferred[object]:
+        """
+        L{IMAPClient.startTLS} supplies a default TLS context if none is
+        supplied.
+        """
+        self.assertIsNotNone(self.client.context)
+        self.client.context = None
+        disconnected: Deferred[object] = self.startTLSAndAssertSession()
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
         return disconnected
