@@ -22,7 +22,9 @@ try:
         TLSv1_1_METHOD,
         TLSv1_2_METHOD,
         TLSv1_METHOD,
+        TLS_METHOD,
         WantReadError,
+        SSL_CB_HANDSHAKE_DONE,
     )
 
     from twisted.protocols.tls import (
@@ -72,11 +74,7 @@ class HandshakeCallbackContextFactory:
         is done.
     """
 
-    # pyOpenSSL needs to expose this.
-    # https://bugs.launchpad.net/pyopenssl/+bug/372832
-    SSL_CB_HANDSHAKE_DONE = 0x20
-
-    def __init__(self, method=TLSv1_METHOD):
+    def __init__(self, method=TLS_METHOD):
         self._finished = Deferred()
         self._method = method
 
@@ -523,9 +521,10 @@ class TLSMemoryBIOTests(TestCase):
             cert = sslClientProtocol.getPeerCertificate()
             self.assertIsInstance(cert, crypto.X509)
             self.assertEqual(
-                cert.digest("sha1"),
-                # openssl x509 -noout -sha1 -fingerprint -in server.pem
-                b"23:4B:72:99:2E:5D:5E:2B:02:C3:BC:1B:7C:50:67:05:4F:60:FF:C9",
+                cert.digest("sha256"),
+                # openssl x509 -noout -sha256 -fingerprint -in server.pem
+                b"9B:11:E6:87:7D:FB:77:8D:C0:DE:77:FB:46:C2:60:0F:42:17:7F:9F"
+                b":96:D2:3F:0C:4C:DA:D7:E2:BE:E2:78:E5",
             )
 
         handshakeDeferred.addCallback(cbHandshook)
