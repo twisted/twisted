@@ -73,7 +73,7 @@ class FinderPy3Tests(packages.SysPathManglingTest):
         )
 
 
-def loosely_resembles(module: ModuleType) -> Matcher[ModuleType]:
+def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
     """
     Match a module with a L{ModuleSpec} like that of the given module.
 
@@ -139,7 +139,7 @@ class FileTests(packages.SysPathManglingTest):
         from goodpackage import test_sample as sample2  # type: ignore[import]
 
         self.assertIsNot(sample1, sample2)
-        assert_that(sample1, loosely_resembles(sample2))
+        assert_that(sample1, looselyResembles(sample2))
 
     def test_packageInPath(self):
         """
@@ -166,7 +166,7 @@ class FileTests(packages.SysPathManglingTest):
         import goodpackage
 
         self.assertIsNot(package1, goodpackage)
-        assert_that(package1, loosely_resembles(goodpackage))
+        assert_that(package1, looselyResembles(goodpackage))
 
     def test_directoryNotPackage(self):
         """
