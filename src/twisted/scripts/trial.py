@@ -511,7 +511,7 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     def postOptions(self):
         _BasicOptions.postOptions(self)
         if self["jobs"]:
-            conflicts = ["debug", "profile", "debug-stacktraces", "exitfirst"]
+            conflicts = ["debug", "profile", "debug-stacktraces"]
             for option in conflicts:
                 if self[option]:
                     raise usage.UsageError(
@@ -601,6 +601,7 @@ def _makeRunner(config):
         "uncleanWarnings": config["unclean-warnings"],
         "logfile": config["logfile"],
         "workingDirectory": config["temp-directory"],
+        "exitFirst": config["exitfirst"],
     }
     if config["dry-run"]:
         args["mode"] = runner.TrialRunner.DRY_RUN
@@ -608,7 +609,7 @@ def _makeRunner(config):
         from twisted.trial._dist.disttrial import DistTrialRunner
 
         cls = DistTrialRunner
-        args["workerNumber"] = config["jobs"]
+        args["maxWorkers"] = config["jobs"]
         args["workerArguments"] = config._getWorkerArguments()
     else:
         if config["debug"]:
@@ -625,7 +626,6 @@ def _makeRunner(config):
             else:
                 args["debugger"] = _wrappedPdb()
 
-        args["exitFirst"] = config["exitfirst"]
         args["profile"] = config["profile"]
         args["forceGarbageCollection"] = config["force-gc"]
 

@@ -68,7 +68,7 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
         self, test: ITestCase, error: ReporterFailure, todo: Optional[str] = None
     ) -> None:
         """
-        Queue adding an unexpected failure.
+        Queue adding an expected failure.
         """
         self.running[test.id()].append(
             (self.original.addExpectedFailure, test, error, todo)
