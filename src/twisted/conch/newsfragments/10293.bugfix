@@ -1,1 +1,0 @@
-twisted.conch.ssh.filetransfer.FileTransferServer will now return an ENOENT error status if an SFTP client tries to close an unrecognized file handle.

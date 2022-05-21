@@ -329,38 +329,10 @@ class RunnerTests(unittest.SynchronousTestCase):
         self.original = plugin.getPlugins
         plugin.getPlugins = getPlugins
 
-        self.standardReport = [
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-        ]
+        # twisted.trial.test.sample has 10 test cases in it so the "standard"
+        # report expected from running it will have 10 repetitions of this
+        # sequence.
+        self.standardReport = ["startTest", "addSuccess", "stopTest"] * 10
 
     def tearDown(self):
         plugin.getPlugins = self.original

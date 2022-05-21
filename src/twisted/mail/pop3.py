@@ -32,7 +32,7 @@ from twisted.python import log
 
 
 # Authentication
-@implementer(cred.credentials.IUsernamePassword)
+@implementer(cred.credentials.IUsernameHashedPassword)
 class APOPCredentials:
     """
     Credentials for use in APOP authentication.

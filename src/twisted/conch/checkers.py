@@ -571,7 +571,7 @@ class SSHPublicKeyChecker:
         self._keydb = keydb
 
     def requestAvatarId(self, credentials):
-        d = defer.maybeDeferred(self._sanityCheckKey, credentials)
+        d = defer.execute(self._sanityCheckKey, credentials)
         d.addCallback(self._checkKey, credentials)
         d.addCallback(self._verifyKey, credentials)
         return d

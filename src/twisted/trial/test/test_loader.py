@@ -10,6 +10,11 @@ import os
 import sys
 import unittest as pyunit
 from hashlib import md5
+from operator import attrgetter
+from types import ModuleType
+
+from hamcrest import assert_that, equal_to, has_properties
+from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
 from twisted.python.modules import getModule
@@ -18,6 +23,7 @@ from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial.itrial import ITestCase
 from twisted.trial.test import packages
+from .matchers import after
 
 
 def testNames(tests):
@@ -66,6 +72,30 @@ class FinderPy3Tests(packages.SysPathManglingTest):
         )
 
 
+def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
+    """
+    Match a module with a L{ModuleSpec} like that of the given module.
+
+    @return: A matcher for a module spec that has the same name and origin as
+        the given module spec, though the origin may be structurally inequal
+        as long as it is semantically equal.
+    """
+    expected = module.__spec__
+    # Technically possible but not expected in any of the tests written so
+    # far.
+    assert expected is not None
+    match_spec = has_properties(
+        {
+            "name": equal_to(expected.name),
+            "origin": after(
+                filepath.FilePath,
+                equal_to(filepath.FilePath(expected.origin)),
+            ),
+        }
+    )
+    return after(attrgetter("__spec__"), match_spec)
+
+
 class FileTests(packages.SysPathManglingTest):
     """
     Tests for L{runner.filenameToModule}.
@@ -89,7 +119,7 @@ class FileTests(packages.SysPathManglingTest):
 
         self.assertEqual(sample2, sample1)
 
-    def test_moduleNotInPath(self):
+    def test_moduleNotInPath(self) -> None:
         """
         If passed the path to a file containing the implementation of a
         module within a package which is not on the import path,
@@ -108,7 +138,7 @@ class FileTests(packages.SysPathManglingTest):
         from goodpackage import test_sample as sample2  # type: ignore[import]
 
         self.assertIsNot(sample1, sample2)
-        self.assertEqual(sample1.__spec__, sample2.__spec__)
+        assert_that(sample1, looselyResembles(sample2))
 
     def test_packageInPath(self):
         """
@@ -119,7 +149,7 @@ class FileTests(packages.SysPathManglingTest):
 
         self.assertIs(package1, sys.modules["goodpackage"])
 
-    def test_packageNotInPath(self):
+    def test_packageNotInPath(self) -> None:
         """
         If passed the path to a directory which represents a package which
         is not on the import path, L{runner.filenameToModule} returns a
@@ -135,7 +165,7 @@ class FileTests(packages.SysPathManglingTest):
         import goodpackage
 
         self.assertIsNot(package1, goodpackage)
-        self.assertEqual(package1.__spec__, goodpackage.__spec__)
+        assert_that(package1, looselyResembles(goodpackage))
 
     def test_directoryNotPackage(self):
         """

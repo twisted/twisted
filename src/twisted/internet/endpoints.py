@@ -1406,8 +1406,7 @@ def _parseSSL(
     @type certKey: C{str}
 
     @param sslmethod: The string name of an SSL method, based on the name of a
-        constant in C{OpenSSL.SSL}.  Must be one of: "SSLv23_METHOD",
-        "SSLv2_METHOD", "SSLv3_METHOD", "TLSv1_METHOD".
+        constant in C{OpenSSL.SSL}.
     @type sslmethod: C{str}
 
     @param extraCertChain: The path of a file containing one or more

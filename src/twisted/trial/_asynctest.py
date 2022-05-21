@@ -199,7 +199,8 @@ class TestCase(SynchronousTestCase):
         object.
         """
         failures = []
-        for func, args, kwargs in self._cleanups[::-1]:
+        while len(self._cleanups) > 0:
+            func, args, kwargs = self._cleanups.pop()
             try:
                 yield func(*args, **kwargs)
             except Exception:
