@@ -18,7 +18,6 @@ from typing import (
     Iterator,
     Mapping,
     Optional,
-    Protocol,
     Tuple,
     cast,
 )
@@ -26,7 +25,7 @@ from typing import (
 from zope.interface import Interface, implementer, providedBy
 
 from incremental import Version
-from typing_extensions import Literal
+from typing_extensions import Literal, Protocol
 
 from twisted.conch import error
 from twisted.conch.ssh import keys
