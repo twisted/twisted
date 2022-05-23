@@ -24,7 +24,7 @@ except ImportError:
 else:
     ssl = _ssl
 
-if ssl and not ssl.supported:  # type: ignore[attr-defined]
+if ssl and not ssl.supported:
     ssl = None
 
 

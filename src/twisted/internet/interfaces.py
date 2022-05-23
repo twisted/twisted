@@ -707,7 +707,7 @@ class IReactorTCP(Interface):
         """
 
     def connectTCP(
-        host: bytes,
+        host: str,
         port: int,
         factory: "ClientFactory",
         timeout: float,
@@ -762,7 +762,7 @@ class IReactorSSL(Interface):
         contextFactory: "IOpenSSLContextFactory",
         backlog: int,
         interface: str,
-    ) -> int:
+    ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -1086,8 +1086,7 @@ class IReactorProcess(Interface):
         L{bytes} using the encoding given by L{sys.getfilesystemencoding}, to be
         used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
         arguments will be decoded up to L{unicode} using the encoding given by
-        L{sys.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
-        thereafter) and given to Windows's native "wide" APIs.
+        L{sys.getfilesystemencoding} (C{utf8}) and given to Windows's native "wide" APIs.
 
         @param processProtocol: An object which will be notified of all events
             related to the created process.

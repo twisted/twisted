@@ -3,6 +3,271 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 22.4.0 (2022-04-11)
+===========================
+
+Features
+--------
+
+- twisted.python.failure.Failure tracebacks now capture module information, improving compatibility with the Raven Sentry client. (#7796)
+- twisted.python.failure.Failure objects are now compatible with dis.distb, improving compatibility with post-mortem debuggers. (#9599)
+
+
+Bugfixes
+--------
+
+- twisted.internet.interfaces.IReactorSSL.listenSSL now has correct type annotations. (#10274)
+- twisted.internet.test.test_glibbase.GlibReactorBaseTests now passes. (#10317)
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports using RSA keys with SHA-2 signatures (RFC 8332) when acting as a server.  The rsa-sha2-512 and rsa-sha2-256 public key signature algorithms are automatically preferred over ssh-rsa if the client advertises support for them; the actual public keys do not need to change. (#9765)
+- twisted.conch.ssh now has an alternative Ed25519 implementation using PyNaCl, in order to support platforms that lack OpenSSL >= 1.1.1b.  The new "conch_nacl" extra has the necessary dependency. (#10208)
+
+
+Misc
+~~~~
+
+-  (#10313)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- Twisted is now compatible with h2 4.x.x. (#10182)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.http had several several defects in HTTP request parsing that could permit HTTP request smuggling. It now disallows signed Content-Length headers, forbids illegal characters in chunked extensions, forbids a ``0x`` prefix to chunk lengths, and only strips spaces and horizontal tab characters from header values. These changes address CVE-2022-24801 and GHSA-c2jg-hw38-jrqq. (#10323)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.pop3.APOPCredentials is now correctly marked as implementing twisted.cred.credentials.IUsernamHashedPassword, rather than IUsernamePassword. (#10305)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- `trial --until-failure --jobs=N` now reports the number of each test pass as it begins. (#10312)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.trial.unittest.TestCase now discards cleanup functions after running them.  Notably, this prevents them from being run an ever growing number of times with `trial -u ...`. (#10320)
+
+
+Misc
+~~~~
+
+- #10315, #10321, #10322
+
+
+Twisted 22.2.0 (2022-03-01)
+===========================
+
+Bugfixes
+--------
+
+- twisted.internet.gireactor.PortableGIReactor.simulate and twisted.internet.gtk2reactor.PortableGtkReactor.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python 3 in which the builtin `min` function no longer accepts `None` as an argument. (#9660)
+- twisted.conch.ssh.transport.SSHTransportBase now disconnects the remote peer if the
+  SSH version string is not sent in the first 4096 bytes. (#10284, CVE-2022-21716,
+  GHSA-rv6r-3f5q-9rgx)
+
+
+Improved Documentation
+----------------------
+
+- Add type annotations for twisted.web.http.Request.getHeader. (#10270)
+
+
+Deprecations and Removals
+-------------------------
+
+- Support for Python 3.6, which is EoL as of 2021-09-04, has been deprecated. (#10303)
+
+
+Misc
+----
+
+- #10216, #10299, #10300
+
+
+Conch
+-----
+
+Misc
+~~~~
+
+- #10298
+
+
+Web
+---
+
+No significant changes.
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Bugfixes
+~~~~~~~~
+
+- _dist.test.test_workertrial now correctly compare strings via assertEqual() and pass on PyPy3 (#10302)
+
+
+Twisted 22.1.0 (2022-02-03)
+===========================
+
+Features
+--------
+
+- Python 3.10 is now a supported platform (#10224)
+- Type annotations have been added to the twisted.python.fakepwd module. (#10287)
+
+
+Bugfixes
+--------
+
+- twisted.internet.defer.inlineCallbacks has an improved type annotation, to avoid typing errors when it is used on a function which returns a non-None result. (#10231)
+- ``twisted.internet.base.DelayedCall.__repr__`` and ``twisted.internet.task.LoopingCall.__repr__`` had the changes from #10155 reverted to accept non-function callables.  (#10235)
+- Revert the removal of .whl building that was done as part of #10177. (#10236)
+- The type annotation of the host parameter to twisted.internet.interfaces.IReactorTCP.connectTCP has been corrected from bytes to str. (#10251)
+- Deprecated ``twisted.python.threading.ThreadPool.currentThread()`` in favor of ``threading.current_thread()``.
+  Switched ``twisted.python.threading.ThreadPool.currentThread()`` and ``twisted.python.threadable.getThreadID()`` to use `threading.current_thread()`` to avoid the deprecation warnings introduced for ``threading.currentThread()`` in Python 3.10. (#10273)
+
+
+Improved Documentation
+----------------------
+
+- twisted.internet.utils.runWithWarningsSupressed behavior of waiting on deferreds has been documented. (#10238)
+- Sync API docs templates with pydoctor 21.9.0 release, using new theming capabilities. (#10267)
+
+
+Misc
+----
+
+- #1681, #9944, #10198, #10218, #10219, #10228, #10229, #10234, #10239, #10240, #10245, #10246, #10248, #10250, #10255, #10277, #10288, #10292
+
+
+Conch
+-----
+
+Bugfixes
+--------
+
+- SSHTransportBase.ssh_KEXINIT now uses the remote peer preferred MAC list for negotiation. In previous versions  it was only using the local preferred MAC list. (#10241)
+
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports SSH extension negotiation (RFC 8308). (#10266)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch now uses constant-time comparisons for MACs. (#8199)
+- twisted.conch.ssh.filetransfer.FileTransferServer will now return an ENOENT error status if an SFTP client tries to close an unrecognized file handle. (#10293)
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.client.RedirectAgent and twisted.web.client.BrowserLikeRedirectAgent now properly remove sensitive headers when redirecting to a different origin. (#10294)
+
+
+Improved Documentation
+----------------------
+
+- Add type annotations for twisted.web.client.readBody. (#10269)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.client.getPage, twisted.web.client.downladPage, and the associated implementation classes (HTTPPageGetter, HTTPPageDownloader, HTTPClientFactory, HTTPDownloader) have been removed because they do not segregate cookies by domain. They were deprecated in Twisted 16.7.0 in favor of twisted.web.client.Agent. GHSA-92x2-jw7w-xvvx. (#10295)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Bugfixes
+~~~~~~~~
+
+- trial.runner.filenameToModule now sets the correct module.__name__ and sys.modules key (#10230)
+
 
 Twisted 21.7.0 (2021-07-26)
 ===========================
