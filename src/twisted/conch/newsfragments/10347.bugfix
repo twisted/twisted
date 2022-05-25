@@ -1,0 +1,1 @@
+twisted.conch.ssh.SSHSession.request_env no longer gives a warning if the session does not implement ISessionSetEnv.
