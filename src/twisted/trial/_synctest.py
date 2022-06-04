@@ -17,12 +17,12 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, TypeVar, Union
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
 
-from twisted.internet.defer import ensureDeferred
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python import failure, log, monkey
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
@@ -33,6 +33,8 @@ from twisted.python.deprecate import (
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
+
+T = TypeVar("T")
 
 
 class FailTest(AssertionError):
@@ -662,7 +664,7 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred):
+    def successResultOf(self, deferred: Deferred[T]) -> T:  # type: ignore [return]
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
@@ -682,17 +684,17 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        result = []
-        deferred.addBoth(result.append)
+        results: List[Union[T, failure.Failure]] = []
+        deferred.addBoth(results.append)
 
-        if not result:
+        if not results:
             self.fail(
                 "Success result expected on {!r}, found no result instead".format(
                     deferred
                 )
             )
 
-        result = result[0]
+        result = results[0]
 
         if isinstance(result, failure.Failure):
             self.fail(
@@ -701,8 +703,8 @@ class _Assertions(pyunit.TestCase):
                     deferred, result.getTraceback()
                 )
             )
-
-        return result
+        else:
+            return result
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
