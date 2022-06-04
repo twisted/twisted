@@ -63,6 +63,8 @@ Flattenable = Union[
 Type alias containing all types that can be flattened by L{flatten()}.
 """
 
+BUFFER_SIZE = 2 ** 16
+
 
 def escapeForContent(data: Union[bytes, str]) -> bytes:
     """
@@ -381,14 +383,33 @@ async def _flattenTree(
 
     @return: A C{Deferred}-returning coroutine that resolves to C{None}.
     """
+    buf = []
+    bufSize = 0
+
+    def bufferedWrite(bs: bytes) -> None:
+        nonlocal bufSize
+        buf.append(bs)
+        bufSize += len(bs)
+        if bufSize >= BUFFER_SIZE:
+            flushBuffer()
+
+    def flushBuffer() -> None:
+        nonlocal bufSize
+        if bufSize > 0:
+            write(b"".join(buf))
+            del buf[:]
+            bufSize = 0
+
     stack: List[Generator] = [
-        _flattenElement(request, root, write, [], None, escapeForContent)
+        _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
+
     while stack:
         try:
             frame = stack[-1].gi_frame
             element = next(stack[-1])
             if isinstance(element, Deferred):
+                flushBuffer()
                 element = await element
         except StopIteration:
             stack.pop()
@@ -401,6 +422,8 @@ async def _flattenTree(
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             stack.append(element)
+
+    flushBuffer()
 
 
 def flatten(

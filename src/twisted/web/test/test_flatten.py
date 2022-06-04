@@ -17,6 +17,8 @@ from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
 
+from hamcrest import assert_that, equal_to
+
 from twisted.internet.defer import (
     CancelledError,
     Deferred,
@@ -27,6 +29,7 @@ from twisted.internet.defer import (
 from twisted.python.failure import Failure
 from twisted.test.testutils import XMLAssertionMixin
 from twisted.trial.unittest import SynchronousTestCase
+from twisted.web._flatten import BUFFER_SIZE
 from twisted.web.error import FlattenerError, UnfilledSlot, UnsupportedType
 from twisted.web.iweb import IRenderable, IRequest, ITemplateLoader
 from twisted.web.template import (
@@ -37,6 +40,7 @@ from twisted.web.template import (
     Flattenable,
     Tag,
     TagLoader,
+    flatten,
     flattenString,
     renderer,
     slot,
@@ -451,6 +455,53 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         Test that flattening an unknown type of thing raises an exception.
         """
         self.assertFlatteningRaises(None, UnsupportedType)  # type: ignore[arg-type]
+
+
+class FlattenChunkingTests(SynchronousTestCase):
+    """
+    Tests for the way pieces of the result are chunked together in calls to
+    the write function.
+    """
+
+    def test_oneSmallChunk(self) -> None:
+        """
+        If the entire value to be flattened is available synchronously and fits
+        into the buffer it is all passed to a single call to the write
+        function.
+        """
+        output: List[bytes] = []
+        self.successResultOf(flatten(None, ["1", "2", "3"], output.append))
+        assert_that(output, equal_to([b"123"]))
+
+    def test_someLargeChunks(self) -> None:
+        """
+        If the entire value to be flattened is available synchronously but does
+        not fit into the buffer then it is chunked into buffer-sized pieces
+        and these are passed to the write function.
+        """
+        some = ["x"] * BUFFER_SIZE
+        someMore = ["y"] * BUFFER_SIZE
+        evenMore = ["z"] * BUFFER_SIZE
+
+        output: List[bytes] = []
+        self.successResultOf(flatten(None, [some, someMore, evenMore], output.append))
+        assert_that(
+            output,
+            equal_to([b"x" * BUFFER_SIZE, b"y" * BUFFER_SIZE, b"z" * BUFFER_SIZE]),
+        )
+
+    def test_chunksSeparatedByAsync(self) -> None:
+        """
+        When a L{Deferred} is encountered any buffered data is passed to the write
+        function.  After the result of the L{Deferred} is available it is
+        passed to another write along with following synchronous values.
+        """
+        c = succeed("c")
+        f = succeed("f")
+        value = ["a", "b", c, "d", "e", f, "g", "h"]
+        output: List[bytes] = []
+        self.successResultOf(flatten(None, value, output.append))
+        assert_that(output, equal_to([b"ab", b"cde", b"fgh"]))
 
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
