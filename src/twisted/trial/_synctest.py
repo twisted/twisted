@@ -17,7 +17,7 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import List, Optional, Tuple, TypeVar, Union
+from typing import List, NoReturn, Optional, Tuple, TypeVar, Union
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
@@ -351,7 +351,7 @@ class _Assertions(pyunit.TestCase):
     callbacks.
     """
 
-    def fail(self, msg=None):
+    def fail(self, msg: Optional[object] = None) -> NoReturn:
         """
         Absolutely fail the test.  Do not pass go, do not collect $200.
 
@@ -664,7 +664,7 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred: Deferred[T]) -> T:  # type: ignore [return]
+    def successResultOf(self, deferred: Deferred[T]) -> T:
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
@@ -703,8 +703,7 @@ class _Assertions(pyunit.TestCase):
                     deferred, result.getTraceback()
                 )
             )
-        else:
-            return result
+        return result
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
