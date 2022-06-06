@@ -6,7 +6,6 @@ Tests for implementations of L{IReactorCore}.
 """
 
 
-import inspect
 import signal
 import time
 from types import FrameType
@@ -18,43 +17,6 @@ from twisted.internet.error import ReactorAlreadyRunning, ReactorNotRestartable
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
-
-
-class ObjectModelIntegrationMixin:
-    """
-    Helpers for tests about the object model of reactor-related objects.
-    """
-
-    def assertFullyNewStyle(self, instance: object) -> None:
-        """
-        Assert that the given object is an instance of a new-style class and
-        that there are no classic classes in the inheritance hierarchy of
-        that class.
-
-        This is a beneficial condition because PyPy is better able to
-        optimize attribute lookup on such classes.
-        """
-        testCase = cast(SynchronousTestCase, self)
-        testCase.assertIsInstance(instance, object)
-        mro = inspect.getmro(type(instance))
-        for subclass in mro:
-            testCase.assertTrue(
-                issubclass(subclass, object), f"{subclass!r} is not new-style"
-            )
-
-
-class ObjectModelIntegrationTests(ReactorBuilder, ObjectModelIntegrationMixin):
-    """
-    Test details of object model integration against all reactors.
-    """
-
-    def test_newstyleReactor(self) -> None:
-        """
-        Checks that all reactors on a platform have method resolution order
-        containing only new style classes.
-        """
-        reactor = self.buildReactor()
-        self.assertFullyNewStyle(reactor)
 
 
 class SystemEventTestsBuilder(ReactorBuilder):
@@ -352,4 +314,3 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())
-globals().update(ObjectModelIntegrationTests.makeTestCaseClasses())

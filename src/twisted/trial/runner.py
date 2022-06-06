@@ -553,9 +553,6 @@ class TestLoader:
         """
         return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
-    def loadMethod(self, method):
-        raise NotImplementedError("Can't happen on Py3")
-
     def _makeCase(self, klass, methodName):
         return klass(methodName)
 
@@ -845,7 +842,7 @@ class TrialRunner:
         if self.logfile == "-":
             logFile = sys.stdout
         else:
-            logFile = open(self.logfile, "a")
+            logFile = util.openTestLog(filepath.FilePath(self.logfile))
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)

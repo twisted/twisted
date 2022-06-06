@@ -49,10 +49,16 @@ if sys.platform != "win32":
 else:
     skip = "Release toolchain only supported on POSIX."
 
-# This should match the GitHub Actions environment used by pre-comnmit.ci to push changes to the auto-updated branches.
-PRECOMMIT_CI_ENVIRON = {"GITHUB_HEAD_REF": "pre-commit-ci-update-config"}
+# This should match the GitHub Actions environment used by pre-commit.ci to push changes to the auto-updated branches.
+PRECOMMIT_CI_ENVIRON = {
+    "GITHUB_HEAD_REF": "pre-commit-ci-update-config",
+    "PATH": os.environ["PATH"],
+}
 # This should match the GHA environment for non pre-commit.ci PRs.
-GENERIC_CI_ENVIRON = {"GITHUB_HEAD_REF": "1234-some-branch-name"}
+GENERIC_CI_ENVIRON = {
+    "GITHUB_HEAD_REF": "1234-some-branch-name",
+    "PATH": os.environ["PATH"],
+}
 
 
 class ExternalTempdirTestCase(TestCase):
