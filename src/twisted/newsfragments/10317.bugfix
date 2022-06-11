@@ -1,1 +1,0 @@
-twisted.internet.test.test_glibbase.GlibReactorBaseTests now passes.

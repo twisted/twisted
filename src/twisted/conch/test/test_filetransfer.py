@@ -855,6 +855,9 @@ class ConstantsTests(TestCase):
             self.assertEqual(v, getattr(filetransfer, k))
 
 
+# We don't run on Windows, as we don't have an SFTP file server implemented in conch.ssh for Windows.
+# As soon as there is such an implementation, we can run these tests on Windows.
+@skipIf(not unix, "can't run on non-posix computers")
 @skipIf(not cryptography, "Cannot run without cryptography")
 class RawPacketDataServerTests(TestCase):
     """

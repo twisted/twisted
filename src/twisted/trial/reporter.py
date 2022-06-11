@@ -107,9 +107,12 @@ class TestResult(pyunit.TestResult):
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
-        if isinstance(error, tuple):
+        is_exc_info_tuple = isinstance(error, tuple) and len(error) == 3
+        if is_exc_info_tuple:
             return Failure(error[1], error[0], error[2])
-        return error
+        elif isinstance(error, Failure):
+            return error
+        raise TypeError(f"Cannot convert {error} to a Failure")
 
     def startTest(self, test):
         """
