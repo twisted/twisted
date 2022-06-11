@@ -6,17 +6,19 @@ Tests for L{twisted.conch.checkers}.
 """
 
 
+import os
+from base64 import encodebytes
+from collections import namedtuple
+from io import BytesIO
+from typing import Optional
+
+cryptSkip: Optional[str]
 try:
     import crypt
 except ImportError:
     cryptSkip = "cannot run without crypt module"
 else:
-    cryptSkip = ""
-
-import os
-from base64 import encodebytes
-from collections import namedtuple
-from io import BytesIO
+    cryptSkip = None
 
 from zope.interface.verify import verifyObject
 
@@ -28,8 +30,8 @@ from twisted.cred.credentials import (
     UsernamePassword,
 )
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.internet.defer import Deferred
 from twisted.python import util
-from twisted.python.failure import Failure
 from twisted.python.fakepwd import ShadowDatabase, UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
@@ -37,7 +39,7 @@ from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
-    dependencySkip = ""
+    dependencySkip = None
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.ssh import keys
@@ -45,10 +47,10 @@ if requireModule("cryptography") and requireModule("pyasn1"):
 else:
     dependencySkip = "can't run without cryptography and PyASN1"
 
-if getattr(os, "geteuid", None) is None:
-    euidSkip = "Cannot run without effective UIDs (questionable)"
+if getattr(os, "geteuid", None) is not None:
+    euidSkip = None
 else:
-    euidSkip = ""
+    euidSkip = "Cannot run without effective UIDs (questionable)"
 
 
 class HelperTests(TestCase):
@@ -159,30 +161,31 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
     skip = euidSkip or dependencySkip
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.checker = checkers.SSHPublicKeyDatabase()
         self.key1 = encodebytes(b"foobar")
         self.key2 = encodebytes(b"eggspam")
         self.content = b"t1 " + self.key1 + b" foo\nt2 " + self.key2 + b" egg\n"
 
         self.mockos = MockOS()
-        self.mockos.path = FilePath(self.mktemp())
-        self.mockos.path.makedirs()
         self.patch(util, "os", self.mockos)
-        self.sshDir = self.mockos.path.child(".ssh")
+
+        self.path = FilePath(self.mktemp())
+        assert isinstance(self.path.path, str)  # text mode
+        self.sshDir = self.path.child(".ssh")
         self.sshDir.makedirs()
 
         userdb = UserDatabase()
         userdb.addUser(
-            b"user",
-            b"password",
+            "user",
+            "password",
             1,
             2,
-            b"first last",
-            self.mockos.path.path,
-            b"/bin/shell",
+            "first last",
+            self.path.path,
+            "/bin/shell",
         )
-        self.checker._userdb = userdb
+        self.checker._userdb = userdb  # type: ignore
 
     def test_deprecated(self):
         """
@@ -448,24 +451,14 @@ class UNIXPasswordDatabaseTests(TestCase):
 
     skip = cryptSkip or dependencySkip
 
-    def assertLoggedIn(self, d, username):
+    def assertLoggedIn(self, d: Deferred[bytes], username: bytes) -> None:
         """
         Assert that the L{Deferred} passed in is called back with the value
         'username'.  This represents a valid login for this TestCase.
 
-        NOTE: To work, this method's return value must be returned from the
-        test method, or otherwise hooked up to the test machinery.
-
         @param d: a L{Deferred} from an L{IChecker.requestAvatarId} method.
-        @type d: L{Deferred}
-        @rtype: L{Deferred}
         """
-        result = []
-        d.addBoth(result.append)
-        self.assertEqual(len(result), 1, "login incomplete")
-        if isinstance(result[0], Failure):
-            result[0].raiseException()
-        self.assertEqual(result[0], username)
+        self.assertEqual(self.successResultOf(d), username)
 
     def test_defaultCheckers(self):
         """
@@ -520,9 +513,7 @@ class UNIXPasswordDatabaseTests(TestCase):
         @type d: L{Deferred}
         @rtype: L{None}
         """
-        self.assertRaises(
-            checkers.UnauthorizedLogin, self.assertLoggedIn, d, "bogus value"
-        )
+        self.failureResultOf(d, checkers.UnauthorizedLogin)
 
     def test_passInCheckers(self):
         """
@@ -565,7 +556,7 @@ class UNIXPasswordDatabaseTests(TestCase):
             raise KeyError(username)
 
         checker = checkers.UNIXPasswordDatabase([getpwnam])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertUnauthorizedLogin(checker.requestAvatarId(credential))
 
     def test_failOnBadPassword(self):
@@ -578,11 +569,11 @@ class UNIXPasswordDatabaseTests(TestCase):
             return False
 
         def getpwnam(username):
-            return [username, username]
+            return [username, b"password"]
 
         self.patch(checkers, "verifyCryptedPassword", verifyCryptedPassword)
         checker = checkers.UNIXPasswordDatabase([getpwnam])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertUnauthorizedLogin(checker.requestAvatarId(credential))
 
     def test_loopThroughFunctions(self):
@@ -600,11 +591,11 @@ class UNIXPasswordDatabaseTests(TestCase):
             return [username, "not the password"]
 
         def getpwnam2(username):
-            return [username, username]
+            return [username, "password"]
 
         self.patch(checkers, "verifyCryptedPassword", verifyCryptedPassword)
         checker = checkers.UNIXPasswordDatabase([getpwnam1, getpwnam2])
-        credential = UsernamePassword(b"username", b"username")
+        credential = UsernamePassword(b"username", b"password")
         self.assertLoggedIn(checker.requestAvatarId(credential), b"username")
 
     def test_failOnSpecial(self):
@@ -722,23 +713,23 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
 
     skip = dependencySkip
 
-    def setUp(self):
-        mockos = MockOS()
-        mockos.path = FilePath(self.mktemp())
-        mockos.path.makedirs()
+    def setUp(self) -> None:
+        self.path = FilePath(self.mktemp())
+        assert isinstance(self.path.path, str)
+        self.path.makedirs()
 
         self.userdb = UserDatabase()
         self.userdb.addUser(
-            b"alice",
-            b"password",
+            "alice",
+            "password",
             1,
             2,
-            b"alice lastname",
-            mockos.path.path,
-            b"/bin/shell",
+            "alice lastname",
+            self.path.path,
+            "/bin/shell",
         )
 
-        self.sshDir = mockos.path.child(".ssh")
+        self.sshDir = self.path.child(".ssh")
         self.sshDir.makedirs()
         authorizedKeys = self.sshDir.child("authorized_keys")
         authorizedKeys.setContent(b"key 1\nkey 2")
@@ -760,7 +751,7 @@ class UNIXAuthorizedKeysFilesTests(TestCase):
         by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}.
         """
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb, parseKey=lambda x: x)
-        self.assertEqual([], list(keydb.getAuthorizedKeys("bob")))
+        self.assertEqual([], list(keydb.getAuthorizedKeys(b"bob")))
 
     def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
         """
