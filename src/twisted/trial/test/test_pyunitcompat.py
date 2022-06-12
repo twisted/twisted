@@ -4,24 +4,20 @@
 
 import sys
 import traceback
-
+import unittest as pyunit
 from unittest import skipIf
+
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.trial.unittest import SynchronousTestCase, PyUnitResultAdapter
 from twisted.trial.itrial import IReporter, ITestCase
-
-import unittest as pyunit
+from twisted.trial.test import pyunitcases
+from twisted.trial.unittest import PyUnitResultAdapter, SynchronousTestCase
 
 
 class PyUnitTestTests(SynchronousTestCase):
-    class PyUnitTest(pyunit.TestCase):
-        def test_pass(self):
-            pass
-
     def setUp(self):
-        self.original = self.PyUnitTest("test_pass")
+        self.original = pyunitcases.PyUnitTest("test_pass")
         self.test = ITestCase(self.original)
 
     def test_callable(self):

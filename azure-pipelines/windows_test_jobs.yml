@@ -1,3 +1,6 @@
+#
+# This is just a template, and not a main pipeline definition.
+#
 parameters:
 - name: imageName
   type: string

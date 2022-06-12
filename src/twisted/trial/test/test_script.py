@@ -15,8 +15,12 @@ from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
 from twisted.trial._dist.disttrial import DistTrialRunner
-from twisted.trial.runner import TestLoader
-from twisted.trial.runner import TrialRunner, TestSuite, DestructiveTestSuite
+from twisted.trial.runner import (
+    DestructiveTestSuite,
+    TestLoader,
+    TestSuite,
+    TrialRunner,
+)
 from twisted.trial.test.test_loader import testNames
 
 pyunit = __import__("unittest")
@@ -510,18 +514,6 @@ class OptionsTests(unittest.TestCase):
             "You can't specify --debug-stacktraces when using --jobs", str(error)
         )
 
-    def test_jobsConflictWithExitFirst(self):
-        """
-        C{parseOptions} raises a C{UsageError} when C{--exitfirst} is passed
-        along C{--jobs} as it's not supported yet.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/6436}
-        """
-        error = self.assertRaises(
-            UsageError, self.options.parseOptions, ["--jobs", "4", "--exitfirst"]
-        )
-        self.assertEqual("You can't specify --exitfirst when using --jobs", str(error))
-
     def test_orderConflictWithRandom(self):
         """
         C{parseOptions} raises a C{UsageError} when C{--order} is passed along
@@ -546,13 +538,13 @@ class MakeRunnerTests(unittest.TestCase):
     def test_jobs(self):
         """
         L{_makeRunner} returns a L{DistTrialRunner} instance when the C{--jobs}
-        option is passed, and passes the C{workerNumber} and C{workerArguments}
-        parameters to it.
+        option is passed.  The L{DistTrialRunner} knows how many workers to
+        run and the C{workerArguments} to pass to them.
         """
         self.options.parseOptions(["--jobs", "4", "--force-gc"])
         runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, DistTrialRunner)
-        self.assertEqual(4, runner._workerNumber)
+        self.assertEqual(4, runner._maxWorkers)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
     def test_dryRunWithJobs(self):

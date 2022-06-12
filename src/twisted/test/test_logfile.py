@@ -7,10 +7,10 @@ import errno
 import os
 import stat
 import time
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase
+
 from twisted.python import logfile, runtime
+from twisted.trial.unittest import TestCase
 
 
 class LogFileTests(TestCase):

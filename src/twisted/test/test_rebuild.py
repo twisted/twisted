@@ -6,9 +6,8 @@ import os
 import sys
 import types
 
-from twisted.trial.unittest import TestCase
 from twisted.python import rebuild
-
+from twisted.trial.unittest import TestCase
 from . import crash_test_dummy
 
 f = crash_test_dummy.foo
@@ -67,8 +66,10 @@ class RebuildTests(TestCase):
         sys.path.remove(self.libPath)
 
     def test_FileRebuild(self):
+        import shutil
+        import time
+
         from twisted.python.util import sibpath
-        import shutil, time
 
         shutil.copyfile(
             sibpath(__file__, "myrebuilder1.py"),

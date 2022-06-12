@@ -9,10 +9,12 @@ Test reporter forwarding test results over trial distributed AMP commands.
 @since: 12.3
 """
 
+from typing import List
+
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
-from twisted.trial.reporter import TestResult
 from twisted.trial._dist import managercommands
+from twisted.trial.reporter import TestResult
 
 
 class WorkerReporter(TestResult):
@@ -43,12 +45,14 @@ class WorkerReporter(TestResult):
             return Failure(error[1], error[0], error[2])
         return error
 
-    def _getFrames(self, failure):
+    def _getFrames(self, failure: Failure) -> List[str]:
         """
         Extract frames from a C{Failure} instance.
         """
-        frames = []
+        frames: List[str] = []
         for frame in failure.frames:
+            # The code object's name, the code object's filename, and the line
+            # number.
             frames.extend([frame[0], frame[1], str(frame[2])])
         return frames
 
@@ -69,7 +73,7 @@ class WorkerReporter(TestResult):
         failure = self._getFailure(error)
         error = failure.getErrorMessage()
         errorClass = qual(failure.type)
-        frames = [frame for frame in self._getFrames(failure)]
+        frames = self._getFrames(failure)
         self.ampProtocol.callRemote(
             managercommands.AddError,
             testName=testName,
@@ -87,7 +91,7 @@ class WorkerReporter(TestResult):
         failure = self._getFailure(fail)
         fail = failure.getErrorMessage()
         failClass = qual(failure.type)
-        frames = [frame for frame in self._getFrames(failure)]
+        frames = self._getFrames(failure)
         self.ampProtocol.callRemote(
             managercommands.AddFailure,
             testName=testName,

@@ -39,7 +39,7 @@ class OptionsTests(TestCase):
         """
         self.out = StringIO()
         # Override the mailmail logger, so we capture stderr output
-        from twisted.logger import textFileLogObserver, Logger
+        from twisted.logger import Logger, textFileLogObserver
 
         logObserver = textFileLogObserver(self.out)
         self.patch(mailmail, "_log", Logger(observer=logObserver))

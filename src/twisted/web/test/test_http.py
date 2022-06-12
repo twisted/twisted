@@ -9,54 +9,43 @@ Test HTTP support.
 import base64
 import calendar
 import random
-import sys
+from io import BytesIO
+from itertools import cycle
+from typing import Sequence, Union
+from unittest import skipIf
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from urllib.parse import urlparse, urlunsplit
+
+from zope.interface import directlyProvides, providedBy, provider
+from zope.interface.verify import verifyObject
 
 import hamcrest
 
-from urllib.parse import urlparse, urlunsplit, parse_qs
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from unittest import skipIf
-from typing import Sequence, Union
-
-from io import BytesIO
-from itertools import cycle
-from zope.interface import (
-    provider,
-    directlyProvides,
-    providedBy,
-)
-from zope.interface.verify import verifyObject
-
+from twisted.internet import address
+from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.task import Clock
+from twisted.logger import globalLogPublisher
+from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.test.proto_helpers import (
+    EventLoggingObserver,
+    NonStreamingProducer,
+    StringTransport,
+)
+from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers, iweb
-from twisted.web.http import PotentialDataLoss, _DataLoss
-from twisted.web.http import _IdentityTransferDecoder
-from twisted.internet import address
-from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionLost, ConnectionDone
-from twisted.protocols import loopback
-from twisted.test.proto_helpers import (
-    StringTransport,
-    NonStreamingProducer,
-    EventLoggingObserver,
-)
-from twisted.test.test_internet import DummyProducer
+from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
     textLinearWhitespaceComponents,
 )
-
-from twisted.logger import globalLogPublisher
-
-from ._util import (
-    assertIsFilesystemTemporary,
-)
+from ._util import assertIsFilesystemTemporary
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
@@ -1289,6 +1278,28 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         p.dataReceived(b"3; x-foo=bar\r\nabc\r\n")
         self.assertEqual(L, [b"abc"])
 
+    def test_extensionsMalformed(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk extension fields contain
+        invalid characters.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        invalidControl = (
+            b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\n\x0b\x0c\r\x0e\x0f"
+            b"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+        )
+        invalidDelimiter = b"\\"
+        invalidDel = b"\x7f"
+        for b in invalidControl + invalidDelimiter + invalidDel:
+            data = b"3; " + bytes((b,)) + b"\r\nabc\r\n"
+            p = http._ChunkedTransferDecoder(
+                lambda b: None,  # pragma: nocov
+                lambda b: None,  # pragma: nocov
+            )
+            self.assertRaises(http._MalformedChunkedDataError, p.dataReceived, data)
+
     def test_oversizedChunkSizeLine(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} raises
@@ -1342,6 +1353,22 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         )
         self.assertRaises(
             http._MalformedChunkedDataError, p.dataReceived, b"-3\r\nabc\r\n"
+        )
+
+    def test_malformedChunkSizeHex(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the chunk size is prefixed with
+        "0x", as if it were a Python integer literal.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,  # pragma: nocov
+            lambda b: None,  # pragma: nocov
+        )
+        self.assertRaises(
+            http._MalformedChunkedDataError, p.dataReceived, b"0x3\r\nabc\r\n"
         )
 
     def test_malformedChunkEnd(self):
@@ -1456,6 +1483,8 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
             chunked = b"".join(http.toChunk(s))
             self.assertEqual((s, b""), http.fromChunk(chunked))
         self.assertRaises(ValueError, http.fromChunk, b"-5\r\nmalformed!\r\n")
+        self.assertRaises(ValueError, http.fromChunk, b"0xa\r\nmalformed!\r\n")
+        self.assertRaises(ValueError, http.fromChunk, b"0XA\r\nmalformed!\r\n")
 
     def testConcatenatedChunks(self):
         chunked = b"".join([b"".join(http.toChunk(t)) for t in self.strings])
@@ -1713,7 +1742,12 @@ class ParsingTests(unittest.TestCase):
         Line folded headers are handled by L{HTTPChannel} by replacing each
         fold with a single space by the time they are made available to the
         L{Request}. Any leading whitespace in the folded lines of the header
-        value is preserved.
+        value is replaced with a single space, per:
+
+            A server that receives an obs-fold in a request message ... MUST
+            ... replace each received obs-fold with one or more SP octets prior
+            to interpreting the field value or forwarding the message
+            downstream.
 
         See RFC 7230 section 3.2.4.
         """
@@ -1750,15 +1784,65 @@ class ParsingTests(unittest.TestCase):
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"space"),
-            [b"space  space"],
+            [b"space space"],
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"spaces"),
-            [b"spaces   spaces    spaces"],
+            [b"spaces spaces spaces"],
         )
         self.assertEqual(
             request.requestHeaders.getRawHeaders(b"tab"),
-            [b"t \ta \tb"],
+            [b"t a b"],
+        )
+
+    def test_headerStripWhitespace(self):
+        """
+        Leading and trailing space and tab characters are stripped from
+        headers. Other forms of whitespace are preserved.
+
+        See RFC 7230 section 3.2.3 and 3.2.4.
+        """
+        processed = []
+
+        class MyRequest(http.Request):
+            def process(self):
+                processed.append(self)
+                self.finish()
+
+        requestLines = [
+            b"GET / HTTP/1.0",
+            b"spaces:   spaces were stripped   ",
+            b"tabs: \t\ttabs were stripped\t\t",
+            b"spaces-and-tabs: \t \t spaces and tabs were stripped\t \t",
+            b"line-tab:   \v vertical tab was preserved\v\t",
+            b"form-feed: \f form feed was preserved \f  ",
+            b"",
+            b"",
+        ]
+
+        self.runRequest(b"\n".join(requestLines), MyRequest, 0)
+        [request] = processed
+        # All leading and trailing whitespace is stripped from the
+        # header-value.
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces"),
+            [b"spaces were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"tabs"),
+            [b"tabs were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"spaces-and-tabs"),
+            [b"spaces and tabs were stripped"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"line-tab"),
+            [b"\v vertical tab was preserved\v"],
+        )
+        self.assertEqual(
+            request.requestHeaders.getRawHeaders(b"form-feed"),
+            [b"\f form feed was preserved \f"],
         )
 
     def test_tooManyHeaders(self):
@@ -2325,6 +2409,58 @@ Hello,
             ]
         )
 
+    def test_contentLengthMalformed(self):
+        """
+        A request with a non-integer C{Content-Length} header fails with a 400
+        response without calling L{Request.process}.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: MORE THAN NINE THOUSAND!",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 9001,
+            ]
+        )
+
+    def test_contentLengthTooPositive(self):
+        """
+        A request with a C{Content-Length} header that begins with a L{+} fails
+        with a 400 response without calling L{Request.process}.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: +100",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 100,
+            ]
+        )
+
+    def test_contentLengthNegative(self):
+        """
+        A request with a C{Content-Length} header that is negative fails with
+        a 400 response without calling L{Request.process}.
+
+        This is a potential request smuggling vector: see GHSA-c2jg-hw38-jrqq.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET /a HTTP/1.1",
+                b"Content-Length: -100",
+                b"Host: host.invalid",
+                b"",
+                b"",
+                b"x" * 200,
+            ]
+        )
+
     def test_duplicateContentLengthsWithPipelinedRequests(self):
         """
         Two pipelined requests, the first of which includes multiple
@@ -2432,18 +2568,6 @@ ok
 
 
 class QueryArgumentsTests(unittest.TestCase):
-    # FIXME: https://twistedmatrix.com/trac/ticket/10096
-    # Re-enable once the implementation is updated.
-    @skipIf(sys.version_info >= (3, 6, 13), "newer py3.6 parse_qs treat ; differently")
-    def testParseqs(self):
-        self.assertEqual(parse_qs(b"a=b&d=c;+=f"), http.parse_qs(b"a=b&d=c;+=f"))
-        self.assertRaises(ValueError, http.parse_qs, b"blah", strict_parsing=True)
-        self.assertEqual(
-            parse_qs(b"a=&b=c", keep_blank_values=1),
-            http.parse_qs(b"a=&b=c", keep_blank_values=1),
-        )
-        self.assertEqual(parse_qs(b"a=&b=c"), http.parse_qs(b"a=&b=c"))
-
     def test_urlparse(self):
         """
         For a given URL, L{http.urlparse} should behave the same as L{urlparse},
@@ -4249,3 +4373,43 @@ class HTTPClientSanitizationTests(unittest.SynchronousTestCase):
                 transport.value().splitlines(),
                 [b": ".join([sanitizedBytes, sanitizedBytes])],
             )
+
+
+class HexHelperTests(unittest.SynchronousTestCase):
+    """
+    Test the L{http._hexint} and L{http._ishexdigits} helper functions.
+    """
+
+    badStrings = (b"", b"0x1234", b"feds", b"-123" b"+123")
+
+    def test_isHex(self):
+        """
+        L{_ishexdigits()} returns L{True} for nonempy bytestrings containing
+        hexadecimal digits.
+        """
+        for s in (b"10", b"abcdef", b"AB1234", b"fed", b"123467890"):
+            self.assertIs(True, http._ishexdigits(s))
+
+    def test_decodes(self):
+        """
+        L{_hexint()} returns the integer equivalent of the input.
+        """
+        self.assertEqual(10, http._hexint(b"a"))
+        self.assertEqual(0x10, http._hexint(b"10"))
+        self.assertEqual(0xABCD123, http._hexint(b"abCD123"))
+
+    def test_isNotHex(self):
+        """
+        L{_ishexdigits()} returns L{False} for bytestrings that don't contain
+        hexadecimal digits, including the empty string.
+        """
+        for s in self.badStrings:
+            self.assertIs(False, http._ishexdigits(s))
+
+    def test_decodeNotHex(self):
+        """
+        L{_hexint()} raises L{ValueError} for bytestrings that can't
+        be decoded.
+        """
+        for s in self.badStrings:
+            self.assertRaises(ValueError, http._hexint, s)

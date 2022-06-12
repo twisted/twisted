@@ -14,15 +14,13 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 import sys
+from subprocess import STDOUT, CalledProcessError, check_output
 from typing import Dict
 
 from zope.interface import Interface, implementer
 
-from subprocess import check_output, STDOUT, CalledProcessError
-
 from twisted.python.compat import execfile
 from twisted.python.filepath import FilePath
-from twisted.python.monkey import MonkeyPatcher
 
 # Types of newsfragments.
 NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
@@ -31,9 +29,9 @@ intersphinxURLs = [
     "https://cryptography.io/en/latest/objects.inv",
     "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
     "https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.github.io/constantly/docs/objects.inv",
-    "https://twisted.github.io/incremental/docs/objects.inv",
-    "https://hyper-h2.readthedocs.io/en/stable/objects.inv",
+    "https://twisted.org/constantly/docs/objects.inv",
+    "https://twisted.org/incremental/docs/objects.inv",
+    "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
     "https://priority.readthedocs.io/en/stable/objects.inv",
     "https://zopeinterface.readthedocs.io/en/latest/objects.inv",
     "https://automat.readthedocs.io/en/latest/objects.inv",
@@ -303,24 +301,9 @@ class APIBuilder:
             intersphinxes.append("--intersphinx")
             intersphinxes.append(intersphinx)
 
-        # Super awful monkeypatch that will selectively use our templates.
-        from pydoctor.templatewriter import util  # type: ignore[import]
-
-        originalTemplatefile = util.templatefile
-
-        def templatefile(filename):
-
-            if filename in ["summary.html", "index.html", "common.html"]:
-                twistedPythonDir = FilePath(__file__).parent()
-                templatesDir = twistedPythonDir.child("_pydoctortemplates")
-                return templatesDir.child(filename).path
-            else:
-                return originalTemplatefile(filename)
-
-        monkeyPatch = MonkeyPatcher((util, "templatefile", templatefile))
-        monkeyPatch.patch()
-
         from pydoctor.driver import main  # type: ignore[import]
+
+        templatesPath = FilePath(__file__).parent().child("_pydoctortemplates")
 
         args = [
             "--project-name",
@@ -331,17 +314,18 @@ class APIBuilder:
             "twisted.python._pydoctor.TwistedSystem",
             "--project-base-dir",
             packagePath.parent().path,
+            "--template-dir",
+            templatesPath.path,
             "--html-viewsource-base",
             sourceURL,
             "--html-output",
             outputPath.path,
             "--quiet",
             "--make-html",
+            "--warnings-as-errors",
         ] + intersphinxes
         args.append(packagePath.path)
         main(args)
-
-        monkeyPatch.restore()
 
 
 class SphinxBuilder:
@@ -579,6 +563,17 @@ class CheckNewsfragmentScript:
                 sys.exit(1)
             else:
                 self._print("Release branch with no newsfragments, all good.")
+                sys.exit(0)
+
+        if os.environ.get("GITHUB_HEAD_REF", "") == "pre-commit-ci-update-config":
+            # The run was triggered by pre-commit.ci.
+            if newsfragments:
+                self._print(
+                    "No newsfragments should be present on an autoupdated branch."
+                )
+                sys.exit(1)
+            else:
+                self._print("Autoupdated branch with no newsfragments, all good.")
                 sys.exit(0)
 
         for change in newsfragments:

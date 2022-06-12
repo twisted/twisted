@@ -5,20 +5,22 @@
 Tests for twisted SSL support.
 """
 
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet import protocol, reactor, interfaces, defer
-from twisted.internet.error import ConnectionDone
-from twisted.protocols import basic
-from twisted.python.runtime import platform
-from twisted.test.test_tcp import ProperlyCloseFilesMixin
-from twisted.test.proto_helpers import waitUntilAllDisconnected
-
 import os
+
 import hamcrest
 
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet.error import ConnectionDone
+from twisted.protocols import basic
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.test.proto_helpers import waitUntilAllDisconnected
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.trial.unittest import TestCase
+
 try:
-    from OpenSSL import SSL, crypto  # type: ignore[import]
+    from OpenSSL import SSL, crypto
+
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:
@@ -302,6 +304,7 @@ class StolenTCPTests(ProperlyCloseFilesMixin, TestCase):
                 hamcrest.any_of(
                     hamcrest.equal_to("SSL_write"),
                     hamcrest.equal_to("ssl_write_internal"),
+                    hamcrest.equal_to(""),
                 ),
                 hamcrest.equal_to("protocol is shutdown"),
             ),
@@ -657,15 +660,14 @@ class DefaultOpenSSLContextFactoryTests(TestCase):
         L{ssl.DefaultOpenSSLContextFactory.getContext} returns an SSL context
         which can use SSLv3 or TLSv1 but not SSLv2.
         """
-        # SSLv23_METHOD allows SSLv2, SSLv3, or TLSv1
-        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+        # TLS_METHOD allows for negotiating multiple versions of TLS
+        self.assertEqual(self.context._method, SSL.TLS_METHOD)
 
-        # And OP_NO_SSLv2 disables the SSLv2 support.
+        # OP_NO_SSLv2 disables SSLv2 support
         self.assertEqual(self.context._options & SSL.OP_NO_SSLv2, SSL.OP_NO_SSLv2)
 
-        # Make sure SSLv3 and TLSv1 aren't disabled though.
-        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
-        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+        # Make sure TLSv1.2 isn't disabled though.
+        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1_2)
 
     def test_missingCertificateFile(self):
         """
@@ -704,9 +706,9 @@ class ClientContextFactoryTests(TestCase):
     def test_method(self):
         """
         L{ssl.ClientContextFactory.getContext} returns a context which can use
-        SSLv3 or TLSv1 but not SSLv2.
+        TLSv1.2 or 1.3 but nothing earlier.
         """
-        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+        self.assertEqual(self.context._method, SSL.TLS_METHOD)
         self.assertEqual(self.context._options & SSL.OP_NO_SSLv2, SSL.OP_NO_SSLv2)
-        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
-        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+        self.assertTrue(self.context._options & SSL.OP_NO_SSLv3)
+        self.assertTrue(self.context._options & SSL.OP_NO_TLSv1)

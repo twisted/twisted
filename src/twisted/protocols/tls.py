@@ -37,34 +37,26 @@ transports, such as UNIX sockets and stdio.
 """
 
 
-from OpenSSL.SSL import Error, ZeroReturnError, WantReadError  # type: ignore[import]
-from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
+from zope.interface import directlyProvides, implementer, providedBy
 
-try:
-    Connection(Context(TLSv1_METHOD), None)
-except TypeError as e:
-    if str(e) != "argument must be an int, or have a fileno() method.":
-        raise
-    raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
+from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroReturnError
 
-from zope.interface import implementer, providedBy, directlyProvides
-
-from twisted.python.failure import Failure
+from twisted.internet._producer_helpers import _PullToPush
+from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
-    ISystemHandle,
-    INegotiated,
-    IPushProducer,
-    ILoggingContext,
-    IOpenSSLServerConnectionCreator,
-    IOpenSSLClientConnectionCreator,
-    IProtocolNegotiationFactory,
     IHandshakeListener,
+    ILoggingContext,
+    INegotiated,
+    IOpenSSLClientConnectionCreator,
+    IOpenSSLServerConnectionCreator,
+    IProtocolNegotiationFactory,
+    IPushProducer,
+    ISystemHandle,
 )
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
-from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
+from twisted.python.failure import Failure
 
 
 @implementer(IPushProducer)
@@ -109,6 +101,19 @@ class _ProducerMembrane:
         on.
         """
         self._producer.stopProducing()
+
+
+def _representsEOF(exceptionObject: Error) -> bool:
+    """
+    Does the given OpenSSL.SSL.Error represent an end-of-file?
+    """
+    reasonString: str
+    if isinstance(exceptionObject, SysCallError):
+        _, reasonString = exceptionObject.args
+    else:
+        errorQueue = exceptionObject.args[0]
+        _, _, reasonString = errorQueue[-1]
+    return reasonString.casefold().startswith("unexpected eof")
 
 
 @implementer(ISystemHandle, INegotiated)
@@ -359,7 +364,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             # Squash an EOF in violation of the TLS protocol into
             # ConnectionLost, so that applications which might run over
             # multiple protocols can recognize its type.
-            if tuple(reason.value.args[:2]) == (-1, "Unexpected EOF"):
+            if _representsEOF(reason.value):
                 reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason

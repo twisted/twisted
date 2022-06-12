@@ -9,12 +9,12 @@ Tests for L{twisted.python.lockfile}.
 
 import errno
 import os
-
 from unittest import skipIf, skipUnless
-from twisted.trial.unittest import TestCase
+
 from twisted.python import lockfile
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 skipKill = False
 skipKillReason = ""

@@ -6,13 +6,13 @@ Tests for L{twisted.runner.procmon}.
 """
 import pickle
 
-from twisted.trial import unittest
-from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
-from twisted.internet.error import ProcessDone, ProcessTerminated, ProcessExitedAlready
+from twisted.internet.error import ProcessDone, ProcessExitedAlready, ProcessTerminated
 from twisted.internet.task import Clock
-from twisted.python.failure import Failure
 from twisted.logger import globalLogPublisher
+from twisted.python.failure import Failure
+from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
 from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial import unittest
 
 
 class DummyProcess:

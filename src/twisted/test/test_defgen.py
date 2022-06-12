@@ -6,15 +6,17 @@ Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 """
 
 
-from twisted.internet import reactor
-
-from twisted.trial import unittest
-
-from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
-from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.internet import defer
-from twisted.trial.util import suppress as SUPPRESS
+from twisted.internet import defer, reactor
+from twisted.internet.defer import (
+    Deferred,
+    deferredGenerator,
+    inlineCallbacks,
+    returnValue,
+    waitForDeferred,
+)
 from twisted.python.util import runWithWarningsSuppressed
+from twisted.trial import unittest
+from twisted.trial.util import suppress as SUPPRESS
 
 
 def getThing():
@@ -150,7 +152,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
     @deprecatedDeferredGenerator
     def _genNothing(self):
         if False:
-            yield 1  # type: ignore[unreachable]
+            yield 1
 
     @deprecatedDeferredGenerator
     def _genHandledTerminalFailure(self):
@@ -233,7 +235,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def _genNothing(self):
         if False:
-            yield 1  # type: ignore[unreachable]
+            yield 1
 
     _genNothing = inlineCallbacks(_genNothing)
 

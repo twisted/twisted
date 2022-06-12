@@ -14,22 +14,17 @@ import inspect
 import random
 import socket
 import struct
-from itertools import chain
-
 from io import BytesIO
+from itertools import chain
 from typing import Optional, SupportsInt, Union
 
-from zope.interface import implementer, Interface, Attribute
-
+from zope.interface import Attribute, Interface, implementer
 
 # Twisted imports
-from twisted.internet import protocol, defer
+from twisted.internet import defer, protocol
 from twisted.internet.error import CannotListenError
-from twisted.python import log, failure
-from twisted.python import util as tputil
-from twisted.python import randbytes
-from twisted.python.compat import comparable, cmp, nativeString
-
+from twisted.python import failure, log, randbytes, util as tputil
+from twisted.python.compat import cmp, comparable, nativeString
 
 __all__ = [
     "IEncodable",
@@ -293,8 +288,11 @@ class IRecord(Interface):
 
 # Backwards compatibility aliases - these should be deprecated or something I
 # suppose. -exarkun
-from twisted.names.error import DomainError, AuthoritativeDomainError
-from twisted.names.error import DNSQueryTimeoutError
+from twisted.names.error import (
+    AuthoritativeDomainError,
+    DNSQueryTimeoutError,
+    DomainError,
+)
 
 
 def _nameToLabels(name):
@@ -344,7 +342,7 @@ def domainString(domain):
     if not isinstance(domain, bytes):
         raise TypeError(
             "Expected {} or {} but found {!r} of type {}".format(
-                type(b"").__name__, type("").__name__, domain, type(domain)
+                bytes.__name__, str.__name__, domain, type(domain)
             )
         )
     return domain
@@ -3219,6 +3217,9 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             m.fromStr(data)
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
+            return
+        except ValueError as ex:
+            log.msg(f"Invalid packet ({ex}) from {addr}")
             return
         except BaseException:
             # Nothing should trigger this, but since we're potentially

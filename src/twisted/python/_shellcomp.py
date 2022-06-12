@@ -32,7 +32,7 @@ import itertools
 from types import MethodType
 from typing import Dict, List, Set
 
-from twisted.python import reflect, util, usage
+from twisted.python import reflect, usage, util
 from twisted.python.compat import ioType
 
 
