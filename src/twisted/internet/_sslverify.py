@@ -1654,13 +1654,7 @@ class OpenSSLCertificateOptions:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
-        def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-            return preverify_ok
-
-        ctx.set_verify(verifyFlags, _verifyCallback)
+        ctx.set_verify(verifyFlags)
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
