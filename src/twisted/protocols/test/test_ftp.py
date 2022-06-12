@@ -6,8 +6,8 @@ Test cases for L{twisted.protocols.ftp}.
 """
 
 
-from twisted.trial import unittest
 from twisted.protocols import ftp
+from twisted.trial import unittest
 
 
 class MockDefer:
