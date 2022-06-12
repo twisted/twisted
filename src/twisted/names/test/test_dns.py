@@ -1262,6 +1262,26 @@ class DatagramProtocolTests(unittest.TestCase):
         self.proto.datagramReceived(b"", address.IPv4Address("UDP", "127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
 
+    def test_malformedMessage(self):
+        """
+        Test that when an unparsable message is received, datagramReceived does
+        not raise an exception while processing it.
+        """
+        # message with a reference loop - captured in the field.
+        unparsable = (
+            b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x02\x11WWWW"
+            b"WWWWWW-XXXXXX\x08_arduino\x04_tcp\x05local\x00\x00\xff\x80\x01\xc0"
+            b"7\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x02\xc0V\xc0V\x00!\x00\x01\x00"
+            b"\x00\x11\x94\x00\x08\x00\x00\x00\x00 J\xc0\x8f\xc0V\x00\x10\x00\x01"
+            b'\x00\x00\x11\x94\x00K\x0eauth_upload=no board="ESP8266_WEMOS_D1MINIL'
+            b'ITE"\rssh_upload=no\x0ctcp_check=no\xc0\x8f\x00\x01\x00\x01\x00\x00'
+            b"\x00x\x00\x04\xc0\xa8\x01)"
+        )
+        self.proto.datagramReceived(
+            unparsable, address.IPv4Address("UDP", "127.0.0.1", 12345)
+        )
+        self.assertEqual(self.controller.messages, [])
+
     def test_simpleQuery(self):
         """
         Test content received after a query.
