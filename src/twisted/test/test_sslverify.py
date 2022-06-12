@@ -509,7 +509,7 @@ class FakeContext:
         """
         self._mode = mode
 
-    def set_verify(self, flags, callback):
+    def set_verify(self, flags, callback=None):
         self._verify = flags, callback
 
     def set_verify_depth(self, depth):
