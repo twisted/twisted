@@ -13,15 +13,18 @@ import errno
 import os
 import time
 from typing import Dict
-
 from zipfile import ZipFile
 
-from twisted.python.compat import comparable, cmp
-from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
-from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.filepath import UnlistableError
-
 from zope.interface import implementer
+
+from twisted.python.compat import cmp, comparable
+from twisted.python.filepath import (
+    AbstractFilePath,
+    FilePath,
+    IFilePath,
+    UnlistableError,
+    _coerceToFilesystemEncoding,
+)
 
 ZIP_PATH_SEP = "/"  # In zipfiles, "/" is universally used as the
 # path separator, regardless of platform.
@@ -66,7 +69,7 @@ class ZipPath(AbstractFilePath):
         ]
         parts.extend(self.pathInArchive.split(self.sep))
         ossep = _coerceToFilesystemEncoding(self.sep, os.sep)
-        return "ZipPath({!r})".format(ossep.join(parts))
+        return f"ZipPath({ossep.join(parts)!r})"
 
     @property
     def sep(self):
@@ -266,7 +269,7 @@ class ZipArchive(ZipPath):
         return FilePath(self.zipfile.filename).getStatusChangeTime()
 
     def __repr__(self) -> str:
-        return "ZipArchive({!r})".format(os.path.abspath(self.path))
+        return f"ZipArchive({os.path.abspath(self.path)!r})"
 
 
 __all__ = ["ZipArchive", "ZipPath"]

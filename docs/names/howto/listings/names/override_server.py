@@ -16,7 +16,7 @@ eg
     172.0.2.1
 """
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
 from twisted.names import client, dns, error, server
 
 

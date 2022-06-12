@@ -18,19 +18,17 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import Dict, Sequence, Optional, Type, Union
+from typing import Dict, Optional, Sequence, Type, Union
 
 from zope.interface import Interface
 
-from twisted.trial.unittest import SynchronousTestCase, SkipTest
-from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
-from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-
 from twisted.python import log
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.failure import Failure
-
+from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 
 # Access private APIs.
 try:
@@ -254,8 +252,8 @@ class ReactorBuilder:
         Create and return a reactor using C{self.reactorFactory}.
         """
         try:
-            from twisted.internet.cfreactor import CFReactor
             from twisted.internet import reactor as globalReactor
+            from twisted.internet.cfreactor import CFReactor
         except ImportError:
             pass
         else:

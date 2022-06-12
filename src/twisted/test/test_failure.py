@@ -6,23 +6,20 @@ Test cases for the L{twisted.python.failure} module.
 """
 
 
+import linecache
+import pdb
 import re
 import sys
 import traceback
-import pdb
-import linecache
-
+from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from unittest import skipIf
 
-from twisted.python import reflect
-from twisted.python import failure
-
-from twisted.trial.unittest import SynchronousTestCase
-
-
 from cython_test_exception_raiser import raiser  # type: ignore[import]
+
+from twisted.python import failure, reflect
+from twisted.trial.unittest import SynchronousTestCase
 
 
 def getDivisionFailure(*args, **kwargs):
@@ -300,7 +297,7 @@ class FailureTests(SynchronousTestCase):
         stack = ""
         for method, filename, lineno, localVars, globalVars in f.frames:
             stack += f'  File "{filename}", line {lineno}, in {method}\n'
-            stack += "    {}\n".format(linecache.getline(filename, lineno).strip())
+            stack += f"    {linecache.getline(filename, lineno).strip()}\n"
 
         self.assertTracebackFormat(
             tb,
@@ -493,6 +490,19 @@ class FailureTests(SynchronousTestCase):
         self.assertIs(f.value.__traceback__, f.tb)
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
+
+    def test_distb(self):
+        """
+        The traceback captured by a L{Failure} is compatible with the stdlib
+        L{dis.distb} function as used in post-mortem debuggers. Specifically,
+        it doesn't cause that function to raise an exception.
+        """
+        f = getDivisionFailure()
+        buf = StringIO()
+        distb(f.getTracebackObject(), file=buf)
+        # The bytecode details vary across Python versions, so we only check
+        # that the arrow pointing at the source of the exception is present.
+        self.assertIn(" --> ", buf.getvalue())
 
     def test_repr(self):
         """
@@ -748,10 +758,13 @@ class FormattableTracebackTests(SynchronousTestCase):
         )
 
 
-class FrameAttributesTests(SynchronousTestCase):
+class FakeAttributesTests(SynchronousTestCase):
     """
-    _Frame objects should possess some basic attributes that qualify them as
-    fake python Frame objects.
+    _Frame, _Code and _TracebackFrame objects should possess some basic
+    attributes that qualify them as fake python objects, allowing the return of
+    _Traceback to be used as a fake traceback. The attributes that have zero or
+    empty values are there so that things expecting them find them (e.g. post
+    mortem debuggers).
     """
 
     def test_fakeFrameAttributes(self):
@@ -760,10 +773,73 @@ class FrameAttributesTests(SynchronousTestCase):
         bound to C{dict} instance.  They also have the C{f_code} attribute
         bound to something like a code object.
         """
-        frame = failure._Frame(("dummyname", "dummyfilename", None, None, None), None)
-        self.assertIsInstance(frame.f_globals, dict)
-        self.assertIsInstance(frame.f_locals, dict)
+        back_frame = failure._Frame(
+            (
+                "dummyparent",
+                "dummyparentfile",
+                111,
+                None,
+                None,
+            ),
+            None,
+        )
+        fake_locals = {"local_var": 42}
+        fake_globals = {"global_var": 100}
+        frame = failure._Frame(
+            (
+                "dummyname",
+                "dummyfilename",
+                42,
+                fake_locals,
+                fake_globals,
+            ),
+            back_frame,
+        )
+        self.assertEqual(frame.f_globals, fake_globals)
+        self.assertEqual(frame.f_locals, fake_locals)
         self.assertIsInstance(frame.f_code, failure._Code)
+        self.assertEqual(frame.f_back, back_frame)
+        self.assertIsInstance(frame.f_builtins, dict)
+        self.assertIsInstance(frame.f_lasti, int)
+        self.assertEqual(frame.f_lineno, 42)
+        self.assertIsInstance(frame.f_trace, type(None))
+
+    def test_fakeCodeAttributes(self):
+        """
+        See L{FakeAttributesTests} for more details about this test.
+        """
+        code = failure._Code("dummyname", "dummyfilename")
+        self.assertEqual(code.co_name, "dummyname")
+        self.assertEqual(code.co_filename, "dummyfilename")
+        self.assertIsInstance(code.co_argcount, int)
+        self.assertIsInstance(code.co_code, bytes)
+        self.assertIsInstance(code.co_cellvars, tuple)
+        self.assertIsInstance(code.co_consts, tuple)
+        self.assertIsInstance(code.co_firstlineno, int)
+        self.assertIsInstance(code.co_flags, int)
+        self.assertIsInstance(code.co_lnotab, bytes)
+        self.assertIsInstance(code.co_freevars, tuple)
+        self.assertIsInstance(code.co_posonlyargcount, int)
+        self.assertIsInstance(code.co_kwonlyargcount, int)
+        self.assertIsInstance(code.co_names, tuple)
+        self.assertIsInstance(code.co_nlocals, int)
+        self.assertIsInstance(code.co_stacksize, int)
+        self.assertIsInstance(code.co_varnames, list)
+        self.assertIsInstance(code.co_positions(), tuple)
+
+    def test_fakeTracebackFrame(self):
+        """
+        See L{FakeAttributesTests} for more details about this test.
+        """
+        frame = failure._Frame(
+            ("dummyname", "dummyfilename", 42, {}, {}),
+            None,
+        )
+        traceback_frame = failure._TracebackFrame(frame)
+        self.assertEqual(traceback_frame.tb_frame, frame)
+        self.assertEqual(traceback_frame.tb_lineno, 42)
+        self.assertIsInstance(traceback_frame.tb_lasti, int)
+        self.assertTrue(hasattr(traceback_frame, "tb_next"))
 
 
 class DebugModeTests(SynchronousTestCase):

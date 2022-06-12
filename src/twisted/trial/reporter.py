@@ -9,17 +9,16 @@ Defines classes that handle the results of tests.
 """
 
 
-import sys
 import os
+import sys
 import time
-import warnings
 import unittest as pyunit
-
+import warnings
 from collections import OrderedDict
 
 from zope.interface import implementer
 
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
@@ -108,9 +107,12 @@ class TestResult(pyunit.TestResult):
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
-        if isinstance(error, tuple):
+        is_exc_info_tuple = isinstance(error, tuple) and len(error) == 3
+        if is_exc_info_tuple:
             return Failure(error[1], error[0], error[2])
-        return error
+        elif isinstance(error, Failure):
+            return error
+        raise TypeError(f"Cannot convert {error} to a Failure")
 
     def startTest(self, test):
         """
@@ -457,7 +459,7 @@ class Reporter(TestResult):
         @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(""))
+        assert isinstance(s, str)
         if args:
             self._stream.write(s % args)
         else:
@@ -891,12 +893,12 @@ class _Win32Colorizer:
 
     def __init__(self, stream):
         from win32console import (  # type: ignore[import]
-            GetStdHandle,
-            STD_OUTPUT_HANDLE,
-            FOREGROUND_RED,
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
+            FOREGROUND_RED,
+            STD_OUTPUT_HANDLE,
+            GetStdHandle,
         )
 
         red, green, blue, bold = (
@@ -1203,9 +1205,9 @@ class TreeReporter(Reporter):
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                    self._write(f"{self.indent * indentLevel}{seg}\n")
             else:
-                self._write("{}{}\n".format(self.indent * indentLevel, seg))
+                self._write(f"{self.indent * indentLevel}{seg}\n")
             indentLevel += 1
         self._lastTest = segments
 

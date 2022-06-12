@@ -11,7 +11,6 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-
 from typing import List
 
 from zope.interface import implementer
@@ -21,7 +20,6 @@ from zope.interface import implementer
 # breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
 from twisted.python import failure
-
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
@@ -201,7 +199,8 @@ class TestCase(SynchronousTestCase):
         object.
         """
         failures = []
-        for func, args, kwargs in self._cleanups[::-1]:
+        while len(self._cleanups) > 0:
+            func, args, kwargs = self._cleanups.pop()
             try:
                 yield func(*args, **kwargs)
             except Exception:

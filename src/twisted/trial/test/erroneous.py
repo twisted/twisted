@@ -12,8 +12,9 @@ this code is arranged.
 
 
 from unittest import skipIf
+
+from twisted.internet import defer, protocol, reactor
 from twisted.trial import unittest, util
-from twisted.internet import reactor, protocol, defer
 
 
 class FoolishError(Exception):
@@ -99,6 +100,8 @@ class TestAsynchronousFail(unittest.TestCase):
     Test failures for L{unittest.TestCase} based classes.
     """
 
+    text = "I fail"
+
     def test_fail(self):
         """
         A test which fails in the callback of the returned L{defer.Deferred}.
@@ -115,7 +118,7 @@ class TestAsynchronousFail(unittest.TestCase):
         """
         A test which raises an exception synchronously.
         """
-        raise Exception("I fail")
+        raise Exception(self.text)
 
 
 class ErrorTest(unittest.SynchronousTestCase):
@@ -203,3 +206,19 @@ def unexpectedException(self):
 
     >>> 1/0
     """
+
+
+class EventuallyFailingTestCase(unittest.SynchronousTestCase):
+    """
+    A test suite that fails after it is run a few times.
+    """
+
+    n: int = 0
+
+    def test_it(self):
+        """
+        Run successfully a few times and then fail forever after.
+        """
+        self.n += 1
+        if self.n >= 5:
+            self.fail("eventually failing")

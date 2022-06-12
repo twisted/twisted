@@ -6,15 +6,15 @@ Tests for L{twisted.cred}, now with 30% more starch.
 """
 
 
-from zope.interface import implementer, Interface
-
 from binascii import hexlify, unhexlify
 
-from twisted.trial import unittest
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, error, portal
+from twisted.internet import defer
 from twisted.python import components
 from twisted.python.versions import Version
-from twisted.internet import defer
-from twisted.cred import checkers, credentials, portal, error
+from twisted.trial import unittest
 
 try:
     from crypt import crypt as _crypt
@@ -266,11 +266,6 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
         hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
-        # workaround for pypy3 3.6.9 and above which returns bytes from crypt.crypt()
-        # This is fixed in pypy3 7.3.5.
-        # See L{https://foss.heptapod.net/pypy/pypy/-/issues/3395}
-        if isinstance(hashed_password, bytes):
-            return hashed_password
         return hashed_password.encode("ascii")
 
     def testGoodCredentials(self):
@@ -361,7 +356,10 @@ class CheckersMixin:
 class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
     diskHash = None
-    networkHash = staticmethod(lambda x: x)
+
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return x
 
     _validCredentials = [
         (b"user1", b"password1"),
@@ -418,7 +416,9 @@ class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
 
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    networkHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return hexlify(x)
 
     class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):

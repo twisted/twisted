@@ -9,7 +9,7 @@ import pickle
 import sys
 
 # Twisted Imports
-from twisted.persisted import styles, aot, crefutil
+from twisted.persisted import aot, crefutil, styles
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 

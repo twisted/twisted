@@ -28,12 +28,11 @@ more information about the protocol.
 
 from collections import deque
 
+from twisted.internet.defer import Deferred, TimeoutError, fail
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
-from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
 from twisted.python.compat import nativeString, networkString
-
 
 DEFAULT_PORT = 11211
 
@@ -393,9 +392,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError(
-                    "Invalid type for key: {}, expecting bytes".format(type(key))
-                )
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
             )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
@@ -510,17 +507,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError(
-                    "Invalid type for key: {}, expecting bytes".format(type(key))
-                )
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
             )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
         if not isinstance(val, bytes):
             return fail(
-                ClientError(
-                    "Invalid type for value: {}, expecting bytes".format(type(val))
-                )
+                ClientError(f"Invalid type for value: {type(val)}, expecting bytes")
             )
         if cas:
             cas = b" " + cas
@@ -633,9 +626,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         for key in keys:
             if not isinstance(key, bytes):
                 return fail(
-                    ClientError(
-                        "Invalid type for key: {}, expecting bytes".format(type(key))
-                    )
+                    ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
                 )
             if len(key) > self.MAX_KEY_LENGTH:
                 return fail(ClientError("Key too long"))
@@ -710,9 +701,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
             return fail(
-                ClientError(
-                    "Invalid type for key: {}, expecting bytes".format(type(key))
-                )
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
             )
         self.sendLine(b"delete " + key)
         cmdObj = Command(b"delete", key=key)

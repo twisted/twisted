@@ -9,23 +9,22 @@ Helpers related to HTTP requests, used by tests.
 __all__ = ["DummyChannel", "DummyRequest"]
 
 from io import BytesIO
-
 from typing import Optional
+
 from zope.interface import implementer, verify
 
-from twisted.python.deprecate import deprecated
 from incremental import Version
-from twisted.internet.defer import Deferred
+
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet.interfaces import ISSLTransport, IAddress
-
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IAddress, ISSLTransport
+from twisted.internet.task import Clock
+from twisted.python.deprecate import deprecated
 from twisted.trial import unittest
-
+from twisted.web._responses import FOUND
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
-from twisted.web._responses import FOUND
-
 
 textLinearWhitespaceComponents = [f"Foo{lw}bar" for lw in ["\r", "\n", "\r\n"]]
 
@@ -233,7 +232,7 @@ class DummyRequest:
         self.postpath = postpath
         self.prepath = []
         self.session = None
-        self.protoSession = session or Session(0, self)
+        self.protoSession = session or Session(site=None, uid=b"0", reactor=Clock())
         self.args = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()

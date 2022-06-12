@@ -1,8 +1,9 @@
 Twisted
 =======
 
+|gitter|_
+|rtd|_
 |pypi|_
-|circleci|_
 |mypy|_
 
 For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
@@ -44,7 +45,8 @@ This documentation contains how-tos, code examples, and an API reference.
 
 Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web), on ``chat.freenode.net``.
+There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web),
+on `irc.libera.chat <https://web.libera.chat/>_`.
 
 
 Unit Tests
@@ -85,7 +87,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2022 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -110,8 +112,11 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. |pypi| image:: https://img.shields.io/pypi/v/twisted.svg
 .. _pypi: https://pypi.python.org/pypi/twisted
 
-.. |circleci| image:: https://circleci.com/gh/twisted/twisted.svg?style=svg
-.. _circleci: https://circleci.com/gh/twisted/twisted
+.. |gitter| image:: https://img.shields.io/gitter/room/twisted/twisted.svg
+.. _gitter: https://gitter.im/twisted/twisted
 
 .. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
 .. _mypy: https://github.com/twisted/twisted
+
+.. |rtd| image:: https://readthedocs.org/projects/twisted/badge/?version=latest&style=flat
+.. _rtd: https://docs.twistedmatrix.com

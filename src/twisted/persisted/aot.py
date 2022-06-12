@@ -10,14 +10,13 @@ this side of Marmalade!
 """
 
 
+import copyreg as copy_reg
 import re
 import types
-
 from tokenize import generate_tokens as tokenize
-import copyreg as copy_reg
 
-from twisted.python import reflect, log
 from twisted.persisted import crefutil
+from twisted.python import log, reflect
 from twisted.python.compat import _constructMethod
 
 ###########################
@@ -109,10 +108,10 @@ class Instance:
             stateDict = None
         if stateDict is not None:
             try:
-                return "Instance({!r}, {})".format(self.klass, dictToKW(stateDict))
+                return f"Instance({self.klass!r}, {dictToKW(stateDict)})"
             except NonFormattableDict:
-                return "Instance({!r}, {})".format(self.klass, prettify(stateDict))
-        return "Instance({!r}, {})".format(self.klass, prettify(self.state))
+                return f"Instance({self.klass!r}, {prettify(stateDict)})"
+        return f"Instance({self.klass!r}, {prettify(self.state)})"
 
 
 class Ref:
@@ -161,7 +160,7 @@ class Copyreg:
         self.state = state
 
     def getSource(self):
-        return "Copyreg({!r}, {})".format(self.loadfunc, prettify(self.state))
+        return f"Copyreg({self.loadfunc!r}, {prettify(self.state)})"
 
 
 ###############
@@ -190,7 +189,7 @@ def dictToKW(d):
             raise NonFormattableDict("%r ain't a string" % k)
         if not r.match(k):
             raise NonFormattableDict("%r ain't an identifier" % k)
-        out.append("\n\0{}={},".format(k, prettify(v)))
+        out.append(f"\n\0{k}={prettify(v)},")
     return "".join(out)
 
 
@@ -207,7 +206,7 @@ def prettify(obj):
         elif t is dict:
             out = ["{"]
             for k, v in obj.items():
-                out.append("\n\0{}: {},".format(prettify(k), prettify(v)))
+                out.append(f"\n\0{prettify(k)}: {prettify(v)},")
             out.append(len(obj) and "\n\0}" or "}")
             return "".join(out)
 

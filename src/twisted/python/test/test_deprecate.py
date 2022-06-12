@@ -11,36 +11,34 @@ import sys
 import types
 import warnings
 from os.path import normcase
-from warnings import simplefilter, catch_warnings
+from warnings import catch_warnings, simplefilter
 
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None  # type: ignore[assignment,misc]
-
-from twisted.python import deprecate
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.deprecate import (
-    getDeprecationWarningString,
-    deprecated,
-    _appendToDocstring,
-    _getDeprecationDocstring,
-    _fullyQualifiedName as fullyQualifiedName,
-    _mutuallyExclusiveArguments,
-    deprecatedProperty,
-    deprecatedKeywordParameter,
-    _passedArgSpec,
-    _passedSignature,
-)
+    invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
 
+from twisted.python import deprecate
+from twisted.python.deprecate import (
+    DEPRECATION_WARNING_FORMAT,
+    _appendToDocstring,
+    _fullyQualifiedName as fullyQualifiedName,
+    _getDeprecationDocstring,
+    _getDeprecationWarningString,
+    _mutuallyExclusiveArguments,
+    _passedArgSpec,
+    _passedSignature,
+    deprecated,
+    deprecatedKeywordParameter,
+    deprecatedProperty,
+    getDeprecationWarningString,
+)
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-
 from twisted.trial.unittest import SynchronousTestCase
 
 # Note that various tests in this module require manual encoding of paths to
@@ -133,9 +131,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
-        self.assertEqual(
-            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
-        )
+        self.assertEqual(repr(proxy), f"<{type(proxy).__name__} module={realModule!r}>")
 
 
 class DeprecatedAttributeTests(SynchronousTestCase):

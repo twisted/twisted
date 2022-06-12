@@ -8,45 +8,64 @@ L{twisted.internet.endpoints}.
 """
 
 from errno import EPERM
-from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP, gaierror
+from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, gaierror
+from types import FunctionType
 from unicodedata import normalize
 from unittest import skipIf
-from types import FunctionType
 
 from zope.interface import implementer, providedBy, provider
 from zope.interface.interface import InterfaceClass
-from zope.interface.verify import verifyObject, verifyClass
-
-from twisted.trial import unittest
-from twisted.internet.testing import MemoryReactorClock as MemoryReactor
-from twisted.internet.testing import RaisingMemoryReactor, StringTransport
-from twisted.internet.testing import StringTransportWithDisconnection
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted import plugins
-from twisted.internet import error, interfaces, defer, endpoints, protocol
-from twisted.internet import reactor, threads, stdio
-from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.address import _ProcessAddress, HostnameAddress
+from twisted.internet import (
+    defer,
+    endpoints,
+    error,
+    interfaces,
+    protocol,
+    reactor,
+    stdio,
+    threads,
+)
+from twisted.internet.abstract import isIPv6Address
+from twisted.internet.address import (
+    HostnameAddress,
+    IPv4Address,
+    IPv6Address,
+    UNIXAddress,
+    _ProcessAddress,
+)
 from twisted.internet.endpoints import StandardErrorBehavior
-from twisted.internet.interfaces import IConsumer, IPushProducer, ITransport
-from twisted.internet.protocol import ClientFactory, Protocol, Factory
+from twisted.internet.error import ConnectingCancelledError
+from twisted.internet.interfaces import (
+    IConsumer,
+    IHostnameResolver,
+    IPushProducer,
+    IReactorPluggableNameResolver,
+    ITransport,
+)
+from twisted.internet.protocol import ClientFactory, Factory, Protocol
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.internet.testing import (
+    MemoryReactorClock as MemoryReactor,
+    RaisingMemoryReactor,
+    StringTransport,
+    StringTransportWithDisconnection,
+)
 from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
+from twisted.protocols import basic, policies
 from twisted.python import log
+from twisted.python.compat import nativeString
+from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
-from twisted.protocols import basic, policies
-from twisted.test.iosim import connectedServerAndClient, connectableEndpoint
-from twisted.internet.error import ConnectingCancelledError
-from twisted.python.compat import nativeString
-from twisted.internet.interfaces import IHostnameResolver
-from twisted.internet.interfaces import IReactorPluggableNameResolver
-from twisted.python.components import proxyForInterface
-from twisted.internet.abstract import isIPv6Address
+from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
+from twisted.trial import unittest
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
@@ -69,16 +88,22 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 
 try:
-    from twisted.test.test_sslverify import makeCertificate
+    from OpenSSL.SSL import (
+        TLS_METHOD,
+        Context as ContextType,
+        OP_NO_SSLv3,
+        TLSv1_2_METHOD,
+    )
+
     from twisted.internet.ssl import (
-        PrivateCertificate,
         Certificate,
         CertificateOptions,
-        KeyPair,
         DiffieHellmanParameters,
+        KeyPair,
+        PrivateCertificate,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3  # type: ignore[import]
+    from twisted.test.test_sslverify import makeCertificate
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -3096,7 +3121,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName),
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
@@ -3104,7 +3129,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3123,7 +3148,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
-        self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLS_METHOD)
         self.assertTrue(
             server._sslContextFactory._options & OP_NO_SSLv3,
         )
@@ -3223,7 +3248,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (
                 escapedNoTrailingNewlineKeyPEMPathName,
                 escapedNoTrailingNewlineCertPEMPathName,
@@ -3234,7 +3259,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3508,7 +3533,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertTrue(certOptions._options & OP_NO_SSLv3)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
@@ -3572,7 +3597,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertIsNone(certOptions.certificate)
         self.assertIsNone(certOptions.privateKey)
 

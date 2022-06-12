@@ -2,25 +2,25 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
-import sys
 import inspect
-
+import sys
 from typing import List
 from unittest import skipIf
+
 from zope.interface import directlyProvides
 
 import twisted.mail._pop3client
-
-from twisted.internet import reactor, defer, error, protocol, interfaces
-from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
-from twisted.mail.pop3 import InsecureAuthenticationDisallowed
-from twisted.mail.pop3 import ServerErrorResponse
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.mail.pop3 import (
+    AdvancedPOP3Client as POP3Client,
+    InsecureAuthenticationDisallowed,
+    ServerErrorResponse,
+)
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
-
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -630,10 +630,6 @@ class POP3ClientModuleStructureTests(TestCase):
         ]
 
         for pc in publicClasses:
-            if sys.version_info < (3, 7) and pc == "List":
-                # typing.List shows up in publicClasses on
-                # Python < 3.7, so skip it.
-                continue
             if not pc == "POP3Client":
                 self.assertTrue(
                     hasattr(twisted.mail.pop3, pc),

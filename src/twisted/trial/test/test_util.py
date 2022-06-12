@@ -7,24 +7,27 @@ Tests for L{twisted.trial.util}
 """
 
 
+import locale
 import os
 import sys
 from io import StringIO
 
 from zope.interface import implementer
 
-from twisted.python import filepath
-from twisted.internet.interfaces import IProcessTransport
-from twisted.internet.base import DelayedCall
-from twisted.python.failure import Failure
+from hamcrest import assert_that, equal_to
 
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
+from twisted.python import filepath
+from twisted.python.failure import Failure
 from twisted.trial import util
+from twisted.trial.unittest import SynchronousTestCase
 from twisted.trial.util import (
     DirtyReactorAggregateError,
     _Janitor,
-    excInfoOrFailureToExcInfo,
     acquireAttribute,
+    excInfoOrFailureToExcInfo,
+    openTestLog,
 )
 
 
@@ -597,3 +600,50 @@ class ListToPhraseTests(SynchronousTestCase):
 
         error = self.assertRaises(TypeError, util._listToPhrase, sample, "and")
         self.assertEqual(str(error), "Things must be a list or a tuple")
+
+
+class OpenTestLogTests(SynchronousTestCase):
+    """
+    Tests for C{openTestLog}.
+    """
+
+    def test_utf8(self):
+        """
+        The log file is opened in text mode and uses UTF-8 for encoding.
+        """
+        # Modern OSes are running default locale in UTF-8 and this is what is
+        # used by Python at startup.  For this test, we force an ASCII default
+        # encoding so that we can see that UTF-8 is used even if it isn't the
+        # platform default.
+        currentLocale = locale.getlocale()
+        self.addCleanup(locale.setlocale, locale.LC_ALL, currentLocale)
+        locale.setlocale(locale.LC_ALL, ("C", "ascii"))
+
+        text = "Here comes the \N{SUN}"
+        p = filepath.FilePath(self.mktemp())
+        with openTestLog(p) as f:
+            f.write(text)
+
+        with open(p.path, "rb") as f:
+            written = f.read()
+
+        assert_that(text.encode("utf-8"), equal_to(written))
+
+    def test_append(self):
+        """
+        The log file is opened in append mode so if runner configuration specifies
+        an existing log file its contents are not wiped out.
+        """
+        existingText = "Hello, world.\n "
+        newText = "Goodbye, world.\n"
+        expected = f"Hello, world.{os.linesep} Goodbye, world.{os.linesep}"
+        p = filepath.FilePath(self.mktemp())
+        with openTestLog(p) as f:
+            f.write(existingText)
+        with openTestLog(p) as f:
+            f.write(newText)
+
+        assert_that(
+            p.getContent().decode("utf-8"),
+            equal_to(expected),
+        )

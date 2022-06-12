@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol, reactor
 
 
 class Echo(protocol.Protocol):

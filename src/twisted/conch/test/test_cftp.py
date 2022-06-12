@@ -6,34 +6,32 @@
 Tests for L{twisted.conch.scripts.cftp}.
 """
 
-import locale
 import getpass
+import locale
 import operator
 import os
 import struct
 import sys
 import time
-from unittest import skipIf
 from io import BytesIO
+from unittest import skipIf
 
-from twisted.python.filepath import FilePath
-from twisted.python.procutils import which
-from twisted.python.reflect import requireModule
 from zope.interface import implementer
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
-from twisted.conch.test.test_filetransfer import SFTPTestBase
-from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer, error
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.internet.task import Clock
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.filepath import FilePath
+from twisted.python.procutils import which
+from twisted.python.reflect import requireModule
 from twisted.test.proto_helpers import StringTransport
-from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
-
 
 pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
@@ -44,9 +42,9 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
-        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-        from twisted.conch.test import test_ssh, test_conch
+        from twisted.conch.test import test_conch, test_ssh
         from twisted.conch.test.test_conch import FakeStdio
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError:
         pass
 
@@ -608,7 +606,7 @@ class StdioClientTests(TestCase):
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
                 line = line.strip().split(" ", 1)
-                actualTransfer.append("{} {}".format(line[0], line[1].strip()))
+                actualTransfer.append(f"{line[0]} {line[1].strip()}")
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
@@ -1414,6 +1412,7 @@ exit
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(not which("ssh"), "no ssh command-line client available")
 @skipIf(not which("sftp"), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
@@ -1435,6 +1434,10 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         This test is mainly here to check that
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
+        # Get the current environment to pass along so that `ssh` and `sftp`
+        # can be found on our PATH.
+        env = dict(os.environ)
+
         fn = self.mktemp()
         with open(fn, "w") as f:
             f.write("ls .\nexit")
@@ -1454,7 +1457,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         # first need to check if we can set it. If we can, -V will just print
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
-        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"))
+        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"), env)
 
         def hasPAKT(status):
             if status == 0:
@@ -1482,7 +1485,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return args
 
         def check(result):
-            self.assertEqual(result[2], 0)
+            self.assertEqual(result[2], 0, result[1].decode("ascii"))
             for i in [
                 b"testDirectory",
                 b"testRemoveFile",
@@ -1492,5 +1495,5 @@ class OurServerSftpClientTests(CFTPClientTestBase):
                 self.assertIn(i, result[0])
 
         d.addCallback(hasPAKT)
-        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args))
+        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args, env))
         return d.addCallback(check)

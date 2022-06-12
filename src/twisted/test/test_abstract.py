@@ -6,11 +6,10 @@ Tests for generic file descriptor based reactor support code.
 """
 
 
-from twisted.trial.unittest import TestCase
+from socket import AF_IPX
 
 from twisted.internet.abstract import isIPAddress
-
-from socket import AF_IPX
+from twisted.trial.unittest import TestCase
 
 
 class AddressTests(TestCase):

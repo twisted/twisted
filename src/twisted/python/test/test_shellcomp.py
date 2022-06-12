@@ -10,10 +10,9 @@ import sys
 from io import BytesIO
 from typing import List, Optional
 
+from twisted.python import _shellcomp, reflect, usage
+from twisted.python.usage import CompleteFiles, CompleteList, Completer, Completions
 from twisted.trial import unittest
-from twisted.python import _shellcomp, usage, reflect
-from twisted.python.usage import Completions, Completer, CompleteFiles
-from twisted.python.usage import CompleteList
 
 
 class ZshScriptTestMeta(type):
@@ -391,10 +390,10 @@ class ZshTests(unittest.TestCase):
             optParameters = [["param", "p", None, "A param"]]
 
             def opt_flag(self):
-                """ junk description """
+                """junk description"""
 
             def opt_param(self, param):
-                """ junk description """
+                """junk description"""
 
         opts = Options()
         argGen = _shellcomp.ZshArgumentsGenerator(opts, "ace", None)

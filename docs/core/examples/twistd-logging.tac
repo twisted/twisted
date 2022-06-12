@@ -7,10 +7,9 @@
 # structure of each log message.
 
 from twisted.application.service import Application
+from twisted.internet.task import LoopingCall
 from twisted.python.log import ILogObserver, msg
 from twisted.python.util import untilConcludes
-from twisted.internet.task import LoopingCall
-
 
 logfile = open("twistd-logging.log", "a")
 

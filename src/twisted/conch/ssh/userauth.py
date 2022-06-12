@@ -13,14 +13,14 @@ Maintainer: Paul Swartz
 import struct
 
 from twisted.conch import error, interfaces
-from twisted.conch.ssh import keys, transport, service
+from twisted.conch.ssh import keys, service, transport
 from twisted.conch.ssh.common import NS, getNS
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
+from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString
-from twisted.logger import Logger
 
 
 class SSHUserAuthServer(service.SSHService):
@@ -263,7 +263,7 @@ class SSHUserAuthServer(service.SSHService):
         algName, blob, rest = getNS(packet[1:], 2)
 
         try:
-            pubKey = keys.Key.fromString(blob)
+            keys.Key.fromString(blob)
         except keys.BadKeyError:
             error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
@@ -278,7 +278,7 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(self.nextService)
                 + NS(b"publickey")
                 + bytes((hasSig,))
-                + NS(pubKey.sshType())
+                + NS(algName)
                 + NS(blob)
             )
             c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
@@ -449,11 +449,11 @@ class SSHUserAuthClient(service.SSHService):
                 return len(self.preferredOrder)
 
         canContinue = sorted(
-            [
+            (
                 meth
                 for meth in canContinue.split(b",")
                 if meth not in self.authenticatedWith
-            ],
+            ),
             key=orderByPreference,
         )
 

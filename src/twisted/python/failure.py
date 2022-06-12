@@ -13,15 +13,17 @@ See L{Failure}.
 
 
 # System Imports
+import builtins
 import copy
-import sys
-import linecache
 import inspect
-import opcode
+import linecache
+import sys
 from inspect import getmro
+from io import StringIO
+
+import opcode
 
 from twisted.python import reflect
-from io import StringIO
 
 count = 0
 traceupLength = 4
@@ -71,10 +73,10 @@ def format_frames(frames, write, detail="default"):
             w(" [ Locals ]\n")
             # Note: the repr(val) was (self.pickled and val) or repr(val)))
             for name, val in localVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
             w(" ( Globals )\n")
             for name, val in globalVars:
-                w("  {} : {}\n".format(name, repr(val)))
+                w(f"  {name} : {repr(val)}\n")
 
 
 # slyphon: i have a need to check for this value in trial
@@ -91,10 +93,10 @@ class NoCurrentExceptionError(Exception):
 
 def _Traceback(stackFrames, tbFrames):
     """
-    Construct a fake traceback object using a list of frames. Note that
-    although frames generally include locals and globals, this information
-    is not kept by this method, since locals and globals are not used in
-    standard tracebacks.
+    Construct a fake traceback object using a list of frames.
+
+    It should have the same API as stdlib to allow interaction with
+    other tools.
 
     @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
     @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
@@ -127,6 +129,9 @@ def _Traceback(stackFrames, tbFrames):
     return firstTb
 
 
+# The set of attributes for _TracebackFrame, _Frame and _Code were taken from
+# https://docs.python.org/3.11/library/inspect.html Other Pythons may have a
+# few more attributes that should be added if needed.
 class _TracebackFrame:
     """
     Fake traceback object which can be passed to functions in the standard
@@ -139,6 +144,7 @@ class _TracebackFrame:
         """
         self.tb_frame = frame
         self.tb_lineno = frame.f_lineno
+        self.tb_lasti = frame.f_lasti
         self.tb_next = None
 
 
@@ -162,19 +168,42 @@ class _Frame:
         name, filename, lineno, localz, globalz = frameinfo
         self.f_code = _Code(name, filename)
         self.f_lineno = lineno
-        self.f_globals = {}
-        self.f_locals = {}
+        self.f_globals = dict(globalz or {})
+        self.f_locals = dict(localz or {})
         self.f_back = back
+        self.f_lasti = 0
+        self.f_builtins = vars(builtins).copy()
+        self.f_trace = None
 
 
 class _Code:
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
+
+    It is intended to have the same API as the stdlib code type to allow
+    interoperation with other tools based on that interface.
     """
 
     def __init__(self, name, filename):
         self.co_name = name
         self.co_filename = filename
+        self.co_lnotab = b""
+        self.co_firstlineno = 0
+        self.co_argcount = 0
+        self.co_varnames = []
+        self.co_code = b""
+        self.co_cellvars = ()
+        self.co_consts = ()
+        self.co_flags = 0
+        self.co_freevars = ()
+        self.co_posonlyargcount = 0
+        self.co_kwonlyargcount = 0
+        self.co_names = ()
+        self.co_nlocals = 0
+        self.co_stacksize = 0
+
+    def co_positions(self):
+        return ((None, None, None, None),)
 
 
 _inlineCallbacksExtraneous = []
@@ -466,24 +495,12 @@ class Failure(BaseException):
                 return error
         return None
 
-    # It would be nice to use twisted.python.compat.reraise, but that breaks
-    # the stack exploration in _findFailure; possibly this can be fixed in
-    # #5931.
-    if getattr(BaseException, "with_traceback", None):
-        # Python 3
-        def raiseException(self):
-            raise self.value.with_traceback(self.tb)
-
-    else:
-        exec(
-            """def raiseException(self):
-    raise self.type, self.value, self.tb"""
-        )
-
-    raiseException.__doc__ = """
+    def raiseException(self):
+        """
         raise the original exception, preserving traceback
         information if available.
         """
+        raise self.value.with_traceback(self.tb)
 
     @_extraneous
     def throwExceptionIntoGenerator(self, g):
@@ -713,7 +730,7 @@ class Failure(BaseException):
 
         # Postamble, if any
         if not detail == "brief":
-            w("{}: {}\n".format(reflect.qual(self.type), reflect.safe_str(self.value)))
+            w(f"{reflect.qual(self.type)}: {reflect.safe_str(self.value)}\n")
 
         # Chaining
         if isinstance(self.value, Failure):

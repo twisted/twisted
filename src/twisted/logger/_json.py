@@ -6,18 +6,18 @@
 Tools for saving and loading log events in a structured format.
 """
 
-from constantly import NamedConstant  # type: ignore[import]
 from json import dumps, loads
+from typing import IO, Any, AnyStr, Dict, Iterable, Optional, Union, cast
 from uuid import UUID
-from typing import Any, AnyStr, Dict, IO, Iterable, Optional, Union, cast
 
+from constantly import NamedConstant  # type: ignore[import]
+
+from twisted.python.failure import Failure
 from ._file import FileLogObserver
 from ._flatten import flattenEvent
 from ._interfaces import LogEvent
 from ._levels import LogLevel
 from ._logger import Logger
-
-from twisted.python.failure import Failure
 
 log = Logger()
 
@@ -52,7 +52,7 @@ def failureFromJSON(failureDict: JSONDict) -> Failure:
 
     @return: L{Failure}
     """
-    f = cast(Failure, Failure.__new__(Failure))
+    f = Failure.__new__(Failure)
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
     f.__dict__ = failureDict
@@ -183,7 +183,7 @@ def jsonFileLogObserver(
     @return: A file log observer.
     """
     return FileLogObserver(
-        outFile, lambda event: "{}{}\n".format(recordSeparator, eventAsJSON(event))
+        outFile, lambda event: f"{recordSeparator}{eventAsJSON(event)}\n"
     )
 
 

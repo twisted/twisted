@@ -13,15 +13,16 @@ from typing import Optional
 
 from zope.interface import implementer
 
-from twisted.internet import defer, address, error, interfaces
+from twisted.internet import address, defer, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log, failure
-
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_PORT_UNREACHABLE,
+)
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from twisted.python import failure, log
 
 
 @implementer(

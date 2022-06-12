@@ -9,13 +9,14 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
-from threading import Thread, currentThread
+from threading import Thread, current_thread
 from typing import List
 
 from twisted._threads import pool as _pool
-from twisted.python import log, context
+from twisted.python import context, log
+from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
-
+from twisted.python.versions import Version
 
 WorkerStop = object()
 
@@ -44,7 +45,12 @@ class ThreadPool:
     name = None
 
     threadFactory = Thread
-    currentThread = staticmethod(currentThread)
+    currentThread = staticmethod(
+        deprecated(
+            version=Version("Twisted", 22, 1, 0),
+            replacement="threading.current_thread",
+        )(current_thread)
+    )
     _pool = staticmethod(_pool)
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
@@ -168,7 +174,7 @@ class ThreadPool:
         @return: A distinctive name for the thread.
         @rtype: native L{str}
         """
-        return "PoolThread-{}-{}".format(self.name or id(self), self.workers)
+        return f"PoolThread-{self.name or id(self)}-{self.workers}"
 
     def stopAWorker(self):
         """

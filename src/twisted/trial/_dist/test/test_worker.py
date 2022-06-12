@@ -10,26 +10,26 @@ from io import BytesIO, StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.trial.reporter import TestResult
-from twisted.trial.unittest import TestCase
+from twisted.internet.defer import fail, succeed
+from twisted.internet.error import ProcessDone
+from twisted.internet.interfaces import IAddress, ITransport
+from twisted.protocols.amp import AMP
+from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import fullyQualifiedName
+from twisted.scripts import trial
+from twisted.test.proto_helpers import StringTransport
+from twisted.trial._dist import managercommands, workercommands
 from twisted.trial._dist.worker import (
     LocalWorker,
     LocalWorkerAMP,
     LocalWorkerTransport,
+    NotRunning,
+    WorkerException,
     WorkerProtocol,
 )
-from twisted.trial._dist import managercommands, workercommands
-
-from twisted.scripts import trial
-from twisted.test.proto_helpers import StringTransport
-
-from twisted.internet.interfaces import ITransport, IAddress
-from twisted.internet.defer import fail, succeed
-from twisted.internet.main import CONNECTION_DONE
-from twisted.internet.error import ConnectionDone
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.failure import Failure
-from twisted.protocols.amp import AMP
+from twisted.trial.reporter import TestResult
+from twisted.trial.unittest import TestCase
 
 
 class FakeAMP(AMP):
@@ -158,7 +158,10 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.errors[0][0])
+        case, failure = self.result.errors[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, ValueError)
+        self.assertEqual(failure.value, WorkerException("error"))
         self.assertTrue(results)
 
     def test_runErrorWithFrames(self):
@@ -178,10 +181,11 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.errors[0][0])
-        self.assertEqual(
-            [("file.py", "invalid code", 3, [], [])], self.result.errors[0][1].frames
-        )
+        case, failure = self.result.errors[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, ValueError)
+        self.assertEqual(failure.value, WorkerException("error"))
+        self.assertEqual([("file.py", "invalid code", 3, [], [])], failure.frames)
         self.assertTrue(results)
 
     def test_runFailure(self):
@@ -200,7 +204,10 @@ class LocalWorkerAMPTests(TestCase):
         d.addCallback(lambda result: results.append(result["success"]))
         self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.failures[0][0])
+        case, failure = self.result.failures[0]
+        self.assertEqual(self.testCase, case)
+        self.assertEqual(failure.type, RuntimeError)
+        self.assertEqual(failure.value, WorkerException("fail"))
         self.assertTrue(results)
 
     def test_runSkip(self):
@@ -272,9 +279,10 @@ class LocalWorkerAMPTests(TestCase):
         return d.addCallback(self.assertIdentical, result)
 
 
-class FakeAMProtocol(AMP):
+class SpyDataLocalWorkerAMP(LocalWorkerAMP):
     """
-    A fake implementation of L{AMP} for testing.
+    A fake implementation of L{LocalWorkerAMP} that records the received
+    data and doesn't automatically dispatch any command..
     """
 
     id = 0
@@ -282,9 +290,6 @@ class FakeAMProtocol(AMP):
 
     def dataReceived(self, data):
         self.dataString += data
-
-    def setTestStream(self, stream):
-        self.testStream = stream
 
 
 class FakeTransport:
@@ -320,10 +325,36 @@ class LocalWorkerTests(TestCase):
         """
         worker = LocalWorker(*args, **kwargs)
         worker.makeConnection(FakeTransport())
-        self.addCleanup(worker._testLog.close)
         self.addCleanup(worker._outLog.close)
         self.addCleanup(worker._errLog.close)
         return worker
+
+    def test_exitBeforeConnected(self):
+        """
+        L{LocalWorker.exit} fails with L{NotRunning} if it is called before the
+        protocol is connected to a transport.
+        """
+        worker = LocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+        )
+        self.failureResultOf(worker.exit(), NotRunning)
+
+    def test_exitAfterDisconnected(self):
+        """
+        L{LocalWorker.exit} fails with L{NotRunning} if it is called after the the
+        protocol is disconnected from its transport.
+        """
+        worker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+        )
+        worker.processEnded(Failure(ProcessDone(0)))
+        # Since we're not calling exit until after the process has ended, it
+        # won't consume the ProcessDone failure on the internal `endDeferred`.
+        # Swallow it here.
+        self.failureResultOf(worker.endDeferred, ProcessDone)
+
+        # Now assert that exit behaves.
+        self.failureResultOf(worker.exit(), NotRunning)
 
     def test_childDataReceived(self):
         """
@@ -331,19 +362,49 @@ class LocalWorkerTests(TestCase):
         L{AMP} protocol if the right file descriptor, otherwise forwards to
         C{ProcessProtocol.childDataReceived}.
         """
-        localWorker = self.tidyLocalWorker(FakeAMProtocol(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+        )
         localWorker._outLog = BytesIO()
         localWorker.childDataReceived(4, b"foo")
         localWorker.childDataReceived(1, b"bar")
         self.assertEqual(b"foo", localWorker._ampProtocol.dataString)
         self.assertEqual(b"bar", localWorker._outLog.getvalue())
 
+    def test_newlineStyle(self):
+        """
+        L{LocalWorker} writes the log data with local newlines.
+        """
+        amp = SpyDataLocalWorkerAMP()
+        tempDir = FilePath(self.mktemp())
+        tempDir.makedirs()
+        logPath = tempDir.child("test.log")
+
+        with open(logPath.path, "wt") as logFile:
+            worker = LocalWorker(amp, tempDir, logFile)
+            worker.makeConnection(FakeTransport())
+            self.addCleanup(worker._outLog.close)
+            self.addCleanup(worker._errLog.close)
+
+            expected = "Here comes the \N{sun}!"
+            amp.testWrite(expected)
+
+        self.assertEqual(
+            # os.linesep is the local newline.
+            (expected + os.linesep),
+            # getContent reads in binary mode so we'll see the bytes that
+            # actually ended up in the file.
+            logPath.getContent().decode("utf-8"),
+        )
+
     def test_outReceived(self):
         """
         L{LocalWorker.outReceived} logs the output into its C{_outLog} log
         file.
         """
-        localWorker = self.tidyLocalWorker(FakeAMProtocol(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+        )
         localWorker._outLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
@@ -354,7 +415,9 @@ class LocalWorkerTests(TestCase):
         L{LocalWorker.errReceived} logs the errors into its C{_errLog} log
         file.
         """
-        localWorker = self.tidyLocalWorker(FakeAMProtocol(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+        )
         localWorker._errLog = BytesIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.errReceived(data)
@@ -395,31 +458,30 @@ class LocalWorkerTests(TestCase):
 
     def test_connectionLost(self):
         """
-        L{LocalWorker.connectionLost} closes the log streams.
+        L{LocalWorker.connectionLost} closes the per-worker log streams.
         """
 
-        localWorker = self.tidyLocalWorker(FakeAMProtocol(), ".", "test.log")
+        localWorker = self.tidyLocalWorker(
+            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+        )
         localWorker.connectionLost(None)
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
-        self.assertTrue(localWorker._testLog.closed)
 
     def test_processEnded(self):
         """
         L{LocalWorker.processEnded} calls C{connectionLost} on itself and on
         the L{AMP} protocol.
         """
-
         transport = FakeTransport()
-        protocol = FakeAMProtocol()
-        localWorker = LocalWorker(protocol, ".", "test.log")
+        protocol = SpyDataLocalWorkerAMP()
+        localWorker = LocalWorker(protocol, FilePath(self.mktemp()), "test.log")
         localWorker.makeConnection(transport)
-        localWorker.processEnded(Failure(CONNECTION_DONE))
+        localWorker.processEnded(Failure(ProcessDone(0)))
         self.assertTrue(localWorker._outLog.closed)
         self.assertTrue(localWorker._errLog.closed)
-        self.assertTrue(localWorker._testLog.closed)
         self.assertIdentical(None, protocol.transport)
-        return self.assertFailure(localWorker.endDeferred, ConnectionDone)
+        return self.assertFailure(localWorker.endDeferred, ProcessDone)
 
     def test_addresses(self):
         """
@@ -447,8 +509,7 @@ class LocalWorkerTests(TestCase):
         def failCallRemote(command, directory):
             return fail(RuntimeError("oops"))
 
-        protocol = FakeAMProtocol()
+        protocol = SpyDataLocalWorkerAMP()
         protocol.callRemote = failCallRemote
-        self.tidyLocalWorker(protocol, ".", "test.log")
-
+        self.tidyLocalWorker(protocol, FilePath(self.mktemp()), "test.log")
         self.assertEqual([], self.flushLoggedErrors(RuntimeError))

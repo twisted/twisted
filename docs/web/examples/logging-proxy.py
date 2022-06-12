@@ -19,7 +19,7 @@ See also proxy.py for a simpler proxy example.
 """
 
 from twisted.internet import reactor
-from twisted.web import proxy, http
+from twisted.web import http, proxy
 
 
 class LoggingProxyRequest(proxy.ProxyRequest):

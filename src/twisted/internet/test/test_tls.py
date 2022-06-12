@@ -7,47 +7,45 @@ Tests for implementations of L{ITLSTransport}.
 
 
 from typing import Optional, Sequence, Type
-from zope.interface import implementer, Interface
 
-from twisted.python.compat import networkString
-from twisted.python.filepath import FilePath
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.internet.interfaces import (
-    IReactorSSL,
-    ITLSTransport,
-    IStreamClientEndpoint,
-)
+from zope.interface import Interface, implementer
+
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.endpoints import (
-    SSL4ServerEndpoint,
     SSL4ClientEndpoint,
+    SSL4ServerEndpoint,
     TCP4ClientEndpoint,
 )
 from twisted.internet.error import ConnectionClosed
+from twisted.internet.interfaces import (
+    IReactorSSL,
+    IStreamClientEndpoint,
+    ITLSTransport,
+)
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.internet.task import Cooperator
-from twisted.trial.unittest import SkipTest
-from twisted.python.runtime import platform
-
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
+from twisted.internet.test.connectionmixins import (
+    BrokenContextFactory,
+    ConnectionTestsMixin,
+    EndpointCreator,
+)
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import (
+    AbortConnectionMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
-    AbortConnectionMixin,
 )
-from twisted.internet.test.connectionmixins import (
-    EndpointCreator,
-    ConnectionTestsMixin,
-    BrokenContextFactory,
-)
+from twisted.python.compat import networkString
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest
 
 try:
-    from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
+    from OpenSSL.crypto import FILETYPE_PEM
 except ImportError:
-    FILETYPE_PEM = None
+    FILETYPE_PEM = None  # type: ignore[assignment]
 else:
-    from twisted.internet.ssl import PrivateCertificate, KeyPair
-    from twisted.internet.ssl import ClientContextFactory
+    from twisted.internet.ssl import ClientContextFactory, KeyPair, PrivateCertificate
 
 
 class TLSMixin:
@@ -311,7 +309,6 @@ class SSLClientTestsMixin(
 class TLSPortTestsBuilder(
     TLSMixin,
     ContextGeneratingMixin,
-    ObjectModelIntegrationMixin,
     BadContextTestsMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,

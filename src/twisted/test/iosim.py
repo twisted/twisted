@@ -10,19 +10,18 @@ Utilities and helpers for simulating a network
 import itertools
 
 try:
-    from OpenSSL.SSL import Error as NativeOpenSSLError  # type: ignore[import]
+    from OpenSSL.SSL import Error as NativeOpenSSLError
 except ImportError:
     pass
 
-from zope.interface import implementer, directlyProvides
-from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.error import ConnectionRefusedError
+from zope.interface import directlyProvides, implementer
 
-from twisted.python.failure import Failure
-from twisted.internet import error
-from twisted.internet import interfaces
+from twisted.internet import error, interfaces
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
+from twisted.internet.error import ConnectionRefusedError
+from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.testing import MemoryReactorClock
+from twisted.python.failure import Failure
 
 
 class TLSNegotiation:
@@ -61,7 +60,7 @@ class FakeTransport:
     and is thus useful mainly as a utility for debugging protocols.
     """
 
-    _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
+    _nextserial = staticmethod(lambda counter=itertools.count(): int(next(counter)))
     closed = 0
     disconnecting = 0
     disconnected = 0

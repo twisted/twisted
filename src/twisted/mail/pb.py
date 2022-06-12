@@ -2,9 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.spread import pb
-
 import os
+
+from twisted.spread import pb
 
 
 class Maildir(pb.Referenceable):

@@ -8,18 +8,22 @@ Tests for loading tests by name.
 
 import os
 import sys
-
 import unittest as pyunit
 from hashlib import md5
+from operator import attrgetter
+from types import ModuleType
 
-from twisted.python import util, filepath
-from twisted.trial.test import packages
-from twisted.trial import runner, reporter, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial._asyncrunner import _iterateTests
+from hamcrest import assert_that, equal_to, has_properties
+from hamcrest.core.matcher import Matcher
 
+from twisted.python import filepath, util
 from twisted.python.modules import getModule
 from twisted.python.reflect import ModuleNotFound
+from twisted.trial import reporter, runner, unittest
+from twisted.trial._asyncrunner import _iterateTests
+from twisted.trial.itrial import ITestCase
+from twisted.trial.test import packages
+from .matchers import after
 
 
 def testNames(tests):
@@ -68,6 +72,30 @@ class FinderPy3Tests(packages.SysPathManglingTest):
         )
 
 
+def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
+    """
+    Match a module with a L{ModuleSpec} like that of the given module.
+
+    @return: A matcher for a module spec that has the same name and origin as
+        the given module spec, though the origin may be structurally inequal
+        as long as it is semantically equal.
+    """
+    expected = module.__spec__
+    # Technically possible but not expected in any of the tests written so
+    # far.
+    assert expected is not None
+    match_spec = has_properties(
+        {
+            "name": equal_to(expected.name),
+            "origin": after(
+                filepath.FilePath,
+                equal_to(filepath.FilePath(expected.origin)),
+            ),
+        }
+    )
+    return after(attrgetter("__spec__"), match_spec)
+
+
 class FileTests(packages.SysPathManglingTest):
     """
     Tests for L{runner.filenameToModule}.
@@ -91,30 +119,26 @@ class FileTests(packages.SysPathManglingTest):
 
         self.assertEqual(sample2, sample1)
 
-    def test_moduleNotInPath(self):
+    def test_moduleNotInPath(self) -> None:
         """
         If passed the path to a file containing the implementation of a
         module within a package which is not on the import path,
         L{runner.filenameToModule} returns a module object loosely
         resembling the module defined by that file anyway.
         """
-        # "test_sample" isn't actually the name of this module.  However,
-        # filenameToModule can't seem to figure that out.  So clean up this
-        # misnamed module.  It would be better if this weren't necessary
-        # and filenameToModule either didn't exist or added a correctly
-        # named module to sys.modules.
-        self.addCleanup(sys.modules.pop, "test_sample", None)
 
         self.mangleSysPath(self.oldPath)
         sample1 = runner.filenameToModule(
             os.path.join(self.parent, "goodpackage", "test_sample.py")
         )
+        self.assertEqual(sample1.__name__, "goodpackage.test_sample")
+
+        self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         from goodpackage import test_sample as sample2  # type: ignore[import]
 
-        self.assertEqual(
-            os.path.splitext(sample2.__file__)[0], os.path.splitext(sample1.__file__)[0]
-        )
+        self.assertIsNot(sample1, sample2)
+        assert_that(sample1, looselyResembles(sample2))
 
     def test_packageInPath(self):
         """
@@ -122,33 +146,26 @@ class FileTests(packages.SysPathManglingTest):
         properly import and return that package.
         """
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
-        import goodpackage
 
-        self.assertEqual(goodpackage, package1)
+        self.assertIs(package1, sys.modules["goodpackage"])
 
-    def test_packageNotInPath(self):
+    def test_packageNotInPath(self) -> None:
         """
         If passed the path to a directory which represents a package which
         is not on the import path, L{runner.filenameToModule} returns a
         module object loosely resembling the package defined by that
         directory anyway.
         """
-        # "__init__" isn't actually the name of the package!  However,
-        # filenameToModule is pretty stupid and decides that is its name
-        # after all.  Make sure it gets cleaned up.  See the comment in
-        # test_moduleNotInPath for possible courses of action related to
-        # this.
-        self.addCleanup(sys.modules.pop, "__init__")
-
         self.mangleSysPath(self.oldPath)
         package1 = runner.filenameToModule(os.path.join(self.parent, "goodpackage"))
+        self.assertEqual(package1.__name__, "goodpackage")
+
+        self.cleanUpModules()
         self.mangleSysPath(self.newPath)
         import goodpackage
 
-        self.assertEqual(
-            os.path.splitext(goodpackage.__file__)[0],
-            os.path.splitext(package1.__file__)[0],
-        )
+        self.assertIsNot(package1, goodpackage)
+        assert_that(package1, looselyResembles(goodpackage))
 
     def test_directoryNotPackage(self):
         """

@@ -7,26 +7,29 @@ Tests for L{twisted.conch.ssh}.
 
 
 import struct
+from itertools import chain
 
-from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
+from twisted.conch.test.keydata import (
+    privateDSA_openssh,
+    privateRSA_openssh,
+    publicDSA_openssh,
+    publicRSA_openssh,
+)
 from twisted.conch.test.loopback import LoopbackRelay
 from twisted.cred import portal
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
-from twisted.trial import unittest
-
 from twisted.python.reflect import requireModule
-
+from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
 pyasn1 = requireModule("pyasn1")
 
 if cryptography:
-    from twisted.conch.ssh import common, forwarding, session, _kex
     from twisted.conch import avatar, error
+    from twisted.conch.ssh import _kex, common, forwarding, session
 else:
 
     class avatar:  # type: ignore[no-redef]
@@ -310,8 +313,14 @@ class SuperEchoTransport:
 
 if cryptography is not None and pyasn1 is not None:
     from twisted.conch import checkers
-    from twisted.conch.ssh import channel, connection, factory, keys
-    from twisted.conch.ssh import transport, userauth
+    from twisted.conch.ssh import (
+        channel,
+        connection,
+        factory,
+        keys,
+        transport,
+        userauth,
+    )
 
     class ConchTestPasswordChecker:
         credentialInterfaces = (checkers.IUsernamePassword,)
@@ -340,7 +349,12 @@ if cryptography is not None and pyasn1 is not None:
 
         def buildProtocol(self, addr):
             proto = ConchTestServer()
-            proto.supportedPublicKeys = self.privateKeys.keys()
+            proto.supportedPublicKeys = list(
+                chain.from_iterable(
+                    key.supportedSignatureAlgorithms()
+                    for key in self.privateKeys.values()
+                )
+            )
             proto.factory = self
 
             if hasattr(self, "expectedLoseConnection"):
@@ -856,9 +870,13 @@ class SSHFactoryTests(unittest.TestCase):
 
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
-        gpk = lambda: {"ssh-rsa": keys.Key(None)}
         sshFactory.getPrimes = lambda: primes
-        sshFactory.getPublicKeys = sshFactory.getPrivateKeys = gpk
+        sshFactory.getPublicKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(publicRSA_openssh)
+        }
+        sshFactory.getPrivateKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(privateRSA_openssh)
+        }
         sshFactory.startFactory()
         return sshFactory
 
@@ -887,6 +905,27 @@ class SSHFactoryTests(unittest.TestCase):
         factory.buildProtocol(None)
         self.assertEqual([()], calls)
 
+    def test_buildProtocolSignatureAlgorithms(self):
+        """
+        buildProtocol() sets supportedPublicKeys to the list of supported
+        signature algorithms.
+        """
+        f = factory.SSHFactory()
+        f.getPublicKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(publicRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(publicDSA_openssh),
+        }
+        f.getPrivateKeys = lambda: {
+            b"ssh-rsa": keys.Key.fromString(privateRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(privateDSA_openssh),
+        }
+        f.startFactory()
+        p = f.buildProtocol(None)
+        self.assertEqual(
+            [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa", b"ssh-dss"],
+            p.supportedPublicKeys,
+        )
+
     def test_buildProtocolNoPrimes(self):
         """
         Group key exchanges are not supported when we don't have the primes
@@ -913,6 +952,21 @@ class SSHFactoryTests(unittest.TestCase):
 
         self.assertIn(b"diffie-hellman-group-exchange-sha1", p2.supportedKeyExchanges)
         self.assertIn(b"diffie-hellman-group-exchange-sha256", p2.supportedKeyExchanges)
+
+    def test_buildProtocolKexECDSA(self):
+        """
+        ECDSA key exchanges are listed with 256 having a higher priority among ECDSA.
+        """
+        f2 = self.makeSSHFactory()
+
+        p2 = f2.buildProtocol(None)
+
+        # The list might contain other algorightm.
+        # For this test just check the order for ECDSA KEX.
+        self.assertIn(
+            b"ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521",
+            b",".join(p2.supportedKeyExchanges),
+        )
 
 
 class MPTests(unittest.TestCase):

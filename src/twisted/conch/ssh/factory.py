@@ -10,13 +10,13 @@ Maintainer: Paul Swartz
 """
 
 
-from twisted.internet import protocol
-from twisted.logger import Logger
+import random
+from itertools import chain
 
 from twisted.conch import error
-from twisted.conch.ssh import _kex, transport, userauth, connection
-
-import random
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.logger import Logger
 
 
 class SSHFactory(protocol.Factory):
@@ -56,7 +56,11 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+        t.supportedPublicKeys = list(
+            chain.from_iterable(
+                key.supportedSignatureAlgorithms() for key in self.privateKeys.values()
+            )
+        )
         if not self.primes:
             self._log.info(
                 "disabling non-fixed-group key exchange algorithms "

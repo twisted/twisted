@@ -7,31 +7,26 @@ Tests for L{twisted.internet._sslverify}.
 """
 
 
-import sys
-import itertools
 import datetime
-
+import itertools
+import sys
 from unittest import skipIf
 
 from zope.interface import implementer
-from twisted.python.reflect import requireModule
-from twisted.test.test_twisted import SetAsideModule
-from twisted.test.iosim import connectedServerAndClient
 
-from twisted.internet.error import ConnectionClosed
+from incremental import Version
+
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet._idna import _idnaText
+from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
-
+from twisted.python.reflect import requireModule
+from twisted.test.iosim import connectedServerAndClient
+from twisted.test.test_twisted import SetAsideModule
 from twisted.trial import util
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
-from twisted.internet import protocol, defer, reactor
-from twisted.internet._idna import _idnaText
-
-from twisted.internet.error import CertificateError, ConnectionLost
-from twisted.internet import interfaces
-from incremental import Version
-
 
 skipSSL = ""
 skipSNI = ""
@@ -41,21 +36,21 @@ skipALPN = ""
 if requireModule("OpenSSL"):
     import ipaddress
 
-    from twisted.internet import ssl
-
-    from OpenSSL import SSL  # type: ignore[import]
-    from OpenSSL.crypto import get_elliptic_curves  # type: ignore[import]
-    from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+    from OpenSSL import SSL
+    from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
 
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives.serialization import PrivateFormat, NoEncryption
-
+    from cryptography.hazmat.primitives.serialization import (
+        Encoding,
+        NoEncryption,
+        PrivateFormat,
+    )
     from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives.serialization import Encoding
+
+    from twisted.internet import ssl
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -68,7 +63,7 @@ if requireModule("OpenSSL"):
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.set_alpn_select_callback(lambda c: None)
+        ctx.set_alpn_select_callback(lambda c: None)  # type: ignore[misc,arg-type]
     except NotImplementedError:
         skipALPN = "OpenSSL 1.0.2 or greater required for ALPN support"
 else:
@@ -78,8 +73,8 @@ else:
     skipALPN = skipSSL
 
 if not skipSSL:
-    from twisted.internet.ssl import platformTrust, VerificationError
     from twisted.internet import _sslverify as sslverify
+    from twisted.internet.ssl import VerificationError, platformTrust
     from twisted.protocols.tls import TLSMemoryBIOFactory
 
 
@@ -514,7 +509,7 @@ class FakeContext:
         """
         self._mode = mode
 
-    def set_verify(self, flags, callback):
+    def set_verify(self, flags, callback=None):
         self._verify = flags, callback
 
     def set_verify_depth(self, depth):
@@ -1002,10 +997,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(message, warnings[0]["message"])
 
-    def test_tlsv1ByDefault(self):
+    def test_tlsv12ByDefault(self):
         """
         L{sslverify.OpenSSLCertificateOptions} will make the default minimum
-        TLS version v1.0, if no C{method}, or C{insecurelyLowerMinimumTo} is
+        TLS version v1.2, if no C{method}, or C{insecurelyLowerMinimumTo} is
         given.
         """
         opts = sslverify.OpenSSLCertificateOptions(
@@ -1018,6 +1013,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
 
@@ -1085,7 +1082,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
-                method=SSL.SSLv23_METHOD,
+                method=SSL.TLS_METHOD,
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 
@@ -1327,9 +1324,11 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
-        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_0)
+        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_2)
 
     def test_tlsProtocolsAllSecureTLS(self):
         """
@@ -3346,31 +3345,19 @@ class SelectVerifyImplementationTests(SynchronousTestCase):
             if warning["category"] == UserWarning
         )
 
-        importErrors = [
-            # Python 3.6.3
-            "'import of service_identity halted; None in sys.modules'",
-            # Python 3
-            "'import of 'service_identity' halted; None in sys.modules'",
-            # Python 2
-            "'No module named service_identity'",
-        ]
+        expectedMessage = (
+            "You do not have a working installation of the "
+            "service_identity module: "
+            "'import of service_identity halted; None in sys.modules'.  "
+            "Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> "
+            "and make sure all of its dependencies are satisfied.  "
+            "Without the service_identity module, Twisted can perform only"
+            " rudimentary TLS client hostname verification.  Many valid "
+            "certificate/hostname mappings may be rejected."
+        )
 
-        expectedMessages = []
-        for importError in importErrors:
-            expectedMessages.append(
-                "You do not have a working installation of the "
-                "service_identity module: {message}.  Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module, Twisted can perform only"
-                " rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.".format(
-                    message=importError
-                )
-            )
-
-        self.assertIn(warning["message"], expectedMessages)
-
+        self.assertEqual(warning["message"], expectedMessage)
         # Make sure we're abusing the warning system to a sufficient
         # degree: there is no filename or line number that makes sense for
         # this warning to "blame" for the problem.  It is a system
