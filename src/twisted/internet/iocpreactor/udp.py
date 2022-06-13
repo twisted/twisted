@@ -168,7 +168,12 @@ class Port(abstract.FileHandle):
         )
 
         if rc and rc != ERROR_IO_PENDING:
-            self.handleRead(rc, data, evt)
+            # If the error was not 0 or IO_PENDING then that means recvfrom() hit a
+            # failure condition. In this situation recvfrom() gives us our response
+            # right away and we don't need to wait for Windows to call the callback
+            # on our event. In fact, windows will not call it for us so we must call it
+            # ourselves manually
+            self.reactor.callLater(0, self.cbRead, rc, data, evt)
 
     def write(self, datagram, addr=None):
         """
