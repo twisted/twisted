@@ -18,6 +18,7 @@ from twisted.trial._synctest import (
     SynchronousTestCase,
     Todo,
     makeTodo,
+    mark,
 )
 
 # Further obscure the origins of these objects, to reduce surprise (and this is
@@ -36,4 +37,5 @@ __all__ = [
     "TestDecorator",
     "TestSuite",
     "Todo",
+    "mark",
 ]

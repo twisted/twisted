@@ -162,12 +162,11 @@ class DeferredTests(unittest.TestCase):
 class TimeoutTests(unittest.TestCase):
     timedOut = None
 
+    @unittest.mark(timeout=2)
     def test_pass(self):
         d = defer.Deferred()
         reactor.callLater(0, d.callback, "hoorj!")
         return d
-
-    test_pass.timeout = 2  # type: ignore[attr-defined]
 
     def test_passDefault(self):
         # test default timeout

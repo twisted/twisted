@@ -17,10 +17,12 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import Optional, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
+
+import attr
 
 from twisted.internet.defer import ensureDeferred
 from twisted.python import failure, log, monkey
@@ -41,31 +43,28 @@ class FailTest(AssertionError):
     """
 
 
+@attr.s(frozen=True, slots=True, auto_attribs=True)
 class Todo:
     """
-    Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
+    Object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
     are reported differently in Trial L{TestResult}s. If todo'd tests fail,
     they do not fail the suite and the errors are reported in a separate
     category. If todo'd tests succeed, Trial L{TestResult}s will report an
     unexpected success.
     """
 
-    def __init__(self, reason, errors=None):
-        """
-        @param reason: A string explaining why the test is marked 'todo'
+    reason: str
+    """A string explaining why the test is marked 'todo'"""
 
-        @param errors: An iterable of exception types that the test is
-        expected to raise. If one of these errors is raised by the test, it
-        will be trapped. Raising any other kind of error will fail the test.
-        If L{None} is passed, then all errors will be trapped.
-        """
-        self.reason = reason
-        self.errors = errors
+    errors: Optional[List[BaseException]] = None
+    """
+    A C{List} of exception types that the test is
+    expected to raise. If one of these errors is raised by the test, it
+    will be trapped. Raising any other kind of error will fail the test.
+    If L{None} is passed, then all errors will be trapped.
+    """
 
-    def __repr__(self) -> str:
-        return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
-
-    def expected(self, failure):
+    def expected(self, failure: failure.Failure) -> bool:
         """
         @param failure: A L{twisted.python.failure.Failure}.
 
@@ -79,7 +78,16 @@ class Todo:
         return False
 
 
-def makeTodo(value):
+_TodoType = Union[
+    str,
+    Tuple[BaseException, str],
+    Tuple[Iterable[BaseException], str],
+    Todo,
+    None,
+]
+
+
+def makeTodo(value: _TodoType) -> Optional[Todo]:
     """
     Return a L{Todo} object built from C{value}.
 
@@ -92,15 +100,50 @@ def makeTodo(value):
 
     @return: A L{Todo} object.
     """
+    if isinstance(value, Todo):
+        return value
     if isinstance(value, str):
         return Todo(reason=value)
     if isinstance(value, tuple):
         errors, reason = value
         try:
-            errors = list(errors)
+            errors = list(errors)  # type: ignore[arg-type]
         except TypeError:
-            errors = [errors]
+            errors = [errors]  # type: ignore[list-item]
         return Todo(reason=reason, errors=errors)
+    return None
+
+
+_TCallable = TypeVar("_TCallable", bound=Callable[..., object])
+_DecoratorType = Callable[[_TCallable], _TCallable]
+_T = TypeVar("_T")
+
+
+def _noop(v: _T) -> _T:
+    return v
+
+
+def mark(
+    condition: object = True,
+    *,
+    skip: Optional[str] = None,
+    timeout: Optional[float] = None,
+    todo: _TodoType = None,
+) -> _DecoratorType:
+    if not condition or (skip is timeout is todo is None):
+        return _noop
+
+    def decorator(fn: _T) -> _T:
+        if skip is not None:
+            fn.skip = skip  # type: ignore[attr-defined]
+        if timeout is not None:
+            fn.timeout = timeout  # type: ignore[attr-defined]
+        if todo is not None:
+            fn.todo = todo  # type: ignore[attr-defined]
+
+        return fn
+
+    return decorator
 
 
 class _Warning:
