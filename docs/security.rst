@@ -6,8 +6,10 @@ Your input and feedback on our security is always appreciated.
 
 You can send urgent or sensitive reports directly to security@twistedmatrix.com
 
-You may use our public key (below) to keep your message safe.
-Provide us with a secure way to respond.
+You may use our PGP public key if you wish.
+We will create a GitHub security advisory to coordinate a fix.
+Include your GitHub username so that we add you as a collaborator on the advisory.
+See `GHSA-c2jg-hw38-jrqq <https://github.com/twisted/twisted/security/advisories/GHSA-c2jg-hw38-jrqq>`_ for an example.
 We'll get back to you as soon as we can.
 
 Twisted is an all volunteer project and there may be some delay before we can respond.
@@ -444,7 +446,7 @@ In some cases we are not careful enough. For example, in HTTP
 there are many places where strings need to be converted to
 ints, so we use ``int()`` . The problem
 is that this will accept negative or hexadecimal (`0x123`) numbers as well, whereas
-the protocol should only be accepting positive numbers.
+the protocol should only accept positive numbers.
 
 
 Resource Exhaustion and DoS
