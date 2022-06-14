@@ -506,15 +506,20 @@ class FlattenChunkingTests(SynchronousTestCase):
             "computed",
             second_wait,
             "more-chunks-",
-            "already-available"
-            ]
+            "already-available",
+        ]
         output: List[bytes] = []
         self.successResultOf(flatten(None, value, output.append))
-        assert_that(output, equal_to([
-            b"already-available-chunks",
-            b"first-chunks-already-computed",
-            b"second-more-chunks-already-available"
-            ]))
+        assert_that(
+            output,
+            equal_to(
+                [
+                    b"already-available-chunks",
+                    b"first-chunks-already-computed",
+                    b"second-more-chunks-already-available",
+                ]
+            ),
+        )
 
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
