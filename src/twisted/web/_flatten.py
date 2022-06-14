@@ -418,6 +418,8 @@ async def _flattenTree(
             frame = stack[-1].gi_frame
             element = next(stack[-1])
             if isinstance(element, Deferred):
+                # Before suspending flattening for an unknown amount of time,
+                # flush whatever data we have collected so far.
                 flushBuffer()
                 element = await element
         except StopIteration:
@@ -432,6 +434,7 @@ async def _flattenTree(
         else:
             stack.append(element)
 
+    # Flush any data that remains in the buffer before finishing.
     flushBuffer()
 
 
