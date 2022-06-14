@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, List, NoReturn, Optional, cast
+from typing import Callable, Dict, List, NoReturn, Optional, Tuple, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -490,7 +490,25 @@ class FlattenChunkingTests(SynchronousTestCase):
             equal_to([b"x" * BUFFER_SIZE, b"y" * BUFFER_SIZE, b"z" * BUFFER_SIZE]),
         )
 
-    def _chunksSeparatedByAsyncTest(self, start) -> None:
+    def _chunksSeparatedByAsyncTest(
+        self,
+        start: Callable[
+            [Flattenable], Tuple[Deferred[Flattenable], Callable[[], object]]
+        ],
+    ) -> None:
+        """
+        Assert that flattening with a L{Deferred} returned by C{start} results
+        in the expected buffering behavior.
+
+        The L{Deferred} need not have a result by it is returned by C{start}
+        but must have a result after the callable returned along with it is
+        called.
+
+        The expected buffering behavior is that flattened values up to the
+        L{Deferred} are written together and then the result of the
+        L{Deferred} is written together with values following it up to the
+        next L{Deferred}.
+        """
         first_wait, first_finish = start("first-")
         second_wait, second_finish = start("second-")
         value = [
@@ -530,7 +548,9 @@ class FlattenChunkingTests(SynchronousTestCase):
         if someone wants.
         """
 
-        def sync_start(v):
+        def sync_start(
+            v: Flattenable,
+        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
             return (succeed(v), lambda: None)
 
         self._chunksSeparatedByAsyncTest(sync_start)
@@ -543,8 +563,10 @@ class FlattenChunkingTests(SynchronousTestCase):
         synchronous values.
         """
 
-        def async_start(v):
-            d = Deferred()
+        def async_start(
+            v: Flattenable,
+        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
+            d: Deferred[Flattenable] = Deferred()
             return (d, lambda: d.callback(v))
 
         self._chunksSeparatedByAsyncTest(async_start)
