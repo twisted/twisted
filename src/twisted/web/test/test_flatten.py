@@ -529,8 +529,10 @@ class FlattenChunkingTests(SynchronousTestCase):
         detail and can be replaced by some other better behavior in the future
         if someone wants.
         """
+
         def sync_start(v):
             return (succeed(v), lambda: None)
+
         self._chunksSeparatedByAsyncTest(sync_start)
 
     def test_chunksSeparatedByUnfiredDeferred(self) -> None:
@@ -540,10 +542,13 @@ class FlattenChunkingTests(SynchronousTestCase):
         available it is passed to another write along with following
         synchronous values.
         """
+
         def async_start(v):
             d = Deferred()
             return (d, lambda: d.callback(v))
+
         self._chunksSeparatedByAsyncTest(async_start)
+
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
 # it is the mechanism traceback formatting uses.  The two do not necessarily
