@@ -490,14 +490,9 @@ class FlattenChunkingTests(SynchronousTestCase):
             equal_to([b"x" * BUFFER_SIZE, b"y" * BUFFER_SIZE, b"z" * BUFFER_SIZE]),
         )
 
-    def test_chunksSeparatedByAsync(self) -> None:
-        """
-        When a L{Deferred} is encountered any buffered data is passed to the write
-        function.  After the result of the L{Deferred} is available it is
-        passed to another write along with following synchronous values.
-        """
-        first_wait = succeed("first-")
-        second_wait = succeed("second-")
+    def _chunksSeparatedByAsyncTest(self, start) -> None:
+        first_wait, first_finish = start("first-")
+        second_wait, second_finish = start("second-")
         value = [
             "already-available",
             "-chunks",
@@ -509,7 +504,10 @@ class FlattenChunkingTests(SynchronousTestCase):
             "already-available",
         ]
         output: List[bytes] = []
-        self.successResultOf(flatten(None, value, output.append))
+        d = flatten(None, value, output.append)
+        first_finish()
+        second_finish()
+        self.successResultOf(d)
         assert_that(
             output,
             equal_to(
@@ -521,6 +519,31 @@ class FlattenChunkingTests(SynchronousTestCase):
             ),
         )
 
+    def test_chunksSeparatedByFiredDeferred(self) -> None:
+        """
+        When a fired L{Deferred} is encountered any buffered data is
+        passed to the write function.  Then the L{Deferred}'s result is passed
+        to another write along with following synchronous values.
+
+        This exact buffering behavior should be considered an implementation
+        detail and can be replaced by some other better behavior in the future
+        if someone wants.
+        """
+        def sync_start(v):
+            return (succeed(v), lambda: None)
+        self._chunksSeparatedByAsyncTest(sync_start)
+
+    def test_chunksSeparatedByUnfiredDeferred(self) -> None:
+        """
+        When an unfired L{Deferred} is encountered any buffered data is
+        passed to the write function.  After the result of the L{Deferred} is
+        available it is passed to another write along with following
+        synchronous values.
+        """
+        def async_start(v):
+            d = Deferred()
+            return (d, lambda: d.callback(v))
+        self._chunksSeparatedByAsyncTest(async_start)
 
 # Use the co_filename mechanism (instead of the __file__ mechanism) because
 # it is the mechanism traceback formatting uses.  The two do not necessarily
