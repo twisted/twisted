@@ -93,7 +93,7 @@ class GlibReactorBaseTests(TestCase):
         no delayed calls for the reactor and hence there is no defined sleep
         period.
         """
-        sut = gireactor.PortableGIReactor(usegtk=False)
+        sut = gireactor.PortableGIReactor(useGtk=False)
         # Double check that reactor has no sleep period.
         self.assertIs(None, sut.timeout())
 

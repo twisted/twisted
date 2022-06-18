@@ -581,8 +581,7 @@ class ProcessTests(unittest.TestCase):
 
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        and runtime.platform.getType() == "win32",
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_process(self):
@@ -621,8 +620,7 @@ class ProcessTests(unittest.TestCase):
 
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        and runtime.platform.getType() == "win32",
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_manyProcesses(self):

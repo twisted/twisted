@@ -1,2 +1,0 @@
-Add type annotations for twisted.web.http.Request.getHeader.
-
