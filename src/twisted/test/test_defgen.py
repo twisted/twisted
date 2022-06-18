@@ -5,8 +5,9 @@
 Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 """
 
+import traceback
 
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, task
 from twisted.internet.defer import (
     Deferred,
     deferredGenerator,
@@ -337,6 +338,58 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         _noYield = inlineCallbacks(_noYield)
 
         self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
+
+    def test_internalDefGenReturnDoesntLeak(self):
+        """
+        When one inlineCallbacks calls another, the internal L{_DefGen_Return}
+        flow control exception doesn't leak into tracebacks captured in the
+        caller.
+        """
+        clock = task.Clock()
+
+        @inlineCallbacks
+        def _returns():
+            yield task.deferLater(clock, 0)
+            returnValue(6)
+
+        @inlineCallbacks
+        def _raises():
+            try:
+                yield _returns()
+                raise TerminalException("boom")
+            except TerminalException:
+                return traceback.format_exc()
+
+        d = _raises()
+        clock.advance(0)
+        tb = self.successResultOf(d)
+        self.assertNotIn("_DefGen_Return", tb)
+
+    def test_internalStopIterationDoesntLeak(self):
+        """
+        When one inlineCallbacks calls another, the internal L{StopIteration}
+        flow control exception generated when the inner generator returns
+        doesn't leak into tracebacks captured in the caller.
+        """
+        clock = task.Clock()
+
+        @inlineCallbacks
+        def _returns():
+            yield task.deferLater(clock, 0)
+            return 6
+
+        @inlineCallbacks
+        def _raises():
+            try:
+                yield _returns()
+                raise TerminalException("boom")
+            except TerminalException:
+                return traceback.format_exc()
+
+        d = _raises()
+        clock.advance(0)
+        tb = self.successResultOf(d)
+        self.assertNotIn("StopIteration", tb)
 
 
 class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
