@@ -36,7 +36,7 @@ try:
     import h2  # type: ignore[import]
     import h2.errors  # type: ignore[import]
     import h2.exceptions  # type: ignore[import]
-    import hyperframe  # type: ignore[import]
+    import hyperframe
     import priority  # type: ignore[import]
     from hpack.hpack import Decoder, Encoder  # type: ignore[import]
 

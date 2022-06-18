@@ -92,7 +92,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         self,
         privateKeyFileName,
         certificateFileName,
-        sslmethod=SSL.SSLv23_METHOD,
+        sslmethod=SSL.TLS_METHOD,
         _contextFactory=SSL.Context,
     ):
         """
@@ -141,16 +141,16 @@ class ClientContextFactory:
 
     isClient = 1
 
-    # SSLv23_METHOD allows SSLv2, SSLv3, and TLSv1.  We disable SSLv2 below,
-    # though.
-    method = SSL.SSLv23_METHOD
+    # TLS_METHOD allows negotiation of multiple TLS versions.
+    method = SSL.TLS_METHOD
 
     _contextFactory = SSL.Context
 
     def getContext(self):
         ctx = self._contextFactory(self.method)
-        # See comment in DefaultOpenSSLContextFactory about SSLv2.
-        ctx.set_options(SSL.OP_NO_SSLv2)
+        ctx.set_options(
+            SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1
+        )
         return ctx
 
 

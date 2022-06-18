@@ -11,7 +11,6 @@ Development of Twisted
 
    naming
    philosophy
-   security
    policy/index
 
 
@@ -19,5 +18,4 @@ This documentation is for people who work on the Twisted codebase itself, rather
 
 - :doc:`Naming <naming>`
 - :doc:`Philosophy <philosophy>`
-- :doc:`Security <security>`
 - :doc:`Twisted development policy <policy/index>`

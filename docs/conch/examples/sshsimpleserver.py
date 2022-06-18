@@ -251,11 +251,6 @@ class ExampleFactory(factory.SSHFactory):
     """
 
     protocol = SSHServerTransport
-    # Server's host keys.
-    # To simplify the example this server is defined only with a host key of
-    # type RSA.
-    publicKeys = {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PUBLIC)}
-    privateKeys = {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PRIVATE)}
     # Service handlers.
     services = {
         b"ssh-userauth": userauth.SSHUserAuthServer,
@@ -268,6 +263,22 @@ class ExampleFactory(factory.SSHFactory):
             InMemorySSHKeyDB({b"user": [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]})
         )
         self.portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
+
+    # Server's host keys.
+    # To simplify the example this server is defined only with a host key of
+    # type RSA.
+
+    def getPublicKeys(self):
+        """
+        See: L{factory.SSHFactory}
+        """
+        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PUBLIC)}
+
+    def getPrivateKeys(self):
+        """
+        See: L{factory.SSHFactory}
+        """
+        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PRIVATE)}
 
     def getPrimes(self):
         """
