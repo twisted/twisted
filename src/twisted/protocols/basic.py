@@ -8,16 +8,17 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 
 
+import math
+
 # System imports
 import re
-from struct import pack, unpack, calcsize
 from io import BytesIO
-import math
+from struct import calcsize, pack, unpack
 
 from zope.interface import implementer
 
 # Twisted imports
-from twisted.internet import protocol, defer, interfaces
+from twisted.internet import defer, interfaces, protocol
 from twisted.python import log
 
 

@@ -35,22 +35,20 @@ import sys
 import time
 import types
 import warnings
-
 from importlib.machinery import SourceFileLoader
 
-from twisted.python import reflect, log, failure, modules, filepath
+from zope.interface import implementer
 
 from twisted.internet import defer
-from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
+from twisted.python import failure, filepath, log, modules, reflect
+from twisted.trial import unittest, util
 from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
 from twisted.trial._synctest import _logObserver
+from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
-
-from zope.interface import implementer
 
 pyunit = __import__("unittest")
 
@@ -555,9 +553,6 @@ class TestLoader:
         """
         return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
-    def loadMethod(self, method):
-        raise NotImplementedError("Can't happen on Py3")
-
     def _makeCase(self, klass, methodName):
         return klass(methodName)
 
@@ -847,7 +842,7 @@ class TrialRunner:
         if self.logfile == "-":
             logFile = sys.stdout
         else:
-            logFile = open(self.logfile, "a")
+            logFile = util.openTestLog(filepath.FilePath(self.logfile))
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)

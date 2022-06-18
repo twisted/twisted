@@ -11,11 +11,11 @@ Interface definitions for L{twisted.web}.
 """
 from typing import TYPE_CHECKING, Callable, List, Optional
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
+from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
-from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
@@ -713,12 +713,12 @@ class IAgent(Interface):
     obtained by combining a number of (hypothetical) implementations::
 
         baseAgent = Agent(reactor)
-        redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
+        decode = ContentDecoderAgent(baseAgent, [(b"gzip", GzipDecoder())])
+        cookie = CookieAgent(decode, diskStore.cookie)
         authenticate = AuthenticateAgent(
-            redirect, [diskStore.credentials, GtkAuthInterface()])
-        cookie = CookieAgent(authenticate, diskStore.cookie)
-        decode = ContentDecoderAgent(cookie, [(b"gzip", GzipDecoder())])
-        cache = CacheAgent(decode, diskStore.cache)
+            cookie, [diskStore.credentials, GtkAuthInterface()])
+        cache = CacheAgent(authenticate, diskStore.cache)
+        redirect = BrowserLikeRedirectAgent(cache, limit=10)
 
         doSomeRequests(cache)
     """

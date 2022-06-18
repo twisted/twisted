@@ -14,27 +14,27 @@ import os
 import sys
 import tempfile
 import types
+import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import Optional, Tuple
+from typing import List, NoReturn, Optional, Tuple, TypeVar, Union
 
+# Python 2.7 and higher has skip support built-in
+from unittest import SkipTest
+
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python import failure, log, monkey
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
     getDeprecationWarningString,
     getVersionString,
     warnAboutFunction,
 )
-from twisted.internet.defer import ensureDeferred
-
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
 
-import unittest as pyunit
-
-# Python 2.7 and higher has skip support built-in
-from unittest import SkipTest
+T = TypeVar("T")
 
 
 class FailTest(AssertionError):
@@ -351,7 +351,7 @@ class _Assertions(pyunit.TestCase):
     callbacks.
     """
 
-    def fail(self, msg=None):
+    def fail(self, msg: Optional[object] = None) -> NoReturn:
         """
         Absolutely fail the test.  Do not pass go, do not collect $200.
 
@@ -664,7 +664,7 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred):
+    def successResultOf(self, deferred: Deferred[T]) -> T:
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
@@ -684,17 +684,17 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        result = []
-        deferred.addBoth(result.append)
+        results: List[Union[T, failure.Failure]] = []
+        deferred.addBoth(results.append)
 
-        if not result:
+        if not results:
             self.fail(
                 "Success result expected on {!r}, found no result instead".format(
                     deferred
                 )
             )
 
-        result = result[0]
+        result = results[0]
 
         if isinstance(result, failure.Failure):
             self.fail(
@@ -703,7 +703,6 @@ class _Assertions(pyunit.TestCase):
                     deferred, result.getTraceback()
                 )
             )
-
         return result
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):

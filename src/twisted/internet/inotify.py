@@ -43,8 +43,7 @@ import struct
 
 from twisted.internet import fdesc
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import log, _inotify
-
+from twisted.python import _inotify, log
 
 # from /usr/src/linux/include/linux/inotify.h
 

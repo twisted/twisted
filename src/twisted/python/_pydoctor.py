@@ -12,7 +12,7 @@ This documentation does not link to pydoctor API as there is no public API yet.
 import ast
 from typing import Optional
 
-from pydoctor import model, zopeinterface, astbuilder  # type: ignore[import]
+from pydoctor import astbuilder, model, zopeinterface  # type: ignore[import]
 from pydoctor.sphinx import SphinxInventory  # type: ignore[import]
 
 
@@ -132,6 +132,7 @@ def versionToUsefulObject(version):
 
     package = version.args[0].s
     major = getattr(version.args[1], "n", getattr(version.args[1], "s", None))
+    assert isinstance(major, int) or major == "NEXT"
     return Version(package, major, *(x.n for x in version.args[2:] if x))
 
 

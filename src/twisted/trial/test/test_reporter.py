@@ -11,21 +11,18 @@ import errno
 import os
 import re
 import sys
-
 from inspect import getmro
 from io import BytesIO, StringIO
 from typing import Type
-from unittest import expectedFailure
-from unittest import TestCase as StdlibTestCase
+from unittest import TestCase as StdlibTestCase, expectedFailure
 
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
-from twisted.trial import itrial, unittest, runner, reporter, util
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
-from twisted.trial.test import erroneous
-from twisted.trial.unittest import makeTodo, SkipTest, Todo
-from twisted.trial.test import sample
+from twisted.trial import itrial, reporter, runner, unittest, util
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
+from twisted.trial.test import erroneous, sample
+from twisted.trial.unittest import SkipTest, Todo, makeTodo
 
 
 class BrokenStream:
@@ -104,6 +101,23 @@ class TestResultTests(unittest.SynchronousTestCase):
         failure = self.result.failures[0][1]
         self.assertEqual(excValue, failure.value)
         self.assertEqual(self.failureException, failure.type)
+
+    def test_somethingElse(self):
+        """
+        L{reporter.TestResult.addError} raises L{TypeError} if it is called with
+        an error that is neither a L{sys.exc_info}-like three-tuple nor a
+        L{Failure}.
+        """
+        with self.assertRaises(TypeError):
+            self.result.addError(self, "an error")
+        with self.assertRaises(TypeError):
+            self.result.addError(self, Exception("an error"))
+        with self.assertRaises(TypeError):
+            self.result.addError(
+                self, (Exception, Exception("an error"), None, "extra")
+            )
+        with self.assertRaises(TypeError):
+            self.result.addError(self, (Exception, Exception("an error")))
 
 
 class ReporterRealtimeTests(TestResultTests):

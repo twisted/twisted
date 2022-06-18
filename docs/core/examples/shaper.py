@@ -10,10 +10,10 @@ with it some bytes of overhead.  Check to make sure this overhead is not
 costing you more bandwidth than you are saving by limiting the rate!
 """
 
-from twisted.protocols import htb
-
 # for picklability
 import shaper
+
+from twisted.protocols import htb
 
 serverFilter = htb.HierarchicalBucketFilter()
 serverBucket = htb.Bucket()
@@ -45,8 +45,8 @@ if servertype == "web":
     site = server.Site(static.File("/var/www"))
     site.protocol = htb.ShapedProtocolFactory(site.protocol, webFilter)
 elif servertype == "chargen":
-    from twisted.protocols import wire
     from twisted.internet import protocol
+    from twisted.protocols import wire
 
     site = protocol.ServerFactory()
     site.protocol = htb.ShapedProtocolFactory(wire.Chargen, webFilter)

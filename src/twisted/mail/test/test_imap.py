@@ -12,45 +12,39 @@ import codecs
 import functools
 import locale
 import os
-from io import BytesIO
-from typing import List, Optional, Tuple, Type
 import uuid
-
-from itertools import chain
 from collections import OrderedDict
+from io import BytesIO
+from itertools import chain
+from typing import List, Optional, Tuple, Type
 from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import interfaces
-from twisted.internet import reactor
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.credentials import (
+    CramMD5Credentials,
+    IUsernameHashedPassword,
+    IUsernamePassword,
+)
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import defer, error, interfaces, reactor
+from twisted.internet.defer import Deferred
 from twisted.internet.task import Clock
 from twisted.mail import imap4
+from twisted.mail.imap4 import MessageSet
 from twisted.mail.interfaces import (
     IChallengeResponse,
     IClientAuthentication,
     ICloseableMailboxIMAP,
 )
-from twisted.mail.imap4 import MessageSet
 from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.python import util, log
-from twisted.python.compat import nativeString, networkString, iterbytes
-from twisted.trial.unittest import SynchronousTestCase, TestCase
-
-from twisted.cred.portal import Portal, IRealm
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.error import UnauthorizedLogin
-from twisted.cred.credentials import (
-    IUsernameHashedPassword,
-    IUsernamePassword,
-    CramMD5Credentials,
-)
-
+from twisted.python import failure, log, util
+from twisted.python.compat import iterbytes, nativeString, networkString
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -7206,6 +7200,18 @@ class TLSTests(IMAP4HelperMixin, TestCase):
         encryption.
         """
         disconnected = self.startTLSAndAssertSession()
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+        return disconnected
+
+    def test_startTLSDefault(self) -> Deferred[object]:
+        """
+        L{IMAPClient.startTLS} supplies a default TLS context if none is
+        supplied.
+        """
+        self.assertIsNotNone(self.client.context)
+        self.client.context = None
+        disconnected: Deferred[object] = self.startTLSAndAssertSession()
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
         return disconnected

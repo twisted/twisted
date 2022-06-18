@@ -10,12 +10,13 @@ Requires PySerial and pywin32.
 """
 
 
+import win32event  # type: ignore[import]
+import win32file  # type: ignore[import]
+
 # system imports
 from serial import PARITY_NONE  # type: ignore[import]
-from serial import STOPBITS_ONE
-from serial import EIGHTBITS
+from serial import EIGHTBITS, STOPBITS_ONE
 from serial.serialutil import to_bytes  # type: ignore[import]
-import win32file, win32event  # type: ignore[import]
 
 # twisted imports
 from twisted.internet import abstract

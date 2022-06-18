@@ -7,8 +7,9 @@ Tests for twisted.internet.glibbase.
 
 
 import sys
-from twisted.trial.unittest import TestCase
+
 from twisted.internet._glibbase import ensureNotImported
+from twisted.trial.unittest import TestCase
 
 
 class EnsureNotImportedTests(TestCase):
@@ -64,3 +65,36 @@ class EnsureNotImportedTests(TestCase):
         )
         self.assertEqual(modules, {"m2": module})
         self.assertEqual(e.args, ("A message.",))
+
+
+try:
+    from twisted.internet import gireactor as _gireactor
+except ImportError:
+    gireactor = None
+else:
+    gireactor = _gireactor
+
+missingGlibReactor = None
+if gireactor is None:
+    missingGlibReactor = "gi reactor not available"
+
+
+class GlibReactorBaseTests(TestCase):
+    """
+    Tests for the private C{twisted.internet._glibbase.GlibReactorBase}
+    done via the public C{twisted.internet.gireactor.PortableGIReactor}
+    """
+
+    skip = missingGlibReactor
+
+    def test_simulate(self):
+        """
+        C{simulate} can be called without raising any errors when there are
+        no delayed calls for the reactor and hence there is no defined sleep
+        period.
+        """
+        sut = gireactor.PortableGIReactor(useGtk=False)
+        # Double check that reactor has no sleep period.
+        self.assertIs(None, sut.timeout())
+
+        sut.simulate()

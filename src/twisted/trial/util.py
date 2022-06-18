@@ -18,10 +18,10 @@ Maintainer: Jonathan Lange
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
 
-
 from random import randrange
+from typing import TextIO
 
-from twisted.internet import utils, interfaces
+from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -387,3 +387,12 @@ def _listToPhrase(things, finalDelimiter, delimiter=", "):
             finalDelimiter,
             strThings[-1],
         )
+
+
+def openTestLog(path: FilePath) -> TextIO:
+    """
+    Open the given path such that test log messages can be written to it.
+    """
+    # Always use UTF-8 because, considering all platforms, the system default
+    # encoding can not reliably encode all code points.
+    return open(path.path, "a", encoding="utf-8", errors="strict")

@@ -13,15 +13,16 @@ from typing import Optional
 
 from zope.interface import implementer
 
-from twisted.internet import defer, address, error, interfaces
+from twisted.internet import address, defer, error, interfaces
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-from twisted.python import log, failure
-
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_PORT_UNREACHABLE
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_PORT_UNREACHABLE,
+)
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
+from twisted.python import failure, log
 
 
 @implementer(
@@ -167,7 +168,12 @@ class Port(abstract.FileHandle):
         )
 
         if rc and rc != ERROR_IO_PENDING:
-            self.handleRead(rc, data, evt)
+            # If the error was not 0 or IO_PENDING then that means recvfrom() hit a
+            # failure condition. In this situation recvfrom() gives us our response
+            # right away and we don't need to wait for Windows to call the callback
+            # on our event. In fact, windows will not call it for us so we must call it
+            # ourselves manually
+            self.reactor.callLater(0, self.cbRead, rc, data, evt)
 
     def write(self, datagram, addr=None):
         """

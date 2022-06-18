@@ -1,6 +1,7 @@
 from calculus.remote_2 import RemoteCalculationFactory
-from twisted.trial import unittest
+
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class RemoteCalculationTestCase(unittest.TestCase):

@@ -11,12 +11,13 @@ Maintainer: Moshe Zadka
 
 
 import os
+import pickle
 import sys
 
-import pickle
-from twisted.python import log, runtime
+from zope.interface import Interface, implementer
+
 from twisted.persisted import styles
-from zope.interface import implementer, Interface
+from twisted.python import log, runtime
 
 
 class IPersistable(Interface):
