@@ -417,6 +417,7 @@ class FileDBCheckerTests(TestCase):
         self.assertIn(cred_file.invalidFileWarning, newOutput.getvalue())
 
 
+@skipIf(not pwd, "Required module not available: pwd")
 @skipIf(not requireModule("cryptography"), "cryptography is not available")
 @skipIf(not requireModule("pyasn1"), "pyasn1 is not available")
 class SSHCheckerTests(TestCase):

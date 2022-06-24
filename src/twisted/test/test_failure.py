@@ -825,6 +825,7 @@ class FakeAttributesTests(SynchronousTestCase):
         self.assertIsInstance(code.co_nlocals, int)
         self.assertIsInstance(code.co_stacksize, int)
         self.assertIsInstance(code.co_varnames, list)
+        self.assertIsInstance(code.co_positions(), tuple)
 
     def test_fakeTracebackFrame(self):
         """

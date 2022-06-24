@@ -133,14 +133,6 @@ class SSHSession(channel.SSHChannel):
         if not self.session:
             self.session = ISession(self.avatar)
         if not ISessionSetEnv.providedBy(self.session):
-            log.warn(
-                "Can't handle environment variables for SSH avatar {avatar}: "
-                "{session} does not provide ISessionSetEnv interface. "
-                "It should be decorated with @implementer(ISession, "
-                "ISessionSetEnv) to support env variables.",
-                avatar=self.avatar,
-                session=self.session,
-            )
             return 0
         name, value, data = common.getNS(data, 2)
         try:

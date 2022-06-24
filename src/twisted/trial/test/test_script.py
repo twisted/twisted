@@ -514,18 +514,6 @@ class OptionsTests(unittest.TestCase):
             "You can't specify --debug-stacktraces when using --jobs", str(error)
         )
 
-    def test_jobsConflictWithExitFirst(self):
-        """
-        C{parseOptions} raises a C{UsageError} when C{--exitfirst} is passed
-        along C{--jobs} as it's not supported yet.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/6436}
-        """
-        error = self.assertRaises(
-            UsageError, self.options.parseOptions, ["--jobs", "4", "--exitfirst"]
-        )
-        self.assertEqual("You can't specify --exitfirst when using --jobs", str(error))
-
     def test_orderConflictWithRandom(self):
         """
         C{parseOptions} raises a C{UsageError} when C{--order} is passed along

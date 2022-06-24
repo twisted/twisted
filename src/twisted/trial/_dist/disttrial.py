@@ -32,7 +32,7 @@ from ..runner import TestHolder
 from ..util import _unusedTestDirectory, openTestLog
 from . import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from .distreporter import DistReporter
-from .functional import countingCalls, discardResult, iterateWhile
+from .functional import countingCalls, discardResult, iterateWhile, takeWhile
 from .worker import LocalWorker, LocalWorkerAMP, WorkerAction
 
 
@@ -252,7 +252,7 @@ def shouldContinue(untilFailure: bool, result: IReporter) -> bool:
 
 async def runTests(
     pool: StartedWorkerPool,
-    testCases: Sequence[ITestCase],
+    testCases: Iterable[ITestCase],
     result: DistReporter,
     driveWorker: Callable[
         [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
@@ -260,7 +260,7 @@ async def runTests(
 ) -> None:
     try:
         # Run the tests using the worker pool.
-        await pool.run(partial(driveWorker, result, iter(testCases)))
+        await pool.run(partial(driveWorker, result, testCases))
     except Exception:
         # Exceptions from test code are handled somewhere else.  An
         # exception here is a bug in the runner itself.  The only
@@ -275,7 +275,10 @@ class DistTrialRunner:
     local worker processes which will run tests.
 
     @ivar _maxWorkers: the number of workers to be spawned.
-    @type _maxWorkers: C{int}
+
+    @ivar _exitFirst: ``True`` to stop the run as soon as a test case fails.
+        ``False`` to run through the whole suite and report all of the results
+        at the end.
 
     @ivar _stream: stream which the reporter will use.
 
@@ -290,6 +293,7 @@ class DistTrialRunner:
     _reporterFactory: Callable[..., IReporter]
     _maxWorkers: int
     _workerArguments: List[str]
+    _exitFirst: bool = False
     _reactor: IDistTrialReactor = field(
         # mypy doesn't understand the converter
         default=None,
@@ -353,7 +357,9 @@ class DistTrialRunner:
             await task(case)
 
     async def runAsync(
-        self, suite: TestSuite, untilFailure: bool = False
+        self,
+        suite: TestSuite,
+        untilFailure: bool = False,
     ) -> DistReporter:
         """
         Spawn local worker processes and load tests. After that, run them.
@@ -400,9 +406,17 @@ class DistTrialRunner:
                 self._stream.write(f"Test Pass {n + 1}\n")
 
             result = self._makeResult()
+
+            if self._exitFirst:
+                # Keep giving out tests as long as the result object has only
+                # seen success.
+                casesCondition = lambda _: result.original.wasSuccessful()
+            else:
+                casesCondition = lambda _: True
+
             await runTests(
                 startedPool,
-                testCases,
+                takeWhile(casesCondition, testCases),
                 result,
                 self._driveWorker,
             )

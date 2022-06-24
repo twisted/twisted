@@ -8,7 +8,7 @@ Tests for L{twisted.trial._dist.workerreporter}.
 
 from unittest import TestCase
 
-from hamcrest import assert_that, equal_to, has_length, has_properties
+from hamcrest import assert_that, equal_to, has_length
 from hamcrest.core.matcher import Matcher
 
 from twisted.test.iosim import connectedServerAndClient
@@ -16,29 +16,7 @@ from twisted.trial._dist.worker import LocalWorkerAMP, WorkerProtocol
 from twisted.trial.reporter import TestResult
 from twisted.trial.test import erroneous, pyunitcases, sample, skipping
 from twisted.trial.unittest import SynchronousTestCase
-
-
-def matches_result(
-    successes: Matcher = equal_to(0),
-    errors: Matcher = has_length(0),
-    failures: Matcher = has_length(0),
-    skips: Matcher = has_length(0),
-    expectedFailures: Matcher = has_length(0),
-    unexpectedSuccesses: Matcher = has_length(0),
-) -> Matcher:
-    """
-    Match a L{TestCase} instances with matching attributes.
-    """
-    return has_properties(
-        {
-            "successes": successes,
-            "errors": errors,
-            "failures": failures,
-            "skips": skips,
-            "expectedFailures": expectedFailures,
-            "unexpectedSuccesses": unexpectedSuccesses,
-        }
-    )
+from .matchers import matches_result
 
 
 def run(case: SynchronousTestCase, target: TestCase) -> TestResult:
