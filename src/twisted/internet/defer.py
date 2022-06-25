@@ -1680,8 +1680,8 @@ def _inlineCallbacks(
     # waiting for result?  # result
     waiting: List[Any] = [True, None]
 
-    stop_iteration: bool = False
-    callback_value: Any = None
+    stopIteration: bool = False
+    callbackValue: Any = None
 
     while 1:
         try:
@@ -1696,8 +1696,8 @@ def _inlineCallbacks(
                 result = context.run(gen.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            stop_iteration = True
-            callback_value = getattr(e, "value", None)
+            stopIteration = True
+            callbackValue = getattr(e, "value", None)
 
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
@@ -1767,18 +1767,18 @@ def _inlineCallbacks(
                     lineno,
                 )
 
-            stop_iteration = True
-            callback_value = e.value
+            stopIteration = True
+            callbackValue = e.value
 
         except BaseException:
             status.deferred.errback()
             return
 
-        if stop_iteration:
+        if stopIteration:
             # Call the callback outside of the exception handler to avoid inappropriate/confusing
             # "During handling of the above exception, another exception occurred:" if the callback
             # itself throws an exception.
-            status.deferred.callback(callback_value)
+            status.deferred.callback(callbackValue)
             return
 
         if isinstance(result, Deferred):
