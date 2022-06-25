@@ -51,6 +51,7 @@ from twisted.internet.interfaces import (
     IReactorFDSet,
     IReactorSocket,
     IReactorTCP,
+    IReactorTime,
     IResolverSimple,
     ITLSTransport,
 )
@@ -1230,12 +1231,27 @@ def assertPeerClosedOnEMFILE(
 
     serverConnectionMade.addCallback(stopReactorIfServerAccepted)
 
-    port = listen(reactor, serverFactory)
-    listeningHost = port.getHost()
     clientFactory = MyClientFactory()
-    connect(reactor, listeningHost, clientFactory)
 
-    reactor.callWhenRunning(exhauster.exhaust)
+    if IReactorTime.providedBy(reactor):
+        # For Glib-based reactors, the exhauster should be run after the signal handler used by glib [1]
+        # and restoration of twisted signal handlers [2], thus such 2-level callLater
+        # [1] https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/gi/_ossighelper.py#L76
+        # [2] https://github.com/twisted/twisted/blob/twisted-22.4.0/src/twisted/internet/_glibbase.py#L134
+        # See also https://twistedmatrix.com/trac/ticket/10342
+        def inner():
+            port = listen(reactor, serverFactory)
+            listeningHost = port.getHost()
+            connect(reactor, listeningHost, clientFactory)
+            exhauster.exhaust()
+
+        reactor.callLater(0, reactor.callLater, 0, inner)
+    else:
+        # For reactors without callLater (ex: MemoryReactor)
+        port = listen(reactor, serverFactory)
+        listeningHost = port.getHost()
+        connect(reactor, listeningHost, clientFactory)
+        reactor.callWhenRunning(exhauster.exhaust)
 
     def stopReactorAndCloseFileDescriptors(result):
         exhauster.release()
@@ -2808,6 +2824,12 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2816,6 +2838,12 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some

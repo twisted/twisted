@@ -63,6 +63,10 @@ Flattenable = Union[
 Type alias containing all types that can be flattened by L{flatten()}.
 """
 
+# The maximum number of bytes to synchronously accumulate in the flattener
+# buffer before delivering them onwards.
+BUFFER_SIZE = 2 ** 16
+
 
 def escapeForContent(data: Union[bytes, str]) -> bytes:
     """
@@ -381,14 +385,42 @@ async def _flattenTree(
 
     @return: A C{Deferred}-returning coroutine that resolves to C{None}.
     """
+    buf = []
+    bufSize = 0
+
+    # Accumulate some bytes up to the buffer size so that we don't annoy the
+    # upstream writer with a million tiny string.
+    def bufferedWrite(bs: bytes) -> None:
+        nonlocal bufSize
+        buf.append(bs)
+        bufSize += len(bs)
+        if bufSize >= BUFFER_SIZE:
+            flushBuffer()
+
+    # Deliver the buffered content to the upstream writer as a single string.
+    # This is how a "big enough" buffer gets delivered, how a buffer of any
+    # size is delivered before execution is suspended to wait for an
+    # asynchronous value, and how anything left in the buffer when we're
+    # finished is delivered.
+    def flushBuffer() -> None:
+        nonlocal bufSize
+        if bufSize > 0:
+            write(b"".join(buf))
+            del buf[:]
+            bufSize = 0
+
     stack: List[Generator] = [
-        _flattenElement(request, root, write, [], None, escapeForContent)
+        _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
+
     while stack:
         try:
             frame = stack[-1].gi_frame
             element = next(stack[-1])
             if isinstance(element, Deferred):
+                # Before suspending flattening for an unknown amount of time,
+                # flush whatever data we have collected so far.
+                flushBuffer()
                 element = await element
         except StopIteration:
             stack.pop()
@@ -401,6 +433,9 @@ async def _flattenTree(
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             stack.append(element)
+
+    # Flush any data that remains in the buffer before finishing.
+    flushBuffer()
 
 
 def flatten(

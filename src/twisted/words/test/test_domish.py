@@ -308,16 +308,6 @@ class DomishStreamTestsMixin:
         self.stream.parse(xml)
         self.assertEqual(self.elements[0].child2.uri, "")
 
-    def test_namespaceWithWhitespace(self):
-        """
-        Whitespace in an xmlns value is preserved in the resulting node's C{uri}
-        attribute.
-        """
-        xml = b"<root xmlns:foo=' bar baz '><foo:bar foo:baz='quux'/></root>"
-        self.stream.parse(xml)
-        self.assertEqual(self.elements[0].uri, " bar baz ")
-        self.assertEqual(self.elements[0].attributes, {(" bar baz ", "baz"): "quux"})
-
     def test_attributesWithNamespaces(self):
         """
         Attributes with namespace are parsed without Exception.

@@ -732,7 +732,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return None
         else:
             context = ssl.ClientContextFactory()
-            context.method = ssl.SSL.TLSv1_METHOD
+            context.method = ssl.SSL.TLSv1_2_METHOD
             return context
 
     def login(self, username, password):
