@@ -342,11 +342,8 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     def test_internalDefGenReturnValueDoesntLeak(self):
         """
         When one inlineCallbacks calls another, the internal L{_DefGen_Return}
-        flow control exception doesn't leak into tracebacks captured in the
-        caller.
-        
-        This is the test in which the inner functions use L{defer.retrunValue},
-        which is the original python 2.7 method.
+        flow control exception raised by calling L{defer.returnValue} doesn't
+        leak into tracebacks captured in the caller.
         """
         clock = task.Clock()
 
@@ -356,7 +353,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
             This is the inner function using returnValue.
             """
             yield task.deferLater(clock, 0)
-            returnValue('actual-value-not-used-for-the-test')
+            returnValue("actual-value-not-used-for-the-test")
 
         @inlineCallbacks
         def _raises():
@@ -369,25 +366,25 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         d = _raises()
         clock.advance(0)
         tb = self.successResultOf(d)
-        # The internal function is in the traceback.
+
+        # The internal exception is not in the traceback.
         self.assertNotIn("_DefGen_Return", tb)
         # No other extra exception is in the traceback.
         self.assertNotIn(
-            "During handling of the above exception, "
-            "another exception occurred",
-            tb)
+            "During handling of the above exception, another exception occurred", tb
+        )
         # Our targeted exception is in the traceback
-        self.assertIn('test_defgen.TerminalException: boom returnValue', tb)
+        self.assertIn("test_defgen.TerminalException: boom returnValue", tb)
 
     def test_internalStopIterationDoesntLeak(self):
         """
         When one inlineCallbacks calls another, the internal L{StopIteration}
         flow control exception generated when the inner generator returns
         doesn't leak into tracebacks captured in the caller.
-        
-        This is similar to C{test_internalDefGenReturnValueDoesntLeak}
-        but the inner function uses the "normal" return statemement, and
-        not the C{returnValue} helper.
+
+        This is similar to C{test_internalDefGenReturnValueDoesntLeak} but the
+        inner function uses the "normal" return statemement rather than the
+        C{returnValue} helper.
         """
         clock = task.Clock()
 
@@ -407,7 +404,15 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         d = _raises()
         clock.advance(0)
         tb = self.successResultOf(d)
+
+        # The internal exception is not in the traceback.
         self.assertNotIn("StopIteration", tb)
+        # No other extra exception is in the traceback.
+        self.assertNotIn(
+            "During handling of the above exception, another exception occurred", tb
+        )
+        # Our targeted exception is in the traceback
+        self.assertIn("test_defgen.TerminalException: boom normal return", tb)
 
 
 class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
