@@ -9,6 +9,8 @@ if you don't do them, it's likely that nobody will even notice your PR needs a r
 
 ## Scope and purpose
 
+Fixes #<!-- ISSUE-ID -->
+
 Add a few words about why this PR is needed and what is its scope.
 
 Add any comments about trade-offs (if any) made in this PR and the reasoning behind them.
@@ -18,8 +20,7 @@ Add mentions of things that are not covered here and are planed to be done in se
 
 ## Contributor Checklist:
 
-* [ ] The associated issue is here: #<!-- Create a new one at https://github.com/twisted/twisted/issues/ and replace this comment with the issue number. -->
-* [ ] I ran `tox -e lint` to format my patch to meet the [Twisted Coding Standard](https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html)
+* [ ] I ran `tox -e lint` to format my patch to meet the [Twisted Coding Standard](https://docs.twistedmatrix.com/en/stable/core/development/policy/coding-standard.html)
 * [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: [News files](https://github.com/twisted/trac-wiki-archive/blob/trunk//ReviewProcess.mediawiki#News_files))
 * [ ] The title of the PR starts with the associated issue number (without the `#` character).
 * [ ] I have updated the automated tests and checked that all checks for the PR are green.
@@ -32,7 +33,8 @@ Merge pull request #123 from twisted/4356-branch-name-with-issue-id
 
 Author: <github_username>, <github_usernames_if_more_authors>
 Reviewer: <github_username>, <github_username_if_more_reviewers>
-Fixes: #<github_issue_number>, #<another_if_more_in_one_PR>
+Fixes #<github_issue_number>
+Fixes #<another_if_more_in_one_PR>
 
 Long description providing a summary of these changes.
 (as long as you wish)
