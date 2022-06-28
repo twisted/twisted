@@ -958,6 +958,8 @@ class SSHSession(channel.SSHChannel):
             #             -------------                  --------------
             #           SSH_EXTENDED_DATA_STDERR               1
             #
+            # (end of RFC quotations)
+            #
             # Here we decode the stderr bytes as UTF-8 and handle errors by
             # representing undecodeable bytes with a certain escape scheme.
             # There is no guarantee that the peer is sending UTF-8 encoded
