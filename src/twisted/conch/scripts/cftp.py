@@ -957,6 +957,24 @@ class SSHSession(channel.SSHChannel):
             #             Symbolic name                  data_type_code
             #             -------------                  --------------
             #           SSH_EXTENDED_DATA_STDERR               1
+            #
+            # Here we decode the stderr bytes as UTF-8 and handle errors by
+            # representing undecodeable bytes with a certain escape scheme.
+            # There is no guarantee that the peer is sending UTF-8 encoded
+            # bytes but if they are not it is complex to determine what
+            # encoding they _are_ sending.  The standard says nothing about
+            # how these bytes should be decoded because the standard probably
+            # doesn't think they should be decoded at all - just handle them
+            # as bytes!  However, our stderr is a text-mode file so we *must*
+            # decode them to be able to write them out at all.  And even if we
+            # had a binary-mode file we would still /probably/ want to write
+            # bytes in a *known* encoding to it.
+            #
+            # Perhaps in the future we can somehow inspect LANG or LC_* in the
+            # remote execution environment (but I'm not sure how) and use that
+            # as a hint about which encoding to use for decoding here.
+            # Meanwhile, UTF-8 is the de facto universal interoperable
+            # encoding so: use it.
             self.stderr.write(data.decode("utf-8", "backslashreplace"))
             self.stderr.flush()
 
