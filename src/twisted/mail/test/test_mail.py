@@ -254,7 +254,14 @@ class FileMessageTests(TestCase):
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class MaildirMessageTests(TestCase):
+    """
+    Tests for the file creating by the L{mail.maildir.MaildirMessage}.
+    """
+
     def setUp(self):
+        """
+        Create and open a temporary file.
+        """
         self.name = self.mktemp()
         self.final = self.mktemp()
         self.address = b"user@example.com"
@@ -265,29 +272,54 @@ class MaildirMessageTests(TestCase):
         )
 
     def _finalName(self):
+        """
+        Search for the final file path.
+
+        @rtype: L{str}
+        @return: Final file path.
+        """
         return glob.glob(f"{self.final},S=[0-9]*")[0]
 
-    def testFinalName(self):
-        return self.fp.eomReceived().addCallback(self._cbFinalName)
+    def test_finalName(self):
+        """
+        Send the EOM to the message and add the callback for testing final name.
+        """
+        self.fp.eomReceived().addCallback(self._cbFinalName)
 
     def _cbFinalName(self, result):
+        """
+        Check that the final file name contains the correct file size and the
+        temporary file has been closed and removed.
+        """
         self.assertEqual(result, f"{self.final},S={os.path.getsize(result)}")
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
-    def testContents(self):
+    def test_contents(self):
+        """
+        Send a message contents and the EOM to the message and add the callback
+        for testing the file contents.
+        """
         contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
-        return self.fp.eomReceived().addCallback(self._cbTestContents, contents)
+        self.fp.eomReceived().addCallback(self._cbTestContents, contents)
 
     def _cbTestContents(self, result, contents):
+        """
+        Check that the final file contains the correct header and the message
+        contents.
+        """
         with open(result, "rb") as f:
             self.assertEqual(
                 f.read(), b"Delivered-To: %s\n%s" % (self.address, contents)
             )
 
-    def testInterrupted(self):
+    def test_interrupted(self):
+        """
+        Check that the interrupted message transfer removes the temporary file
+        and a doesn't create a final file.
+        """
         contents = b"first line\nsecond line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
