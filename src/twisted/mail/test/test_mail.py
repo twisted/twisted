@@ -221,24 +221,11 @@ class BounceWithSMTPServerTests(TestCase):
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class FileMessageTests(TestCase):
     def setUp(self):
-        self.name = "fileMessage.testFile"
-        self.final = "final.fileMessage.testFile"
+        self.name = self.mktemp()
+        self.final = self.mktemp()
         self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
         self.fp = mail.mail.FileMessage(self.f, self.name, self.final)
-
-    def tearDown(self):
-        try:
-            self.f.close()
-        except BaseException:
-            pass
-        try:
-            os.remove(self.name)
-        except BaseException:
-            pass
-        try:
-            os.remove(self.final)
-        except BaseException:
-            pass
 
     def testFinalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
@@ -268,30 +255,17 @@ class FileMessageTests(TestCase):
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class MaildirMessageTests(TestCase):
     def setUp(self):
-        self.name = "maildirMessage.testFile"
-        self.final = "final.maildirMessage.testFile"
+        self.name = self.mktemp()
+        self.final = self.mktemp()
         self.address = b"user@example.com"
         self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
         self.fp = mail.maildir.MaildirMessage(
             self.address, self.f, self.name, self.final
         )
 
     def _finalName(self):
         return glob.glob(f"{self.final},S=[0-9]*")[0]
-
-    def tearDown(self):
-        try:
-            self.f.close()
-        except BaseException:
-            pass
-        try:
-            os.remove(self.name)
-        except BaseException:
-            pass
-        try:
-            os.remove(self._finalName())
-        except BaseException:
-            pass
 
     def testFinalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
