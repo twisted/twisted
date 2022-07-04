@@ -1,0 +1,1 @@
+twisted.pair.tuntap._TUNSETIFF and ._TUNGETIFF values are now correct parisc, powerpc and sparc architectures.

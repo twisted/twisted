@@ -135,7 +135,7 @@ def generateRSAkey(options):
     from cryptography.hazmat.primitives.asymmetric import rsa
 
     if not options["bits"]:
-        options["bits"] = 1024
+        options["bits"] = 2048
     keyPrimitive = rsa.generate_private_key(
         key_size=int(options["bits"]),
         public_exponent=65537,
@@ -179,9 +179,7 @@ def generateECDSAkey(options):
 
 @_keyGenerator("ed25519")
 def generateEd25519key(options):
-    from cryptography.hazmat.primitives.asymmetric import ed25519
-
-    keyPrimitive = ed25519.Ed25519PrivateKey.generate()
+    keyPrimitive = keys.Ed25519PrivateKey.generate()
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 

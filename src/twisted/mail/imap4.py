@@ -2972,9 +2972,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         except ImportError:
             return None
         else:
-            context = ssl.ClientContextFactory()
-            context.method = ssl.SSL.TLSv1_METHOD
-            return context
+            return ssl.ClientContextFactory()
 
     def __cbLoginCaps(self, capabilities, username, password):
         # If the server advertises STARTTLS, we might want to try to switch to TLS
