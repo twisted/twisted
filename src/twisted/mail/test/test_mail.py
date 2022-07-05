@@ -282,35 +282,24 @@ class MaildirMessageTests(TestCase):
 
     def test_finalName(self):
         """
-        Send the EOM to the message and add the callback for testing final name.
+        Send the EOM to the message and check that the final file name contains
+        the correct file size and the temporary file has been closed and removed.
         """
-        self.fp.eomReceived().addCallback(self._cbFinalName)
-
-    def _cbFinalName(self, result):
-        """
-        Check that the final file name contains the correct file size and the
-        temporary file has been closed and removed.
-        """
-        self.assertEqual(result, f"{self.final},S={os.path.getsize(result)}")
+        final = self.successResultOf(self.fp.eomReceived())
+        self.assertEqual(final, f"{self.final},S={os.path.getsize(final)}")
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
     def test_contents(self):
         """
-        Send a message contents and the EOM to the message and add the callback
-        for testing the file contents.
+        Send a message contents and the EOM to the message and check that the
+        final file contains the correct header and the message contents.
         """
         contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
-        self.fp.eomReceived().addCallback(self._cbTestContents, contents)
-
-    def _cbTestContents(self, result, contents):
-        """
-        Check that the final file contains the correct header and the message
-        contents.
-        """
-        with open(result, "rb") as f:
+        final = self.successResultOf(self.fp.eomReceived())
+        with open(final, "rb") as f:
             self.assertEqual(
                 f.read(), b"Delivered-To: %s\n%s" % (self.address, contents)
             )
