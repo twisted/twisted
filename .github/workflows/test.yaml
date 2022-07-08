@@ -257,12 +257,29 @@ jobs:
           fi
 
 
+  # We have this job so that the PR can be blocked on a single job.
+  # In this way, each time a job is modified,
+  # we don't have to go to GitHub UI and reconfigure branch protection.
+  # See GitHub support answer for this hack.
+  # https://gist.github.com/altendky/2e3483a1f7e1ba21cc97de75db9b7d1c
   all-successful:
-    # We have this job so that the PR can be blocked on a single job.
-    # See GitHub support answer for this hack.
-    # https://gist.github.com/altendky/2e3483a1f7e1ba21cc97de75db9b7d1c
+    # Is very important to force running this always, as otherwise it will be
+    #  skipped by default.
+    if: always()
     runs-on: ubuntu-latest
-    needs: [testing, static-checks, release-publish]
+    # Here should be the list of all the other jobs defined in this file.
+    needs:
+      - testing
+      - static-checks
+      - release-publish
     steps:
-    - name: note that all tests succeeded
-      run: echo "🎉"
+      - name: Require all successes
+        shell: python
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          import json
+          import os
+          import sys
+          results = json.loads(os.environ["RESULTS"])
+          sys.exit(0 if all(result == "success" for result in results) else 1)
