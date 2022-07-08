@@ -11,12 +11,12 @@ you'll probably want to check out a tree from the Twisted Git repository.
 The `trunk` is the main branch and is where all current development takes place.
 
 
-
 Checkout and initial dev virtual environment
 --------------------------------------------
 
-
-Git tutorials can be found elsewhere, see in particular `Git and GitHub learning resources <https://help.github.com/articles/good-resources-for-learning-git-and-github/>`_ :
+Twisted used Git to track code changes.
+Git tutorials can be found elsewhere,
+see in particular `Git and GitHub learning resources <https://help.github.com/articles/good-resources-for-learning-git-and-github/>`_ :
 
 .. code-block:: console
 
@@ -37,14 +37,13 @@ The output of ``git blame`` `will be better <https://github.com/psf/black#migrat
 Running tests
 -------------
 
-The test are handled by `trial` testing framework.
+The tests are handled by the `trial` testing framework.
 It knows about deferred and any other good stuff provided by Twisted.
 To run the full unit-test suite, do:
 
 .. code-block:: console
 
     ./bin/trial twisted
-
 
 To run a single test file (like ``twisted/test/test_defer.py`` ), do one of:
 
@@ -54,14 +53,11 @@ To run a single test file (like ``twisted/test/test_defer.py`` ), do one of:
     # or
     ./bin/trial twisted/test/test_defer.py
 
-
-
 To run any tests that are related to a code file, like ``twisted/protocols/imap4.py`` , do:
 
 .. code-block:: console
 
     ./bin/trial --testmodule twisted/mail/imap4.py
-
 
 This depends upon the ``.py`` file having an appropriate "test-case-name" tag that indicates which test cases provide coverage.
 See the :doc:`Test Standards <policy/test-standard>` document for
@@ -89,65 +85,22 @@ This will trigger a full build including the API docs:
     firefox docs/_build/index.html
 
 
-Committing and Post-commit Hooks
+Committing and pre-commit hooks
 --------------------------------
 
+As a suggestion, when working on a branch prefix the name of that branch with the associated ticket number.
+For example, use `1234-some-brach-name` as the name of the branch working to fix ticket with number `1234`.
 
-Twisted's Trac installation is notified when the Git repository changes,
-and will update the ticket depending on the Git commit logs.
-When making a branch for a ticket, the branch name should end
-in ``-<ticket number>`` , for
-example ``my-branch-9999`` . This will add a ticket comment containing a
-changeset link and branch name. To make your commit message show up as a comment
-on a Trac ticket, add a ``refs #<ticket number>`` line at the
-bottom of your commit message. To automatically close a ticket on Trac
-as ``Fixed`` and add a comment with the closing commit message, add
-a ``Fixes: #<ticket number>`` line to your commit message. In
-general, a commit message closing a ticket looks like this:
+Before you commit any change make sure they pass basic code sanity checks.
+We use `pre-commit <https://pre-commit.com/>`_ to automate these check and make sure you don't forget to run the checks before a commit::
+
+    pre-commit install
+    pre-commit.
 
 
+Review process
+--------------
 
+Any changed accepted into the main branch must pass the review process.
 
-
-::
-
-    
-    Merge my-branch-9999: A single-line summary.
-    
-    Author: jesstess
-    Reviewers: exarkun, glyph
-    Fixes: #9999
-    
-    My longer description of the changes made.
-
-
-
-
-The :doc:`Twisted Coding Standard <coding-standard>` 
-elaborates on commit messages and source control.
-
-
-
-
-
-Emacs
------
-
-
-
-A minor mode for development with Twisted using Emacs is available.  See ``twisted-dev.el`` , provided by `twisted-emacs <https://launchpad.net/twisted-emacs>`_ ,
-for several utility functions which make it easier to grep for methods, run test cases, etc.
-
-
-
-
-
-Building Debian packages
-------------------------
-
-
-
-Our support for building Debian packages has fallen into disrepair.  We
-would very much like to restore this functionality, but until we do so, if
-you are interested in this, you are on your own.  See `stdeb <https://github.com/astraw/stdeb>`_ for one possible approach to
-this.
+See :doc:`the dedicated review process page </core/development/review-process>` for more details.
