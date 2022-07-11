@@ -49,7 +49,7 @@ Elements of it may be followed more or less strictly depending on the severity o
    Try to communicate over IRC, gitter or other means to find a person to
    review the new PR.
    Coordinate with the release manager.
-   More info about the release process can be found on the :doc:`release process </core/development/policy/release-process>` dedicated page.
+   More info about the release process can be found on the :doc:`release process </development/release-process>` dedicated page.
 
 #. We are not aware of a way to securely transmit our code to our public continuous integration systems.
    Reviewers should manually run the automated tests on their local forks of the new private repository.
