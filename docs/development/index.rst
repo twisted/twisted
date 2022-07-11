@@ -7,8 +7,9 @@ This documentation is for people who work on the Twisted codebase itself, rather
 .. toctree::
    :maxdepth: 1
 
-   code-dev
    coding-standard
+   dev-process
+   review-process
    release-process
    test-standard
    writing-standard
