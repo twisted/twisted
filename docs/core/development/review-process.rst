@@ -3,8 +3,6 @@ Twisted Code Review Process
 
 
 All commits to Twisted's trunk must follow this review process.
-The only exception is for the [https://github.com/twisted/twisted/blob/trunk/docs/fun/Twisted.Quotes Twisted Quotes] file.
-There are no other exceptions!
 
 Both authors and reviewers should be intimately familiar with all requirements on this page.
 
@@ -20,13 +18,13 @@ so you should usually err on the side of just trying something out rather than w
 That being said, there are a few things that you should be aware of before you write your first line of code:
 
   * Make sure you have a *clear idea of what work needs doing*.
-    Write down your idea first; `file a ticket <https://github.com/twisted/twisted/issues/new/choose>`_ before you write a patch.
-    A really good ticket will give a precise description of what needs to change and why it needs changing;
+    Write down your idea first; `file an issue <https://github.com/twisted/twisted/issues/new/choose>`_ before you write a patch.
+    A really good issue will give a precise description of what needs to change and why it needs changing;
     it avoids giving precise details of exactly *how* the code needs to change,
     because the patch should supply those details.
-    A really *bad* ticket will say "here is a patch I wrote, apply it".
+    A really *bad* issue will say "here is a patch I wrote, apply it".
     If you're just getting started with contributing to Twisted,
-    it would be good to find an existing ticket rather than come up with something yourself,
+    it would be good to find an existing issue rather than come up with something yourself,
     so you have an idea how to go through the process before you start making difficult changes.
     You'll need to have a good description of your work for other parts of the process as well (the NEWS file, the commit message) which is another reason thinking about what you're trying to do helps.
   * **If you're filing a bug because you noticed a regression** in the current pre-release,
@@ -75,7 +73,6 @@ Reviewers: How to review a change
    you already did the first round of self-review.
  * Make sure that all checks are **green**!
  * Note any unreliable / flaky tests should have a separate issue created.
- * Assign the ticket to yourself.
  * Review the change, and write a detailed comment about all potential improvements to the branch (See [#Howtobeagoodreviewer below]).
  * Use GitHub review UI to approve or request changes to the PR.
  * If the author does not have commit access, merge the change for them or add the "needs-merge" label.
@@ -96,15 +93,15 @@ The commit message, when using both the GitHub button or the CLI commit, must fo
 
     Author: comma_separated_github_username
     Reviewer: comma_separated_github_usernames
-    Fixes: #ticket number
+    Fixes: #issue number
 
     Long description (as long as you wish)
 
  * If there is a regression on a supported builder you should [#Revertingachange revert your merge].
  * '''If this fix has implications for an ongoing [wiki:ReleaseProcess pre-release in progress]''', please announce it on the mailing list so that the release manager will know.  A change definitely has implications for the release process if:
   - a pre-release has been issued for which there is no final release
-  - this ticket was a known regression and is now closed, so another pre-release should be issued
-  - this ticket was in the release milestone and is now closed, so another pre-release should be issued
+  - this issue was a known regression and is now closed, so another pre-release should be issued
+  - this issue was in the release milestone and is now closed, so another pre-release should be issued
   - as part of the final review, the reviewer noticed that this is fixing something that could be considered a regression.
   In general, if there's any doubt, communicate to the mailing list.  The mailing list is fairly low traffic, and so a little extra noise about interesting developments is much better than letting an important fix slip through the cracks.  If you're not sure whether something qualifies as a regression or not, let the release manager know so they can decide.
  * If no regression appears, you can delete the source branch.
@@ -116,17 +113,17 @@ Details
 News files
 ^^^^^^^^^^
 
-**NB: If your pull request contains news fragments in {{{topfiles}}} directories, please run {{{admin/fix-for-towncrier.py}}} and then commit the result.**
+**NB: If your pull request contains news fragments in ``topfiles`` directories, please run ``admin/fix-for-towncrier.py`` and then commit the result.**
 
 It is up to the authors of individual changes to write high-level descriptions for their changes. These descriptions will be aggregated into the release notes distributed with Twisted releases.  If we just let each author add to the [https://github.com/twisted/twisted/blob/trunk/NEWS.rst NEWS] file on every commit, though, we would run into lots of spurious conflicts. To avoid this, we use [https://pypi.python.org/pypi/towncrier towncrier] to manage separate news fragments for each change.
 
-Changes must be accompanied by a file whose content describes that change in at least one `newsfragments` directory. There are `newsfragments` directories for each subproject (''e.g.'' [https://github.com/twisted/twisted/tree/trunk/src/twisted/web/newsfragments src/twisted/web/newsfragments], [https://github.com/twisted/twisted/tree/trunk/src/twisted/names/newsfragments src/twisted/names/newsfragments], [https://github.com/twisted/twisted/tree/trunk/src/twisted/words/newsfragments src/twisted/words/newsfragments]), and one root directory ([https://github.com/twisted/twisted/tree/trunk/src/twisted/newsfragments src/twisted/newsfragments]) for core Twisted changes. If a change affects multiple areas of Twisted, then each affected area can have a newsfragments entry to detail the relevant changes.  An entry must be a file named `<ticket number>.<change type>` (eg. `1234.bugfix`). You should replace `<ticket number>` with the ticket number which is being resolved by the change (if multiple tickets are resolved, multiple files with the same contents should be added).  The `<change type>` extension is replaced by one of the following literal strings:
+Changes must be accompanied by a file whose content describes that change in at least one `newsfragments` directory. There are `newsfragments` directories for each subproject (''e.g.'' [https://github.com/twisted/twisted/tree/trunk/src/twisted/web/newsfragments src/twisted/web/newsfragments], [https://github.com/twisted/twisted/tree/trunk/src/twisted/names/newsfragments src/twisted/names/newsfragments], [https://github.com/twisted/twisted/tree/trunk/src/twisted/words/newsfragments src/twisted/words/newsfragments]), and one root directory ([https://github.com/twisted/twisted/tree/trunk/src/twisted/newsfragments src/twisted/newsfragments]) for core Twisted changes. If a change affects multiple areas of Twisted, then each affected area can have a newsfragments entry to detail the relevant changes.  An entry must be a file named `<issue number>.<change type>` (eg. `1234.bugfix`). You should replace `<issue number>` with the issue number which is being resolved by the change (if multiple issues are resolved, multiple files with the same contents should be added).  The `<change type>` extension is replaced by one of the following literal strings:
 
-||'''feature'''||Tickets which are adding a new feature||
-||'''bugfix'''||Tickets which are fixing a bug||
-||'''doc'''||Tickets primarily about fixing or improving documentation (any variety)||
-||'''removal'''||Tickets which are deprecating something or removing something which was already deprecated||
-||'''misc'''||Tickets which are very minor and not worth summarizing outside of the git changelog.  These should be empty (their contents will be ignored)||
+||'''feature'''||Issues which are adding a new feature||
+||'''bugfix'''||Issues which are fixing a bug||
+||'''doc'''||Issues primarily about fixing or improving documentation (any variety)||
+||'''removal'''||Issues which are deprecating something or removing something which was already deprecated||
+||'''misc'''||Issues which are very minor and not worth summarizing outside of the git changelog.  These should be empty (their contents will be ignored)||
 
 To get a sense of how the text in these files is presented to users, take a look at [https://github.com/twisted/twisted/blob/trunk/NEWS.rst the real overall news file].  The goal when writing the content for one of these files is to produce text that will fit well into the overall news files.
 
@@ -182,7 +179,7 @@ You don't need to worry about newlines in the file; the contents will be rewrapp
 Filing bugs and writing review requests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Tickets should be described well enough that the change is already justified and the new code should be easy enough to read that further explanations aren't necessary to understand it, but sometimes diffs themselves can be more difficult to read than either the old or new state of the code, so comments like ''the implementation of foo moved from bar.py to baz.py'' can sometimes make a reviewer's job easier.
+Issues should be described well enough that the change is already justified and the new code should be easy enough to read that further explanations aren't necessary to understand it, but sometimes diffs themselves can be more difficult to read than either the old or new state of the code, so comments like ''the implementation of foo moved from bar.py to baz.py'' can sometimes make a reviewer's job easier.
 
 If you're a committer, please always make sure the "branch" field is current and force a build; this helps decrease review latency if the reviewer can see the diff and build results from the convenient links at the top of the ticket without waiting.
 
@@ -193,9 +190,9 @@ Changes must be reviewed by a developer other than the author of the changes. If
 
 A reviewer need not necessarily be familiar with the specific area of Twisted being changed, but he or she should feel confident in his or her abilities to spot problems in the change.
 
-Twisted committers may review anyone's tickets; those submitted by other committers or those submitted by non-committer contributors.  If a non-committer contributor submits a ticket that is acceptable to merge, it is the committer's responsibility to commit and merge the branch.  When a committer reviews a ticket, they are responsible if there are any problems with the review.
+Twisted committers may review anyone's PRs; those submitted by other committers or those submitted by non-committer contributors.  If a non-committer contributor submits a PR that is acceptable to merge, it is the committer's responsibility to commit and merge the PR.  When a committer reviews a PR, they are responsible if there are any problems with the review.
 
-Non-committer contributors may review tickets which committers have submitted.  When a non-committer views [report:25 review queue], it will ghost the rows submitted by other non-committers so they know not to review those.  When a non-committer does a passing review, the committer may accept it and land their change, but they are then responsible for the adequacy of the review.  So, if a non-committer does a review you feel might be incomplete, put it back into review and explain what they might have missed - this kind of reviewing-the-review is important to make sure that more people learn how to do reviews well!
+Non-committer contributors may review PRs which committers have submitted.  When a non-committer does a passing review, the committer may accept it and land their change, but they are then responsible for the adequacy of the review.  So, if a non-committer does a review you feel might be incomplete, put it back into review and explain what they might have missed - this kind of reviewing-the-review is important to make sure that more people learn how to do reviews well!
 
 
 How to be a good reviewer
@@ -219,7 +216,7 @@ Here are some extra things to consider while reviewing a change:
 
 When you're done with the review, always say what the next step should be: for example, if the author is a committer, can they commit after making a few minor fixes?  If your review feedback is more substantial, should they re-submit for another review?
 
-If you are officially "doing a review" - in other words, removing the review keyword - please make sure you do a complete review and look for ''all'' of these things, so that the author has as much feedback as possible to work with while their ticket is out of the review state.  If you don't have time to do a complete review, and you just notice one or two things about the ticket, just make a comment to help the future reviewer, and don't remove the review keyword, so another reviewer might have a look.  For example, say, "I just checked for a news file and I noticed there wasn't one", or, "I saw some trailing whitespace in these methods".  If you remove the review keyword, you may substantially increase the amount of time that the author has to wait for a real, comprehensive review, which is very frustrating.
+If you are officially "doing a review", please make sure you do a complete review and look for ''all'' of these things, so that the author has as much feedback as possible to work with while their ticket is out of the review state.  If you don't have time to do a complete review, and you just notice one or two things about the ticket, just make a comment to help the future reviewer, and don't remove the review keyword, so another reviewer might have a look.  For example, say, "I just checked for a news file and I noticed there wasn't one", or, "I saw some trailing whitespace in these methods".  If you remove the PR from the review queue, you may substantially increase the amount of time that the author has to wait for a real, comprehensive review, which is very frustrating.
 
 
 Reverting a change
@@ -236,13 +233,13 @@ If there are too many failures,
 it can be put in the issue tracker,
 with a reference in the message.
 
-Use the "Reopens" tag to automatically reopen the ticket:
+Use the "Reopens" tag to reference the relevant issue:
 
 
     Revert #revision number: Brief description
 
     A description of the problem, or a traceback if pertinent
 
-    Reopens: ticket:&lt;ticket number&gt;
+    Reopens: #issue number
 
 Reverted branches are to be reviewed again before being merged.

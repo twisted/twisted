@@ -13,7 +13,7 @@ Twisted Development Policy
    writing-standard
    test-standard
    compatibility-policy
-   development-process
+   code-dev
    release-process
 
 This series of documents is designed for people who wish to contribute to the Twisted codebase.
