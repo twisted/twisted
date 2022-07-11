@@ -45,8 +45,6 @@ try:
 except ImportError:
     pass
 
-extensions.append("traclinks")
-
 from twisted import version as twisted_version_object
 
 # Add any paths that contain templates here, relative to this directory.
@@ -104,10 +102,10 @@ pygments_style = "sphinx"
 on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 
 if not on_rtd:
-    html_theme = "twistedtrac"
+    import sphinx_rtd_theme
 
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
+    html_theme = "sphinx_rtd_theme"
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -194,14 +192,15 @@ print(f"== Environment dump for {_git_reference} ===")
 pprint(dict(os.environ))
 print("======")
 
-# Base url for API docs
-api_base_url = f"/documents/{release}/api/"
+# For dev purposes we always point to latest read the docs to some something.
+# In production, this is deployed via RTD and we have a specific version.
+api_base_url = "/en/latest/api/"
 if on_rtd:
     # For a PR the link is like:
     # https://twisted--1422.org.readthedocs.build/en/1422/
     # For a release:
-    # https://docs.twistedmatrix.com/en/twisted-20.3.0/
-    # https://docs.twistedmatrix.com/en/latest/
+    # https://docs.twisted.org/en/twisted-20.3.0/
+    # https://docs.twisted.org/en/latest/
     api_base_url = "/{}/{}/api/".format(
         os.environ["READTHEDOCS_LANGUAGE"],
         os.environ["READTHEDOCS_VERSION"],
@@ -226,7 +225,7 @@ pydoctor_args = [
     "--quiet",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     "--project-name=Twisted",
-    "--project-url=https://twistedmatrix.com/",
+    "--project-url=https://twisted.org/",
     "--system-class=twisted.python._pydoctor.TwistedSystem",
     "--docformat=epytext",
     "--intersphinx=https://docs.python.org/3/objects.inv",
@@ -245,8 +244,6 @@ pydoctor_args = [
 ]
 
 pydoctor_url_path = "/en/{rtd_version}/api/"
-
-traclinks_base_url = "https://twistedmatrix.com/trac"
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
 # tuple of (<external sphinx documentation URI>, <inventory file location>).
