@@ -195,6 +195,31 @@ jobs:
         tox -q -e newsfragment
 
 
+  # Used to validate the API docs.
+  # Checks for invalid syntax or broken links.
+  # This is only the validation and help highlight API docs errors.
+  # The actual API docs are built and published via Read The Docs.
+  apidocs:
+    name: Check apidocs
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.10
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+
+    - uses: twisted/python-info-action@v1
+
+    - name: Build apidocs
+      run: tox -e apidocs
+
+
   # Used for various release automation.
   # This is also executed for each PR to exercise the release as much
   # as possible and reduce the possibility of finding bugs in the release
@@ -271,6 +296,7 @@ jobs:
     needs:
       - testing
       - static-checks
+      - apidocs
       - release-publish
     steps:
       - name: Require all successes
