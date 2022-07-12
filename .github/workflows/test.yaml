@@ -179,7 +179,7 @@ jobs:
     - name: Run the checks
       run: |
         python --version
-        tox --parallel -e lint,apidocs,narrativedocs,mypy
+        tox --parallel -e lint,mypy
 
     - name: Revert merge commit for a release branch
       if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
@@ -195,13 +195,16 @@ jobs:
         tox -q -e newsfragment
 
 
-  # Used to validate the API docs.
+  # Used to validate the narrative and API docs.
   # Checks for invalid syntax or broken links.
-  # This is only the validation and help highlight API docs errors.
-  # The actual API docs are built and published via Read The Docs.
-  apidocs:
-    name: Check apidocs
+  # This is only the validation and help highlight docs errors.
+  # The actual docs are built and published via Read The Docs.
+  docs:
+    name: Documentation build
     runs-on: ubuntu-20.04
+    env:
+      TOX_PARALLEL_NO_SPINNER: 1
+
     steps:
     - uses: actions/checkout@v2
 
@@ -217,7 +220,8 @@ jobs:
     - uses: twisted/python-info-action@v1
 
     - name: Build apidocs
-      run: tox -e apidocs
+      run: |
+        tox --parallel -e apidocs,narrativedocs
 
 
   # Used for various release automation.
@@ -296,7 +300,7 @@ jobs:
     needs:
       - testing
       - static-checks
-      - apidocs
+      - docs
       - release-publish
     steps:
       - name: Require all successes
