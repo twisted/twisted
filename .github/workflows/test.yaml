@@ -236,7 +236,8 @@ jobs:
 
         if not re.search('^#\d+ .+', pr_title):
           print('Title of PR has no issue ID reference.')
-          print('Fix the title and then re-run this job.')
+          print('Fix the title and then trigger a new push.')
+          print('A re-run for this job will not work.')
           sys.exit(1)
 
         # All good.
