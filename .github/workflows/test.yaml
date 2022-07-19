@@ -194,6 +194,28 @@ jobs:
       run: |
         tox -q -e newsfragment
 
+    # This is called only on code changes.
+    # If you forgot to define the right PR title you should re-run the job.
+    - name: Check PR title format
+      if: github.event_name == 'pull_request'
+      shell: python
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
+      run: |
+        import os, re, sys
+        pr_title = os.environ.get('PR_TITLE', '')
+        if not pr_title:
+          print('Title for PR not found.')
+          sys.exit(1)
+
+        if not re.search('^#\d+ .+', pr_title):
+          print('Title of PR has no issue ID reference.')
+          print('Fix the title and then re-run this job.')
+          sys.exit(1)
+
+        # All good.
+        sys.exit(0)
+
 
   # Used for various release automation.
   # This is also executed for each PR to exercise the release as much
