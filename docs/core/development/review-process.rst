@@ -104,17 +104,6 @@ Authors: How to merge the change to trunk
  * Use the GitHub merge button to merge the request, using the GitHub default commit subject, and with the standard commit format required by Twisted. See below for details.
  * Alternatively, you can use the command line and merge the change into a checkout of Twisted trunk (as a merge commit, using `git merge --no-ff`) and commit it.
 
-The commit message, when using both the GitHub button or the CLI commit, must follow this format.
-This helps automatically close the associated ticket::
-
-    Merge pull request #123 from twisted/FIRST-LINE-AUTOMATICALLY-GENERATED-BY-GITHUB
-
-    Author: comma_separated_github_username
-    Reviewer: comma_separated_github_usernames
-    Fixes #issue number
-
-    Long description (as long as you wish)
-
 If this fix has implications for an ongoing pre-release in progress,
 please announce it on the mailing list so that the release manager will know.
 
