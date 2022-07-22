@@ -380,7 +380,7 @@ class LocalWorkerTests(TestCase):
         tempDir.makedirs()
         logPath = tempDir.child("test.log")
 
-        with open(logPath.path, "wt") as logFile:
+        with open(logPath.path, "wt", encoding="utf-8") as logFile:
             worker = LocalWorker(amp, tempDir, logFile)
             worker.makeConnection(FakeTransport())
             self.addCleanup(worker._outLog.close)
