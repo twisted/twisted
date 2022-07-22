@@ -21,4 +21,5 @@ Below is a non-exaustive list (as a reminder):
 * A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
 * The automated tests were updated.
 * Once all checks are green, request a review by leaving a comment that contains the `please review` words.
-  This will trigger the review process.
+  Our bot will trigger the review process, by applying the pending review label
+  and requesting a review from the Twisted dev team.

@@ -214,7 +214,6 @@ jobs:
         git reset --hard $BRANCH_SHA
 
     - name: Newsfragment
-      if: ${{ !cancelled() }}
       run: |
         tox -q -e newsfragment
 
@@ -225,23 +224,9 @@ jobs:
       shell: python
       env:
         PR_TITLE: ${{ github.event.pull_request.title }}
-      run: |
-        import os, re, sys
-        pr_title = os.environ.get('PR_TITLE', '')
-        if not pr_title:
-          print('Title for PR not found.')
-          sys.exit(1)
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: python .github/scripts/check-pr-text.py
 
-        print('Title: {}'.format(pr_title))
-
-        if not re.search('^#\d+ .+', pr_title):
-          print('Title of PR has no issue ID reference.')
-          print('Fix the title and then trigger a new push.')
-          print('A re-run for this job will not work.')
-          sys.exit(1)
-
-        # All good.
-        sys.exit(0)
 
 
   # Used for various release automation.
