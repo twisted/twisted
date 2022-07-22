@@ -3,7 +3,7 @@
 Fixes #<!-- ISSUE-ID -->
 
 Add a few words about why this PR is needed and what is its scope.
-You can just refer to the associated ticket(s).
+If the associate ticket(s) fully explain the need you can just refer to it/them.
 
 Add any comments about trade-offs (if any) made in this PR and the reasoning behind them.
 
@@ -12,7 +12,7 @@ Add mentions of things that are not covered here and are planed to be done in se
 
 ## Contributor Checklist:
 
-This process apply to *all* pull requests, no matter how small.
+This process applies to *all* pull requests - no matter how small.
 Have a look at [our developer documentation](https://docs.twisted.org/en/latest/core/development/dev-process.html) before submitting your Pull Request.
 
 Below is a non-exaustive list (as a reminder):
