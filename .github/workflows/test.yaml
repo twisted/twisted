@@ -221,7 +221,6 @@ jobs:
     # If you forgot to define the right PR title you should re-run the job.
     - name: Check PR title format
       if: github.event_name == 'pull_request'
-      shell: python
       env:
         PR_TITLE: ${{ github.event.pull_request.title }}
         PR_BODY: ${{ github.event.pull_request.body }}
