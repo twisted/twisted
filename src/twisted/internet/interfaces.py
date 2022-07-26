@@ -18,6 +18,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
 )
 
@@ -190,9 +191,9 @@ class IHostnameResolver(Interface):
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int,
-        addressTypes: Sequence[IAddress],
+        addressTypes: Sequence[Type[IAddress]],
         transportSemantics: str,
-    ) -> IResolutionReceiver:
+    ) -> IHostResolution:
         """
         Initiate a hostname resolution.
 
