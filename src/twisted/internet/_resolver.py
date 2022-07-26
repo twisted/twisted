@@ -49,6 +49,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.threads import deferToThreadPool
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
+from twisted.python.failure import Failure
 
 if TYPE_CHECKING:
     from twisted.python.runtime import platform
@@ -207,7 +208,7 @@ class SimpleResolverComplexifier:
 
     _log = Logger()
 
-    def __init__(self, simpleResolver):
+    def __init__(self, simpleResolver: IResolverSimple):
         """
         Construct a L{SimpleResolverComplexifier} with an L{IResolverSimple}.
         """
@@ -215,12 +216,12 @@ class SimpleResolverComplexifier:
 
     def resolveHostName(
         self,
-        resolutionReceiver,
-        hostName,
-        portNumber=0,
-        addressTypes=None,
-        transportSemantics="TCP",
-    ):
+        resolutionReceiver: IResolutionReceiver,
+        hostName: str,
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
         """
         See L{IHostnameResolver.resolveHostName}
 
@@ -238,25 +239,25 @@ class SimpleResolverComplexifier:
         """
         # If it's str, we need to make sure that it's just ASCII.
         try:
-            hostName = hostName.encode("ascii")
+            hostName_bytes = hostName.encode("ascii")
         except UnicodeEncodeError:
             # If it's not just ASCII, IDNA it. We don't want to give a Unicode
             # string with non-ASCII in it to Python 3, as if anyone passes that
             # to a Python 3 stdlib function, it will probably use the wrong
             # IDNA version and break absolutely everything
-            hostName = _idnaBytes(hostName)
+            hostName_bytes = _idnaBytes(hostName)
 
         # Make sure it's passed down as a native str, to maintain the interface
-        hostName = nativeString(hostName)
+        hostName = nativeString(hostName_bytes)
 
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
         onAddress = self._simpleResolver.getHostByName(hostName)
 
-        def addressReceived(address):
+        def addressReceived(address: str) -> None:
             resolutionReceiver.addressResolved(IPv4Address("TCP", address, portNumber))
 
-        def errorReceived(error):
+        def errorReceived(error: Failure) -> None:
             if not error.check(DNSLookupError):
                 self._log.failure(
                     "while looking up {name} with {resolver}",
@@ -267,7 +268,7 @@ class SimpleResolverComplexifier:
 
         onAddress.addCallbacks(addressReceived, errorReceived)
 
-        def finish(result):
+        def finish(result: None) -> None:
             resolutionReceiver.resolutionComplete()
 
         onAddress.addCallback(finish)
@@ -280,7 +281,7 @@ class FirstOneWins:
     An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
     """
 
-    def __init__(self, deferred):
+    def __init__(self, deferred: "Deferred[str]"):
         """
         @param deferred: The L{Deferred} to fire when the first resolution
             result arrives.
@@ -288,7 +289,7 @@ class FirstOneWins:
         self._deferred = deferred
         self._resolved = False
 
-    def resolutionBegan(self, resolution):
+    def resolutionBegan(self, resolution: IHostResolution) -> None:
         """
         See L{IResolutionReceiver.resolutionBegan}
 
@@ -296,7 +297,7 @@ class FirstOneWins:
         """
         self._resolution = resolution
 
-    def addressResolved(self, address):
+    def addressResolved(self, address: IAddress) -> None:
         """
         See L{IResolutionReceiver.addressResolved}
 
@@ -305,9 +306,12 @@ class FirstOneWins:
         if self._resolved:
             return
         self._resolved = True
+        # This is used by ComplexResolverSimplifier which specifies only results
+        # of IPv4Address.
+        assert isinstance(address, IPv4Address)
         self._deferred.callback(address.host)
 
-    def resolutionComplete(self):
+    def resolutionComplete(self) -> None:
         """
         See L{IResolutionReceiver.resolutionComplete}
         """
@@ -322,7 +326,7 @@ class ComplexResolverSimplifier:
     A converter from L{IHostnameResolver} to L{IResolverSimple}
     """
 
-    def __init__(self, nameResolver):
+    def __init__(self, nameResolver: IHostnameResolver):
         """
         Create a L{ComplexResolverSimplifier} with an L{IHostnameResolver}.
 
@@ -330,7 +334,7 @@ class ComplexResolverSimplifier:
         """
         self._nameResolver = nameResolver
 
-    def getHostByName(self, name, timeouts=()):
+    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> "Deferred[str]":
         """
         See L{IResolverSimple.getHostByName}
 
@@ -340,6 +344,6 @@ class ComplexResolverSimplifier:
 
         @return: see L{IResolverSimple.getHostByName}
         """
-        result = Deferred()
+        result: "Deferred[str]" = Deferred()
         self._nameResolver.resolveHostName(FirstOneWins(result), name, 0, [IPv4Address])
         return result
