@@ -10,7 +10,7 @@ See L{pydoctor} for details.
 
 from typing import Optional
 
-from pydoctor import model # type: ignore[import]
+from pydoctor import model  # type: ignore[import]
 from pydoctor.sphinx import SphinxInventory  # type: ignore[import]
 
 
@@ -69,6 +69,7 @@ class TwistedSphinxInventory(SphinxInventory):
             return f"{baseURL}/{relativeLink}"
 
         return None
+
 
 class TwistedSystem(model.System):
     """

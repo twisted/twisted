@@ -33,6 +33,7 @@ class TwistedSystemTests(TestCase):
 
         self.assertIsInstance(sut.intersphinx, TwistedSphinxInventory)
 
+
 class TwistedSphinxInventoryTests(TestCase):
     """
     Tests for L{TwistedSphinxInventory}.
