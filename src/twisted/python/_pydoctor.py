@@ -6,7 +6,7 @@
 Support for a few things specific to documenting Twisted using pydoctor.
 
 FIXME: The majority of the tweaks in this file are not necessary anymore.
-       Cleanup is needed to be compatible with pydoctor >= 22.7
+Cleanup is needed to be compatible with pydoctor >= 22.7
 
 See L{pydoctor} for details.
 """
