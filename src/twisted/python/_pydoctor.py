@@ -5,16 +5,12 @@
 """
 Support for a few things specific to documenting Twisted using pydoctor.
 
-FIXME: The majority of the tweaks in this file are not necessary anymore.
-Cleanup is needed to be compatible with pydoctor >= 22.7
-
 See L{pydoctor} for details.
 """
 
-import ast
 from typing import Optional
 
-from pydoctor import astbuilder, model, zopeinterface  # type: ignore[import]
+from pydoctor import model # type: ignore[import]
 from pydoctor.sphinx import SphinxInventory  # type: ignore[import]
 
 
@@ -74,102 +70,10 @@ class TwistedSphinxInventory(SphinxInventory):
 
         return None
 
-
-def getDeprecated(self, decorators):
-    """
-    With a list of decorators, and the object it is running on, set the
-    C{_deprecated_info} flag if any of the decorators are a Twisted deprecation
-    decorator.
-    """
-    for a in decorators:
-        if isinstance(a, ast.Call):
-            fn = astbuilder.node2fullname(a.func, self)
-
-            if fn in (
-                "twisted.python.deprecate.deprecated",
-                "twisted.python.deprecate.deprecatedProperty",
-            ):
-                try:
-                    self._deprecated_info = deprecatedToUsefulText(self, self.name, a)
-                except AttributeError:
-                    # It's a reference or something that we can't figure out
-                    # from the AST.
-                    pass
-
-
-class TwistedModuleVisitor(zopeinterface.ZopeInterfaceModuleVisitor):
-    def visit_ClassDef(self, node):
-        """
-        Called when a class definition is visited.
-        """
-        super().visit_ClassDef(node)
-        try:
-            cls = self.builder.current.contents[node.name]
-        except KeyError:
-            # Classes inside functions are ignored.
-            return
-
-        getDeprecated(cls, cls.raw_decorators)
-
-    def visit_FunctionDef(self, node):
-        """
-        Called when a function definition is visited.
-        """
-        super().visit_FunctionDef(node)
-        try:
-            func = self.builder.current.contents[node.name]
-        except KeyError:
-            # Inner functions are ignored.
-            return
-
-        if func.decorators:
-            getDeprecated(func, func.decorators)
-
-
-def versionToUsefulObject(version):
-    """
-    Change an AST C{Version()} to a real one.
-    """
-    from incremental import Version
-
-    package = version.args[0].s
-    major = getattr(version.args[1], "n", getattr(version.args[1], "s", None))
-    assert isinstance(major, int) or major == "NEXT"
-    return Version(package, major, *(x.n for x in version.args[2:] if x))
-
-
-def deprecatedToUsefulText(visitor, name, deprecated):
-    """
-    Change a C{@deprecated} to a display string.
-    """
-    from twisted.python.deprecate import _getDeprecationWarningString
-
-    version = versionToUsefulObject(deprecated.args[0])
-    if len(deprecated.args) > 1 and deprecated.args[1]:
-        if isinstance(deprecated.args[1], ast.Name):
-            replacement = visitor.resolveName(deprecated.args[1].id)
-        else:
-            replacement = deprecated.args[1].s
-    else:
-        replacement = None
-        for keyword in deprecated.keywords:
-            if keyword.arg == "replacement":
-                replacement = keyword.value.s
-
-    return _getDeprecationWarningString(name, version, replacement=replacement) + "."
-
-
-class TwistedASTBuilder(zopeinterface.ZopeInterfaceASTBuilder):
-    # Vistor is not a typo...
-    ModuleVistor = TwistedModuleVisitor
-
-
-class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
+class TwistedSystem(model.System):
     """
     A PyDoctor "system" used to generate the docs.
     """
-
-    defaultBuilder = TwistedASTBuilder
 
     def __init__(self, options=None):
         super().__init__(options=options)
@@ -178,29 +82,3 @@ class TwistedSystem(zopeinterface.ZopeInterfaceSystem):
         self.intersphinx = TwistedSphinxInventory(
             logger=self.msg, project_name=self.projectname
         )
-
-    def privacyClass(self, documentable):
-        """
-        Report the privacy level for an object.
-
-        Hide all tests with the exception of L{twisted.test.proto_helpers}.
-
-        param obj: Object for which the privacy is reported.
-        type obj: C{model.Documentable}
-
-        rtype: C{model.PrivacyClass} member
-        """
-        if documentable.fullName() == "twisted.test":
-            # Match this package exactly, so that proto_helpers
-            # below is visible
-            return model.PrivacyClass.VISIBLE
-
-        current = documentable
-        while current:
-            if current.fullName() == "twisted.test.proto_helpers":
-                return model.PrivacyClass.VISIBLE
-            if isinstance(current, model.Package) and current.name == "test":
-                return model.PrivacyClass.HIDDEN
-            current = current.parent
-
-        return super().privacyClass(documentable)
