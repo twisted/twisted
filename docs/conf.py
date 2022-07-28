@@ -222,11 +222,11 @@ if os.environ.get("READTHEDOCS", "") == "True":
         _git_reference = rtd_version
 
 _project_root = pathlib.Path(__file__).parent.parent
-_source_root =  _project_root / "src"
+_source_root = _project_root / "src"
 pydoctor_args = [
-    "--quiet", "--quiet",
+    "--quiet",
+    "--quiet",
     # pydoctor should not fail the sphinx build, we have another tox environment for that.
-     
     f"--config={_project_root}/setup.cfg",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     f"--project-base-dir={_source_root}",
