@@ -5,8 +5,10 @@
 """
 Support for a few things specific to documenting Twisted using pydoctor.
 
-FIXME: https://github.com/twisted/pydoctor/issues/106
-This documentation does not link to pydoctor API as there is no public API yet.
+FIXME: The majority of the tweaks in this file are not necessary anymore.
+       Cleanup is needed to be compatible with pydoctor >= 22.7
+
+See L{pydoctor} for details.
 """
 
 import ast

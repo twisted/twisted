@@ -227,7 +227,6 @@ pydoctor_args = [
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
     "--project-name=Twisted",
     "--project-url=https://twistedmatrix.com/",
-    "--system-class=twisted.python._pydoctor.TwistedSystem",
     "--docformat=epytext",
     "--intersphinx=https://docs.python.org/3/objects.inv",
     "--intersphinx=https://cryptography.io/en/latest/objects.inv",
