@@ -221,49 +221,16 @@ if os.environ.get("READTHEDOCS", "") == "True":
         # It looks like we have a tag build.
         _git_reference = rtd_version
 
-_source_root = pathlib.Path(__file__).parent.parent / "src"
+_project_root = pathlib.Path(__file__).parent.parent
+_source_root =  _project_root / "src"
 pydoctor_args = [
-    "--quiet",
+    "--quiet", "--quiet",
+    # pydoctor should not fail the sphinx build, we have another tox environment for that.
+     
+    f"--config={_project_root}/setup.cfg",
     f"--html-viewsource-base=https://github.com/twisted/twisted/tree/{_git_reference}/src",
-    "--project-name=Twisted",
-    "--project-url=https://twistedmatrix.com/",
-    "--docformat=epytext",
-    "--privacy=HIDDEN:twisted.words.test",
-    "--privacy=HIDDEN:twisted.web.test",
-    "--privacy=HIDDEN:twisted.spread.test",
-    "--privacy=HIDDEN:twisted.scripts.test",
-    "--privacy=HIDDEN:twisted.runner.test",
-    "--privacy=HIDDEN:twisted.python.test",
-    "--privacy=HIDDEN:twisted.protocols.haproxy.test",
-    "--privacy=HIDDEN:twisted.protocols.test",
-    "--privacy=HIDDEN:twisted.positioning.test",
-    "--privacy=HIDDEN:twisted.persisted.test",
-    "--privacy=HIDDEN:twisted.pair.test",
-    "--privacy=HIDDEN:twisted.names.test",
-    "--privacy=HIDDEN:twisted.mail.test",
-    "--privacy=HIDDEN:twisted.logger.test",
-    "--privacy=HIDDEN:twisted.cred.test",
-    "--privacy=HIDDEN:twisted.conch.test",
-    "--privacy=HIDDEN:twisted.application.runner.test",
-    "--privacy=HIDDEN:twisted.application.twist.test",
-    "--privacy=HIDDEN:twisted.application.test",
-    "--privacy=HIDDEN:twisted._threads.test",
-    "--privacy=HIDDEN:twisted.trial._dist.test",
-    "--privacy=HIDDEN:twisted.trial.test",
-    "--privacy=HIDDEN:twisted.internet.test",
-    "--privacy=HIDDEN:twisted.test.*",
-    "--privacy=PUBLIC:twisted.test.proto_helpers",
-    "--intersphinx=https://docs.python.org/3/objects.inv",
-    "--intersphinx=https://cryptography.io/en/latest/objects.inv",
-    "--intersphinx=https://pyopenssl.readthedocs.io/en/stable/objects.inv",
-    "--intersphinx=https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "--intersphinx=https://twisted.org/constantly/docs/objects.inv",
-    "--intersphinx=https://twisted.org/incremental/docs/objects.inv",
-    "--intersphinx=https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
-    "--intersphinx=https://priority.readthedocs.io/en/stable/objects.inv",
-    "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
-    "--intersphinx=https://automat.readthedocs.io/en/latest/objects.inv",
     f"--project-base-dir={_source_root}",
+    f"--template-dir={_source_root}/twisted/python/_pydoctortemplates",
     "--html-output={outdir}/api",
     str(_source_root / "twisted"),
 ]
