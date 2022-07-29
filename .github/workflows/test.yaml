@@ -156,27 +156,6 @@ jobs:
         name: lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
         fail_ci_if_error: true
 
-  docs:
-    runs-on: ubuntu-20.04
-    env:
-      TOX_PARALLEL_NO_SPINNER: 1
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip tox
-
-    - name: Run the checks
-      run: |
-        python --version
-        tox --parallel -e narrativedocs
 
 
   static-checks:
@@ -226,6 +205,44 @@ jobs:
         PR_BODY: ${{ github.event.pull_request.body }}
       run: python .github/scripts/check-pr-text.py
 
+
+  # Used to validate the narrative and API docs.
+  # Checks for invalid syntax or broken links.
+  # This is only the validation and help highlight docs errors.
+  # The actual docs are built and published via Read The Docs.
+  apidocs:
+    name: API docs build
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+
+    - name: Build apidocs
+      run: |
+        tox -e apidocs
+
+  narrativedocs:
+    name: Narrative docs build
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+
+    - name: Run the checks
+      run: |
+        tox -e narrativedocs
 
 
   # Used for various release automation.
@@ -303,7 +320,8 @@ jobs:
     # Here should be the list of all the other jobs defined in this file.
     needs:
       - testing
-      - docs
+      - narrativedocs
+      - apidocs
       - static-checks
       - release-publish
     steps:
