@@ -20,22 +20,9 @@ from typing import Dict
 from zope.interface import Interface, implementer
 
 from twisted.python.compat import execfile
-from twisted.python.filepath import FilePath
 
 # Types of newsfragments.
 NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
-intersphinxURLs = [
-    "https://docs.python.org/3/objects.inv",
-    "https://cryptography.io/en/latest/objects.inv",
-    "https://pyopenssl.readthedocs.io/en/stable/objects.inv",
-    "https://hyperlink.readthedocs.io/en/stable/objects.inv",
-    "https://twisted.org/constantly/docs/objects.inv",
-    "https://twisted.org/incremental/docs/objects.inv",
-    "https://python-hyper.org/projects/hyper-h2/en/stable/objects.inv",
-    "https://priority.readthedocs.io/en/stable/objects.inv",
-    "https://zopeinterface.readthedocs.io/en/latest/objects.inv",
-    "https://automat.readthedocs.io/en/latest/objects.inv",
-]
 
 
 def runCommand(args, **kwargs):
@@ -263,71 +250,6 @@ class NoDocumentsFound(Exception):
     """
 
 
-class APIBuilder:
-    """
-    Generate API documentation from source files using
-    U{pydoctor<https://github.com/twisted/pydoctor>}.  This requires
-    pydoctor to be installed and usable.
-    """
-
-    def build(self, projectName, projectURL, sourceURL, packagePath, outputPath):
-        """
-        Call pydoctor's entry point with options which will generate HTML
-        documentation for the specified package's API.
-
-        @type projectName: C{str}
-        @param projectName: The name of the package for which to generate
-            documentation.
-
-        @type projectURL: C{str}
-        @param projectURL: The location (probably an HTTP URL) of the project
-            on the web.
-
-        @type sourceURL: C{str}
-        @param sourceURL: The location (probably an HTTP URL) of the root of
-            the source browser for the project.
-
-        @type packagePath: L{FilePath}
-        @param packagePath: The path to the top-level of the package named by
-            C{projectName}.
-
-        @type outputPath: L{FilePath}
-        @param outputPath: An existing directory to which the generated API
-            documentation will be written.
-        """
-        intersphinxes = []
-
-        for intersphinx in intersphinxURLs:
-            intersphinxes.append("--intersphinx")
-            intersphinxes.append(intersphinx)
-
-        from pydoctor.driver import main  # type: ignore[import]
-
-        templatesPath = FilePath(__file__).parent().child("_pydoctortemplates")
-
-        args = [
-            "--project-name",
-            projectName,
-            "--project-url",
-            projectURL,
-            "--system-class",
-            "twisted.python._pydoctor.TwistedSystem",
-            "--project-base-dir",
-            packagePath.parent().path,
-            "--template-dir",
-            templatesPath.path,
-            "--html-viewsource-base",
-            sourceURL,
-            "--html-output",
-            outputPath.path,
-            "--quiet",
-            "--make-html",
-            "--warnings-as-errors",
-        ] + intersphinxes
-        args.append(packagePath.path)
-        main(args)
-
-
 def filePathDelta(origin, destination):
     """
     Return a list of strings that represent C{destination} as a path relative
@@ -361,50 +283,6 @@ class NotWorkingDirectory(Exception):
     Raised when a directory does not appear to be a repository directory of a
     supported VCS.
     """
-
-
-class BuildAPIDocsScript:
-    """
-    A thing for building API documentation. See L{main}.
-    """
-
-    def buildAPIDocs(self, projectRoot, output):
-        """
-        Build the API documentation of Twisted, with our project policy.
-
-        @param projectRoot: A L{FilePath} representing the root of the Twisted
-            checkout.
-        @param output: A L{FilePath} pointing to the desired output directory.
-        """
-        version = Project(projectRoot.child("twisted")).getVersion()
-        versionString = version.base()
-        sourceURL = (
-            "https://github.com/twisted/twisted/tree/"
-            "twisted-%s" % (versionString,) + "/src"
-        )
-        apiBuilder = APIBuilder()
-        apiBuilder.build(
-            "Twisted",
-            "https://twistedmatrix.com/",
-            sourceURL,
-            projectRoot.child("twisted"),
-            output,
-        )
-
-    def main(self, args):
-        """
-        Build API documentation.
-
-        @type args: list of str
-        @param args: The command line arguments to process.  This must contain
-            two strings: the path to the root of the Twisted checkout, and a
-            path to an output directory.
-        """
-        if len(args) != 2:
-            sys.exit(
-                "Must specify two arguments: " "Twisted checkout and destination path"
-            )
-        self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
 
 
 class CheckNewsfragmentScript:
