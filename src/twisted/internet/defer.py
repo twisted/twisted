@@ -378,6 +378,18 @@ class DebugInfo:
             log.failure(format, self.failResult, debugInfo=debugInfo)
 
 
+@attr.s(frozen=True, slots=True, auto_attribs=True)
+class _Outcome:
+    _result: object
+
+    @_extraneous
+    def unwrap(self) -> object:
+        result = self._result
+        if isinstance(result, Failure):
+            result.raiseException()
+        return result
+
+
 class Deferred(Awaitable[_DeferredResultT]):
     """
     This is a callback which will be put off until later.
@@ -972,38 +984,27 @@ class Deferred(Awaitable[_DeferredResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred[_DeferredResultT]":
-        return self
-
     @_extraneous
-    def send(self, value: object = None) -> "Deferred[_DeferredResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
+    def __iter__(
+        self,
+    ) -> "Generator[Deferred[_DeferredResultT], _DeferredResultT, _DeferredResultT]":
+        # Wrap failures in an _Outcome object here to avoid buggy .throw()
+        #   https://bugs.python.org/issue29587
+        #   https://bugs.python.org/issue29590
+        # https://github.com/python-trio/trio/blob/ab75cd12a4db68e2fbb2e58f46900ebaa582aab2/trio/_core/_run.py#L2160-L2166
+        return (yield self.addBoth(_Outcome)).unwrap()  # type: ignore[no-any-return,attr-defined,arg-type]
 
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            raise result.value
-        else:
-            raise StopIteration(result)
+    if TYPE_CHECKING:
+        #     Callable[[], Generator[Any, None, _DeferredResultT]]
+        #     See: https://github.com/python/typeshed/issues/5125
+        #     When the typeshed patch is included in a mypy release,
+        #     this method can be replaced by `__await__ = __iter__`.
+        def __await__(self) -> Generator[Any, None, _DeferredResultT]:
+            return self.__iter__()  # type: ignore[return-value]
 
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _DeferredResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _DeferredResultT]:
-        return self.__iter__()  # type: ignore[return-value]
-
-    __next__ = send
+    else:
+        # but we can still save a frame at runtime
+        __await__ = __iter__
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_DeferredResultT]":
         """
@@ -1646,8 +1647,8 @@ class _CancellationStatus:
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[_T], object, None],
-        Coroutine[Deferred[_T], object, None],
+        Generator[Deferred[_T], object, _T],
+        Coroutine[Deferred[_T], object, _T],
     ],
     status: _CancellationStatus,
     context: _Context,

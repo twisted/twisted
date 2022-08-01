@@ -18,10 +18,13 @@ import copy
 import inspect
 import linecache
 import sys
+import types
 from inspect import getmro
 from io import StringIO
+from typing import List, TypeVar
 
 import opcode
+import typing_extensions
 
 from twisted.python import reflect
 
@@ -206,10 +209,19 @@ class _Code:
         return ((None, None, None, None),)
 
 
-_inlineCallbacksExtraneous = []
+_inlineCallbacksExtraneous: List[types.CodeType] = []
 
 
-def _extraneous(f):
+class _HasCode(typing_extensions.Protocol):
+    @property
+    def __code__(self) -> types.CodeType:
+        ...
+
+
+_T_hascode = TypeVar("_T_hascode", bound=_HasCode)
+
+
+def _extraneous(f: _T_hascode) -> _T_hascode:
     """
     Mark the given callable as extraneous to inlineCallbacks exception
     reporting; don't show these functions.

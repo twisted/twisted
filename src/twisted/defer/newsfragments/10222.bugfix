@@ -1,0 +1,1 @@
+``Deferred.fromCoroutine`` (and therefore also ``ensureDeferred``) now always consumes the result of awaited Deferreds. Previously awaiting the same Deferred synchronously multiple times in a row would resolve to the same result.
