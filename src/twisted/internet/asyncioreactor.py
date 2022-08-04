@@ -9,25 +9,25 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-from time import time as _time
-
 from asyncio import AbstractEventLoop, TimerHandle, get_event_loop
 from functools import partial
+from time import time as _time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type
+
+from zope.interface import implementer
 
 from attrs import Factory, define, field
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IDelayedCall, IReactorFDSet, IReactorTime
 from twisted.internet.posixbase import (
+    _NO_FILEDESC,
     PosixReactorBase,
     _ContinuousPolling,
-    _NO_FILEDESC,
 )
 from twisted.internet.task import Clock
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
-from zope.interface import implementer
 
 
 @implementer(IDelayedCall)
