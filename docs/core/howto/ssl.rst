@@ -259,7 +259,7 @@ It will return a collection of flags indicating support for NPN and/or ALPN.
 
 :py:class:`twisted.internet.ssl.CertificateOptions` and :py:func:`twisted.internet.ssl.optionsForClientTLS` allow for selecting the protocols your program is willing to speak after the connection is established.
 
-On the server=side you will have:
+On the server-side you will have:
 
 .. code-block:: python
 

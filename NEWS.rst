@@ -1,5 +1,10 @@
+This file contains the release notes for the Twisted.
+
+It only contains high-level changes that are of interest to Twisted library users.
+Users of Twisted should check the notes before planning an upgrade.
+
 Ticket numbers in this file can be looked up by visiting
-http://twistedmatrix.com/trac/ticket/<number>
+https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
