@@ -17,8 +17,20 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 from attrs import Factory, define, field
 
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.interfaces import IConnector, IDelayedCall, IListeningPort, IReactorFDSet, IReactorTCP, IReactorTime, IReactorUDP
-from twisted.internet.posixbase import PosixReactorBase, _ContinuousPolling, _NO_FILEDESC
+from twisted.internet.interfaces import (
+    IConnector,
+    IDelayedCall,
+    IListeningPort,
+    IReactorFDSet,
+    IReactorTCP,
+    IReactorTime,
+    IReactorUDP,
+)
+from twisted.internet.posixbase import (
+    PosixReactorBase,
+    _ContinuousPolling,
+    _NO_FILEDESC,
+)
 from twisted.internet.protocol import ClientFactory, DatagramProtocol, ServerFactory
 from twisted.internet.task import Clock
 from twisted.logger import Logger
