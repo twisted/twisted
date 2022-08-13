@@ -17,7 +17,7 @@ Have a look at [our developer documentation](https://docs.twisted.org/en/latest/
 
 Below is a non-exaustive list (as a reminder):
 
-* The title of the PR should describe the changes and starts with the associated issue number (including the `#` character for GitHub auto-links).
+* The title of the PR should describe the changes and starts with the associated issue number, like “#1234 Brief description”.
 * A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
 * The automated tests were updated.
 * Once all checks are green, request a review by leaving a comment that contains the `please review` words.
