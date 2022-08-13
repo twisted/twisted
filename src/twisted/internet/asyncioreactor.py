@@ -14,6 +14,8 @@ from functools import partial
 from time import time as _time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
+from zope.interface import implementer
+
 from attrs import Factory, define, field
 
 from twisted.internet.abstract import FileDescriptor
@@ -27,15 +29,14 @@ from twisted.internet.interfaces import (
     IReactorUDP,
 )
 from twisted.internet.posixbase import (
+    _NO_FILEDESC,
     PosixReactorBase,
     _ContinuousPolling,
-    _NO_FILEDESC,
 )
 from twisted.internet.protocol import ClientFactory, DatagramProtocol, ServerFactory
 from twisted.internet.task import Clock
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
-from zope.interface import implementer
 
 
 @implementer(IDelayedCall)
