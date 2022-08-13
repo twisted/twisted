@@ -12,22 +12,18 @@ import sys
 from asyncio import AbstractEventLoop, TimerHandle, get_event_loop
 from functools import partial
 from time import time as _time
-from typing import Any, Callable, Dict, List, Optional, Sequence, Type
-
-from zope.interface import implementer
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
 from attrs import Factory, define, field
 
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.interfaces import IDelayedCall, IReactorFDSet, IReactorTime
-from twisted.internet.posixbase import (
-    _NO_FILEDESC,
-    PosixReactorBase,
-    _ContinuousPolling,
-)
+from twisted.internet.interfaces import IConnector, IDelayedCall, IListeningPort, IReactorFDSet, IReactorTCP, IReactorTime, IReactorUDP
+from twisted.internet.posixbase import PosixReactorBase, _ContinuousPolling, _NO_FILEDESC
+from twisted.internet.protocol import ClientFactory, DatagramProtocol, ServerFactory
 from twisted.internet.task import Clock
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
+from zope.interface import implementer
 
 
 @implementer(IDelayedCall)
@@ -82,7 +78,7 @@ class TimerHandleDelayedCall:
         )
 
 
-@implementer(IReactorTime)
+@implementer(IReactorTime, IReactorTCP, IReactorUDP)
 @define()
 class AsyncioLoopReactor:
     """
@@ -124,6 +120,39 @@ class AsyncioLoopReactor:
         Get the current wall clock time.
         """
         return self._monotonicDelta + self._eventloop.time()
+
+    def connectTCP(
+        self,
+        host: str,
+        port: int,
+        factory: ClientFactory,
+        timeout: float = 30,
+        bindAdress: Optional[Tuple[str, int]] = None,
+    ) -> IConnector:
+        """
+        Connect to the given TCP host and port.
+        """
+        # TODO
+
+    def listenTCP(
+        self, port: int, factory: ServerFactory, backlog: int = 50, interface: str = ""
+    ) -> IListeningPort:
+        """
+        Listen on the given TCP port.
+        """
+        # TODO
+
+    def listenUDP(
+        self,
+        port: int,
+        protocol: DatagramProtocol,
+        interface: str,
+        maxPacketSize: int,
+    ) -> IListeningPort:
+        """
+        Listen on the given UDP port.
+        """
+        # TODO
 
 
 @implementer(IReactorFDSet)
