@@ -43,7 +43,9 @@ if not pr_body:
 
 title_search = re.search(r"^(#\d+) .+", pr_title)
 if not title_search:
-    fail("Title of PR has no issue ID reference.")
+    fail(
+        "Title of PR has no issue ID reference. It must look like “#1234 Foo bar baz”."
+    )
 else:
     print(f"PR title is complaint for {title_search[1]}. Good job.")
 
