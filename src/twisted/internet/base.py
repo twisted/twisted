@@ -80,6 +80,9 @@ class DelayedCall:
     debug = False
     _repr: Optional[str] = None
 
+    # In debug mode, the call stack at the time of instantiation.
+    creator: Optional[object] = None
+
     def __init__(
         self,
         time: float,
@@ -265,7 +268,7 @@ class DelayedCall:
                 )
             L.append(")")
 
-        if self.debug:
+        if self.creator is not None:
             L.append("\n\ntraceback at creation: \n\n%s" % ("    ".join(self.creator)))
         L.append(">")
 
