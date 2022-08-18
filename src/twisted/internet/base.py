@@ -81,7 +81,7 @@ class DelayedCall:
     _repr: Optional[str] = None
 
     # In debug mode, the call stack at the time of instantiation.
-    creator: Optional[object] = None
+    creator: Optional[Sequence[str]] = None
 
     def __init__(
         self,
