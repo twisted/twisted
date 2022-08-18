@@ -217,8 +217,6 @@ def nothing():
     """
 
 
-
-
 class DelayedCallMixin:
     """
     L{DelayedCall}
