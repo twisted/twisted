@@ -1,1 +1,1 @@
-``twisted.internet.base.DelayedCall.__repr__`` will no longer raise ``AttributeError`` if the ``DelayedCall`` was created before debug mode was enabled.
+``twisted.internet.base.DelayedCall.__repr__`` will no longer raise ``AttributeError`` if the ``DelayedCall`` was created before debug mode was enabled.  As a side-effect, ``twisted.internet.base.DelayedCall.creator`` is now defined as ``None`` in cases where previously it was undefined.
