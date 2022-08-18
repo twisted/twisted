@@ -994,7 +994,7 @@ class ReactorBase(PluggableResolverMixin):
                 call.func(*call.args, **call.kw)
             except BaseException:
                 log.deferr()
-                if hasattr(call, "creator"):
+                if call.creator is not None:
                     e = "\n"
                     e += (
                         " C: previous exception occurred in "
