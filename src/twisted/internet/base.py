@@ -993,7 +993,7 @@ class ReactorBase(PluggableResolverMixin):
                 call.called = 1
                 call.func(*call.args, **call.kw)
             except BaseException:
-                log.deferr()
+                log.err()
                 if call.creator is not None:
                     e = "\n"
                     e += (
