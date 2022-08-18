@@ -1,0 +1,1 @@
+``twisted.internet.base.DelayedCall.__repr__`` will no longer raise ``AttributeError`` if the ``DelayedCall`` was created before debug mode was enabled.
