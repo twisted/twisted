@@ -22,7 +22,7 @@ from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.trial.unittest import TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
@@ -1162,40 +1162,6 @@ class InputStreamTestMixin(WSGITestsMixin):
         d = self._renderAndReturnReaderResult(iterate, bytes)
         d.addCallback(self.assertEqual, [b"en eggs\n", b"and ham\n"])
         return d
-
-
-class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{StringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from StringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("StringIO.StringIO is not available.")
-        else:
-            return StringIO
-
-
-class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{cStringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from cStringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("cStringIO.StringIO is not available.")
-        else:
-            return StringIO
 
 
 class InputStreamBytesIOTests(InputStreamTestMixin, TestCase):
