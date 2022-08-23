@@ -720,7 +720,7 @@ class TLSMemoryBIOTests(TestCase):
         sent later.
         """
         data = b"some bytes"
-        factor = 2 ** 20
+        factor = 2**20
 
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
