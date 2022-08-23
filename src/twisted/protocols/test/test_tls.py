@@ -523,8 +523,8 @@ class TLSMemoryBIOTests(TestCase):
             self.assertEqual(
                 cert.digest("sha256"),
                 # openssl x509 -noout -sha256 -fingerprint -in server.pem
-                b"9B:11:E6:87:7D:FB:77:8D:C0:DE:77:FB:46:C2:60:0F:42:17:7F:9F"
-                b":96:D2:3F:0C:4C:DA:D7:E2:BE:E2:78:E5",
+                b"5F:7C:99:D2:03:9B:C9:80:B8:1B:BD:FE:33:D1:BC:1C:BA:CC:67:3F"
+                b":73:8D:67:C2:5D:59:28:DC:02:97:42:C7",
             )
 
         handshakeDeferred.addCallback(cbHandshook)
