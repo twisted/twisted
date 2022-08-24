@@ -7,9 +7,6 @@ Tests for L{twisted.python.release} and L{twisted.python._release}.
 All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
-
-
-import functools
 import glob
 import operator
 import os
@@ -17,7 +14,7 @@ import shutil
 import sys
 import tempfile
 import textwrap
-from io import BytesIO, StringIO
+from io import StringIO
 from subprocess import CalledProcessError
 from unittest import skipIf
 
@@ -25,8 +22,6 @@ from incremental import Version
 
 from twisted.python import release
 from twisted.python._release import (
-    APIBuilder,
-    BuildAPIDocsScript,
     CheckNewsfragmentScript,
     GitCommand,
     IVCSCommand,
@@ -41,8 +36,7 @@ from twisted.python._release import (
 )
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
-from twisted.python.reflect import requireModule
-from twisted.trial.unittest import FailTest, SkipTest, TestCase
+from twisted.trial.unittest import TestCase
 
 if sys.platform != "win32":
     skip = None
@@ -316,289 +310,6 @@ class UtilityTests(ExternalTempdirTestCase):
         replaceInFile("release.replace", {"2.0.0": "3.0.0"})
         with open("release.replace") as f:
             self.assertEqual(f.read(), expected)
-
-
-def doNotFailOnNetworkError(func):
-    """
-    A decorator which makes APIBuilder tests not fail because of intermittent
-    network failures -- mamely, APIBuilder being unable to get the "object
-    inventory" of other projects.
-
-    @param func: The function to decorate.
-
-    @return: A decorated function which won't fail if the object inventory
-        fetching fails.
-    """
-
-    @functools.wraps(func)
-    def wrapper(*a, **kw):
-        try:
-            func(*a, **kw)
-        except FailTest as e:
-            if e.args[0].startswith("'Failed to get object inventory from "):
-                raise SkipTest(
-                    (
-                        "This test is prone to intermittent network errors. "
-                        "See ticket 8753. Exception was: {!r}"
-                    ).format(e)
-                )
-            raise
-
-    return wrapper
-
-
-class DoNotFailTests(TestCase):
-    """
-    Tests for L{doNotFailOnNetworkError}.
-    """
-
-    def test_skipsOnAssertionError(self):
-        """
-        When the test raises L{FailTest} and the assertion failure starts with
-        "'Failed to get object inventory from ", the test will be skipped
-        instead.
-        """
-
-        @doNotFailOnNetworkError
-        def inner():
-            self.assertEqual("Failed to get object inventory from blah", "")
-
-        try:
-            inner()
-        except Exception as e:
-            self.assertIsInstance(e, SkipTest)
-
-    def test_doesNotSkipOnDifferentError(self):
-        """
-        If there is a L{FailTest} that is not the intersphinx fetching error,
-        it will be passed through.
-        """
-
-        @doNotFailOnNetworkError
-        def inner():
-            self.assertEqual("Error!!!!", "")
-
-        try:
-            inner()
-        except Exception as e:
-            self.assertIsInstance(e, FailTest)
-
-
-pydoctor = requireModule("pydoctor")
-
-
-@skipIf(pydoctor is None, "Pydoctor is not present.")
-class APIBuilderTests(ExternalTempdirTestCase):
-    """
-    Tests for L{APIBuilder}.
-    """
-
-    @doNotFailOnNetworkError
-    def test_build(self):
-        """
-        L{APIBuilder.build} writes an index file which includes the name of the
-        project specified.
-        """
-        stdout = BytesIO()
-        self.patch(sys, "stdout", stdout)
-
-        projectName = "Foobar"
-        packageName = "quux"
-        projectURL = "scheme:project"
-        sourceURL = "scheme:source"
-        docstring = "text in docstring"
-        privateDocstring = "should also appear in output"
-
-        inputPath = FilePath(self.mktemp()).child(packageName)
-        inputPath.makedirs()
-        inputPath.child("__init__.py").setContent(
-            "def foo():\n"
-            "    '{}'\n"
-            "def _bar():\n"
-            "    '{}'".format(docstring, privateDocstring).encode()
-        )
-
-        outputPath = FilePath(self.mktemp())
-
-        builder = APIBuilder()
-        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
-
-        indexPath = outputPath.child("index.html")
-
-        self.assertTrue(
-            indexPath.exists(), f"API index {outputPath.path!r} did not exist."
-        )
-        self.assertIn(
-            f'<a href="{projectURL}" class="projecthome">{projectName}</a>',
-            indexPath.getContent().decode(),
-            "Project name/location not in file contents.",
-        )
-
-        quuxPath = outputPath.child("quux.html")
-        self.assertTrue(
-            quuxPath.exists(),
-            f"Package documentation file {quuxPath.path!r} did not exist.",
-        )
-        self.assertIn(
-            docstring,
-            quuxPath.getContent().decode(),
-            "Docstring not in package documentation file.",
-        )
-        self.assertIn(
-            f'<a href="{sourceURL}/{packageName}/__init__.py" class="sourceLink">'
-            f"(source)</a>",
-            quuxPath.getContent().decode(),
-        )
-        self.assertIn(
-            '<a class="sourceLink" href="%s/%s/__init__.py#L1">'
-            % (sourceURL, packageName),
-            quuxPath.getContent().decode(),
-        )
-        self.assertIn(privateDocstring, quuxPath.getContent().decode())
-
-        self.assertEqual(stdout.getvalue(), b"")
-
-    @doNotFailOnNetworkError
-    def test_buildWithPolicy(self):
-        """
-        L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
-        appropriate for the Twisted project.
-        """
-        stdout = BytesIO()
-        self.patch(sys, "stdout", stdout)
-        docstring = "text in docstring"
-
-        projectRoot = FilePath(self.mktemp())
-        packagePath = projectRoot.child("twisted")
-        packagePath.makedirs()
-        packagePath.child("__init__.py").setContent(
-            "def foo():\n" "    '{}'\n".format(docstring).encode()
-        )
-        packagePath.child("_version.py").setContent(
-            genVersion("twisted", 1, 0, 0).encode()
-        )
-        outputPath = FilePath(self.mktemp())
-
-        script = BuildAPIDocsScript()
-        script.buildAPIDocs(projectRoot, outputPath)
-
-        indexPath = outputPath.child("index.html")
-        self.assertTrue(
-            indexPath.exists(), f"API index {outputPath.path} did not exist."
-        )
-        self.assertIn(
-            '<a href="https://twistedmatrix.com/" class="projecthome">Twisted</a>',
-            indexPath.getContent().decode(),
-            "Project name/location not in file contents.",
-        )
-
-        twistedPath = outputPath.child("twisted.html")
-        self.assertTrue(
-            twistedPath.exists(),
-            f"Package documentation file {twistedPath.path!r} did not exist.",
-        )
-        self.assertIn(
-            docstring,
-            twistedPath.getContent().decode(),
-            "Docstring not in package documentation file.",
-        )
-        # Here we check that it figured out the correct version based on the
-        # source code.
-        self.assertIn(
-            '<a href="https://github.com/twisted/twisted/tree/'
-            'twisted-1.0.0/src/twisted/__init__.py" class="sourceLink">(source)</a>',
-            twistedPath.getContent().decode(),
-        )
-
-        self.assertEqual(stdout.getvalue(), b"")
-
-    @doNotFailOnNetworkError
-    def test_buildWithDeprecated(self):
-        """
-        The templates and System for Twisted includes adding deprecations.
-        """
-        stdout = BytesIO()
-        self.patch(sys, "stdout", stdout)
-
-        projectName = "Foobar"
-        packageName = "quux"
-        projectURL = "scheme:project"
-        sourceURL = "scheme:source"
-        docstring = "text in docstring"
-        privateDocstring = "should also appear in output"
-
-        inputPath = FilePath(self.mktemp()).child(packageName)
-        inputPath.makedirs()
-        inputPath.child("__init__.py").setContent(
-            "from twisted.python.deprecate import deprecated\n"
-            "from incremental import Version\n"
-            "@deprecated(Version('Twisted', 15, 0, 0), "
-            "'Baz')\n"
-            "def foo():\n"
-            "    '{}'\n"
-            "from twisted.python import deprecate\n"
-            "import incremental\n"
-            "@deprecate.deprecated(incremental.Version('Twisted', 16, 0, 0))\n"
-            "def _bar():\n"
-            "    '{}'\n"
-            "@deprecated(Version('Twisted', 14, 2, 3), replacement='stuff')\n"
-            "class Baz:\n"
-            "    pass"
-            "".format(docstring, privateDocstring).encode()
-        )
-
-        outputPath = FilePath(self.mktemp())
-
-        builder = APIBuilder()
-        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
-
-        quuxPath = outputPath.child("quux.html")
-        self.assertTrue(
-            quuxPath.exists(),
-            f"Package documentation file {quuxPath.path!r} did not exist.",
-        )
-
-        self.assertIn(
-            docstring,
-            quuxPath.getContent().decode(),
-            "Docstring not in package documentation file.",
-        )
-        self.assertIn(
-            "foo was deprecated in Twisted 15.0.0; please use Baz instead.",
-            quuxPath.getContent().decode(),
-        )
-        self.assertIn(
-            "_bar was deprecated in Twisted 16.0.0.", quuxPath.getContent().decode()
-        )
-        self.assertIn(privateDocstring, quuxPath.getContent().decode())
-
-        self.assertIn(
-            "Baz was deprecated in Twisted 14.2.3; please use stuff instead.",
-            quuxPath.sibling("quux.Baz.html").getContent().decode(),
-        )
-
-        self.assertEqual(stdout.getvalue(), b"")
-
-    def test_apiBuilderScriptMainRequiresTwoArguments(self):
-        """
-        SystemExit is raised when the incorrect number of command line
-        arguments are passed to the API building script.
-        """
-        script = BuildAPIDocsScript()
-        self.assertRaises(SystemExit, script.main, [])
-        self.assertRaises(SystemExit, script.main, ["foo"])
-        self.assertRaises(SystemExit, script.main, ["foo", "bar", "baz"])
-
-    def test_apiBuilderScriptMain(self):
-        """
-        The API building script invokes the same code that
-        L{test_buildWithPolicy} tests.
-        """
-        script = BuildAPIDocsScript()
-        calls = []
-        script.buildAPIDocs = lambda a, b: calls.append((a, b))
-        script.main(["hello", "there"])
-        self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
 
 
 class FilePathDeltaTests(TestCase):
