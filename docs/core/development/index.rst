@@ -1,14 +1,6 @@
-Development of Twisted
-======================
+:orphan:
 
-This section of the documentation is for people who work on the Twisted codebase itself,
-rather than for people who want to use Twisted in their projects.
+Redirecting to dev pages
+========================
 
-.. toctree::
-   :maxdepth: 1
-
-   dev-process
-   review-process
-   naming
-   philosophy
-   policy/index
+The content of this page was moved to :doc:`Twisted development </development/index>`.
