@@ -188,7 +188,7 @@ class LocalWorkerAMP(AMP):
         """
         Add an expected failure to the reporter.
         """
-        _todo = Todo(todo)
+        _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
 

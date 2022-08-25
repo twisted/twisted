@@ -7,19 +7,20 @@ Test for distributed trial worker side.
 
 import os
 from io import BytesIO, StringIO
+from typing import Type
+from unittest import TestCase as PyUnitTestCase
 
 from zope.interface.verify import verifyObject
 
-from twisted.internet.defer import fail, succeed
+from hamcrest import assert_that, contains_exactly, equal_to, has_item, has_properties
+
+from twisted.internet.defer import fail
 from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
-from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.python.reflect import fullyQualifiedName
-from twisted.scripts import trial
-from twisted.test.proto_helpers import StringTransport
-from twisted.trial._dist import managercommands, workercommands
+from twisted.test.iosim import connectedServerAndClient
+from twisted.trial._dist import managercommands
 from twisted.trial._dist.worker import (
     LocalWorker,
     LocalWorkerAMP,
@@ -29,13 +30,9 @@ from twisted.trial._dist.worker import (
     WorkerProtocol,
 )
 from twisted.trial.reporter import TestResult
-from twisted.trial.unittest import TestCase
-
-
-class FakeAMP(AMP):
-    """
-    A fake amp protocol.
-    """
+from twisted.trial.test import pyunitcases, skipping
+from twisted.trial.unittest import TestCase, makeTodo
+from .matchers import isFailure, isTuple, matches_result, similarFrame
 
 
 class WorkerProtocolTests(TestCase):
@@ -43,41 +40,34 @@ class WorkerProtocolTests(TestCase):
     Tests for L{WorkerProtocol}.
     """
 
-    def setUp(self):
+    worker: WorkerProtocol
+    server: LocalWorkerAMP
+
+    def setUp(self) -> None:
         """
         Set up a transport, a result stream and a protocol instance.
         """
-        self.serverTransport = StringTransport()
-        self.clientTransport = StringTransport()
-        self.server = WorkerProtocol()
-        self.server.makeConnection(self.serverTransport)
-        self.client = FakeAMP()
-        self.client.makeConnection(self.clientTransport)
+        self.worker, self.server, pump = connectedServerAndClient(
+            LocalWorkerAMP, WorkerProtocol, greet=False
+        )
+        self.flush = pump.flush
 
-    def test_run(self):
+    def test_run(self) -> None:
         """
-        Calling the L{workercommands.Run} command on the client returns a
+        Sending the L{workercommands.Run} command to the worker returns a
         response with C{success} sets to C{True}.
         """
-        d = self.client.callRemote(workercommands.Run, testCase="doesntexist")
+        d = self.server.run(pyunitcases.PyUnitTest("test_pass"), TestResult())
+        self.flush()
+        self.assertEqual({"success": True}, self.successResultOf(d))
 
-        def check(result):
-            self.assertTrue(result["success"])
-
-        d.addCallback(check)
-        self.server.dataReceived(self.clientTransport.value())
-        self.clientTransport.clear()
-        self.client.dataReceived(self.serverTransport.value())
-        self.serverTransport.clear()
-        return d
-
-    def test_start(self):
+    def test_start(self) -> None:
         """
         The C{start} command changes the current path.
         """
         curdir = os.path.realpath(os.path.curdir)
         self.addCleanup(os.chdir, curdir)
-        self.server.start("..")
+        self.worker.start("..")
         self.assertNotEqual(os.path.realpath(os.path.curdir), curdir)
 
 
@@ -86,197 +76,155 @@ class LocalWorkerAMPTests(TestCase):
     Test case for distributed trial's manager-side local worker AMP protocol
     """
 
-    def setUp(self):
-        self.managerTransport = StringTransport()
-        self.managerAMP = LocalWorkerAMP()
-        self.managerAMP.makeConnection(self.managerTransport)
-        self.result = TestResult()
-        self.workerTransport = StringTransport()
-        self.worker = AMP()
-        self.worker.makeConnection(self.workerTransport)
+    def setUp(self) -> None:
+        self.worker, self.managerAMP, pump = connectedServerAndClient(
+            LocalWorkerAMP, WorkerProtocol, greet=False
+        )
+        self.flush = pump.flush
 
-        config = trial.Options()
-        self.testName = "twisted.doesnexist"
-        config["tests"].append(self.testName)
-        self.testCase = trial._getSuite(config)._tests.pop()
+    def workerRunTest(
+        self, testCase: PyUnitTestCase, makeResult: Type[TestResult] = TestResult
+    ) -> TestResult:
+        result = makeResult()
+        d = self.managerAMP.run(testCase, result)
+        self.flush()
+        self.assertEqual({"success": True}, self.successResultOf(d))
+        return result
 
-        self.managerAMP.run(self.testCase, self.result)
-        self.managerTransport.clear()
-
-    def pumpTransports(self):
-        """
-        Sends data from C{self.workerTransport} to C{self.managerAMP}, and then
-        data from C{self.managerTransport} back to C{self.worker}.
-        """
-        self.managerAMP.dataReceived(self.workerTransport.value())
-        self.workerTransport.clear()
-        self.worker.dataReceived(self.managerTransport.value())
-
-    def test_runSuccess(self):
+    def test_runSuccess(self) -> None:
         """
         Run a test, and succeed.
         """
-        results = []
+        result = self.workerRunTest(pyunitcases.PyUnitTest("test_pass"))
+        assert_that(result, matches_result(successes=equal_to(1)))
 
-        d = self.worker.callRemote(managercommands.AddSuccess, testName=self.testName)
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
-
-        self.assertTrue(results)
-
-    def test_runExpectedFailure(self):
+    def test_runExpectedFailure(self) -> None:
         """
         Run a test, and fail expectedly.
         """
-        results = []
-
-        d = self.worker.callRemote(
-            managercommands.AddExpectedFailure,
-            testName=self.testName,
-            error="error",
-            todo="todoReason",
+        case = skipping.SynchronousStrictTodo("test_todo1")
+        result = self.workerRunTest(case)
+        assert_that(
+            result,
+            matches_result(
+                expectedFailures=equal_to(
+                    [
+                        # Match the strings used in the test we ran.
+                        (case, "expected failure", makeTodo("todo1")),
+                    ]
+                )
+            ),
         )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.expectedFailures[0][0])
-        self.assertTrue(results)
-
-    def test_runError(self):
+    def test_runError(self) -> None:
         """
         Run a test, and encounter an error.
         """
-        results = []
-        errorClass = fullyQualifiedName(ValueError)
-        d = self.worker.callRemote(
-            managercommands.AddError,
-            testName=self.testName,
-            error="error",
-            errorClass=errorClass,
-            frames=[],
+        case = pyunitcases.PyUnitTest("test_error")
+        result = self.workerRunTest(case)
+        assert_that(
+            result,
+            matches_result(
+                # Failures don't compare nicely so unpack the result and peek inside.
+                errors=contains_exactly(
+                    isTuple(  # type: ignore[arg-type]
+                        equal_to(case),
+                        isFailure(
+                            type=equal_to(Exception),
+                            value=equal_to(WorkerException("pyunit error")),
+                            frames=has_item(  # type: ignore[arg-type]
+                                similarFrame("test_error", "pyunitcases.py")  # type: ignore[arg-type]
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
 
-        case, failure = self.result.errors[0]
-        self.assertEqual(self.testCase, case)
-        self.assertEqual(failure.type, ValueError)
-        self.assertEqual(failure.value, WorkerException("error"))
-        self.assertTrue(results)
-
-    def test_runErrorWithFrames(self):
-        """
-        L{LocalWorkerAMP._buildFailure} recreates the C{Failure.frames} from
-        the C{frames} argument passed to C{AddError}.
-        """
-        results = []
-        errorClass = fullyQualifiedName(ValueError)
-        d = self.worker.callRemote(
-            managercommands.AddError,
-            testName=self.testName,
-            error="error",
-            errorClass=errorClass,
-            frames=["file.py", "invalid code", "3"],
-        )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
-
-        case, failure = self.result.errors[0]
-        self.assertEqual(self.testCase, case)
-        self.assertEqual(failure.type, ValueError)
-        self.assertEqual(failure.value, WorkerException("error"))
-        self.assertEqual([("file.py", "invalid code", 3, [], [])], failure.frames)
-        self.assertTrue(results)
-
-    def test_runFailure(self):
+    def test_runFailure(self) -> None:
         """
         Run a test, and fail.
         """
-        results = []
-        failClass = fullyQualifiedName(RuntimeError)
-        d = self.worker.callRemote(
-            managercommands.AddFailure,
-            testName=self.testName,
-            fail="fail",
-            failClass=failClass,
-            frames=[],
+        case = pyunitcases.PyUnitTest("test_fail")
+        result = self.workerRunTest(case)
+        assert_that(
+            result,
+            matches_result(
+                failures=contains_exactly(
+                    isTuple(  # type: ignore[arg-type]
+                        equal_to(case),
+                        isFailure(
+                            # AssertionError is the type raised by TestCase.fail
+                            type=equal_to(AssertionError),
+                            value=equal_to(WorkerException("pyunit failure")),
+                        ),
+                    ),
+                ),
+            ),
         )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
 
-        case, failure = self.result.failures[0]
-        self.assertEqual(self.testCase, case)
-        self.assertEqual(failure.type, RuntimeError)
-        self.assertEqual(failure.value, WorkerException("fail"))
-        self.assertTrue(results)
-
-    def test_runSkip(self):
+    def test_runSkip(self) -> None:
         """
         Run a test, but skip it.
         """
-        results = []
-
-        d = self.worker.callRemote(
-            managercommands.AddSkip, testName=self.testName, reason="reason"
+        case = pyunitcases.PyUnitTest("test_skip")
+        result = self.workerRunTest(case)
+        assert_that(
+            result,
+            matches_result(
+                skips=contains_exactly(  # type: ignore[arg-type]
+                    isTuple(  # type: ignore[arg-type]
+                        equal_to(case),
+                        equal_to("pyunit skip"),
+                    ),
+                ),
+            ),
         )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.skips[0][0])
-        self.assertTrue(results)
-
-    def test_runUnexpectedSuccesses(self):
+    def test_runUnexpectedSuccesses(self) -> None:
         """
         Run a test, and succeed unexpectedly.
         """
-        results = []
-
-        d = self.worker.callRemote(
-            managercommands.AddUnexpectedSuccess, testName=self.testName, todo="todo"
+        case = skipping.SynchronousStrictTodo("test_todo7")
+        result = self.workerRunTest(case)
+        assert_that(
+            result,
+            matches_result(
+                unexpectedSuccesses=contains_exactly(  # type: ignore[arg-type]
+                    isTuple(  # type: ignore[arg-type]
+                        equal_to(case),
+                        equal_to("todo7"),
+                    ),
+                ),
+            ),
         )
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
 
-        self.assertEqual(self.testCase, self.result.unexpectedSuccesses[0][0])
-        self.assertTrue(results)
-
-    def test_testWrite(self):
+    def test_testWrite(self) -> None:
         """
         L{LocalWorkerAMP.testWrite} writes the data received to its test
         stream.
         """
-        results = []
         stream = StringIO()
         self.managerAMP.setTestStream(stream)
-
-        command = managercommands.TestWrite
-        d = self.worker.callRemote(command, out="Some output")
-        d.addCallback(lambda result: results.append(result["success"]))
-        self.pumpTransports()
-
+        d = self.worker.callRemote(managercommands.TestWrite, out="Some output")
+        self.flush()
+        self.assertEqual({"success": True}, self.successResultOf(d))
         self.assertEqual("Some output\n", stream.getvalue())
-        self.assertTrue(results)
 
-    def test_stopAfterRun(self):
+    def test_stopAfterRun(self) -> None:
         """
         L{LocalWorkerAMP.run} calls C{stopTest} on its test result once the
         C{Run} commands has succeeded.
         """
-        result = object()
-        stopped = []
-
-        def fakeCallRemote(command, testCase):
-            return succeed(result)
-
-        self.managerAMP.callRemote = fakeCallRemote
 
         class StopTestResult(TestResult):
-            def stopTest(self, test):
-                stopped.append(test)
+            _stopped = False
 
-        d = self.managerAMP.run(self.testCase, StopTestResult())
-        self.assertEqual([self.testCase], stopped)
-        return d.addCallback(self.assertIdentical, result)
+            def stopTest(self, test: PyUnitTestCase) -> None:
+                self._stopped = True
+
+        result = self.workerRunTest(pyunitcases.PyUnitTest("test_pass"), StopTestResult)
+        assert_that(result, has_properties(_stopped=equal_to(True)))
 
 
 class SpyDataLocalWorkerAMP(LocalWorkerAMP):
