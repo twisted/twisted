@@ -9,10 +9,10 @@ from hamcrest.core.core.allof import AllOf
 from hamcrest.core.matcher import Matcher
 from hamcrest.core.string_description import StringDescription
 from hypothesis import given
-from hypothesis.strategies import booleans, integers, just, lists
+from hypothesis.strategies import booleans, integers, just, lists, one_of, text, binary
 
 from twisted.trial.unittest import SynchronousTestCase
-from .matchers import HasSum, IsSequenceOf, S
+from .matchers import HasSum, IsSequenceOf, S, isTuple
 
 
 class HasSumTests(SynchronousTestCase):
@@ -105,3 +105,53 @@ class IsSequenceOfTests(SynchronousTestCase):
                 )
             ),
         )
+
+
+class IsTupleTests(SynchronousTestCase):
+    """
+    Tests for L{isTuple}.
+    """
+    @given(lists(integers(), min_size=0, max_size=10))
+    def test_matches(self, elements: list[int]) -> None:
+        """
+        L{isTuple} matches tuples if they have the same number of elements
+        as the number of matchers given and each element is matched by the
+        corresponding matcher.
+        """
+        matcher = isTuple(*(equal_to(e) for e in elements))
+        actualDescription = StringDescription()
+        assert_that(matcher.matches(tuple(elements), actualDescription), equal_to(True))
+        assert_that(str(actualDescription), equal_to(""))
+
+    @given(
+        lists(integers(), min_size=0, max_size=10),
+        integers(),
+        lists(integers(), min_size=0, max_size=10),
+    )
+    def test_mismatch(self, before: list[int], mismatch: int, after: list[int]) -> None:
+        """
+        L{isTuple} does not match if any element is not matched.
+        """
+        matchers = [equal_to(e) for e in before]
+        matchers.append(not_(anything()))
+        matchers = [equal_to(e) for e in after]
+        matcher = isTuple(*matchers)
+
+        elements = tuple(before) + (mismatch,) + tuple(after)
+        actualDescription = StringDescription()
+        assert_that(matcher.matches(elements, actualDescription), equal_to(False))
+
+    @given(
+        one_of(
+            lists(integers(), max_size=2),
+            text(max_size=2),
+            binary(max_size=2),
+            integers(),
+        ),
+    )
+    def test_mismatchOtherType(self, wrongType: object) -> None:
+        """
+        L{isTuple} does not match non-tuple values.
+        """
+        matcher = isTuple(anything())
+        assert_that(matcher.matches([1]), equal_to(False))
