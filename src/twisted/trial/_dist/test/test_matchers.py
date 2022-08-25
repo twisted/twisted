@@ -2,17 +2,35 @@
 Tests for L{twisted.trial._dist.test.matchers}.
 """
 
-from typing import Sequence
+from typing import Sequence, Type
 
-from hamcrest import anything, assert_that, contains_string, equal_to, is_, not_
+from hamcrest import (
+    anything,
+    assert_that,
+    contains,
+    contains_string,
+    equal_to,
+    is_,
+    not_,
+)
 from hamcrest.core.core.allof import AllOf
 from hamcrest.core.matcher import Matcher
 from hamcrest.core.string_description import StringDescription
 from hypothesis import given
-from hypothesis.strategies import booleans, integers, just, lists, one_of, text, binary
+from hypothesis.strategies import (
+    binary,
+    booleans,
+    integers,
+    just,
+    lists,
+    one_of,
+    sampled_from,
+    text,
+)
 
+from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
-from .matchers import HasSum, IsSequenceOf, S, isTuple
+from .matchers import HasSum, IsSequenceOf, S, isFailure, isTuple, similarFrame
 
 
 class HasSumTests(SynchronousTestCase):
@@ -111,6 +129,7 @@ class IsTupleTests(SynchronousTestCase):
     """
     Tests for L{isTuple}.
     """
+
     @given(lists(integers(), min_size=0, max_size=10))
     def test_matches(self, elements: list[int]) -> None:
         """
@@ -155,3 +174,49 @@ class IsTupleTests(SynchronousTestCase):
         """
         matcher = isTuple(anything())
         assert_that(matcher.matches([1]), equal_to(False))
+
+
+class IsFailureTests(SynchronousTestCase):
+    """
+    Tests for L{isFailure}.
+    """
+
+    @given(sampled_from([ValueError, ZeroDivisionError, RuntimeError]))
+    def test_matches(self, excType: Type[BaseException]) -> None:
+        """
+        L{isFailure} matches instances of L{Failure} with matching
+        attributes.
+        """
+        matcher = isFailure(type=equal_to(excType))
+        failure = Failure(excType())
+        assert_that(matcher.matches(failure), equal_to(True))
+
+    @given(sampled_from([ValueError, ZeroDivisionError, RuntimeError]))
+    def test_mismatches(self, excType: Type[BaseException]) -> None:
+        """
+        L{isFailure} does not match match instances of L{Failure} with
+        attributes that don't match.
+        """
+        matcher = isFailure(type=equal_to(excType), other=not_(anything()))
+        failure = Failure(excType())
+        assert_that(matcher.matches(failure), equal_to(False))
+
+    def test_frames(self):
+        """
+        The L{similarFrame} matcher matches elements of the C{frames} list
+        of a L{Failure}.
+        """
+        try:
+            raise ValueError("Oh no")
+        except BaseException:
+            f = Failure()
+
+        actualDescription = StringDescription()
+        matcher = isFailure(
+            frames=contains(similarFrame("test_frames", "test_matchers"))
+        )
+        assert_that(
+            matcher.matches(f, actualDescription),
+            equal_to(True),
+            str(actualDescription),
+        )

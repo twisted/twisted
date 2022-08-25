@@ -184,12 +184,15 @@ def similarFrame(
     #
     # (functionName, fileName, someint, [], [])
     return contains_exactly(
-        equal_to("test_error"),
-        contains_string("pyunitcases.py"),  # type: ignore[arg-type]
+        equal_to(functionName),
+        contains_string(fileName),  # type: ignore[arg-type]
         instance_of(int),  # type: ignore[arg-type]
-        equal_to([]),
-        equal_to([]),
+        # Unfortunately Failure makes them sometimes tuples, sometimes
+        # dict_items.
+        has_length(0),  # type: ignore[arg-type]
+        has_length(0),  # type: ignore[arg-type]
     )
+
 
 def isTuple(*matchers: Matcher[object]) -> Matcher[object]:
     """
@@ -198,5 +201,5 @@ def isTuple(*matchers: Matcher[object]) -> Matcher[object]:
     """
     return AllOf(
         instance_of(tuple),
-        contains_exactly(*matchers), # type: ignore[arg-type]
+        contains_exactly(*matchers),  # type: ignore[arg-type]
     )
