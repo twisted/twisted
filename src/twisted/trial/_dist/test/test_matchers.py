@@ -2,7 +2,7 @@
 Tests for L{twisted.trial._dist.test.matchers}.
 """
 
-from typing import Sequence, Type
+from typing import List, Sequence, Type
 
 from hamcrest import (
     anything,
@@ -131,7 +131,7 @@ class IsTupleTests(SynchronousTestCase):
     """
 
     @given(lists(integers(), min_size=0, max_size=10))
-    def test_matches(self, elements: list[int]) -> None:
+    def test_matches(self, elements: List[int]) -> None:
         """
         L{isTuple} matches tuples if they have the same number of elements
         as the number of matchers given and each element is matched by the
@@ -147,7 +147,7 @@ class IsTupleTests(SynchronousTestCase):
         integers(),
         lists(integers(), min_size=0, max_size=10),
     )
-    def test_mismatch(self, before: list[int], mismatch: int, after: list[int]) -> None:
+    def test_mismatch(self, before: List[int], mismatch: int, after: List[int]) -> None:
         """
         L{isTuple} does not match if any element is not matched.
         """
