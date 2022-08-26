@@ -12,7 +12,7 @@ from unittest import TestCase as PyUnitTestCase
 
 from zope.interface.verify import verifyObject
 
-from hamcrest import assert_that, contains_exactly, equal_to, has_item, has_properties
+from hamcrest import assert_that, contains_exactly, equal_to, has_item, has_length
 
 from twisted.internet.defer import fail
 from twisted.internet.error import ProcessDone
@@ -120,24 +120,17 @@ class LocalWorkerAMPTests(TestCase):
         """
         Run a test, and encounter an error.
         """
-        case = pyunitcases.PyUnitTest("test_error")
-        result = self.workerRunTest(case)
+        expectedCase = pyunitcases.PyUnitTest("test_error")
+        result = self.workerRunTest(expectedCase)
+        assert_that(result, matches_result(errors=has_length(1)))
+        [(actualCase, failure)] = result.errors
+        assert_that(expectedCase, equal_to(actualCase))
         assert_that(
-            result,
-            matches_result(
-                # Failures don't compare nicely so unpack the result and peek inside.
-                errors=contains_exactly(
-                    isTuple(
-                        equal_to(case),
-                        isFailure(
-                            type=equal_to(Exception),
-                            value=equal_to(WorkerException("pyunit error")),
-                            frames=has_item(  # type: ignore[arg-type]
-                                similarFrame("test_error", "pyunitcases.py")  # type: ignore[arg-type]
-                            ),
-                        ),
-                    ),
-                ),
+            failure,
+            isFailure(
+                type=equal_to(Exception),
+                value=equal_to(WorkerException("pyunit error")),
+                frames=has_item(similarFrame("test_error", "pyunitcases.py")),  # type: ignore[arg-type]
             ),
         )
 
@@ -217,12 +210,13 @@ class LocalWorkerAMPTests(TestCase):
         C{Run} commands has succeeded.
         """
         stopped = []
+
         class StopTestResult(TestResult):
             def stopTest(self, test: PyUnitTestCase) -> None:
                 stopped.append(test)
 
         case = pyunitcases.PyUnitTest("test_pass")
-        result = self.workerRunTest(case, StopTestResult)
+        self.workerRunTest(case, StopTestResult)
         assert_that(stopped, equal_to([case]))
 
 
