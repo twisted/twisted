@@ -216,15 +216,14 @@ class LocalWorkerAMPTests(TestCase):
         L{LocalWorkerAMP.run} calls C{stopTest} on its test result once the
         C{Run} commands has succeeded.
         """
-
+        stopped = []
         class StopTestResult(TestResult):
-            _stopped = False
-
             def stopTest(self, test: PyUnitTestCase) -> None:
-                self._stopped = True
+                stopped.append(test)
 
-        result = self.workerRunTest(pyunitcases.PyUnitTest("test_pass"), StopTestResult)
-        assert_that(result, has_properties(_stopped=equal_to(True)))
+        case = pyunitcases.PyUnitTest("test_pass")
+        result = self.workerRunTest(case, StopTestResult)
+        assert_that(stopped, equal_to([case]))
 
 
 class SpyDataLocalWorkerAMP(LocalWorkerAMP):
