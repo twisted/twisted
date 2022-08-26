@@ -14,6 +14,7 @@ this code is arranged.
 from unittest import skipIf
 
 from twisted.internet import defer, protocol, reactor
+from twisted.internet.task import deferLater
 from twisted.trial import unittest, util
 
 
@@ -102,17 +103,11 @@ class TestAsynchronousFail(unittest.TestCase):
 
     text = "I fail"
 
-    def test_fail(self):
+    def test_fail(self) -> defer.Deferred[None]:
         """
         A test which fails in the callback of the returned L{defer.Deferred}.
         """
-        d = defer.Deferred()
-        d.addCallback(self._later)
-        reactor.callLater(0, d.callback, None)
-        return d
-
-    def _later(self, res):
-        self.fail("I fail later")
+        return deferLater(reactor, 0, self.fail, "I fail later")  # type: ignore[arg-type]
 
     def test_exception(self):
         """
