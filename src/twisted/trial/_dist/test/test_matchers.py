@@ -2,18 +2,9 @@
 Tests for L{twisted.trial._dist.test.matchers}.
 """
 
-from typing import List, Sequence, Type
+from typing import Callable, List, Sequence, Tuple, Type
 
-from hamcrest import (
-    anything,
-    assert_that,
-    contains,
-    contains_string,
-    equal_to,
-    is_,
-    not_,
-)
-from hamcrest.core.core.allof import AllOf
+from hamcrest import anything, assert_that, contains, contains_string, equal_to, not_
 from hamcrest.core.matcher import Matcher
 from hamcrest.core.string_description import StringDescription
 from hypothesis import given
@@ -26,11 +17,17 @@ from hypothesis.strategies import (
     one_of,
     sampled_from,
     text,
+    tuples,
 )
 
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
 from .matchers import HasSum, IsSequenceOf, S, isFailure, isTuple, similarFrame
+
+Summer = Callable[[Sequence[S]], S]
+concatInt = sum
+concatStr = "".join
+concatBytes = b"".join
 
 
 class HasSumTests(SynchronousTestCase):
@@ -38,48 +35,58 @@ class HasSumTests(SynchronousTestCase):
     Tests for L{HasSum}.
     """
 
-    sequences = lists(integers())
-    # For the moment we know we always have integers
-    zeros = just(0)
+    summables = one_of(
+        tuples(lists(integers()), just(concatInt)),
+        tuples(lists(text()), just(concatStr)),
+        tuples(lists(binary()), just(concatBytes)),
+    )
 
-    @given(sequences, zeros)
-    def test_matches(self, seq: Sequence[S], zero: S) -> None:
+    @given(summables)
+    def test_matches(self, summable: Tuple[Sequence[S], Summer[S]]) -> None:
         """
         L{HasSum} matches a sequence if the elements sum to a value matched by
         the parameterized matcher.
+
+        :param summable: A tuple of a sequence of values to try to match and a
+            function which can compute the correct sum for that sequence.
         """
-        expected = sum(seq, zero)
+        seq, sumFunc = summable
+        expected = sumFunc(seq)
+        zero = sumFunc([])
+        matcher = HasSum(equal_to(expected), zero)
 
         description = StringDescription()
-        matcher = HasSum(equal_to(expected), zero)
         assert_that(matcher.matches(seq, description), equal_to(True))
         assert_that(str(description), equal_to(""))
 
-    @given(sequences, zeros)
-    def test_mismatches(self, seq: Sequence[S], zero: S) -> None:
+    @given(summables)
+    def test_mismatches(
+        self,
+        summable: Tuple[
+            Sequence[S],
+            Summer[S],
+        ],
+    ) -> None:
         """
         L{HasSum} does not match a sequence if the elements do not sum to a
         value matched by the parameterized matcher.
+
+        :param summable: See L{test_matches}.
         """
+        seq, sumFunc = summable
+        zero = sumFunc([])
         # A matcher that never matches.
         sumMatcher: Matcher[S] = not_(anything())
+        matcher = HasSum(sumMatcher, zero)
 
         actualDescription = StringDescription()
-        matcher = HasSum(sumMatcher, zero)
         assert_that(matcher.matches(seq, actualDescription), equal_to(False))
 
         sumMatcherDescription = StringDescription()
         sumMatcherDescription.append_description_of(sumMatcher)
-
-        assert_that(
-            str(actualDescription),
-            is_(
-                AllOf(
-                    contains_string("a sequence with sum"),
-                    contains_string(str(sumMatcherDescription)),
-                )
-            ),
-        )
+        actualStr = str(actualDescription)
+        assert_that(actualStr, contains_string("a sequence with sum"))
+        assert_that(actualStr, contains_string(str(sumMatcherDescription)))
 
 
 class IsSequenceOfTests(SynchronousTestCase):
@@ -90,12 +97,14 @@ class IsSequenceOfTests(SynchronousTestCase):
     sequences = lists(booleans())
 
     @given(integers(min_value=0, max_value=1000))
-    def test_matches(self, num_items: int) -> None:
+    def test_matches(self, numItems: int) -> None:
         """
         L{IsSequenceOf} matches a sequence if all of the elements are
         matched by the parameterized matcher.
+
+        :param numItems: The length of a sequence to try to match.
         """
-        seq = [True] * num_items
+        seq = [True] * numItems
         matcher = IsSequenceOf(equal_to(True))
 
         actualDescription = StringDescription()
@@ -103,25 +112,27 @@ class IsSequenceOfTests(SynchronousTestCase):
         assert_that(str(actualDescription), equal_to(""))
 
     @given(integers(min_value=0, max_value=1000), integers(min_value=0, max_value=1000))
-    def test_mismatches(self, num_before: int, num_after: int) -> None:
+    def test_mismatches(self, numBefore: int, numAfter: int) -> None:
         """
         L{IsSequenceOf} does not match a sequence if any of the elements
         are not matched by the parameterized matcher.
+
+        :param numBefore: In the sequence to try to match, the number of
+            elements expected to match before an expected mismatch.
+
+        :param numAfter: In the sequence to try to match, the number of
+            elements expected expected to match after an expected mismatch.
         """
         # Hide the non-matching value somewhere in the sequence.
-        seq = [True] * num_before + [False] + [True] * num_after
+        seq = [True] * numBefore + [False] + [True] * numAfter
         matcher = IsSequenceOf(equal_to(True))
 
         actualDescription = StringDescription()
         assert_that(matcher.matches(seq, actualDescription), equal_to(False))
+        actualStr = str(actualDescription)
+        assert_that(actualStr, contains_string("a sequence containing only"))
         assert_that(
-            str(actualDescription),
-            is_(
-                AllOf(
-                    contains_string("a sequence containing only"),
-                    contains_string(f"not sequence with element #{num_before}"),
-                )
-            ),
+            actualStr, contains_string(f"not sequence with element #{numBefore}")
         )
 
 
@@ -136,6 +147,9 @@ class IsTupleTests(SynchronousTestCase):
         L{isTuple} matches tuples if they have the same number of elements
         as the number of matchers given and each element is matched by the
         corresponding matcher.
+
+        :param elements: The elements with which to populate the tuple to
+            attempt to match with L{isTuple}.
         """
         matcher = isTuple(*(equal_to(e) for e in elements))
         actualDescription = StringDescription()
@@ -150,6 +164,14 @@ class IsTupleTests(SynchronousTestCase):
     def test_mismatch(self, before: List[int], mismatch: int, after: List[int]) -> None:
         """
         L{isTuple} does not match if any element is not matched.
+
+        :param before: For the tuple to match, elements leading up to an
+            expected mismatching element.
+
+        :param mismatch: An element expected to mismatch.
+
+        :param after: For the tuple to match, elements following an expected
+            mismatching element.
         """
         matchers = [equal_to(e) for e in before]
         matchers.append(not_(anything()))
@@ -168,12 +190,14 @@ class IsTupleTests(SynchronousTestCase):
             integers(),
         ),
     )
-    def test_mismatchOtherType(self, wrongType: object) -> None:
+    def test_mismatchOtherType(self, mismatch: object) -> None:
         """
         L{isTuple} does not match non-tuple values.
+
+        :param mismatch: A value of a type other than tuple.
         """
         matcher = isTuple(anything())
-        assert_that(matcher.matches([1]), equal_to(False))
+        assert_that(matcher.matches(mismatch), equal_to(False))
 
 
 class IsFailureTests(SynchronousTestCase):
@@ -186,6 +210,9 @@ class IsFailureTests(SynchronousTestCase):
         """
         L{isFailure} matches instances of L{Failure} with matching
         attributes.
+
+        :param excType: An exception type to wrap in a L{Failure} to be
+            matched against.
         """
         matcher = isFailure(type=equal_to(excType))
         failure = Failure(excType())
@@ -194,8 +221,11 @@ class IsFailureTests(SynchronousTestCase):
     @given(sampled_from([ValueError, ZeroDivisionError, RuntimeError]))
     def test_mismatches(self, excType: Type[BaseException]) -> None:
         """
-        L{isFailure} does not match match instances of L{Failure} with
+        L{isFailure} does not match instances of L{Failure} with
         attributes that don't match.
+
+        :param excType: An exception type to wrap in a L{Failure} to be
+            matched against.
         """
         matcher = isFailure(type=equal_to(excType), other=not_(anything()))
         failure = Failure(excType())
@@ -218,5 +248,5 @@ class IsFailureTests(SynchronousTestCase):
         assert_that(
             matcher.matches(f, actualDescription),
             equal_to(True),
-            str(actualDescription),
+            actualDescription,
         )

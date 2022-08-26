@@ -11,7 +11,7 @@ __all__ = [
     "IsSequenceOf",
 ]
 
-from typing import List, Sequence, Sized, Tuple, TypeVar, cast
+from typing import List, Sequence, Sized, Tuple, TypeVar
 
 from hamcrest import (
     contains_exactly,
@@ -89,12 +89,10 @@ class HasSum(BaseMatcher[Sequence[S]]):
     def _sum(self, sequence: Sequence[S]) -> S:
         if not sequence:
             return self.zero
-        elif all(isinstance(e, bytes) for e in sequence):
-            return cast(S, b"".join(cast(Sequence[bytes], sequence)))
-        elif all(isinstance(e, str) for e in sequence):
-            return cast(S, "".join(cast(Sequence[str], sequence)))
-        else:
-            return sum(sequence, self.zero)
+        result = self.zero
+        for elem in sequence:
+            result = result + elem
+        return result
 
     def _matches(self, item: Sequence[S]) -> bool:
         """
