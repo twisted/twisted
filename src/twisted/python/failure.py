@@ -20,6 +20,7 @@ import linecache
 import sys
 from inspect import getmro
 from io import StringIO
+from typing import NoReturn
 
 import opcode
 
@@ -495,7 +496,7 @@ class Failure(BaseException):
                 return error
         return None
 
-    def raiseException(self):
+    def raiseException(self) -> NoReturn:
         """
         raise the original exception, preserving traceback
         information if available.
