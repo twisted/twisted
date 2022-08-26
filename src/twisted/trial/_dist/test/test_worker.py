@@ -127,7 +127,7 @@ class LocalWorkerAMPTests(TestCase):
             matches_result(
                 # Failures don't compare nicely so unpack the result and peek inside.
                 errors=contains_exactly(
-                    isTuple(  # type: ignore[arg-type]
+                    isTuple(
                         equal_to(case),
                         isFailure(
                             type=equal_to(Exception),
@@ -151,7 +151,7 @@ class LocalWorkerAMPTests(TestCase):
             result,
             matches_result(
                 failures=contains_exactly(
-                    isTuple(  # type: ignore[arg-type]
+                    isTuple(
                         equal_to(case),
                         isFailure(
                             # AssertionError is the type raised by TestCase.fail
@@ -172,8 +172,8 @@ class LocalWorkerAMPTests(TestCase):
         assert_that(
             result,
             matches_result(
-                skips=contains_exactly(  # type: ignore[arg-type]
-                    isTuple(  # type: ignore[arg-type]
+                skips=contains_exactly(
+                    isTuple(
                         equal_to(case),
                         equal_to("pyunit skip"),
                     ),
@@ -190,8 +190,8 @@ class LocalWorkerAMPTests(TestCase):
         assert_that(
             result,
             matches_result(
-                unexpectedSuccesses=contains_exactly(  # type: ignore[arg-type]
-                    isTuple(  # type: ignore[arg-type]
+                unexpectedSuccesses=contains_exactly(
+                    isTuple(
                         equal_to(case),
                         equal_to("todo7"),
                     ),

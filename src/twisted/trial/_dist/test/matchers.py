@@ -11,7 +11,7 @@ __all__ = [
     "IsSequenceOf",
 ]
 
-from typing import List, Sequence, Sized, Tuple, TypeVar
+from typing import List, Sequence, Tuple, TypeVar
 
 from hamcrest import (
     contains_exactly,
@@ -28,7 +28,6 @@ from hamcrest.core.matcher import Matcher
 from typing_extensions import Protocol
 
 from twisted.python.failure import Failure
-from twisted.trial.reporter import TestResult
 
 T = TypeVar("T")
 
@@ -52,12 +51,12 @@ S = TypeVar("S", bound=Semigroup)
 
 def matches_result(
     successes: Matcher = equal_to(0),
-    errors: Matcher[Sized] = has_length(0),
-    failures: Matcher[Sized] = has_length(0),
-    skips: Matcher[Sized] = has_length(0),
-    expectedFailures: Matcher[Sized] = has_length(0),
-    unexpectedSuccesses: Matcher[Sized] = has_length(0),
-) -> Matcher[TestResult]:
+    errors: Matcher = has_length(0),
+    failures: Matcher = has_length(0),
+    skips: Matcher = has_length(0),
+    expectedFailures: Matcher = has_length(0),
+    unexpectedSuccesses: Matcher = has_length(0),
+) -> Matcher:
     """
     Match a L{TestCase} instances with matching attributes.
     """
