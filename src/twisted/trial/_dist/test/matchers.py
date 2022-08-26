@@ -11,7 +11,7 @@ __all__ = [
     "IsSequenceOf",
 ]
 
-from typing import List, Protocol, Sequence, Sized, Tuple, TypeVar, cast
+from typing import List, Sequence, Sized, Tuple, TypeVar, cast
 
 from hamcrest import (
     contains_exactly,
@@ -25,6 +25,7 @@ from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.core.allof import AllOf
 from hamcrest.core.description import Description
 from hamcrest.core.matcher import Matcher
+from typing_extensions import Protocol
 
 from twisted.python.failure import Failure
 from twisted.trial.reporter import TestResult
