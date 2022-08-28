@@ -59,10 +59,10 @@ only to have it rejected because we're not interested in having such a feature a
 Authors: Things your branch or patch must contain
 -------------------------------------------------
 
- * Code which follows the :doc:`coding standards </core/development/policy/coding-standard>`.
+ * Code which follows the :doc:`coding standards </development/coding-standard>`.
  * 100% unit test coverage for all modified and new code (even if it didn't have tests before)
  * 100% API docstring coverage for all modified and new code (even if it didn't have docs before)
- * No :doc:`backwards-incompatible </core/development/policy/compatibility-policy>` changes.
+ * No :doc:`backwards-incompatible </development/compatibility-policy>` changes.
    Also be sparing when adding 'public' names to the API, as they must be supported in the future.
    If it can start with an underscore and not be exposed publicly, it probably should.
  * Appropriate new or modified "End User" guide documentation (in the form of rst files in the `docs/ <https://github.com/twisted/twisted/tree/trunk/docs>`_ directory)

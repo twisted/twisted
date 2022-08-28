@@ -62,7 +62,7 @@ To run any tests that are related to a code file, like ``twisted/protocols/imap4
     trial --testmodule twisted/mail/imap4.py
 
 This depends upon the ``.py`` file having an appropriate "test-case-name" tag that indicates which test cases provide coverage.
-See the :doc:`Test Standards <policy/test-standard>` document for
+See the :doc:`Test Standards </development/test-standard>` document for
 details about using "test-case-name".
 In this example, the ``twisted.mail.test.test_imap`` test will be run.
 
@@ -183,9 +183,9 @@ You don't need to worry about newlines in the file; the contents will be rewrapp
 Review process
 --------------
 
-Any changed accepted into the main branch must pass the review process.
+Any change to be accepted into the main branch must pass the review process.
 
-See :doc:`the dedicated review process page </core/development/review-process>` for more details.
+See :doc:`the dedicated review process page </development/review-process>` for more details.
 
 
 Reverting a change

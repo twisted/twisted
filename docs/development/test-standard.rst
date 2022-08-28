@@ -595,7 +595,7 @@ Links
   
 
 
-See also :doc:`Tips for writing tests for Twisted code <../../howto/testing>` .
+See also :doc:`Tips for writing tests for Twisted code </core/howto/testing>` .
 
   
 

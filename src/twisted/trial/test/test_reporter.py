@@ -315,7 +315,14 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         """
         test = erroneous.TestAsynchronousFail("test_fail")
         frames = self.getErrorFrames(test)
-        self.checkFrames(frames, [("_later", "twisted/trial/test/erroneous")])
+        self.checkFrames(
+            frames,
+            [
+                # This depends on the implementation of test_fail.  Currently
+                # it uses deferLater so we get a frame from the task module.
+                ("cb", "twisted/internet/task"),
+            ],
+        )
 
     def test_noFrames(self):
         result = reporter.Reporter(None)
