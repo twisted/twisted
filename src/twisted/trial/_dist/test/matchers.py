@@ -190,14 +190,3 @@ def similarFrame(
         has_length(0),  # type: ignore[arg-type]
         has_length(0),  # type: ignore[arg-type]
     )
-
-
-def isTuple(*matchers: Matcher[object]) -> Matcher[object]:
-    """
-    Match tuples for which the elements are matched by corresponding
-    elements of a tuple of matchers.
-    """
-    return AllOf(
-        instance_of(tuple),
-        contains_exactly(*matchers),  # type: ignore[arg-type]
-    )

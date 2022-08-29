@@ -22,7 +22,7 @@ from hypothesis.strategies import (
 
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase
-from .matchers import HasSum, IsSequenceOf, S, isFailure, isTuple, similarFrame
+from .matchers import HasSum, IsSequenceOf, S, isFailure, similarFrame
 
 Summer = Callable[[Sequence[S]], S]
 concatInt = sum
@@ -134,70 +134,6 @@ class IsSequenceOfTests(SynchronousTestCase):
         assert_that(
             actualStr, contains_string(f"not sequence with element #{numBefore}")
         )
-
-
-class IsTupleTests(SynchronousTestCase):
-    """
-    Tests for L{isTuple}.
-    """
-
-    @given(lists(integers(), min_size=0, max_size=10))
-    def test_matches(self, elements: List[int]) -> None:
-        """
-        L{isTuple} matches tuples if they have the same number of elements
-        as the number of matchers given and each element is matched by the
-        corresponding matcher.
-
-        :param elements: The elements with which to populate the tuple to
-            attempt to match with L{isTuple}.
-        """
-        matcher = isTuple(*(equal_to(e) for e in elements))
-        actualDescription = StringDescription()
-        assert_that(matcher.matches(tuple(elements), actualDescription), equal_to(True))
-        assert_that(str(actualDescription), equal_to(""))
-
-    @given(
-        lists(integers(), min_size=0, max_size=10),
-        integers(),
-        lists(integers(), min_size=0, max_size=10),
-    )
-    def test_mismatch(self, before: List[int], mismatch: int, after: List[int]) -> None:
-        """
-        L{isTuple} does not match if any element is not matched.
-
-        :param before: For the tuple to match, elements leading up to an
-            expected mismatching element.
-
-        :param mismatch: An element expected to mismatch.
-
-        :param after: For the tuple to match, elements following an expected
-            mismatching element.
-        """
-        matchers = [equal_to(e) for e in before]
-        matchers.append(not_(anything()))
-        matchers = [equal_to(e) for e in after]
-        matcher = isTuple(*matchers)
-
-        elements = tuple(before) + (mismatch,) + tuple(after)
-        actualDescription = StringDescription()
-        assert_that(matcher.matches(elements, actualDescription), equal_to(False))
-
-    @given(
-        one_of(
-            lists(integers(), max_size=2),
-            text(max_size=2),
-            binary(max_size=2),
-            integers(),
-        ),
-    )
-    def test_mismatchOtherType(self, mismatch: object) -> None:
-        """
-        L{isTuple} does not match non-tuple values.
-
-        :param mismatch: A value of a type other than tuple.
-        """
-        matcher = isTuple(anything())
-        assert_that(matcher.matches(mismatch), equal_to(False))
 
 
 class IsFailureTests(SynchronousTestCase):

@@ -32,7 +32,7 @@ from twisted.trial._dist.worker import (
 from twisted.trial.reporter import TestResult
 from twisted.trial.test import pyunitcases, skipping
 from twisted.trial.unittest import TestCase, makeTodo
-from .matchers import isFailure, isTuple, matches_result, similarFrame
+from .matchers import isFailure, matches_result, similarFrame
 
 
 class WorkerProtocolTests(TestCase):
@@ -138,21 +138,17 @@ class LocalWorkerAMPTests(TestCase):
         """
         Run a test, and fail.
         """
-        case = pyunitcases.PyUnitTest("test_fail")
-        result = self.workerRunTest(case)
+        expectedCase = pyunitcases.PyUnitTest("test_fail")
+        result = self.workerRunTest(expectedCase)
+        assert_that(result, matches_result(failures=has_length(1)))
+        [(actualCase, failure)] = result.failures
+        assert_that(expectedCase, equal_to(actualCase))
         assert_that(
-            result,
-            matches_result(
-                failures=contains_exactly(
-                    isTuple(
-                        equal_to(case),
-                        isFailure(
-                            # AssertionError is the type raised by TestCase.fail
-                            type=equal_to(AssertionError),
-                            value=equal_to(WorkerException("pyunit failure")),
-                        ),
-                    ),
-                ),
+            failure,
+            isFailure(
+                # AssertionError is the type raised by TestCase.fail
+                type=equal_to(AssertionError),
+                value=equal_to(WorkerException("pyunit failure")),
             ),
         )
 
@@ -160,37 +156,23 @@ class LocalWorkerAMPTests(TestCase):
         """
         Run a test, but skip it.
         """
-        case = pyunitcases.PyUnitTest("test_skip")
-        result = self.workerRunTest(case)
-        assert_that(
-            result,
-            matches_result(
-                skips=contains_exactly(
-                    isTuple(
-                        equal_to(case),
-                        equal_to("pyunit skip"),
-                    ),
-                ),
-            ),
-        )
+        expectedCase = pyunitcases.PyUnitTest("test_skip")
+        result = self.workerRunTest(expectedCase)
+        assert_that(result, matches_result(skips=has_length(1)))
+        [(actualCase, skip)] = result.skips
+        assert_that(expectedCase, equal_to(actualCase))
+        assert_that(skip, equal_to("pyunit skip"))
 
     def test_runUnexpectedSuccesses(self) -> None:
         """
         Run a test, and succeed unexpectedly.
         """
-        case = skipping.SynchronousStrictTodo("test_todo7")
-        result = self.workerRunTest(case)
-        assert_that(
-            result,
-            matches_result(
-                unexpectedSuccesses=contains_exactly(
-                    isTuple(
-                        equal_to(case),
-                        equal_to("todo7"),
-                    ),
-                ),
-            ),
-        )
+        expectedCase = skipping.SynchronousStrictTodo("test_todo7")
+        result = self.workerRunTest(expectedCase)
+        assert_that(result, matches_result(unexpectedSuccesses=has_length(1)))
+        [(actualCase, unexpectedSuccess)] = result.unexpectedSuccesses
+        assert_that(expectedCase, equal_to(actualCase))
+        assert_that(unexpectedSuccess, equal_to("todo7"))
 
     def test_testWrite(self) -> None:
         """
