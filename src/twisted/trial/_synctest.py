@@ -84,7 +84,7 @@ class Todo:
 
 def makeTodo(
     value: Union[
-        str, tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
+        str, Tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
     ]
 ) -> Todo:
     """
