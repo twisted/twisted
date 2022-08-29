@@ -82,7 +82,11 @@ class Todo:
         return False
 
 
-def makeTodo(value):
+def makeTodo(
+    value: Union[
+        str, tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
+    ]
+) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
 
@@ -99,11 +103,11 @@ def makeTodo(value):
         return Todo(reason=value)
     if isinstance(value, tuple):
         errors, reason = value
-        try:
-            errors = list(errors)
-        except TypeError:
-            errors = [errors]
-        return Todo(reason=reason, errors=errors)
+        if isinstance(errors, type):
+            iterableErrors: Iterable[Type[BaseException]] = [errors]
+        else:
+            iterableErrors = errors
+        return Todo(reason=reason, errors=iterableErrors)
 
 
 class _Warning:
