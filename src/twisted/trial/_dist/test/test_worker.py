@@ -102,19 +102,15 @@ class LocalWorkerAMPTests(TestCase):
         """
         Run a test, and fail expectedly.
         """
-        case = skipping.SynchronousStrictTodo("test_todo1")
-        result = self.workerRunTest(case)
-        assert_that(
-            result,
-            matches_result(
-                expectedFailures=equal_to(
-                    [
-                        # Match the strings used in the test we ran.
-                        (case, "expected failure", makeTodo("todo1")),
-                    ]
-                )
-            ),
-        )
+        expectedCase = skipping.SynchronousStrictTodo("test_todo1")
+        result = self.workerRunTest(expectedCase)
+        assert_that(result, matches_result(expectedFailures=has_length(1)))
+        [(actualCase, exceptionMessage, todoReason)] = result.expectedFailures
+        assert_that(actualCase, equal_to(expectedCase))
+
+        # Match the strings used in the test we ran.
+        assert_that(exceptionMessage, equal_to("expected failure"))
+        assert_that(todoReason, equal_to(makeTodo("todo1")))
 
     def test_runError(self) -> None:
         """
