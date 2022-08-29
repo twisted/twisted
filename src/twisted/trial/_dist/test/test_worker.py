@@ -12,7 +12,7 @@ from unittest import TestCase as PyUnitTestCase
 
 from zope.interface.verify import verifyObject
 
-from hamcrest import assert_that, contains_exactly, equal_to, has_item, has_length
+from hamcrest import assert_that, equal_to, has_item, has_length
 
 from twisted.internet.defer import fail
 from twisted.internet.error import ProcessDone
