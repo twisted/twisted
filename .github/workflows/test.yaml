@@ -27,6 +27,7 @@ defaults:
 
 jobs:
   testing:
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env || 'default-tests' }}${{matrix.trial-args}}
     # We have Ubuntu as the base for running agains multiple Python versions.
     runs-on: "${{ matrix.runs-on || 'ubuntu-20.04'}}"
     env:
@@ -37,15 +38,11 @@ jobs:
       # On Windows, we don't yet enable distributed tests as is not yet
       # supported.
       TRIAL_ARGS: "${{ matrix.trial-args || '-j 4' }}"
-    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
       fail-fast: false
       matrix:
         # Run on latest minor release of each major Python version.
         python-version: ['3.8', '3.9', '3.10']
-        # We run with the default reactor.
-        # The matrix is later extended for specific reactors.
-        twisted-reactor: ['']
         # Just use the default OS.
         runs-on: ['']
         # This is the main tox target.
@@ -62,21 +59,26 @@ jobs:
         tox-wrapper: ['']
         # Tests are executed with the default target which is the full test suite.
         trial-target: ['']
+        # By default the coverate is not skipped.
+        skip-coverage: ['']
 
         include:
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
             runs-on: 'windows-2022'
-            twisted-reactor: 'selectreactor'
             tox-env: 'alldeps-withcov-windows'
-            # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=selectreactor'
+            # Distributed trial is not yet suported on Windows so we overwrite
+            # the default trial-args.
+            # tox will alwasy add `--reactor=default`. The hope is that
+            # `trial-args` are added at the end and the previous value is
+            # ignored.
+            trial-args: '--reactor=select'
           # Windows, latest Python version with iocp reactor.
           - python-version: '3.10'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=iocpreactor'
+            trial-args: '--reactor=iocp'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
@@ -101,6 +103,7 @@ jobs:
           - python-version: pypy-3.7
             runs-on: 'ubuntu-20.04'
             tox-env: alldeps-nocov-posix
+            skip-coverage: yes
           # We still run some tests with coverage,
           # as there are test with specific code branches for pypy.
           - python-version: pypy-3.7
@@ -174,7 +177,7 @@ jobs:
         ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
-      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
+      if: ${{ !cancelled() && matrix['skip-coverage'] }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
@@ -184,10 +187,10 @@ jobs:
         python -m coverage report --skip-covered
 
     - uses: codecov/codecov-action@v2
-      if: ${{ !cancelled() && contains(matrix['tox-env'], 'withcov') }}
+      if: ${{ !cancelled() && matrix['skip-coverage'] }}
       with:
         files: coverage.xml
-        name: ${{matrix.runs-on}}-${{ matrix.python-version }}-${{matrix.twisted-reactor}}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
+        name: ${{matrix.runs-on}}-${{ matrix.python-version }}-${{matrix.trial-args}}-${{ matrix.tox-env }}${{ matrix.noipv6 }}
         fail_ci_if_error: true
 
 
