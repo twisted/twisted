@@ -27,11 +27,16 @@ defaults:
 
 jobs:
   testing:
-    runs-on: "${{ matrix.runs-on }}"
+    # We have Ubuntu as the base for running agains multiple Python versions.
+    runs-on: "${{ matrix.runs-on || 'ubuntu-20.04'}}"
     env:
-      TOXENV: "${{ matrix.tox-env }}"
-      TRIAL_ARGS: "${{ matrix.trial-args }}"
-      TWISTED_REACTOR: "${{ matrix.twisted-reactor }}"
+      # By default we run all tests with all deps with coverage.
+      TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
+      # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
+      # On Windows, we don't yet enable distributed tests as is not yet
+      # supported.
+      TRIAL_ARGS: "${{ matrix.trial-args || '-j 4' }}"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
     strategy:
       fail-fast: false
@@ -40,18 +45,15 @@ jobs:
         python-version: ['3.8', '3.9', '3.10']
         # We run with the default reactor.
         # The matrix is later extended for specific reactors.
-        twisted-reactor: ['default']
-        # We have Ubuntu as the base for running agains multiple Python versions.
-        runs-on: ['ubuntu-20.04']
+        twisted-reactor: ['']
+        # Just use the default OS.
+        runs-on: ['']
         # This is the main tox target.
         # It is later extended with more jobs that should run in a specific
         # OS + Python version configuration.
-        tox-env: ['alldeps-withcov-posix']
-        # As of April 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-        # Trial distributed jobs enabled to speed up the CI jobs.
-        # On Windows, we don't yet enable distributed tests as is not yet
-        # supported.
-        trial-args: ["-j 4"]
+        tox-env: ['']
+        # We just go with the default arguments.
+        trial-args: ['']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
         # By default, tests are executed without extra platform dependencies.
@@ -66,20 +68,20 @@ jobs:
           - python-version: '3.7'
             runs-on: 'windows-2022'
             twisted-reactor: 'selectreactor'
+            tox-env: 'alldeps-withcov-windows'
             # Distributed trial is not yet suported on Windows.
-            trial-args: ''
+            trial-args: '--reactor=selectreactor'
           # Windows, latest Python version with iocp reactor.
           - python-version: '3.10'
             runs-on: 'windows-2022'
-            twisted-reactor: 'iocpreactor'
+            tox-env: 'alldeps-withcov-windows'
             # Distributed trial is not yet suported on Windows.
-            trial-args: ''
+            trial-args: '--reactor=iocpreactor'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: '3.7'
             runs-on: 'ubuntu-20.04'
-            tox-env: alldeps-withcov-posix
             noipv6: -noipv6
           # `nodeps` is created to make sure we don't have import errors in the
           # runtime and production code.
@@ -103,7 +105,6 @@ jobs:
           # as there are test with specific code branches for pypy.
           - python-version: pypy-3.7
             runs-on: 'ubuntu-20.04'
-            tox-env: alldeps-withcov-posix
             trial-target: twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests
           # We run selected test for GTK reactor inside X virtual framebuffer.
           - python-version: '3.7'
