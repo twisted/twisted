@@ -30,8 +30,6 @@ defaults:
 
 env:
   # Set to 'yes' to open a tunnel to GitHub's VMs through tmate on failures.
-  # Also increase timeout-minutes for the relevant OS when debugging remotely
-  # and you need a longer session.
   TMATE_DEBUG: 'no'
 
 jobs:
@@ -339,7 +337,7 @@ jobs:
 
     - name: Publish to PyPI - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1
+      uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
