@@ -1,5 +1,9 @@
 # Try to get a short workflow name and a job name that start with Python
 # version to make it easier to check the status inside GitHub UI.
+#
+# When using external actions check that the extenral repos are permitted via
+# the GitHub configuration at https://github.com/twisted/twisted/settings/actions
+#
 name: CI
 
 on:
@@ -32,7 +36,7 @@ env:
 
 jobs:
   testing:
-    name: ${{ matrix.python-version }}${{ matrix.job-name || 'lnx-default-tests' }}
+    name: ${{ matrix.python-version }}-${{ matrix.job-name || 'lnx-default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
     runs-on: "${{ matrix.runs-on || 'ubuntu-20.04'}}"
     env:
@@ -45,6 +49,10 @@ jobs:
       TRIAL_ARGS: "${{ matrix.trial-args || '-j 4' }}"
     strategy:
       fail-fast: false
+      # The matrix is designed to run by default various Python versions with
+      # the default OS and tests suite.
+      # Default values should be declared via empty string, to allow them
+      # to be omitted when extending the matrix.
       matrix:
         # Run on latest minor release of each major Python version.
         python-version: ['3.8', '3.9', '3.10']
@@ -69,6 +77,8 @@ jobs:
         # By default the coverate is not skipped.
         skip-coverage: ['']
 
+        # Here the matrix is extended with variations of the default
+        # value.
         include:
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
@@ -186,8 +196,7 @@ jobs:
     # If one of the above steps fails, fire up tmate for remote debugging.
     - name: Tmate debug on failure
       if: ${{ !cancelled() && env.TMATE_DEBUG == 'yes' }}
-      # We pin the version 3.11.
-      uses: mxschmitt/action-tmate@8b4e4ac71822ed7e0ad5fb3d1c33483e9e8fb270
+      uses: mxschmitt/action-tmate@v3
       with:
         limit-access-to-actor: true
 
@@ -201,8 +210,7 @@ jobs:
         python -m coverage xml -o coverage.xml -i
         python -m coverage report --skip-covered
 
-    # Pin at 3.1.0
-    - uses: codecov/codecov-action@v81cd2dc8148241f03f5839d295e000b8f761e378
+    - uses: codecov/codecov-action@v3
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
@@ -331,8 +339,7 @@ jobs:
 
     - name: Publish to PyPI - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
-      # Pin at 1.5.1
-      uses: pypa/gh-action-pypi-publish@37f50c210e3d2f9450da2cd423303d6a14a6e29f
+      uses: pypa/gh-action-pypi-publish@v1
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
