@@ -63,8 +63,10 @@ jobs:
       # It is used to document the test environement variations.
       # The actual job enviroment are defined in the `include` section.
       matrix:
-        # The Python version on which the job is executed..
-        python-version: ['']
+        # The Python version on which the job is executed.
+        # We need at least one value here, so we go with latest Python version
+        # that we support..
+        python-version: ['3.10']
         # Just use the default OS.
         runs-on: ['']
         # Human readable short description for this job.
@@ -116,9 +118,6 @@ jobs:
 
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
-
-          # Just Python 3.10 with default settings.
-          - python-version: '3.10'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
@@ -307,7 +306,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox
@@ -324,7 +323,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '{{ env.DEFAULT_PYTHON_VERSION }}'
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox
