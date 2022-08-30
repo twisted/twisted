@@ -65,7 +65,7 @@ steps:
     displayName: 'Run tests'
     continueOnError: ${{ parameters.allowFailure }}
     env:
-      TWISTED_REACTOR: ${{ parameters.windowsReactor }}
+      TRIAL_ARGS: --reactor=${{ parameters.windowsReactor }}
 
 - bash: |
     # sub-process coverage are generated in separate files so we combine them
