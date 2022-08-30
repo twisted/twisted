@@ -24,6 +24,11 @@ defaults:
   run:
     shell: bash
 
+env:
+  # Set to 'yes' to open a tunnel to GitHub's VMs through tmate on failures.
+  # Also increase timeout-minutes for the relevant OS when debugging remotely
+  # and you need a longer session.
+  TMATE_DEBUG: 'no'
 
 jobs:
   testing:
@@ -134,7 +139,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: pip cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key:
@@ -178,8 +183,16 @@ jobs:
       run: |
         ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
+    # If one of the above steps fails, fire up tmate for remote debugging.
+    - name: Tmate debug on failure
+      if: ${{ !cancelled() && env.TMATE_DEBUG == 'yes' }}
+      # We pin the version 3.11.
+      uses: mxschmitt/action-tmate@8b4e4ac71822ed7e0ad5fb3d1c33483e9e8fb270
+      with:
+        limit-access-to-actor: true
+
     - name: Prepare coverage
-      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
+      if: ${{ !cancelled() && !matrix.skip-coverage }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
@@ -188,7 +201,8 @@ jobs:
         python -m coverage xml -o coverage.xml -i
         python -m coverage report --skip-covered
 
-    - uses: codecov/codecov-action@v2
+    # Pin at 3.1.0
+    - uses: codecov/codecov-action@v81cd2dc8148241f03f5839d295e000b8f761e378
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
@@ -317,7 +331,8 @@ jobs:
 
     - name: Publish to PyPI - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1.3.1
+      # Pin at 1.5.1
+      uses: pypa/gh-action-pypi-publish@37f50c210e3d2f9450da2cd423303d6a14a6e29f
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
