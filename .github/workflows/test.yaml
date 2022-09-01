@@ -127,7 +127,7 @@ jobs:
             # Distributed trial is not yet suported on Windows so we overwrite
             # the default trial-args to remove concurrent runs and to
             # select a reactor.
-            trial-args: '--reactor=select'
+            trial-args: '--reactor=select -x'
 
           # Windows, newest Python supported version with iocp reactor.
           - python-version: '3.10'
@@ -135,7 +135,7 @@ jobs:
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=iocp'
+            trial-args: '--reactor=iocp -x'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
@@ -215,6 +215,10 @@ jobs:
           gir1.2-gtk-3.0 \
           xvfb
 
+    - name: Test
+      run: |
+        ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
+
     # If one of the above steps fails, fire up tmate for remote debugging.
     # This is fired for manual trigger or via the environment variable.
     - name: Tmate debug session
@@ -222,10 +226,6 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       with:
         limit-access-to-actor: true
-
-    - name: Test
-      run: |
-        ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
       if: ${{ !cancelled() && !matrix.skip-coverage }}
