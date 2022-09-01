@@ -107,10 +107,10 @@ jobs:
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
-          # We go with latest micro release for the smalles minor relase
+          # We go with latest micro release for the smallest minor release
           # that we support.
           - python-version: '3.7'
-            noipv6: -noipv6
+            noipv6: '-noipv6'
             job-name: 'default-tests-noipv6'
 
           # Just Python 3.8 with default settings.
@@ -241,7 +241,7 @@ jobs:
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'lnx-default-tests' }}
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
 
 
