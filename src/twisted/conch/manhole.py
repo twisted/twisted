@@ -149,7 +149,10 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 
     def write(self, data, isAsync=None, **kwargs):
         isAsync = _get_async_param(isAsync, **kwargs)
-        self.handler.addOutput(data, isAsync)
+        sys.__stdout__.flush()
+        sys.__stderr__.write(f"write() handling {data!r}")
+        sys.__stderr__.flush()
+        self.handler.addOutput(data , isAsync)
 
 
 CTRL_C = b"\x03"
