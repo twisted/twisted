@@ -232,6 +232,7 @@ class ManholeLoopbackMixin:
         Evaluate raising an exception.
         """
         import sys
+
         print(f"\n\nexcepthook: {sys.excepthook}")
         print(f"__excepthook__: {sys.__excepthook__}")
         print(f"sys.stdout: {sys.stdout}")
