@@ -215,10 +215,6 @@ jobs:
           gir1.2-gtk-3.0 \
           xvfb
 
-    - name: Test
-      run: |
-        ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
-
     # If one of the above steps fails, fire up tmate for remote debugging.
     # This is fired for manual trigger or via the environment variable.
     - name: Tmate debug session
@@ -226,6 +222,10 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       with:
         limit-access-to-actor: true
+
+    - name: Test
+      run: |
+        ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
     - name: Prepare coverage
       if: ${{ !cancelled() && !matrix.skip-coverage }}
