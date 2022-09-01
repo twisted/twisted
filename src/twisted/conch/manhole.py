@@ -152,7 +152,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         sys.__stdout__.flush()
         sys.__stderr__.write(f"write() handling {data!r}")
         sys.__stderr__.flush()
-        self.handler.addOutput(data , isAsync)
+        self.handler.addOutput(data, isAsync)
 
 
 CTRL_C = b"\x03"
