@@ -22,6 +22,9 @@ on:
         required: false
         default: false
 
+permissions:
+  contents: read
+
 # Only have a run a single parallel for each branch.
 # Runs for trunk are queues.
 # Older runs for non-trunk branches are cancelled and the jobs are executed
@@ -339,6 +342,8 @@ jobs:
   # process late in the release cycle,
   # The files are published only when a tag is created.
   release-publish:
+    permissions:
+      contents: write
     name: Check release and publish on twisted-* tag
     runs-on: 'ubuntu-20.04'
     steps:
