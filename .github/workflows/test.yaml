@@ -408,7 +408,6 @@ jobs:
           else
             echo "Branch not updated for not stable releases: $GITUB_REF"
           fi
-    
 
   # We have this job so that the PR can be blocked on a single job.
   # In this way, each time a job is modified,
