@@ -342,8 +342,6 @@ jobs:
   # process late in the release cycle,
   # The files are published only when a tag is created.
   release-publish:
-    permissions:
-      contents: write
     name: Check release and publish on twisted-* tag
     runs-on: 'ubuntu-20.04'
     steps:
@@ -376,8 +374,15 @@ jobs:
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
+  update-stable-branch:
+    permissions:
+      contents: write
+    name: Update stable branch - on stable tag
+    runs-on: 'ubuntu-20.04'
+    needs: [release-publish]
+    if: startsWith(github.ref, 'refs/tags/twisted-')
+    steps:
     - name: Update stable branch - on stable tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
       env:
         STABLE_BRANCH: 'stable'
         STABLE_REF_RE: '.*twisted-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$'
@@ -399,7 +404,7 @@ jobs:
           else
             echo "Branch not updated for not stable releases: $GITUB_REF"
           fi
-
+    
 
   # We have this job so that the PR can be blocked on a single job.
   # In this way, each time a job is modified,
