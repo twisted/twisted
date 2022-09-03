@@ -374,6 +374,10 @@ jobs:
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
+  # Read the Docs has no support for our "twisted-1.2.3" numbering convention
+  # and can't detect which tag is the stable one.
+  # A workaournd is to manually push to a "stable" branch to inform RTD
+  # that this is what we want at the "/en/stable" link.
   update-stable-branch:
     permissions:
       contents: write
@@ -423,6 +427,7 @@ jobs:
       - apidocs
       - static-checks
       - release-publish
+      - update-stable-branch
     steps:
       - name: Require all successes
         shell: python
