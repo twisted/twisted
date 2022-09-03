@@ -437,4 +437,4 @@ jobs:
           import os
           import sys
           results = json.loads(os.environ["RESULTS"])
-          sys.exit(0 if all(result == "success" for result in results) else 1)
+          sys.exit(0 if all(result in ["success", "skipped"] for result in results) else 1)
