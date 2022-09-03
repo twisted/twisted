@@ -381,7 +381,7 @@ jobs:
   update-stable-branch:
     permissions:
       contents: write
-    name: Update stable branch - on stable tag
+    name: Update stable branch for RTD - on tag
     runs-on: 'ubuntu-20.04'
     needs: [release-publish]
     if: startsWith(github.ref, 'refs/tags/twisted-')
