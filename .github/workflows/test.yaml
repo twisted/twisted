@@ -22,6 +22,9 @@ on:
         required: false
         default: false
 
+permissions:
+  contents: read
+
 # Only have a run a single parallel for each branch.
 # Runs for trunk are queues.
 # Older runs for non-trunk branches are cancelled and the jobs are executed
@@ -371,8 +374,19 @@ jobs:
       with:
         password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
 
+  # Read the Docs has no support for our "twisted-1.2.3" numbering convention
+  # and can't detect which tag is the stable one.
+  # A workaournd is to manually push to a "stable" branch to inform RTD
+  # that this is what we want at the "/en/stable" link.
+  update-stable-branch:
+    permissions:
+      contents: write
+    name: Update stable branch for RTD - on tag
+    runs-on: 'ubuntu-20.04'
+    needs: [release-publish]
+    if: startsWith(github.ref, 'refs/tags/twisted-')
+    steps:
     - name: Update stable branch - on stable tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
       env:
         STABLE_BRANCH: 'stable'
         STABLE_REF_RE: '.*twisted-[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$'
@@ -394,7 +408,6 @@ jobs:
           else
             echo "Branch not updated for not stable releases: $GITUB_REF"
           fi
-
 
   # We have this job so that the PR can be blocked on a single job.
   # In this way, each time a job is modified,
