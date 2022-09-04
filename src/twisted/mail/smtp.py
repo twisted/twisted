@@ -1651,8 +1651,9 @@ class ESMTP(SMTP):
         for c, v in self.extensions().items():
             if v is not None:
                 if v:
+                    bv = [x.encode() if isinstance(x, str) else x for x in v]
                     # Intentionally omit extensions with empty argument lists
-                    r.append(c + b" " + b" ".join(v))
+                    r.append(c + b" " + b" ".join(bv))
             else:
                 r.append(c)
 
