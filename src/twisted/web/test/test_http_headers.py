@@ -668,3 +668,51 @@ class UnicodeHeadersTests(TestCase):
         # Verify that the orignal does not have it
         self.assertEqual(h.getRawHeaders("test\u00E1"), ["foo\u2603", "bar"])
         self.assertEqual(h.getRawHeaders(b"test\xe1"), [b"foo\xe2\x98\x83", b"bar"])
+
+
+class MixedHeadersTests(TestCase):
+    """
+    Tests for L{Headers}, mixing L{bytes} and L{str} arguments for methods
+    where that is permitted.
+    """
+
+    def test_init(self) -> None:
+        """
+        Mixed L{str} and L{bytes} are accepted by the L{Headers} initializer.
+        """
+        h = Headers(
+            {
+                b"bytes": ["str", b"bytes"],
+                "str": [b"bytes", "str"],
+            }
+        )
+
+        self.assertEqual(
+            {
+                b"Bytes": [b"str", b"bytes"],
+                b"Str": [b"bytes", b"str"],
+            },
+            h.getAllRawHeaders(),
+        )
+
+    def test_addRawHeader(self) -> None:
+        """
+        L{Headers.addRawHeader} accepts mixed L{str} and L{bytes}.
+        """
+        h = Headers()
+        h.addRawHeader(b"bytes", "str")
+        h.addRawHeader("str", b"bytes")
+
+        self.assertEqual(h.getRawHeaders(b"Bytes"), [b"str"])
+        self.assertEqual(h.getRawHeaders("Str"), ["bytes"])
+
+    def test_setRawHeaders(self) -> None:
+        """
+        L{Headers.setRawHeaders} accepts mixed L{str} and L{bytes}.
+        """
+        h = Headers()
+        h.setRawHeaders(b"bytes", ["str", b"bytes"])
+        h.setRawHeaders("str", ["str", b"bytes"])
+
+        self.assertEqual(h.getRawHeaders(b"Bytes"), [b"str", b"bytes"])
+        self.assertEqual(h.getRawHeaders("Str"), ["str", "bytes"])

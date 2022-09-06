@@ -24,6 +24,7 @@ from typing import (
 
 from twisted.python.compat import cmp, comparable
 
+_S = Union[str, bytes]
 _T = TypeVar("_T")
 
 
@@ -84,7 +85,7 @@ class Headers:
 
     def __init__(
         self,
-        rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
+        rawHeaders: Optional[Mapping[_S, Sequence[_S]]] = None,
     ):
         self._rawHeaders: Dict[bytes, List[bytes]] = {}
         if rawHeaders is not None:
@@ -152,7 +153,7 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(self, name: AnyStr, values: Sequence[AnyStr]) -> None:
+    def setRawHeaders(self, name: _S, values: Sequence[_S]) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -200,7 +201,7 @@ class Headers:
 
         self._rawHeaders[_name] = encodedValues
 
-    def addRawHeader(self, name: AnyStr, value: AnyStr) -> None:
+    def addRawHeader(self, name: _S, value: _S) -> None:
         """
         Add a new raw value for the given header.
 
