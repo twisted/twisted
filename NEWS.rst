@@ -1,4 +1,4 @@
-This file contains the release notes for the Twisted.
+This file contains the release notes for Twisted.
 
 It only contains high-level changes that are of interest to Twisted library users.
 Users of Twisted should check the notes before planning an upgrade.
@@ -8,14 +8,18 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 22.8.0.rc1 (2022-08-28)
-===============================
+Twisted 22.8.0 (2022-09-06)
+===========================
+
+Twisted 22.8.0rc1 release candidate was released on 2022-08-28 and there are
+no changes between the release candidate and the final release.
+
 
 Features
 --------
 
 - twisted.internet.defer.maybeDeferred will now schedule a coroutine result as asynchronous operation and return a Deferred that fires with the result of the coroutine. (#10327)
-- Twisted now works with Cryptography versions 37 and above, and as a result its minimum TLS protocol version has been upgraded to TLSv1.2. (#10377)
+- Twisted now works with Cryptography versions 37 and above, and as a result, its minimum TLS protocol version has been upgraded to TLSv1.2. (#10377)
 
 
 Bugfixes
