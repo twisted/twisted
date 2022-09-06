@@ -692,7 +692,7 @@ class MixedHeadersTests(TestCase):
                 b"Bytes": [b"str", b"bytes"],
                 b"Str": [b"bytes", b"str"],
             },
-            h.getAllRawHeaders(),
+            dict(h.getAllRawHeaders()),
         )
 
     def test_addRawHeader(self) -> None:

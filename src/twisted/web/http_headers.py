@@ -112,7 +112,7 @@ class Headers:
             )
         return NotImplemented
 
-    def _encodeName(self, name: AnyStr) -> bytes:
+    def _encodeName(self, name: _S) -> bytes:
         """
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
@@ -211,7 +211,7 @@ class Headers:
         """
         if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
+                "Header name is an instance of %r, not bytes or str" % (type(name),)
             )
 
         if not isinstance(value, (bytes, str)):
@@ -221,7 +221,7 @@ class Headers:
             )
 
         # We secretly know getRawHeaders is really returning a list
-        values = cast(List[AnyStr], self.getRawHeaders(name, default=[]))
+        values = cast(List[_S], self.getRawHeaders(name, default=[]))
         values.append(value)
 
         self.setRawHeaders(name, values)
