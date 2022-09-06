@@ -1,0 +1,1 @@
+The typing of twisted.web.http_headers.Headers() and its methods addRawHeader() and setRawHeaders() now allow mixing str and bytes, matching the runtime behavior.
