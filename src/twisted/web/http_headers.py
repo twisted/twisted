@@ -85,7 +85,7 @@ class Headers:
 
     def __init__(
         self,
-        rawHeaders: Optional[Mapping[_S, Sequence[_S]]] = None,
+        rawHeaders: Optional[Mapping[_S, Union[Sequence[bytes], Sequence[str]]]] = None,
     ):
         self._rawHeaders: Dict[bytes, List[bytes]] = {}
         if rawHeaders is not None:
@@ -153,7 +153,9 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(self, name: _S, values: Sequence[_S]) -> None:
+    def setRawHeaders(
+        self, name: _S, values: Union[Sequence[bytes], Sequence[str]]
+    ) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -176,7 +178,7 @@ class Headers:
 
         if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
+                f"Header name is an instance of {type(name)!r}, not bytes or str"
             )
 
         for count, value in enumerate(values):

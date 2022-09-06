@@ -682,15 +682,15 @@ class MixedHeadersTests(TestCase):
         """
         h = Headers(
             {
-                b"bytes": ["str", b"bytes"],
-                "str": [b"bytes", "str"],
+                b"bytes": [b"bytes", b"bytes"],
+                "str": ["str", "str"],
             }
         )
 
         self.assertEqual(
             {
-                b"Bytes": [b"str", b"bytes"],
-                b"Str": [b"bytes", b"str"],
+                b"Bytes": [b"bytes", b"bytes"],
+                b"Str": [b"str", b"str"],
             },
             dict(h.getAllRawHeaders()),
         )
@@ -711,8 +711,8 @@ class MixedHeadersTests(TestCase):
         L{Headers.setRawHeaders} accepts mixed L{str} and L{bytes}.
         """
         h = Headers()
-        h.setRawHeaders(b"bytes", ["str", b"bytes"])
-        h.setRawHeaders("str", ["str", b"bytes"])
+        h.setRawHeaders(b"bytes", [b"bytes"])
+        h.setRawHeaders("str", ["str"])
 
-        self.assertEqual(h.getRawHeaders(b"Bytes"), [b"str", b"bytes"])
-        self.assertEqual(h.getRawHeaders("Str"), ["str", "bytes"])
+        self.assertEqual(h.getRawHeaders(b"Bytes"), [b"bytes"])
+        self.assertEqual(h.getRawHeaders("Str"), ["str"])
