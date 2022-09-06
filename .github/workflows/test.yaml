@@ -127,7 +127,7 @@ jobs:
             # Distributed trial is not yet suported on Windows so we overwrite
             # the default trial-args to remove concurrent runs and to
             # select a reactor.
-            trial-args: '--reactor=select -x'
+            trial-args: '--reactor=select --debug --nopm -x'
 
           # Windows, newest Python supported version with iocp reactor.
           - python-version: '3.10'
@@ -135,7 +135,7 @@ jobs:
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=iocp -x'
+            trial-args: '--reactor=iocp --debug --nopm -x'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
