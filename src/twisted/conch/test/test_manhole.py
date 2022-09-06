@@ -231,15 +231,6 @@ class ManholeLoopbackMixin:
         """
         Evaluate raising an exception.
         """
-        # import sys
-
-        # print(f"\n\nexcepthook: {sys.excepthook}")
-        # print(f"__excepthook__: {sys.__excepthook__}")
-        # print(f"sys.stdout: {sys.stdout}")
-        # print(f"sys.__stdout__: {sys.__stdout__}")
-        # print(f"sys.stderr: {sys.stderr}")
-        # print(f"sys.__stderr__: {sys.__stderr__}\n\n")
-
         done = self.recvlineClient.expect(b"done")
 
         self._testwrite(b"raise Exception('foo bar baz')\n" b"done")

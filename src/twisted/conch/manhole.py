@@ -149,9 +149,6 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 
     def write(self, data, isAsync=None, **kwargs):
         isAsync = _get_async_param(isAsync, **kwargs)
-        # sys.__stdout__.flush()
-        # sys.__stderr__.write(f"write() handling {data!r}")
-        # sys.__stderr__.flush()
         self.handler.addOutput(data, isAsync)
 
 
