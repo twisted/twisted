@@ -152,3 +152,22 @@ class MonkeyPatcherTests(unittest.SynchronousTestCase):
         self.assertRaises(RuntimeError, self.monkeyPatcher.runWithPatches, _)
         self.assertEqual(self.testObject.foo, self.originalObject.foo)
         self.assertEqual(self.testObject.bar, self.originalObject.bar)
+
+    def test_contextManager(self):
+        """
+        L{MonkeyPatcher} is a context manager that applies its patches on
+        entry and restore original values on exit.
+        """
+        self.monkeyPatcher.addPatch(self.testObject, "foo", "patched value")
+        with self.monkeyPatcher:
+            self.assertEqual(self.testObject.foo, "patched value")
+        self.assertEqual(self.testObject.foo, self.originalObject.foo)
+
+    def test_contextManagerPropagatesExceptions(self):
+        """
+        Exceptions propagate through the L{MonkeyPatcher} context-manager
+        exit method.
+        """
+        with self.assertRaises(RuntimeError):
+            with self.monkeyPatcher:
+                raise RuntimeError("something")
