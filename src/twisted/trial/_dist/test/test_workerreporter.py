@@ -46,6 +46,18 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         assert_that(run(self, target), matches_result(**expectations))
 
+    def test_outsideReportingContext(self) -> None:
+        """
+        L{WorkerReporter}'s implementation of test result methods raise
+        L{ValueError} when called outside of the
+        L{WorkerReporter.gatherReportingResults} context manager.
+        """
+        worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
+
+        case = sample.FooTest("test_foo")
+        with self.assertRaises(ValueError):
+            worker._result.addSuccess(case)
+
     def test_addSuccess(self) -> None:
         """
         L{WorkerReporter} propagates successes.
