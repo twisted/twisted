@@ -11,6 +11,7 @@ from unittest import TestCase
 from hamcrest import assert_that, equal_to, has_length
 from hamcrest.core.matcher import Matcher
 
+from twisted.internet.defer import Deferred
 from twisted.test.iosim import connectedServerAndClient
 from twisted.trial._dist.worker import LocalWorkerAMP, WorkerProtocol
 from twisted.trial.reporter import TestResult
@@ -27,7 +28,7 @@ def run(case: SynchronousTestCase, target: TestCase) -> TestResult:
     """
     result = TestResult()
     worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
-    d = local.run(target, result)
+    d = Deferred.fromCoroutine(local.run(target, result))
     pump.flush()
     assert_that(case.successResultOf(d), equal_to({"success": True}))
     return result

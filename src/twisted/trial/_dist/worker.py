@@ -11,16 +11,18 @@ This module implements the worker classes.
 
 import os
 from typing import Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
+from unittest import TestCase
 
 from zope.interface import implementer
 
 from attrs import frozen
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypedDict
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
+from twisted.logger import Logger
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -34,7 +36,7 @@ from twisted.trial._dist import (
 from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.reporter import TestResult
 from twisted.trial.runner import TestLoader, TrialSuite
-from twisted.trial.unittest import TestCase, Todo
+from twisted.trial.unittest import Todo
 
 
 @frozen(auto_exc=False)
@@ -48,12 +50,20 @@ class WorkerException(Exception):
     message: str
 
 
+class RunResult(TypedDict):
+    """
+    Represent the result of a L{workercommands.Run} command.
+    """
+
+    success: bool
+
+
 class Worker(Protocol):
     """
     An object that can run actions.
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: TestCase, result: TestResult) -> RunResult:
         """
         Run a test case.
         """
@@ -68,20 +78,44 @@ class WorkerProtocol(AMP):
     The worker-side trial distributed protocol.
     """
 
+    logger = Logger()
+
     def __init__(self, forceGarbageCollection=False):
         self._loader = TestLoader()
         self._result = WorkerReporter(self)
         self._forceGarbageCollection = forceGarbageCollection
 
     @workercommands.Run.responder
-    def run(self, testCase):
+    async def run(self, testCase: str) -> RunResult:
         """
         Run a test case by name.
         """
-        case = self._loader.loadByName(testCase)
-        suite = TrialSuite([case], self._forceGarbageCollection)
-        suite.run(self._result)
-        return {"success": True}
+        with self._result.gatherReportingResults() as results:
+            case = self._loader.loadByName(testCase)
+            suite = TrialSuite([case], self._forceGarbageCollection)
+            suite.run(self._result)
+
+            allSucceeded = True
+            for (success, result) in await DeferredList(results, consumeErrors=True):
+                if not success:
+                    allSucceeded = False
+                    # We can try to report the error but since something has
+                    # already gone wrong we shouldn't be extremely confident
+                    # that this will succeed.  So we will also log it and any
+                    # errors reporting it to our local log.
+                    self.logger.failure(
+                        "Result reporting for {id} failed",
+                        failure=result,
+                        id=testCase,
+                    )
+                    try:
+                        await self._result._addErrorFallible(testCase, result)
+                    except BaseException:
+                        self.logger.failure(
+                            "Additionally, reporting the reporting failure failed."
+                        )
+
+        return {"success": allSucceeded}
 
     @workercommands.Start.responder
     def start(self, directory):
@@ -206,14 +240,7 @@ class LocalWorkerAMP(AMP):
         self._testStream.flush()
         return {"success": True}
 
-    def _stopTest(self, result):
-        """
-        Stop the current running test case, forwarding the result.
-        """
-        self._result.stopTest(self._testCase)
-        return result
-
-    def run(self, testCase, result):
+    async def run(self, testCase: TestCase, result: TestResult) -> RunResult:
         """
         Run a test.
         """
@@ -221,8 +248,10 @@ class LocalWorkerAMP(AMP):
         self._result = result
         self._result.startTest(testCase)
         testCaseId = testCase.id()
-        d = self.callRemote(workercommands.Run, testCase=testCaseId)
-        return d.addCallback(self._stopTest)
+        try:
+            return await self.callRemote(workercommands.Run, testCase=testCaseId)  # type: ignore[no-any-return]
+        finally:
+            self._result.stopTest(testCase)
 
     def setTestStream(self, stream):
         """

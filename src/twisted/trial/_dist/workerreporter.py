@@ -9,12 +9,78 @@ Test reporter forwarding test results over trial distributed AMP commands.
 @since: 12.3
 """
 
-from typing import List
+from types import TracebackType
+from typing import Callable, List, Literal, Optional, Sequence, Tuple, Type, Union
+from unittest import TestCase as PyUnitTestCase
 
+from attrs import Factory, define
+from typing_extensions import TypeAlias
+
+from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial._dist import managercommands
 from twisted.trial.reporter import TestResult
+
+ExcInfo: TypeAlias = Tuple[BaseException, Type[BaseException], TracebackType]
+
+
+@define
+class ReportingResults:
+    """
+    A mutable container for the result of sending test results back to the
+    parent process.
+
+    Since it is possible for these sends to fail asynchronously but the
+    L{TestResult} protocol is not well suited for asynchronous result
+    reporting, results are collected on an instance of this class and when the
+    runner believes the test is otherwise complete, it can collect the results
+    and do something with any errors.
+
+    :ivar _reporter: The L{WorkerReporter} this object is associated with.
+        This is the object doing the result reporting.
+
+    :ivar _results: A list of L{Deferred} instances representing the results
+        of reporting operations.  This is expected to grow over the course of
+        the test run and then be inspected by the runner once the test is
+        over.  The public interface to this list is via the context manager
+        interface.
+    """
+
+    _reporter: "WorkerReporter"
+    _results: List[Deferred[object]] = Factory(list)
+
+    def __enter__(self) -> Sequence[Deferred[object]]:
+        """
+        Begin a new reportable context in which results can be collected.
+
+        :return: A sequence which will contain the L{Deferred} instances
+            representing the results of all test result reporting that happens
+            while the context manager is active.  The sequence is extended as
+            the test runs so its value should not be consumed until the test
+            is over.
+        """
+        return self._results
+
+    def __exit__(
+        self,
+        excType: Type[BaseException],
+        excValue: BaseException,
+        excTraceback: TracebackType,
+    ) -> Literal[False]:
+        """
+        End the reportable context.
+        """
+        self._reporter._reporting = None
+        return False
+
+    def record(self, result: Deferred[object]) -> None:
+        """
+        Record a L{Deferred} instance representing one test result reporting
+        operation.
+        """
+        self._results.append(result)
 
 
 class WorkerReporter(TestResult):
@@ -24,20 +90,36 @@ class WorkerReporter(TestResult):
 
     @ivar _DEFAULT_TODO: Default message for expected failures and
         unexpected successes, used only if a C{Todo} is not provided.
+
+    @ivar _reporting: When a "result reporting" context is active, the
+        corresponding context manager.  Otherwise, L{None}.
     """
 
     _DEFAULT_TODO = "Test expected to fail"
+
+    ampProtocol: AMP
+    _reporting: Optional[ReportingResults] = None
 
     def __init__(self, ampProtocol):
         """
         @param ampProtocol: The communication channel with the trial
             distributed manager which collects all test results.
-        @type ampProtocol: C{AMP}
         """
         super().__init__()
         self.ampProtocol = ampProtocol
 
-    def _getFailure(self, error):
+    def gatherReportingResults(self) -> ReportingResults:
+        """
+        Get a "result reporting" context manager.
+
+        In a "result reporting" context, asynchronous test result reporting
+        methods may be used safely.  Their results (in particular, failures)
+        are available from the context manager.
+        """
+        self._reporting = ReportingResults(self)
+        return self._reporting
+
+    def _getFailure(self, error: Union[Failure, ExcInfo]) -> Failure:
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
@@ -56,31 +138,66 @@ class WorkerReporter(TestResult):
             frames.extend([frame[0], frame[1], str(frame[2])])
         return frames
 
-    def addSuccess(self, test):
+    def _call(self, f: Callable[[], Deferred[object]]) -> None:
         """
-        Send a success over.
+        Call L{f} if and only if a "result reporting" context is active.
+
+        @param f: A function to call.  Its result is accumulated into the
+            result reporting context.
+
+        @raise ValueError: If no result reporting context is active.
+        """
+        if self._reporting is not None:
+            self._reporting.record(maybeDeferred(f))
+        else:
+            raise ValueError(
+                "Cannot call command outside of reporting context manager."
+            )
+
+    def addSuccess(self, test: PyUnitTestCase) -> None:
+        """
+        Send a success to the parent process.
+
+        This must be called in context managed by L{gatherReportingResults}.
         """
         super().addSuccess(test)
         testName = test.id()
-        self.ampProtocol.callRemote(managercommands.AddSuccess, testName=testName)
+        self._call(
+            lambda: self.ampProtocol.callRemote(  # type: ignore[no-any-return]
+                managercommands.AddSuccess, testName=testName
+            )
+        )
 
-    def addError(self, test, error):
+    def _addErrorFallible(
+        self, testName: str, errorObj: Union[Failure, ExcInfo]
+    ) -> Deferred[object]:
         """
-        Send an error over.
+        Attempt to report an error to the parent process.
+
+        Unlike L{addError} this can fail asynchronously.  This version is for
+        infrastructure code that can apply its own failure handling.
+
+        @return: A L{Deferred} that fires with the result of the attempt.
         """
-        super().addError(test, error)
-        testName = test.id()
-        failure = self._getFailure(error)
-        error = failure.getErrorMessage()
+        failure = self._getFailure(errorObj)
+        errorStr = failure.getErrorMessage()
         errorClass = qual(failure.type)
         frames = self._getFrames(failure)
-        self.ampProtocol.callRemote(
+        return self.ampProtocol.callRemote(  # type: ignore[no-any-return]
             managercommands.AddError,
             testName=testName,
-            error=error,
+            error=errorStr,
             errorClass=errorClass,
             frames=frames,
         )
+
+    def addError(self, test, error):
+        """
+        Send an error to the parent process.
+        """
+        super().addError(test, error)
+        testName = test.id()
+        self._addErrorFallible(testName, error)
 
     def addFailure(self, test, fail):
         """
