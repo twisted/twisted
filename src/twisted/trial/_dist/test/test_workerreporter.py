@@ -28,8 +28,7 @@ def run(case: SynchronousTestCase, target: TestCase) -> TestResult:
     result = TestResult()
     worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
     d = local.run(target, result)
-    pump.pump()
-    pump.pump()
+    pump.flush()
     assert_that(case.successResultOf(d), equal_to({"success": True}))
     return result
 
