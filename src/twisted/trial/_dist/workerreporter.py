@@ -13,7 +13,6 @@ from types import TracebackType
 from typing import (
     Callable,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -24,7 +23,7 @@ from typing import (
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, Literal
 
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.protocols.amp import AMP
