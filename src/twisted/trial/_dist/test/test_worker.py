@@ -80,15 +80,13 @@ class WorkerProtocolErrorTests(TestCase):
     infrastructure/runner errors).
     """
 
-    def test_addSuccessError(self):
-        """
-        If there is an error reporting success then the test run is marked as
-        an error.
-        """
+    def _runErrorTest(
+        self, brokenTestName: str, loggedExceptionType: Type[BaseException]
+    ) -> None:
         worker, server, pump = connectedServerAndClient(
             LocalWorkerAMP, WorkerProtocol, greet=False
         )
-        expectedCase = pyunitcases.BrokenRunInfrastructure("test_addSuccess")
+        expectedCase = pyunitcases.BrokenRunInfrastructure(brokenTestName)
         result = TestResult()
         Deferred.fromCoroutine(server.run(expectedCase, result))
         pump.flush()
@@ -103,7 +101,21 @@ class WorkerProtocolErrorTests(TestCase):
         # easily make an assertion about it.  Also, if we don't flush it, the
         # test fails.  As far as the type goes, we just have to be aware of
         # the implementation details of `BrokenRunInfrastructure`.
-        assert_that(self.flushLoggedErrors(AttributeError), has_length(1))
+        assert_that(self.flushLoggedErrors(loggedExceptionType), has_length(1))
+
+    def test_addSuccessError(self) -> None:
+        """
+        If there is an error reporting success then the test run is marked as
+        an error.
+        """
+        self._runErrorTest("test_addSuccess", AttributeError)
+
+    def test_addErrorError(self) -> None:
+        """
+        If there is an error reporting an error then the test run is marked as
+        an error.
+        """
+        self._runErrorTest("test_addError", AttributeError)
 
 
 class LocalWorkerAMPTests(TestCase):

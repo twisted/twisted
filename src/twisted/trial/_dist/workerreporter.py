@@ -197,7 +197,7 @@ class WorkerReporter(TestResult):
         """
         super().addError(test, error)
         testName = test.id()
-        self._addErrorFallible(testName, error)
+        self._call(lambda: self._addErrorFallible(testName, error))
 
     def addFailure(self, test, fail):
         """
