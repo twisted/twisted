@@ -22,6 +22,21 @@ class FoolishError(Exception):
     pass
 
 
+class LargeError(Exception):
+    """
+    An exception which has a string representation of at least a specified
+    number of characters.
+    """
+
+    def __init__(self, minSize: int) -> None:
+        Exception.__init__(self)
+        self.minSize = minSize
+
+    def __str__(self):
+        large = "x" * self.minSize
+        return f"LargeError<I fail: {large}>"
+
+
 class FailureInSetUpMixin:
     def setUp(self):
         raise FoolishError("I am a broken setUp method")
@@ -109,11 +124,25 @@ class TestAsynchronousFail(unittest.TestCase):
         """
         return deferLater(reactor, 0, self.fail, "I fail later")  # type: ignore[arg-type]
 
-    def test_exception(self):
+    def test_failGreaterThan64k(self) -> defer.Deferred[None]:
+        """
+        A test which fails in the callback of the returned L{defer.Deferred}
+        with a very long string.
+        """
+        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2 ** 16)  # type: ignore[arg-type]
+
+    def test_exception(self) -> None:
         """
         A test which raises an exception synchronously.
         """
         raise Exception(self.text)
+
+    def test_exceptionGreaterThan64k(self) -> None:
+        """
+        A test which raises an exception with a long string representation
+        synchronously.
+        """
+        raise LargeError(2 ** 16)
 
 
 class ErrorTest(unittest.SynchronousTestCase):

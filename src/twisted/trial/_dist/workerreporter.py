@@ -10,7 +10,17 @@ Test reporter forwarding test results over trial distributed AMP commands.
 """
 
 from types import TracebackType
-from typing import Callable, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Callable,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
@@ -22,8 +32,66 @@ from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial._dist import managercommands
 from twisted.trial.reporter import TestResult
+from .stream import chunk, stream
 
-ExcInfo: TypeAlias = Tuple[BaseException, Type[BaseException], TracebackType]
+T = TypeVar("T")
+ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
+XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
+TrialFailure = Union[XUnitFailure, Failure]
+
+
+async def addError(
+    amp: AMP, testName: str, errorClass: str, error: str, frames: List[str]
+) -> None:
+    """
+    Send an error to the worker manager over an AMP connection.
+
+    First the pieces which can be large are streamed over the connection.
+    Then, L{managercommands.AddError} is called with the rest of the
+    information and the stream IDs.
+
+    :param amp: The connection to use.
+    :param testName: The name (or ID) of the test the error relates to.
+    :param errorClass: The fully qualified name of the error type.
+    :param error: The string representation of the error.
+    :param frames: The lines of the traceback associated with the error.
+    """
+
+    errorStreamId = await stream(amp, chunk(error, 2 ** 16 - 1))
+    framesStreamId = await stream(amp, iter(frames))
+
+    await amp.callRemote(
+        managercommands.AddError,
+        testName=testName,
+        errorClass=errorClass,
+        errorStreamId=errorStreamId,
+        framesStreamId=framesStreamId,
+    )
+
+
+async def addFailure(
+    amp: AMP, testName: str, fail: str, failClass: str, frames: List[str]
+) -> None:
+    """
+    Like L{addError} but for failures.
+
+    :param amp: See L{addError}
+    :param testName: See L{addError}
+    :param failClass: The fully qualified name of the exception associated
+        with the failure.
+    :param fail: The string representation of the failure.
+    :param frames: The lines of the traceback associated with the error.
+    """
+    failStreamId = await stream(amp, chunk(fail, 2 ** 16 - 1))
+    framesStreamId = await stream(amp, iter(frames))
+
+    await amp.callRemote(
+        managercommands.AddFailure,
+        testName=testName,
+        failClass=failClass,
+        failStreamId=failStreamId,
+        framesStreamId=framesStreamId,
+    )
 
 
 @define
@@ -119,7 +187,7 @@ class WorkerReporter(TestResult):
         self._reporting = ReportingResults(self)
         return self._reporting
 
-    def _getFailure(self, error: Union[Failure, ExcInfo]) -> Failure:
+    def _getFailure(self, error: TrialFailure) -> Failure:
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
@@ -138,12 +206,14 @@ class WorkerReporter(TestResult):
             frames.extend([frame[0], frame[1], str(frame[2])])
         return frames
 
-    def _call(self, f: Callable[[], Deferred[object]]) -> None:
+    def _call(self, f: Callable[[], T]) -> None:
         """
         Call L{f} if and only if a "result reporting" context is active.
 
         @param f: A function to call.  Its result is accumulated into the
-            result reporting context.
+            result reporting context.  It may return a L{Deferred} or a
+            coroutine or synchronously raise an exception or return a result
+            value.
 
         @raise ValueError: If no result reporting context is active.
         """
@@ -168,9 +238,7 @@ class WorkerReporter(TestResult):
             )
         )
 
-    def _addErrorFallible(
-        self, testName: str, errorObj: Union[Failure, ExcInfo]
-    ) -> Deferred[object]:
+    async def _addErrorFallible(self, testName: str, errorObj: TrialFailure) -> None:
         """
         Attempt to report an error to the parent process.
 
@@ -183,15 +251,15 @@ class WorkerReporter(TestResult):
         errorStr = failure.getErrorMessage()
         errorClass = qual(failure.type)
         frames = self._getFrames(failure)
-        return self.ampProtocol.callRemote(  # type: ignore[no-any-return]
-            managercommands.AddError,
-            testName=testName,
-            error=errorStr,
-            errorClass=errorClass,
-            frames=frames,
+        await addError(
+            self.ampProtocol,
+            testName,
+            errorClass,
+            errorStr,
+            frames,
         )
 
-    def addError(self, test, error):
+    def addError(self, test: PyUnitTestCase, error: TrialFailure) -> None:
         """
         Send an error to the parent process.
         """
@@ -199,24 +267,24 @@ class WorkerReporter(TestResult):
         testName = test.id()
         self._call(lambda: self._addErrorFallible(testName, error))
 
-    def addFailure(self, test, fail):
+    def addFailure(self, test: PyUnitTestCase, fail: TrialFailure) -> None:
         """
         Send a Failure over.
         """
         super().addFailure(test, fail)
         testName = test.id()
         failure = self._getFailure(fail)
-        fail = failure.getErrorMessage()
+        failureMessage = failure.getErrorMessage()
         failClass = qual(failure.type)
         frames = self._getFrames(failure)
         self._call(
-            lambda: self.ampProtocol.callRemote(
-                managercommands.AddFailure,
-                testName=testName,
-                fail=fail,
-                failClass=failClass,
-                frames=frames,
-            )
+            lambda: addFailure(
+                self.ampProtocol,
+                testName,
+                failureMessage,
+                failClass,
+                frames,
+            ),
         )
 
     def addSkip(self, test, reason):

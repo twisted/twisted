@@ -60,6 +60,15 @@ class WorkerReporterTests(SynchronousTestCase):
             erroneous.TestAsynchronousFail("test_exception"), errors=has_length(1)
         )
 
+    def test_addErrorGreaterThan64k(self) -> None:
+        """
+        L{WorkerReporter} propagates errors with large string representations.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_exceptionGreaterThan64k"),
+            errors=has_length(1),
+        )
+
     def test_addErrorTuple(self) -> None:
         """
         L{WorkerReporter} propagates errors from pyunit's TestCases.
@@ -72,6 +81,15 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         self.assertTestRun(
             erroneous.TestRegularFail("test_fail"), failures=has_length(1)
+        )
+
+    def test_addFailureGreaterThan64k(self) -> None:
+        """
+        L{WorkerReporter} propagates test failures with large string representations.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_failGreaterThan64k"),
+            failures=has_length(1),
         )
 
     def test_addFailureTuple(self) -> None:
@@ -103,6 +121,15 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         self.assertTestRun(
             skipping.SynchronousStrictTodo("test_todo1"), expectedFailures=has_length(1)
+        )
+
+    def test_addExpectedFailureGreaterThan64k(self) -> None:
+        """
+        WorkerReporter propagates expected failures with large string representations.
+        """
+        self.assertTestRun(
+            skipping.ExpectedFailure("test_expectedFailureGreaterThan64k"),
+            expectedFailures=has_length(1),
         )
 
     def test_addUnexpectedSuccess(self) -> None:

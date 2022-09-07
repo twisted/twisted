@@ -37,6 +37,7 @@ from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.reporter import TestResult
 from twisted.trial.runner import TestLoader, TrialSuite
 from twisted.trial.unittest import Todo
+from .stream import StreamOpen, StreamReceiver, StreamWrite
 
 
 @frozen(auto_exc=False)
@@ -132,6 +133,19 @@ class LocalWorkerAMP(AMP):
     Local implementation of the manager commands.
     """
 
+    def __init__(self, boxReceiver=None, locator=None):
+        super().__init__(boxReceiver, locator)
+        self._streams = StreamReceiver()
+
+    @StreamOpen.responder
+    def streamOpen(self):
+        return {"streamId": self._streams.open()}
+
+    @StreamWrite.responder
+    def streamWrite(self, streamId, data):
+        self._streams.write(streamId, data)
+        return {}
+
     @managercommands.AddSuccess.responder
     def addSuccess(self, testName):
         """
@@ -171,15 +185,17 @@ class LocalWorkerAMP(AMP):
     def addError(
         self,
         testName: str,
-        error: str,
         errorClass: str,
-        frames: List[str],
+        errorStreamId: int,
+        framesStreamId: int,
     ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
 
         :param error: A message describing the error.
         """
+        error = "".join(self._streams.close(errorStreamId))
+        frames = self._streams.close(framesStreamId)
         # Wrap the error message in ``WorkerException`` because it is not
         # possible to transfer arbitrary exception values over the AMP
         # connection to the main process but we must give *some* Exception
@@ -192,13 +208,15 @@ class LocalWorkerAMP(AMP):
     def addFailure(
         self,
         testName: str,
-        fail: str,
+        failStreamId: int,
         failClass: str,
-        frames: List[str],
+        framesStreamId: int,
     ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
         """
+        fail = "".join(self._streams.close(failStreamId))
+        frames = self._streams.close(framesStreamId)
         # See addError for info about use of WorkerException here.
         failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
