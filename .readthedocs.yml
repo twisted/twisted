@@ -8,9 +8,7 @@ sphinx:
   # This can be re-enable once RTD is updated with https://github.com/readthedocs/readthedocs.org/issues/7116
   fail_on_warning: False
 
-formats:
-  - pdf
-  - epub
+formats: all
 
 python:
   version: 3.8
