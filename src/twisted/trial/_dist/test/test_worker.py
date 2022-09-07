@@ -117,6 +117,34 @@ class WorkerProtocolErrorTests(TestCase):
         """
         self._runErrorTest("test_addError", AttributeError)
 
+    def test_addFailureError(self) -> None:
+        """
+        If there is an error reporting a failure then the test run is marked
+        as an error.
+        """
+        self._runErrorTest("test_addFailure", AttributeError)
+
+    def test_addSkipError(self) -> None:
+        """
+        If there is an error reporting a skip then the test run is marked
+        as an error.
+        """
+        self._runErrorTest("test_addSkip", AttributeError)
+
+    def test_addExpectedFailure(self) -> None:
+        """
+        If there is an error reporting an expected failure then the test
+        run is marked as an error.
+        """
+        self._runErrorTest("test_addExpectedFailure", AttributeError)
+
+    def test_addUnexpectedSuccess(self) -> None:
+        """
+        If there is an error reporting an unexpected ccess then the test
+        run is marked as an error.
+        """
+        self._runErrorTest("test_addUnexpectedSuccess", AttributeError)
+
 
 class LocalWorkerAMPTests(TestCase):
     """

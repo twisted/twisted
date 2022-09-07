@@ -209,12 +209,14 @@ class WorkerReporter(TestResult):
         fail = failure.getErrorMessage()
         failClass = qual(failure.type)
         frames = self._getFrames(failure)
-        self.ampProtocol.callRemote(
-            managercommands.AddFailure,
-            testName=testName,
-            fail=fail,
-            failClass=failClass,
-            frames=frames,
+        self._call(
+            lambda: self.ampProtocol.callRemote(
+                managercommands.AddFailure,
+                testName=testName,
+                fail=fail,
+                failClass=failClass,
+                frames=frames,
+            )
         )
 
     def addSkip(self, test, reason):
@@ -224,8 +226,10 @@ class WorkerReporter(TestResult):
         super().addSkip(test, reason)
         reason = str(reason)
         testName = test.id()
-        self.ampProtocol.callRemote(
-            managercommands.AddSkip, testName=testName, reason=reason
+        self._call(
+            lambda: self.ampProtocol.callRemote(
+                managercommands.AddSkip, testName=testName, reason=reason
+            )
         )
 
     def _getTodoReason(self, todo):
@@ -246,11 +250,13 @@ class WorkerReporter(TestResult):
         super().addExpectedFailure(test, error, todo)
         errorMessage = error.getErrorMessage()
         testName = test.id()
-        self.ampProtocol.callRemote(
-            managercommands.AddExpectedFailure,
-            testName=testName,
-            error=errorMessage,
-            todo=self._getTodoReason(todo),
+        self._call(
+            lambda: self.ampProtocol.callRemote(
+                managercommands.AddExpectedFailure,
+                testName=testName,
+                error=errorMessage,
+                todo=self._getTodoReason(todo),
+            )
         )
 
     def addUnexpectedSuccess(self, test, todo=None):
@@ -259,10 +265,12 @@ class WorkerReporter(TestResult):
         """
         super().addUnexpectedSuccess(test, todo)
         testName = test.id()
-        self.ampProtocol.callRemote(
-            managercommands.AddUnexpectedSuccess,
-            testName=testName,
-            todo=self._getTodoReason(todo),
+        self._call(
+            lambda: self.ampProtocol.callRemote(
+                managercommands.AddUnexpectedSuccess,
+                testName=testName,
+                todo=self._getTodoReason(todo),
+            )
         )
 
     def printSummary(self):
