@@ -71,6 +71,38 @@ class WorkerProtocolTests(TestCase):
         self.assertNotEqual(os.path.realpath(os.path.curdir), curdir)
 
 
+class WorkerProtocolErrorTests(TestCase):
+    """
+    Tests for L{WorkerProtocol}'s handling of certain errors related to
+    running the tests themselves (i.e., not test errors but test
+    infrastructure/runner errors).
+    """
+    def test_addSuccessError(self):
+        """
+        If there is an error reporting success then the test run is marked as
+        an error.
+        """
+        worker, server, pump = connectedServerAndClient(
+            LocalWorkerAMP, WorkerProtocol, greet=False
+        )
+        expectedCase = pyunitcases.BrokenRunInfrastructure("test_addSuccess")
+        result = TestResult()
+        server.run(expectedCase, result)
+        pump.flush()
+        assert_that(result, matches_result(errors=has_length(1)))
+        [(actualCase, errors)] = result.errors
+        assert_that(actualCase, equal_to(expectedCase))
+
+        # Additionally, we expect that the worker protocol logged the failure
+        # once so that it is visible somewhere, even if it cannot deliver it
+        # back to the parent process (which it can in this case).  Since the
+        # worker runs in process with us, that failure is in our log so we can
+        # easily make an assertion about it.  Also, if we don't flush it, the
+        # test fails.  As far as the type goes, we just have to be aware of
+        # the implementation details of `BrokenRunInfrastructure`.
+        assert_that(self.flushLoggedErrors(AttributeError), has_length(1))
+
+
 class LocalWorkerAMPTests(TestCase):
     """
     Test case for distributed trial's manager-side local worker AMP protocol

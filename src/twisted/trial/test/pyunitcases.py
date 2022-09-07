@@ -33,3 +33,29 @@ class PyUnitTest(unittest.TestCase):
         """
         A test which uses the L{unittest.skip} decorator to cause a skip.
         """
+
+
+class BrokenRunInfrastructure(unittest.TestCase):
+    """
+    A test suite that is broken at the level of integration between
+    L{TestCase.run} and the results object.
+    """
+
+    def run(self, result):
+        """
+        Override the normal C{run} behavior to pass the result object
+        along to the test method.  Each test method needs the result object so
+        that it can implement its particular kind of brokenness.
+        """
+        return getattr(self, self._testMethodName)(result)
+
+    def test_addSuccess(self, result):
+        """
+        Violate the L{TestResult.addSuccess} interface.
+        """
+
+        class NonStringId:
+            def id(self) -> object:
+                return object()
+
+        result.addSuccess(NonStringId())
