@@ -65,7 +65,7 @@ class AddExpectedFailure(Command):
 
     arguments = [
         (b"testName", NativeString()),
-        (b"error", NativeString()),
+        (b"errorStreamId", Integer()),
         (b"todo", NativeString()),
     ]
     response = [(b"success", Boolean())]

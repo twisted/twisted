@@ -93,6 +93,25 @@ async def addFailure(
     )
 
 
+async def addExpectedFailure(amp: AMP, testName: str, error: str, todo: str) -> None:
+    """
+    Like L{addError} but for expected failures.
+
+    :param amp: See L{addError}
+    :param testName: See L{addError}
+    :param error: The string representation of the expected failure.
+    :param todo: The string description of the expectation.
+    """
+    errorStreamId = await stream(amp, chunk(error, 2 ** 16 - 1))
+
+    await amp.callRemote(
+        managercommands.AddExpectedFailure,
+        testName=testName,
+        errorStreamId=errorStreamId,
+        todo=todo,
+    )
+
+
 @define
 class ReportingResults:
     """
@@ -318,8 +337,8 @@ class WorkerReporter(TestResult):
         errorMessage = error.getErrorMessage()
         testName = test.id()
         self._call(
-            lambda: self.ampProtocol.callRemote(
-                managercommands.AddExpectedFailure,
+            lambda: addExpectedFailure(
+                self.ampProtocol,
                 testName=testName,
                 error=errorMessage,
                 todo=self._getTodoReason(todo),

@@ -232,11 +232,12 @@ class LocalWorkerAMP(AMP):
 
     @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
-        self, testName: str, error: str, todo: Optional[None]
+        self, testName: str, errorStreamId: int, todo: Optional[str]
     ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """
+        error = "".join(self._streams.close(errorStreamId))
         _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
