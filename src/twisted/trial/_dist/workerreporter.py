@@ -10,20 +10,11 @@ Test reporter forwarding test results over trial distributed AMP commands.
 """
 
 from types import TracebackType
-from typing import (
-    Callable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Callable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
-from typing_extensions import TypeAlias, Literal
+from typing_extensions import Literal, TypeAlias
 
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.protocols.amp import AMP
