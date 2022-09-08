@@ -98,14 +98,13 @@ class LocalWorkerAMP(AMP):
     Local implementation of the manager commands.
     """
 
+    @managercommands.AddSuccess.responder
     def addSuccess(self, testName):
         """
         Add a success to the reporter.
         """
         self._result.addSuccess(self._testCase)
         return {"success": True}
-
-    managercommands.AddSuccess.responder(addSuccess)
 
     def _buildFailure(
         self,
@@ -134,6 +133,7 @@ class LocalWorkerAMP(AMP):
             )
         return failure
 
+    @managercommands.AddError.responder
     def addError(
         self,
         testName: str,
@@ -154,8 +154,7 @@ class LocalWorkerAMP(AMP):
         self._result.addError(self._testCase, failure)
         return {"success": True}
 
-    managercommands.AddError.responder(addError)
-
+    @managercommands.AddFailure.responder
     def addFailure(
         self,
         testName: str,
@@ -171,8 +170,7 @@ class LocalWorkerAMP(AMP):
         self._result.addFailure(self._testCase, failure)
         return {"success": True}
 
-    managercommands.AddFailure.responder(addFailure)
-
+    @managercommands.AddSkip.responder
     def addSkip(self, testName, reason):
         """
         Add a skip to the reporter.
@@ -180,20 +178,18 @@ class LocalWorkerAMP(AMP):
         self._result.addSkip(self._testCase, reason)
         return {"success": True}
 
-    managercommands.AddSkip.responder(addSkip)
-
+    @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
         self, testName: str, error: str, todo: Optional[None]
     ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
         """
-        _todo = Todo(todo)
+        _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
 
-    managercommands.AddExpectedFailure.responder(addExpectedFailure)
-
+    @managercommands.AddUnexpectedSuccess.responder
     def addUnexpectedSuccess(self, testName, todo):
         """
         Add an unexpected success to the reporter.
@@ -201,8 +197,7 @@ class LocalWorkerAMP(AMP):
         self._result.addUnexpectedSuccess(self._testCase, todo)
         return {"success": True}
 
-    managercommands.AddUnexpectedSuccess.responder(addUnexpectedSuccess)
-
+    @managercommands.TestWrite.responder
     def testWrite(self, out):
         """
         Print test output from the worker.
@@ -210,8 +205,6 @@ class LocalWorkerAMP(AMP):
         self._testStream.write(out + "\n")
         self._testStream.flush()
         return {"success": True}
-
-    managercommands.TestWrite.responder(testWrite)
 
     def _stopTest(self, result):
         """

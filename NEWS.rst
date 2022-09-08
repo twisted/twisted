@@ -1,7 +1,141 @@
+This file contains the release notes for Twisted.
+
+It only contains high-level changes that are of interest to Twisted library users.
+Users of Twisted should check the notes before planning an upgrade.
+
 Ticket numbers in this file can be looked up by visiting
-http://twistedmatrix.com/trac/ticket/<number>
+https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
+
+Twisted 22.8.0 (2022-09-06)
+===========================
+
+Twisted 22.8.0rc1 release candidate was released on 2022-08-28 and there are
+no changes between the release candidate and the final release.
+
+
+Features
+--------
+
+- twisted.internet.defer.maybeDeferred will now schedule a coroutine result as asynchronous operation and return a Deferred that fires with the result of the coroutine. (#10327)
+- Twisted now works with Cryptography versions 37 and above, and as a result, its minimum TLS protocol version has been upgraded to TLSv1.2. (#10377)
+
+
+Bugfixes
+--------
+
+- ``twisted.internet.base.DelayedCall.__repr__`` will no longer raise ``AttributeError`` if the ``DelayedCall`` was created before debug mode was enabled.  As a side-effect, ``twisted.internet.base.DelayedCall.creator`` is now defined as ``None`` in cases where previously it was undefined. (#8306)
+- twisted.internet.iocpreactor.udp now properly re-queues its listener when there is a failure condition on the read from the socket. (#10052)
+- twisted.internet.defer.inlineCallbacks no longer causes confusing StopIteration tracebacks to be added to the top of tracebacks originating in triggered callbacks (#10260)
+- The typing of twisted.internet.task.react no longer constrains the type of argv. (#10289)
+- `ContextVar.reset()` now works correctly inside `inlineCallbacks` functions and coroutines. (#10301)
+- Implement twisted.python.failure._Code.co_positions for compatibility with Python 3.11. (#10336)
+- twisted.pair.tuntap._TUNSETIFF and ._TUNGETIFF values are now correct parisc, powerpc and sparc architectures. (#10339)
+
+
+Improved Documentation
+----------------------
+
+- The release process documentation was updated to include information about
+  doing a security release. (#10324)
+- The development and policy documentation pages were moved into the same
+  directory that is now placed inside the documentation root directory. (#11575)
+
+
+Deprecations and Removals
+-------------------------
+
+- Python 3.6 is no longer supported.
+  Twisted 22.4.0 was the last version with support for Python 3.6. (#10304)
+
+
+Misc
+----
+
+- #9437, #9495, #10066, #10275, #10318, #10325, #10328, #10329, #10331, #10349, #10350, #10352, #10353, #11561, #11564, #11567, #11569, #11585, #11592, #11600, #11606, #11610, #11612, #11614
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.checkers.UNIXAuthorizedKeysFiles now uses the filesystem encoding to decode usernames before looking them up in the password database, so it works on Python 3. (#10286)
+- twisted.conch.ssh.SSHSession.request_env no longer gives a warning if the session does not implement ISessionSetEnv. (#10347)
+- The cftp command line (and `twisted.conch.scripts.cftp.SSHSession.extReceived`) no longer raises an unhandled error when receiving data on stderr from the server. (#10351)
+
+
+Misc
+~~~~
+
+- #10330
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.template.renderElement now combines consecutive, sychronously-available bytes up to a fixed size limit into a single string to pass to ``IRequest.write`` instead of passing them all separately.  This greatly reduces the number of chunks in the response. (#10348)
+
+
+Misc
+~~~~
+
+- #11604
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.maildir.MaildirMessage now use byte header to avoid incompatibility with the FileMessage which writes bytes not strings lines to a message file (#10244)
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.words.protocols.irc.IRCClient now splits overly long NOTICEs and NOTICEs containing \n before sending. (#10285)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.names.dns logs unparsable messages rather than generating a Failure instance (#9723)
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- ``trial --jobs=N --exitfirst`` is now supported. (#9654)
+
+
+Bugfixes
+~~~~~~~~
+
+- `trial --jobs=N --until-failure ...` now reports the correct number of tests run after each iteration. (#10311)
+- ``trial -jN ...`` will now pass errors and failures to ``IReporter`` methods as instances of ``WorkerException`` instead of ``str``. (#10333)
+
+
+Misc
+~~~~
+
+- #10319, #10338, #11571
+
 
 Twisted 22.4.0 (2022-04-11)
 ===========================

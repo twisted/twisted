@@ -8,6 +8,7 @@ Tests for large portions of L{twisted.mail}.
 import email.message
 import email.parser
 import errno
+import glob
 import io
 import os
 import pickle
@@ -220,24 +221,11 @@ class BounceWithSMTPServerTests(TestCase):
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class FileMessageTests(TestCase):
     def setUp(self):
-        self.name = "fileMessage.testFile"
-        self.final = "final.fileMessage.testFile"
-        self.f = open(self.name, "w")
+        self.name = self.mktemp()
+        self.final = self.mktemp()
+        self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
         self.fp = mail.mail.FileMessage(self.f, self.name, self.final)
-
-    def tearDown(self):
-        try:
-            self.f.close()
-        except BaseException:
-            pass
-        try:
-            os.remove(self.name)
-        except BaseException:
-            pass
-        try:
-            os.remove(self.final)
-        except BaseException:
-            pass
 
     def testFinalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
@@ -247,23 +235,86 @@ class FileMessageTests(TestCase):
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testContents(self):
-        contents = "first line\nsecond line\nthird line\n"
+        contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        with open(self.final) as f:
+        with open(self.final, "rb") as f:
             self.assertEqual(f.read(), contents)
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testInterrupted(self):
-        contents = "first line\nsecond line\n"
+        contents = b"first line\nsecond line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.connectionLost()
         self.assertFalse(os.path.exists(self.name))
         self.assertFalse(os.path.exists(self.final))
+
+
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirMessageTests(TestCase):
+    """
+    Tests for the file creating by the L{mail.maildir.MaildirMessage}.
+    """
+
+    def setUp(self):
+        """
+        Create and open a temporary file.
+        """
+        self.name = self.mktemp()
+        self.final = self.mktemp()
+        self.address = b"user@example.com"
+        self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
+        self.fp = mail.maildir.MaildirMessage(
+            self.address, self.f, self.name, self.final
+        )
+
+    def _finalName(self):
+        """
+        Search for the final file path.
+
+        @rtype: L{str}
+        @return: Final file path.
+        """
+        return glob.glob(f"{self.final},S=[0-9]*")[0]
+
+    def test_finalName(self):
+        """
+        Send the EOM to the message and check that the final file name contains
+        the correct file size and the temporary file has been closed and removed.
+        """
+        final = self.successResultOf(self.fp.eomReceived())
+        self.assertEqual(final, f"{self.final},S={os.path.getsize(final)}")
+        self.assertTrue(self.f.closed)
+        self.assertFalse(os.path.exists(self.name))
+
+    def test_contents(self):
+        """
+        Send a message contents and the EOM to the message and check that the
+        final file contains the correct header and the message contents.
+        """
+        contents = b"first line\nsecond line\nthird line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        final = self.successResultOf(self.fp.eomReceived())
+        with open(final, "rb") as f:
+            self.assertEqual(
+                f.read(), b"Delivered-To: %s\n%s" % (self.address, contents)
+            )
+
+    def test_interrupted(self):
+        """
+        Check that the interrupted message transfer removes the temporary file
+        and a doesn't create a final file.
+        """
+        contents = b"first line\nsecond line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        self.fp.connectionLost()
+        self.assertFalse(os.path.exists(self.name))
+        self.assertRaises(IndexError, self._finalName)
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")

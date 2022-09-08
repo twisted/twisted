@@ -1,21 +1,6 @@
+:orphan:
 
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
+Redirecting to dev pages
+========================
 
-Development of Twisted
-======================
-
-.. toctree::
-   :hidden:
-
-   naming
-   philosophy
-   policy/index
-
-
-This documentation is for people who work on the Twisted codebase itself, rather than for people who want to use Twisted in their own projects.
-
-- :doc:`Naming <naming>`
-- :doc:`Philosophy <philosophy>`
-- :doc:`Twisted development policy <policy/index>`
+The content of this page was moved to :doc:`Twisted development </development/index>`.
