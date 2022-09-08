@@ -8,9 +8,16 @@ sphinx:
   # This can be re-enable once RTD is updated with https://github.com/readthedocs/readthedocs.org/issues/7116
   fail_on_warning: False
 
-formats:
-  - pdf
-  - epub
+# We don't proofread all the output formats, and we don't know if anyone really
+# uses some of them.  Is anyone actually printing the docs out as a PDF?  If a
+# particular format is useful to someone let's let them download it.  If
+# dubiously-used formats start causing build errors that are difficult to debug
+# (i.e. PDF, EPub) feel free to disable them if necessary, but HTMLZip is an
+# offline archive of the actual docs website that everyone uses most frequently
+# and should be kept working; if it's breaking then probably something is wrong
+# with the website as well.
+
+formats: all
 
 python:
   version: 3.8

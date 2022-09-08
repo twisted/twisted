@@ -1,1 +1,0 @@
-twisted.words.protocols.irc.IRCClient now splits overly long NOTICEs and NOTICEs containing \n before sending.

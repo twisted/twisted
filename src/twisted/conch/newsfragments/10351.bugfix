@@ -1,1 +1,0 @@
-The cftp command line (and `twisted.conch.scripts.cftp.SSHSession.extReceived`) no longer raises an unhandled error when receiving data on stderr from the server.

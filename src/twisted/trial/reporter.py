@@ -15,6 +15,7 @@ import time
 import unittest as pyunit
 import warnings
 from collections import OrderedDict
+from typing import TYPE_CHECKING, List, Tuple
 
 from zope.interface import implementer
 
@@ -24,13 +25,16 @@ from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
+if TYPE_CHECKING:
+    from ._synctest import Todo
+
 try:
     from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
 
 
-def _makeTodo(value):
+def _makeTodo(value: str) -> "Todo":
     """
     Return a L{Todo} object built from C{value}.
 
@@ -80,6 +84,11 @@ class TestResult(pyunit.TestResult):
 
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
     _DEFAULT_TODO = "Test expected to fail"
+
+    skips: List[Tuple[itrial.ITestCase, str]]
+    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
+    successes: int
 
     def __init__(self):
         super().__init__()
