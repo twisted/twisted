@@ -17,6 +17,7 @@ import os
 import re
 import socket
 import warnings
+from typing import Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -33,7 +34,9 @@ from twisted.internet.address import (
     _ProcessAddress,
 )
 from twisted.internet.interfaces import (
+    IAddress,
     IHostnameResolver,
+    IHostResolution,
     IReactorPluggableNameResolver,
     IResolutionReceiver,
     IStreamClientEndpointStringParserWithReactor,
@@ -702,12 +705,12 @@ class _SimpleHostnameResolver:
 
     def resolveHostName(
         self,
-        resolutionReceiver,
-        hostName,
-        portNumber=0,
-        addressTypes=None,
-        transportSemantics="TCP",
-    ):
+        resolutionReceiver: IResolutionReceiver,
+        hostName: str,
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
         """
         Initiate a hostname resolution.
 
@@ -726,7 +729,8 @@ class _SimpleHostnameResolver:
         @return: The resolution in progress.
         @rtype: L{IResolutionReceiver}
         """
-        resolutionReceiver.resolutionBegan(HostResolution(hostName))
+        resolution = HostResolution(hostName)
+        resolutionReceiver.resolutionBegan(resolution)
         d = self._nameResolution(hostName, portNumber)
 
         def cbDeliver(gairesult):
@@ -747,7 +751,7 @@ class _SimpleHostnameResolver:
         d.addCallback(cbDeliver)
         d.addErrback(ebLog)
         d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
-        return resolutionReceiver
+        return resolution
 
 
 @implementer(interfaces.IStreamClientEndpoint)
