@@ -1770,9 +1770,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         globalLogPublisher.addObserver(captureLogs)
         self.addCleanup(lambda: globalLogPublisher.removeObserver(captureLogs))
 
-        receiver = self.resolver.resolveHostName(self.receiver, "example.com")
-
-        self.assertIs(receiver, self.receiver)
+        self.resolver.resolveHostName(self.receiver, "example.com")
 
         self.fakeResolverReturns.errback(Exception())
 
@@ -1798,9 +1796,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         ipv4Host = "1.2.3.4"
         ipv6Host = "1::2::3::4"
 
-        receiver = self.resolver.resolveHostName(self.receiver, "example.com")
-
-        self.assertIs(receiver, self.receiver)
+        self.resolver.resolveHostName(self.receiver, "example.com")
 
         self.fakeResolverReturns.callback(
             [
