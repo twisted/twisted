@@ -103,7 +103,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred[str]":
+    def getHostByName(name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -190,9 +190,9 @@ class IHostnameResolver(Interface):
     def resolveHostName(
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
-        portNumber: int,
-        addressTypes: Sequence[Type[IAddress]],
-        transportSemantics: str,
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
         Initiate a hostname resolution.
