@@ -27,9 +27,12 @@ Stack Overflow is a programming Q & A site.  You can find Twisted-related questi
 Real-Time Chat
 ==============
 
-Server: ``irc.libera.chat`` (more about `the Libera IRC network <https://libera.chat>`_)
+You can join the `Twisted Gitter channel <https://gitter.im/twisted/twisted>`_ (or simply click the "Open Chat" button at the bottom-right of this screen).
+Gitter is based on `Matrix <https://matrix.org/>`_, which is itself built with Twisted !
 
-For support, you can join this channel:
+Alternatively you can join the following IRC channel. There are gateways between the Gitter and IRC channels.
+
+Server: ``irc.libera.chat`` (more about `the Libera IRC network <https://libera.chat>`_)
 
 - `#twisted <irc://irc.libera.chat/twisted>`_  - support for Twisted and its ecosystem
 
