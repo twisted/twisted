@@ -648,4 +648,3 @@ class KeyGenTests(TestCase):
         self.assertNotEqual(
             privateRSA_openssh_encrypted, FilePath(filename).getContent()
         )
-
