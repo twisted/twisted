@@ -225,7 +225,7 @@ def printFingerprint(options):
 
 def changePassPhrase(options):
     if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
+        filename = os.path.expanduser("~").join(".ssh", "id_rsa")
         try:
             options["filename"] = input("Enter file in which the key is (%s): " % filename)
         except EOFError:
