@@ -628,3 +628,24 @@ class KeyGenTests(TestCase):
         self.assertTrue(
             privateKeyContent.startswith(b"-----BEGIN OPENSSH PRIVATE KEY-----\n")
         )
+
+    def test_changePassphrase_use_default(self):
+        """
+        L{changePassPhrase} defaults to "~/.ssh/id_rsa" if the user doesn't
+        specify a key.
+        """
+        oldNewConfirm = makeGetpass("encrypted", "newpass", "newpass")
+        self.patch(getpass, "getpass", oldNewConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        changePassPhrase({"filename": ""})
+        self.assertEqual(
+            self.stdout.getvalue().strip("\n"),
+            "Your identification has been saved with the new passphrase.",
+        )
+        self.assertNotEqual(
+            privateRSA_openssh_encrypted, FilePath(filename).getContent()
+        )
+

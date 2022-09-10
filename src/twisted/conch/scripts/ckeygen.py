@@ -226,7 +226,8 @@ def printFingerprint(options):
 def changePassPhrase(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename) or filename
+        user_input = input("Enter file in which the key is (%s): " % filename)
+        options["filename"] = user_input or filename
     try:
         key = keys.Key.fromFile(options["filename"])
     except keys.EncryptedKeyError:
