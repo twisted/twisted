@@ -14,12 +14,13 @@ Group:		System/Libraries
 URL:		http://www.twistedmatrix.com/
 Requires:	python >= %{py_libver}
 BuildRequires:	python-devel
+BuildRequires:	pyproject-rpm-macros >= 1.2.0
 BuildRoot:	%{_tmppath}/%{name}-buildroot
 Prefix:		%{_prefix}
 
 %description
 Twisted is an event-based framework for internet applications.  It includes a
-web server, a telnet server, a chat server, a news server, a generic client 
+web server, a telnet server, a chat server, a news server, a generic client
 and server for remote object access, and APIs for creating new protocols and
 services. Twisted supports integration of the Tk, GTK+, Qt or wxPython event
 loop with its main event loop. The Win32 event loop is also supported, as is
@@ -37,15 +38,8 @@ Install Twisted-doc if you need the API documentation and example programs.
 %build
 
 %install
-[ -n "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != / ] && rm -rf "$RPM_BUILD_ROOT"
-mkdir -p "$RPM_BUILD_ROOT"
-
-python setup.py install --optimize=2 --record=installed-files \
-      --root="$RPM_BUILD_ROOT"
-
-#  install man pages
-mkdir -p "$RPM_BUILD_ROOT"/%{_mandir}/man1/
-cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man1/
+%pyproject_install
+%pyproject_save_files %{srcname}
 
 %clean
 [ -n "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != / ] && rm -rf "$RPM_BUILD_ROOT"

@@ -26,4 +26,4 @@ python:
     - method: pip
       path: .
       extra_requirements:
-        - dev_release
+        - dev-release
