@@ -12,6 +12,7 @@ from hamcrest.core.description import Description
 from hamcrest.core.matcher import Matcher
 
 from twisted.python.filepath import IFilePath
+from twisted.python.reflect import fullyQualifiedName
 
 _A = TypeVar("_A")
 _B = TypeVar("_B")
@@ -61,7 +62,8 @@ class _MatchAfter(BaseMatcher[_A]):
             super().describe_mismatch(item, mismatch_description)
         else:
             mismatch_description.append_text(
-                f"{self.f.__qualname__}({item!r}) raised\n    {self._e}"
+                f"{fullyQualifiedName(self.f)}({item!r}) raised\n"
+                f"{fullyQualifiedName(self._e.__class__)}: {self._e}"
             )
 
     def describe_to(self, description: Description) -> None:

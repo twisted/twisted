@@ -74,9 +74,13 @@ class FileContentsTests(SynchronousTestCase):
         assert_that(fileContents(anything()).matches(p, description), equal_to(False))
         assert_that(
             str(description),
+            # It must contain at least ...
             AllOf(
+                # the name of the matcher.
                 contains_string("fileContents"),
-                contains_string("No such file or directory"),
+                # the name of the exception raised.
+                contains_string("FileNotFoundError"),
+                # the path being matched against.
                 contains_string(p.path),
             ),
         )
