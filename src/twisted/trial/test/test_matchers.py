@@ -80,7 +80,8 @@ class FileContentsTests(SynchronousTestCase):
                 contains_string("fileContents"),
                 # the name of the exception raised.
                 contains_string("FileNotFoundError"),
-                # the path being matched against.
-                contains_string(p.path),
+                # the repr (so weird values are escaped) of the path being
+                # matched against.
+                contains_string(repr(p.path)),
             ),
         )
