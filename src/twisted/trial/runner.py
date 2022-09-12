@@ -837,7 +837,7 @@ class TrialRunner:
             self._logFileObject.close()
             self._logFileObject = None
 
-    def _setUpLogFile(self):
+    def _setUpLogFile(self) -> None:
         self._tearDownLogFile()
         if self.logfile == "-":
             logFile = sys.stdout

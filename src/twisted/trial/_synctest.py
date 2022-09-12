@@ -17,7 +17,19 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import Iterable, List, NoReturn, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    Coroutine,
+    Generator,
+    Iterable,
+    List,
+    NoReturn,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
@@ -669,18 +681,30 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred: Deferred[T]) -> T:
+    def successResultOf(
+        self,
+        deferred: Union[
+            Coroutine[Deferred[T], Any, T],
+            Generator[Deferred[T], Any, T],
+            Deferred[T],
+        ],
+    ) -> T:
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
 
-        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} which
-            has a success result.  This means
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} or
+            I{coroutine} which has a success result.
+
+            For a L{Deferred<twisted.internet.defer.Deferred>} this means
             L{Deferred.callback<twisted.internet.defer.Deferred.callback>} or
             L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
             been called on it and it has reached the end of its callback chain
-            and the last callback or errback returned a non-L{failure.Failure}.
-        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+            and the last callback or errback returned a
+            non-L{failure.Failure}.
+
+            For a I{coroutine} this means all awaited values have a success
+            result.
 
         @raise SynchronousTestCase.failureException: If the
             L{Deferred<twisted.internet.defer.Deferred>} has no result or has a

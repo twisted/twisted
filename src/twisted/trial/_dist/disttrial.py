@@ -12,6 +12,7 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 from functools import partial
+from os.path import isabs
 from typing import Awaitable, Callable, Iterable, List, Sequence, TextIO, Union, cast
 from unittest import TestResult, TestSuite
 
@@ -212,9 +213,15 @@ class WorkerPool:
             self._config.workingDirectory,
         )
 
-        # Open a log file in the chosen working directory (not necessarily the
-        # same as our configured working directory, if that path was in use).
-        testLog = openTestLog(testDir.child(self._config.logFile))
+        if isabs(self._config.logFile):
+            # Open a log file wherever the user asked.
+            testLogPath = FilePath(self._config.logFile)
+        else:
+            # Open a log file in the chosen working directory (not necessarily
+            # the same as our configured working directory, if that path was
+            # in use).
+            testLogPath = testDir.preauthChild(self._config.logFile)
+        testLog = openTestLog(testLogPath)
 
         ampWorkers = [LocalWorkerAMP() for x in range(self._config.numWorkers)]
         workers = self._createLocalWorkers(
