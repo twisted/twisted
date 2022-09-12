@@ -9,6 +9,7 @@ import os
 import sys
 from functools import partial
 from io import StringIO
+from os.path import sep
 from typing import Callable, List, Set
 
 from zope.interface import implementer, verify
@@ -320,7 +321,7 @@ class WorkerPoolTests(TestCase):
         sampled_from(
             [
                 "out.log",
-                "subdir/out.log",
+                f"subdir{sep}out.log",
             ]
         ),
     )
@@ -330,7 +331,7 @@ class WorkerPoolTests(TestCase):
         log file based on the L{WorkerPoolConfig.logFile}.
         """
         if absolute:
-            logFile = self.parent.path + "/" + logFile
+            logFile = self.parent.path + sep + logFile
 
         config = assoc(self.config, logFile=logFile)
 
@@ -339,10 +340,10 @@ class WorkerPoolTests(TestCase):
         else:
             matches = AllOf(
                 # This might have a suffix if the configured workingDirectory
-                # was found to be in-use already so we don't add a "/" suffix.
+                # was found to be in-use already so we don't add a sep suffix.
                 starts_with(config.workingDirectory.path),
-                # This should be exactly the suffix so we add a "/" prefix.
-                ends_with("/" + logFile),
+                # This should be exactly the suffix so we add a sep prefix.
+                ends_with(sep + logFile),
             )
 
         pool = WorkerPool(config)
