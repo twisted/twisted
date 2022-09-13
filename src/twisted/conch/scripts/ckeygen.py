@@ -9,6 +9,7 @@ Implementation module for the `ckeygen` command.
 
 import getpass
 import os
+import platform
 import socket
 import sys
 from functools import wraps
@@ -225,7 +226,10 @@ def printFingerprint(options):
 
 def changePassPhrase(options):
     if not options["filename"]:
-        filename = os.path.expanduser("~").join([".ssh", "id_rsa"])
+        if platform.system() == 'Windows':
+            filename = os.path.expanduser("~\.ssh\id_rsa")
+        else:
+            filename = os.path.expanduser("~/.ssh/id_rsa")
         try:
             options["filename"] = input("Enter file in which the key is (%s): " % filename)
         except EOFError:
