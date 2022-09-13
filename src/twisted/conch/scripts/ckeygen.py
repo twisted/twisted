@@ -208,9 +208,9 @@ def getKeyOrDefault(options):
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
-        options["filename"] = input(
-            "Enter file in which the key is (%s): " % filename
-        ) or filename
+        options["filename"] = (
+            input("Enter file in which the key is (%s): " % filename) or filename
+        )
 
 
 def printFingerprint(options):
