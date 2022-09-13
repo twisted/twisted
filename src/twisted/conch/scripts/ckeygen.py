@@ -203,7 +203,7 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def printFingerprint(options):
+def getKeyOrDefault(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
@@ -214,6 +214,10 @@ def printFingerprint(options):
             )
         except EOFError:
             options["filename"] = filename
+
+
+def printFingerprint(options):
+    getKeyOrDefault(options)
     if os.path.exists(options["filename"] + ".pub"):
         options["filename"] += ".pub"
     options = enumrepresentation(options)
@@ -232,16 +236,7 @@ def printFingerprint(options):
 
 
 def changePassPhrase(options):
-    if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
-        if platform.system() == "Windows":
-            filename = os.path.expanduser(r"~\.ssh\id_rsa")
-        try:
-            options["filename"] = input(
-                "Enter file in which the key is (%s): " % filename
-            )
-        except EOFError:
-            options["filename"] = filename
+    getKeyOrDefault(options)
     try:
         key = keys.Key.fromFile(options["filename"])
     except keys.EncryptedKeyError:
@@ -256,6 +251,8 @@ def changePassPhrase(options):
             sys.exit(f"Could not change passphrase: {e}")
     except keys.BadKeyError as e:
         sys.exit(f"Could not change passphrase: {e}")
+    except FileNotFoundError as e:
+        sys.exit(f"Default file {e} could not be opened, please specify a file.")
 
     if not options.get("newpass"):
         while 1:
@@ -290,18 +287,11 @@ def changePassPhrase(options):
 
 
 def displayPublicKey(options):
-    if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
-        if platform.system() == "Windows":
-            filename = os.path.expanduser(r"~\.ssh\id_rsa")
-        try:
-            options["filename"] = input(
-                "Enter file in which the key is (%s): " % filename
-            )
-        except EOFError:
-            options["filename"] = filename
+    getKeyOrDefault(options)
     try:
         key = keys.Key.fromFile(options["filename"])
+    except FileNotFoundError as e:
+        sys.exit(f"Default file {e} could not be opened, please specify a file.")
     except keys.EncryptedKeyError:
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter passphrase: ")
