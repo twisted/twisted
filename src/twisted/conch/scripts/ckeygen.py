@@ -206,7 +206,7 @@ def _defaultPrivateKeySubtype(keyType):
 def getKeyOrDefault(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
-        if platform.system() == "Windows":
+        if platform.system() == "Windows": #noqa
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
         options["filename"] = (
             input("Enter file in which the key is (%s): " % filename) or filename
@@ -322,7 +322,7 @@ def _saveKey(key, options):
     keyTypeName = KeyTypeMapping[key.type()]
     if not options["filename"]:
         defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
-        if platform.system() == "Windows":
+        if platform.system() == "Windows": #noqa
             defaultPath = os.path.expanduser(fr"~\.ssh\id_{keyTypeName}")
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
