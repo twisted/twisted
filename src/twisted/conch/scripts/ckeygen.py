@@ -290,8 +290,8 @@ def displayPublicKey(options):
     getKeyOrDefault(options)
     try:
         key = keys.Key.fromFile(options["filename"])
-    except FileNotFoundError as e:
-        sys.exit(f"Default file {e} could not be opened, please specify a file.")
+    except FileNotFoundError:
+        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
     except keys.EncryptedKeyError:
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter passphrase: ")
