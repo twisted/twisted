@@ -3,7 +3,7 @@ Tests for L{twisted.trial._dist.stream}.
 """
 
 from random import Random
-from typing import Awaitable, List, TypeVar, Union
+from typing import Awaitable, Dict, List, TypeVar, Union
 
 from hamcrest import (
     all_of,
@@ -120,11 +120,11 @@ class AMPStreamReceiver(AMP):
         self.streams = streams
 
     @StreamOpen.responder
-    def streamOpen(self) -> dict[str, object]:
+    def streamOpen(self) -> Dict[str, object]:
         return {"streamId": self.streams.open()}
 
     @StreamWrite.responder
-    def streamWrite(self, streamId: int, data: str) -> dict[str, object]:
+    def streamWrite(self, streamId: int, data: str) -> Dict[str, object]:
         self.streams.write(streamId, data)
         return {}
 
