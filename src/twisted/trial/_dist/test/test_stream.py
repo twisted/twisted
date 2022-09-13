@@ -18,8 +18,9 @@ from hamcrest import (
 from hypothesis import given
 from hypothesis.strategies import integers, just, lists, randoms, text
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, fail
 from twisted.internet.interfaces import IProtocol
+from twisted.internet.protocol import Protocol
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.test.iosim import FakeTransport, connect
@@ -160,6 +161,32 @@ def interact(server: IProtocol, client: IProtocol, interaction: Awaitable[T]) ->
             result.raiseException()
         return result
     raise Exception("Interaction failed to produce a result.")
+
+
+class InteractTests(SynchronousTestCase):
+    """
+    Tests for the test helper L{interact}.
+    """
+
+    def test_failure(self):
+        """
+        If the interaction results in a failure then L{interact} raises an
+        exception.
+        """
+
+        class ArbitraryException(Exception):
+            pass
+
+        with self.assertRaises(ArbitraryException):
+            interact(Protocol(), Protocol(), fail(ArbitraryException()))
+
+    def test_incomplete(self):
+        """
+        If the interaction fails to produce a result then L{interact} raises
+        an exception.
+        """
+        with self.assertRaises(Exception):
+            interact(Protocol(), Protocol(), Deferred())
 
 
 class StreamTests(SynchronousTestCase):
