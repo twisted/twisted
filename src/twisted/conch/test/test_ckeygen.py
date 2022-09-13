@@ -647,19 +647,13 @@ class KeyGenTests(TestCase):
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar"}
-        displayPublicKey(options)
-        self.assertEqual(
-            self.stdout.getvalue().strip("\n"),
-            "/foo/bar could not be opened, please specify a file.",
-        )
+        with self.assertRaises(SystemExit):
+            displayPublicKey(options)
 
     def test_handleBadFileChangePassPhrase(self):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar"}
-        changePassPhrase(options)
-        self.assertEqual(
-            self.stdout.getvalue().strip("\n"),
-            "/foo/bar could not be opened, please specify a file.",
-        )
+        with self.assertRaises(SystemExit):
+            changePassPhrase(options)
