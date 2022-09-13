@@ -251,7 +251,7 @@ def changePassPhrase(options):
             sys.exit(f"Could not change passphrase: {e}")
     except keys.BadKeyError as e:
         sys.exit(f"Could not change passphrase: {e}")
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         sys.exit(f"{options['filename']} could not be opened, please specify a file.")
 
     if not options.get("newpass"):
