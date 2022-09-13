@@ -45,7 +45,7 @@ class WorkerException(Exception):
     """
     An exception was reported by a test running in a worker process.
 
-    :ivar message: An error message describing the exception.
+    @ivar message: An error message describing the exception.
     """
 
     message: str
@@ -192,7 +192,14 @@ class LocalWorkerAMP(AMP):
         """
         Add an error to the reporter.
 
-        :param error: A message describing the error.
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to
+            the peer.
+
+        @param error: A message describing the error.
         """
         error = "".join(self._streams.close(errorStreamId))
         frames = self._streams.close(framesStreamId)
@@ -214,6 +221,13 @@ class LocalWorkerAMP(AMP):
     ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
+
+        @param failStreamId: The identifier of a stream over which the text of
+            this failure was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to the
+            peer.
         """
         fail = "".join(self._streams.close(failStreamId))
         frames = self._streams.close(framesStreamId)
@@ -236,6 +250,9 @@ class LocalWorkerAMP(AMP):
     ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
+
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
         """
         error = "".join(self._streams.close(errorStreamId))
         _todo = Todo("<unknown>" if todo is None else todo)
