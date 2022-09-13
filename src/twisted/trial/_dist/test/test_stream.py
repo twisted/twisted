@@ -153,8 +153,7 @@ def interact(server: IProtocol, client: IProtocol, interaction: Awaitable[T]) ->
     interacting = Deferred.fromCoroutine(to_coroutine())
     interacting.addBoth(collect_result)
 
-    while pump.pump():
-        pass
+    pump.flush()
 
     if finished:
         if isinstance(result, Failure):
