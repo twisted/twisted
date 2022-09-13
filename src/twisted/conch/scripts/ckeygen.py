@@ -207,7 +207,7 @@ def getKeyOrDefault(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
-            filename = os.path.expanduser(r"~\.ssh\id_rsa")
+            filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
         try:
             options["filename"] = input(
                 "Enter file in which the key is (%s): " % filename
@@ -252,7 +252,7 @@ def changePassPhrase(options):
     except keys.BadKeyError as e:
         sys.exit(f"Could not change passphrase: {e}")
     except FileNotFoundError as e:
-        sys.exit(f"Default file {e} could not be opened, please specify a file.")
+        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
 
     if not options.get("newpass"):
         while 1:
