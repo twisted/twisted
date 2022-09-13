@@ -206,7 +206,14 @@ def _defaultPrivateKeySubtype(keyType):
 def printFingerprint(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename)
+        if platform.system() == "Windows":
+            filename = os.path.expanduser(r"~\.ssh\id_rsa")
+        try:
+            options["filename"] = input(
+                "Enter file in which the key is (%s): " % filename
+            )
+        except EOFError:
+            options["filename"] = filename
     if os.path.exists(options["filename"] + ".pub"):
         options["filename"] += ".pub"
     options = enumrepresentation(options)
@@ -226,12 +233,13 @@ def printFingerprint(options):
 
 def changePassPhrase(options):
     if not options["filename"]:
-        if platform.system() == 'Windows':
-            filename = os.path.expanduser("~\.ssh\id_rsa")
-        else:
-            filename = os.path.expanduser("~/.ssh/id_rsa")
+        filename = os.path.expanduser("~/.ssh/id_rsa")
+        if platform.system() == "Windows":
+            filename = os.path.expanduser(r"~\.ssh\id_rsa")
         try:
-            options["filename"] = input("Enter file in which the key is (%s): " % filename)
+            options["filename"] = input(
+                "Enter file in which the key is (%s): " % filename
+            )
         except EOFError:
             options["filename"] = filename
     try:
@@ -284,7 +292,14 @@ def changePassPhrase(options):
 def displayPublicKey(options):
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename)
+        if platform.system() == "Windows":
+            filename = os.path.expanduser(r"~\.ssh\id_rsa")
+        try:
+            options["filename"] = input(
+                "Enter file in which the key is (%s): " % filename
+            )
+        except EOFError:
+            options["filename"] = filename
     try:
         key = keys.Key.fromFile(options["filename"])
     except keys.EncryptedKeyError:
@@ -318,6 +333,8 @@ def _saveKey(key, options):
     keyTypeName = KeyTypeMapping[key.type()]
     if not options["filename"]:
         defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
+        if platform.system() == "Windows":
+            defaultPath = os.path.expanduser(fr"~\.ssh\id_{keyTypeName}")
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
         )
