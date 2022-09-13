@@ -635,6 +635,10 @@ class KeyGenTests(TestCase):
         L{options} will default to "~/.ssh/id_rsa" if the user doesn't
         specify a key.
         """
+        def mock_input(*args):
+            return ""
+        import builtins
+        self.patch(builtins, "input", mock_input)
         options = {"filename": ""}
         getKeyOrDefault(options)
         self.assertNotEqual(
@@ -657,3 +661,12 @@ class KeyGenTests(TestCase):
         options = {"filename": "/foo/bar"}
         with self.assertRaises(SystemExit):
             changePassPhrase(options)
+
+    def test_handleBadFilePrintFingerprint(self):
+        """
+        Ensure FileNotFoundError is handled for an invalid filename.
+        """
+        options = {"filename": "/foo/bar", "format": "md5-hex"}
+        with self.assertRaises(SystemExit):
+            printFingerprint(options)
+

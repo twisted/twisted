@@ -208,15 +208,13 @@ def getKeyOrDefault(options):
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
-        try:
-            options["filename"] = input(
-                "Enter file in which the key is (%s): " % filename
-            )
-        except EOFError:
-            options["filename"] = filename
+        options["filename"] = input(
+            "Enter file in which the key is (%s): " % filename
+        ) or filename
 
 
 def printFingerprint(options):
+    getKeyOrDefault(options)
     if os.path.exists(options["filename"] + ".pub"):
         options["filename"] += ".pub"
     options = enumrepresentation(options)
@@ -232,6 +230,8 @@ def printFingerprint(options):
         )
     except keys.BadKeyError:
         sys.exit("bad key")
+    except FileNotFoundError:
+        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
 
 
 def changePassPhrase(options):
