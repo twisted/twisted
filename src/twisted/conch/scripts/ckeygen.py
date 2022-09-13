@@ -217,7 +217,6 @@ def getKeyOrDefault(options):
 
 
 def printFingerprint(options):
-    getKeyOrDefault(options)
     if os.path.exists(options["filename"] + ".pub"):
         options["filename"] += ".pub"
     options = enumrepresentation(options)
