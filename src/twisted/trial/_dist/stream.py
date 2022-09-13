@@ -56,9 +56,10 @@ class StreamReceiver:
         """
         self._streams[streamId].append(chunk)
 
-    def close(self, streamId: int) -> List[str]:
+    def finish(self, streamId: int) -> List[str]:
         """
-        Close an open stream and return all of its contents.
+        Indicate an open stream may receive no further data and return all of
+        its current contents.
 
         :raise KeyError: If there is no such open stream.
         """

@@ -39,7 +39,7 @@ class StreamReceiverTests(SynchronousTestCase):
     def test_streamReceived(self, streams: List[str], random: Random) -> None:
         """
         All data passed to L{StreamReceiver.write} is returned by a call to
-        L{StreamReceiver.close} with a matching C{streamId} .
+        L{StreamReceiver.finish} with a matching C{streamId} .
         """
         receiver = StreamReceiver()
         streamIds = [receiver.open() for _ in streams]
@@ -55,7 +55,7 @@ class StreamReceiverTests(SynchronousTestCase):
         # uncorrelate the results with write() order
         random.shuffle(streamIds)
 
-        actualData = {streamId: receiver.close(streamId) for streamId in streamIds}
+        actualData = {streamId: receiver.finish(streamId) for streamId in streamIds}
 
         assert_that(actualData, is_(equal_to(expectedData)))
 
@@ -69,22 +69,22 @@ class StreamReceiverTests(SynchronousTestCase):
         assert_that(calling(receiver.write).with_args(streamId, data), raises(KeyError))
 
     @given(integers())
-    def test_badCloseStreamId(self, streamId: int) -> None:
+    def test_badFinishStreamId(self, streamId: int) -> None:
         """
-        L{StreamReceiver.close} raises L{KeyError} if called with a
+        L{StreamReceiver.finish} raises L{KeyError} if called with a
         streamId not associated with an open stream.
         """
         receiver = StreamReceiver()
-        assert_that(calling(receiver.close).with_args(streamId), raises(KeyError))
+        assert_that(calling(receiver.finish).with_args(streamId), raises(KeyError))
 
-    def test_closeRemovesStream(self) -> None:
+    def test_finishRemovesStream(self) -> None:
         """
-        L{StreamReceiver.close} closes the identified stream.
+        L{StreamReceiver.finish} removes the identified stream.
         """
         receiver = StreamReceiver()
         streamId = receiver.open()
-        receiver.close(streamId)
-        assert_that(calling(receiver.close).with_args(streamId), raises(KeyError))
+        receiver.finish(streamId)
+        assert_that(calling(receiver.finish).with_args(streamId), raises(KeyError))
 
 
 class ChunkTests(SynchronousTestCase):
@@ -177,4 +177,4 @@ class StreamTests(SynchronousTestCase):
         sender = AMP()
         streams = StreamReceiver()
         streamId = interact(AMPStreamReceiver(streams), sender, stream(sender, chunks))
-        assert_that(streams.close(streamId), is_(equal_to(chunks)))
+        assert_that(streams.finish(streamId), is_(equal_to(chunks)))
