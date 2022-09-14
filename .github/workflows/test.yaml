@@ -125,12 +125,12 @@ jobs:
           # Oldest macOS and olders Python supported versions.
           - python-version: '3.7'
             runs-on: 'macos-10.15'
-            job-name: 'macos-default-tests'
+            job-name: 'macos-10-default-tests'
 
           # Newest macOS and newest Python supported versions.
           - python-version: '3.10'
             runs-on: 'macos-12'
-            job-name: 'macos-default-tests'
+            job-name: 'macos-12-default-tests'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
