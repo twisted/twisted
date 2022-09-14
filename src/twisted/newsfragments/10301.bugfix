@@ -1,1 +1,0 @@
-`ContextVar.reset()` now works correctly inside `inlineCallbacks` functions and coroutines.

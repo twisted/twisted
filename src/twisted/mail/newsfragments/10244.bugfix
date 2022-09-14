@@ -1,1 +1,0 @@
-twisted.mail.maildir.MaildirMessage now use byte header to avoid incompatibility with the FileMessage which writes bytes not strings lines to a message file

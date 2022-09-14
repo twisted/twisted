@@ -329,6 +329,7 @@ def _unusedTestDirectory(base):
         else:
             testdir = base
 
+        testdir.parent().makedirs(ignoreExistingDirectory=True)
         testDirLock = FilesystemLock(testdir.path + ".lock")
         if testDirLock.lock():
             # It is not in use
@@ -393,6 +394,7 @@ def openTestLog(path: FilePath) -> TextIO:
     """
     Open the given path such that test log messages can be written to it.
     """
+    path.parent().makedirs(ignoreExistingDirectory=True)
     # Always use UTF-8 because, considering all platforms, the system default
     # encoding can not reliably encode all code points.
     return open(path.path, "a", encoding="utf-8", errors="strict")
