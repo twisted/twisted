@@ -247,7 +247,7 @@ class WorkerReporter(TestResult):
             )
         )
 
-    async def _addErrorFallible(self, testName: str, errorObj: TrialFailure) -> None:
+    async def addErrorFallible(self, testName: str, errorObj: TrialFailure) -> None:
         """
         Attempt to report an error to the parent process.
 
@@ -274,7 +274,7 @@ class WorkerReporter(TestResult):
         """
         super().addError(test, error)
         testName = test.id()
-        self._call(lambda: self._addErrorFallible(testName, error))
+        self._call(lambda: self.addErrorFallible(testName, error))
 
     def addFailure(self, test: PyUnitTestCase, fail: TrialFailure) -> None:
         """

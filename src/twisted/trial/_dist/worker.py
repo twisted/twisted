@@ -110,7 +110,7 @@ class WorkerProtocol(AMP):
                         id=testCase,
                     )
                     try:
-                        await self._result._addErrorFallible(testCase, result)
+                        await self._result.addErrorFallible(testCase, result)
                     except BaseException:
                         self.logger.failure(
                             "Additionally, reporting the reporting failure failed."
