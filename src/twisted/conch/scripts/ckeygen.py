@@ -205,7 +205,8 @@ def _defaultPrivateKeySubtype(keyType):
 
 def _getKeyOrDefault(options):
     """
-    If C{options["filename"]} is None, attempt to set it to .ssh/id_rsa
+    If C{options["filename"]} is None, prompt the user to enter a path
+    or attempt to set it to .ssh/id_rsa
     """
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
