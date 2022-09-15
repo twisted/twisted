@@ -648,6 +648,9 @@ class KeyGenTests(TestCase):
             options["filename"],
             "",
         )
+        self.assertTrue(
+            "id_rsa" in options["filename"],
+        )
 
     def test_handleBadFileDisplayPublicKey(self):
         """
