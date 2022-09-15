@@ -27,7 +27,7 @@ if requireModule("cryptography") and requireModule("pyasn1"):
         changePassPhrase,
         displayPublicKey,
         enumrepresentation,
-        getKeyOrDefault,
+        _getKeyOrDefault,
         printFingerprint,
     )
     from twisted.conch.ssh.keys import (
@@ -643,7 +643,7 @@ class KeyGenTests(TestCase):
 
         self.patch(builtins, "input", mock_input)
         options = {"filename": ""}
-        getKeyOrDefault(options)
+        _getKeyOrDefault(options)
         self.assertNotEqual(
             options["filename"],
             "",

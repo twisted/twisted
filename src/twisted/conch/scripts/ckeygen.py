@@ -203,10 +203,13 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def getKeyOrDefault(options):
+def _getKeyOrDefault(options):
+    """
+    If C{options["filename"]} is None, attempt to set it to .ssh/id_rsa
+    """
     if not options["filename"]:
         filename = os.path.expanduser("~/.ssh/id_rsa")
-        if platform.system() == "Windows": #noqa
+        if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
         options["filename"] = (
             input("Enter file in which the key is (%s): " % filename) or filename
@@ -214,7 +217,7 @@ def getKeyOrDefault(options):
 
 
 def printFingerprint(options):
-    getKeyOrDefault(options)
+    _getKeyOrDefault(options)
     if os.path.exists(options["filename"] + ".pub"):
         options["filename"] += ".pub"
     options = enumrepresentation(options)
@@ -235,7 +238,7 @@ def printFingerprint(options):
 
 
 def changePassPhrase(options):
-    getKeyOrDefault(options)
+    _getKeyOrDefault(options)
     try:
         key = keys.Key.fromFile(options["filename"])
     except keys.EncryptedKeyError:
@@ -286,7 +289,7 @@ def changePassPhrase(options):
 
 
 def displayPublicKey(options):
-    getKeyOrDefault(options)
+    _getKeyOrDefault(options)
     try:
         key = keys.Key.fromFile(options["filename"])
     except FileNotFoundError:
@@ -322,7 +325,7 @@ def _saveKey(key, options):
     keyTypeName = KeyTypeMapping[key.type()]
     if not options["filename"]:
         defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
-        if platform.system() == "Windows": #noqa
+        if platform.system() == "Windows":
             defaultPath = os.path.expanduser(fr"~\.ssh\id_{keyTypeName}")
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
