@@ -652,26 +652,36 @@ class KeyGenTests(TestCase):
             "id_rsa" in options["filename"],
         )
 
-    def test_handleBadFileDisplayPublicKey(self):
+    def test_displayPublicKeyHandleFileNotFound(self):
         """
-        Ensure FileNotFoundError is handled for an invalid filename.
+        Ensure FileNotFoundError is handled, whether the user has supplied
+        a bad path, or has no key at the default path.
         """
         options = {"filename": "/foo/bar"}
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as e:
             displayPublicKey(options)
+            self.assertTrue(
+                "could not be opened, please specify a file." in e,
+            )
 
-    def test_handleBadFileChangePassPhrase(self):
+    def test_changePassPhraseHandleFileNotFound(self):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar"}
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as e:
             changePassPhrase(options)
+            self.assertTrue(
+                "could not be opened, please specify a file." in e,
+            )
 
-    def test_handleBadFilePrintFingerprint(self):
+    def test_printFingerprintHandleFileNotFound(self):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar", "format": "md5-hex"}
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as e:
             printFingerprint(options)
+            self.assertTrue(
+                "could not be opened, please specify a file." in e,
+            )

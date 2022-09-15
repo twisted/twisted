@@ -327,7 +327,7 @@ def _saveKey(key, options):
     if not options["filename"]:
         defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         if platform.system() == "Windows":
-            defaultPath = os.path.expanduser(fr"~\.ssh\id_{keyTypeName}")
+            defaultPath = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
         )
