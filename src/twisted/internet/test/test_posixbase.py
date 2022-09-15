@@ -190,6 +190,9 @@ class IterationTimeoutTests(WarningCheckerTestCase):
     calls.
     """
 
+    if not isinstance(reactor, PosixReactorBase):
+        skip = "Non-posixbase reactor"
+
     def _checkIterationTimeout(self, reactor):
         timeout = []
         reactor.iterationTimeout.addCallback(timeout.append)
