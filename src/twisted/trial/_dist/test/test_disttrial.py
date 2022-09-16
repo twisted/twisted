@@ -11,6 +11,7 @@ from functools import partial
 from io import StringIO
 from os.path import sep
 from typing import Callable, List, Set
+from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify
 
@@ -48,7 +49,7 @@ from twisted.trial._dist.functional import (
     iterateWhile,
     sequence,
 )
-from twisted.trial._dist.worker import LocalWorker, Worker, WorkerAction
+from twisted.trial._dist.worker import LocalWorker, RunResult, Worker, WorkerAction
 from twisted.trial.reporter import (
     Reporter,
     TestResult,
@@ -770,11 +771,12 @@ class _LocalWorker:
     somewhere else..
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> RunResult:
         """
         Directly run C{case} in the usual way.
         """
         TrialSuite([case]).run(result)
+        return {"success": True}
 
 
 class WorkerBroken(Exception):
@@ -788,7 +790,7 @@ class _BrokenLocalWorker:
     A L{Worker} that always fails to run test cases.
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> None:
         """
         Raise an exception instead of running C{case}.
         """

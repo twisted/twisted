@@ -14,8 +14,8 @@ from zope.interface.verify import verifyObject
 
 from hamcrest import assert_that, equal_to, has_item, has_length
 
-from twisted.internet.defer import fail
-from twisted.internet.error import ProcessDone
+from twisted.internet.defer import Deferred, fail
+from twisted.internet.error import ConnectionLost, ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -57,7 +57,9 @@ class WorkerProtocolTests(TestCase):
         Sending the L{workercommands.Run} command to the worker returns a
         response with C{success} sets to C{True}.
         """
-        d = self.server.run(pyunitcases.PyUnitTest("test_pass"), TestResult())
+        d = Deferred.fromCoroutine(
+            self.server.run(pyunitcases.PyUnitTest("test_pass"), TestResult())
+        )
         self.flush()
         self.assertEqual({"success": True}, self.successResultOf(d))
 
@@ -69,6 +71,102 @@ class WorkerProtocolTests(TestCase):
         self.addCleanup(os.chdir, curdir)
         self.worker.start("..")
         self.assertNotEqual(os.path.realpath(os.path.curdir), curdir)
+
+
+class WorkerProtocolErrorTests(TestCase):
+    """
+    Tests for L{WorkerProtocol}'s handling of certain errors related to
+    running the tests themselves (i.e., not test errors but test
+    infrastructure/runner errors).
+    """
+
+    def _runErrorTest(
+        self, brokenTestName: str, loggedExceptionType: Type[BaseException]
+    ) -> None:
+        worker, server, pump = connectedServerAndClient(
+            LocalWorkerAMP, WorkerProtocol, greet=False
+        )
+        expectedCase = pyunitcases.BrokenRunInfrastructure(brokenTestName)
+        result = TestResult()
+        Deferred.fromCoroutine(server.run(expectedCase, result))
+        pump.flush()
+        assert_that(result, matches_result(errors=has_length(1)))
+        [(actualCase, errors)] = result.errors
+        assert_that(actualCase, equal_to(expectedCase))
+
+        # Additionally, we expect that the worker protocol logged the failure
+        # once so that it is visible somewhere, even if it cannot deliver it
+        # back to the parent process (which it can in this case).  Since the
+        # worker runs in process with us, that failure is in our log so we can
+        # easily make an assertion about it.  Also, if we don't flush it, the
+        # test fails.  As far as the type goes, we just have to be aware of
+        # the implementation details of `BrokenRunInfrastructure`.
+        assert_that(self.flushLoggedErrors(loggedExceptionType), has_length(1))
+
+    def test_addSuccessError(self) -> None:
+        """
+        If there is an error reporting success then the test run is marked as
+        an error.
+        """
+        self._runErrorTest("test_addSuccess", AttributeError)
+
+    def test_addErrorError(self) -> None:
+        """
+        If there is an error reporting an error then the test run is marked as
+        an error.
+        """
+        self._runErrorTest("test_addError", AttributeError)
+
+    def test_addFailureError(self) -> None:
+        """
+        If there is an error reporting a failure then the test run is marked
+        as an error.
+        """
+        self._runErrorTest("test_addFailure", AttributeError)
+
+    def test_addSkipError(self) -> None:
+        """
+        If there is an error reporting a skip then the test run is marked
+        as an error.
+        """
+        self._runErrorTest("test_addSkip", AttributeError)
+
+    def test_addExpectedFailure(self) -> None:
+        """
+        If there is an error reporting an expected failure then the test
+        run is marked as an error.
+        """
+        self._runErrorTest("test_addExpectedFailure", AttributeError)
+
+    def test_addUnexpectedSuccess(self) -> None:
+        """
+        If there is an error reporting an unexpected ccess then the test
+        run is marked as an error.
+        """
+        self._runErrorTest("test_addUnexpectedSuccess", AttributeError)
+
+    def test_failedFailureReport(self) -> None:
+        """
+        A failure encountered while reporting a reporting failure is logged.
+        """
+        worker, server, pump = connectedServerAndClient(
+            LocalWorkerAMP, WorkerProtocol, greet=False
+        )
+
+        # We can easily break everything by eliminating the worker protocol's
+        # transport.  This prevents it from ever sending anything to the
+        # manager protocol.
+        worker.transport = None
+
+        expectedCase = pyunitcases.PyUnitTest("test_pass")
+        result = TestResult()
+        Deferred.fromCoroutine(server.run(expectedCase, result))
+        pump.flush()
+
+        # There should be two exceptions logged here.  The first is from the
+        # attempt to report the success result.  The second is a report that
+        # the first failed.
+        assert_that(self.flushLoggedErrors(ConnectionLost), has_length(2))
 
 
 class LocalWorkerAMPTests(TestCase):
@@ -86,7 +184,7 @@ class LocalWorkerAMPTests(TestCase):
         self, testCase: PyUnitTestCase, makeResult: Type[TestResult] = TestResult
     ) -> TestResult:
         result = makeResult()
-        d = self.managerAMP.run(testCase, result)
+        d = Deferred.fromCoroutine(self.managerAMP.run(testCase, result))
         self.flush()
         self.assertEqual({"success": True}, self.successResultOf(d))
         return result
