@@ -162,7 +162,7 @@ jobs:
         ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
     - uses: actions/upload-artifact@v3
-      if: true
+      if: ${{ always() }}
       with:
         name: "test.log"
         path: "_trial_temp/test.log"
