@@ -15,7 +15,7 @@ from hamcrest import (
     less_than_or_equal_to,
     raises,
 )
-from hypothesis import given
+from hypothesis import given, example
 from hypothesis.strategies import integers, just, lists, randoms, text
 
 from twisted.internet.defer import Deferred, fail
@@ -195,6 +195,7 @@ class StreamTests(SynchronousTestCase):
     """
 
     @given(lists(text()))
+    @example(chunks=['\U000e707cñ;', '', '\U000dacd8\U0007b366', 'F*', ''])
     def test_stream(self, chunks):
         """
         All of the chunks passed to L{stream} are sent in order over a
