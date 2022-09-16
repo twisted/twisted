@@ -99,7 +99,7 @@ jobs:
           - python-version: '3.10'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
-            trial-target: 'twisted.trial._dist.test.test_stream.StreamTest'
+            trial-target: 'twisted.trial._dist.test.test_stream.StreamTests'
 
 
     steps:
