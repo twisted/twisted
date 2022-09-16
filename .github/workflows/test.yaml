@@ -160,6 +160,11 @@ jobs:
       run: |
         ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
 
+    - uses: actions/upload-artifact@v3
+      with:
+        name: "test.log"
+        path: "_trial_temp/test.log"
+
     # If one of the above steps fails, fire up tmate for remote debugging.
     # This is fired for manual trigger or via the environment variable.
     - name: Tmate debug session
