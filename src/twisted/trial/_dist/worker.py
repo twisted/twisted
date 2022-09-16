@@ -117,6 +117,9 @@ class WorkerProtocol(AMP):
             try:
                 await self._result.addErrorFallible(testCase, result)
             except BaseException:
+                # We failed to report the failure to the peer.  It doesn't
+                # seem very likely that reporting this new failure to the peer
+                # will succeed so just log it locally.
                 self.logger.failure(
                     "Additionally, reporting the reporting failure failed."
                 )
