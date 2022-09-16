@@ -122,11 +122,6 @@ jobs:
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
 
-          # Oldest macOS and olders Python supported versions.
-          - python-version: '3.7'
-            runs-on: 'macos-11'
-            job-name: 'macos-10-default-tests'
-
           # Newest macOS and newest Python supported versions.
           - python-version: '3.10'
             runs-on: 'macos-12'
