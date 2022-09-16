@@ -8,6 +8,8 @@ be used by test modules to exercise different features of trial's test runner.
 
 See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
+
+Some of these tests are also used by L{twisted.trial._dist.test}.
 """
 
 
