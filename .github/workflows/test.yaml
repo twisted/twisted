@@ -95,85 +95,11 @@ jobs:
         # value.
         include:
 
-          # `nodeps` is created to make sure we don't have import errors in the
-          # runtime and production code.
-          # The minimum supported Python version should be used to maximize
-          # coverage of code that otherwise depends on backports.
-          # Distributed test run is disabled here so that we also have
-          # end to end functional test usage for non-distributed trial runs.
-          # When updating the minimum Python version here, also update the
-          # `python_requires` from `setup.cfg`.
-          - python-version: '3.7.1'
-            tox-env: 'nodeps-withcov-posix'
-            job-name: 'nodeps-test'
-
-          # `noipv6` is created to make sure all is OK on an OS which doesn't
-          # have IPv6 available.
-          # Any supported Python version is OK for this job.
-          # We go with latest micro release for the smallest minor release
-          # that we support.
-          - python-version: '3.7'
-            noipv6: '-noipv6'
-            job-name: 'default-tests-noipv6'
-
-          # Just Python 3.8 with default settings.
-          - python-version: '3.8'
-
-          # Just Python 3.9 with default settings.
-          - python-version: '3.9'
-
-          # Oldest macOS and olders Python supported versions.
-          # We pin a specific Python micro release due to a TK library bug.
-          # https://github.com/actions/setup-python/issues/402#issuecomment-1156015780
-          - python-version: '3.7.12'
-            runs-on: 'macos-10.15'
-            job-name: 'macos-10-default-tests'
-
           # Newest macOS and newest Python supported versions.
           - python-version: '3.10'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
 
-          # Windows, minimum Python version with select reactor.
-          - python-version: '3.7'
-            runs-on: 'windows-2022'
-            tox-env: 'alldeps-withcov-windows'
-            job-name: 'win-default-tests-select'
-            # Distributed trial is not yet suported on Windows so we overwrite
-            # the default trial-args to remove concurrent runs and to
-            # select a reactor.
-            trial-args: '--reactor=select'
-
-          # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.10'
-            runs-on: 'windows-2022'
-            tox-env: 'alldeps-withcov-windows'
-            job-name: 'win-default-tests-iocp'
-            # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=iocp'
-
-          # On PYPY coverage is very slow (5min vs 30min) as there is no C
-          # extension.
-          # There is very little PYPY specific code so there is not much to
-          # gain from reporting coverage.
-          - python-version: 'pypy-3.7'
-            tox-env: 'alldeps-nocov-posix'
-            job-name: 'no-coverage'
-            skip-coverage: yes
-
-          # We still run some tests with coverage,
-          # as there are test with specific code branches for pypy.
-          - python-version: 'pypy-3.7'
-            trial-target: 'twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
-            job-name: 'with-coverage'
-
-          # We run selected test for GTK reactor inside X virtual framebuffer.
-          - python-version: '3.7'
-            tox-env: 'alldeps-gtk-withcov-posix'
-            trial-target: 'twisted.internet.test'
-            platform-deps: 'gtk_platform'
-            tox-wrapper: 'xvfb-run -a'
-            job-name: 'gtk-tests'
 
 
     steps:
