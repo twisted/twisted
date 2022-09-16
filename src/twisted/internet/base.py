@@ -6,7 +6,6 @@
 Very basic functionality for a Reactor implementation.
 """
 
-
 import builtins
 import socket  # needed only for sync-dns
 import warnings
@@ -30,6 +29,8 @@ from typing import (
 )
 
 from zope.interface import classImplements, implementer
+
+from attrs import Factory, define, field
 
 from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
@@ -569,6 +570,70 @@ _SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHan
 _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 
 
+@define
+class EventSystem:
+    """
+    An event system can run functions during three phases of an event: before,
+    during, and after.
+
+    This is used to implement L{IReactorCore}.
+    """
+    _isRunning: Callable[[], bool]
+    _eventTriggers: Dict[str, _ThreePhaseEvent] = Factory(dict)
+
+    def fireSystemEvent(self, eventType: str) -> None:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.fireSystemEvent}.
+        """
+        event = self._eventTriggers.get(eventType)
+        if event is not None:
+            event.fireEvent()
+
+    def addSystemEventTrigger(
+        self,
+        phase: str,
+        eventType: str,
+        callable: Callable[..., Any],
+        *args: object,
+        **kwargs: object,
+    ) -> _SystemEventID:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.addSystemEventTrigger}
+        """
+        assert builtins.callable(callable), f"{callable} is not callable"
+        if eventType not in self._eventTriggers:
+            self._eventTriggers[eventType] = _ThreePhaseEvent()
+        return _SystemEventID(
+            (
+                eventType,
+                self._eventTriggers[eventType].addTrigger(
+                    phase, callable, *args, **kwargs
+                ),
+            )
+        )
+
+    def callWhenRunning(
+        self, callable: Callable[..., Any], *args: object, **kwargs: object
+    ) -> Optional[_SystemEventID]:
+        """
+        @see: {twisted.internet.interfaces.IReactorCore.callWhenRunning}
+        """
+        if self._isRunning():
+            callable(*args, **kwargs)
+            return None
+        else:
+            return self.addSystemEventTrigger(
+                "after", "startup", callable, *args, **kwargs
+            )
+
+    def removeSystemEventTrigger(self, triggerID: _SystemEventID) -> None:
+        """
+        @see: {twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger}
+        """
+        eventType, handle = triggerID
+        self._eventTriggers[eventType].removeTrigger(handle)
+
+
 @implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
 class ReactorBase(PluggableResolverMixin):
     """
@@ -605,10 +670,17 @@ class ReactorBase(PluggableResolverMixin):
     def __init__(self) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
-        self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
         self._pendingTimedCalls: List[DelayedCall] = []
         self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
+
+        # Some of IReactorCore
+        self._events = EventSystem(lambda: self.running)
+        self.fireSystemEvent = self._events.fireSystemEvent  # type: ignore[assignment]
+        self.addSystemEventTrigger = self._events.addSystemEventTrigger  # type: ignore[assignment]
+        self.callWhenRunning = self._events.callWhenRunning  # type: ignore[assignment]
+        self.removeSystemEventTrigger = self._events.removeSystemEventTrigger  # type: ignore[assignment]
+        # Core lifetime management
         self.running = False
         self._started = False
         self._justStopped = False
@@ -691,6 +763,41 @@ class ReactorBase(PluggableResolverMixin):
         )
 
     # IReactorCore
+    def addSystemEventTrigger(
+        self,
+        phase: str,
+        eventType: str,
+        callable: Callable[..., Any],
+        *args: object,
+        **kwargs: object,
+    ) -> _SystemEventID:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.addSystemEventTrigger}
+        """
+        # This isn't the implementation.  It's here to convince static
+        # analysis tools that ReactorBase has the method.  See the override in
+        # __init__.
+
+    def fireSystemEvent(self, eventType: str) -> None:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.fireSystemEvent}
+        """
+        # See the comment in addSystemEventTrigger.
+
+    def callWhenRunning(
+        self, callable: Callable[..., Any], *args: object, **kwargs: object
+    ) -> Optional[_SystemEventID]:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.callWhenRunning}
+        """
+        # See the comment in addSystemEventTrigger.
+
+    def removeSystemEventTrigger(self, triggerID: _SystemEventID) -> None:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger}
+        """
+        # See the comment in addSystemEventTrigger.
+
     def resolve(
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
     ) -> Deferred[str]:
@@ -772,58 +879,6 @@ class ReactorBase(PluggableResolverMixin):
         """
         self.runUntilCurrent()
         self.doIteration(delay)
-
-    def fireSystemEvent(self, eventType: str) -> None:
-        """
-        See twisted.internet.interfaces.IReactorCore.fireSystemEvent.
-        """
-        event = self._eventTriggers.get(eventType)
-        if event is not None:
-            event.fireEvent()
-
-    def addSystemEventTrigger(
-        self,
-        phase: str,
-        eventType: str,
-        callable: Callable[..., Any],
-        *args: object,
-        **kwargs: object,
-    ) -> _SystemEventID:
-        """
-        See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
-        """
-        assert builtins.callable(callable), f"{callable} is not callable"
-        if eventType not in self._eventTriggers:
-            self._eventTriggers[eventType] = _ThreePhaseEvent()
-        return _SystemEventID(
-            (
-                eventType,
-                self._eventTriggers[eventType].addTrigger(
-                    phase, callable, *args, **kwargs
-                ),
-            )
-        )
-
-    def removeSystemEventTrigger(self, triggerID: _SystemEventID) -> None:
-        """
-        See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
-        """
-        eventType, handle = triggerID
-        self._eventTriggers[eventType].removeTrigger(handle)
-
-    def callWhenRunning(
-        self, callable: Callable[..., Any], *args: object, **kwargs: object
-    ) -> Optional[_SystemEventID]:
-        """
-        See twisted.internet.interfaces.IReactorCore.callWhenRunning.
-        """
-        if self.running:
-            callable(*args, **kwargs)
-            return None
-        else:
-            return self.addSystemEventTrigger(
-                "after", "startup", callable, *args, **kwargs
-            )
 
     def startRunning(self) -> None:
         """
