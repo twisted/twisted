@@ -98,23 +98,28 @@ class WorkerProtocol(AMP):
 
         allSucceeded = True
         for (success, result) in await DeferredList(results, consumeErrors=True):
-            if not success:
-                allSucceeded = False
-                # We can try to report the error but since something has
-                # already gone wrong we shouldn't be extremely confident
-                # that this will succeed.  So we will also log it and any
-                # errors reporting it to our local log.
+            if success:
+                # Nothing to do here, proceed to the next result.
+                continue
+
+            # There was some error reporting a result to the peer.
+            allSucceeded = False
+
+            # We can try to report the error but since something has already
+            # gone wrong we shouldn't be extremely confident that this will
+            # succeed.  So we will also log it (and any errors reporting *it*)
+            # to our local log.
+            self.logger.failure(
+                "Result reporting for {id} failed",
+                failure=result,
+                id=testCase,
+            )
+            try:
+                await self._result.addErrorFallible(testCase, result)
+            except BaseException:
                 self.logger.failure(
-                    "Result reporting for {id} failed",
-                    failure=result,
-                    id=testCase,
+                    "Additionally, reporting the reporting failure failed."
                 )
-                try:
-                    await self._result.addErrorFallible(testCase, result)
-                except BaseException:
-                    self.logger.failure(
-                        "Additionally, reporting the reporting failure failed."
-                    )
 
         return {"success": allSucceeded}
 
