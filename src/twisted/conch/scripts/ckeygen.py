@@ -119,7 +119,7 @@ def enumrepresentation(options):
         return options
     else:
         raise keys.BadFingerPrintFormat(
-            "Unsupported fingerprint format: {}".format(options["format"])
+            f"Unsupported fingerprint format: {options['format']}"
         )
 
 
@@ -208,46 +208,46 @@ def _getKeyOrDefault(options):
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
     """
-    if not options["filename"]:
+    filename = options["filename"]
+    if not filename:
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
-        options["filename"] = (
-            input("Enter file in which the key is (%s): " % filename) or filename
-        )
+        filename = input("Enter file in which the key is (%s): " % filename) or filename
+    return filename
 
 
 def printFingerprint(options):
-    _getKeyOrDefault(options)
-    if os.path.exists(options["filename"] + ".pub"):
-        options["filename"] += ".pub"
+    filename = _getKeyOrDefault(options)
+    if os.path.exists(filename + ".pub"):
+        filename += ".pub"
     options = enumrepresentation(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
         print(
             "%s %s %s"
             % (
                 key.size(),
                 key.fingerprint(options["format"]),
-                os.path.basename(options["filename"]),
+                os.path.basename(filename),
             )
         )
     except keys.BadKeyError:
         sys.exit("bad key")
     except FileNotFoundError:
-        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
+        sys.exit(f"{filename} could not be opened, please specify a file.")
 
 
 def changePassPhrase(options):
-    _getKeyOrDefault(options)
+    filename = _getKeyOrDefault(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
     except keys.EncryptedKeyError:
         # Raised if password not supplied for an encrypted key
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter old passphrase: ")
         try:
-            key = keys.Key.fromFile(options["filename"], passphrase=options["pass"])
+            key = keys.Key.fromFile(filename, passphrase=options["pass"])
         except keys.BadKeyError:
             sys.exit("Could not change passphrase: old passphrase error")
         except keys.EncryptedKeyError as e:
@@ -255,7 +255,7 @@ def changePassPhrase(options):
     except keys.BadKeyError as e:
         sys.exit(f"Could not change passphrase: {e}")
     except FileNotFoundError:
-        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
+        sys.exit(f"{filename} could not be opened, please specify a file.")
 
     if not options.get("newpass"):
         while 1:
@@ -283,22 +283,22 @@ def changePassPhrase(options):
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
         sys.exit(f"Could not change passphrase: {e}")
 
-    with open(options["filename"], "wb") as fd:
+    with open(filename, "wb") as fd:
         fd.write(newkeydata)
 
     print("Your identification has been saved with the new passphrase.")
 
 
 def displayPublicKey(options):
-    _getKeyOrDefault(options)
+    filename = _getKeyOrDefault(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
     except FileNotFoundError:
-        sys.exit(f"{options['filename']} could not be opened, please specify a file.")
+        sys.exit(f"{filename} could not be opened, please specify a file.")
     except keys.EncryptedKeyError:
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter passphrase: ")
-        key = keys.Key.fromFile(options["filename"], passphrase=options["pass"])
+        key = keys.Key.fromFile(filename, passphrase=options["pass"])
     displayKey = key.public().toString("openssh").decode("ascii")
     print(displayKey)
 
@@ -324,7 +324,8 @@ def _saveKey(key, options):
     """
     KeyTypeMapping = {"EC": "ecdsa", "Ed25519": "ed25519", "RSA": "rsa", "DSA": "dsa"}
     keyTypeName = KeyTypeMapping[key.type()]
-    if not options["filename"]:
+    filename = options["filename"]
+    if not filename:
         defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         if platform.system() == "Windows":
             defaultPath = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
@@ -332,10 +333,10 @@ def _saveKey(key, options):
             f"Enter file in which to save the key ({defaultPath}): "
         )
 
-        options["filename"] = newPath.strip() or defaultPath
+        filename = newPath.strip() or defaultPath
 
-    if os.path.exists(options["filename"]):
-        print("{} already exists.".format(options["filename"]))
+    if os.path.exists(filename):
+        print(f"{filename} already exists.")
         yn = input("Overwrite (y/n)? ")
         if yn[0].lower() != "y":
             sys.exit()
@@ -356,23 +357,23 @@ def _saveKey(key, options):
 
     comment = f"{getpass.getuser()}@{socket.gethostname()}"
 
-    filepath.FilePath(options["filename"]).setContent(
+    filepath.FilePath(filename).setContent(
         key.toString(
             "openssh",
             subtype=options["private-key-subtype"],
             passphrase=options["pass"],
         )
     )
-    os.chmod(options["filename"], 33152)
+    os.chmod(filename, 33152)
 
-    filepath.FilePath(options["filename"] + ".pub").setContent(
+    filepath.FilePath(filename + ".pub").setContent(
         key.public().toString("openssh", comment=comment)
     )
     options = enumrepresentation(options)
 
-    print("Your identification has been saved in {}".format(options["filename"]))
-    print("Your public key has been saved in {}.pub".format(options["filename"]))
-    print("The key fingerprint in {} is:".format(options["format"]))
+    print(f"Your identification has been saved in {filename}")
+    print(f"Your public key has been saved in {filename}.pub")
+    print(f"The key fingerprint in {options['format']} is:")
     print(key.fingerprint(options["format"]))
 
 

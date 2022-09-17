@@ -643,13 +643,13 @@ class KeyGenTests(TestCase):
 
         self.patch(builtins, "input", mock_input)
         options = {"filename": ""}
-        _getKeyOrDefault(options)
-        self.assertNotEqual(
+        filename =_getKeyOrDefault(options)
+        self.assertEqual(
             options["filename"],
             "",
         )
         self.assertTrue(
-            "id_rsa" in options["filename"],
+            "id_rsa" in filename,
         )
 
     def test_displayPublicKeyHandleFileNotFound(self):
