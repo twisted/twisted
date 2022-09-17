@@ -23,11 +23,11 @@ from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1"):
     from twisted.conch.scripts.ckeygen import (
+        _getKeyOrDefault,
         _saveKey,
         changePassPhrase,
         displayPublicKey,
         enumrepresentation,
-        _getKeyOrDefault,
         printFingerprint,
     )
     from twisted.conch.ssh.keys import (
@@ -643,7 +643,7 @@ class KeyGenTests(TestCase):
 
         self.patch(builtins, "input", mock_input)
         options = {"filename": ""}
-        filename =_getKeyOrDefault(options)
+        filename = _getKeyOrDefault(options)
         self.assertEqual(
             options["filename"],
             "",
