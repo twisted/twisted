@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "hatchling",
+    "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
     "incremental >= 21.3.0",
 ]
@@ -61,6 +61,9 @@ dev-release = [
     "readthedocs-sphinx-ext ~= 2.1",
     "sphinx >= 4.1.2, <6",
 ]
+dev_release = [
+    "twisted[dev-release]",
+]
 
 # All the extra tools used to help with the development process.
 dev = [
@@ -92,6 +95,9 @@ conch-nacl = [
     # Used to support Ed25519 keys on systems with OpenSSL < 1.1.1b
     "PyNaCl",
 ]
+conch_nacl = [
+    "twisted[conch-nacl]",
+]
 
 serial = [
     "pyserial >= 3.0",
@@ -110,6 +116,9 @@ contextvars = [
 all-non-platform = [
     "twisted[test,tls,conch,serial,http2,contextvars]",
 ]
+all_non_platform = [
+    "twisted[all-non-platform]",
+]
 
 macos-platform = [
     "twisted[all-non-platform]",
@@ -117,19 +126,31 @@ macos-platform = [
     "pyobjc-framework-CFNetwork",
     "pyobjc-framework-Cocoa",
 ]
+macos_platform = [
+    "twisted[macos-platform]",
+]
 
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
 ]
+windows_platform = [
+    "twisted[windows-platform]",
+]
 
 osx-platform = [
     "twisted[macos-platform]",
+]
+osx_platform = [
+    "twisted[osx-platform]",
 ]
 
 gtk-platform = [
     "twisted[all-non-platform]",
     "pygobject",
+]
+gtk_platform = [
+    "twisted[gtk-platform]",
 ]
 
 mypy = [
@@ -158,6 +179,9 @@ Homepage = "https://twistedmatrix.com/"
 Issues = "https://twistedmatrix.com/trac/report"
 Source = "https://github.com/twisted/twisted"
 Twitter = "https://twitter.com/twistedmatrix"
+
+[tool.hatch.metadata]
+allow-ambiguous-features = true
 
 [tool.hatch.version]
 source = "code"
