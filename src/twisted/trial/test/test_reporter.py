@@ -14,7 +14,11 @@ import sys
 from inspect import getmro
 from io import BytesIO, StringIO
 from typing import Type
-from unittest import TestCase as StdlibTestCase, expectedFailure, TestSuite as PyUnitTestSuite
+from unittest import (
+    TestCase as StdlibTestCase,
+    TestSuite as PyUnitTestSuite,
+    expectedFailure,
+)
 
 from hamcrest import assert_that, equal_to, has_item, has_length
 
