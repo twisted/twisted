@@ -15,9 +15,12 @@ import time
 import unittest as pyunit
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, List, Tuple
+from types import TracebackType
+from typing import TYPE_CHECKING, List, Sequence, Tuple, Type, Union
 
 from zope.interface import implementer
+
+from typing_extensions import TypeAlias
 
 from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
@@ -32,6 +35,10 @@ try:
     from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
+
+ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
+XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
+TrialFailure = Union[XUnitFailure, Failure]
 
 
 def _makeTodo(value: str) -> "Todo":
@@ -242,6 +249,30 @@ class TestResultDecorator(
     @ivar _originalReporter: The wrapped instance of reporter.
     @type _originalReporter: A provider of L{itrial.IReporter}
     """
+
+    @property
+    def errors(self) -> Sequence[Tuple[itrial.ITestCase, TrialFailure]]:
+        return self._originalReporter.errors
+
+    @property
+    def failures(self) -> Sequence[Tuple[itrial.ITestCase, TrialFailure]]:
+        return self._originalReporter.failures
+
+    @property
+    def successes(self) -> int:
+        return self._originalReporter.successes
+
+    @property
+    def expectedFailures(self) -> Sequence[Tuple[itrial.ITestCase, Failure, str]]:
+        return self._originalReporter.expectedFailures
+
+    @property
+    def unexpectedSuccesses(self) -> Sequence[Tuple[itrial.ITestCase, str]]:
+        return self._originalReporter.unexpectedSuccesses
+
+    @property
+    def skips(self) -> Sequence[Tuple[itrial.ITestCase, str]]:
+        return self._originalReporter.skips
 
 
 @implementer(itrial.IReporter)
