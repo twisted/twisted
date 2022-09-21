@@ -122,13 +122,6 @@ jobs:
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
 
-          # Oldest macOS and olders Python supported versions.
-          # We pin a specific Python micro release due to a TK library bug.
-          # https://github.com/actions/setup-python/issues/402#issuecomment-1156015780
-          - python-version: '3.7.12'
-            runs-on: 'macos-10.15'
-            job-name: 'macos-10-default-tests'
-
           # Newest macOS and newest Python supported versions.
           - python-version: '3.10'
             runs-on: 'macos-12'
