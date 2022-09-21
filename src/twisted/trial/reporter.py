@@ -16,7 +16,7 @@ import unittest as pyunit
 import warnings
 from collections import OrderedDict
 from types import TracebackType
-from typing import TYPE_CHECKING, List, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING, List, Tuple, Type, Union
 
 from zope.interface import implementer
 
@@ -249,30 +249,6 @@ class TestResultDecorator(
     @ivar _originalReporter: The wrapped instance of reporter.
     @type _originalReporter: A provider of L{itrial.IReporter}
     """
-
-    @property
-    def errors(self) -> Sequence[Tuple[itrial.ITestCase, TrialFailure]]:
-        return self._originalReporter.errors
-
-    @property
-    def failures(self) -> Sequence[Tuple[itrial.ITestCase, TrialFailure]]:
-        return self._originalReporter.failures
-
-    @property
-    def successes(self) -> int:
-        return self._originalReporter.successes
-
-    @property
-    def expectedFailures(self) -> Sequence[Tuple[itrial.ITestCase, Failure, str]]:
-        return self._originalReporter.expectedFailures
-
-    @property
-    def unexpectedSuccesses(self) -> Sequence[Tuple[itrial.ITestCase, str]]:
-        return self._originalReporter.unexpectedSuccesses
-
-    @property
-    def skips(self) -> Sequence[Tuple[itrial.ITestCase, str]]:
-        return self._originalReporter.skips
 
 
 @implementer(itrial.IReporter)

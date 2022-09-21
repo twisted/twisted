@@ -14,7 +14,7 @@ import sys
 from inspect import getmro
 from io import BytesIO, StringIO
 from typing import Type
-from unittest import TestCase as StdlibTestCase, expectedFailure
+from unittest import TestCase as StdlibTestCase, expectedFailure, TestSuite as PyUnitTestSuite
 
 from hamcrest import assert_that, equal_to, has_item, has_length
 
@@ -135,14 +135,14 @@ class ErrorReportingTests(StringTest):
     def setUp(self):
         self.loader = runner.TestLoader()
         self.output = StringIO()
-        self.result = reporter.Reporter(self.output)
+        self.result: reporter.Reporter = reporter.Reporter(self.output)
 
     def getOutput(self, suite):
         result = self.getResult(suite)
         result.done()
         return self.output.getvalue()
 
-    def getResult(self, suite):
+    def getResult(self, suite: PyUnitTestSuite) -> reporter.Reporter:
         suite.run(self.result)
         return self.result
 
@@ -210,7 +210,7 @@ class ErrorReportingTests(StringTest):
         expect = [self.doubleSeparator, re.compile(r"\[(ERROR|FAIL)\]")]
         self.stringComparison(expect, output.splitlines())
 
-    def test_hiddenException(self):
+    def test_hiddenException(self) -> None:
         """
         When a function scheduled using L{IReactorTime.callLater} in a
         test method raises an exception that exception is added to the test
@@ -224,7 +224,8 @@ class ErrorReportingTests(StringTest):
         L{erroneous.DelayedCall.testHiddenException} for more details.
         """
         test = erroneous.DelayedCall("testHiddenException")
-        result = self.getResult(test)
+
+        result = self.getResult(PyUnitTestSuite([test]))
         assert_that(
             result, matches_result(errors=has_length(1), failures=has_length(1))
         )
@@ -235,7 +236,7 @@ class ErrorReportingTests(StringTest):
             isFailure(
                 type=equal_to(RuntimeError),
                 value=after(str, equal_to("something blew up")),
-                frames=has_item(similarFrame("go", "erroneous.py")),
+                frames=has_item(similarFrame("go", "erroneous.py")),  # type: ignore[arg-type]
             ),
         )
 
@@ -248,7 +249,7 @@ class ErrorReportingTests(StringTest):
                 value=after(
                     str, equal_to("Deliberate failure to mask the hidden exception")
                 ),
-                frames=has_item(similarFrame("testHiddenException", "erroneous.py")),
+                frames=has_item(similarFrame("testHiddenException", "erroneous.py")),  # type: ignore[arg-type]
             ),
         )
 
@@ -262,7 +263,12 @@ class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
     def setUp(self):
         self.loader = runner.TestLoader()
         self.output = StringIO()
-        self.result = UncleanWarningsReporterWrapper(reporter.Reporter(self.output))
+        self.reporter: reporter.Reporter = reporter.Reporter(self.output)
+        self.result = UncleanWarningsReporterWrapper(self.reporter)
+
+    def getResult(self, suite: PyUnitTestSuite) -> reporter.Reporter:
+        suite.run(self.result)
+        return self.reporter
 
 
 class TracebackHandlingTests(unittest.SynchronousTestCase):
