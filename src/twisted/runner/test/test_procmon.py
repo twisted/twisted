@@ -302,6 +302,11 @@ class ProcmonTests(unittest.TestCase):
         # verify that the process restarts
         self.reactor.advance(timeToDie)
 
+        # No further time is required to pass here but the reactor must
+        # iterate due to implementation details.  See the comment in
+        # test_stopProcessForcedKill.
+        self.reactor.advance(0)
+
         # We expect it to be restarted immediately
         self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
@@ -324,7 +329,14 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(0.0, self.pm.timeStarted["foo"])
 
         self.reactor.advance(1)
-        # We expect it to be immediately restarted
+
+        # We expect it to be immediately restarted.  While no actual time
+        # should need to pass for this to happen, the reactor will need to
+        # iterate a couple times because the implementation uses `callLater`
+        # (twice!) to schedule the restart and no delayed call can run sooner
+        # than the reactor iteration after it is scheduled.
+        self.reactor.pump([0, 0])
+
         self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
     def test_stopProcessUnknownKeyError(self):
