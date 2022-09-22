@@ -506,6 +506,10 @@ class LoopTests(unittest.TestCase):
         loop.clock = clock
         deferred = loop.start(0, now=False)
 
+        # Even though we have a no-delay loop,
+        # a single iteration of the reactor will not trigger the looping call
+        # multiple times.
+        # This is why we explicitly iterate multiple times.
         clock.pump([0] * 5)
         self.successResultOf(deferred)
 
