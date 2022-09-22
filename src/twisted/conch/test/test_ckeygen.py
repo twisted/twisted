@@ -660,8 +660,8 @@ class KeyGenTests(TestCase):
         options = {"filename": "/foo/bar"}
         with self.assertRaises(SystemExit) as e:
             displayPublicKey(options)
-            self.assertTrue(
-                "could not be opened, please specify a file." in e,
+            self.assertIn(
+                "could not be opened, please specify a file.", e
             )
 
     def test_changePassPhraseHandleFileNotFound(self):
@@ -671,7 +671,7 @@ class KeyGenTests(TestCase):
         options = {"filename": "/foo/bar"}
         with self.assertRaises(SystemExit) as e:
             changePassPhrase(options)
-            self.assertTrue(
+            self.assertIn(
                 "could not be opened, please specify a file." in e,
             )
 
@@ -682,6 +682,6 @@ class KeyGenTests(TestCase):
         options = {"filename": "/foo/bar", "format": "md5-hex"}
         with self.assertRaises(SystemExit) as e:
             printFingerprint(options)
-            self.assertTrue(
+            self.assertIn(
                 "could not be opened, please specify a file." in e,
             )
