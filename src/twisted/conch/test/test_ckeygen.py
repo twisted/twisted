@@ -660,9 +660,7 @@ class KeyGenTests(TestCase):
         options = {"filename": "/foo/bar"}
         with self.assertRaises(SystemExit) as e:
             displayPublicKey(options)
-            self.assertIn(
-                "could not be opened, please specify a file.", e
-            )
+            self.assertIn("could not be opened, please specify a file.", e)
 
     def test_changePassPhraseHandleFileNotFound(self):
         """
