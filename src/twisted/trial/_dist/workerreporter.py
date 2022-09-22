@@ -10,11 +10,11 @@ Test reporter forwarding test results over trial distributed AMP commands.
 """
 
 from types import TracebackType
-from typing import Callable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Callable, List, Optional, Sequence, Type, TypeVar
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Literal
 
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.protocols.amp import AMP
@@ -22,12 +22,10 @@ from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial._dist import managercommands
 from twisted.trial.reporter import TestResult
+from ..reporter import TrialFailure
 from .stream import chunk, stream
 
 T = TypeVar("T")
-ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
-XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
-TrialFailure = Union[XUnitFailure, Failure]
 
 
 async def addError(
