@@ -7,6 +7,7 @@ We'd like to acknowledge those companies and individuals who made critical contr
 Companies
 =========
 
+
 .. raw:: html
 
   <a href="https://www.itasoftware.com/"><img align="center" src="/_static/images/founding-sponsors-logos/ITA_logo_160x80.jpg?format=raw" /></a><br/>
