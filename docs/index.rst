@@ -17,6 +17,7 @@ Contents:
     words/index
     api/index
     development/index
+    sponsors/index
 
 .. toctree::
     :maxdepth: 1
