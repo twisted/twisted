@@ -15,9 +15,12 @@ import time
 import unittest as pyunit
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, List, Tuple
+from types import TracebackType
+from typing import TYPE_CHECKING, List, Tuple, Type, Union
 
 from zope.interface import implementer
+
+from typing_extensions import TypeAlias
 
 from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
@@ -32,6 +35,10 @@ try:
     from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
+
+ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
+XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
+TrialFailure = Union[XUnitFailure, Failure]
 
 
 def _makeTodo(value: str) -> "Todo":
