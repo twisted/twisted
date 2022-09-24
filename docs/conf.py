@@ -18,6 +18,8 @@ import sys
 from datetime import date
 from pprint import pprint
 
+import sphinx_rtd_theme
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -44,8 +46,6 @@ try:
     extensions.append("rst2pdf.pdfbuilder")
 except ImportError:
     pass
-
-extensions.append("traclinks")
 
 from twisted import version as twisted_version_object
 
@@ -96,18 +96,9 @@ pygments_style = "sphinx"
 
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-
-# See Read The Docs environment variables
-# https://docs.readthedocs.io/en/stable/builds.html#build-environment
-on_rtd = os.environ.get("READTHEDOCS", None) == "True"
-
-if not on_rtd:
-    html_theme = "twistedtrac"
-
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
+# Only the RTD theme is used. Both for local development and for the public site.
+html_theme = "sphinx_rtd_theme"
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -194,18 +185,6 @@ print(f"== Environment dump for {_git_reference} ===")
 pprint(dict(os.environ))
 print("======")
 
-# Base url for API docs
-api_base_url = f"/documents/{release}/api/"
-if on_rtd:
-    # For a PR the link is like:
-    # https://twisted--1422.org.readthedocs.build/en/1422/
-    # For a release:
-    # https://docs.twistedmatrix.com/en/twisted-20.3.0/
-    # https://docs.twistedmatrix.com/en/latest/
-    api_base_url = "/{}/{}/api/".format(
-        os.environ["READTHEDOCS_LANGUAGE"],
-        os.environ["READTHEDOCS_VERSION"],
-    )
 
 # Try to find URL fragment for the GitHub source page based on current
 # branch or tag.
@@ -235,8 +214,6 @@ pydoctor_args = [
 ]
 
 pydoctor_url_path = "/en/{rtd_version}/api/"
-
-traclinks_base_url = "https://twistedmatrix.com/trac"
 
 # A dict mapping unique IDs (which can be used to disambiguate references) to a
 # tuple of (<external sphinx documentation URI>, <inventory file location>).
