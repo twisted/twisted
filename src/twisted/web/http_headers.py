@@ -23,7 +23,6 @@ from typing import (
 
 from twisted.python.compat import cmp, comparable
 
-_S = Union[str, bytes]
 _T = TypeVar("_T")
 
 
@@ -232,15 +231,13 @@ class Headers:
                 "bytes or str" % (type(value),)
             )
 
-        _name = _sanitizeLinearWhitespace(self._encodeName(name))
-        if isinstance(value, str):
-            _value = value.encode("utf8")
-        else:
-            _value = value
-        self._rawHeaders[_name] = [
-            *self._rawHeaders.get(_name, ()),
-            _sanitizeLinearWhitespace(_value),
-        ]
+        self._rawHeaders.setdefault(
+            _sanitizeLinearWhitespace(self._encodeName(name)), []
+        ).append(
+            _sanitizeLinearWhitespace(
+                value.encode("utf8") if isinstance(value, str) else value
+            )
+        )
 
     @overload
     def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]:
