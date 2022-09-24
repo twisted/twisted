@@ -676,25 +676,6 @@ class MixedHeadersTests(TestCase):
     where that is permitted.
     """
 
-    def test_init(self) -> None:
-        """
-        Mixed L{str} and L{bytes} are accepted by the L{Headers} initializer.
-        """
-        h = Headers(
-            {
-                b"bytes": [b"bytes", b"bytes"],
-                "str": ["str", "str"],
-            }
-        )
-
-        self.assertEqual(
-            {
-                b"Bytes": [b"bytes", b"bytes"],
-                b"Str": [b"str", b"str"],
-            },
-            dict(h.getAllRawHeaders()),
-        )
-
     def test_addRawHeader(self) -> None:
         """
         L{Headers.addRawHeader} accepts mixed L{str} and L{bytes}.
@@ -713,6 +694,10 @@ class MixedHeadersTests(TestCase):
         h = Headers()
         h.setRawHeaders(b"bytes", [b"bytes"])
         h.setRawHeaders("str", ["str"])
+        h.setRawHeaders("mixed-str", [b"bytes", "str"])
+        h.setRawHeaders(b"mixed-bytes", ["str", b"bytes"])
 
         self.assertEqual(h.getRawHeaders(b"Bytes"), [b"bytes"])
         self.assertEqual(h.getRawHeaders("Str"), ["str"])
+        self.assertEqual(h.getRawHeaders("Mixed-Str"), ["bytes", "str"])
+        self.assertEqual(h.getRawHeaders(b"Mixed-Bytes"), [b"str", b"bytes"])
