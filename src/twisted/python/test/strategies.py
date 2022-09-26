@@ -1,3 +1,10 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Hypothesis strategies for values related to L{twisted.python}.
+"""
+
 from hypothesis.strategies import SearchStrategy, characters, text
 
 
