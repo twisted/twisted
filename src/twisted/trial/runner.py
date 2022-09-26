@@ -909,7 +909,7 @@ class TrialRunner:
         result.done()
         return result
 
-    def runUntilFailure(self, test):
+    def runUntilFailure(self, test: ITestCase) -> itrial.IReporter:
         """
         Repeatedly run C{test} until it fails.
         """
