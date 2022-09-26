@@ -3887,6 +3887,15 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         else:
             self._parseNameStreamServerTest(AF_UNIX, "UNIX")
 
+    def test_indexAndNameMutuallyExclusive(self) -> None:
+        """
+        The endpoint cannot be defined using both C{index} and C{name}.
+        """
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs([], ())
+        with self.assertRaises(ValueError):
+            parser.parseStreamServer(reactor, domain="INET", index=0, name="foo")
+
 
 class TCP6ServerEndpointPluginTests(unittest.TestCase):
     """
