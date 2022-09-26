@@ -5,7 +5,7 @@ Description=Example Web Server
 ExecStart=/usr/bin/twistd \
     --nodaemon \
     --pidfile= \
-    web --listen systemd:domain=INET:index=0 --path .
+    web --listen systemd:domain=INET:name=www --path .
 
 NonBlocking=true
 
