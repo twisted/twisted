@@ -9,20 +9,49 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_event_loop
-from typing import Dict, Optional, Type
+from asyncio import AbstractEventLoop, get_event_loop, new_event_loop, set_event_loop
+from functools import partial
+from typing import Any, Dict, Optional, Type
 
 from zope.interface import implementer
+
+from attrs import define
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import (
     _NO_FILEDESC,
     PosixReactorBase,
+    ReactorCoreWithSignalsAndProcesses,
     _ContinuousPolling,
 )
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
+
+
+@define
+class AsyncioReactorCore(ReactorCoreWithSignalsAndProcesses):
+    """
+    An reactor core based on an L{AbstractEventLoop}.
+    """
+    eventloop: AbstractEventLoop = get_event_loop()
+
+    def _mainLoop(self) -> None:
+        self.eventloop.run_forever()
+
+    def iterate(self, delay: float = 0.0) -> None:
+        self.eventloop.call_later(delay + 0.01, self.eventloop.stop)
+        self.eventloop.run_forever()
+
+    def crash(self) -> None:
+        super().crash()
+        self.eventloop.stop()
+
+    def stop(self) -> None:
+        super().stop()
+        # The shutdown event is essentially required to begin very near
+        # delayed call handling, so arrange for that.
+        self.eventloop.call_later(0 + 0.01, lambda: self.fireSystemEvent("shutdown"))
 
 
 @implementer(IReactorFDSet)
@@ -47,7 +76,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
-            _eventloop: AbstractEventLoop = get_event_loop()
+            # XXX install says we'll use the global one but this works better
+            _eventloop: AbstractEventLoop = new_event_loop()
+            set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
 
@@ -62,7 +93,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
                     f"ProactorEventLoop is not supported, got: {_eventloop}"
                 )
 
+        coreFactory = partial(
+            AsyncioReactorCore, eventloop=_eventloop,
+        )
         self._asyncioEventloop: AbstractEventLoop = _eventloop
+
         self._writers: Dict[Type[FileDescriptor], int] = {}
         self._readers: Dict[Type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
@@ -70,7 +105,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._scheduledAt = None
         self._timerHandle = None
 
-        super().__init__()
+        super().__init__(coreFactory=coreFactory)
 
     def _unregisterFDInAsyncio(self, fd):
         """
@@ -246,26 +281,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def getWriters(self):
         return list(self._writers.keys()) + self._continuousPolling.getWriters()
 
-    def iterate(self, timeout):
-        self._asyncioEventloop.call_later(timeout + 0.01, self._asyncioEventloop.stop)
-        self._asyncioEventloop.run_forever()
-
-    def run(self, installSignalHandlers=True):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self._asyncioEventloop.run_forever()
-        if self._justStopped:
-            self._justStopped = False
-
-    def stop(self):
-        super().stop()
-        # This will cause runUntilCurrent which in its turn
-        # will call fireSystemEvent("shutdown")
-        self.callLater(0, lambda: None)
-
-    def crash(self):
-        super().crash()
-        self._asyncioEventloop.stop()
-
     def _onTimer(self):
         self._scheduledAt = None
         self.runUntilCurrent()
@@ -292,6 +307,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
         return dc
 
     def callFromThread(self, f, *args, **kwargs):
+        assert (
+            # Currently running
+            self._core._started or
+            # About to run
+            not self._core._startedBefore
+        )
         g = lambda: self.callLater(0, f, *args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
 

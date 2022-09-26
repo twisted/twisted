@@ -32,7 +32,7 @@ from zope.interface.verify import verifyObject
 from twisted import internet, logger, plugin
 from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
-from twisted.internet.base import ReactorBase
+from twisted.internet.base import ReactorBase, ReactorCore
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
@@ -691,22 +691,26 @@ class ApplicationRunnerTests(TestCase):
         the signal.
         """
 
-        class DummyReactorWithSignal(ReactorBase):
+        class DummyCoreWithSignal(ReactorCore):
             """
-            A dummy reactor, providing a C{run} method, and setting the
+            A dummy reactor core, providing a C{run} method, and setting the
             _exitSignal attribute to a nonzero value.
             """
-
-            def installWaker(self):
-                """
-                Dummy method, does nothing.
-                """
 
             def run(self):
                 """
                 A fake run method setting _exitSignal to a nonzero value
                 """
-                self._exitSignal = 2
+                self._sigInt(2, None)
+
+        class DummyReactorWithSignal(ReactorBase):
+            def installWaker(self):
+                """
+                Dummy method, does nothing.
+                """
+
+            def __init__(self):
+                super().__init__(coreFactory=DummyCoreWithSignal)
 
         reactor = DummyReactorWithSignal()
         runner = app.ApplicationRunner(

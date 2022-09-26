@@ -30,7 +30,8 @@ from typing import (
 
 from zope.interface import classImplements, implementer
 
-from attrs import Factory, define, field
+from attrs import Factory, define
+from typing_extensions import Literal, Protocol, TypeAlias
 
 from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
@@ -374,6 +375,7 @@ _ThreePhaseEventTriggerHandle = NewType(
 )
 
 
+@define
 class _ThreePhaseEvent:
     """
     Collection of callables (with arguments) which can be invoked as a group in
@@ -404,11 +406,11 @@ class _ThreePhaseEvent:
         are in the process of being executed).
     """
 
-    def __init__(self) -> None:
-        self.before: List[_ThreePhaseEventTrigger] = []
-        self.during: List[_ThreePhaseEventTrigger] = []
-        self.after: List[_ThreePhaseEventTrigger] = []
-        self.state = "BASE"
+    before: List[_ThreePhaseEventTrigger] = Factory(list)
+    during: List[_ThreePhaseEventTrigger] = Factory(list)
+    after: List[_ThreePhaseEventTrigger] = Factory(list)
+    state: str = "BASE"
+    finishedBefore: List[_ThreePhaseEventTrigger] = Factory(list)
 
     def addTrigger(
         self,
@@ -569,22 +571,215 @@ class PluggableResolverMixin:
 _SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHandle])
 _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 
+SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
+
+
+@frozen
+class _WithoutSignalHandling:
+    def install(self) -> None:
+        pass
+
+@frozen
+class _WithSignalHandling:
+    """
+    A reactor core helper that can manage signals: it installs signal handlers
+    at start time.
+    """
+    _sigInt: SignalHandler
+    _sigBreak: SignalHandler
+    _sigTerm: SignalHandler
+
+    def install(self) -> None:
+        """
+        Install the signal handlers for the Twisted event loop.
+        """
+        try:
+            import signal
+        except ImportError:
+            log.msg(
+                "Warning: signal module unavailable -- "
+                "not installing signal handlers."
+            )
+            return
+
+        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
+            # only handle if there isn't already a handler, e.g. for Pdb.
+            signal.signal(signal.SIGINT, self._sigInt)
+        signal.signal(signal.SIGTERM, self._sigTerm)
+
+        # Catch Ctrl-Break in windows
+        SIGBREAK = getattr(signal, "SIGBREAK", None)
+        if SIGBREAK is not None:
+            signal.signal(SIGBREAK, self._sigBreak)
+
 
 @define
-class EventSystem:
+class ReactorCore(PluggableResolverMixin):
     """
-    An event system can run functions during three phases of an event: before,
-    during, and after.
+    An implementation of L{IReactorCore}.
 
-    This is used to implement L{IReactorCore}.
+    This includes an "event system" (which can run functions during three
+    phases of an event: before, during, and after) as well as control over
+    starting and stopping the loop.
+
+    @ivar _stopped: A flag which is true between paired calls to C{reactor.run}
+        and C{reactor.stop}.  This should be replaced with an explicit state
+        machine.
+    @ivar _justStopped: A flag which is true between the time C{reactor.stop}
+        is called and the time the shutdown system event is fired.  This is
+        used to determine whether that event should be fired after each
+        iteration through the mainloop.  This should be replaced with an
+        explicit state machine.
+    @ivar _started: A flag which is true from the time C{reactor.run} is called
+        until the time C{reactor.run} returns.  This is used to prevent calls
+        to C{reactor.run} on a running reactor.  This should be replaced with
+        an explicit state machine.
+    @ivar running: See L{IReactorCore.running}
     """
-    _isRunning: Callable[[], bool]
+
+    _runUntilCurrent: Callable[[], object]
+    _doIteration: Callable[[Optional[float]], object]
+    _timeout: Callable[[], Optional[float]]
+
+    _addInternalReader: Callable[[IReadDescriptor], object]
+
+    _wakeUp: Callable[[], object]
+
     _eventTriggers: Dict[str, _ThreePhaseEvent] = Factory(dict)
+    _signals =
+
+    running: bool = False
+    _started: bool = False
+    _justStopped: bool = False
+    _startedBefore: bool = False
+    _stopped: bool = True
+
+    def __attrs_post_init__(self) -> None:
+        # This will be the first "during" "startup" trigger because the object
+        # is still being initialized and triggers are executed in the order
+        # they were added.  This will make sure the reactor reflects its
+        # running state for all other "during" and "after" startup hooks.
+        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
+
+        # Likewise for shutdown.
+        self.addSystemEventTrigger("during", "shutdown", self.crash)
+
+    def resolve(
+        self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
+    ) -> Deferred[str]:
+        """
+        Return a Deferred that will resolve a hostname."""
+        if not name:
+            # XXX - This is *less than* '::', and will screw up IPv6 servers
+            return defer.succeed("0.0.0.0")
+        if abstract.isIPAddress(name):
+            return defer.succeed(name)
+        return self.resolver.getHostByName(name, timeout)
+
+    def run(self, signals: Union[_WithoutSignalHandling, _WithSignalHandling]) -> None:
+        self._signals = signals
+        self._startRunning()
+        self._mainLoop()
+
+    def _startRunning(self) -> None:
+        """
+        Method called when reactor starts: do some initialization and fire
+        startup events.
+
+        Don't call this directly, call reactor.run() instead: it should take
+        care of calling this.
+
+        This method is somewhat misnamed.  The reactor will not necessarily be
+        in the running state by the time this method returns.  The only
+        guarantee is that it will be on its way to the running state.
+        """
+        if self._started:
+            raise error.ReactorAlreadyRunning()
+        if self._startedBefore:
+            raise error.ReactorNotRestartable()
+        self._started = True
+        self._stopped = False
+        self.fireSystemEvent("startup")
+
+    def _reallyStartRunning(self) -> None:
+        """
+        Method called to transition to the running state.  This should happen
+        in the I{during startup} event trigger phase.
+        """
+        self.running = True
+        # Make sure this happens before after-startup events, since the
+        # expectation of after-startup is that the reactor is fully
+        # initialized.  Don't do it right away for historical reasons (perhaps
+        # some before-startup triggers don't want there to be a custom SIGCHLD
+        # handler so that they can run child processes with some blocking
+        # api).
+        self._signals.install()
+
+    def iterate(self, delay: float = 0.0) -> None:
+        """
+        See twisted.internet.interfaces.IReactorCore.iterate.
+        """
+        self._runUntilCurrent()
+        self._doIteration(delay)
+
+    def crash(self) -> None:
+        """
+        See twisted.internet.interfaces.IReactorCore.crash.
+
+        Reset reactor state tracking attributes and re-initialize certain
+        state-transition helpers which were set up in C{__init__} but later
+        destroyed (through use).
+        """
+        self._started = False
+        self.running = False
+
+        # This will get the reactor to reflect its running state correctly the
+        # next time it starts running.
+        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
+        # Likewise for shutdown. ???
+        # self.addSystemEventTrigger("during", "shutdown", self.crash)
+
+    def stop(self) -> None:
+        """
+        See twisted.internet.interfaces.IReactorCore.stop.
+        """
+        if self._stopped:
+            raise error.ReactorNotRunning("Can't stop reactor that isn't running.")
+        self._stopped = True
+        self._justStopped = True
+        self._startedBefore = True
+
+    def _mainLoop(self) -> None:
+        while self._started:
+            try:
+                while self._started:
+                    # Advance simulation time in delayed event processors.
+                    self._runUntilCurrent()
+
+                    # XXX It used to be at the end of runUntilCurrent which
+                    # effectively put it in the middle of this loop but I
+                    # don't know if it particularly makes sense here or if
+                    # that was just an accident.
+                    if self._justStopped:
+                        self._justStopped = False
+                        self.fireSystemEvent("shutdown")
+
+                    t2 = self._timeout()
+                    t = self.running and t2
+                    self._doIteration(t)
+            except BaseException:
+                log.msg("Unexpected error in main loop.")
+                log.err()
+            else:
+                log.msg("Main loop terminated.")  # type:ignore[unreachable]
 
     def fireSystemEvent(self, eventType: str) -> None:
         """
         @see: L{twisted.internet.interfaces.IReactorCore.fireSystemEvent}.
         """
+        if not self._started:
+            # raise RuntimeError("Cannot fire events on unstarted reactor")
+            pass
         event = self._eventTriggers.get(eventType)
         if event is not None:
             event.fireEvent()
@@ -618,7 +813,7 @@ class EventSystem:
         """
         @see: {twisted.internet.interfaces.IReactorCore.callWhenRunning}
         """
-        if self._isRunning():
+        if self.running:
             callable(*args, **kwargs)
             return None
         else:
@@ -633,58 +828,110 @@ class EventSystem:
         eventType, handle = triggerID
         self._eventTriggers[eventType].removeTrigger(handle)
 
+    def uninstallHandler(self) -> None:
+        pass
 
-@implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
-class ReactorBase(PluggableResolverMixin):
+
+class _CoreFactory(Protocol):
+    def __call__(
+        self,
+        runUntilCurrent: Callable[[], object],
+        doIteration: Callable[[Optional[float]], object],
+        timeout: Callable[[], Optional[float]],
+        addInternalReader: Callable[[IReadDescriptor], object],
+        wakeUp: Callable[[], object],
+    ) -> ReactorCore:
+        ...
+
+
+@implementer(
+    IReactorCore,
+    IReactorTime,
+    _ISupportsExitSignalCapturing,
+    IReactorPluggableNameResolver,
+    IReactorPluggableResolver,
+)
+class ReactorBase:
     """
     Default base class for Reactors.
 
-    @ivar _stopped: A flag which is true between paired calls to C{reactor.run}
-        and C{reactor.stop}.  This should be replaced with an explicit state
-        machine.
-    @ivar _justStopped: A flag which is true between the time C{reactor.stop}
-        is called and the time the shutdown system event is fired.  This is
-        used to determine whether that event should be fired after each
-        iteration through the mainloop.  This should be replaced with an
-        explicit state machine.
-    @ivar _started: A flag which is true from the time C{reactor.run} is called
-        until the time C{reactor.run} returns.  This is used to prevent calls
-        to C{reactor.run} on a running reactor.  This should be replaced with
-        an explicit state machine.
-    @ivar running: See L{IReactorCore.running}
     @ivar _registerAsIOThread: A flag controlling whether the reactor will
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
+
     @ivar _exitSignal: See L{_ISupportsExitSignalCapturing._exitSignal}
+
+    @ivar _installSignalHandlers: A flag which indicates whether any signal
+        handlers will be installed during startup.  This includes handlers for
+        SIGCHLD to monitor child processes, and SIGINT, SIGTERM, and SIGBREAK
+        to stop the reactor.
     """
 
     _registerAsIOThread = True
 
-    _stopped = True
     installed = False
     usingThreads = False
     _exitSignal = None
 
     __name__ = "twisted.internet.reactor"
 
-    def __init__(self) -> None:
+    # IReactorCore
+    @property
+    def running(self) -> bool:
+        return self._core.running
+
+    # IReactorPluggableNameResolver
+    @property
+    def nameResolver(self) -> IHostnameResolver:
+        return self._core.nameResolver
+
+    # Not part of IReactorPluggableResolver but some tests use it and it has
+    # no leading underscore ... :/
+    @property
+    def resolver(self) -> IResolverSimple:
+        return self._core.resolver
+
+    def _addInternalReader(self, reader: IReadDescriptor) -> None:
+        self._internalReaders.add(reader)
+        self.addReader(reader)
+
+    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
         self._pendingTimedCalls: List[DelayedCall] = []
         self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
 
-        # Some of IReactorCore
-        self._events = EventSystem(lambda: self.running)
-        self.fireSystemEvent = self._events.fireSystemEvent  # type: ignore[assignment]
-        self.addSystemEventTrigger = self._events.addSystemEventTrigger  # type: ignore[assignment]
-        self.callWhenRunning = self._events.callWhenRunning  # type: ignore[assignment]
-        self.removeSystemEventTrigger = self._events.removeSystemEventTrigger  # type: ignore[assignment]
-        # Core lifetime management
-        self.running = False
-        self._started = False
-        self._justStopped = False
-        self._startedBefore = False
+        if coreFactory is None:
+            _coreFactory: _CoreFactory = ReactorCoreWithSignals
+        else:
+            _coreFactory = coreFactory
+
+        # IReactorCore
+        self._core = _coreFactory(
+            runUntilCurrent=self.runUntilCurrent,
+            doIteration=self.doIteration,
+            timeout=self.timeout,
+            signals=self._signalHandler,
+            addInternalReader=self._addInternalReader,
+            wakeUp=self.wakeUp,
+        )
+        self.resolve = self._core.resolve  # type: ignore[assignment]
+        self.fireSystemEvent = self._core.fireSystemEvent  # type: ignore[assignment]
+        self.addSystemEventTrigger = self._core.addSystemEventTrigger  # type: ignore[assignment]
+        self.callWhenRunning = self._core.callWhenRunning  # type: ignore[assignment]
+        self.removeSystemEventTrigger = self._core.removeSystemEventTrigger  # type: ignore[assignment]
+        self.stop = self._core.stop  # type: ignore[assignment]
+        self.crash = self._core.crash  # type: ignore[assignment]
+        self.iterate = self._core.iterate  # type: ignore[assignment]
+
+        # IReactorPluggableResolver
+        self.installResolver = self._core.installResolver
+        self.installNameResolver = self._core.installNameResolver
+
+        # IReactorPluggableNameResolver
+        self.installNameResolver = self._core.installNameResolver
+
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
         self._internalReaders: Set[Any] = set()
@@ -693,13 +940,25 @@ class ReactorBase(PluggableResolverMixin):
         # Arrange for the running attribute to change to True at the right time
         # and let a subclass possibly do other things at that time (eg install
         # signal handlers).
-        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
-        self.addSystemEventTrigger("during", "shutdown", self.crash)
         self.addSystemEventTrigger("during", "shutdown", self.disconnectAll)
 
         if platform.supportsThreads():
             self._initThreads()
         self.installWaker()
+
+    # IReactorCore
+    def run(self, installSignalHandlers: bool=True) -> None:
+        self._installSignalHandlers = installSignalHandlers
+        if installSignalHandlers:
+            signals = _WithSignalHandling(
+                sigInt=self.sigInt,
+                sigBreak=self.sigBreak,
+                sigTerm=self.sigTerm,
+            )
+        else:
+            signals = _WithoutSignalHandling()
+
+        self._core.run(signals)
 
     # override in subclasses
 
@@ -798,39 +1057,35 @@ class ReactorBase(PluggableResolverMixin):
         """
         # See the comment in addSystemEventTrigger.
 
-    def resolve(
-        self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
-    ) -> Deferred[str]:
+    def resolve(self, name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
-        Return a Deferred that will resolve a hostname."""
-        if not name:
-            # XXX - This is *less than* '::', and will screw up IPv6 servers
-            return defer.succeed("0.0.0.0")
-        if abstract.isIPAddress(name):
-            return defer.succeed(name)
-        return self.resolver.getHostByName(name, timeout)
+        @see: L{twisted.internet.interfaces.IReactorCore.resolve}
+        """
+        # See the comment in addSystemEventTrigger.
 
-    def stop(self) -> None:
+    def run(self) -> None:
         """
-        See twisted.internet.interfaces.IReactorCore.stop.
+        @see: L{twisted.internet.interfaces.IReactorCore.run}
         """
-        if self._stopped:
-            raise error.ReactorNotRunning("Can't stop reactor that isn't running.")
-        self._stopped = True
-        self._justStopped = True
-        self._startedBefore = True
+        # See the comment in addSystemEventTrigger.
+
+    def iterate(self, delay: float) -> None:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.iterate}
+        """
+        # See the comment in addSystemEventTrigger.
 
     def crash(self) -> None:
         """
-        See twisted.internet.interfaces.IReactorCore.crash.
-
-        Reset reactor state tracking attributes and re-initialize certain
-        state-transition helpers which were set up in C{__init__} but later
-        destroyed (through use).
+        @see: L{twisted.internet.interfaces.IReactorCore.crash}
         """
-        self._started = False
-        self.running = False
-        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
+        # See the comment in addSystemEventTrigger.
+
+    def stop(self) -> None:
+        """
+        @see: L{twisted.internet.interfaces.IReactorCore.stop}
+        """
+        # See the comment in addSystemEventTrigger.
 
     def sigInt(self, number: int, frame: Optional[FrameType] = None) -> None:
         """
@@ -872,46 +1127,6 @@ class ReactorBase(PluggableResolverMixin):
             log.callWithLogger(
                 reader, reader.connectionLost, Failure(main.CONNECTION_LOST)
             )
-
-    def iterate(self, delay: float = 0.0) -> None:
-        """
-        See twisted.internet.interfaces.IReactorCore.iterate.
-        """
-        self.runUntilCurrent()
-        self.doIteration(delay)
-
-    def startRunning(self) -> None:
-        """
-        Method called when reactor starts: do some initialization and fire
-        startup events.
-
-        Don't call this directly, call reactor.run() instead: it should take
-        care of calling this.
-
-        This method is somewhat misnamed.  The reactor will not necessarily be
-        in the running state by the time this method returns.  The only
-        guarantee is that it will be on its way to the running state.
-        """
-        if self._started:
-            raise error.ReactorAlreadyRunning()
-        if self._startedBefore:
-            raise error.ReactorNotRestartable()
-        self._started = True
-        self._stopped = False
-        if self._registerAsIOThread:
-            threadable.registerAsIOThread()
-        self.fireSystemEvent("startup")
-
-    def _reallyStartRunning(self) -> None:
-        """
-        Method called to transition to the running state.  This should happen
-        in the I{during startup} event trigger phase.
-        """
-        self.running = True
-
-    def run(self) -> None:
-        # IReactorCore.run
-        raise NotImplementedError()
 
     # IReactorTime
 
@@ -1070,10 +1285,6 @@ class ReactorBase(PluggableResolverMixin):
             ]
             heapify(self._pendingTimedCalls)
 
-        if self._justStopped:
-            self._justStopped = False
-            self.fireSystemEvent("shutdown")
-
     # IReactorThreads
     if platform.supportsThreads():
         assert ThreadPool is not None
@@ -1085,8 +1296,15 @@ class ReactorBase(PluggableResolverMixin):
         threadpoolShutdownID = None
 
         def _initThreads(self) -> None:
+            self.addSystemEventTrigger(
+                "before", "startup", self._maybeRegisterAsIOThread
+            )
             self.installNameResolver(_GAIResolver(self, self.getThreadPool))
             self.usingThreads = True
+
+        def _maybeRegisterAsIOThread(self) -> None:
+            if self._registerAsIOThread:
+                threadable.registerAsIOThread()
 
         # `IReactorFromThreads` defines the first named argument as
         # `callable: Callable[..., Any]` but this defines it as `f`
@@ -1116,7 +1334,7 @@ class ReactorBase(PluggableResolverMixin):
             )
 
         def _uninstallHandler(self) -> None:
-            pass
+            self._core.uninstallHandler()
 
         def _stopThreadPool(self) -> None:
             """
@@ -1297,98 +1515,6 @@ class BasePort(abstract.FileDescriptor):
     def doWrite(self) -> Optional[Failure]:
         """Raises a RuntimeError"""
         raise RuntimeError("doWrite called on a %s" % reflect.qual(self.__class__))
-
-
-class _SignalReactorMixin:
-    """
-    Private mixin to manage signals: it installs signal handlers at start time,
-    and define run method.
-
-    It can only be used mixed in with L{ReactorBase}, and has to be defined
-    first in the inheritance (so that method resolution order finds
-    startRunning first).
-
-    @ivar _installSignalHandlers: A flag which indicates whether any signal
-        handlers will be installed during startup.  This includes handlers for
-        SIGCHLD to monitor child processes, and SIGINT, SIGTERM, and SIGBREAK
-        to stop the reactor.
-    """
-
-    _installSignalHandlers = False
-
-    def _handleSignals(self) -> None:
-        """
-        Install the signal handlers for the Twisted event loop.
-        """
-        try:
-            import signal
-        except ImportError:
-            log.msg(
-                "Warning: signal module unavailable -- "
-                "not installing signal handlers."
-            )
-            return
-
-        reactorBaseSelf = cast(ReactorBase, self)
-
-        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
-            # only handle if there isn't already a handler, e.g. for Pdb.
-            signal.signal(signal.SIGINT, reactorBaseSelf.sigInt)
-        signal.signal(signal.SIGTERM, reactorBaseSelf.sigTerm)
-
-        # Catch Ctrl-Break in windows
-        SIGBREAK = getattr(signal, "SIGBREAK", None)
-        if SIGBREAK is not None:
-            signal.signal(SIGBREAK, reactorBaseSelf.sigBreak)
-
-    def startRunning(self, installSignalHandlers: bool = True) -> None:
-        """
-        Extend the base implementation in order to remember whether signal
-        handlers should be installed later.
-
-        @param installSignalHandlers: A flag which, if set, indicates that
-            handlers for a number of (implementation-defined) signals should be
-            installed during startup.
-        """
-        self._installSignalHandlers = installSignalHandlers
-        ReactorBase.startRunning(cast(ReactorBase, self))
-
-    def _reallyStartRunning(self) -> None:
-        """
-        Extend the base implementation by also installing signal handlers, if
-        C{self._installSignalHandlers} is true.
-        """
-        ReactorBase._reallyStartRunning(cast(ReactorBase, self))
-        if self._installSignalHandlers:
-            # Make sure this happens before after-startup events, since the
-            # expectation of after-startup is that the reactor is fully
-            # initialized.  Don't do it right away for historical reasons
-            # (perhaps some before-startup triggers don't want there to be a
-            # custom SIGCHLD handler so that they can run child processes with
-            # some blocking api).
-            self._handleSignals()
-
-    def run(self, installSignalHandlers: bool = True) -> None:
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.mainLoop()
-
-    def mainLoop(self) -> None:
-        reactorBaseSelf = cast(ReactorBase, self)
-
-        while reactorBaseSelf._started:
-            try:
-                while reactorBaseSelf._started:
-                    # Advance simulation time in delayed event
-                    # processors.
-                    reactorBaseSelf.runUntilCurrent()
-                    t2 = reactorBaseSelf.timeout()
-                    t = reactorBaseSelf.running and t2
-                    reactorBaseSelf.doIteration(t)
-            except BaseException:
-                log.msg("Unexpected error in main loop.")
-                log.err()
-            else:
-                log.msg("Main loop terminated.")  # type:ignore[unreachable]
 
 
 __all__: List[str] = []

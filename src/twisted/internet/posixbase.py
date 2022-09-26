@@ -12,12 +12,12 @@ import errno
 import os
 import socket
 import sys
-from typing import Sequence
+from typing import Optional, Sequence
 
 from zope.interface import Attribute, Interface, classImplements, implementer
 
 from twisted.internet import error, tcp, udp
-from twisted.internet.base import ReactorBase, _SignalReactorMixin
+from twisted.internet.base import ReactorBase, ReactorCoreWithSignals, _CoreFactory
 from twisted.internet.interfaces import (
     IHalfCloseableDescriptor,
     IReactorFDSet,
@@ -303,18 +303,64 @@ class _DisconnectSelectableMixin:
             selectable.connectionLost(failure.Failure(why))
 
 
-@implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
-class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorBase):
+class ReactorCoreWithSignalsAndProcesses(ReactorCoreWithSignals):
     """
-    A basis for reactors that use file descriptors.
-
     @ivar _childWaker: L{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
+    """
+
+    _childWaker = None
+
+    def uninstallHandler(self):
+        """
+        If a child waker was created and installed, uninstall it now.
+
+        Since this disables reactor functionality and is only called when the
+        reactor is stopping, it doesn't provide any directly useful
+        functionality, but the cleanup of reactor-related process-global state
+        that it does helps in unit tests involving multiple reactors and is
+        generally just a nice thing.
+        """
+        # XXX This would probably be an alright place to put all of the
+        # cleanup code for all internal readers (here and in the base class,
+        # anyway).  See #3063 for that cleanup task.
+        if self._childWaker is not None:
+            self._childWaker.uninstall()
+
+    def _handleSignals(self):
+        """
+        Extend the basic signal handling logic to also support
+        handling SIGCHLD to know when to try to reap child processes.
+        """
+        super()._handleSignals()
+        if platformType == "posix" and processEnabled:
+            if self._childWaker is None:
+                self._childWaker = _SIGCHLDWaker(self)
+                self._addInternalReader(self._childWaker)
+
+            self._childWaker.install()
+            # Also reap all processes right now, in case we missed any
+            # signals before we installed the SIGCHLD waker/handler.
+            # This should only happen if someone used spawnProcess
+            # before calling reactor.run (and the process also exited
+            # already).
+            process.reapAllProcesses()
+
+
+@implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
+class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
+    """
+    A basis for reactors that use file descriptors.
     """
 
     # Callable that creates a waker, overrideable so that subclasses can
     # substitute their own implementation:
     _wakerFactory = _Waker
+
+    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
+        if coreFactory is None:
+            coreFactory = ReactorCoreWithSignalsAndProcesses
+        super().__init__(coreFactory=coreFactory)
 
     def installWaker(self):
         """
@@ -327,44 +373,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
             self.waker = self._wakerFactory(self)
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
-
-    _childWaker = None
-
-    def _handleSignals(self):
-        """
-        Extend the basic signal handling logic to also support
-        handling SIGCHLD to know when to try to reap child processes.
-        """
-        _SignalReactorMixin._handleSignals(self)
-        if platformType == "posix" and processEnabled:
-            if not self._childWaker:
-                self._childWaker = _SIGCHLDWaker(self)
-                self._internalReaders.add(self._childWaker)
-                self.addReader(self._childWaker)
-            self._childWaker.install()
-            # Also reap all processes right now, in case we missed any
-            # signals before we installed the SIGCHLD waker/handler.
-            # This should only happen if someone used spawnProcess
-            # before calling reactor.run (and the process also exited
-            # already).
-            process.reapAllProcesses()
-
-    def _uninstallHandler(self):
-        """
-        If a child waker was created and installed, uninstall it now.
-
-        Since this disables reactor functionality and is only called
-        when the reactor is stopping, it doesn't provide any directly
-        useful functionality, but the cleanup of reactor-related
-        process-global state that it does helps in unit tests
-        involving multiple reactors and is generally just a nice
-        thing.
-        """
-        # XXX This would probably be an alright place to put all of
-        # the cleanup code for all internal readers (here and in the
-        # base class, anyway).  See #3063 for that cleanup task.
-        if self._childWaker:
-            self._childWaker.uninstall()
 
     # IReactorProcess
 
