@@ -32,12 +32,15 @@ import importlib
 import inspect
 import os
 import sys
-import time
 import types
 import warnings
+from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
+from typing import IO, Any, Generator, Optional
 
 from zope.interface import implementer
+
+from attrs import define
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
@@ -49,8 +52,22 @@ from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
+from . import itrial
 
 pyunit = __import__("unittest")
+
+from typing import Callable, Protocol
+
+from typing_extensions import ParamSpec
+
+_P = ParamSpec("_P")
+
+
+class _Debugger(Protocol):
+    def runcall(
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> object:
+        ...
 
 
 def isPackage(module):
@@ -765,6 +782,50 @@ def _qualNameWalker(qualName):
         yield (".".join(qualParts[:-index]), qualParts[-index:])
 
 
+@contextmanager
+def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
+    """
+    A context manager which obtains a lock on a trial working directory
+    and enters (L{os.chdir}) it and then reverses these things.
+
+    @param workingDirectory: A pattern for the basename of the working
+        directory to acquire.
+    """
+    currentDir = os.getcwd()
+    base = filepath.FilePath(workingDirectory)
+    testdir, testDirLock = util._unusedTestDirectory(base)
+    os.chdir(testdir.path)
+
+    yield
+
+    os.chdir(currentDir)
+    testDirLock.unlock()
+
+
+@contextmanager
+def _logFile(logfile: str) -> Generator[None, None, None]:
+    """
+    A context manager which adds a log observer and then removes it.
+
+    @param logfile: C{"-"} f or stdout logging, otherwise the path to a log
+        file to which to write.
+    """
+    if logfile == "-":
+        logFile = sys.stdout
+    else:
+        logFile = util.openTestLog(filepath.FilePath(logfile))
+
+    logFileObserver = log.FileLogObserver(logFile)
+    observerFunction = logFileObserver.emit
+    log.startLoggingWithObserver(observerFunction, 0)
+
+    yield
+
+    log.removeObserver(observerFunction)
+    logFile.close()
+
+
+@define
 class TrialRunner:
     """
     A specialised runner that the trial front end uses.
@@ -773,21 +834,24 @@ class TrialRunner:
     DEBUG = "debug"
     DRY_RUN = "dry-run"
 
-    def _setUpTestdir(self):
-        self._tearDownLogFile()
-        currentDir = os.getcwd()
-        base = filepath.FilePath(self.workingDirectory)
-        testdir, self._testDirLock = util._unusedTestDirectory(base)
-        os.chdir(testdir.path)
-        return currentDir
+    reporterFactory: Callable[[IO[str], str, bool, log.LogPublisher], itrial.IReporter]
+    mode: Optional[str] = None
+    logfile: str = "test.log"
+    stream: IO[str] = sys.stdout
+    profile: bool = False
+    _tracebackFormat: str = "default"
+    _realTimeErrors: bool = False
+    uncleanWarnings: bool = False
+    workingDirectory: str = "_trial_temp"
+    _forceGarbageCollection: bool = False
+    debugger: Optional[_Debugger] = None
+    _exitFirst: bool = False
 
-    def _tearDownTestdir(self, oldDir):
-        os.chdir(oldDir)
-        self._testDirLock.unlock()
+    _result: Optional[Any] = None
 
-    _log = log
+    _log: log.LogPublisher = log  # type: ignore[assignment]
 
-    def _makeResult(self):
+    def _makeResult(self) -> itrial.IReporter:
         reporter = self.reporterFactory(
             self.stream, self.tbformat, self.rterrors, self._log
         )
@@ -797,64 +861,28 @@ class TrialRunner:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
 
-    def __init__(
-        self,
-        reporterFactory,
-        mode=None,
-        logfile="test.log",
-        stream=sys.stdout,
-        profile=False,
-        tracebackFormat="default",
-        realTimeErrors=False,
-        uncleanWarnings=False,
-        workingDirectory=None,
-        forceGarbageCollection=False,
-        debugger=None,
-        exitFirst=False,
-    ):
-        self.reporterFactory = reporterFactory
-        self.logfile = logfile
-        self.mode = mode
-        self.stream = stream
-        self.tbformat = tracebackFormat
-        self.rterrors = realTimeErrors
-        self.uncleanWarnings = uncleanWarnings
-        self._result = None
-        self.workingDirectory = workingDirectory or "_trial_temp"
-        self._logFileObserver = None
-        self._logFileObject = None
-        self._forceGarbageCollection = forceGarbageCollection
-        self.debugger = debugger
-        self._exitFirst = exitFirst
-        if profile:
-            self.run = util.profiled(self.run, "profile.data")
+    @property
+    def tbformat(self) -> str:
+        return self._tracebackFormat
 
-    def _tearDownLogFile(self):
-        if self._logFileObserver is not None:
-            log.removeObserver(self._logFileObserver.emit)
-            self._logFileObserver = None
-        if self._logFileObject is not None:
-            self._logFileObject.close()
-            self._logFileObject = None
+    @property
+    def rterrors(self) -> bool:
+        return self._realTimeErrors
 
-    def _setUpLogFile(self) -> None:
-        self._tearDownLogFile()
-        if self.logfile == "-":
-            logFile = sys.stdout
-        else:
-            logFile = util.openTestLog(filepath.FilePath(self.logfile))
-        self._logFileObject = logFile
-        self._logFileObserver = log.FileLogObserver(logFile)
-        log.startLoggingWithObserver(self._logFileObserver.emit, 0)
-
-    def run(self, test):
+    def run(self, test: ITestCase) -> itrial.IReporter:
         """
         Run the test or suite and return a result object.
         """
         test = unittest.decorate(test, ITestCase)
-        return self._runWithoutDecoration(test, self._forceGarbageCollection)
+        if self.profile:
+            run = util.profiled(self._runWithoutDecoration, "profile.data")
+        else:
+            run = self._runWithoutDecoration
+        return run(test, self._forceGarbageCollection)
 
-    def _runWithoutDecoration(self, test, forceGarbageCollection=False):
+    def _runWithoutDecoration(
+        self, test: ITestCase, forceGarbageCollection: bool = False
+    ) -> itrial.IReporter:
         """
         Private helper that runs the given test but doesn't decorate it.
         """
@@ -863,7 +891,6 @@ class TrialRunner:
         # This should move out of the runner and be presumed to be
         # present
         suite = TrialSuite([test], forceGarbageCollection)
-        startTime = time.time()
         if self.mode == self.DRY_RUN:
             for single in _iterateTests(suite):
                 result.startTest(single)
@@ -871,36 +898,15 @@ class TrialRunner:
                 result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
+                assert self.debugger is not None
                 run = lambda: self.debugger.runcall(suite.run, result)
             else:
                 run = lambda: suite.run(result)
 
-            oldDir = self._setUpTestdir()
-            try:
-                self._setUpLogFile()
+            with _testDirectory(self.workingDirectory), _logFile(self.logfile):
                 run()
-            finally:
-                self._tearDownLogFile()
-                self._tearDownTestdir(oldDir)
 
-        endTime = time.time()
-        done = getattr(result, "done", None)
-        if done is None:
-            warnings.warn(
-                "%s should implement done() but doesn't. Falling back to "
-                "printErrors() and friends." % reflect.qual(result.__class__),
-                category=DeprecationWarning,
-                stacklevel=3,
-            )
-            result.printErrors()
-            result.writeln(result.separator)
-            result.writeln(
-                "Ran %d tests in %.3fs", result.testsRun, endTime - startTime
-            )
-            result.write("\n")
-            result.printSummary()
-        else:
-            result.done()
+        result.done()
         return result
 
     def runUntilFailure(self, test):

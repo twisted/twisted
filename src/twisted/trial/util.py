@@ -17,9 +17,10 @@ Maintainer: Jonathan Lange
 @var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
-
 from random import randrange
-from typing import TextIO
+from typing import Callable, TextIO, TypeVar
+
+from typing_extensions import ParamSpec
 
 from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
@@ -240,8 +241,12 @@ def suppress(action="ignore", **kwarg):
 
 # This should be deleted, and replaced with twisted.application's code; see
 # #6016:
-def profiled(f, outputFile):
-    def _(*args, **kwargs):
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+
+def profiled(f: Callable[_P, _T], outputFile: str) -> Callable[_P, _T]:
+    def _(*args: _P.args, **kwargs: _P.kwargs) -> _T:
         import profile
 
         prof = profile.Profile()
