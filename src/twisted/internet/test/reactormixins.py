@@ -158,7 +158,7 @@ class ReactorBuilder:
             ]
         )
 
-        _reactors.append("twisted.internet.test.reactormixins.asyncioreactor")
+        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -373,7 +373,8 @@ class ReactorBuilder:
         return classes
 
 
-def asyncioreactor() -> "AsyncioSelectorReactor":
+@staticmethod
+def AsyncioSelectReactor() -> "AsyncioSelectorReactor":
     """
     Make a new asyncio reactor associated with a new event loop.
 
@@ -382,6 +383,10 @@ def asyncioreactor() -> "AsyncioSelectorReactor":
     prefers to re-use (or create) a global loop because of how this interacts
     with other asyncio-based libraries and applications (though maybe it
     shouldn't).
+
+    @note: This function's name deviates from the coding standard because the
+        name of the generated test cases is derived from it.  The given name
+        reflects the name of the reactor the generated tests will cover.
     """
     from asyncio import new_event_loop, set_event_loop
 
