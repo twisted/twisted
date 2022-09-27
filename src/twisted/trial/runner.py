@@ -841,6 +841,42 @@ class _Runner(Protocol):
 class TrialRunner:
     """
     A specialised runner that the trial front end uses.
+
+    @ivar reporterFactory: A callable to create a reporter to use.
+
+    @ivar mode: Either C{None} for a normal test run, L{TrialRunner.DEBUG} for
+        a run in the debugger, or L{TrialRunner.DRY_RUN} to collect and report
+        the tests but not call any of them.
+
+    @ivar logfile: The path to the file to write the test run log.
+
+    @ivar stream: The file to report results to.
+
+    @ivar profile: C{True} to run the tests with a profiler enabled.
+
+    @ivar _tracebackFormat: A format name to use with L{Failure} for reporting
+        failures.
+
+    @ivar _realTimeErrors: C{True} if errors should be reported as they
+        happen.  C{False} if they should only be reported at the end of the
+        test run in the summary.
+
+    @ivar uncleanWarnings: C{True} to report dirty reactor errors as warnings,
+        C{False} to report them as test-failing errors.
+
+    @ivar workingDirectory: A path template to a directory which will be the
+        process's working directory while the tests are running.
+
+    @ivar _forceGarbageCollection: C{True} to perform a full garbage
+        collection at least after each test.  C{False} to let garbage
+        collection run only when it normally would.
+
+    @ivar debugger: In debug mode, an object to use to launch the debugger.
+
+    @ivar _exitFirst: C{True} to stop after the first failed test.  C{False}
+        to run the whole suite.
+
+    @ivar log: An object to give to the reporter to use as a log publisher.
     """
 
     DEBUG = "debug"
