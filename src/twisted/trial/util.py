@@ -240,7 +240,7 @@ def suppress(action="ignore", **kwarg):
 
 
 # This should be deleted, and replaced with twisted.application's code; see
-# #6016:
+# https://github.com/twisted/twisted/issues/6016:
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 
