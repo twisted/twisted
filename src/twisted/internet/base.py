@@ -24,14 +24,15 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     Union,
     cast,
 )
 
 from zope.interface import classImplements, implementer
 
-from attrs import Factory, define
-from typing_extensions import Literal, Protocol, TypeAlias
+from attrs import Factory, define, frozen
+from typing_extensions import Protocol, TypeAlias
 
 from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
@@ -574,10 +575,22 @@ _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
 
+class SignalHandling(Protocol):
+    def install(self) -> None:
+        pass
+
+    def uninstallHandler(self) -> None:
+        pass
+
+
 @frozen
 class _WithoutSignalHandling:
     def install(self) -> None:
         pass
+
+    def uninstallHandler(self) -> None:
+        pass
+
 
 @frozen
 class _WithSignalHandling:
@@ -585,6 +598,7 @@ class _WithSignalHandling:
     A reactor core helper that can manage signals: it installs signal handlers
     at start time.
     """
+
     _sigInt: SignalHandler
     _sigBreak: SignalHandler
     _sigTerm: SignalHandler
@@ -611,6 +625,10 @@ class _WithSignalHandling:
         SIGBREAK = getattr(signal, "SIGBREAK", None)
         if SIGBREAK is not None:
             signal.signal(SIGBREAK, self._sigBreak)
+
+    def uninstallHandler(self) -> None:
+        # XXX Uninstall the signal handlers we installed?
+        pass
 
 
 @define
@@ -641,12 +659,10 @@ class ReactorCore(PluggableResolverMixin):
     _doIteration: Callable[[Optional[float]], object]
     _timeout: Callable[[], Optional[float]]
 
-    _addInternalReader: Callable[[IReadDescriptor], object]
-
     _wakeUp: Callable[[], object]
 
     _eventTriggers: Dict[str, _ThreePhaseEvent] = Factory(dict)
-    _signals =
+    _signals: Optional[SignalHandling] = None
 
     running: bool = False
     _started: bool = False
@@ -676,7 +692,7 @@ class ReactorCore(PluggableResolverMixin):
             return defer.succeed(name)
         return self.resolver.getHostByName(name, timeout)
 
-    def run(self, signals: Union[_WithoutSignalHandling, _WithSignalHandling]) -> None:
+    def run(self, signals: SignalHandling) -> None:
         self._signals = signals
         self._startRunning()
         self._mainLoop()
@@ -713,6 +729,7 @@ class ReactorCore(PluggableResolverMixin):
         # some before-startup triggers don't want there to be a custom SIGCHLD
         # handler so that they can run child processes with some blocking
         # api).
+        assert self._signals is not None
         self._signals.install()
 
     def iterate(self, delay: float = 0.0) -> None:
@@ -829,7 +846,10 @@ class ReactorCore(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
     def uninstallHandler(self) -> None:
-        pass
+        # This uninstallation hook gets called whether or not the reactor ever
+        # got run so we have to handle the partially-initialized case.
+        if self._signals is not None:
+            self._signals.uninstallHandler()
 
 
 class _CoreFactory(Protocol):
@@ -838,7 +858,6 @@ class _CoreFactory(Protocol):
         runUntilCurrent: Callable[[], object],
         doIteration: Callable[[Optional[float]], object],
         timeout: Callable[[], Optional[float]],
-        addInternalReader: Callable[[IReadDescriptor], object],
         wakeUp: Callable[[], object],
     ) -> ReactorCore:
         ...
@@ -895,7 +914,7 @@ class ReactorBase:
         self._internalReaders.add(reader)
         self.addReader(reader)
 
-    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
+    def __init__(self, coreFactory: Optional[Type[ReactorCore]] = None) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
         self._pendingTimedCalls: List[DelayedCall] = []
@@ -903,7 +922,7 @@ class ReactorBase:
         self._cancellations = 0
 
         if coreFactory is None:
-            _coreFactory: _CoreFactory = ReactorCoreWithSignals
+            _coreFactory: Type[ReactorCore] = ReactorCore
         else:
             _coreFactory = coreFactory
 
@@ -912,8 +931,6 @@ class ReactorBase:
             runUntilCurrent=self.runUntilCurrent,
             doIteration=self.doIteration,
             timeout=self.timeout,
-            signals=self._signalHandler,
-            addInternalReader=self._addInternalReader,
             wakeUp=self.wakeUp,
         )
         self.resolve = self._core.resolve  # type: ignore[assignment]
@@ -947,10 +964,10 @@ class ReactorBase:
         self.installWaker()
 
     # IReactorCore
-    def run(self, installSignalHandlers: bool=True) -> None:
+    def run(self, installSignalHandlers: bool = True) -> None:
         self._installSignalHandlers = installSignalHandlers
         if installSignalHandlers:
-            signals = _WithSignalHandling(
+            signals: SignalHandling = _WithSignalHandling(
                 sigInt=self.sigInt,
                 sigBreak=self.sigBreak,
                 sigTerm=self.sigTerm,
@@ -1060,12 +1077,6 @@ class ReactorBase:
     def resolve(self, name: str, timeout: Sequence[int]) -> "Deferred[str]":
         """
         @see: L{twisted.internet.interfaces.IReactorCore.resolve}
-        """
-        # See the comment in addSystemEventTrigger.
-
-    def run(self) -> None:
-        """
-        @see: L{twisted.internet.interfaces.IReactorCore.run}
         """
         # See the comment in addSystemEventTrigger.
 

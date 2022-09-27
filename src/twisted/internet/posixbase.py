@@ -12,12 +12,19 @@ import errno
 import os
 import socket
 import sys
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 from zope.interface import Attribute, Interface, classImplements, implementer
 
+from attrs import define
+
 from twisted.internet import error, tcp, udp
-from twisted.internet.base import ReactorBase, ReactorCoreWithSignals, _CoreFactory
+from twisted.internet.base import (
+    ReactorBase,
+    SignalHandling,
+    _WithoutSignalHandling,
+    _WithSignalHandling,
+)
 from twisted.internet.interfaces import (
     IHalfCloseableDescriptor,
     IReactorFDSet,
@@ -29,6 +36,7 @@ from twisted.internet.interfaces import (
     IReactorUDP,
     IReactorUNIX,
     IReactorUNIXDatagram,
+    IReadDescriptor,
 )
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log, util
@@ -152,6 +160,7 @@ class _SocketWaker(log.Logger):
         self.w.close()
 
 
+@implementer(IReadDescriptor)
 class _FDWaker(log.Logger):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
@@ -237,9 +246,6 @@ class _SIGCHLDWaker(_FDWaker):
     @see: L{twisted.internet._signals}
     """
 
-    def __init__(self, reactor):
-        _FDWaker.__init__(self, reactor)
-
     def install(self):
         """
         Install the handler necessary to make this waker active.
@@ -303,13 +309,16 @@ class _DisconnectSelectableMixin:
             selectable.connectionLost(failure.Failure(why))
 
 
-class ReactorCoreWithSignalsAndProcesses(ReactorCoreWithSignals):
+@define
+class _WithChildSignalHandling:
     """
     @ivar _childWaker: L{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
 
-    _childWaker = None
+    _signals: SignalHandling
+    _addInternalReader: Callable[[IReadDescriptor], object]
+    _childWaker: Optional[_SIGCHLDWaker] = None
 
     def uninstallHandler(self):
         """
@@ -321,30 +330,31 @@ class ReactorCoreWithSignalsAndProcesses(ReactorCoreWithSignals):
         that it does helps in unit tests involving multiple reactors and is
         generally just a nice thing.
         """
+        self._signals.uninstallHandler() # XXX this is untested
         # XXX This would probably be an alright place to put all of the
         # cleanup code for all internal readers (here and in the base class,
         # anyway).  See #3063 for that cleanup task.
         if self._childWaker is not None:
             self._childWaker.uninstall()
 
-    def _handleSignals(self):
+    def install(self) -> None:
         """
         Extend the basic signal handling logic to also support
         handling SIGCHLD to know when to try to reap child processes.
         """
-        super()._handleSignals()
-        if platformType == "posix" and processEnabled:
-            if self._childWaker is None:
-                self._childWaker = _SIGCHLDWaker(self)
-                self._addInternalReader(self._childWaker)
+        self._signals.install() # XXX is this untested?
 
-            self._childWaker.install()
-            # Also reap all processes right now, in case we missed any
-            # signals before we installed the SIGCHLD waker/handler.
-            # This should only happen if someone used spawnProcess
-            # before calling reactor.run (and the process also exited
-            # already).
-            process.reapAllProcesses()
+        if self._childWaker is None:
+            self._childWaker = _SIGCHLDWaker(self)
+            self._addInternalReader(self._childWaker)
+
+        self._childWaker.install()
+        # Also reap all processes right now, in case we missed any
+        # signals before we installed the SIGCHLD waker/handler.
+        # This should only happen if someone used spawnProcess
+        # before calling reactor.run (and the process also exited
+        # already).
+        process.reapAllProcesses()
 
 
 @implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
@@ -357,10 +367,23 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
     # substitute their own implementation:
     _wakerFactory = _Waker
 
-    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
-        if coreFactory is None:
-            coreFactory = ReactorCoreWithSignalsAndProcesses
-        super().__init__(coreFactory=coreFactory)
+    def run(self, installSignalHandlers: bool = True) -> None:
+        self._installSignalHandlers = installSignalHandlers
+
+        if installSignalHandlers:
+            signals: SignalHandling = _WithSignalHandling(
+                sigInt=self.sigInt,
+                sigBreak=self.sigBreak,
+                sigTerm=self.sigTerm,
+            )
+            # XXX These checks are the same?
+            if platformType == "posix" and processEnabled:
+                signals = _WithChildSignalHandling(signals, self._addInternalReader)
+
+        else:
+            signals = _WithoutSignalHandling()
+
+        self._core.run(signals)
 
     def installWaker(self):
         """

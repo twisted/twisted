@@ -32,7 +32,12 @@ from zope.interface.verify import verifyObject
 from twisted import internet, logger, plugin
 from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
-from twisted.internet.base import ReactorBase, ReactorCore
+from twisted.internet.base import (
+    ReactorBase,
+    ReactorCore,
+    SignalHandling,
+    _WithSignalHandling,
+)
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
@@ -690,6 +695,7 @@ class ApplicationRunnerTests(TestCase):
         If the reactor exits with a signal, the application runner caches
         the signal.
         """
+        observedSignals = None
 
         class DummyCoreWithSignal(ReactorCore):
             """
@@ -697,11 +703,13 @@ class ApplicationRunnerTests(TestCase):
             _exitSignal attribute to a nonzero value.
             """
 
-            def run(self):
+            def run(self, signals: SignalHandling) -> None:
                 """
                 A fake run method setting _exitSignal to a nonzero value
                 """
-                self._sigInt(2, None)
+                nonlocal observedSignals
+                observedSignals = signals
+                reactor.sigInt(2, None)
 
         class DummyReactorWithSignal(ReactorBase):
             def installWaker(self):
@@ -718,6 +726,8 @@ class ApplicationRunnerTests(TestCase):
         )
         runner.startReactor(reactor, None, None)
         self.assertEquals(2, runner._exitSignal)
+        # XXX Is this a good assertion?
+        self.assertIsInstance(observedSignals, _WithSignalHandling)
 
     def test_applicationRunnerIgnoresNoSignal(self):
         """

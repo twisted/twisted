@@ -11,18 +11,18 @@ import errno
 import sys
 from asyncio import AbstractEventLoop, get_event_loop, new_event_loop, set_event_loop
 from functools import partial
-from typing import Any, Dict, Optional, Type
+from typing import Dict, Optional, Type
 
 from zope.interface import implementer
 
 from attrs import define
 
 from twisted.internet.abstract import FileDescriptor
+from twisted.internet.base import ReactorCore
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import (
     _NO_FILEDESC,
     PosixReactorBase,
-    ReactorCoreWithSignalsAndProcesses,
     _ContinuousPolling,
 )
 from twisted.logger import Logger
@@ -30,10 +30,11 @@ from twisted.python.log import callWithLogger
 
 
 @define
-class AsyncioReactorCore(ReactorCoreWithSignalsAndProcesses):
+class AsyncioReactorCore(ReactorCore):
     """
     An reactor core based on an L{AbstractEventLoop}.
     """
+
     eventloop: AbstractEventLoop = get_event_loop()
 
     def _mainLoop(self) -> None:
@@ -93,8 +94,9 @@ class AsyncioSelectorReactor(PosixReactorBase):
                     f"ProactorEventLoop is not supported, got: {_eventloop}"
                 )
 
-        coreFactory = partial(
-            AsyncioReactorCore, eventloop=_eventloop,
+        coreFactory: Type[ReactorCore] = partial(  # type: ignore[assignment]
+            AsyncioReactorCore,
+            eventloop=_eventloop,
         )
         self._asyncioEventloop: AbstractEventLoop = _eventloop
 
@@ -309,7 +311,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
     def callFromThread(self, f, *args, **kwargs):
         assert (
             # Currently running
-            self._core._started or
+            self._core._started
+            or
             # About to run
             not self._core._startedBefore
         )
