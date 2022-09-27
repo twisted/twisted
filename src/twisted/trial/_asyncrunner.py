@@ -168,9 +168,9 @@ def _iterateTests(
     Iterate through all of the test cases in C{testSuiteOrCase}.
     """
     try:
-        suite = iter(testSuiteOrCase) # type: ignore[arg-type]
+        suite = iter(testSuiteOrCase)  # type: ignore[arg-type]
     except TypeError:
-        yield testSuiteOrCase # type: ignore[misc]
+        yield testSuiteOrCase  # type: ignore[misc]
     else:
         for test in suite:
             yield from _iterateTests(test)

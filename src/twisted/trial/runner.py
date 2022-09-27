@@ -33,14 +33,26 @@ import inspect
 import os
 import sys
 import types
+import unittest as pyunit
 import warnings
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import IO, Any, Generator, Optional
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    List,
+    Optional,
+    Protocol,
+    TextIO,
+    Type,
+    Union,
+)
 
 from zope.interface import implementer
 
 from attrs import define
+from typing_extensions import ParamSpec, TypeAlias, TypeGuard
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
@@ -53,12 +65,6 @@ from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
 from . import itrial
-
-pyunit = __import__("unittest")
-
-from typing import Callable, Protocol
-
-from typing_extensions import ParamSpec
 
 _P = ParamSpec("_P")
 
@@ -275,26 +281,31 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-def name(thing):
+_Loadable: TypeAlias = Union[
+    modules.PythonAttribute,
+    modules.PythonModule,
+    pyunit.TestCase,
+    Type[pyunit.TestCase],
+]
+
+
+def name(thing: _Loadable) -> str:
     """
     @param thing: an object from modules (instance of PythonModule,
         PythonAttribute), a TestCase subclass, or an instance of a TestCase.
     """
-    if isTestCase(thing):
+    if isinstance(thing, pyunit.TestCase):
+        return thing.id()
+    elif isinstance(thing, (modules.PythonAttribute, modules.PythonModule)):
+        return thing.name
+    elif isTestCase(thing):
         # TestCase subclass
-        theName = reflect.qual(thing)
+        return reflect.qual(thing)
     else:
-        # thing from trial, or thing from modules.
-        # this monstrosity exists so that modules' objects do not have to
-        # implement id(). -jml
-        try:
-            theName = thing.id()
-        except AttributeError:
-            theName = thing.name
-    return theName
+        assert False
 
 
-def isTestCase(obj):
+def isTestCase(obj: type) -> TypeGuard[Type[pyunit.TestCase]]:
     """
     @return: C{True} if C{obj} is a class that contains test cases, C{False}
         otherwise. Used to find all the tests in a module.
@@ -381,6 +392,7 @@ class ErrorHolder(TestHolder):
         result.stopTest(self)
 
 
+@define
 class TestLoader:
     """
     I find tests inside function, modules, files -- whatever -- then return
@@ -405,10 +417,8 @@ class TestLoader:
     methodPrefix = "test"
     modulePrefix = "test_"
 
-    def __init__(self):
-        self.suiteFactory = TestSuite
-        self.sorter = name
-        self._importErrors = []
+    suiteFactory: Type[TestSuite] = TestSuite
+    sorter: Callable[[_Loadable], object] = name
 
     def sort(self, xs):
         """
@@ -708,7 +718,7 @@ class TestLoader:
 
     loadTestsFromName = loadByName
 
-    def loadByNames(self, names, recurse=False):
+    def loadByNames(self, names: List[str], recurse: bool = False) -> TestSuite:
         """
         Load some tests by a list of names.
 
@@ -825,6 +835,18 @@ def _logFile(logfile: str) -> Generator[None, None, None]:
     logFile.close()
 
 
+class _Runner(Protocol):
+    stream: TextIO
+
+    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+        ...
+
+    def runUntilFailure(
+        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+    ) -> itrial.IReporter:
+        ...
+
+
 @define
 class TrialRunner:
     """
@@ -834,10 +856,10 @@ class TrialRunner:
     DEBUG = "debug"
     DRY_RUN = "dry-run"
 
-    reporterFactory: Callable[[IO[str], str, bool, log.LogPublisher], itrial.IReporter]
+    reporterFactory: Callable[[TextIO, str, bool, log.LogPublisher], itrial.IReporter]
     mode: Optional[str] = None
     logfile: str = "test.log"
-    stream: IO[str] = sys.stdout
+    stream: TextIO = sys.stdout
     profile: bool = False
     _tracebackFormat: str = "default"
     _realTimeErrors: bool = False
@@ -869,7 +891,7 @@ class TrialRunner:
     def rterrors(self) -> bool:
         return self._realTimeErrors
 
-    def run(self, test: ITestCase) -> itrial.IReporter:
+    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
         """
         Run the test or suite and return a result object.
         """
@@ -881,7 +903,9 @@ class TrialRunner:
         return run(test, self._forceGarbageCollection)
 
     def _runWithoutDecoration(
-        self, test: ITestCase, forceGarbageCollection: bool = False
+        self,
+        test: Union[pyunit.TestCase, pyunit.TestSuite],
+        forceGarbageCollection: bool = False,
     ) -> itrial.IReporter:
         """
         Private helper that runs the given test but doesn't decorate it.
@@ -909,7 +933,9 @@ class TrialRunner:
         result.done()
         return result
 
-    def runUntilFailure(self, test: ITestCase) -> itrial.IReporter:
+    def runUntilFailure(
+        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+    ) -> itrial.IReporter:
         """
         Repeatedly run C{test} until it fails.
         """
@@ -918,6 +944,9 @@ class TrialRunner:
             count += 1
             self.stream.write("Test Pass %d\n" % (count,))
             if count == 1:
+                # If test is a TestSuite, run *mutates it*.  So only follow
+                # this code-path once!  Otherwise the decorations accumulate
+                # forever.
                 result = self.run(test)
             else:
                 result = self._runWithoutDecoration(test)

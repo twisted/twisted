@@ -10,7 +10,9 @@ import pdb
 import random
 import sys
 import time
+import trace
 import warnings
+from typing import NoReturn, Optional, Type
 
 from twisted import plugin
 from twisted.application import app
@@ -19,6 +21,8 @@ from twisted.python import failure, reflect, usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
 from twisted.trial import itrial, reporter, runner
+from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.trial.unittest import TestSuite
 
 # Yea, this is stupid.  Leave it for command-line compatibility for a
 # while, though.
@@ -232,7 +236,7 @@ class _BasicOptions:
     )
 
     fallbackReporter = reporter.TreeReporter
-    tracer = None
+    tracer: Optional[trace.Trace] = None
 
     def __init__(self):
         self["tests"] = []
@@ -275,8 +279,6 @@ class _BasicOptions:
         Generate coverage information in the coverage file in the
         directory specified by the temp-directory option.
         """
-        import trace
-
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
         self["coverage"] = True
@@ -476,7 +478,6 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
 
     fallbackReporter = reporter.TreeReporter
     extra = None
-    tracer = None
 
     def opt_jobs(self, number):
         """
@@ -523,7 +524,7 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
             failure.DO_POST_MORTEM = False
 
 
-def _initialDebugSetup(config):
+def _initialDebugSetup(config: Options) -> None:
     # do this part of debug setup first for easy debugging of import failures
     if config["debug"]:
         failure.startDebugMode()
@@ -531,13 +532,13 @@ def _initialDebugSetup(config):
         defer.setDebugging(True)
 
 
-def _getSuite(config):
+def _getSuite(config: Options) -> TestSuite:
     loader = _getLoader(config)
     recurse = not config["no-recurse"]
     return loader.loadByNames(config["tests"], recurse=recurse)
 
 
-def _getLoader(config):
+def _getLoader(config: Options) -> runner.TestLoader:
     loader = runner.TestLoader()
     if config["random"]:
         randomer = random.Random()
@@ -584,16 +585,14 @@ class _DebuggerNotFound(Exception):
     """
 
 
-def _makeRunner(config):
+def _makeRunner(config: Options) -> runner._Runner:
     """
     Return a trial runner class set up with the parameters extracted from
     C{config}.
 
     @return: A trial runner instance.
-    @rtype: L{runner.TrialRunner} or C{DistTrialRunner} depending on the
-        configuration.
     """
-    cls = runner.TrialRunner
+    cls: Type[runner._Runner] = runner.TrialRunner
     args = {
         "reporterFactory": config["reporter"],
         "tracebackFormat": config["tbformat"],
@@ -606,8 +605,6 @@ def _makeRunner(config):
     if config["dry-run"]:
         args["mode"] = runner.TrialRunner.DRY_RUN
     elif config["jobs"]:
-        from twisted.trial._dist.disttrial import DistTrialRunner
-
         cls = DistTrialRunner
         args["maxWorkers"] = config["jobs"]
         args["workerArguments"] = config._getWorkerArguments()
@@ -632,7 +629,7 @@ def _makeRunner(config):
     return cls(**args)
 
 
-def run():
+def run() -> NoReturn:
     if len(sys.argv) == 1:
         sys.argv.append("--help")
     config = Options()
@@ -649,13 +646,13 @@ def run():
 
     suite = _getSuite(config)
     if config["until-failure"]:
-        test_result = trialRunner.runUntilFailure(suite)
+        testResult = trialRunner.runUntilFailure(suite)
     else:
-        test_result = trialRunner.run(suite)
+        testResult = trialRunner.run(suite)
     if config.tracer:
         sys.settrace(None)
         results = config.tracer.results()
         results.write_results(
-            show_missing=1, summary=False, coverdir=config.coverdir().path
+            show_missing=True, summary=False, coverdir=config.coverdir().path
         )
-    sys.exit(not test_result.wasSuccessful())
+    sys.exit(not testResult.wasSuccessful())
