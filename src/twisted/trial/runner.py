@@ -37,22 +37,12 @@ import unittest as pyunit
 import warnings
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import (
-    Any,
-    Callable,
-    Generator,
-    List,
-    Optional,
-    Protocol,
-    TextIO,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Generator, List, Optional, TextIO, Type, Union
 
 from zope.interface import implementer
 
 from attrs import define
-from typing_extensions import ParamSpec, TypeAlias, TypeGuard
+from typing_extensions import ParamSpec, Protocol, TypeAlias, TypeGuard
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
