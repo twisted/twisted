@@ -282,7 +282,7 @@ ExecStart
 
   The ``domain=INET`` endpoint argument makes ``twistd`` treat the inherited file descriptor as an IPv4 socket.
 
-  The ``index=0`` endpoint argument makes ``twistd`` adopt the first file descriptor inherited from ``systemd``\ .
+  The ``name=www`` endpoint argument makes ``twistd`` adopt the file descriptor inherited from ``systemd`` named ``www``.
 
   Socket activation is also technically possible with other socket families and types, but Twisted currently only accepts IPv4 and IPv6 TCP sockets. See :ref:`limitations` below.
 
@@ -353,7 +353,7 @@ You can verify this by using systemctl to report the status of the service. eg
               Active: active (running) since Tue 2013-01-29 15:02:20 GMT; 3s ago
             Main PID: 25605 (twistd)
               CGroup: name=systemd:/system/www.example.com.service
-                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:index=0 --path .
+                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:name=www --path .
 
     Jan 29 15:02:20 zorin.lan systemd[1]: Started Example Web Server.
     Jan 29 15:02:20 zorin.lan twistd[25605]: 2013-01-29 15:02:20+0000 [-] Log opened.
