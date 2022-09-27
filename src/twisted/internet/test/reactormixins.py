@@ -33,7 +33,7 @@ from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 if TYPE_CHECKING:
     # Only bring in this name to support the type annotation below.  We don't
     # really want to import a reactor module this early at runtime.
-    from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+    from twisted.internet import asyncioreactor
 
 # Access private APIs.
 try:
@@ -158,7 +158,7 @@ class ReactorBuilder:
             ]
         )
 
-        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectReactor")
+        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -373,8 +373,7 @@ class ReactorBuilder:
         return classes
 
 
-@staticmethod
-def AsyncioSelectReactor() -> "AsyncioSelectorReactor":
+def asyncioSelectorReactor(self: object) -> "asyncioreactor.AsyncioSelectorReactor":
     """
     Make a new asyncio reactor associated with a new event loop.
 
@@ -384,15 +383,19 @@ def AsyncioSelectReactor() -> "AsyncioSelectorReactor":
     with other asyncio-based libraries and applications (though maybe it
     shouldn't).
 
-    @note: This function's name deviates from the coding standard because the
-        name of the generated test cases is derived from it.  The given name
-        reflects the name of the reactor the generated tests will cover.
+    @param self: The L{ReactorBuilder} subclass this is being called on.  We
+        don't use this parameter but we get called with it anyway.
     """
     from asyncio import new_event_loop, set_event_loop
 
-    from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+    from twisted.internet import asyncioreactor
 
     loop = new_event_loop()
     set_event_loop(loop)
 
-    return AsyncioSelectorReactor(loop)
+    return asyncioreactor.AsyncioSelectorReactor(loop)
+
+
+# Give it an alias that makes the names of the generated test classes fit the
+# pattern.
+AsyncioSelectorReactor = asyncioSelectorReactor
