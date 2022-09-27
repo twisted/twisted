@@ -37,7 +37,7 @@ import unittest as pyunit
 import warnings
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Any, Callable, Generator, List, Optional, TextIO, Type, Union
+from typing import Callable, Generator, List, Optional, TextIO, Type, Union
 
 from zope.interface import implementer
 
@@ -858,8 +858,6 @@ class TrialRunner:
     _forceGarbageCollection: bool = False
     debugger: Optional[_Debugger] = None
     _exitFirst: bool = False
-
-    _result: Optional[Any] = None
 
     _log: log.LogPublisher = log  # type: ignore[assignment]
 
