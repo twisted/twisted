@@ -9,7 +9,7 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_event_loop, new_event_loop, set_event_loop
+from asyncio import AbstractEventLoop, get_event_loop
 from functools import partial
 from typing import Dict, Optional, Type
 
@@ -77,9 +77,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
-            # XXX install says we'll use the global one but this works better
-            _eventloop: AbstractEventLoop = new_event_loop()
-            set_event_loop(_eventloop)
+            _eventloop: AbstractEventLoop = get_event_loop()
         else:
             _eventloop = eventloop
 
