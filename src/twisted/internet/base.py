@@ -31,7 +31,7 @@ from typing import (
 
 from zope.interface import classImplements, implementer
 
-from attrs import Factory, define, frozen
+from attrs import Factory, define, field, frozen
 from typing_extensions import Protocol, TypeAlias
 
 from twisted.internet import abstract, defer, error, fdesc, main, threads
@@ -661,14 +661,16 @@ class ReactorCore(PluggableResolverMixin):
 
     _wakeUp: Callable[[], object]
 
-    _eventTriggers: Dict[str, _ThreePhaseEvent] = Factory(dict)
-    _signals: Optional[SignalHandling] = None
+    _eventTriggers: Dict[str, _ThreePhaseEvent] = field(
+        init=False, default=Factory(dict)
+    )
+    _signals: Optional[SignalHandling] = field(init=False, default=None)
 
-    running: bool = False
-    _started: bool = False
-    _justStopped: bool = False
-    _startedBefore: bool = False
-    _stopped: bool = True
+    running: bool = field(init=False, default=False)
+    _started: bool = field(init=False, default=False)
+    _justStopped: bool = field(init=False, default=False)
+    _startedBefore: bool = field(init=False, default=False)
+    _stopped: bool = field(init=False, default=True)
 
     def __attrs_post_init__(self) -> None:
         # This will be the first "during" "startup" trigger because the object

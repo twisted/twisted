@@ -35,7 +35,7 @@ class AsyncioReactorCore(ReactorCore):
     An reactor core based on an L{AbstractEventLoop}.
     """
 
-    eventloop: AbstractEventLoop = get_event_loop()
+    eventloop: AbstractEventLoop
 
     def _mainLoop(self) -> None:
         self.eventloop.run_forever()
