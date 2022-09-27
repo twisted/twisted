@@ -286,13 +286,19 @@ def name(thing: _Loadable) -> str:
     """
     if isinstance(thing, pyunit.TestCase):
         return thing.id()
-    elif isinstance(thing, (modules.PythonAttribute, modules.PythonModule)):
+
+    if isinstance(thing, (modules.PythonAttribute, modules.PythonModule)):
         return thing.name
-    elif isTestCase(thing):
+
+    if isTestCase(thing):
         # TestCase subclass
         return reflect.qual(thing)
-    else:
-        assert False
+
+    # Based on the type of thing, this is unreachable.  Maybe someone calls
+    # this from un-type-checked code though.  Also, even with the type
+    # information, mypy fails to determine this is unreachable and complains
+    # about a missing return without _something_ here.
+    raise TypeError(f"Cannot name {thing!r}")
 
 
 def isTestCase(obj: type) -> TypeGuard[Type[pyunit.TestCase]]:
