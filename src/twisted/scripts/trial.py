@@ -20,7 +20,7 @@ from twisted.internet import defer
 from twisted.python import failure, reflect, usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
-from twisted.trial import itrial, reporter, runner
+from twisted.trial import itrial, runner
 from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.trial.unittest import TestSuite
 
@@ -235,7 +235,6 @@ class _BasicOptions:
         ],
     )
 
-    fallbackReporter = reporter.TreeReporter
     tracer: Optional[trace.Trace] = None
 
     def __init__(self):
@@ -475,9 +474,6 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
 
     _workerFlags = ["disablegc", "force-gc", "coverage"]
     _workerParameters = ["recursionlimit", "reactor", "without-module"]
-
-    fallbackReporter = reporter.TreeReporter
-    extra = None
 
     def opt_jobs(self, number):
         """
