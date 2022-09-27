@@ -330,7 +330,7 @@ class _WithChildSignalHandling:
         that it does helps in unit tests involving multiple reactors and is
         generally just a nice thing.
         """
-        self._signals.uninstallHandler() # XXX this is untested
+        self._signals.uninstallHandler()  # XXX this is untested
         # XXX This would probably be an alright place to put all of the
         # cleanup code for all internal readers (here and in the base class,
         # anyway).  See #3063 for that cleanup task.
@@ -342,7 +342,7 @@ class _WithChildSignalHandling:
         Extend the basic signal handling logic to also support
         handling SIGCHLD to know when to try to reap child processes.
         """
-        self._signals.install() # XXX is this untested?
+        self._signals.install()  # XXX is this untested?
 
         if self._childWaker is None:
             self._childWaker = _SIGCHLDWaker(self)
