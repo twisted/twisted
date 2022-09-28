@@ -692,13 +692,21 @@ class ApplicationRunnerTests(TestCase):
         """
 
         class DummyReactorWithSignal(ReactorBase):
-            def installWaker(self) -> None:
+            """
+            A dummy reactor, providing a C{run} method, and setting the
+            _exitSignal attribute to a nonzero value.
+            """
+
+            def installWaker(self):
                 """
                 Dummy method, does nothing.
                 """
 
-            def run(self, installSignalHandlers: bool = True) -> None:
-                self.sigInt(2, None)
+            def run(self):
+                """
+                A fake run method setting _exitSignal to a nonzero value
+                """
+                self._exitSignal = 2
 
         reactor = DummyReactorWithSignal()
         runner = app.ApplicationRunner(
