@@ -32,12 +32,7 @@ from zope.interface.verify import verifyObject
 from twisted import internet, logger, plugin
 from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
-from twisted.internet.base import (
-    ReactorBase,
-    ReactorCore,
-    SignalHandling,
-    _WithSignalHandling,
-)
+from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
@@ -695,30 +690,15 @@ class ApplicationRunnerTests(TestCase):
         If the reactor exits with a signal, the application runner caches
         the signal.
         """
-        observedSignals = None
-
-        class DummyCoreWithSignal(ReactorCore):
-            """
-            A dummy reactor core, providing a C{run} method, and setting the
-            _exitSignal attribute to a nonzero value.
-            """
-
-            def run(self, signals: SignalHandling) -> None:
-                """
-                A fake run method setting _exitSignal to a nonzero value
-                """
-                nonlocal observedSignals
-                observedSignals = signals
-                reactor.sigInt(2, None)
 
         class DummyReactorWithSignal(ReactorBase):
-            def installWaker(self):
+            def installWaker(self) -> None:
                 """
                 Dummy method, does nothing.
                 """
 
-            def __init__(self):
-                super().__init__(coreFactory=DummyCoreWithSignal)
+            def run(self, installSignalHandlers: bool = True) -> None:
+                self.sigInt(2, None)
 
         reactor = DummyReactorWithSignal()
         runner = app.ApplicationRunner(
@@ -726,8 +706,6 @@ class ApplicationRunnerTests(TestCase):
         )
         runner.startReactor(reactor, None, None)
         self.assertEquals(2, runner._exitSignal)
-        # XXX Is this a good assertion?
-        self.assertIsInstance(observedSignals, _WithSignalHandling)
 
     def test_applicationRunnerIgnoresNoSignal(self):
         """
