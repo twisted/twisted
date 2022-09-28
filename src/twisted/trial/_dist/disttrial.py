@@ -14,7 +14,7 @@ import sys
 from functools import partial
 from os.path import isabs
 from typing import Awaitable, Callable, Iterable, List, Sequence, TextIO, Union, cast
-from unittest import TestResult, TestSuite
+from unittest import TestCase, TestSuite
 
 from attrs import define, field, frozen
 from attrs.converters import default_if_none
@@ -287,7 +287,7 @@ class DistTrialRunner:
         ``False`` to run through the whole suite and report all of the results
         at the end.
 
-    @ivar _stream: stream which the reporter will use.
+    @ivar stream: stream which the reporter will use.
 
     @ivar _reporterFactory: the reporter class to be used.
     """
@@ -307,7 +307,8 @@ class DistTrialRunner:
         converter=default_if_none(factory=_defaultReactor),  # type: ignore [misc]
     )
     # mypy doesn't understand the converter
-    _stream: TextIO = field(default=None, converter=default_if_none(sys.stdout))  # type: ignore [misc]
+    stream: TextIO = field(default=None, converter=default_if_none(sys.stdout))  # type: ignore [misc]
+
     _tracebackFormat: str = "default"
     _realTimeErrors: bool = False
     _uncleanWarnings: bool = False
@@ -320,7 +321,7 @@ class DistTrialRunner:
         Make reporter factory, and wrap it with a L{DistReporter}.
         """
         reporter = self._reporterFactory(
-            self._stream, self._tracebackFormat, realtime=self._realTimeErrors
+            self.stream, self._tracebackFormat, realtime=self._realTimeErrors
         )
         if self._uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
@@ -365,13 +366,13 @@ class DistTrialRunner:
 
     async def runAsync(
         self,
-        suite: TestSuite,
+        suite: Union[TestCase, TestSuite],
         untilFailure: bool = False,
     ) -> DistReporter:
         """
         Spawn local worker processes and load tests. After that, run them.
 
-        @param suite: A tests suite to be run.
+        @param suite: A test or suite to be run.
 
         @param untilFailure: If C{True}, continue to run the tests until they
             fail.
@@ -396,7 +397,7 @@ class DistTrialRunner:
         # Announce that we're beginning.  countTestCases result is preferred
         # (over len(testCases)) because testCases may contain synthetic cases
         # for error reporting purposes.
-        self._stream.write(f"Running {suite.countTestCases()} tests.\n")
+        self.stream.write(f"Running {suite.countTestCases()} tests.\n")
 
         # Start the worker pool.
         startedPool = await poolStarter.start(self._reactor)
@@ -410,7 +411,7 @@ class DistTrialRunner:
             if untilFailure:
                 # If and only if we're running the suite more than once,
                 # provide a report about which run this is.
-                self._stream.write(f"Test Pass {n + 1}\n")
+                self.stream.write(f"Test Pass {n + 1}\n")
 
             result = self._makeResult()
 
@@ -439,19 +440,14 @@ class DistTrialRunner:
             # Shut down the worker pool.
             await startedPool.join()
 
-    def run(self, suite: TestSuite, untilFailure: bool = False) -> TestResult:
-        """
-        Run a reactor and a test suite.
-
-        @param suite: The test suite to run.
-        """
+    def _run(self, test: Union[TestCase, TestSuite], untilFailure: bool) -> IReporter:
         result: Union[Failure, DistReporter]
 
         def capture(r):
             nonlocal result
             result = r
 
-        d = Deferred.fromCoroutine(self.runAsync(suite, untilFailure))
+        d = Deferred.fromCoroutine(self.runAsync(test, untilFailure))
         d.addBoth(capture)
         d.addBoth(lambda ignored: self._reactor.stop())
         self._reactor.run()
@@ -464,14 +460,22 @@ class DistTrialRunner:
         # certainly a DistReporter at this point.
         assert isinstance(result, DistReporter)
 
-        # Unwrap the DistReporter to give the caller some regular TestResult
+        # Unwrap the DistReporter to give the caller some regular IReporter
         # object.  DistReporter isn't type annotated correctly so fix it here.
-        return cast(TestResult, result.original)
+        return cast(IReporter, result.original)
 
-    def runUntilFailure(self, suite):
+    def run(self, test: Union[TestCase, TestSuite]) -> IReporter:
+        """
+        Run a reactor and a test suite.
+
+        @param test: The test or suite to run.
+        """
+        return self._run(test, untilFailure=False)
+
+    def runUntilFailure(self, test: Union[TestCase, TestSuite]) -> IReporter:
         """
         Run the tests with local worker processes until they fail.
 
-        @param suite: A tests suite to be run.
+        @param test: The test or suite to run.
         """
-        return self.run(suite, untilFailure=True)
+        return self._run(test, untilFailure=True)
