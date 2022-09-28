@@ -10,6 +10,7 @@ Infrastructure for test running and suites.
 import doctest
 import gc
 import unittest as pyunit
+from typing import Iterator, Union
 
 from zope.interface import implementer
 
@@ -160,14 +161,16 @@ if _docTestCase:
     components.registerAdapter(_BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
 
 
-def _iterateTests(testSuiteOrCase):
+def _iterateTests(
+    testSuiteOrCase: Union[pyunit.TestCase, pyunit.TestSuite]
+) -> Iterator[itrial.ITestCase]:
     """
     Iterate through all of the test cases in C{testSuiteOrCase}.
     """
     try:
-        suite = iter(testSuiteOrCase)
+        suite = iter(testSuiteOrCase)  # type: ignore[arg-type]
     except TypeError:
-        yield testSuiteOrCase
+        yield testSuiteOrCase  # type: ignore[misc]
     else:
         for test in suite:
             yield from _iterateTests(test)
