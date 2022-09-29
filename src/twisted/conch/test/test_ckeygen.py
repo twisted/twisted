@@ -180,7 +180,7 @@ class KeyGenTests(TestCase):
         exists in ~/.ssh.
         """
         filename = self.mktemp()
-        FilePath(filename + '.pub').setContent(publicRSA_openssh)
+        FilePath(filename + ".pub").setContent(publicRSA_openssh)
         printFingerprint({"filename": filename, "format": "md5-hex"})
         self.assertEqual(
             self.stdout.getvalue(),
