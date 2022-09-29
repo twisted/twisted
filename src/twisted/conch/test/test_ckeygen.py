@@ -6,10 +6,10 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 """
 
 import getpass
-from io import StringIO
 import os
 import subprocess
 import sys
+from io import StringIO
 
 from twisted.conch.test.keydata import (
     privateECDSA_openssh,
@@ -652,9 +652,7 @@ class KeyGenTests(TestCase):
         # The user is prompted once to enter the path, since no path was
         # provided via CLI.
         self.assertEqual(1, len(input_prompts))
-        self.assertTrue(
-            "Enter file in which the key is (" in input_prompts
-        )
+        self.assertTrue("Enter file in which the key is (" in input_prompts)
 
     def test_displayPublicKeyHandleFileNotFound(self):
         """

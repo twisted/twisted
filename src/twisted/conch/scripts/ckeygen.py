@@ -215,7 +215,10 @@ def _getKeyOrDefault(options, input_collector=None):
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
-        filename = input_collector("Enter file in which the key is (%s): " % filename) or filename
+        filename = (
+            input_collector("Enter file in which the key is (%s): " % filename)
+            or filename
+        )
     return filename
 
 
