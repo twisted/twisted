@@ -6,9 +6,10 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 """
 
 import getpass
+from io import StringIO
+import os
 import subprocess
 import sys
-from io import StringIO
 
 from twisted.conch.test.keydata import (
     privateECDSA_openssh,
@@ -635,21 +636,24 @@ class KeyGenTests(TestCase):
         L{options} will default to "~/.ssh/id_rsa" if the user doesn't
         specify a key.
         """
+        input_prompts = []
 
         def mock_input(*args):
-            return ""
+            return input_prompts.append("")
 
-        import builtins
-
-        self.patch(builtins, "input", mock_input)
         options = {"filename": ""}
-        filename = _getKeyOrDefault(options)
+        filename = _getKeyOrDefault(options, mock_input)
         self.assertEqual(
             options["filename"],
             "",
         )
+        # Resolved path is an RSA key inside .ssh dir.
+        self.assertTrue(filename.endswith(os.path.join(".ssh", "id_rsa")))
+        # The user is prompted once to enter the path, since no path was
+        # provided via CLI.
+        self.assertEqual(1, len(input_prompts))
         self.assertTrue(
-            "id_rsa" in filename,
+            "Enter file in which the key is (" in input_prompts
         )
 
     def test_displayPublicKeyHandleFileNotFound(self):
