@@ -642,6 +642,7 @@ class KeyGenTests(TestCase):
             return input_prompts.append("")
 
         options = {"filename": ""}
+
         filename = _getKeyOrDefault(options, mock_input)
         self.assertEqual(
             options["filename"],
@@ -652,7 +653,7 @@ class KeyGenTests(TestCase):
         # The user is prompted once to enter the path, since no path was
         # provided via CLI.
         self.assertEqual(1, len(input_prompts))
-        self.assertTrue("Enter file in which the key is (" in input_prompts)
+        self.assertEqual([""], input_prompts)
 
     def test_displayPublicKeyHandleFileNotFound(self):
         """
