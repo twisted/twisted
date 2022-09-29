@@ -661,9 +661,8 @@ class KeyGenTests(TestCase):
         a bad path, or has no key at the default path.
         """
         options = {"filename": "/foo/bar"}
-        with self.assertRaises(SystemExit) as e:
-            displayPublicKey(options)
-            self.assertIn("could not be opened, please specify a file.", e)
+        exc = self.assertRaises(SystemExit, displayPublicKey, options)
+        self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
     def test_changePassPhraseHandleFileNotFound(self):
         """
