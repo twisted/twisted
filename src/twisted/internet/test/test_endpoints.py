@@ -2641,6 +2641,70 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual(results[0].factory, clientFactory)
         self.assertEqual([], self.mreactor.getDelayedCalls())
 
+    def test_connectQuicklyUponFailure(self):
+        """
+        When a connection definitively fails before its timeout, the next
+        connection is started immediately.
+        """
+        clientFactory = protocol.Factory()
+        clientFactory.protocol = protocol.Protocol
+
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+        clients = self.mreactor.tcpClients
+
+        self.assertEqual(len(clients), 1)
+        (host, port, factory, timeout, bindAddress) = clients.pop(0)
+
+        self.assertEqual(host, "1.2.3.4")
+        self.assertEqual(port, 80)
+
+        factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
+        self.assertEqual(len(clients), 1)
+        (host, port, factory, timeout, bindAddress) = clients.pop(0)
+
+        self.assertEqual(host, "1:2::3:4")
+        self.assertEqual(port, 80)
+
+        fakeTransport = object()
+
+        self.assertEqual(results, [])
+
+        proto = factory.buildProtocol((host, port))
+        proto.makeConnection(fakeTransport)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].factory, clientFactory)
+        self.assertEqual([], self.mreactor.getDelayedCalls())
+
+    def test_timeoutGoesFromStartToStart(self):
+        """
+        When a connection fails before its timeout, subsequent connection
+        timeouts start from that point.
+        """
+        self.endpoint = endpoints.HostnameEndpoint(
+            deterministicResolvingReactor(
+                self.mreactor, ["1.2.3.4", "2.3.4.5", "3.4.5.6"]
+            ),
+            b"www.example.com",
+            80,
+        )
+        clientFactory = protocol.Factory()
+        d = self.endpoint.connect(clientFactory)
+        results = []
+        d.addCallback(results.append)
+        clients = self.mreactor.tcpClients
+        self.mreactor.advance(0.1)
+        self.assertEqual(len(clients), 1)
+        (host, port, factory, timeout, bindAddress) = clients.pop(0)
+        factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
+        self.assertEqual(len(clients), 1)
+        self.mreactor.advance(0.299)
+        self.assertEqual(len(clients), 1)
+        self.mreactor.advance(0.002)
+        self.assertEqual(len(clients), 2)
+
     def test_IPv6IsFaster(self):
         """
         The endpoint returns a connection to the IPv6 address.
