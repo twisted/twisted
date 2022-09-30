@@ -15,66 +15,109 @@ For a deeper explanation of what optional dependencies are and how they are decl
 
 The following optional dependencies are supported:
 
-* **dev** - packages that aid in the development of Twisted itself.
+tls
+   Packages that are needed to work with TLS:
 
-  * `pyflakes`_
-  * `twisted-dev-tools`_
-  * `python-subunit`_
-  * `Sphinx`_
-  * `TwistedChecker`_, only available on python2
-  * `pydoctor`_, only available on python2
+   * pyOpenSSL_
+   * service_identity_
+   * idna_
 
+conch
+   Packages for working with conch/SSH:
 
-* **tls** - packages that are needed to work with TLS.
+   * pyasn1_
+   * cryptography_
+   * bcrypt_
+   * appdirs_
 
-  * `pyOpenSSL`_
-  * `service_identity`_
-  * `idna`_
+conch_nacl
+   ``conch`` options and PyNaCl_ to support Ed25519 keys
+   on systems with OpenSSL < 1.1.1b.
 
-* **conch** - packages for working with conch/SSH.
+serial
+   The pyserial_ package to work with serial data.
+   On Windows, this also requires pywin32_.
 
-  * `pyasn1`_
-  * `cryptography`_
+http2
+   Packages needed for HTTP/2 support:
 
-* **conch_nacl** - **conch** options and `PyNaCl`_ to support Ed25519 keys on systems with OpenSSL < 1.1.1b.
+   * h2_
+   * priority_
 
-* **soap** - the `SOAPpy`_ package to work with SOAP.
+contextvars
+   The contextvars_ backport package to provide `context variables`_ support
+   for Python versions before 3.7.
 
-* **serial** - the `pyserial`_ package to work with serial data.
+all
+   Extras ``tls``, ``conch``, ``serial``, ``http2``, ``contextvars``,
+   and platform-specific interfacing such as pyobjc_ for Objective-C on macOS
+   and pywin32_ for Windows.
 
-* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+dev_release
+   Packages used in Twisted's release process:
 
-* **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
+   * towncrier_
+   * pydoctor_
+   * Sphinx_, sphinx-rtd-theme_ and readthedocs-sphinx-ext_
 
-* **windows_platform** - **all_non_platform** options and `pywin32`_ to work with Windows's apis.
+dev
+   Packages that aid in the development of Twisted itself,
+   including those in ``all`, ``dev_release`` and the following:
 
-* **http2** - packages needed for http2 support.
+   * pyflakes_
+   * python-subunit_
+   * twistedchecker_
+   * coverage_
 
-  * `h2`_
-  * `priority`_
+mypy
+   Type checking facilities, including ``dev`` packages,
+   ``conch_nacl``, as well as the following:
 
-* **contextvars** - the `contextvars`_ backport package to provide contextvars support for Python versions before 3.7.
+   * mypy_
+   * mypy-zope_
+   * types-setuptools_
+   * types-pyOpenSSL_
 
+.. _pip: https://pip.pypa.io
+.. _python packaging tutorial:
+   https://packaging.python.org/en/latest/installing.html#examples
+.. _setuptools documentation:
+   https://setuptools.readthedocs.io/en/stable/userguide/dependency_management.html#optional-dependencies
 
-.. _pip: https://pip.pypa.io/en/latest/quickstart.html
-.. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
-.. _pyflakes: https://pypi.python.org/pypi/pyflakes
-.. _twisted-dev-tools: https://pypi.python.org/pypi/twisted-dev-tools
-.. _python-subunit: https://pypi.python.org/pypi/python-subunit
-.. _Sphinx: https://pypi.python.org/pypi/Sphinx/1.3b1
-.. _pydoctor: https://pypi.python.org/pypi/pydoctor
-.. _pyOpenSSL: https://pypi.python.org/pypi/pyOpenSSL
-.. _service_identity: https://pypi.python.org/pypi/service_identity
-.. _pyasn1: https://pypi.python.org/pypi/pyasn1
-.. _cryptography: https://pypi.python.org/pypi/cryptography
+.. _pyOpenSSL: https://pypi.org/project/pyOpenSSL
+.. _service_identity: https://pypi.org/project/service_identity
+.. _idna: https://pypi.org/project/idna
+
+.. _pyasn1: https://pypi.org/project/pyasn1
+.. _cryptography: https://pypi.org/project/cryptography
+.. _bcrypt: https://pypi.org/project/bcrypt
+.. _appdirs: https://pypi.org/project/appdirs
+
 .. _PyNaCl: https://pypi.python.org/pypi/PyNaCl
-.. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
-.. _pyserial: https://pypi.python.org/pypi/pyserial
-.. _pyobjc: https://pypi.python.org/pypi/pyobjc
-.. _pywin32: https://pypi.python.org/pypi/pywin32
-.. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
-.. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
-.. _idna: https://pypi.python.org/pypi/idna
-.. _h2: https://pypi.python.org/pypi/h2
-.. _priority: https://pypi.python.org/pypi/priority
-.. _contextvars: https://pypi.org/project/contextvars/
+
+.. _pyserial: https://pypi.org/project/pyserial
+.. _pywin32: https://pypi.org/project/pywin32
+
+.. _h2: https://pypi.org/project/h2
+.. _priority: https://pypi.org/project/priority
+
+.. _contextvars: https://pypi.org/project/contextvars
+.. _context variables: https://docs.python.org/3/library/contextvars.html
+
+.. _pyobjc: https://pypi.org/project/pyobjc
+
+.. _mypy: https://pypi.org/project/mypy
+.. _mypy-zope: https://pypi.org/project/mypy-zope
+.. _types-setuptools: https://pypi.org/project/types-setuptools
+.. _types-pyOpenSSL: https://pypi.org/project/types-pyOpenSSL
+
+.. _towncrier: https://pypi.org/project/towncrier
+.. _pydoctor: https://pypi.org/project/pydoctor
+.. _Sphinx: https://pypi.org/project/Sphinx
+.. _sphinx-rtd-theme: https://pypi.org/project/sphinx-rtd-theme
+.. _readthedocs-sphinx-ext: https://pypi.org/project/readthedocs-sphinx-ext
+
+.. _pyflakes: https://pypi.org/project/pyflakes
+.. _python-subunit: https://pypi.org/project/python-subunit
+.. _twistedchecker: https://pypi.org/project/twistedchecker
+.. _coverage: https://pypi.org/project/coverage
