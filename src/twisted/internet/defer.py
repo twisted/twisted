@@ -175,7 +175,7 @@ def execute(
 
 
 def maybeDeferred(
-    f: Callable[..., _T], *args: object, **kwargs: object
+    f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Invoke a function that may or may not return a L{Deferred} or coroutine.
