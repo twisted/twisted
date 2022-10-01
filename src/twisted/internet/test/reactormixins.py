@@ -18,7 +18,7 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import Dict, Optional, Sequence, Type, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union
 
 from zope.interface import Interface
 
@@ -29,6 +29,11 @@ from twisted.python.reflect import namedAny
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
+
+if TYPE_CHECKING:
+    # Only bring in this name to support the type annotation below.  We don't
+    # really want to import a reactor module this early at runtime.
+    from twisted.internet import asyncioreactor
 
 # Access private APIs.
 try:
@@ -153,7 +158,7 @@ class ReactorBuilder:
             ]
         )
 
-        _reactors.append("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -366,3 +371,31 @@ class ReactorBuilder:
             testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
             classes[testcase.__name__] = testcase
         return classes
+
+
+def asyncioSelectorReactor(self: object) -> "asyncioreactor.AsyncioSelectorReactor":
+    """
+    Make a new asyncio reactor associated with a new event loop.
+
+    The test suite prefers this constructor because having a new event loop
+    for each reactor provides better test isolation.  The real constructor
+    prefers to re-use (or create) a global loop because of how this interacts
+    with other asyncio-based libraries and applications (though maybe it
+    shouldn't).
+
+    @param self: The L{ReactorBuilder} subclass this is being called on.  We
+        don't use this parameter but we get called with it anyway.
+    """
+    from asyncio import new_event_loop, set_event_loop
+
+    from twisted.internet import asyncioreactor
+
+    loop = new_event_loop()
+    set_event_loop(loop)
+
+    return asyncioreactor.AsyncioSelectorReactor(loop)
+
+
+# Give it an alias that makes the names of the generated test classes fit the
+# pattern.
+AsyncioSelectorReactor = asyncioSelectorReactor
