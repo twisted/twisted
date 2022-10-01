@@ -80,7 +80,10 @@ class ListenFDs:
         # They may both be missing (consistent with not running under systemd
         # at all) or they may both be present (consistent with running under
         # systemd 227 or newer).  It is not allowed for only one to be present
-        # or for the values to disagree with each other.
+        # or for the values to disagree with each other (per
+        # systemd.socket(5), systemd will use a default value based on the
+        # socket unit name if the socket unit doesn't explicitly define a name
+        # with FileDescriptorName).
         if len(names) != len(descriptors):
             return cls([], ())
 
