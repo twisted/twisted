@@ -18,10 +18,14 @@ from twisted.trial.unittest import SynchronousTestCase
 from .strategies import systemdDescriptorNames
 
 
-def initializeEnvironment(count: int, pid: object) -> Dict[str, str]:
+def buildEnvironment(count: int, pid: object) -> Dict[str, str]:
     """
-    Create a copy of the process environment and add I{LISTEN_FDS} and
-    I{LISTEN_PID} (the environment variables set by systemd) to it.
+    @param count: The number of file descriptors to indicate as inherited.
+
+    @param pid: The pid of the inheriting process to indicate.
+
+    @return: A copy of the current process environment with the I{systemd}
+        file descriptor inheritance-related environment variables added to it.
     """
     result = os.environ.copy()
     result["LISTEN_FDS"] = str(count)
@@ -63,7 +67,7 @@ class ListenFDsTests(SynchronousTestCase):
         L{ListenFDs.fromEnvironment}, the real process environment dictionary
         is used.
         """
-        self.patch(os, "environ", initializeEnvironment(5, os.getpid()))
+        self.patch(os, "environ", buildEnvironment(5, os.getpid()))
         sddaemon = ListenFDs.fromEnvironment()
         self.assertEqual(list(range(3, 3 + 5)), sddaemon.inheritedDescriptors())
 
@@ -74,7 +78,7 @@ class ListenFDsTests(SynchronousTestCase):
         same inherited file descriptors cannot be handled repeatedly from
         multiple L{ListenFDs} instances.
         """
-        env = initializeEnvironment(3, os.getpid())
+        env = buildEnvironment(3, os.getpid())
         first = ListenFDs.fromEnvironment(environ=env)
         second = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual(list(range(3, 6)), first.inheritedDescriptors())
@@ -85,7 +89,7 @@ class ListenFDsTests(SynchronousTestCase):
         If the current process PID does not match the PID in the environment,
         no inherited descriptors are reported.
         """
-        env = initializeEnvironment(3, os.getpid() + 1)
+        env = buildEnvironment(3, os.getpid() + 1)
         sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
@@ -94,7 +98,7 @@ class ListenFDsTests(SynchronousTestCase):
         If the I{LISTEN_PID} environment variable is not present, no inherited
         descriptors are reported.
         """
-        env = initializeEnvironment(3, os.getpid())
+        env = buildEnvironment(3, os.getpid())
         del env["LISTEN_PID"]
         sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
@@ -104,7 +108,7 @@ class ListenFDsTests(SynchronousTestCase):
         If the I{LISTEN_PID} environment variable is set to a string that cannot
         be parsed as an integer, no inherited descriptors are reported.
         """
-        env = initializeEnvironment(3, "hello, world")
+        env = buildEnvironment(3, "hello, world")
         sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
@@ -113,7 +117,7 @@ class ListenFDsTests(SynchronousTestCase):
         If the I{LISTEN_FDS} and I{LISTEN_FDNAMES} environment variables
         are not present, no inherited descriptors are reported.
         """
-        env = initializeEnvironment(3, os.getpid())
+        env = buildEnvironment(3, os.getpid())
         del env["LISTEN_FDS"]
         del env["LISTEN_FDNAMES"]
         sddaemon = ListenFDs.fromEnvironment(environ=env)
@@ -124,7 +128,7 @@ class ListenFDsTests(SynchronousTestCase):
         If the I{LISTEN_FDS} environment variable is set to a string that cannot
         be parsed as an integer, no inherited descriptors are reported.
         """
-        env = initializeEnvironment(3, os.getpid())
+        env = buildEnvironment(3, os.getpid())
         env["LISTEN_FDS"] = "hello, world"
         sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
