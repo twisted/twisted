@@ -69,8 +69,10 @@ class ListenFDsTests(SynchronousTestCase):
 
     def test_secondEnvironment(self) -> None:
         """
-        L{ListenFDs.fromEnvironment} removes information about the inherited
-        file descriptors from the environment mapping.
+        L{ListenFDs.fromEnvironment} removes information about the
+        inherited file descriptors from the environment mapping so that the
+        same inherited file descriptors cannot be handled repeatedly from
+        multiple L{ListenFDs} instances.
         """
         env = initializeEnvironment(3, os.getpid())
         first = ListenFDs.fromEnvironment(environ=env)

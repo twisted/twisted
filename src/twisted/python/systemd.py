@@ -123,6 +123,18 @@ def _parseDescriptors(start: int, environ: Mapping[str, str]) -> List[int]:
         return []
     else:
         descriptors = list(range(start, start + count))
+
+        # Remove the information from the environment so that a second
+        # `ListenFDs` cannot find the same information.  This is a precaution
+        # against some application code accidentally trying to handle the same
+        # inherited descriptor more than once - which probably wouldn't work.
+        #
+        # This precaution is perhaps somewhat questionable since it is up to
+        # the application itself to know whether its handling of the file
+        # descriptor will actually be safe.  Also, nothing stops an
+        # application from getting the same descriptor more than once using
+        # multiple calls to `ListenFDs.inheritedDescriptors()` on the same
+        # `ListenFDs` instance.
         del environ["LISTEN_PID"], environ["LISTEN_FDS"]
         return descriptors
 
