@@ -1,6 +1,6 @@
 [Socket]
 ListenStream=0.0.0.0:80
-FileDescriptorName=www
+FileDescriptorName=my-web-port
 
 [Install]
 WantedBy=sockets.target
