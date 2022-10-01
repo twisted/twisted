@@ -86,8 +86,11 @@ class ListenFDsTests(SynchronousTestCase):
 
     def test_mismatchedPID(self) -> None:
         """
-        If the current process PID does not match the PID in the environment,
-        no inherited descriptors are reported.
+        If the current process PID does not match the PID in the
+        environment then the systemd variables in the environment were set for
+        a different process (perhaps our parent) and the inherited descriptors
+        are not intended for this process so L{ListenFDs.inheritedDescriptors}
+        returns an empty list.
         """
         env = buildEnvironment(3, os.getpid() + 1)
         sddaemon = ListenFDs.fromEnvironment(environ=env)
@@ -95,8 +98,10 @@ class ListenFDsTests(SynchronousTestCase):
 
     def test_missingPIDVariable(self) -> None:
         """
-        If the I{LISTEN_PID} environment variable is not present, no inherited
-        descriptors are reported.
+        If the I{LISTEN_PID} environment variable is not present then
+        there is no clear indication that any file descriptors were inherited
+        by this process so L{ListenFDs.inheritedDescriptors} returns an empty
+        list.
         """
         env = buildEnvironment(3, os.getpid())
         del env["LISTEN_PID"]
