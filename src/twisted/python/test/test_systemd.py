@@ -15,7 +15,7 @@ from hypothesis.strategies import dictionaries, integers, lists
 
 from twisted.python.systemd import ListenFDs
 from twisted.trial.unittest import SynchronousTestCase
-from .strategies import systemd_descriptor_names
+from .strategies import systemdDescriptorNames
 
 
 def initializeEnvironment(count: int, pid: object) -> Dict[str, str]:
@@ -35,7 +35,7 @@ class ListenFDsTests(SynchronousTestCase):
     Apply tests to L{ListenFDs}, constructed based on an environment dictionary.
     """
 
-    @given(lists(systemd_descriptor_names(), min_size=0, max_size=10))
+    @given(lists(systemdDescriptorNames(), min_size=0, max_size=10))
     def test_fromEnvironmentEquivalence(self, names: Sequence[str]) -> None:
         """
         The L{ListenFDs} and L{ListenFDs.fromEnvironment} constructors are
@@ -142,7 +142,7 @@ class ListenFDsTests(SynchronousTestCase):
         fdsCopy.append(1)
         assert_that(descriptors, not_(equal_to(fdsCopy)))
 
-    @given(dictionaries(systemd_descriptor_names(), integers(min_value=0), max_size=10))
+    @given(dictionaries(systemdDescriptorNames(), integers(min_value=0), max_size=10))
     def test_inheritedNamedDescriptors(self, expected: Mapping[str, int]) -> None:
         """
         L{ListenFDs.inheritedNamedDescriptors} returns a mapping from the

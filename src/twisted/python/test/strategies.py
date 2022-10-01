@@ -8,7 +8,7 @@ Hypothesis strategies for values related to L{twisted.python}.
 from hypothesis.strategies import SearchStrategy, characters, text
 
 
-def systemd_descriptor_names() -> SearchStrategy[str]:
+def systemdDescriptorNames() -> SearchStrategy[str]:
     """
     Build strings that are legal values for the systemd
     I{FileDescriptorName} field.
