@@ -269,6 +269,11 @@ WantedBy=sockets.target
   This is
   a `special target <http://www.freedesktop.org/software/systemd/man/systemd.special.html#sockets.target>`_ used by all socket activated services. ``systemd`` will automatically bind to all such socket activation ports during boot up.
 
+FileDescriptorName=my-web-port
+
+  This option names the file descriptor for the socket.
+  The name allows a specific inherited descriptor to be chosen reliably out of set of several inherited descriptors.
+
 You also need to modify the ``www.example.com.service`` file as follows:
 
 :download:`/etc/systemd/system/www.example.com.service <listings/systemd/www.example.com.socketactivated.service>`
