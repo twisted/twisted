@@ -184,7 +184,7 @@ class KeyGenTests(TestCase):
         printFingerprint({"filename": filename, "format": "md5-hex"})
         self.assertEqual(
             self.stdout.getvalue(),
-            "2048 85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da temp\n",
+            "2048 85:25:04:32:58:55:96:9f:57:ee:fb:a8:1a:ea:69:da temp.pub\n",
         )
 
     def test_saveKey(self):
@@ -682,19 +682,13 @@ class KeyGenTests(TestCase):
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar"}
-        with self.assertRaises(SystemExit) as e:
-            changePassPhrase(options)
-            self.assertIn(
-                "could not be opened, please specify a file." in e,
-            )
+        exc = self.assertRaises(SystemExit, changePassPhrase, options)
+        self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
     def test_printFingerprintHandleFileNotFound(self):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
         options = {"filename": "/foo/bar", "format": "md5-hex"}
-        with self.assertRaises(SystemExit) as e:
-            printFingerprint(options)
-            self.assertIn(
-                "could not be opened, please specify a file." in e,
-            )
+        exc = self.assertRaises(SystemExit, printFingerprint, options)
+        self.assertIn("could not be opened, please specify a file.", exc.args[0])
