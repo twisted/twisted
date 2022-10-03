@@ -1537,9 +1537,8 @@ class _SystemdParser:
             inherited file descriptor.  Either C{index} or C{name} must be
             given.
 
-        @return: A two-tuple of parsed positional arguments and parsed keyword
-            arguments (a tuple and a dictionary).  These can be used to
-            construct an L{AdoptedStreamServerEndpoint}.
+        @return: An L{AdoptedStreamServerEndpoint} which will adopt the
+            inherited listening port when it is used to listen.
         """
         if (index is None) == (name is None):
             raise ValueError("Specify exactly one of descriptor index or name")
