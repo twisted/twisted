@@ -358,7 +358,7 @@ You can verify this by using systemctl to report the status of the service. eg
               Active: active (running) since Tue 2013-01-29 15:02:20 GMT; 3s ago
             Main PID: 25605 (twistd)
               CGroup: name=systemd:/system/www.example.com.service
-                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:name=www --path .
+                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:name=my-web-port --path .
 
     Jan 29 15:02:20 zorin.lan systemd[1]: Started Example Web Server.
     Jan 29 15:02:20 zorin.lan twistd[25605]: 2013-01-29 15:02:20+0000 [-] Log opened.
