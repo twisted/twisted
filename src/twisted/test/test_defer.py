@@ -22,6 +22,7 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NoReturn,
     Optional,
     Tuple,
     Type,
@@ -790,21 +791,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} should catch an exception raised by a synchronous
         function and errback its resulting L{Deferred} with it.
         """
-        try:
-            "10" + 5  # type: ignore[operator]
-        except TypeError as e:
-            expected = str(e)
+        expected = ValueError("that value is unacceptable")
 
-        def plusFive(x: int) -> int:
-            return x + 5
+        def raisesException() -> NoReturn:
+            raise expected
 
         results: List[int] = []
         errors: List[Failure] = []
-        d = defer.maybeDeferred(plusFive, "10")
+        d = defer.maybeDeferred(raisesException)
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
-        self.assertEqual(str(errors[0].value), expected)
+        self.assertEqual(str(errors[0].value), str(expected))
 
     def test_maybeDeferredSyncFailure(self) -> None:
         """
