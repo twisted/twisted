@@ -291,10 +291,6 @@ ExecStart
 
   Socket activation is also technically possible with other socket families and types, but Twisted currently only accepts IPv4 and IPv6 TCP sockets. See :ref:`limitations` below.
 
-NonBlocking
-
-  This must be set to ``true`` to ensure that ``systemd`` passes non-blocking sockets to Twisted.
-
 Requires
 
   The service no longer knows how to bind the listening port for itself.
