@@ -1,5 +1,6 @@
 [Unit]
 Description=Example Web Server
+Requires=www.example.com.socket
 
 [Service]
 ExecStart=/usr/bin/twistd \

@@ -295,6 +295,11 @@ NonBlocking
 
   This must be set to ``true`` to ensure that ``systemd`` passes non-blocking sockets to Twisted.
 
+Requires
+
+  The service no longer knows how to bind the listening port for itself.
+  The corresponding socket unit must be started so it can pass the listening port on to the ``twistd`` process.
+
 [Install]
 
   In this example, the ``[Install]`` section has been moved to the socket configuration file.
