@@ -43,7 +43,7 @@ class TimeTestsBuilder(ReactorBuilder):
 
         else:
             raise SkipTest(
-                "Do not know how to synthesize non-time event to " "stop the test"
+                "Do not know how to synthesize non-time event to stop the test"
             )
 
         # Pick a pretty big delay.
