@@ -317,7 +317,7 @@ def _inputSaveFile(prompt: str) -> str:
     return input(prompt)
 
 
-def _saveKey(key, options):
+def _saveKey(key, options, input_collector=None):
     """
     Persist a SSH key on local filesystem.
 
@@ -326,7 +326,13 @@ def _saveKey(key, options):
 
     @param options:
     @type options: L{dict}
+
+    @param input_collector: Dependency injection for testing.
+    @type input_collector: L{function} or None.
+
     """
+    if input_collector is None:
+        input_collector = input
     KeyTypeMapping = {"EC": "ecdsa", "Ed25519": "ed25519", "RSA": "rsa", "DSA": "dsa"}
     keyTypeName = KeyTypeMapping[key.type()]
     filename = options["filename"]
@@ -342,7 +348,7 @@ def _saveKey(key, options):
 
     if os.path.exists(filename):
         print(f"{filename} already exists.")
-        yn = input("Overwrite (y/n)? ")
+        yn = input_collector("Overwrite (y/n)? ")
         if yn[0].lower() != "y":
             sys.exit()
 

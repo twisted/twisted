@@ -371,6 +371,27 @@ class KeyGenTests(TestCase):
         persistedKey = key.fromString(persistedKeyContent, None, b"")
         self.assertEqual(key, persistedKey)
 
+    def test_saveKeyFileExists(self):
+        """
+        When the specified file exists, it will ask the user for confirmation
+        before overwriting.
+        """
+
+        def mock_input(*args):
+            return ["n"]
+
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        keyPath = base.child("custom_key").path
+
+        import twisted.conch.scripts.ckeygen
+
+        self.patch(twisted.conch.scripts.ckeygen, "_inputSaveFile", lambda _: keyPath)
+        self.patch(os.path, "exists", lambda _: True)
+        key = Key.fromString(privateRSA_openssh)
+        options = {"filename": keyPath, "no-passphrase": True, "format": "md5-hex"}
+        self.assertRaises(SystemExit, _saveKey, key, options, mock_input)
+
     def test_saveKeySubtypeV1(self):
         """
         L{_saveKey} can be told to write the new private key file in OpenSSH
