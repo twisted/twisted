@@ -572,64 +572,6 @@ class PluggableResolverMixin:
 _SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHandle])
 _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 
-SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
-
-
-class SignalHandling(Protocol):
-    def install(self) -> None:
-        pass
-
-    def uninstallHandler(self) -> None:
-        pass
-
-
-@frozen
-class _WithoutSignalHandling:
-    def install(self) -> None:
-        pass
-
-    def uninstallHandler(self) -> None:
-        pass
-
-
-@frozen
-class _WithSignalHandling:
-    """
-    A reactor core helper that can manage signals: it installs signal handlers
-    at start time.
-    """
-
-    _sigInt: SignalHandler
-    _sigBreak: SignalHandler
-    _sigTerm: SignalHandler
-
-    def install(self) -> None:
-        """
-        Install the signal handlers for the Twisted event loop.
-        """
-        try:
-            import signal
-        except ImportError:
-            log.msg(
-                "Warning: signal module unavailable -- "
-                "not installing signal handlers."
-            )
-            return
-
-        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
-            # only handle if there isn't already a handler, e.g. for Pdb.
-            signal.signal(signal.SIGINT, self._sigInt)
-        signal.signal(signal.SIGTERM, self._sigTerm)
-
-        # Catch Ctrl-Break in windows
-        SIGBREAK = getattr(signal, "SIGBREAK", None)
-        if SIGBREAK is not None:
-            signal.signal(SIGBREAK, self._sigBreak)
-
-    def uninstallHandler(self) -> None:
-        # XXX Uninstall the signal handlers we installed?
-        pass
-
 
 @define
 class ReactorCore(PluggableResolverMixin):
@@ -664,7 +606,7 @@ class ReactorCore(PluggableResolverMixin):
     _eventTriggers: Dict[str, _ThreePhaseEvent] = field(
         init=False, default=Factory(dict)
     )
-    _signals: Optional[SignalHandling] = field(init=False, default=None)
+    _signals: SignalHandling = field(init=False, default=_WithoutSignalHandling())
 
     running: bool = field(init=False, default=False)
     _started: bool = field(init=False, default=False)
@@ -725,13 +667,12 @@ class ReactorCore(PluggableResolverMixin):
         in the I{during startup} event trigger phase.
         """
         self.running = True
-        # Make sure this happens before after-startup events, since the
-        # expectation of after-startup is that the reactor is fully
-        # initialized.  Don't do it right away for historical reasons (perhaps
-        # some before-startup triggers don't want there to be a custom SIGCHLD
-        # handler so that they can run child processes with some blocking
-        # api).
-        assert self._signals is not None
+        # Make sure signal handling "during-startup" because the expectation
+        # of "after-startup" is that the reactor is fully initialized.  Don't
+        # do it "before-startup" or earlier for historical reasons (perhaps
+        # some "before-startup" triggers don't want there to be a custom
+        # SIGCHLD handler so that they can run child processes with some
+        # blocking api).
         self._signals.install()
 
     def iterate(self, delay: float = 0.0) -> None:
@@ -848,10 +789,7 @@ class ReactorCore(PluggableResolverMixin):
         self._eventTriggers[eventType].removeTrigger(handle)
 
     def uninstallHandler(self) -> None:
-        # This uninstallation hook gets called whether or not the reactor ever
-        # got run so we have to handle the partially-initialized case.
-        if self._signals is not None:
-            self._signals.uninstallHandler()
+        self._signals.uninstall()
 
 
 class _CoreFactory(Protocol):
