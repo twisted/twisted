@@ -32,10 +32,30 @@ provide the necessary C signal handler which writes to the pipe to be
 registered with C{SA_RESTART}.
 """
 
+from __future__ import annotations
+
+from zope.interface import Attribute, Interface, implementer
+
+import contextlib
+import os
+import socket
+
+
+from twisted.python import failure
+from . import _signals, fdesc
+
+
 
 import signal
+from types import FrameType
+from typing import Callable, Optional
+
+from typing_extensions import TypeAlias
+
+from twisted.python.runtime import platformType
 
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
+
 
 def installHandler(fd):
     """
@@ -68,6 +88,10 @@ def isDefaultHandler():
     """
     return signal.getsignal(signal.SIGCHLD) == signal.SIG_DFL
 
+
+from typing import Protocol
+
+
 class SignalHandling(Protocol):
     """
     The L{SignalHandling} protocol enables customizable signal-handling
@@ -77,6 +101,7 @@ class SignalHandling(Protocol):
     that are called by a reactor at the correct times to have the (typically)
     process-global effects necessary for dealing with signals.
     """
+
     def install(self) -> None:
         """
         Install the signal handlers.
@@ -88,6 +113,9 @@ class SignalHandling(Protocol):
         """
 
 
+from attrs import define, frozen
+
+
 @frozen
 class _WithoutSignalHandling:
     """
@@ -95,6 +123,7 @@ class _WithoutSignalHandling:
 
     This is the implementation of C{installSignalHandlers=False}.
     """
+
     def install(self) -> None:
         """
         Do not install any signal handlers.
@@ -104,6 +133,9 @@ class _WithoutSignalHandling:
         """
         Do nothing because L{install} installed nothing.
         """
+
+
+from twisted.python import log
 
 
 @frozen
@@ -146,6 +178,9 @@ class _WithSignalHandling:
         """
         # TODO Make this do something, someday, because cleaning up your state
         # is a nice idea.
+
+
+from twisted.internet.interfaces import IReadDescriptor
 
 
 @define
@@ -194,6 +229,59 @@ class _WithChildSignalHandling:
         # before calling reactor.run (and the process also exited
         # already).
         process.reapAllProcesses()
+
+
+from . import process
+
+
+@implementer(IReadDescriptor)
+class _FDWaker(log.Logger):
+    """
+    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
+    up the main loop from another thread or a signal handler.
+
+    L{_FDWaker} is a base class for waker implementations based on
+    writing to a pipe being monitored by the reactor.
+
+    @ivar o: The file descriptor for the end of the pipe which can be
+        written to wake up a reactor monitoring this waker.
+
+    @ivar i: The file descriptor which should be monitored in order to
+        be awoken by this waker.
+    """
+
+    disconnected = 0
+
+    i = None
+    o = None
+
+    def __init__(self, reactor):
+        """Initialize."""
+        self.reactor = reactor
+        self.i, self.o = os.pipe()
+        fdesc.setNonBlocking(self.i)
+        fdesc._setCloseOnExec(self.i)
+        fdesc.setNonBlocking(self.o)
+        fdesc._setCloseOnExec(self.o)
+        self.fileno = lambda: self.i
+
+    def doRead(self):
+        """
+        Read some bytes from the pipe and discard them.
+        """
+        fdesc.readFromFD(self.fileno(), lambda data: None)
+
+    def connectionLost(self, reason):
+        """Close both ends of my pipe."""
+        if not hasattr(self, "o"):
+            return
+        for fd in self.i, self.o:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        del self.i, self.o
+
 
 class _SIGCHLDWaker(_FDWaker):
     """
@@ -257,6 +345,11 @@ class _IWaker(Interface):
         """
 
 
+import errno
+
+from twisted.python import util
+
+
 @implementer(_IWaker)
 class _SocketWaker(log.Logger):
     """
@@ -307,55 +400,6 @@ class _SocketWaker(log.Logger):
     def connectionLost(self, reason):
         self.r.close()
         self.w.close()
-
-
-@implementer(IReadDescriptor)
-class _FDWaker(log.Logger):
-    """
-    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
-    up the main loop from another thread or a signal handler.
-
-    L{_FDWaker} is a base class for waker implementations based on
-    writing to a pipe being monitored by the reactor.
-
-    @ivar o: The file descriptor for the end of the pipe which can be
-        written to wake up a reactor monitoring this waker.
-
-    @ivar i: The file descriptor which should be monitored in order to
-        be awoken by this waker.
-    """
-
-    disconnected = 0
-
-    i = None
-    o = None
-
-    def __init__(self, reactor):
-        """Initialize."""
-        self.reactor = reactor
-        self.i, self.o = os.pipe()
-        fdesc.setNonBlocking(self.i)
-        fdesc._setCloseOnExec(self.i)
-        fdesc.setNonBlocking(self.o)
-        fdesc._setCloseOnExec(self.o)
-        self.fileno = lambda: self.i
-
-    def doRead(self):
-        """
-        Read some bytes from the pipe and discard them.
-        """
-        fdesc.readFromFD(self.fileno(), lambda data: None)
-
-    def connectionLost(self, reason):
-        """Close both ends of my pipe."""
-        if not hasattr(self, "o"):
-            return
-        for fd in self.i, self.o:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        del self.i, self.o
 
 
 @implementer(_IWaker)

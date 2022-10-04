@@ -41,7 +41,6 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log, util
 from twisted.python.runtime import platform, platformType
-
 from ._signals import Waker as _Waker
 
 # Exceptions that doSelect might return frequently
