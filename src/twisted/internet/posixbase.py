@@ -21,9 +21,6 @@ from attrs import define
 from twisted.internet import error, tcp, udp
 from twisted.internet.base import (
     ReactorBase,
-    SignalHandling,
-    _WithoutSignalHandling,
-    _WithSignalHandling,
 )
 from twisted.internet.interfaces import (
     IHalfCloseableDescriptor,
@@ -41,7 +38,14 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log, util
 from twisted.python.runtime import platform, platformType
-from ._signals import Waker as _Waker
+from ._signals import (
+    Waker as _Waker,
+    _WithSignalHandling,
+    _WithoutSignalHandling,
+    SignalHandler,
+    SignalHandling,
+    _WithChildSignalHandling,
+)
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")

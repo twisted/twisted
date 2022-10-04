@@ -34,25 +34,23 @@ registered with C{SA_RESTART}.
 
 from __future__ import annotations
 
+import contextlib
+import errno
+import os
+import signal
+import socket
+from types import FrameType
+from typing import Callable, Optional, Protocol
+
 from zope.interface import Attribute, Interface, implementer
 
-import contextlib
-import os
-import socket
-
-
-from twisted.python import failure
-from . import _signals, fdesc
-
-
-
-import signal
-from types import FrameType
-from typing import Callable, Optional
-
+from attrs import define, frozen
 from typing_extensions import TypeAlias
 
+from twisted.internet.interfaces import IReadDescriptor
+from twisted.python import failure, log, util
 from twisted.python.runtime import platformType
+from . import _signals, fdesc, process
 
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
@@ -89,9 +87,6 @@ def isDefaultHandler():
     return signal.getsignal(signal.SIGCHLD) == signal.SIG_DFL
 
 
-from typing import Protocol
-
-
 class SignalHandling(Protocol):
     """
     The L{SignalHandling} protocol enables customizable signal-handling
@@ -113,9 +108,6 @@ class SignalHandling(Protocol):
         """
 
 
-from attrs import define, frozen
-
-
 @frozen
 class _WithoutSignalHandling:
     """
@@ -133,9 +125,6 @@ class _WithoutSignalHandling:
         """
         Do nothing because L{install} installed nothing.
         """
-
-
-from twisted.python import log
 
 
 @frozen
@@ -180,9 +169,6 @@ class _WithSignalHandling:
         # is a nice idea.
 
 
-from twisted.internet.interfaces import IReadDescriptor
-
-
 @define
 class _WithChildSignalHandling:
     """
@@ -194,7 +180,7 @@ class _WithChildSignalHandling:
     _addInternalReader: Callable[[IReadDescriptor], object]
     _childWaker: Optional[_SIGCHLDWaker] = None
 
-    def uninstall(self):
+    def uninstall(self) -> None:
         """
         If a child waker was created and installed, uninstall it now.
 
@@ -204,7 +190,7 @@ class _WithChildSignalHandling:
         that it does helps in unit tests involving multiple reactors and is
         generally just a nice thing.
         """
-        self._signals.uninstallHandler()  # XXX this is untested
+        self._signals.uninstall()  # XXX this is untested
         # XXX This would probably be an alright place to put all of the
         # cleanup code for all internal readers (here and in the base class,
         # anyway).  See #3063 for that cleanup task.
@@ -229,9 +215,6 @@ class _WithChildSignalHandling:
         # before calling reactor.run (and the process also exited
         # already).
         process.reapAllProcesses()
-
-
-from . import process
 
 
 @implementer(IReadDescriptor)
@@ -339,15 +322,10 @@ class _IWaker(Interface):
         Read some data from my connection and discard it.
         """
 
-    def connectionLost(reason: failure.Failure):
+    def connectionLost(reason: failure.Failure) -> None:
         """
         Called when connection was closed and the pipes.
         """
-
-
-import errno
-
-from twisted.python import util
 
 
 @implementer(_IWaker)

@@ -28,6 +28,14 @@ from typing import (
     Union,
     cast,
 )
+from ._signals import (
+    Waker as _Waker,
+    _WithSignalHandling,
+    _WithoutSignalHandling,
+    SignalHandler,
+    SignalHandling,
+    _WithChildSignalHandling,
+)
 
 from zope.interface import classImplements, implementer
 
