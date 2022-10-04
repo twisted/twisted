@@ -28,14 +28,6 @@ from typing import (
     Union,
     cast,
 )
-from ._signals import (
-    Waker as _Waker,
-    _WithSignalHandling,
-    _WithoutSignalHandling,
-    SignalHandler,
-    SignalHandling,
-    _WithChildSignalHandling,
-)
 
 from zope.interface import classImplements, implementer
 
@@ -69,6 +61,14 @@ from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform, seconds as runtimeSeconds
+from ._signals import (
+    SignalHandler,
+    SignalHandling,
+    Waker as _Waker,
+    _WithChildSignalHandling,
+    _WithoutSignalHandling,
+    _WithSignalHandling,
+)
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -862,17 +862,14 @@ class ReactorBase:
         self._internalReaders.add(reader)
         self.addReader(reader)
 
-    def __init__(self, coreFactory: Optional[Type[ReactorCore]] = None) -> None:
+    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
         self._pendingTimedCalls: List[DelayedCall] = []
         self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
 
-        if coreFactory is None:
-            _coreFactory: Type[ReactorCore] = ReactorCore
-        else:
-            _coreFactory = coreFactory
+        _coreFactory = coreFactory if coreFactory is not None else ReactorCore
 
         # IReactorCore
         self._core = _coreFactory(

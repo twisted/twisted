@@ -19,9 +19,7 @@ from zope.interface import Attribute, Interface, classImplements, implementer
 from attrs import define
 
 from twisted.internet import error, tcp, udp
-from twisted.internet.base import (
-    ReactorBase,
-)
+from twisted.internet.base import ReactorBase
 from twisted.internet.interfaces import (
     IHalfCloseableDescriptor,
     IReactorFDSet,
@@ -39,12 +37,12 @@ from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log, util
 from twisted.python.runtime import platform, platformType
 from ._signals import (
-    Waker as _Waker,
-    _WithSignalHandling,
-    _WithoutSignalHandling,
     SignalHandler,
     SignalHandling,
+    Waker as _Waker,
     _WithChildSignalHandling,
+    _WithoutSignalHandling,
+    _WithSignalHandling,
 )
 
 # Exceptions that doSelect might return frequently

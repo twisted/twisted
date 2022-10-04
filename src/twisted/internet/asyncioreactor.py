@@ -75,7 +75,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
     _asyncClosed = False
     _log = Logger()
 
-    def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
+    def __init__(self, eventloop: Optional[AbstractEventLoop] = None) -> None:
         if eventloop is None:
             _eventloop: AbstractEventLoop = get_event_loop()
         else:
@@ -92,10 +92,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
                     f"ProactorEventLoop is not supported, got: {_eventloop}"
                 )
 
-        coreFactory: Type[ReactorCore] = partial(  # type: ignore[assignment]
-            AsyncioReactorCore,
-            eventloop=_eventloop,
-        )
         self._asyncioEventloop: AbstractEventLoop = _eventloop
 
         self._writers: Dict[Type[FileDescriptor], int] = {}
@@ -105,7 +101,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._scheduledAt = None
         self._timerHandle = None
 
-        super().__init__(coreFactory=coreFactory)
+        super().__init__(
+            coreFactory=partial(
+                AsyncioReactorCore,
+                eventloop=_eventloop,
+            )
+        )
 
     def _unregisterFDInAsyncio(self, fd):
         """

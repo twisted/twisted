@@ -16,8 +16,8 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.internet._signals import _UnixWaker
 from twisted.internet import base, posixbase, selectreactor
+from twisted.internet._signals import _UnixWaker
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
 
