@@ -384,9 +384,6 @@ class KeyGenTests(TestCase):
         base.makedirs()
         keyPath = base.child("custom_key").path
 
-        import twisted.conch.scripts.ckeygen
-
-        self.patch(twisted.conch.scripts.ckeygen, "_inputSaveFile", lambda _: keyPath)
         self.patch(os.path, "exists", lambda _: True)
         key = Key.fromString(privateRSA_openssh)
         options = {"filename": keyPath, "no-passphrase": True, "format": "md5-hex"}
