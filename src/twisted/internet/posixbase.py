@@ -58,9 +58,8 @@ if unixEnabled:
     from ._signals import (
         SignalHandling,
         Waker as _Waker,
-        _WithChildSignalHandling,
-        _WithoutSignalHandling,
-        _WithSignalHandling,
+        _ChildSignalHandling,
+        _MultiSignalHandling,
     )
 
     processEnabled = True
@@ -123,33 +122,42 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
     # substitute their own implementation:
     _wakerFactory = _Waker
 
-    def run(self, installSignalHandlers: bool = True) -> None:
-        self._installSignalHandlers = installSignalHandlers
-
-        if installSignalHandlers:
-            signals: SignalHandling = _WithSignalHandling(
-                sigInt=self.sigInt,
-                sigBreak=self.sigBreak,
-                sigTerm=self.sigTerm,
+    def _run(self, signals: SignalHandling) -> None:
+        """
+        Customize reactor setup by adding signal handling behavior that
+        supports running child processes on POSIX platforms.
+        """
+        if (
+            # If we're allowed to install signal handlers
+            self._installSignalHandlers
+            # And we're on a platform that uses signals for process event signaling
+            and platformType == "posix"
+            # And we have the necessary dependencies for running processes
+            and processEnabled
+        ):
+            # Compose ...
+            signals = _MultiSignalHandling(
+                (
+                    # the given signal handling behavior ...
+                    signals,
+                    # with our extra SIGCHLD handling behavior.
+                    _ChildSignalHandling(
+                        self._addInternalReader,
+                        self._removeInternalReader,
+                    ),
+                )
             )
-            # XXX These checks are the same?
-            if platformType == "posix" and processEnabled:
-                signals = _WithChildSignalHandling(signals, self._addInternalReader)
 
-        else:
-            signals = _WithoutSignalHandling()
-
-        self._core.run(signals)
+        # Then let the core event loop start with the computed behavior.
+        super()._run(signals)
 
     def installWaker(self):
         """
-        Install a `waker' to allow threads and signals to wake up the IO thread.
-
-        We use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html) to wake
-        the reactor. On Windows we use a pair of sockets.
+        Install a `waker' to allow threads and signals to wake up the IO
+        thread.
         """
-        if not self.waker:
-            self.waker = self._wakerFactory(self)
+        if self.waker is None:
+            self.waker = self._wakerFactory()
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 

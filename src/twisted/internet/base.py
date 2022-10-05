@@ -628,7 +628,8 @@ class ReactorCore(PluggableResolverMixin):
         self, name: str, timeout: Sequence[int] = (1, 3, 11, 45)
     ) -> Deferred[str]:
         """
-        Return a Deferred that will resolve a hostname."""
+        Return a Deferred that will resolve a hostname.
+        """
         if not name:
             # XXX - This is *less than* '::', and will screw up IPv6 servers
             return defer.succeed("0.0.0.0")
@@ -692,6 +693,8 @@ class ReactorCore(PluggableResolverMixin):
         """
         self._started = False
         self.running = False
+
+        self._signals.uninstall()
 
         # This will get the reactor to reflect its running state correctly the
         # next time it starts running.
@@ -854,6 +857,10 @@ class ReactorBase:
         self._internalReaders.add(reader)
         self.addReader(reader)
 
+    def _removeInternalReader(self, reader: IReadDescriptor) -> None:
+        self._internalReaders.remove(reader)
+        self.removeReader(reader)
+
     def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
@@ -903,8 +910,9 @@ class ReactorBase:
     # IReactorCore
     def run(self, installSignalHandlers: bool = True) -> None:
         self._installSignalHandlers = installSignalHandlers
-        if installSignalHandlers:
-            signals: SignalHandling = _WithSignalHandling(
+        signals: SignalHandling
+        if self._installSignalHandlers:
+            signals = _WithSignalHandling(
                 sigInt=self.sigInt,
                 sigBreak=self.sigBreak,
                 sigTerm=self.sigTerm,
@@ -912,6 +920,12 @@ class ReactorBase:
         else:
             signals = _WithoutSignalHandling()
 
+        self._run(signals)
+
+    def _run(self, signals: SignalHandling) -> None:
+        """
+        Run the reactor with the given signal handling behavior.
+        """
         self._core.run(signals)
 
     # override in subclasses

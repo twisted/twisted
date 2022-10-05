@@ -40,9 +40,9 @@ import os
 import signal
 import socket
 from types import FrameType
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence, Type
 
-from zope.interface import Attribute, Interface, implementer
+from zope.interface import implementer
 
 from attrs import define, frozen
 from typing_extensions import Protocol, TypeAlias
@@ -55,7 +55,7 @@ from . import fdesc, process
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
 
-def installHandler(fd):
+def installHandler(fd: int) -> int:
     """
     Install a signal handler which will write a byte to C{fd} when
     I{SIGCHLD} is received.
@@ -66,7 +66,8 @@ def installHandler(fd):
 
     @param fd: The file descriptor to which to write when I{SIGCHLD} is
         received.
-    @type fd: C{int}
+
+    @return: The file descriptor previously configured for this use.
     """
     if fd == -1:
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
@@ -85,6 +86,84 @@ def isDefaultHandler():
     Determine whether the I{SIGCHLD} handler is the default or not.
     """
     return signal.getsignal(signal.SIGCHLD) == signal.SIG_DFL
+
+
+@implementer(IReadDescriptor)
+class _FDWaker(log.Logger):
+    """
+    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
+    up the main loop from another thread or a signal handler.
+
+    L{_FDWaker} is a base class for waker implementations based on
+    writing to a pipe being monitored by the reactor.
+
+    @ivar o: The file descriptor for the end of the pipe which can be
+        written to wake up a reactor monitoring this waker.
+
+    @ivar i: The file descriptor which should be monitored in order to
+        be awoken by this waker.
+    """
+
+    disconnected = 0
+
+    i = None
+    o = None
+
+    def __init__(self):
+        """Initialize."""
+        self.i, self.o = os.pipe()
+        fdesc.setNonBlocking(self.i)
+        fdesc._setCloseOnExec(self.i)
+        fdesc.setNonBlocking(self.o)
+        fdesc._setCloseOnExec(self.o)
+        self.fileno = lambda: self.i
+
+    def doRead(self):
+        """
+        Read some bytes from the pipe and discard them.
+        """
+        fdesc.readFromFD(self.fileno(), lambda data: None)
+
+    def connectionLost(self, reason):
+        """Close both ends of my pipe."""
+        if not hasattr(self, "o"):
+            return
+        for fd in self.i, self.o:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        del self.i, self.o
+
+
+class _SIGCHLDWaker(_FDWaker):
+    """
+    L{_SIGCHLDWaker} can wake up a reactor whenever C{SIGCHLD} is received.
+    """
+
+    def install(self):
+        """
+        Install the handler necessary to make this waker active.
+        """
+        installHandler(self.o)
+
+    def uninstall(self):
+        """
+        Remove the handler which makes this waker active.
+        """
+        installHandler(-1)
+
+    def doRead(self):
+        """
+        Having woken up the reactor in response to receipt of
+        C{SIGCHLD}, reap the process which exited.
+
+        This is called whenever the reactor notices the waker pipe is
+        writeable, which happens soon after any call to the C{wakeUp}
+        method.
+        """
+        _FDWaker.doRead(self)
+        process.reapAllProcesses()
 
 
 class SignalHandling(Protocol):
@@ -170,15 +249,63 @@ class _WithSignalHandling:
 
 
 @define
-class _WithChildSignalHandling:
+class _MultiSignalHandling:
+    """
+    An implementation of L{SignalHandling} which propagates protocol
+    method calls to a number of other implementations.
+
+    This supports composition of multiple signal handling implementations into
+    a single object so the reactor doesn't have to be concerned with how those
+    implementations are factored.
+
+    @ivar _installed: If L{install} has been called but L{uninstall} has not.
+        This is used to avoid double cleanup which otherwise results (at least
+        during test suite runs) because twisted.internet.reactormixins doesn't
+        keep track of whether a reactor has run or not but always invokes its
+        cleanup logic.
+    """
+
+    _delegates: Sequence[SignalHandling]
+    _installed: bool = False
+
+    def install(self) -> None:
+        for d in self._delegates:
+            d.install()
+        self._installed = True
+
+    def uninstall(self) -> None:
+        if self._installed:
+            for d in self._delegates:
+                d.uninstall()
+            self._installed = False
+
+
+@define
+class _ChildSignalHandling:
     """
     @ivar _childWaker: L{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
 
-    _signals: SignalHandling
     _addInternalReader: Callable[[IReadDescriptor], object]
-    _childWaker: _SIGCHLDWaker | None = None
+    _removeInternalReader: Callable[[IReadDescriptor], object]
+    _childWaker: Optional[_SIGCHLDWaker] = None
+
+    def install(self) -> None:
+        """
+        Extend the basic signal handling logic to also support handling
+        SIGCHLD to know when to try to reap child processes.
+        """
+        self._childWaker = _SIGCHLDWaker()
+        self._addInternalReader(self._childWaker)
+        self._childWaker.install()
+
+        # Also reap all processes right now, in case we missed any
+        # signals before we installed the SIGCHLD waker/handler.
+        # This should only happen if someone used spawnProcess
+        # before calling reactor.run (and the process also exited
+        # already).
+        process.reapAllProcesses()
 
     def uninstall(self) -> None:
         """
@@ -190,116 +317,21 @@ class _WithChildSignalHandling:
         that it does helps in unit tests involving multiple reactors and is
         generally just a nice thing.
         """
-        self._signals.uninstall()  # XXX this is untested
+        assert self._childWaker is not None
+
         # XXX This would probably be an alright place to put all of the
         # cleanup code for all internal readers (here and in the base class,
         # anyway).  See #3063 for that cleanup task.
-        if self._childWaker is not None:
-            self._childWaker.uninstall()
+        self._removeInternalReader(self._childWaker)
+        self._childWaker.uninstall()
+        self._childWaker.connectionLost(failure.Failure(Exception("uninstalled")))
 
-    def install(self) -> None:
-        """
-        Extend the basic signal handling logic to also support
-        handling SIGCHLD to know when to try to reap child processes.
-        """
-        self._signals.install()  # XXX is this untested?
-
-        if self._childWaker is None:
-            self._childWaker = _SIGCHLDWaker(self)
-            self._addInternalReader(self._childWaker)
-
-        self._childWaker.install()
-        # Also reap all processes right now, in case we missed any
-        # signals before we installed the SIGCHLD waker/handler.
-        # This should only happen if someone used spawnProcess
-        # before calling reactor.run (and the process also exited
-        # already).
-        process.reapAllProcesses()
+        # We just spoiled the current _childWaker so throw it away.  We can
+        # make a new one later if need be.
+        self._childWaker = None
 
 
-@implementer(IReadDescriptor)
-class _FDWaker(log.Logger):
-    """
-    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
-    up the main loop from another thread or a signal handler.
-
-    L{_FDWaker} is a base class for waker implementations based on
-    writing to a pipe being monitored by the reactor.
-
-    @ivar o: The file descriptor for the end of the pipe which can be
-        written to wake up a reactor monitoring this waker.
-
-    @ivar i: The file descriptor which should be monitored in order to
-        be awoken by this waker.
-    """
-
-    disconnected = 0
-
-    i = None
-    o = None
-
-    def __init__(self, reactor):
-        """Initialize."""
-        self.reactor = reactor
-        self.i, self.o = os.pipe()
-        fdesc.setNonBlocking(self.i)
-        fdesc._setCloseOnExec(self.i)
-        fdesc.setNonBlocking(self.o)
-        fdesc._setCloseOnExec(self.o)
-        self.fileno = lambda: self.i
-
-    def doRead(self):
-        """
-        Read some bytes from the pipe and discard them.
-        """
-        fdesc.readFromFD(self.fileno(), lambda data: None)
-
-    def connectionLost(self, reason):
-        """Close both ends of my pipe."""
-        if not hasattr(self, "o"):
-            return
-        for fd in self.i, self.o:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        del self.i, self.o
-
-
-class _SIGCHLDWaker(_FDWaker):
-    """
-    L{_SIGCHLDWaker} can wake up a reactor whenever C{SIGCHLD} is
-    received.
-
-    @see: L{twisted.internet._signals}
-    """
-
-    def install(self):
-        """
-        Install the handler necessary to make this waker active.
-        """
-        installHandler(self.o)
-
-    def uninstall(self):
-        """
-        Remove the handler which makes this waker active.
-        """
-        installHandler(-1)
-
-    def doRead(self):
-        """
-        Having woken up the reactor in response to receipt of
-        C{SIGCHLD}, reap the process which exited.
-
-        This is called whenever the reactor notices the waker pipe is
-        writeable, which happens soon after any call to the C{wakeUp}
-        method.
-        """
-        _FDWaker.doRead(self)
-        process.reapAllProcesses()
-
-
-class _IWaker(Interface):
+class _Waker(Protocol):
     """
     Interface to wake up the event loop based on the self-pipe trick.
 
@@ -310,25 +342,24 @@ class _IWaker(Interface):
     This is used by threads or signals to wake up the event loop.
     """
 
-    disconnected = Attribute("")
+    disconnected: int
 
-    def wakeUp():
+    def wakeUp(self) -> None:
         """
         Called when the event should be wake up.
         """
 
-    def doRead():
+    def doRead(self) -> None:
         """
         Read some data from my connection and discard it.
         """
 
-    def connectionLost(reason: failure.Failure) -> None:
+    def connectionLost(self, reason: failure.Failure) -> None:
         """
         Called when connection was closed and the pipes.
         """
 
 
-@implementer(_IWaker)
 class _SocketWaker(log.Logger):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, implemented
@@ -339,9 +370,8 @@ class _SocketWaker(log.Logger):
 
     disconnected = 0
 
-    def __init__(self, reactor):
+    def __init__(self):
         """Initialize."""
-        self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -380,7 +410,6 @@ class _SocketWaker(log.Logger):
         self.w.close()
 
 
-@implementer(_IWaker)
 class _UnixWaker(_FDWaker):
     """
     This class provides a simple interface to wake up the event loop.
@@ -402,8 +431,11 @@ class _UnixWaker(_FDWaker):
                     raise
 
 
+Waker: Type[_Waker]
 if platformType == "posix":
+    # On POSIX we use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html)
+    # to wake the reactor.
     Waker = _UnixWaker
 else:
-    # Primarily Windows and Jython.
-    Waker = _SocketWaker  # type: ignore[misc,assignment]
+    # Elsewhere (primarily Windows and Jython) we use a pair of sockets.
+    Waker = _SocketWaker

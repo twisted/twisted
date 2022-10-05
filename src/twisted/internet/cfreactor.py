@@ -10,12 +10,17 @@ This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
 """
 
+from __future__ import annotations
+
 __all__ = ["install", "CFReactor"]
 
 import sys
+from functools import partial
+from typing import Optional
 
 from zope.interface import implementer
 
+from attrs import define
 from CFNetwork import (  # type: ignore[import]
     CFSocketCreateRunLoopSource,
     CFSocketCreateWithNative,
@@ -44,15 +49,21 @@ from CoreFoundation import (  # type: ignore[import]
 )
 
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase, _Waker
+from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
 from twisted.python import log
+from twisted.python.failure import Failure
+
+# cfreactor is macOS-only so we know we can use _UnixWaker and doing so
+# directly makes it easier to get _WakerPlus to type check.
+from ._signals import _UnixWaker
 
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
 
 
-class _WakerPlus(_Waker):
+@define
+class _WakerPlus(_UnixWaker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
     iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
@@ -69,14 +80,16 @@ class _WakerPlus(_Waker):
     do.
     """
 
-    def doRead(self):
+    _reactor: CFReactor
+
+    def doRead(self) -> Optional[Failure]:
         """
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
         next timed iteration.
         """
-        result = _Waker.doRead(self)
-        self.reactor._scheduleSimulate(True)
-        return result
+        result = super().doRead()
+        self._reactor._scheduleSimulate(True)
+        return result  # type: ignore[no-any-return]
 
 
 @implementer(IReactorFDSet)
@@ -126,20 +139,13 @@ class CFReactor(PosixReactorBase):
             runner = CFRunLoopRun
         self._runner = runner
 
+        # Use the waker that knows how to wake up the cf loop too.
+        self._wakerFactory = partial(_WakerPlus, reactor=self)
+
         if runLoop is None:
             runLoop = CFRunLoopGetMain()
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
-
-    def installWaker(self):
-        """
-        Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
-        should be exactly the same as the parent implementation.
-        """
-        if not self.waker:
-            self.waker = _WakerPlus(self)
-            self._internalReaders.add(self.waker)
-            self.addReader(self.waker)
 
     def _socketCallback(
         self, cfSocket, callbackType, ignoredAddress, ignoredData, context

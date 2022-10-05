@@ -6,9 +6,12 @@ Tests for L{twisted.internet.posixbase} and supporting code.
 """
 import os
 
+from twisted.internet._signals import Waker
 from twisted.internet.defer import Deferred
-from twisted.internet.posixbase import PosixReactorBase, _Waker
+from twisted.internet.interfaces import IReadDescriptor
+from twisted.internet.posixbase import PosixReactorBase
 from twisted.internet.protocol import ServerFactory
+from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
 
@@ -82,7 +85,7 @@ class PosixReactorBaseTests(WarningCheckerTestCase):
     """
 
     def _checkWaker(self, reactor):
-        self.assertIsInstance(reactor.waker, _Waker)
+        self.assertIsInstance(reactor.waker, Waker)
         self.assertIn(reactor.waker, reactor._internalReaders)
         self.assertIn(reactor.waker, reactor._readers)
 
@@ -96,7 +99,7 @@ class PosixReactorBaseTests(WarningCheckerTestCase):
 
     def test_removeAllSkipsInternalReaders(self):
         """
-        Any L{IReadDescriptors} in L{PosixReactorBase._internalReaders} are
+        Any L{IReadDescriptor}s in L{PosixReactorBase._internalReaders} are
         left alone by L{PosixReactorBase._removeAll}.
         """
         reactor = TrivialReactor()
@@ -155,10 +158,15 @@ class TimeoutReportReactor(PosixReactorBase):
         self.iterationTimeout = Deferred()
         self.now = 100
 
-    def addReader(self, reader):
+    def addReader(self, reader: IReadDescriptor) -> None:
         """
         Ignore the reader.  This is necessary because the waker will be
         added.  However, we won't actually monitor it for any events.
+        """
+
+    def removeReader(self, reader: IReadDescriptor) -> None:
+        """
+        See L{addReader}.
         """
 
     def removeAll(self):
@@ -327,16 +335,17 @@ class ConnectedDatagramPortTests(WarningCheckerTestCase):
 
 
 class WakerTests(WarningCheckerTestCase):
-    def test_noWakerConstructionWarnings(self):
+    def test_noWakerConstructionWarnings(self) -> None:
         """
         No warnings are generated when constructing the waker.
         """
-        waker = _Waker(reactor=None)
+        waker = Waker()
 
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)
 
-        # Explicitly close the waker to leave a clean state at the end of the test.
-        waker.connectionLost(None)
+        # Explicitly close the waker to leave a clean state at the end of the
+        # test.
+        waker.connectionLost(Failure(Exception("goodbye")))
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)
