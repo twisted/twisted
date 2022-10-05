@@ -54,8 +54,8 @@ class GlibWaker(_UnixWaker):
     Run scheduled events after waking up.
     """
 
-    def doRead(self):
-        posixbase._UnixWaker.doRead(self)
+    def doRead(self) -> None:
+        super().doRead()
         self.reactor._simulate()
 
 
