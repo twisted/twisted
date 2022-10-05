@@ -289,7 +289,7 @@ class _ChildSignalHandling:
 
     _addInternalReader: Callable[[IReadDescriptor], object]
     _removeInternalReader: Callable[[IReadDescriptor], object]
-    _childWaker: Optional[_SIGCHLDWaker] = None
+    _childWaker: _SIGCHLDWaker | None = None
 
     def install(self) -> None:
         """
@@ -431,7 +431,7 @@ class _UnixWaker(_FDWaker):
                     raise
 
 
-Waker: Type[_Waker]
+Waker: type[_Waker]
 if platformType == "posix":
     # On POSIX we use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html)
     # to wake the reactor.

@@ -82,7 +82,7 @@ class _WakerPlus(_UnixWaker):
 
     _reactor: CFReactor
 
-    def doRead(self) -> Optional[Failure]:
+    def doRead(self) -> Failure | None:
         """
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
         next timed iteration.
