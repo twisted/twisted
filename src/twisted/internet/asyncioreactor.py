@@ -311,9 +311,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
         assert (
             # Currently running
             self._core._started
-            or
             # About to run
-            not self._core._startedBefore
+            or not self._core._startedBefore
         )
         g = lambda: self.callLater(0, f, *args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
