@@ -163,8 +163,8 @@ class ThreadTestsBuilder(ReactorBuilder):
         When the reactor has its shutdown event fired before it is run, the
         thread pool is completely destroyed.
 
-        Trial used to do this in L{TrialSuite._bail} but it doesn't anymore so
-        we can probably just forget about it.
+        For what it's worth, the reason we support this behavior at all is
+        because Trial does this.
 
         This is the case of the thread pool being created without the reactor
         being started at al.
