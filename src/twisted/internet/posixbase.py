@@ -54,7 +54,7 @@ unixEnabled = platformType == "posix"
 
 processEnabled = False
 if unixEnabled:
-    from twisted.internet import fdesc, process, unix
+    from twisted.internet import process, unix
     from ._signals import (
         SignalHandling,
         Waker as _Waker,
