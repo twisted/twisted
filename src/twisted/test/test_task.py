@@ -6,15 +6,24 @@ Tests for L{twisted.internet.task}.
 """
 
 
-from twisted.internet import defer, error, interfaces, reactor, task
+from typing import NoReturn, Optional
+
+from attrs import Factory, define, field
+
+from twisted.internet import defer, error, reactor, task
+from twisted.internet._signals import _WithoutSignalHandling
+from twisted.internet.base import ReactorCore
+from twisted.internet.interfaces import IDelayedCall, IReactorCore, IReactorTime
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor
 from twisted.trial import unittest
 
-# Be compatible with any jerks who used our private stuff
+# Provide a minimal level of backwards compatibility for any code incorrectly
+# using this module as a library.
 Clock = task.Clock
 
 from twisted.python import failure
+from twisted.python.components import proxyForInterface
 
 
 class TestableLoopingCall(task.LoopingCall):
@@ -46,7 +55,7 @@ class ClockTests(unittest.TestCase):
         """
         c = task.Clock()
         call = c.callLater(1, lambda a, b: None, 1, b=2)
-        self.assertTrue(interfaces.IDelayedCall.providedBy(call))
+        self.assertTrue(IDelayedCall.providedBy(call))
         self.assertEqual(call.getTime(), 1)
         self.assertTrue(call.active())
 
@@ -162,7 +171,7 @@ class ClockTests(unittest.TestCase):
     def test_providesIReactorTime(self):
         c = task.Clock()
         self.assertTrue(
-            interfaces.IReactorTime.providedBy(c), "Clock does not provide IReactorTime"
+            IReactorTime.providedBy(c), "Clock does not provide IReactorTime"
         )
 
     def test_callLaterKeepsCallsOrdered(self):
@@ -981,56 +990,87 @@ class DeferLaterTests(unittest.TestCase):
         self.assertIs(None, self.successResultOf(d))
 
 
-class _FakeReactor:
-    def __init__(self):
-        self._running = False
-        self._clock = task.Clock()
-        self.callLater = self._clock.callLater
-        self.seconds = self._clock.seconds
-        self.getDelayedCalls = self._clock.getDelayedCalls
-        self._whenRunning = []
-        self._shutdownTriggers = {"before": [], "during": []}
+@define
+class _FakeReactor(
+    proxyForInterface(IReactorCore, "_core"),  # type: ignore[misc]
+    proxyForInterface(IReactorTime, "_clock"),  # type: ignore[misc]
+):
+    """
+    A reactor implementation that's independent of any real I/O.
+    """
 
-    def callWhenRunning(self, callable, *args, **kwargs):
-        if self._whenRunning is None:
-            callable(*args, **kwargs)
+    _numRunningEvents: int = 0
+
+    _clock: task.Clock = Factory(task.Clock)
+    _core: ReactorCore = field()
+
+    @_core.default
+    def _coreDefault(self) -> ReactorCore:
+        return ReactorCore(
+            self._runUntilCurrent, self._doIteration, self._timeout, self._wakeUp
+        )
+
+    def __attrs_post_init__(self) -> None:
+        self._trackEvent("startup")
+        self._trackEvent("shutdown")
+
+    def run(self, installSignalHandlers: bool = True) -> None:
+        self._core.run(_WithoutSignalHandling())
+
+    def _runUntilCurrent(self) -> None:
+        pass
+
+    def _doIteration(self, delay: Optional[float]) -> None:
+        if delay is None:
+            if self._isStarving():
+                raise RuntimeError("No event sources left")
         else:
-            self._whenRunning.append((callable, args, kwargs))
+            self._clock.advance(delay)
 
-    def addSystemEventTrigger(self, phase, event, callable, *args):
-        assert phase in ("before", "during")
-        assert event == "shutdown"
-        self._shutdownTriggers[phase].append((callable, args))
+    def _timeout(self) -> Optional[float]:
+        calls = self._clock.getDelayedCalls()
+        if calls:
+            return calls[0].getTime() - self._clock.seconds()
+        return None
 
-    def run(self):
-        """
-        Call timed events until there are no more or the reactor is stopped.
+    def _wakeUp(self) -> NoReturn:
+        raise NotImplementedError("Nope")
 
-        @raise RuntimeError: When no timed events are left and the reactor is
-            still running.
+    def _isStarving(self) -> bool:
         """
-        self._running = True
-        whenRunning = self._whenRunning
-        self._whenRunning = None
-        for callable, args, kwargs in whenRunning:
-            callable(*args, **kwargs)
-        while self._running:
-            calls = self.getDelayedCalls()
-            if not calls:
-                raise RuntimeError("No DelayedCalls left")
-            self._clock.advance(calls[0].getTime() - self.seconds())
-        shutdownTriggers = self._shutdownTriggers
-        self._shutdownTriggers = None
-        for (trigger, args) in shutdownTriggers["before"] + shutdownTriggers["during"]:
-            trigger(*args)
+        @return: C{True} if it is impossible to ever do any more work.
+            C{False} if it may be possible.
+        """
+        # Look at all the possible sources of work and if they're all empty
+        # then consider the reactor "starving".
+        return (
+            # Timed calls are definitely a source of work.
+            len(self.getDelayedCalls()) == 0
+            # If we're in the middle of dispatching an event through the event
+            # system, hooks on the phases of that event are more work we will
+            # do soon.
+            and self._numRunningEvents == 0
+            # If we just stopped then we're on our way out of the run loop and
+            # we'll change our behavior soon.
+            and not self._core._justStopped
+        )
 
-    def stop(self):
+    def _trackEvent(self, eventName: str) -> None:
         """
-        Stop the reactor.
+        Arrange to know when the given event is in the process of being handled.
+
+        This works by incrementing a counter when we enter the "before" phase
+        and decrementing the counter when we enter the "after" phase.
         """
-        if not self._running:
-            raise error.ReactorNotRunning()
-        self._running = False
+
+        def beforeEvent() -> None:
+            self._numRunningEvents += 1
+
+        def afterEvent() -> None:
+            self._numRunningEvents -= 1
+
+        self.addSystemEventTrigger("before", eventName, beforeEvent)
+        self.addSystemEventTrigger("after", eventName, afterEvent)
 
 
 class ReactTests(unittest.SynchronousTestCase):
