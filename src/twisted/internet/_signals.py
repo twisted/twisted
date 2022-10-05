@@ -289,7 +289,7 @@ class _ChildSignalHandling:
 
     _addInternalReader: Callable[[IReadDescriptor], object]
     _removeInternalReader: Callable[[IReadDescriptor], object]
-    _childWaker: _SIGCHLDWaker | None = None
+    _childWaker: Optional[_SIGCHLDWaker] = None
 
     def install(self) -> None:
         """
