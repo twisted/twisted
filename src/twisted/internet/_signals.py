@@ -40,7 +40,7 @@ import os
 import signal
 import socket
 from types import FrameType
-from typing import Callable, Optional, Sequence, Type
+from typing import Callable, Optional, Sequence
 
 from zope.interface import implementer
 
