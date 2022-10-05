@@ -40,12 +40,12 @@ import os
 import signal
 import socket
 from types import FrameType
-from typing import Callable, Optional, Protocol
+from typing import Callable, Optional
 
 from zope.interface import Attribute, Interface, implementer
 
 from attrs import define, frozen
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, Protocol
 
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
