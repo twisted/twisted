@@ -102,7 +102,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._timerHandle = None
 
         super().__init__(
-            coreFactory=partial(
+            _coreFactory=partial(
                 AsyncioReactorCore,
                 eventloop=_eventloop,
             )

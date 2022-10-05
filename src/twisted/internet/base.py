@@ -861,17 +861,17 @@ class ReactorBase:
         self._internalReaders.remove(reader)
         self.removeReader(reader)
 
-    def __init__(self, coreFactory: Optional[_CoreFactory] = None) -> None:
+    def __init__(self, *, _coreFactory: Optional[_CoreFactory] = None) -> None:
         super().__init__()
         self.threadCallQueue: List[_ThreadCall] = []
         self._pendingTimedCalls: List[DelayedCall] = []
         self._newTimedCalls: List[DelayedCall] = []
         self._cancellations = 0
 
-        _coreFactory = coreFactory if coreFactory is not None else ReactorCore
+        coreFactory = _coreFactory if _coreFactory is not None else ReactorCore
 
         # IReactorCore
-        self._core = _coreFactory(
+        self._core = coreFactory(
             runUntilCurrent=self.runUntilCurrent,
             doIteration=self.doIteration,
             timeout=self.timeout,
