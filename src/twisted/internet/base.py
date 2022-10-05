@@ -917,6 +917,9 @@ class ReactorBase:
 
     # IReactorCore
     def run(self, installSignalHandlers: bool = True) -> None:
+        """
+        @see: {twisted.internet.interfaces.IReactorCore.run}
+        """
         self._installSignalHandlers = installSignalHandlers
         signals: SignalHandling
         if self._installSignalHandlers:
