@@ -40,7 +40,7 @@ import os
 import signal
 import socket
 from types import FrameType
-from typing import Callable, Optional, Sequence, Type
+from typing import Callable, Optional, Sequence
 
 from zope.interface import implementer
 
@@ -431,7 +431,7 @@ class _UnixWaker(_FDWaker):
                     raise
 
 
-Waker: Type[_Waker]
+Waker: type[_Waker]
 if platformType == "posix":
     # On POSIX we use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html)
     # to wake the reactor.
