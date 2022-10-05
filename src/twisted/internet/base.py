@@ -576,11 +576,16 @@ _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 @define
 class ReactorCore(PluggableResolverMixin):
     """
-    An implementation of L{IReactorCore}.
+    I{Almost} an implementation of L{IReactorCore}.
 
     This includes an "event system" (which can run functions during three
     phases of an event: before, during, and after) as well as control over
     starting and stopping the loop.
+
+    It lacks an implementation of L{IReactorCore.run} because a slightly
+    different interface allows for better factoring of signal-handling logic.
+    The real L{IReactorCore} implementation must translate between
+    L{IReactorCore.run} and L{ReactorCore.run}.
 
     @ivar _stopped: A flag which is true between paired calls to C{reactor.run}
         and C{reactor.stop}.  This should be replaced with an explicit state
@@ -796,6 +801,10 @@ class ReactorCore(PluggableResolverMixin):
 
 
 class _CoreFactory(Protocol):
+    """
+    A callable that can create a L{ReactorCore} (or subclass) instance.
+    """
+
     def __call__(
         self,
         runUntilCurrent: Callable[[], object],
