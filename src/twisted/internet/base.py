@@ -60,11 +60,7 @@ from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform, seconds as runtimeSeconds
-from ._signals import (
-    SignalHandling,
-    _WithoutSignalHandling,
-    _WithSignalHandling,
-)
+from ._signals import SignalHandling, _WithoutSignalHandling, _WithSignalHandling
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client

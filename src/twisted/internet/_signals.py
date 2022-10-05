@@ -178,7 +178,7 @@ class _WithChildSignalHandling:
 
     _signals: SignalHandling
     _addInternalReader: Callable[[IReadDescriptor], object]
-    _childWaker: Optional[_SIGCHLDWaker] = None
+    _childWaker: _SIGCHLDWaker | None = None
 
     def uninstall(self) -> None:
         """
