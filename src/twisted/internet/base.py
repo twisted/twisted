@@ -897,7 +897,6 @@ class ReactorBase:
 
         # IReactorPluggableResolver
         self.installResolver = self._core.installResolver
-        self.installNameResolver = self._core.installNameResolver
 
         # IReactorPluggableNameResolver
         self.installNameResolver = self._core.installNameResolver
