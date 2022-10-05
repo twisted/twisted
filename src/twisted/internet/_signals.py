@@ -50,7 +50,7 @@ from typing_extensions import Protocol, TypeAlias
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
 from twisted.python.runtime import platformType
-from . import _signals, fdesc, process
+from . import fdesc, process
 
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
@@ -278,13 +278,13 @@ class _SIGCHLDWaker(_FDWaker):
         """
         Install the handler necessary to make this waker active.
         """
-        _signals.installHandler(self.o)
+        installHandler(self.o)
 
     def uninstall(self):
         """
         Remove the handler which makes this waker active.
         """
-        _signals.installHandler(-1)
+        installHandler(-1)
 
     def doRead(self):
         """
