@@ -43,7 +43,9 @@ from zope.interface import Attribute, Interface, implementer
 
 from twisted.python import failure, log, util
 from twisted.python.runtime import platformType
-from . import fdesc, process
+
+if platformType == "posix":
+    from . import fdesc, process
 
 
 def installHandler(fd):
