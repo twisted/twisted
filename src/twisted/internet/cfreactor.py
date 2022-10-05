@@ -79,7 +79,7 @@ class _WakerPlus(_UnixWaker):
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
         next timed iteration.
         """
-        result = _Waker.doRead(self)
+        result = super().doRead()
         self.reactor._scheduleSimulate(True)
         return result
 
