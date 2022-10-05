@@ -11,15 +11,19 @@ import gireactor or gtk3reactor for GObject Introspection based applications,
 or glib2reactor or gtk2reactor for applications using legacy static bindings.
 """
 
+from __future__ import annotations
 
 import sys
+from functools import partial
 
 from zope.interface import implementer
 
+from attrs import define
+
 from twisted.internet import base, posixbase, selectreactor
-from twisted.internet._signals import _UnixWaker
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
+from ._signals import _UnixWaker
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
@@ -49,14 +53,17 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
+@define
 class GlibWaker(_UnixWaker):
     """
     Run scheduled events after waking up.
     """
 
-    def doRead(self):
-        posixbase._UnixWaker.doRead(self)
-        self.reactor._simulate()
+    _reactor: GlibReactorBase
+
+    def doRead(self) -> None:
+        super().doRead()
+        self._reactor._simulate()
 
 
 @implementer(IReactorFDSet)
@@ -92,10 +99,6 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     @ivar _simtag: A GSource handle for the next L{simulate} call.
     """
 
-    # Install a waker that knows it needs to call C{_simulate} in order to run
-    # callbacks queued from a thread:
-    _wakerFactory = GlibWaker
-
     def __init__(self, glib_module, gtk_module, useGtk=False):
         self._simtag = None
         self._reads = set()
@@ -103,6 +106,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._sources = {}
         self._glib = glib_module
         self._gtk = gtk_module
+
+        # Install a waker that knows it needs to call C{_simulate} in order to
+        # run callbacks queued from a thread:
+        self._wakerFactory = partial(GlibWaker, reactor=self)
+
         posixbase.PosixReactorBase.__init__(self)
 
         self._source_remove = self._glib.source_remove

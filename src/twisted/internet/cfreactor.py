@@ -53,6 +53,9 @@ from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
 from twisted.python import log
 from twisted.python.failure import Failure
 
+# We know that we're going to run on macOS so we can just pick the
+# POSIX-appropriate waker.  This also avoids having a dynamic base class and
+# so lets more things get type checked.
 # cfreactor is macOS-only so we know we can use _UnixWaker and doing so
 # directly makes it easier to get _WakerPlus to type check.
 from ._signals import _UnixWaker
