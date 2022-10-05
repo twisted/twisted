@@ -24,15 +24,14 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Type,
     Union,
     cast,
 )
 
 from zope.interface import classImplements, implementer
 
-from attrs import Factory, define, field, frozen
-from typing_extensions import Protocol, TypeAlias
+from attrs import Factory, define, field
+from typing_extensions import Protocol
 
 from twisted.internet import abstract, defer, error, fdesc, main, threads
 from twisted.internet._resolver import (
@@ -62,10 +61,7 @@ from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform, seconds as runtimeSeconds
 from ._signals import (
-    SignalHandler,
     SignalHandling,
-    Waker as _Waker,
-    _WithChildSignalHandling,
     _WithoutSignalHandling,
     _WithSignalHandling,
 )

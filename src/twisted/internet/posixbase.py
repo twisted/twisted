@@ -7,16 +7,11 @@ Posix reactor base class
 """
 
 
-import contextlib
-import errno
-import os
 import socket
 import sys
-from typing import Callable, Optional, Sequence
+from typing import Sequence
 
-from zope.interface import Attribute, Interface, classImplements, implementer
-
-from attrs import define
+from zope.interface import classImplements, implementer
 
 from twisted.internet import error, tcp, udp
 from twisted.internet.base import ReactorBase
@@ -31,19 +26,10 @@ from twisted.internet.interfaces import (
     IReactorUDP,
     IReactorUNIX,
     IReactorUNIXDatagram,
-    IReadDescriptor,
 )
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
-from twisted.python import failure, log, util
+from twisted.python import failure, log
 from twisted.python.runtime import platform, platformType
-from ._signals import (
-    SignalHandler,
-    SignalHandling,
-    Waker as _Waker,
-    _WithChildSignalHandling,
-    _WithoutSignalHandling,
-    _WithSignalHandling,
-)
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")
@@ -68,7 +54,14 @@ unixEnabled = platformType == "posix"
 
 processEnabled = False
 if unixEnabled:
-    from twisted.internet import _signals, fdesc, process, unix
+    from twisted.internet import fdesc, process, unix
+    from ._signals import (
+        SignalHandling,
+        Waker as _Waker,
+        _WithChildSignalHandling,
+        _WithoutSignalHandling,
+        _WithSignalHandling,
+    )
 
     processEnabled = True
 
