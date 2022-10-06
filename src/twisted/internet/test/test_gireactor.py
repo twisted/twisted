@@ -41,6 +41,9 @@ from twisted.trial.unittest import SkipTest, TestCase
 if not giImported:
     skip = "GObject Introspection `gi` module not importable"
 
+noGtkSkip = (gtkVersion is None) or (gtkVersion not in ("3.0", "4.0"))
+noGtkMessage = f"Unknown GTK version: {repr(gtkVersion)}"
+
 
 class GApplicationRegistrationTests(ReactorBuilder, TestCase):
     """
@@ -95,10 +98,23 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
 
         self.runReactor(app, reactor)
 
-    @skipIf(
-        ((gtkVersion is None) or (gtkVersion not in ("3.0", "4.0"))),
-        f"Unknown GTK version: {repr(gtkVersion)}",
-    )
+    @skipIf(noGtkSkip, noGtkMessage)
+    def test_gtkAliases(self) -> None:
+        """
+        L{twisted.internet.gtk3reactor} is now just a set of compatibility
+        aliases for L{twisted.internet.GIReactor}.
+        """
+        from twisted.internet.gtk3reactor import (
+            Gtk3Reactor,
+            PortableGtk3Reactor,
+            install,
+        )
+
+        self.assertIs(Gtk3Reactor, gireactor.GIReactor)
+        self.assertIs(PortableGtk3Reactor, gireactor.PortableGIReactor)
+        self.assertIs(install, gireactor.install)
+
+    @skipIf(noGtkSkip, noGtkMessage)
     def test_gtkApplicationActivate(self):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
