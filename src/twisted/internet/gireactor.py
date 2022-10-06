@@ -21,11 +21,10 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
+from os import environ
 from typing import Union
 
-from os import environ
-
-from gi import require_version, get_required_version  # type:ignore[import]
+from gi import get_required_version, require_version  # type:ignore[import]
 from gi.repository import GLib  # type:ignore[import]
 
 from twisted.internet import _glibbase
