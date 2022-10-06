@@ -47,7 +47,7 @@ class TimeTestsBuilder(ReactorBuilder):
             )
 
         # Pick a pretty big delay.
-        delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
+        delayedCall = reactor.callLater(2**128 + 1, lambda: None)
 
         def stop():
             msg("Stopping the reactor")
@@ -80,13 +80,11 @@ class GlibTimeTestsBuilder(ReactorBuilder):
 
     requiredInterfaces = (IReactorTime,)
 
-    if platform.isWindows():
-        _reactors = ["twisted.internet.gtk2reactor.PortableGtkReactor"]
-    else:
-        _reactors = [
-            "twisted.internet.glib2reactor.Glib2Reactor",
-            "twisted.internet.gtk2reactor.Gtk2Reactor",
-        ]
+    _reactors = [
+        "twisted.internet.gireactor.PortableGIReactor"
+        if platform.isWindows()
+        else "twisted.internet.gireactor.GIReactor"
+    ]
 
     def test_timeout_add(self):
         """
@@ -95,7 +93,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        import gobject  # type: ignore[import]
+        from gi.repository import GObject
 
         reactor = self.buildReactor()
 
@@ -109,7 +107,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
             result.append(True)
             reactor.stop()
 
-        reactor.callWhenRunning(gobject.timeout_add, 10, gschedule)
+        reactor.callWhenRunning(GObject.timeout_add, 10, gschedule)
         self.runReactor(reactor, 5)
         self.assertEqual(result, [True])
 
