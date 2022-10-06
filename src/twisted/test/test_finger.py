@@ -5,8 +5,8 @@
 Tests for L{twisted.protocols.finger}.
 """
 
+from twisted.internet.testing import StringTransport
 from twisted.protocols import finger
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 
 

@@ -24,16 +24,16 @@ import hamcrest
 from twisted.internet import address
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.task import Clock
+from twisted.internet.testing import (
+    EventLoggingObserver,
+    NonStreamingProducer,
+    StringTransport,
+)
 from twisted.logger import globalLogPublisher
 from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.test.proto_helpers import (
-    EventLoggingObserver,
-    NonStreamingProducer,
-    StringTransport,
-)
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase

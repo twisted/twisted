@@ -12,6 +12,7 @@ import twisted.trial.unittest
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorCore
+from twisted.internet.testing import MemoryReactoy
 from twisted.logger import (
     FileLogObserver,
     LogLevel,
@@ -19,7 +20,6 @@ from twisted.logger import (
     textFileLogObserver,
 )
 from twisted.python.usage import UsageError
-from twisted.test.proto_helpers import MemoryReactor
 from ...reactors import NoSuchReactor
 from ...runner._exit import ExitStatus
 from ...runner.test.test_runner import DummyExit

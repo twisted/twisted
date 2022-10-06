@@ -24,7 +24,7 @@ from twisted.conch.test.test_recvline import (
     stdio,
 )
 from twisted.internet import defer, error
-from twisted.test.proto_helpers import StringTransport
+from twisted.inernet.testing import StringTransport
 from twisted.trial import unittest
 
 

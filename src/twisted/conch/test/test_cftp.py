@@ -24,13 +24,13 @@ from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTes
 from twisted.cred import portal
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransport
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 pyasn1 = requireModule("pyasn1")
