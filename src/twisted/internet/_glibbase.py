@@ -53,7 +53,7 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
-@define
+@define(eq=False)
 class GlibWaker(_UnixWaker):
     """
     Run scheduled events after waking up.
