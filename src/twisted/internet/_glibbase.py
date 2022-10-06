@@ -101,28 +101,17 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._writes = set()
         self._sources = {}
         self._glib = glib_module
-        self._gtk = gtk_module
         posixbase.PosixReactorBase.__init__(self)
 
         self._source_remove = self._glib.source_remove
         self._timeout_add = self._glib.timeout_add
 
-        def _mainquit():
-            if self._gtk.main_level():
-                self._gtk.main_quit()
-
-        if useGtk:
-            self._pending = self._gtk.events_pending
-            self._iteration = self._gtk.main_iteration_do
-            self._crash = _mainquit
-            self._run = self._gtk.main
-        else:
-            self.context = self._glib.main_context_default()
-            self._pending = self.context.pending
-            self._iteration = self.context.iteration
-            self.loop = self._glib.MainLoop()
-            self._crash = lambda: self._glib.idle_add(self.loop.quit)
-            self._run = self.loop.run
+        self.context = self._glib.main_context_default()
+        self._pending = self.context.pending
+        self._iteration = self.context.iteration
+        self.loop = self._glib.MainLoop()
+        self._crash = lambda: self._glib.idle_add(self.loop.quit)
+        self._run = self.loop.run
 
     def _handleSignals(self):
         # First, install SIGINT and friends:
@@ -319,23 +308,14 @@ class PortableGlibReactorBase(selectreactor.SelectReactor):
     def __init__(self, glib_module, gtk_module, useGtk=False):
         self._simtag = None
         self._glib = glib_module
-        self._gtk = gtk_module
         selectreactor.SelectReactor.__init__(self)
 
         self._source_remove = self._glib.source_remove
         self._timeout_add = self._glib.timeout_add
 
-        def _mainquit():
-            if self._gtk.main_level():
-                self._gtk.main_quit()
-
-        if useGtk:
-            self._crash = _mainquit
-            self._run = self._gtk.main
-        else:
-            self.loop = self._glib.MainLoop()
-            self._crash = lambda: self._glib.idle_add(self.loop.quit)
-            self._run = self.loop.run
+        self.loop = self._glib.MainLoop()
+        self._crash = lambda: self._glib.idle_add(self.loop.quit)
+        self._run = self.loop.run
 
     def crash(self):
         selectreactor.SelectReactor.crash(self)

@@ -21,24 +21,14 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
-import gi.pygtkcompat  # type: ignore[import]
-from gi.repository import GLib  # type: ignore[import]
+from typing import Union
+
+from gi.repository import GLib
 
 from twisted.internet import _glibbase
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.python import runtime
 
-# We require a sufficiently new version of pygobject, so always exists:
-_pygtkcompatPresent = True
-
-# Newer version of gi, so we can try to initialize compatibility layer; if
-# real pygtk was already imported we'll get ImportError at this point
-# rather than segfault, so unconditional import is fine.
-gi.pygtkcompat.enable()
-# At this point importing gobject will get you gi version, and importing
-# e.g. gtk will either fail in non-segfaulty way or use gi version if user
-# does gi.pygtkcompat.enable_gtk(). So, no need to prevent imports of
-# old school pygtk modules.
 if getattr(GLib, "threads_init", None) is not None:
     GLib.threads_init()
 
@@ -71,7 +61,7 @@ class GIReactor(_glibbase.GlibReactorBase):
         if useGtk is True:
             from gi.repository import Gtk as _gtk
 
-        _glibbase.GlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
+        _glibbase.GlibReactorBase.__init__(self, GLib, _gtk)
 
     def registerGApplication(self, app):
         """
@@ -111,11 +101,7 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
     """
 
     def __init__(self, useGtk=False):
-        _gtk = None
-        if useGtk is True:
-            from gi.repository import Gtk as _gtk
-
-        _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
+        _glibbase.PortableGlibReactorBase.__init__(self, GLib, None, useGtk=useGtk)
 
     def registerGApplication(self, app):
         """
@@ -125,12 +111,12 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
         raise NotImplementedError("GApplication is not currently supported on Windows.")
 
 
-def install(useGtk=False):
+def install(useGtk=False) -> Union[GIReactor, PortableGIReactor]:
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
 
-    @param useGtk: should GTK+ rather than glib event loop be
-        used (this will be slightly slower but does support GUI).
+    @param useGtk: A hint that the Gtk GUI will or will not be used.  Currently
+        does not modify any behavior.
     """
     if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)

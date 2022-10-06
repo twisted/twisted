@@ -175,21 +175,3 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         self.assertEqual(
             exc.args[0], "Can't register more than one application instance."
         )
-
-
-class PygtkCompatibilityTests(TestCase):
-    """
-    pygtk imports are either prevented, or a compatibility layer is used if
-    possible.
-    """
-
-    def test_compatibilityLayer(self):
-        """
-        If compatibility layer is present, importing gobject uses
-        the gi compatibility layer.
-        """
-        if "gi.pygtkcompat" not in sys.modules:
-            raise SkipTest("This version of gi doesn't include pygtkcompat.")
-        import gobject  # type: ignore[import]
-
-        self.assertTrue(gobject.__name__.startswith("gi."))
