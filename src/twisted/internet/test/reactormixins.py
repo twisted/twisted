@@ -282,7 +282,7 @@ class ReactorBuilder:
             # doesn't fail.
             log.err(None, "Failed to install reactor")
             self.flushLoggedErrors()
-            raise SkipTest(Failure().getErrorMessage())
+            raise SkipTest(Failure().getTraceback())
         else:
             if self.requiredInterfaces is not None:
                 missing = [
@@ -365,7 +365,7 @@ class ReactorBuilder:
                 try:
                     reactorFactory = namedAny(reactor)
                 except BaseException:
-                    skip = Failure().getErrorMessage()
+                    skip = Failure().getTraceback()
 
             testcase.__name__ = name
             testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
