@@ -18,24 +18,24 @@ else:
     giImported = True
     # If we can import Gio, we ought to be able to import our reactor.
     from os import environ
-
     from gi import get_required_version, require_version  # type: ignore[import]
-
     from twisted.internet import gireactor
 
-    try:
-        require_version(
-            "Gtk",
-            environ.get(
-                "TWISTED_TEST_GTK_VERSION",
-                get_required_version("Gtk") or "4.0",
-            ),
-        )
-        gtkVersion = get_required_version("Gtk")
-    except ValueError as ve:
-        gtkVersion = str(ve)
+    requestedVersion = environ.get("TWISTED_TEST_GTK_VERSION")
+    gtkVersion = ""
+    requireErrors = []
+    for each_version in (
+        [requestedVersion] if requestedVersion is not None else ["4.0", "3.0"]
+    ):
+        try:
+            require_version("Gtk", each_version)
+        except ValueError as ve:
+            requireErrors.append(ve)
+        else:
+            gtkVersion = get_required_version("Gtk")
+            break
     else:
-        from gi.repository import Gtk
+        gtkVersion = ", ".join(str(ve) for ve in requireErrors)
 
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -47,6 +47,9 @@ if not giImported:
 
 noGtkSkip = (gtkVersion is None) or (gtkVersion not in ("3.0", "4.0"))
 noGtkMessage = f"Unknown GTK version: {repr(gtkVersion)}"
+
+if not noGtkSkip:
+    from gi.repository import Gtk
 
 
 class GApplicationRegistrationTests(ReactorBuilder, TestCase):
