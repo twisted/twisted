@@ -18,7 +18,9 @@ else:
     giImported = True
     # If we can import Gio, we ought to be able to import our reactor.
     from os import environ
+
     from gi import get_required_version, require_version  # type: ignore[import]
+
     from twisted.internet import gireactor
 
     requestedVersion = environ.get("TWISTED_TEST_GTK_VERSION")
