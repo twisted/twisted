@@ -242,7 +242,17 @@ include = [
 ]
 exclude = [
     # Do not include the news fragments
-    "/src/twisted/newsfragments",
+    "src/twisted/conch/newsfragments",
+    "src/twisted/trial/newsfragments",
+    "src/twisted/mail/newsfragments",
+    "src/twisted/newsfragments",
+    "src/twisted/persisted/newsfragments",
+    "src/twisted/names/newsfragments",
+    "src/twisted/words/newsfragments",
+    "src/twisted/scripts/newsfragments",
+    "src/twisted/runner/newsfragments",
+    "src/twisted/application/newsfragments",
+    "src/twisted/web/newsfragments",
 ]
 
 [tool.towncrier]
