@@ -24,10 +24,14 @@ else:
     from twisted.internet import gireactor
 
     try:
+        require_version(
+            "Gtk",
+            environ.get(
+                "TWISTED_TEST_GTK_VERSION",
+                get_required_version("Gtk") or "4.0",
+            ),
+        )
         gtkVersion = get_required_version("Gtk")
-        if gtkVersion is None:
-            require_version("Gtk", environ.get("TWISTED_TEST_GTK_VERSION", "4.0"))
-            gtkVersion = get_required_version("Gtk")
     except ValueError as ve:
         gtkVersion = str(ve)
     else:
