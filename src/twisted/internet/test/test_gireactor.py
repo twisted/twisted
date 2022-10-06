@@ -6,7 +6,6 @@ GI/GTK3 reactor tests.
 """
 
 
-import sys
 from unittest import skipIf
 
 try:
