@@ -20,6 +20,7 @@ else:
     from twisted.internet import gireactor
     from gi import require_version, get_required_version
     from os import environ
+
     try:
         gtkVersion = get_required_version("Gtk")
         if gtkVersion is None:
@@ -92,7 +93,10 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
 
         self.runReactor(app, reactor)
 
-    @skipIf((gtkVersion is None or gtkVersion not in "3.0", "4.0"), "Unknown GTK version: {repr(gtkVersion)}")
+    @skipIf(
+        (gtkVersion is None or gtkVersion not in "3.0", "4.0"),
+        "Unknown GTK version: {repr(gtkVersion)}",
+    )
     def test_gtkApplicationActivate(self):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
