@@ -96,8 +96,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         self.runReactor(app, reactor)
 
     @skipIf(
-        (gtkVersion is None or gtkVersion not in "3.0", "4.0"),
-        "Unknown GTK version: {repr(gtkVersion)}",
+        ((gtkVersion is None) or (gtkVersion not in ("3.0", "4.0"))),
+        f"Unknown GTK version: {repr(gtkVersion)}",
     )
     def test_gtkApplicationActivate(self):
         """
