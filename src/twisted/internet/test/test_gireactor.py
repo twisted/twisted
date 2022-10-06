@@ -2,7 +2,8 @@
 # See LICENSE for details.
 
 """
-GI/GTK3 reactor tests.
+GObject Introspection reactor tests; i.e. `gireactor` module for gio/glib/gtk
+integration.
 """
 
 
@@ -10,21 +11,23 @@ from unittest import skipIf
 
 try:
     from gi.repository import Gio  # type: ignore[import]
-
-    from twisted.internet import gireactor as _gireactor
 except ImportError:
-    gireactor = None
-    gtk3reactor = None
+    giImported = False
+    gtkVersion = None
 else:
-    gireactor = _gireactor
-    # gtk3reactor may be unavailable even if gireactor is available; in
-    # particular in pygobject 3.4/gtk 3.6, when no X11 DISPLAY is found.
+    giImported = True
+    # If we can import Gio, we ought to be able to import our reactor.
+    from twisted.internet import gireactor
+    from gi import require_version, get_required_version
+    from os import environ
     try:
-        from twisted.internet import gtk3reactor as _gtk3reactor
-    except ImportError:
-        gtk3reactor = None
+        gtkVersion = get_required_version("Gtk")
+        if gtkVersion is None:
+            require_version("Gtk", environ.get("TWISTED_TEST_GTK_VERSION", "4.0"))
+            gtkVersion = get_required_version("Gtk")
+    except ValueError as ve:
+        gtkVersion = str(ve)
     else:
-        gtk3reactor = _gtk3reactor
         from gi.repository import Gtk
 
 from twisted.internet.error import ReactorAlreadyRunning
@@ -32,8 +35,8 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.trial.unittest import SkipTest, TestCase
 
 # Skip all tests if gi is unavailable:
-if gireactor is None:
-    skip = "gtk3/gi not importable"
+if not giImported:
+    skip = "GObject Introspection `gi` module not importable"
 
 
 class GApplicationRegistrationTests(ReactorBuilder, TestCase):
@@ -89,21 +92,17 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
 
         self.runReactor(app, reactor)
 
-    @skipIf(
-        gtk3reactor is None,
-        "Gtk unavailable (may require running with X11 DISPLAY env set)",
-    )
+    @skipIf((gtkVersion is None or gtkVersion not in "3.0", "4.0"), "Unknown GTK version: {repr(gtkVersion)}")
     def test_gtkApplicationActivate(self):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
         """
-        reactor = gtk3reactor.Gtk3Reactor()
+        reactor = gireactor.GIReactor()
         self.addCleanup(self.unbuildReactor, reactor)
         app = Gtk.Application(
             application_id="com.twistedmatrix.trial.gtk3reactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
         )
-
         self.runReactor(app, reactor)
 
     def test_portable(self):

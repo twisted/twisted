@@ -23,6 +23,9 @@ On Python 3, pygobject v3.4 or later is required.
 
 from typing import Union
 
+from os import environ
+
+from gi import require_version, get_required_version  # type:ignore[import]
 from gi.repository import GLib  # type:ignore[import]
 
 from twisted.internet import _glibbase
@@ -57,11 +60,7 @@ class GIReactor(_glibbase.GlibReactorBase):
     _gapplication = None
 
     def __init__(self, useGtk=False):
-        _gtk = None
-        if useGtk is True:
-            from gi.repository import Gtk as _gtk
-
-        _glibbase.GlibReactorBase.__init__(self, GLib, _gtk)
+        _glibbase.GlibReactorBase.__init__(self, GLib, None)
 
     def registerGApplication(self, app):
         """
