@@ -23,7 +23,7 @@ On Python 3, pygobject v3.4 or later is required.
 
 from typing import Union
 
-from gi.repository import GLib
+from gi.repository import GLib  # type:ignore[import]
 
 from twisted.internet import _glibbase
 from twisted.internet.error import ReactorAlreadyRunning
@@ -111,7 +111,7 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
         raise NotImplementedError("GApplication is not currently supported on Windows.")
 
 
-def install(useGtk=False) -> Union[GIReactor, PortableGIReactor]:
+def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
 
