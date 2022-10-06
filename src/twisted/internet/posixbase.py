@@ -30,7 +30,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log
 from twisted.python.runtime import platform, platformType
-from ._signals import SignalHandling, _ChildSignalHandling, _MultiSignalHandling, _Waker
+from ._signals import SignalHandling, _ChildSignalHandling, _MultiSignalHandling, Waker _Waker
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")
