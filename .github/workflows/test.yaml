@@ -221,7 +221,6 @@ jobs:
           libcairo2-dev \
           libffi-dev \
           gir1.2-gtk-3.0 \
-          gir1.2-gtk-4.0 \
           xvfb
 
     - name: Test
