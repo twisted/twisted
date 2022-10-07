@@ -16,6 +16,12 @@ Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
 """
 
+from incremental import Version
+
+from ._deprecate import deprecatedGnomeReactor
+
+deprecatedGnomeReactor("gtk2reactor", Version("Twisted", "NEXT", 0, 0))
+
 # System Imports
 import sys
 
