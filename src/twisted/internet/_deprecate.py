@@ -4,8 +4,10 @@ Support similar deprecation of several reactors.
 
 import warnings
 
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
 from incremental import Version, getVersionString
+
+from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
+
 
 def deprecatedGnomeReactor(name: str, version: Version) -> None:
     """
