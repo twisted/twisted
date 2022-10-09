@@ -81,6 +81,17 @@ class WorkerReporterTests(SynchronousTestCase):
             errors=has_length(1),
         )
 
+    def test_addErrorGreaterThan64kEncoded(self) -> None:
+        """
+        L{WorkerReporter} propagates errors with a string representation that
+        is smaller than an implementation-specific limit but which encode to a
+        byte representation that exceeds this limit.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_exceptionGreaterThan64kEncoded"),
+            errors=has_length(1),
+        )
+
     def test_addErrorTuple(self) -> None:
         """
         L{WorkerReporter} propagates errors from pyunit's TestCases.

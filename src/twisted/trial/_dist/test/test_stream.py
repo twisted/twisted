@@ -16,7 +16,7 @@ from hamcrest import (
     raises,
 )
 from hypothesis import given
-from hypothesis.strategies import integers, just, lists, randoms, text
+from hypothesis.strategies import integers, just, lists, randoms, text, binary
 
 from twisted.internet.defer import Deferred, fail
 from twisted.internet.interfaces import IProtocol
@@ -36,11 +36,11 @@ class StreamReceiverTests(SynchronousTestCase):
     Tests for L{StreamReceiver}
     """
 
-    @given(lists(lists(text())), randoms())
-    def test_streamReceived(self, streams: List[str], random: Random) -> None:
+    @given(lists(lists(binary())), randoms())
+    def test_streamReceived(self, streams: List[List[bytes]], random: Random) -> None:
         """
         All data passed to L{StreamReceiver.write} is returned by a call to
-        L{StreamReceiver.finish} with a matching C{streamId} .
+        L{StreamReceiver.finish} with a matching C{streamId}.
         """
         receiver = StreamReceiver()
         streamIds = [receiver.open() for _ in streams]
@@ -125,7 +125,7 @@ class AMPStreamReceiver(AMP):
         return {"streamId": self.streams.open()}
 
     @StreamWrite.responder
-    def streamWrite(self, streamId: int, data: str) -> Dict[str, object]:
+    def streamWrite(self, streamId: int, data: bytes) -> Dict[str, object]:
         self.streams.write(streamId, data)
         return {}
 
@@ -194,13 +194,13 @@ class StreamTests(SynchronousTestCase):
     Tests for L{stream}.
     """
 
-    @given(lists(text()))
-    def test_stream(self, chunks):
+    @given(lists(binary()))
+    def test_stream(self, chunks: List[bytes]) -> None:
         """
         All of the chunks passed to L{stream} are sent in order over a
         stream using the given AMP connection.
         """
         sender = AMP()
         streams = StreamReceiver()
-        streamId = interact(AMPStreamReceiver(streams), sender, stream(sender, chunks))
+        streamId = interact(AMPStreamReceiver(streams), sender, stream(sender, iter(chunks)))
         assert_that(streams.finish(streamId), is_(equal_to(chunks)))
