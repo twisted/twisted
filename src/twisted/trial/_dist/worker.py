@@ -210,7 +210,9 @@ class LocalWorkerAMP(AMP):
         @param error: A message describing the error.
         """
         error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
-        frames = [frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)]
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # Wrap the error message in ``WorkerException`` because it is not
         # possible to transfer arbitrary exception values over the AMP
         # connection to the main process but we must give *some* Exception
@@ -238,7 +240,9 @@ class LocalWorkerAMP(AMP):
             peer.
         """
         fail = b"".join(self._streams.finish(failStreamId)).decode("utf-8")
-        frames = [frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)]
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # See addError for info about use of WorkerException here.
         failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)

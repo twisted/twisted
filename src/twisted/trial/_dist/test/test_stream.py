@@ -16,7 +16,7 @@ from hamcrest import (
     raises,
 )
 from hypothesis import given
-from hypothesis.strategies import integers, just, lists, randoms, text, binary
+from hypothesis.strategies import binary, integers, just, lists, randoms, text
 
 from twisted.internet.defer import Deferred, fail
 from twisted.internet.interfaces import IProtocol
@@ -202,5 +202,7 @@ class StreamTests(SynchronousTestCase):
         """
         sender = AMP()
         streams = StreamReceiver()
-        streamId = interact(AMPStreamReceiver(streams), sender, stream(sender, iter(chunks)))
+        streamId = interact(
+            AMPStreamReceiver(streams), sender, stream(sender, iter(chunks))
+        )
         assert_that(streams.finish(streamId), is_(equal_to(chunks)))
