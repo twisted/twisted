@@ -17,7 +17,7 @@ from attrs import Factory, define
 from typing_extensions import Literal
 
 from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.protocols.amp import AMP
+from twisted.protocols.amp import AMP, MAX_VALUE_LENGTH
 from twisted.python.failure import Failure
 from twisted.python.reflect import qual
 from twisted.trial._dist import managercommands
@@ -45,7 +45,7 @@ async def addError(
     :param frames: The lines of the traceback associated with the error.
     """
 
-    errorStreamId = await stream(amp, chunk(error.encode("utf-8"), 2 ** 16 - 1))
+    errorStreamId = await stream(amp, chunk(error.encode("utf-8"), MAX_VALUE_LENGTH))
     framesStreamId = await stream(amp, (frame.encode("utf-8") for frame in frames))
 
     await amp.callRemote(
@@ -70,7 +70,7 @@ async def addFailure(
     :param fail: The string representation of the failure.
     :param frames: The lines of the traceback associated with the error.
     """
-    failStreamId = await stream(amp, chunk(fail.encode("utf-8"), 2 ** 16 - 1))
+    failStreamId = await stream(amp, chunk(fail.encode("utf-8"), MAX_VALUE_LENGTH))
     framesStreamId = await stream(amp, (frame.encode("utf-8") for frame in frames))
 
     await amp.callRemote(
@@ -91,7 +91,7 @@ async def addExpectedFailure(amp: AMP, testName: str, error: str, todo: str) -> 
     :param error: The string representation of the expected failure.
     :param todo: The string description of the expectation.
     """
-    errorStreamId = await stream(amp, chunk(error.encode("utf-8"), 2 ** 16 - 1))
+    errorStreamId = await stream(amp, chunk(error.encode("utf-8"), MAX_VALUE_LENGTH))
 
     await amp.callRemote(
         managercommands.AddExpectedFailure,
