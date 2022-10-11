@@ -44,15 +44,20 @@ from CoreFoundation import (  # type: ignore[import]
 )
 
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase, _Waker
+from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
 from twisted.python import log
+
+# We know that we're going to run on macOS so we can just pick the
+# POSIX-appropriate waker.  This also avoids having a dynamic base class and
+# so lets more things get type checked.
+from ._signals import _UnixWaker
 
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
 
 
-class _WakerPlus(_Waker):
+class _WakerPlus(_UnixWaker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
     iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
@@ -74,7 +79,7 @@ class _WakerPlus(_Waker):
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
         next timed iteration.
         """
-        result = _Waker.doRead(self)
+        result = super().doRead()
         self.reactor._scheduleSimulate(True)
         return result
 
