@@ -209,8 +209,10 @@ class LocalWorkerAMP(AMP):
 
         @param error: A message describing the error.
         """
-        error = "".join(self._streams.finish(errorStreamId))
-        frames = self._streams.finish(framesStreamId)
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # Wrap the error message in ``WorkerException`` because it is not
         # possible to transfer arbitrary exception values over the AMP
         # connection to the main process but we must give *some* Exception
@@ -237,8 +239,10 @@ class LocalWorkerAMP(AMP):
             of the traceback for this error were previously completely sent to the
             peer.
         """
-        fail = "".join(self._streams.finish(failStreamId))
-        frames = self._streams.finish(framesStreamId)
+        fail = b"".join(self._streams.finish(failStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # See addError for info about use of WorkerException here.
         failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
@@ -262,7 +266,7 @@ class LocalWorkerAMP(AMP):
         @param errorStreamId: The identifier of a stream over which the text
             of this error was previously completely sent to the peer.
         """
-        error = "".join(self._streams.finish(errorStreamId))
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
         _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
