@@ -1,0 +1,1 @@
+The ``systemd`` endpoint parser's ``index`` parameter is now documented as leading to non-deterministic results in which descriptor is selected.  The new ``name`` parameter is now documented as preferred.
