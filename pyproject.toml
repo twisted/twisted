@@ -61,9 +61,6 @@ dev-release = [
     "readthedocs-sphinx-ext ~= 2.1",
     "sphinx >= 4.1.2, <6",
 ]
-dev_release = [
-    "twisted[dev-release]",
-]
 
 # All the extra tools used to help with the development process.
 dev = [
@@ -95,9 +92,6 @@ conch-nacl = [
     # Used to support Ed25519 keys on systems with OpenSSL < 1.1.1b
     "PyNaCl",
 ]
-conch_nacl = [
-    "twisted[conch-nacl]",
-]
 
 serial = [
     "pyserial >= 3.0",
@@ -116,9 +110,6 @@ contextvars = [
 all-non-platform = [
     "twisted[test,tls,conch,serial,http2,contextvars]",
 ]
-all_non_platform = [
-    "twisted[all-non-platform]",
-]
 
 macos-platform = [
     "twisted[all-non-platform]",
@@ -126,31 +117,19 @@ macos-platform = [
     "pyobjc-framework-CFNetwork",
     "pyobjc-framework-Cocoa",
 ]
-macos_platform = [
-    "twisted[macos-platform]",
-]
 
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
 ]
-windows_platform = [
-    "twisted[windows-platform]",
-]
 
 osx-platform = [
     "twisted[macos-platform]",
-]
-osx_platform = [
-    "twisted[osx-platform]",
 ]
 
 gtk-platform = [
     "twisted[all-non-platform]",
     "pygobject",
-]
-gtk_platform = [
-    "twisted[gtk-platform]",
 ]
 
 mypy = [
@@ -159,6 +138,34 @@ mypy = [
     "mypy-zope==0.3.4",
     "types-setuptools",
     "types-pyOpenSSL",
+]
+
+# We define all the legacy dependency targets using the
+# underscore for backward compatibility.
+# Once underscores are no longer supported by Python package tools
+# like pip and PyPI, these can be removed.
+# Any new extra dependency should not be added here.
+# This list is here only for backward compatiblility.
+dev_release = [
+    "twisted[dev-release]",
+]
+conch_nacl = [
+    "twisted[conch-nacl]",
+]
+all_non_platform = [
+    "twisted[all-non-platform]",
+]
+macos_platform = [
+    "twisted[macos-platform]",
+]
+windows_platform = [
+    "twisted[windows-platform]",
+]
+osx_platform = [
+    "twisted[osx-platform]",
+]
+gtk_platform = [
+    "twisted[gtk-platform]",
 ]
 
 [project.scripts]
@@ -181,6 +188,8 @@ Source = "https://github.com/twisted/twisted"
 Twitter = "https://twitter.com/twistedmatrix"
 
 [tool.hatch.metadata]
+# This is here to enable backward compatible extra dependencies
+# that are defined using underscores.
 allow-ambiguous-features = true
 
 [tool.hatch.version]
@@ -207,8 +216,6 @@ packages = [
     "src/twisted",
 ]
 exclude = [
-    "*.c",
-    "*.h",
     "*.pxi",
     "*.pyx",
     "build.bat",
@@ -239,20 +246,6 @@ include = [
     "/.coveragerc",
     "/mypy.ini",
     "/tox.ini",
-]
-exclude = [
-    # Do not include the news fragments
-    "src/twisted/conch/newsfragments",
-    "src/twisted/trial/newsfragments",
-    "src/twisted/mail/newsfragments",
-    "src/twisted/newsfragments",
-    "src/twisted/persisted/newsfragments",
-    "src/twisted/names/newsfragments",
-    "src/twisted/words/newsfragments",
-    "src/twisted/scripts/newsfragments",
-    "src/twisted/runner/newsfragments",
-    "src/twisted/application/newsfragments",
-    "src/twisted/web/newsfragments",
 ]
 
 [tool.towncrier]
