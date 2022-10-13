@@ -1636,7 +1636,7 @@ class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
     version = Version("Bar", 1, 2, 3)
 
     deprecatedModuleAttribute(
-        GetDeprecatedModuleAttributeTests.version,
+        version,
         "It's old and clunky",
         __name__,
         "somethingOld",

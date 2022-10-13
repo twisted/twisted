@@ -12,7 +12,7 @@ import twisted.trial.unittest
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorCore
-from twisted.internet.testing import MemoryReactoy
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import (
     FileLogObserver,
     LogLevel,
