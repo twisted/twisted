@@ -1635,6 +1635,13 @@ class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
 
     version = Version("Bar", 1, 2, 3)
 
+    deprecatedModuleAttribute(
+        GetDeprecatedModuleAttributeTests.version,
+        "It's old and clunky",
+        __name__,
+        "somethingOld",
+    )
+
     def test_deprecated(self):
         """
         L{getDeprecatedModuleAttribute} returns the specified attribute and
@@ -1704,14 +1711,6 @@ def somethingOld():
 
 # A non-deprecated alias of _somethingOld.
 _somethingOld = somethingOld
-
-
-deprecatedModuleAttribute(
-    GetDeprecatedModuleAttributeTests.version,
-    "It's old and clunky",
-    __name__,
-    "somethingOld",
-)
 
 
 def somethingNew():
