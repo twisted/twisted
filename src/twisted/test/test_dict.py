@@ -19,6 +19,7 @@ class ParamTests(unittest.TestCase):
     def testParseParam(self):
         """Testing command response handling"""
         from twisted.protocols import dict
+
         params = []
         rest = paramString
         while 1:

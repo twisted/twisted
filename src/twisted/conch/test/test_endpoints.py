@@ -31,7 +31,7 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.testing import (
     EventLoggingObserver,
     MemoryReactorClock,
-    StringTransport
+    StringTransport,
 )
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.compat import networkString
