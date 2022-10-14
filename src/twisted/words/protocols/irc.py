@@ -2620,7 +2620,7 @@ class IRCClient(basic.LineReceiver):
         When I get a message that's so broken I can't use it.
 
         @param line: The indecipherable message.
-        @type line: L{bytes}
+        @type line: L{str}
 
         @param excType: The exception type of the exception raised by the
             message.
