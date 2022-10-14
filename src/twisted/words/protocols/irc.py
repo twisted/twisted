@@ -2668,7 +2668,7 @@ class IRCClient(basic.LineReceiver):
                     line = line.decode(codec)
                     break
                 except ValueError:
-                    log.msg(f"Couldn't decode line '{line}' with codec {codec}")
+                    log.msg(f"Couldn't decode line {line!r} with codec {codec}")
             else:
                 line = line.decode(
                     self.decodeCodecs[0], self.decodeFallbackErrorhandling
