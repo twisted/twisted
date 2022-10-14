@@ -2653,7 +2653,7 @@ class IRCClient(basic.LineReceiver):
         basic.LineReceiver.dataReceived(self, data)
 
     def lineReceived(self, line):
-        if bytes != str and isinstance(line, bytes):
+        if isinstance(line, bytes):
             # decode bytes from transport to str
             for codec in self.decode_codecs:
                 try:
