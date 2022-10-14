@@ -2592,9 +2592,7 @@ class ClientDecodingTests(IRCTestCase):
         character 'U+FFFD'.
         """
         self.client.decodeCodecs = IRCClient.decodeCodecs
-        self.client.decodeFallbackErrorhandling = (
-            IRCClient.decodeFallbackErrorhandling
-        )
+        self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
         prefix = ":foo!bar@baz"
         line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
         self.client.lineReceived(line_bytes)
@@ -2614,9 +2612,7 @@ class ClientDecodingTests(IRCTestCase):
         the fallback errorhandling.
         """
         self.client.decodeCodecs = ["utf-8", "latin-1"]
-        self.client.decodeFallbackErrorhandling = (
-            IRCClient.decodeFallbackErrorhandling
-        )
+        self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
         prefix = ":foo!bar@baz"
         line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
         self.client.lineReceived(line_bytes)
