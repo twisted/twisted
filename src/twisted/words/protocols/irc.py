@@ -1197,6 +1197,14 @@ class IRCClient(basic.LineReceiver):
     @ivar heartbeatInterval: Interval, in seconds, to send I{PING} messages to
         the server as a form of keepalive, defaults to 120 seconds. Use L{None}
         to disable the heartbeat.
+
+    @type decodeCodecs: C{list} of C{str}
+    @ivar decodeCodecs: Codecs that will be used for decoding incoming messages.
+
+    @type decodeFallbackErrorhandling: C{str}
+    @ivar decodeFallbackErrorhandling: Error handling strategy used for decoding
+        incoming messages in case decoding with all specified codecs fails. The
+        first given codec is used.
     """
 
     hostname = None
@@ -1238,8 +1246,8 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
-    decode_codecs = ["utf-8"]  # IRC protocol doesn't specify encoding
-    decode_fallback_errorhandling = "replace"  # see bytes.decode
+    decodeCodecs: list[str] = ["utf-8"]  # IRC protocol doesn't specify encoding
+    decodeFallbackErrorhandling: str = "replace"  # see bytes.decode
 
     def _reallySendLine(self, line):
         quoteLine = lowQuote(line)
@@ -2655,7 +2663,7 @@ class IRCClient(basic.LineReceiver):
     def lineReceived(self, line):
         if isinstance(line, bytes):
             # decode bytes from transport to str
-            for codec in self.decode_codecs:
+            for codec in self.decodeCodecs:
                 try:
                     line = line.decode(codec)
                     break
@@ -2663,7 +2671,7 @@ class IRCClient(basic.LineReceiver):
                     log.msg(f"Couldn't decode line '{line}' with codec {codec}")
             else:
                 line = line.decode(
-                    self.decode_codecs[0], self.decode_fallback_errorhandling
+                    self.decodeCodecs[0], self.decodeFallbackErrorhandling
                 )
 
         line = lowDequote(line)

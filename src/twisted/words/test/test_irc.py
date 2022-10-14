@@ -2584,16 +2584,16 @@ class ClientDecodingTests(IRCTestCase):
         methods = ["handleCommand", "badMessage"]
         self.client = CollectorClient(methods)
 
-    def test_decoding_unspecified_codec(self):
+    def testDecodingUnspecifiedCodec(self):
         """
-        Test that message decoding doesn't fail when no fitting codec was
-        specified and default decode error handling is used. Characters that
-        can not be decoded with UTF8 will be replaced by the unicode
-        replacement character 'U+FFFD'.
+        Message decoding doesn't fail when no fitting codec was specified and
+        default decode error handling is used. Characters that can not be
+        decoded with UTF8 will be replaced by the unicode replacement
+        character 'U+FFFD'.
         """
-        self.client.decode_codecs = IRCClient.decode_codecs
-        self.client.decode_fallback_errorhandling = (
-            IRCClient.decode_fallback_errorhandling
+        self.client.decodeCodecs = IRCClient.decodeCodecs
+        self.client.decodeFallbackErrorhandling = (
+            IRCClient.decodeFallbackErrorhandling
         )
         prefix = ":foo!bar@baz"
         line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
@@ -2608,14 +2608,14 @@ class ClientDecodingTests(IRCTestCase):
             ],
         )
 
-    def test_decoding_specified_codec(self):
+    def testDecodingSpecifiedCodec(self):
         """
-        Test that message decoding will try the specified codecs before using
+        Message decoding will try the specified codecs before using
         the fallback errorhandling.
         """
-        self.client.decode_codecs = ["utf-8", "latin-1"]
-        self.client.decode_fallback_errorhandling = (
-            IRCClient.decode_fallback_errorhandling
+        self.client.decodeCodecs = ["utf-8", "latin-1"]
+        self.client.decodeFallbackErrorhandling = (
+            IRCClient.decodeFallbackErrorhandling
         )
         prefix = ":foo!bar@baz"
         line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
@@ -2625,13 +2625,13 @@ class ClientDecodingTests(IRCTestCase):
             [("handleCommand", ("PRIVMSG", prefix[1:], ["foo", "ä"]))],
         )
 
-    def test_decoding_errorhandling(self):
+    def testDecodingErrorhandling(self):
         """
-        Test that fallback errorhandling for message decoding can be overridden
+        Fallback errorhandling for message decoding can be overridden
         by the user.
         """
-        self.client.decode_codecs = ["utf-8"]
-        self.client.decode_fallback_errorhandling = "strict"
+        self.client.decodeCodecs = ["utf-8"]
+        self.client.decodeFallbackErrorhandling = "strict"
         prefix = ":foo!bar@baz"
         line_bytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
         self.assertRaises(UnicodeDecodeError, self.client.lineReceived, line_bytes)
