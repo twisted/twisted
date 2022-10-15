@@ -146,6 +146,17 @@ class TestAsynchronousFail(unittest.TestCase):
         """
         raise LargeError(2 ** 16)
 
+    def test_exceptionGreaterThan64kEncoded(self) -> None:
+        """
+        A test which synchronously raises an exception with a long string
+        representation including non-ascii content.
+        """
+        # The exception text itself is not greater than 64k but SNOWMAN
+        # encodes to 3 bytes with UTF-8 so the length of the UTF-8 encoding of
+        # the string representation of this exception will be greater than 2
+        # ** 16.
+        raise Exception("\N{SNOWMAN}" * 2 ** 15)
+
 
 class ErrorTest(unittest.SynchronousTestCase):
     """
