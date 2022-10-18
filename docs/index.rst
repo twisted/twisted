@@ -19,11 +19,6 @@ Contents:
     development/index
 
 .. toctree::
-    :maxdepth: 1
-
-    historic/index
-
-.. toctree::
    :maxdepth: 1
    :caption: Quick links
 
