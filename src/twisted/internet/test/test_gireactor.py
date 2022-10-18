@@ -23,15 +23,22 @@ else:
 
     from twisted.internet import gireactor
 
-    gtkVersion = ""
-    for each_version in environ.get("TWISTED_TEST_GTK_VERSION", "4.0,3.0").split(","):
+    def requireEach(someVersion: str) -> str:
         try:
-            require_version("Gtk", each_version)
+            require_version("Gtk", someVersion)
         except ValueError as ve:
-            gtkVersion += (", " if gtkVersion else "") + str(ve)
+            return str(ve)
         else:
-            gtkVersion = get_required_version("Gtk")
-            break
+            return ""
+
+    errorMessage = ", ".join(
+        requireEach(version)
+        for version in environ.get("TWISTED_TEST_GTK_VERSION", "4.0,3.0").split(",")
+    )
+
+    actualVersion = get_required_version("Gtk")
+    gtkVersion = actualVersion if actualVersion is not None else errorMessage
+
 
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.test.reactormixins import ReactorBuilder
