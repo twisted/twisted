@@ -13,11 +13,13 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
+from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
 from twisted.internet import base, posixbase, selectreactor
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.abstract import FileDescriptor
+from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
 from ._signals import _UnixWaker
 
@@ -59,6 +61,16 @@ class GlibWaker(_UnixWaker):
         self.reactor._simulate()
 
 
+def _loopQuitter(
+    idleAdd: Callable[[Callable[[], None]], None], loopQuit: Callable[[], None]
+) -> Callable[[], None]:
+    """
+    Combine the C{glib.idle_add} and C{glib.MainLoop.quit} functions into a
+    function suitable for crashing the reactor.
+    """
+    return lambda: idleAdd(loopQuit)
+
+
 @implementer(IReactorFDSet)
 class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
@@ -96,11 +108,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     # callbacks queued from a thread:
     _wakerFactory = GlibWaker
 
-    def __init__(self, glib_module, gtk_module, useGtk=False):
+    def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
-        self._reads = set()
-        self._writes = set()
-        self._sources = {}
+        self._reads: Set[IReadDescriptor] = set()
+        self._writes: Set[IWriteDescriptor] = set()
+        self._sources: Dict[FileDescriptor, int] = {}
         self._glib = glib_module
         posixbase.PosixReactorBase.__init__(self)
 
@@ -111,7 +123,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._pending = self.context.pending
         self._iteration = self.context.iteration
         self.loop = self._glib.MainLoop()
-        self._crash = lambda: self._glib.idle_add(self.loop.quit)
+        self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
         self._run = self.loop.run
 
     def _handleSignals(self):
@@ -306,7 +318,7 @@ class PortableGlibReactorBase(selectreactor.SelectReactor):
     Sockets aren't supported by GObject's input_add on Win32.
     """
 
-    def __init__(self, glib_module, gtk_module, useGtk=False):
+    def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
         self._glib = glib_module
         selectreactor.SelectReactor.__init__(self)
@@ -315,7 +327,7 @@ class PortableGlibReactorBase(selectreactor.SelectReactor):
         self._timeout_add = self._glib.timeout_add
 
         self.loop = self._glib.MainLoop()
-        self._crash = lambda: self._glib.idle_add(self.loop.quit)
+        self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
         self._run = self.loop.run
 
     def crash(self):
