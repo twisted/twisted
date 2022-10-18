@@ -23,11 +23,8 @@ else:
 
     from twisted.internet import gireactor
 
-    requestedVersion = environ.get("TWISTED_TEST_GTK_VERSION")
     gtkVersion = ""
-    for each_version in (
-        [requestedVersion] if requestedVersion is not None else ["4.0", "3.0"]
-    ):
+    for each_version in environ.get("TWISTED_TEST_GTK_VERSION", "4.0,3.0").split(","):
         try:
             require_version("Gtk", each_version)
         except ValueError as ve:
