@@ -25,19 +25,16 @@ else:
 
     requestedVersion = environ.get("TWISTED_TEST_GTK_VERSION")
     gtkVersion = ""
-    requireErrors = []
     for each_version in (
         [requestedVersion] if requestedVersion is not None else ["4.0", "3.0"]
     ):
         try:
             require_version("Gtk", each_version)
         except ValueError as ve:
-            requireErrors.append(ve)
+            gtkVersion += (", " if gtkVersion else "") + str(ve)
         else:
             gtkVersion = get_required_version("Gtk")
             break
-    else:
-        gtkVersion = ", ".join(str(ve) for ve in requireErrors)
 
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.test.reactormixins import ReactorBuilder
