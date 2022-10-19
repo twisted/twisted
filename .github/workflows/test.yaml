@@ -160,7 +160,9 @@ jobs:
             trial-target: 'twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
             job-name: 'with-coverage'
 
-          # We run selected test for GTK reactor inside X virtual framebuffer.
+          # We run the full test suite with the GI reactor against an X virtual
+          # framebuffer server.  This covers our integration with the version
+          # of Gtk packaged within our selected version of Linux above.
           - python-version: '3.7'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk_platform'
