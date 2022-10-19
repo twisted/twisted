@@ -203,20 +203,20 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def _getKeyOrDefault(options, input_collector=None):
+def _getKeyOrDefault(options, inputCollector=None):
     """
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
     """
-    if input_collector is None:
-        input_collector = input
+    if inputCollector is None:
+        inputCollector = input
     filename = options["filename"]
     if not filename:
         filename = os.path.expanduser("~/.ssh/id_rsa")
         if platform.system() == "Windows":
             filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
         filename = (
-            input_collector("Enter file in which the key is (%s): " % filename)
+            inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
         )
     return filename
