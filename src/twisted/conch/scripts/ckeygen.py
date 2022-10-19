@@ -7,9 +7,11 @@ Implementation module for the `ckeygen` command.
 """
 
 
+from collections.abc import Callable
 import getpass
 import os
 import platform
+from typing import Dict, Optional
 import socket
 import sys
 from functools import wraps
@@ -203,7 +205,7 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def _getKeyOrDefault(options, inputCollector=None):
+def _getKeyOrDefault(options: Dict, inputCollector: Optional[Callable] = None) -> str:
     """
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
