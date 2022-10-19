@@ -163,7 +163,6 @@ jobs:
           # We run selected test for GTK reactor inside X virtual framebuffer.
           - python-version: '3.7'
             tox-env: 'alldeps-gtk-withcov-posix'
-            trial-target: 'twisted.internet.test twisted.test'
             platform-deps: 'gtk_platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
