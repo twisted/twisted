@@ -18,7 +18,7 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
@@ -381,12 +381,19 @@ def asyncioSelectorReactor(self: object) -> "asyncioreactor.AsyncioSelectorReact
     @param self: The L{ReactorBuilder} subclass this is being called on.  We
         don't use this parameter but we get called with it anyway.
     """
-    from asyncio import new_event_loop, set_event_loop
+    from asyncio import get_event_loop, new_event_loop, set_event_loop
 
     from twisted.internet import asyncioreactor
 
+    asTestCase = cast(SynchronousTestCase, self)
+    originalLoop = get_event_loop()
     loop = new_event_loop()
     set_event_loop(loop)
+
+    @asTestCase.addCleanup
+    def cleanUp():
+        loop.close()
+        set_event_loop(originalLoop)
 
     return asyncioreactor.AsyncioSelectorReactor(loop)
 

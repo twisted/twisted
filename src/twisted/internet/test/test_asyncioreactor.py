@@ -80,6 +80,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
         @self.addCleanup
         def cleanUp():
+            result.close()
             set_event_loop(existingLoop)
             set_event_loop_policy(existingPolicy)
 
