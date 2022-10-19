@@ -166,7 +166,7 @@ jobs:
             platform-deps: 'gtk_platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
-            trial-args: '--reactor=gi'
+            trial-args: '--reactor=gi -j 4'
 
 
     steps:
