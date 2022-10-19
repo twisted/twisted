@@ -11,6 +11,8 @@ name = "Twisted"
 dynamic = [
     "version",
     "readme",
+    # Remove this when the legacy optional dependency names are removed
+    "optional-dependencies",
 ]
 description = "An asynchronous networking framework written in Python"
 license = "MIT"
@@ -38,7 +40,9 @@ dependencies = [
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
-[project.optional-dependencies]
+# Switch to this when the legacy optional dependency names are removed
+# [project.optional-dependencies]
+[tool.hatch.metadata.hooks.custom.optional-dependencies]
 # This is list of minimum dependencies required to run the tests.
 # The plan is to remove the `test` extra requirement and skip tests that
 # depend on them
@@ -138,34 +142,6 @@ mypy = [
     "mypy-zope==0.3.4",
     "types-setuptools",
     "types-pyOpenSSL",
-]
-
-# We define all the legacy dependency targets using the
-# underscore for backward compatibility.
-# Once underscores are no longer supported by Python package tools
-# like pip and PyPI, these can be removed.
-# Any new extra dependency should not be added here.
-# This list is here only for backward compatiblility.
-dev_release = [
-    "twisted[dev-release]",
-]
-conch_nacl = [
-    "twisted[conch-nacl]",
-]
-all_non_platform = [
-    "twisted[all-non-platform]",
-]
-macos_platform = [
-    "twisted[macos-platform]",
-]
-windows_platform = [
-    "twisted[windows-platform]",
-]
-osx_platform = [
-    "twisted[osx-platform]",
-]
-gtk_platform = [
-    "twisted[gtk-platform]",
 ]
 
 [project.scripts]
