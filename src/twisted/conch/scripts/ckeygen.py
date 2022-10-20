@@ -232,7 +232,7 @@ def _getKeyOrDefault(
             or filename
         )
     if not isinstance(filename, str):
-        filename = str(filename, encoding='utf-8')
+        filename = str(filename, encoding="utf-8")
     return filename
 
 
