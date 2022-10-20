@@ -174,7 +174,7 @@ class KeyGenTests(TestCase):
             "Unsupported fingerprint format: sha-base64", em.exception.args[0]
         )
 
-    def test_printFingerprintSuffixAppended(self):
+    def test_printFingerprintSuffixAppended(self) -> None:
         """
         L{printFingerprint} checks if the filename with the  '.pub' suffix
         exists in ~/.ssh.
@@ -360,18 +360,26 @@ class KeyGenTests(TestCase):
         base = FilePath(self.mktemp())
         base.makedirs()
         keyPath = base.child("custom_key").path
+        input_prompts = []
 
         import twisted.conch.scripts.ckeygen
 
+        def mock_input(*args):
+            return input_prompts.append("")
+
         self.patch(twisted.conch.scripts.ckeygen, "_inputSaveFile", lambda _: keyPath)
         key = Key.fromString(privateRSA_openssh)
-        _saveKey(key, {"filename": None, "no-passphrase": True, "format": "md5-hex"})
+        _saveKey(
+            key,
+            {"filename": None, "no-passphrase": True, "format": "md5-hex"},
+            mock_input,
+        )
 
         persistedKeyContent = base.child("custom_key").getContent()
         persistedKey = key.fromString(persistedKeyContent, None, b"")
         self.assertEqual(key, persistedKey)
 
-    def test_saveKeyFileExists(self):
+    def test_saveKeyFileExists(self) -> None:
         """
         When the specified file exists, it will ask the user for confirmation
         before overwriting.
@@ -662,7 +670,7 @@ class KeyGenTests(TestCase):
             privateKeyContent.startswith(b"-----BEGIN OPENSSH PRIVATE KEY-----\n")
         )
 
-    def test_useDefaultForKey(self):
+    def test_useDefaultForKey(self) -> None:
         """
         L{options} will default to "~/.ssh/id_rsa" if the user doesn't
         specify a key.
@@ -686,7 +694,7 @@ class KeyGenTests(TestCase):
         self.assertEqual(1, len(input_prompts))
         self.assertEqual([""], input_prompts)
 
-    def test_displayPublicKeyHandleFileNotFound(self):
+    def test_displayPublicKeyHandleFileNotFound(self) -> None:
         """
         Ensure FileNotFoundError is handled, whether the user has supplied
         a bad path, or has no key at the default path.
@@ -695,7 +703,7 @@ class KeyGenTests(TestCase):
         exc = self.assertRaises(SystemExit, displayPublicKey, options)
         self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
-    def test_changePassPhraseHandleFileNotFound(self):
+    def test_changePassPhraseHandleFileNotFound(self) -> None:
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
@@ -703,7 +711,7 @@ class KeyGenTests(TestCase):
         exc = self.assertRaises(SystemExit, changePassPhrase, options)
         self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
-    def test_printFingerprintHandleFileNotFound(self):
+    def test_printFingerprintHandleFileNotFound(self) -> None:
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """

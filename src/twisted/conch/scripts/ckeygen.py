@@ -7,15 +7,15 @@ Implementation module for the `ckeygen` command.
 """
 
 
-from collections.abc import Callable
 import getpass
 import os
 import platform
-from typing import Dict, Optional
 import socket
 import sys
+from collections.abc import Callable
 from functools import wraps
 from imp import reload
+from typing import Dict, Optional
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
@@ -205,18 +205,26 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def _getKeyOrDefault(options: Dict, inputCollector: Optional[Callable] = None) -> str:
+def _getKeyOrDefault(
+    options: Dict, inputCollector: Optional[Callable] = None, keyTypeName: str = "rsa"
+) -> str:
     """
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
+    @param options: command line options
+    @type options: L{Dict}
+    @param inputCollector: dependency injection for testing
+    @type inputCollector: L{Callable} or None
+    @param keyTypeName: key type or "rsa"
+    @type keyTypeName: l{str}
     """
     if inputCollector is None:
         inputCollector = input
     filename = options["filename"]
     if not filename:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
+        filename = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         if platform.system() == "Windows":
-            filename = os.path.expandvars(R"%HOMEPATH %\.ssh\id_rsa")
+            filename = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
         filename = (
             inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
@@ -319,7 +327,9 @@ def _inputSaveFile(prompt: str) -> str:
     return input(prompt)
 
 
-def _saveKey(key, options: Dict, inputCollector: Optional[Callable] = None) -> None:
+def _saveKey(
+    key: keys.Key, options: Dict, inputCollector: Optional[Callable] = None
+) -> None:
     """
     Persist a SSH key on local filesystem.
 
@@ -329,8 +339,8 @@ def _saveKey(key, options: Dict, inputCollector: Optional[Callable] = None) -> N
     @param options:
     @type options: L{dict}
 
-    @param input_collector: Dependency injection for testing.
-    @type input_collector: L{function} or None.
+    @param inputCollector: Dependency injection for testing.
+    @type inputCollector: L{function} or None.
 
     """
     if inputCollector is None:
@@ -339,9 +349,7 @@ def _saveKey(key, options: Dict, inputCollector: Optional[Callable] = None) -> N
     keyTypeName = KeyTypeMapping[key.type()]
     filename = options["filename"]
     if not filename:
-        defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
-        if platform.system() == "Windows":
-            defaultPath = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
+        defaultPath = _getKeyOrDefault(options, inputCollector, keyTypeName)
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
         )
@@ -370,14 +378,15 @@ def _saveKey(key, options: Dict, inputCollector: Optional[Callable] = None) -> N
 
     comment = f"{getpass.getuser()}@{socket.gethostname()}"
 
-    filepath.FilePath(filename).setContent(
+    fp = filepath.FilePath(filename)
+    fp.setContent(
         key.toString(
             "openssh",
             subtype=options["private-key-subtype"],
             passphrase=options["pass"],
         )
     )
-    os.chmod(filename, 33152)
+    fp.chmod(0o100600)
 
     filepath.FilePath(filename + ".pub").setContent(
         key.public().toString("openssh", comment=comment)
