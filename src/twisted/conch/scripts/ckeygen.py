@@ -206,8 +206,10 @@ def _defaultPrivateKeySubtype(keyType):
 
 
 def _getKeyOrDefault(
-    options: Dict, inputCollector: Optional[Callable] = None, keyTypeName: str = "rsa"
-) -> str:
+    options: Dict[str, str],
+    inputCollector: Optional[Callable] = None,
+    keyTypeName: str = "rsa"
+    ) -> str:
     """
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
@@ -328,8 +330,10 @@ def _inputSaveFile(prompt: str) -> str:
 
 
 def _saveKey(
-    key: keys.Key, options: Dict, inputCollector: Optional[Callable] = None
-) -> None:
+    key: keys.Key,
+    options: Dict[str, str],
+    inputCollector: Optional[Callable] = None
+    ) -> None:
     """
     Persist a SSH key on local filesystem.
 
