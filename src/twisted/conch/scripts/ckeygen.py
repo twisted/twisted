@@ -15,7 +15,7 @@ import sys
 from collections.abc import Callable
 from functools import wraps
 from imp import reload
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
@@ -206,10 +206,10 @@ def _defaultPrivateKeySubtype(keyType):
 
 
 def _getKeyOrDefault(
-    options: Dict[str, str],
+    options: Dict[str, Any],
     inputCollector: Optional[Callable] = None,
-    keyTypeName: str = "rsa"
-    ) -> str:
+    keyTypeName: str = "rsa",
+) -> str:
     """
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
@@ -231,6 +231,8 @@ def _getKeyOrDefault(
             inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
         )
+    if not isinstance(filename, str):
+        filename = str(filename, encoding='utf-8')
     return filename
 
 
@@ -330,10 +332,8 @@ def _inputSaveFile(prompt: str) -> str:
 
 
 def _saveKey(
-    key: keys.Key,
-    options: Dict[str, str],
-    inputCollector: Optional[Callable] = None
-    ) -> None:
+    key: keys.Key, options: Dict[str, Any], inputCollector: Optional[Callable] = None
+) -> None:
     """
     Persist a SSH key on local filesystem.
 
