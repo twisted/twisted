@@ -1,1 +1,1 @@
-Fixes deprecation warnings raised by importing deprecated code from twisted or stdlib.
+Removes twisted.protocol.dict (deprecated in twisted 17.9). Fixes deprecation warnings raised by importing deprecated code from twisted or stdlib.
