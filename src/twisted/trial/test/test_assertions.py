@@ -1707,7 +1707,7 @@ _somethingOld = somethingOld
 
 
 deprecatedModuleAttribute(
-    version,
+    GetDeprecatedModuleAttributeTests.version,
     "It's old and clunky",
     __name__,
     "somethingOld",
