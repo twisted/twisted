@@ -214,11 +214,8 @@ def _getKeyOrDefault(
     If C{options["filename"]} is None, prompt the user to enter a path
     or attempt to set it to .ssh/id_rsa
     @param options: command line options
-    @type options: L{Dict}
     @param inputCollector: dependency injection for testing
-    @type inputCollector: L{Callable} or None
     @param keyTypeName: key type or "rsa"
-    @type keyTypeName: l{str}
     """
     if inputCollector is None:
         inputCollector = input
@@ -338,14 +335,10 @@ def _saveKey(
     Persist a SSH key on local filesystem.
 
     @param key: Key which is persisted on local filesystem.
-    @type key: C{keys.Key} implementation.
 
     @param options:
-    @type options: L{dict}
 
     @param inputCollector: Dependency injection for testing.
-    @type inputCollector: L{function} or None.
-
     """
     if inputCollector is None:
         inputCollector = input
