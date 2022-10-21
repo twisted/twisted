@@ -56,7 +56,7 @@ class ErrorPageTests(TestCase):
 
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
-        self.assertIn("twisted.pages.NotFoundPage", warning["message"])
+        self.assertIn("twisted.pages.notFound", warning["message"])
 
     def test_deprecatedForbiddenResource(self):
         """
@@ -70,7 +70,7 @@ class ErrorPageTests(TestCase):
 
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
-        self.assertIn("twisted.pages.ForbiddenPage", warning["message"])
+        self.assertIn("twisted.pages.forbidden", warning["message"])
 
     def test_getChild(self):
         """

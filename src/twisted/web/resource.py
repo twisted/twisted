@@ -183,7 +183,7 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return NoResource("No such child resource.")
+        return _UnsafeNoResource()
 
     def getChildWithDefault(self, path, request):
         """
@@ -359,7 +359,7 @@ class _UnsafeNoResource(_UnsafeErrorPage):
     returns the HTTP response code I{NOT FOUND}.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.pages.NotFoundPage} instead.
+    L{twisted.pages.notFound} instead.
     """
 
     def __init__(self, message="Sorry. No luck finding that resource."):
@@ -373,7 +373,7 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
     returns the I{FORBIDDEN} HTTP response code.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.pages.ForbiddenPage} instead.
+    L{twisted.pages.forbidden} instead.
     """
 
     def __init__(self, message="Sorry, resource is forbidden."):
@@ -394,14 +394,14 @@ deprecatedModuleAttribute(
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.pages.NotFoundPage instead, which properly escapes HTML.",
+    "Use twisted.pages.notFound instead, which properly escapes HTML.",
     __name__,
     "NoResource",
 )
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.pages.ForbiddenPage instead, which properly escapes HTML.",
+    "Use twisted.pages.forbidden instead, which properly escapes HTML.",
     __name__,
     "ForbiddenResource",
 )
