@@ -11,10 +11,10 @@ from twisted.web.http_headers import Headers
 from twisted.web.resource import (
     FORBIDDEN,
     NOT_FOUND,
-    ErrorPage,
-    ForbiddenResource,
-    NoResource,
     Resource,
+    _UnsafeErrorPage as ErrorPage,
+    _UnsafeForbiddenResource as ForbiddenResource,
+    _UnsafeNoResource as NoResource,
     getChildForRequest,
 )
 from twisted.web.test.requesthelper import DummyRequest
@@ -22,12 +22,55 @@ from twisted.web.test.requesthelper import DummyRequest
 
 class ErrorPageTests(TestCase):
     """
-    Tests for L{ErrorPage}, L{NoResource}, and L{ForbiddenResource}.
+    Tests for L{_UnafeErrorPage}, L{_UnsafeNoResource}, and
+    L{_UnsafeForbiddenResource}.
     """
 
     errorPage = ErrorPage
     noResource = NoResource
     forbiddenResource = ForbiddenResource
+
+    def test_deprecatedErrorPage(self):
+        """
+        The public C{twisted.web.resource.ErrorPage} alias for the
+        corresponding C{_Unsafe} class produces a deprecation warning when
+        imported.
+        """
+        from twisted.web.resource import ErrorPage
+
+        self.assertIs(ErrorPage, self.errorPage)
+
+        [warning] = self.flushWarnings()
+        self.assertEqual(warning["category"], DeprecationWarning)
+        self.assertIn("twisted.pages.ErrorPage", warning["message"])
+
+    def test_deprecatedNoResource(self):
+        """
+        The public C{twisted.web.resource.NoResource} alias for the
+        corresponding C{_Unsafe} class produces a deprecation warning when
+        imported.
+        """
+        from twisted.web.resource import NoResource
+
+        self.assertIs(NoResource, self.noResource)
+
+        [warning] = self.flushWarnings()
+        self.assertEqual(warning["category"], DeprecationWarning)
+        self.assertIn("twisted.pages.NotFoundPage", warning["message"])
+
+    def test_deprecatedForbiddenResource(self):
+        """
+        The public C{twisted.web.resource.ForbiddenResource} alias for the
+        corresponding C{_Unsafe} class produce a deprecation warning when
+        imported.
+        """
+        from twisted.web.resource import ForbiddenResource
+
+        self.assertIs(ForbiddenResource, self.forbiddenResource)
+
+        [warning] = self.flushWarnings()
+        self.assertEqual(warning["category"], DeprecationWarning)
+        self.assertIn("twisted.pages.ForbiddenPage", warning["message"])
 
     def test_getChild(self):
         """
