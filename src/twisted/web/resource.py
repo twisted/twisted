@@ -59,7 +59,7 @@ class IResource(Interface):
         @type request: L{twisted.web.server.Request}
         """
 
-    def putChild(path, child):
+    def putChild(path: bytes, child: "IResource") -> None:
         """
         Put a child IResource implementor at the given path.
 
@@ -68,7 +68,6 @@ class IResource(Interface):
             For example, if resource A can be found at I{http://example.com/foo}
             then a call like C{A.putChild(b"bar", B)} will make resource B
             available at I{http://example.com/foo/bar}.
-        @type path: C{bytes}
         """
 
     def render(request):
@@ -103,7 +102,7 @@ class Resource:
     """
     Define a web-accessible resource.
 
-    This serves 2 main purposes; one is to provide a standard representation
+    This serves two main purposes: one is to provide a standard representation
     for what HTTP specification calls an 'entity', and the other is to provide
     an abstract directory structure for URL retrieval.
     """
@@ -199,12 +198,17 @@ class Resource:
         return self.getChild(path, request)
 
     def getChildForRequest(self, request):
+        """
+        Deprecated in favor of L{getChildForRequest}.
+
+        @see: L{twisted.web.resource.getChildForRequest}.
+        """
         warnings.warn(
             "Please use module level getChildForRequest.", DeprecationWarning, 2
         )
         return getChildForRequest(self, request)
 
-    def putChild(self, path, child):
+    def putChild(self, path: bytes, child: IResource) -> None:
         """
         Register a static child.
 
@@ -213,21 +217,13 @@ class Resource:
         path to be ''.
 
         @param path: A single path component.
-        @type path: L{bytes}
 
         @param child: The child resource to register.
-        @type child: L{IResource}
 
         @see: L{IResource.putChild}
         """
         if not isinstance(path, bytes):
-            warnings.warn(
-                "Path segment must be bytes; "
-                "passing {} has never worked, and "
-                "will raise an exception in the future.".format(type(path)),
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
+            raise TypeError(f"Path segment must be bytes, but {path!r} is {type(path)}")
 
         self.children[path] = child
         child.server = self.server
