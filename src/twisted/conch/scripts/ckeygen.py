@@ -206,7 +206,7 @@ def _defaultPrivateKeySubtype(keyType):
 
 
 def _getKeyOrDefault(
-    options: Dict[str, Any],
+    options: Dict[Any, Any],
     inputCollector: Optional[Callable] = None,
     keyTypeName: str = "rsa",
 ) -> str:
@@ -231,12 +231,10 @@ def _getKeyOrDefault(
             inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
         )
-    if not isinstance(filename, str):
-        filename = str(filename, encoding="utf-8")
-    return filename
+    return str(filename)
 
 
-def printFingerprint(options):
+def printFingerprint(options: Dict[Any, Any]) -> None:
     filename = _getKeyOrDefault(options)
     if os.path.exists(filename + ".pub"):
         filename += ".pub"
@@ -332,7 +330,9 @@ def _inputSaveFile(prompt: str) -> str:
 
 
 def _saveKey(
-    key: keys.Key, options: Dict[str, Any], inputCollector: Optional[Callable] = None
+    key: keys.Key,
+    options: Dict[Any, Any],
+    inputCollector: Optional[Callable] = None,
 ) -> None:
     """
     Persist a SSH key on local filesystem.
