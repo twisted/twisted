@@ -61,13 +61,16 @@ class IResource(Interface):
 
     def putChild(path: bytes, child: "IResource") -> None:
         """
-        Put a child IResource implementor at the given path.
+        Put a child L{IResource} implementor at the given path.
 
         @param path: A single path component, to be interpreted relative to the
             path this resource is found at, at which to put the given child.
             For example, if resource A can be found at I{http://example.com/foo}
             then a call like C{A.putChild(b"bar", B)} will make resource B
             available at I{http://example.com/foo/bar}.
+
+            The path component is I{not} URL-encoded -- pass C{b'foo bar'}
+            rather than C{b'foo%20bar'}.
         """
 
     def render(request):
@@ -226,7 +229,9 @@ class Resource:
             raise TypeError(f"Path segment must be bytes, but {path!r} is {type(path)}")
 
         self.children[path] = child
-        child.server = self.server
+        # IResource is incomplete and doesn't mention this server attribute, see
+        # https://github.com/twisted/twisted/issues/11717
+        child.server = self.server  # type: ignore[attr-defined]
 
     def render(self, request):
         """
