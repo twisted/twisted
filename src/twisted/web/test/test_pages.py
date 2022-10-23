@@ -5,8 +5,11 @@
 Test L{twisted.web.pages}
 """
 
+from typing import cast
+
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.http_headers import Headers
+from twisted.web.iweb import IRequest
 from twisted.web.pages import ErrorPage, forbidden, notFound
 from twisted.web.test.requesthelper import DummyRequest
 
@@ -20,7 +23,10 @@ def _render(resource: ErrorPage) -> DummyRequest:
     @returns: The request that the resource handled,
     """
     request = DummyRequest([b""])
-    resource.render(request)
+    # The cast is necessary because DummyRequest isn't annotated
+    # as an IRequest, and this can't be trivially done. See
+    # https://github.com/twisted/twisted/issues/11719
+    resource.render(cast(IRequest, request))
     return request
 
 
