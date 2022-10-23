@@ -12,9 +12,10 @@ __all__ = (
     "forbidden",
 )
 
+from typing import cast
 
 from twisted.web import http
-from twisted.web.iweb import IRequest
+from twisted.web.iweb import IRenderable, IRequest
 from twisted.web.resource import Resource
 from twisted.web.template import renderElement, tags
 
@@ -50,18 +51,24 @@ class ErrorPage(Resource):
         self._brief: str = brief
         self._detail: str = detail
 
-    def render(self, request: IRequest) -> None:
+    def render(self, request: IRequest) -> object:
         """
         Respond to all requests with the given HTTP status code and an HTML
         document containing the explanatory strings.
         """
         request.setResponseCode(self._code)
         request.setHeader(b"content-type", b"text/html; charset=utf-8")
-        renderElement(
+        return renderElement(
             request,
-            tags.html(
-                tags.head(tags.title(f"{self._code} - {self._brief}")),
-                tags.body(tags.h1(self._brief), tags.p(self._detail)),
+            # cast because the type annotations here seem off; Tag isn't an
+            # IRenderable but also probably should be? See
+            # https://github.com/twisted/twisted/issues/4982
+            cast(
+                IRenderable,
+                tags.html(
+                    tags.head(tags.title(f"{self._code} - {self._brief}")),
+                    tags.body(tags.h1(self._brief), tags.p(self._detail)),
+                ),
             ),
         )
 
