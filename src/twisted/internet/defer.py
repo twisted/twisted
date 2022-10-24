@@ -39,7 +39,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Literal, Protocol
+from typing_extensions import Literal, ParamSpec, Protocol
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -78,6 +78,7 @@ log = Logger()
 
 
 _T = TypeVar("_T")
+_P = ParamSpec("_P")
 
 
 class AlreadyCalledError(Exception):
@@ -156,7 +157,7 @@ def fail(result: Optional[Union[Failure, BaseException]] = None) -> "Deferred[An
 
 
 def execute(
-    callable: Callable[..., _T], *args: object, **kwargs: object
+    callable: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Create a L{Deferred} from a callable and arguments.
@@ -174,7 +175,7 @@ def execute(
 
 
 def maybeDeferred(
-    f: Callable[..., _T], *args: object, **kwargs: object
+    f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Invoke a function that may or may not return a L{Deferred} or coroutine.
@@ -1149,7 +1150,7 @@ def ensureDeferred(
     Schedule the execution of a coroutine that awaits/yields from L{Deferred}s,
     wrapping it in a L{Deferred} that will fire on success/failure of the
     coroutine. If a Deferred is passed to this function, it will be returned
-    directly (mimicing the L{asyncio.ensure_future} function).
+    directly (mimicking the L{asyncio.ensure_future} function).
 
     See L{Deferred.fromCoroutine} for examples of coroutines.
 
@@ -1680,6 +1681,9 @@ def _inlineCallbacks(
     # waiting for result?  # result
     waiting: List[Any] = [True, None]
 
+    stopIteration: bool = False
+    callbackValue: Any = None
+
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
@@ -1693,8 +1697,9 @@ def _inlineCallbacks(
                 result = context.run(gen.send, result)
         except StopIteration as e:
             # fell off the end, or "return" statement
-            status.deferred.callback(getattr(e, "value", None))
-            return
+            stopIteration = True
+            callbackValue = getattr(e, "value", None)
+
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
             # Deferred.  First though, let's try to identify the potentially
@@ -1763,10 +1768,18 @@ def _inlineCallbacks(
                     lineno,
                 )
 
-            status.deferred.callback(e.value)
-            return
+            stopIteration = True
+            callbackValue = e.value
+
         except BaseException:
             status.deferred.errback()
+            return
+
+        if stopIteration:
+            # Call the callback outside of the exception handler to avoid inappropriate/confusing
+            # "During handling of the above exception, another exception occurred:" if the callback
+            # itself throws an exception.
+            status.deferred.callback(callbackValue)
             return
 
         if isinstance(result, Deferred):

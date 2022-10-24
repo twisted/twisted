@@ -43,10 +43,11 @@ Documentation and Support
 Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
+Help is also available on the `Twisted mailing list <https://mail.python.org/mailman3/lists/twisted.python.org/>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web),
-on `irc.libera.chat <https://web.libera.chat/>_`.
+There is also an IRC channel, ``#twisted``,
+on the `Libera.Chat <https://libera.chat/>`_ network.
+A web client is available at `web.libera.chat <https://web.libera.chat/>`_.
 
 
 Unit Tests

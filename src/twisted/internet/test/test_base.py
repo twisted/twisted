@@ -356,6 +356,17 @@ class DelayedCallNoDebugTests(DelayedCallMixin, TestCase):
         )
         self.assertEqual(str(dc), expected)
 
+    def test_switchToDebug(self):
+        """
+        If L{DelayedCall.debug} changes from C{0} to C{1} between
+        L{DelayeCall.__init__} and L{DelayedCall.__repr__} then
+        L{DelayedCall.__repr__} returns a string that does not include the
+        creator stack.
+        """
+        dc = DelayedCall(3, lambda: None, (), {}, nothing, nothing, lambda: 2)
+        dc.debug = 1
+        self.assertNotIn("traceback at creation", repr(dc))
+
 
 class DelayedCallDebugTests(DelayedCallMixin, TestCase):
     """
@@ -382,6 +393,17 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
             "traceback at creation:".format(id(dc))
         )
         self.assertRegex(str(dc), expectedRegexp)
+
+    def test_switchFromDebug(self):
+        """
+        If L{DelayedCall.debug} changes from C{1} to C{0} between
+        L{DelayeCall.__init__} and L{DelayedCall.__repr__} then
+        L{DelayedCall.__repr__} returns a string that includes the creator
+        stack (we captured it, we might as well display it).
+        """
+        dc = DelayedCall(3, lambda: None, (), {}, nothing, nothing, lambda: 2)
+        dc.debug = 0
+        self.assertIn("traceback at creation", repr(dc))
 
 
 class TestSpySignalCapturingReactor(ReactorBase):

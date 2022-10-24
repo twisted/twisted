@@ -17,10 +17,24 @@ import types
 import unittest as pyunit
 import warnings
 from dis import findlinestarts as _findlinestarts
-from typing import List, NoReturn, Optional, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Coroutine,
+    Generator,
+    Iterable,
+    List,
+    NoReturn,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
+
+from attrs import frozen
 
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python import failure, log, monkey
@@ -43,6 +57,7 @@ class FailTest(AssertionError):
     """
 
 
+@frozen
 class Todo:
     """
     Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
@@ -50,19 +65,17 @@ class Todo:
     they do not fail the suite and the errors are reported in a separate
     category. If todo'd tests succeed, Trial L{TestResult}s will report an
     unexpected success.
+
+    @ivar reason: A string explaining why the test is marked 'todo'
+
+    @ivar errors: An iterable of exception types that the test is expected to
+        raise. If one of these errors is raised by the test, it will be
+        trapped. Raising any other kind of error will fail the test.  If
+        L{None} then all errors will be trapped.
     """
 
-    def __init__(self, reason, errors=None):
-        """
-        @param reason: A string explaining why the test is marked 'todo'
-
-        @param errors: An iterable of exception types that the test is
-        expected to raise. If one of these errors is raised by the test, it
-        will be trapped. Raising any other kind of error will fail the test.
-        If L{None} is passed, then all errors will be trapped.
-        """
-        self.reason = reason
-        self.errors = errors
+    reason: str
+    errors: Optional[Iterable[Type[BaseException]]] = None
 
     def __repr__(self) -> str:
         return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
@@ -81,7 +94,11 @@ class Todo:
         return False
 
 
-def makeTodo(value):
+def makeTodo(
+    value: Union[
+        str, Tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
+    ]
+) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
 
@@ -98,11 +115,11 @@ def makeTodo(value):
         return Todo(reason=value)
     if isinstance(value, tuple):
         errors, reason = value
-        try:
-            errors = list(errors)
-        except TypeError:
-            errors = [errors]
-        return Todo(reason=reason, errors=errors)
+        if isinstance(errors, type):
+            iterableErrors: Iterable[Type[BaseException]] = [errors]
+        else:
+            iterableErrors = errors
+        return Todo(reason=reason, errors=iterableErrors)
 
 
 class _Warning:
@@ -664,18 +681,30 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred: Deferred[T]) -> T:
+    def successResultOf(
+        self,
+        deferred: Union[
+            Coroutine[Deferred[T], Any, T],
+            Generator[Deferred[T], Any, T],
+            Deferred[T],
+        ],
+    ) -> T:
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
 
-        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} which
-            has a success result.  This means
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} or
+            I{coroutine} which has a success result.
+
+            For a L{Deferred<twisted.internet.defer.Deferred>} this means
             L{Deferred.callback<twisted.internet.defer.Deferred.callback>} or
             L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
             been called on it and it has reached the end of its callback chain
-            and the last callback or errback returned a non-L{failure.Failure}.
-        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+            and the last callback or errback returned a
+            non-L{failure.Failure}.
+
+            For a I{coroutine} this means all awaited values have a success
+            result.
 
         @raise SynchronousTestCase.failureException: If the
             L{Deferred<twisted.internet.defer.Deferred>} has no result or has a

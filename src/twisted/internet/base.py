@@ -80,6 +80,9 @@ class DelayedCall:
     debug = False
     _repr: Optional[str] = None
 
+    # In debug mode, the call stack at the time of instantiation.
+    creator: Optional[Sequence[str]] = None
+
     def __init__(
         self,
         time: float,
@@ -265,7 +268,7 @@ class DelayedCall:
                 )
             L.append(")")
 
-        if self.debug:
+        if self.creator is not None:
             L.append("\n\ntraceback at creation: \n\n%s" % ("    ".join(self.creator)))
         L.append(">")
 
@@ -990,8 +993,8 @@ class ReactorBase(PluggableResolverMixin):
                 call.called = 1
                 call.func(*call.args, **call.kw)
             except BaseException:
-                log.deferr()
-                if hasattr(call, "creator"):
+                log.err()
+                if call.creator is not None:
                     e = "\n"
                     e += (
                         " C: previous exception occurred in "
