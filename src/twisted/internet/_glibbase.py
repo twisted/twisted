@@ -19,6 +19,7 @@ from zope.interface import implementer
 from twisted.internet import base, posixbase, selectreactor
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import log
+from ._signals import _UnixWaker
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
@@ -48,13 +49,13 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
-class GlibWaker(posixbase._UnixWaker):
+class GlibWaker(_UnixWaker):
     """
     Run scheduled events after waking up.
     """
 
-    def doRead(self):
-        posixbase._UnixWaker.doRead(self)
+    def doRead(self) -> None:
+        super().doRead()
         self.reactor._simulate()
 
 
