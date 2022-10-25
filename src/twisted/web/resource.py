@@ -299,7 +299,7 @@ class _UnsafeErrorPage(Resource):
     descriptive text.  This is useful for rendering simple error pages.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.pages.ErrorPage} instead.
+    L{twisted.web.pages.ErrorPage} instead.
 
     @ivar template: A native string which will have a dictionary interpolated
         into it to generate the response body.  The dictionary has the following
@@ -359,7 +359,7 @@ class _UnsafeNoResource(_UnsafeErrorPage):
     returns the HTTP response code I{NOT FOUND}.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.pages.notFound} instead.
+    L{twisted.web.pages.notFound} instead.
     """
 
     def __init__(self, message="Sorry. No luck finding that resource."):
@@ -373,7 +373,7 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
     returns the I{FORBIDDEN} HTTP response code.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.pages.forbidden} instead.
+    L{twisted.web.pages.forbidden} instead.
     """
 
     def __init__(self, message="Sorry, resource is forbidden."):
@@ -387,21 +387,21 @@ ForbiddenResource = _UnsafeForbiddenResource
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.pages.ErrorPage instead, which properly escapes HTML.",
+    "Use twisted.web.pages.ErrorPage instead, which properly escapes HTML.",
     __name__,
     "ErrorPage",
 )
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.pages.notFound instead, which properly escapes HTML.",
+    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
     __name__,
     "NoResource",
 )
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.pages.forbidden instead, which properly escapes HTML.",
+    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
     __name__,
     "ForbiddenResource",
 )
