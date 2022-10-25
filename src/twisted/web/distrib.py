@@ -10,9 +10,8 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 import copy
-
-# System Imports
 import os
+import sys
 
 try:
     import pwd
@@ -24,8 +23,6 @@ from xml.dom.minidom import getDOMImplementation
 from twisted.internet import address, reactor
 from twisted.logger import Logger
 from twisted.persisted import styles
-
-# Twisted Imports
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import http, resource, server, static, util
@@ -355,18 +352,20 @@ class UserDirectory(resource.Resource):
         return htmlDoc.encode("utf-8")
 
     def getChild(self, name, request):
-        if name == "":
+        if name == b"":
             return self
 
-        td = ".twistd"
+        td = b".twistd"
 
-        if name[-len(td) :] == td:
+        if name.endswith(td):
             username = name[: -len(td)]
             sub = 1
         else:
             username = name
             sub = 0
         try:
+            # Decode using the filesystem encoding to reverse a transformation
+            # done in the pwd module.
             (
                 pw_name,
                 pw_passwd,
@@ -375,7 +374,7 @@ class UserDirectory(resource.Resource):
                 pw_gecos,
                 pw_dir,
                 pw_shell,
-            ) = self._pwd.getpwnam(username)
+            ) = self._pwd.getpwnam(username.decode(sys.getfilesystemencoding()))
         except KeyError:
             return resource.NoResource()
         if sub:
