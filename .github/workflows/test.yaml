@@ -164,7 +164,7 @@ jobs:
           - python-version: '3.7'
             tox-env: 'alldeps-gtk-withcov-posix'
             trial-target: 'twisted.internet.test'
-            platform-deps: 'gtk-platform'
+            platform-deps: 'gtk_platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
 
@@ -210,7 +210,7 @@ jobs:
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
     - name: Install GTK system deps
-      if: matrix.platform-deps == 'gtk-platform'
+      if: matrix.platform-deps == 'gtk_platform'
       run: |
         # *-dev dependencies are for pygobject
         # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/setup.py#L129-L134

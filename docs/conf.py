@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- General configuration ------------------------------------------------
 
-# See pyproject.toml for the Sphinx version required to build the documentation.
+# See setup.cfg for the Sphinx version required to build the documentation.
 # needs_sphinx is not use to avoid duplication and getting these values
 # out of sync.
 
