@@ -299,7 +299,7 @@ class _UnsafeErrorPage(Resource):
     descriptive text.  This is useful for rendering simple error pages.
 
     Deprecated in Twisted NEXT because it permits HTML injection; use
-    L{twisted.web.pages.ErrorPage} instead.
+    L{twisted.web.pages.errorPage} instead.
 
     @ivar template: A native string which will have a dictionary interpolated
         into it to generate the response body.  The dictionary has the following
@@ -387,7 +387,7 @@ ForbiddenResource = _UnsafeForbiddenResource
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),
-    "Use twisted.web.pages.ErrorPage instead, which properly escapes HTML.",
+    "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
     __name__,
     "ErrorPage",
 )

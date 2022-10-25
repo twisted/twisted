@@ -1,1 +1,1 @@
-The twisted.web.pages.ErrorPage, notFound, and forbidden IResource implementations provide HTML error pages safely rendered using twisted.web.template.
+The twisted.web.pages.errorPage, notFound, and forbidden each return an IResource that displays an HTML error pages safely rendered using twisted.web.template.

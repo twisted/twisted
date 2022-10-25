@@ -10,11 +10,12 @@ from typing import cast
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IRequest
-from twisted.web.pages import ErrorPage, forbidden, notFound
+from twisted.web.pages import errorPage, forbidden, notFound
+from twisted.web.resource import IResource
 from twisted.web.test.requesthelper import DummyRequest
 
 
-def _render(resource: ErrorPage) -> DummyRequest:
+def _render(resource: IResource) -> DummyRequest:
     """
     Render a response using the given resource.
 
@@ -32,7 +33,7 @@ def _render(resource: ErrorPage) -> DummyRequest:
 
 class ErrorPageTests(SynchronousTestCase):
     """
-    Test L{twisted.web.pages.ErrorPage} and its convencience helpers
+    Test L{twisted.web.pages._ErrorPage} and its public aliases L{errorPage},
     L{notFound} and L{forbidden}.
     """
 
@@ -56,7 +57,7 @@ class ErrorPageTests(SynchronousTestCase):
         The I{brief} and I{detail} parameters are HTML-escaped on render.
         """
         self.assertResponse(
-            _render(ErrorPage(400, "A & B", "<script>alert('oops!')")),
+            _render(errorPage(400, "A & B", "<script>alert('oops!')")),
             400,
             (
                 b"<!DOCTYPE html>\n"
@@ -68,10 +69,10 @@ class ErrorPageTests(SynchronousTestCase):
 
     def test_getChild(self):
         """
-        The C{getChild} method of L{ErrorPage} returns the L{ErrorPage} it is
-        called on.
+        The C{getChild} method of the resource returned by L{errorPage} returns
+        the L{_ErrorPage} it is called on.
         """
-        page = ErrorPage(404, "foo", "bar")
+        page = errorPage(404, "foo", "bar")
         self.assertIs(
             page.getChild(b"name", DummyRequest([b""])),
             page,

@@ -42,7 +42,7 @@ class ErrorPageTests(TestCase):
 
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
-        self.assertIn("twisted.web.pages.ErrorPage", warning["message"])
+        self.assertIn("twisted.web.pages.errorPage", warning["message"])
 
     def test_deprecatedNoResource(self):
         """

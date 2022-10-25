@@ -7,7 +7,7 @@ Utility implementations of L{IResource}.
 """
 
 __all__ = (
-    "ErrorPage",
+    "errorPage",
     "notFound",
     "forbidden",
 )
@@ -16,15 +16,17 @@ from typing import cast
 
 from twisted.web import http
 from twisted.web.iweb import IRenderable, IRequest
-from twisted.web.resource import Resource
+from twisted.web.resource import IResource, Resource
 from twisted.web.template import renderElement, tags
 
 
-class ErrorPage(Resource):
+class _ErrorPage(Resource):
     """
-    L{ErrorPage} is a resource that responds to all requests with a particular
-    (parameterized) HTTP status code and a body consisting of HTML containing
-    some descriptive text. This is useful for rendering simple error pages.
+    L{_ErrorPage} is a resource that responds to all requests with a particular
+    (parameterized) HTTP status code and an HTML body containing some
+    descriptive text. This is useful for rendering simple error pages.
+
+    @see: L{twisted.web.pages.errorPage}
 
     @ivar _code: An integer HTTP status code which will be used for the
         response.
@@ -36,16 +38,6 @@ class ErrorPage(Resource):
     """
 
     def __init__(self, code: int, brief: str, detail: str) -> None:
-        """
-        @param code: An integer HTTP status code which will be used for the
-            response.
-
-        @param brief: A short string which will be included in the response
-            body as the page title.
-
-        @param detail: A longer string which will be included in the
-            response body.
-        """
         super().__init__()
         self._code: int = code
         self._brief: str = brief
@@ -74,7 +66,7 @@ class ErrorPage(Resource):
 
     def getChild(self, path: bytes, request: IRequest) -> Resource:
         """
-        Handle all requests for which L{ErrorPage} lacks a child by returning
+        Handle all requests for which L{_ErrorPage} lacks a child by returning
         this error page.
 
         @param path: A path segment.
@@ -84,32 +76,59 @@ class ErrorPage(Resource):
         return self
 
 
+def errorPage(code: int, brief: str, detail: str) -> IResource:
+    """
+    Build a resource that responds to all requests with a particular HTTP
+    status code and an HTML body containing some descriptive text. This is
+    useful for rendering simple error pages.
+
+    The resource dynamically handles all paths below it. Use
+    L{IResource.putChild()} override specific path.
+
+    @param code: An integer HTTP status code which will be used for the
+        response.
+
+    @param brief: A short string which will be included in the response
+        body as the page title.
+
+    @param detail: A longer string which will be included in the
+        response body.
+
+    @returns: An L{IResource}
+    """
+    return _ErrorPage(code, brief, detail)
+
+
 def notFound(
     brief: str = "No Such Resource",
     message: str = "Sorry. No luck finding that resource.",
-) -> ErrorPage:
+) -> IResource:
     """
-    Generate an L{ErrorPage} with a 404 Not Found status code.
+    Generate an L{IResource} with a 404 Not Found status code.
+
+    @see: L{twisted.web.pages.errorPage}
 
     @param brief: A short string displayed as the page title.
 
     @param brief: A longer string displayed in the page body.
 
-    @returns: An L{ErrorPage}
+    @returns: An L{IResource}
     """
-    return ErrorPage(http.NOT_FOUND, brief, message)
+    return _ErrorPage(http.NOT_FOUND, brief, message)
 
 
 def forbidden(
     brief: str = "Forbidden Resource", message: str = "Sorry, resource is forbidden."
-) -> ErrorPage:
+) -> IResource:
     """
-    Generate an L{ErrorPage} with a 403 Forbidden status code.
+    Generate an L{IResource} with a 403 Forbidden status code.
+
+    @see: L{twisted.web.pages.errorPage}
 
     @param brief: A short string displayed as the page title.
 
     @param brief: A longer string displayed in the page body.
 
-    @returns: An L{ErrorPage}
+    @returns: An L{IResource}
     """
-    return ErrorPage(http.FORBIDDEN, brief, message)
+    return _ErrorPage(http.FORBIDDEN, brief, message)
