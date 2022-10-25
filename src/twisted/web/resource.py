@@ -363,7 +363,7 @@ class _UnsafeNoResource(_UnsafeErrorPage):
     """
 
     def __init__(self, message="Sorry. No luck finding that resource."):
-        ErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
+        _UnsafeErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
 
 
 class _UnsafeForbiddenResource(_UnsafeErrorPage):
@@ -377,7 +377,7 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
     """
 
     def __init__(self, message="Sorry, resource is forbidden."):
-        ErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+        _UnsafeErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
 
 
 # Deliberately undocumented public aliases. See GHSA-vg46-2rrj-3647.
