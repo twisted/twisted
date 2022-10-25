@@ -53,4 +53,3 @@ class DictDeprecationTests(SynchronousTestCase):
             ),
             warningsShown[0]["message"],
         )
-
