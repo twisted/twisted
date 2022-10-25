@@ -393,15 +393,14 @@ This makes the script more portable but note that it is not a foolproof method.
 Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
 Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
 
-#. For core scripts, add an entry point to ``"console_scripts"`` in ``setup.cfg``:
+#. For core scripts, add an entry point to ``[project.scripts]`` in ``pyproject.toml``:
 
-   .. code-block:: cfg
+   .. code-block:: toml
 
-       [options.entry_points]
-       console_scripts =
-           ...
-           twistd = twisted.scripts.twistd:run
-           yourmodule = twisted.scripts.yourmodule:run
+       [project.scripts]
+       ...
+       twistd = "twisted.scripts.twistd:run"
+       yourmodule = "twisted.scripts.yourmodule:run"
 
 #. And end with:
 
@@ -416,7 +415,7 @@ Python's distutils will rewrite the shebang line upon installation so this polic
 
 
 This will ensure that your program will have a proper ``console_scripts`` entry point, which
-``setup.py`` will use to generate a console script which will work correctly for users of
+``pyproject.toml`` will use to generate a console script which will work correctly for users of
 Git, Windows releases and Debian packages.
 
 
