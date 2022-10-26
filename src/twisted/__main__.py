@@ -8,7 +8,7 @@
 
 import sys
 
-from pkg_resources import load_entry_point
+from twisted.application.twist._twist import Twist
 
 if __name__ == "__main__":
-    sys.exit(load_entry_point("Twisted", "console_scripts", "twist")())
+    sys.exit(Twist.main())

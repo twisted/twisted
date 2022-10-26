@@ -38,7 +38,6 @@ dependencies = [
     "attrs >= 19.2.0",
     "typing_extensions >= 3.6.5",
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
-    "importlib-metadata; python_version < '3.8'",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
