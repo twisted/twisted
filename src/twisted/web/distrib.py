@@ -124,9 +124,10 @@ class Issue:
         # XXX: Argh. FIXME.
         failure = str(failure)
         self.request.write(
-            resource.ErrorPage(
+            resource._UnsafeErrorPage(
                 http.INTERNAL_SERVER_ERROR,
                 "Server Connection Lost",
+                # GHSA-vg46-2rrj-3647 note: _PRE does HTML-escape the input.
                 "Connection to distributed server lost:" + util._PRE(failure),
             ).render(self.request)
         )
@@ -376,7 +377,7 @@ class UserDirectory(resource.Resource):
                 pw_shell,
             ) = self._pwd.getpwnam(username.decode(sys.getfilesystemencoding()))
         except KeyError:
-            return resource.NoResource()
+            return resource._UnsafeNoResource()
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription("unix", twistdsock)
@@ -385,5 +386,5 @@ class UserDirectory(resource.Resource):
         else:
             path = os.path.join(pw_dir, self.userDirName)
             if not os.path.exists(path):
-                return resource.NoResource()
+                return resource._UnsafeNoResource()
             return static.File(path)
