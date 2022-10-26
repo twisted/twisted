@@ -8,6 +8,116 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 22.10.0.rc1 (2022-10-26)
+================================
+
+Features
+--------
+
+- The ``systemd:`` endpoint parser now supports "named" file descriptors.  This is a more reliable mechanism for choosing among several inherited descriptors. (#8147)
+
+
+Bugfixes
+--------
+
+- `test.yaml` workflow permissions restricted. (#11631)
+
+
+Improved Documentation
+----------------------
+
+- The ``systemd`` endpoint parser's ``index`` parameter is now documented as leading to non-deterministic results in which descriptor is selected.  The new ``name`` parameter is now documented as preferred. (#8146)
+- The implementers of Zope interfaces are once more displayed in the documentations. (#11690)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.protocol.dict, which was deprecated in 17.9, was now removed. (#11725)
+
+
+Misc
+----
+
+- #11573, #11599, #11616, #11628, #11640, #11645, #11647, #11652, #11664, #11674, #11679, #11686, #11692, #11694, #11696, #11700, #11702, #11713, #11715, #11721
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.manhole.ManholeInterpreter now captures tracebacks even if sys.excepthook has been modified. (#11638)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- The twisted.web.pages.errorPage, notFound, and forbidden each return an IResource that displays an HTML error pages safely rendered using twisted.web.template. (#11716)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.error.Error.__str__ no longer raises an exception when the error's message attribute is None. Additionally, it validates that code is a plausible 3-digit HTTP status code. (#10271)
+- The typing of the twisted.web.http_headers.Headers methods addRawHeader() and setRawHeaders() now allow mixing str and bytes, matching the runtime behavior. (#11635)
+- twisted.web.vhost.NameVirtualHost no longer echoes HTML received in the Host header without escaping it (CVE-2022-39348, GHSA-vg46-2rrj-3647). (#11716)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.resource.Resource.putChild now raises TypeError when the path argument is not bytes, rather than issuing a deprecation warning. (#8985)
+- The twisted.web.resource.ErrorPage, NoResource, and ForbiddenResource classes have been deprecated in favor of new implementations twisted.web.pages module because they permit HTML injection. (#11716)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- emailserver.tac now runs under python3.x (#11634)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- twisted.trial.unittest.SynchronousTestCase.successResultOf is now annotated as accepting coroutines. (#11657)
+
+
+Bugfixes
+~~~~~~~~
+
+- The implementation of ``trial -jN ...`` now handles test errors and failures larger than 64 kB.  It also handles other internal communication errors by logging them in the worker and attempting to send them to the parent process -- instead of crashing with ``UnknownRemoteError`` and no additional details. (#10314)
+- `trial -jN --logfile path` no longer hangs if *path* contains a directory separator. (#11580)
+
+
+Misc
+~~~~
+
+- #11649, #11661, #11677, #11710
+
+
 Twisted 22.8.0 (2022-09-06)
 ===========================
 

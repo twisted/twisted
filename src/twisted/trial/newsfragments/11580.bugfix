@@ -1,1 +1,0 @@
-`trial -jN --logfile path` no longer hangs if *path* contains a directory separator.

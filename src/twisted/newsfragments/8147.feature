@@ -1,1 +1,0 @@
-The ``systemd:`` endpoint parser now supports "named" file descriptors.  This is a more reliable mechanism for choosing among several inherited descriptors.

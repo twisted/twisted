@@ -1,1 +1,0 @@
-twisted.web.vhost.NameVirtualHost no longer echoes HTML received in the Host header without escaping it (CVE-2022-39348, GHSA-vg46-2rrj-3647).
