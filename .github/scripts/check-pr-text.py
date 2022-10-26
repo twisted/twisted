@@ -41,7 +41,7 @@ if not pr_title:
 if not pr_body:
     fail("Body for the PR not found. " "Maybe missing PR_BODY env var.")
 
-title_search = re.search(r"^(#\d+) .+", pr_title)
+title_search = re.search(r"^(#\d+):? .+", pr_title)
 if not title_search:
     fail(
         "Title of PR has no issue ID reference. It must look like “#1234 Foo bar baz”."
