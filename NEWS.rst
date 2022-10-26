@@ -11,6 +11,10 @@ https://twisted.org/trac/ticket/<number>
 Twisted 22.10.0.rc1 (2022-10-26)
 ================================
 
+This release contains a security fix for CVE-2022-39348.
+This is a low security bug.
+
+
 Features
 --------
 
