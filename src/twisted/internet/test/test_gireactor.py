@@ -123,6 +123,11 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         self.assertIs(Gtk3Reactor, gireactor.GIReactor)
         self.assertIs(PortableGtk3Reactor, gireactor.PortableGIReactor)
         self.assertIs(install, gireactor.install)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 1)
+        self.assertIn(
+            "twisted.internet.gtk3reactor was deprecated", warnings[0]["message"]
+        )
 
     @skipIf(noGtkSkip, noGtkMessage)
     def test_gtkApplicationActivate(self):
