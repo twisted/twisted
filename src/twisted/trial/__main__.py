@@ -9,13 +9,10 @@ if __name__ == "__main__":
     else:
         from importlib_metadata import distribution
 
-    ep_name = "trial"
-    dist = distribution("twisted")
-    for ep in dist.entry_points:
-        if ep.group == "console_scripts" and ep.name == ep_name:
-            trial = ep
-            break
-    else:
-        raise OSError(f"No console_scripts entry point found for: {ep_name}")
-
-    sys.exit(trial.load()())
+    sys.exit(
+        next(
+            ep
+            for ep in distribution("twisted").entry_points
+            if (ep.group, ep.name) == ("console_scripts", "trial")
+        ).load()()
+    )
