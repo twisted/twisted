@@ -36,17 +36,17 @@ The following optional dependencies are supported:
   * `pyasn1`_
   * `cryptography`_
 
-* **conch-nacl** - **conch** options and `PyNaCl`_ to support Ed25519 keys on systems with OpenSSL < 1.1.1b.
+* **conch_nacl** - **conch** options and `PyNaCl`_ to support Ed25519 keys on systems with OpenSSL < 1.1.1b.
 
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
 * **serial** - the `pyserial`_ package to work with serial data.
 
-* **all-non-platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
 
-* **macos-platform** - **all-non-platform** options and `pyobjc`_ to work with Objective-C apis.
+* **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
 
-* **windows-platform** - **all-non-platform** options and `pywin32`_ to work with Windows's apis.
+* **windows_platform** - **all_non_platform** options and `pywin32`_ to work with Windows's apis.
 
 * **http2** - packages needed for http2 support.
 

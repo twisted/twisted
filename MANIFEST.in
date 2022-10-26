@@ -1,0 +1,93 @@
+# This file dictates what goes into a sdist tarball.
+# As a release tarball, we want to include:
+#  - All of the library code.
+#  - All the useful documentation (but not the super historic stuff)
+#  - All of the test files, so that the tests can be run on an installed copy.
+# We do not want to include:
+#  - Release management files (e.g. topfiles)
+#  - Things only useful when running from a source checkout
+
+# Do not include the old topfiles, or news fragments
+recursive-exclude src/twisted *.misc *.bugfix *.doc *.feature *.removal
+recursive-exclude src/twisted NEWS README newsfragments
+exclude src/twisted/topfiles/CREDITS src/twisted/topfiles/ChangeLog.Old
+
+# Include NEWS, READMEs, etc
+recursive-include docs README
+include NEWS.rst README.rst INSTALL.rst CONTRIBUTING.md LICENSE code_of_conduct.md
+
+# Exclude admin scripts and things only useful when running from a source checkout
+exclude codecov.yml
+exclude .coveralls.yml
+exclude .git-blame-ignore-revs
+exclude .readthedocs.yml
+exclude .pre-commit-config.yaml
+recursive-exclude .circleci *
+exclude azure-pipelines
+recursive-exclude azure-pipelines *
+prune bin
+prune admin
+prune .github
+prune docs/_build
+
+
+# Include marker indicating that we ship type annotations (PEP 561)
+include src/twisted/py.typed
+
+# Include test-running utilities for downstream packagers
+include mypy.ini tox.ini .coveragerc
+
+# Include our docs templates
+recursive-include src/twisted/python/_pydoctortemplates *.html
+
+# Include all modules, even on a Python we're not installing for
+recursive-include src/twisted *.py
+
+# Some tests stuff
+recursive-include src/twisted *.pem
+recursive-include src/twisted/test *.pem.*
+include src/twisted/internet/test/fake_CAs/*
+include src/twisted/mail/test/rfc822.message
+
+# Some extras
+recursive-include src/twisted *.glade *.pxi *.h *.c *.bat *.g *.pyx *.zsh *.txt
+
+# Docs
+include docs/fun/lightbulb
+recursive-include docs/historic/Quotes *
+recursive-include docs *.1
+recursive-include docs *.Quotes
+recursive-include docs *.bat
+recursive-include docs *.bmp
+recursive-include docs *.com
+recursive-include docs *.conf
+recursive-include docs *.css
+recursive-include docs *.dia
+recursive-include docs *.gif
+recursive-include docs *.glade
+recursive-include docs *.html
+recursive-include docs *.ico
+recursive-include docs *.nib
+recursive-include docs *.pem
+recursive-include docs *.placeholder
+recursive-include docs *.png
+recursive-include docs *.py
+recursive-include docs *.rpy
+recursive-include docs *.rst
+recursive-include docs *.rtl
+recursive-include docs *.service
+recursive-include docs *.socket
+recursive-include docs *.svg
+recursive-include docs *.tac
+recursive-include docs *.tidyrc
+recursive-include docs *.tpl
+recursive-include docs *.txt
+recursive-include docs *.users
+recursive-include docs *.xml
+recursive-include docs Makefile
+recursive-include docs/_static/js *.js
+prune docs/_build
+
+# Don't have the real old historic docs
+exclude docs/historic/2003
+recursive-exclude docs/historic/2003 *
