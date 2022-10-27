@@ -1771,7 +1771,8 @@ class SendmailTests(TestCase):
         The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
         L{twisted.internet.reactor}.
         """
-        args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
+        fullSpec = inspect.getfullargspec(smtp.sendmail)
+        defaults = fullSpec[3]
         self.assertEqual(reactor, defaults[2])
 
     def _honorsESMTPArguments(self, username, password):
