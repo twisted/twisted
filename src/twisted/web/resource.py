@@ -1,9 +1,11 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_web, twisted.web.test.test_resource -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Implementation of the lowest-level Resource class.
+
+See L{twisted.web.pages} for some utility implementations.
 """
 
 
@@ -21,8 +23,11 @@ import warnings
 
 from zope.interface import Attribute, Interface, implementer
 
+from incremental import Version
+
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
@@ -180,7 +185,7 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return NoResource("No such child resource.")
+        return _UnsafeNoResource()
 
     def getChildWithDefault(self, path, request):
         """
@@ -287,20 +292,25 @@ def _computeAllowedMethods(resource):
     return allowedMethods
 
 
-class ErrorPage(Resource):
+class _UnsafeErrorPage(Resource):
     """
-    L{ErrorPage} is a resource which responds with a particular
+    L{_UnsafeErrorPage}, publicly available via the deprecated alias
+    C{ErrorPage}, is a resource which responds with a particular
     (parameterized) status and a body consisting of HTML containing some
     descriptive text.  This is useful for rendering simple error pages.
+
+    Deprecated in Twisted NEXT because it permits HTML injection; use
+    L{twisted.web.pages.errorPage} instead.
 
     @ivar template: A native string which will have a dictionary interpolated
         into it to generate the response body.  The dictionary has the following
         keys:
 
-          - C{"code"}: The status code passed to L{ErrorPage.__init__}.
-          - C{"brief"}: The brief description passed to L{ErrorPage.__init__}.
+          - C{"code"}: The status code passed to L{_UnsafeErrorPage.__init__}.
+          - C{"brief"}: The brief description passed to
+            L{_UnsafeErrorPage.__init__}.
           - C{"detail"}: The detailed description passed to
-            L{ErrorPage.__init__}.
+            L{_UnsafeErrorPage.__init__}.
 
     @ivar code: An integer status code which will be used for the response.
     @type code: C{int}
@@ -343,24 +353,59 @@ class ErrorPage(Resource):
         return self
 
 
-class NoResource(ErrorPage):
+class _UnsafeNoResource(_UnsafeErrorPage):
     """
-    L{NoResource} is a specialization of L{ErrorPage} which returns the HTTP
-    response code I{NOT FOUND}.
+    L{_UnsafeNoResource}, publicly available via the deprecated alias
+    C{NoResource}, is a specialization of L{_UnsafeErrorPage} which
+    returns the HTTP response code I{NOT FOUND}.
+
+    Deprecated in Twisted NEXT because it permits HTML injection; use
+    L{twisted.web.pages.notFound} instead.
     """
 
     def __init__(self, message="Sorry. No luck finding that resource."):
-        ErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
+        _UnsafeErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
 
 
-class ForbiddenResource(ErrorPage):
+class _UnsafeForbiddenResource(_UnsafeErrorPage):
     """
-    L{ForbiddenResource} is a specialization of L{ErrorPage} which returns the
-    I{FORBIDDEN} HTTP response code.
+    L{_UnsafeForbiddenResource}, publicly available via the deprecated alias
+    C{ForbiddenResource} is a specialization of L{_UnsafeErrorPage} which
+    returns the I{FORBIDDEN} HTTP response code.
+
+    Deprecated in Twisted NEXT because it permits HTML injection; use
+    L{twisted.web.pages.forbidden} instead.
     """
 
     def __init__(self, message="Sorry, resource is forbidden."):
-        ErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+        _UnsafeErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+
+
+# Deliberately undocumented public aliases. See GHSA-vg46-2rrj-3647.
+ErrorPage = _UnsafeErrorPage
+NoResource = _UnsafeNoResource
+ForbiddenResource = _UnsafeForbiddenResource
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
+    __name__,
+    "ErrorPage",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
+    __name__,
+    "NoResource",
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
+    __name__,
+    "ForbiddenResource",
+)
 
 
 class _IEncodingResource(Interface):
