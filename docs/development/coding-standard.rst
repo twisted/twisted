@@ -136,7 +136,7 @@ In case of local names conflicts due to import, use the ``as`` syntax, for examp
     from twisted.trial import util as trial_util
 
 
-The encoding must always be ASCII, so no coding cookie is necessary.
+The encoding must always be UTF-8, so `no coding cookie is necessary <https://peps.python.org/pep-3120/>`_.
 
 
 Packages
