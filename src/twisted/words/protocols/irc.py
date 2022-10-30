@@ -1199,12 +1199,14 @@ class IRCClient(basic.LineReceiver):
         to disable the heartbeat.
 
     @type decodeCodecs: C{list} of C{str}
-    @ivar decodeCodecs: Codecs that will be used for decoding incoming messages.
+    @ivar decodeCodecs: Codecs that will be used for decoding incoming messages
+                        as the IRC protocol doesn't specify encoding.
 
     @type decodeFallbackErrorhandling: C{str}
     @ivar decodeFallbackErrorhandling: Error handling strategy used for decoding
         incoming messages in case decoding with all specified codecs fails. The
-        first given codec is used.
+        first given codec is used. See
+        https://docs.python.org/3/library/codecs.html#error-handlers
     """
 
     hostname = None
@@ -1246,8 +1248,8 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
-    decodeCodecs: list[str] = ["utf-8"]  # IRC protocol doesn't specify encoding
-    decodeFallbackErrorhandling: str = "replace"  # see bytes.decode
+    decodeCodecs: list[str] = ["utf-8"]
+    decodeFallbackErrorhandling: str = "replace"
 
     def _reallySendLine(self, line):
         quoteLine = lowQuote(line)
