@@ -2663,18 +2663,17 @@ class IRCClient(basic.LineReceiver):
         basic.LineReceiver.dataReceived(self, data)
 
     def lineReceived(self, line):
-        if isinstance(line, bytes):
-            # decode bytes from transport to str
-            for codec in self.decodeCodecs:
-                try:
-                    line = line.decode(codec)
-                    break
-                except ValueError:
-                    log.msg(f"Couldn't decode line {line!r} with codec {codec}")
-            else:
-                line = line.decode(
-                    self.decodeCodecs[0], self.decodeFallbackErrorhandling
-                )
+        # decode bytes from transport to str
+        for codec in self.decodeCodecs:
+            try:
+                line = line.decode(codec)
+                break
+            except ValueError:
+                log.msg(f"Couldn't decode line {line!r} with codec {codec}")
+        else:
+            line = line.decode(
+                self.decodeCodecs[0], self.decodeFallbackErrorhandling
+            )
 
         line = lowDequote(line)
         try:
