@@ -2656,13 +2656,13 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes|str):
         if isinstance(data, str):
             data = data.encode("utf-8")
         data = data.replace(b"\r", b"")
         basic.LineReceiver.dataReceived(self, data)
 
-    def lineReceived(self, line):
+    def lineReceived(self, line: bytes):
         # decode bytes from transport to str
         for codec in self.decodeCodecs:
             try:
