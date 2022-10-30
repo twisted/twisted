@@ -1982,7 +1982,7 @@ class ClientMsgTests(IRCTestCase):
         self.patch(self.client, "privmsg", lambda *a: privmsg.append(a))
         # Deliver these to IRCClient via the normal mechanisms.
         for line in self.client.lines:
-            self.client.lineReceived(responsePrefix + line)
+            self.client.lineReceived((responsePrefix + line).encode())
 
         self.assertEqual(len(privmsg), expectedNumCommands)
         receivedMessage = "".join(message for user, target, message in privmsg)
@@ -2010,7 +2010,7 @@ class ClientMsgTests(IRCTestCase):
         self.patch(self.client, "noticed", lambda *a: notice.append(a))
         # Deliver these to IRCClient via the normal mechanisms.
         for line in self.client.lines:
-            self.client.lineReceived(responsePrefix + line)
+            self.client.lineReceived((responsePrefix + line).encode())
 
         self.assertEqual(len(notice), expectedNumCommands)
         receivedMessage = "".join(message for user, target, message in notice)
