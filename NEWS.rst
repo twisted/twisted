@@ -8,11 +8,14 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 22.10.0.rc1 (2022-10-26)
-================================
+Twisted 22.10.0 (2022-10-30)
+============================
 
 This release contains a security fix for CVE-2022-39348.
-This is a low severity security bug.
+This is a low-severity security bug.
+
+Twisted 22.10.0rc1 release candidate was released on 2022-10-26 and there are
+no changes between the release candidate and the final release.
 
 
 Features
