@@ -2656,7 +2656,7 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
-    def dataReceived(self, data: bytes|str):
+    def dataReceived(self, data: bytes | str):
         if isinstance(data, str):
             data = data.encode("utf-8")
         data = data.replace(b"\r", b"")
@@ -2671,9 +2671,7 @@ class IRCClient(basic.LineReceiver):
             except ValueError:
                 log.msg(f"Couldn't decode line {line!r} with codec {codec}")
         else:
-            line = line.decode(
-                self.decodeCodecs[0], self.decodeFallbackErrorhandling
-            )
+            line = line.decode(self.decodeCodecs[0], self.decodeFallbackErrorhandling)
 
         line = lowDequote(line)
         try:

@@ -2618,7 +2618,12 @@ class ClientDecodingTests(IRCTestCase):
         self.client.lineReceived(lineBytes)
         self.assertEqual(
             self.client.methods,
-            [("handleCommand", ("PRIVMSG", prefix[1:], ["foo", b"\xe4".decode("latin-1")]))],
+            [
+                (
+                    "handleCommand",
+                    ("PRIVMSG", prefix[1:], ["foo", b"\xe4".decode("latin-1")]),
+                )
+            ],
         )
 
     def testDecodingErrorhandling(self):
