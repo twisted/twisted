@@ -12,7 +12,7 @@ Twisted 22.10.0.rc1 (2022-10-26)
 ================================
 
 This release contains a security fix for CVE-2022-39348.
-This is a low security bug.
+This is a low severity security bug.
 
 
 Features
@@ -20,11 +20,6 @@ Features
 
 - The ``systemd:`` endpoint parser now supports "named" file descriptors.  This is a more reliable mechanism for choosing among several inherited descriptors. (#8147)
 
-
-Bugfixes
---------
-
-- `test.yaml` workflow permissions restricted. (#11631)
 
 
 Improved Documentation
@@ -37,13 +32,13 @@ Improved Documentation
 Deprecations and Removals
 -------------------------
 
-- twisted.protocol.dict, which was deprecated in 17.9, was now removed. (#11725)
+- twisted.protocols.dict, which was deprecated in 17.9, has been removed. (#11725)
 
 
 Misc
 ----
 
-- #11573, #11599, #11616, #11628, #11640, #11645, #11647, #11652, #11664, #11674, #11679, #11686, #11692, #11694, #11696, #11700, #11702, #11713, #11715, #11721
+- #11573, #11599, #11616, #11628, #11631, #11640, #11645, #11647, #11652, #11664, #11674, #11679, #11686, #11692, #11694, #11696, #11700, #11702, #11713, #11715, #11721
 
 
 Conch
