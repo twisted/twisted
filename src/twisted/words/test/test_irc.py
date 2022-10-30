@@ -2594,7 +2594,7 @@ class ClientDecodingTests(IRCTestCase):
         self.client.decodeCodecs = IRCClient.decodeCodecs
         self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
         prefix = ":foo!bar@baz"
-        lineBytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
         self.client.lineReceived(lineBytes)
         self.assertEqual(
             self.client.methods,
@@ -2614,11 +2614,11 @@ class ClientDecodingTests(IRCTestCase):
         self.client.decodeCodecs = ["utf-8", "latin-1"]
         self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
         prefix = ":foo!bar@baz"
-        lineBytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
         self.client.lineReceived(lineBytes)
         self.assertEqual(
             self.client.methods,
-            [("handleCommand", ("PRIVMSG", prefix[1:], ["foo", "ä"]))],
+            [("handleCommand", ("PRIVMSG", prefix[1:], ["foo", b"\xe4".decode("latin-1")]))],
         )
 
     def testDecodingErrorhandling(self):
@@ -2629,7 +2629,7 @@ class ClientDecodingTests(IRCTestCase):
         self.client.decodeCodecs = ["utf-8"]
         self.client.decodeFallbackErrorhandling = "strict"
         prefix = ":foo!bar@baz"
-        lineBytes = f"{prefix} PRIVMSG foo :ä".encode("latin-1")
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
         self.assertRaises(UnicodeDecodeError, self.client.lineReceived, lineBytes)
 
 
