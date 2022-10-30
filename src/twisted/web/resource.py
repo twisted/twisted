@@ -299,7 +299,7 @@ class _UnsafeErrorPage(Resource):
     (parameterized) status and a body consisting of HTML containing some
     descriptive text.  This is useful for rendering simple error pages.
 
-    Deprecated in Twisted 22.10.0.rc1 because it permits HTML injection; use
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
     L{twisted.web.pages.errorPage} instead.
 
     @ivar template: A native string which will have a dictionary interpolated
@@ -359,7 +359,7 @@ class _UnsafeNoResource(_UnsafeErrorPage):
     C{NoResource}, is a specialization of L{_UnsafeErrorPage} which
     returns the HTTP response code I{NOT FOUND}.
 
-    Deprecated in Twisted 22.10.0.rc1 because it permits HTML injection; use
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
     L{twisted.web.pages.notFound} instead.
     """
 
@@ -373,7 +373,7 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
     C{ForbiddenResource} is a specialization of L{_UnsafeErrorPage} which
     returns the I{FORBIDDEN} HTTP response code.
 
-    Deprecated in Twisted 22.10.0.rc1 because it permits HTML injection; use
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
     L{twisted.web.pages.forbidden} instead.
     """
 
@@ -387,21 +387,21 @@ NoResource = _UnsafeNoResource
 ForbiddenResource = _UnsafeForbiddenResource
 
 deprecatedModuleAttribute(
-    Version("Twisted", 22, 10, 0, release_candidate=1),
+    Version("Twisted", 22, 10, 0),
     "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
     __name__,
     "ErrorPage",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", 22, 10, 0, release_candidate=1),
+    Version("Twisted", 22, 10, 0),
     "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
     __name__,
     "NoResource",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", 22, 10, 0, release_candidate=1),
+    Version("Twisted", 22, 10, 0),
     "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
     __name__,
     "ForbiddenResource",
