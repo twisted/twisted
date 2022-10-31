@@ -1,0 +1,1 @@
+twisted.internet.gtk2reactor, twisted.internet.gtk3reactor, and twisted.internet.glib2reactor are now deprecated in favor of twisted.internet.gireactor.

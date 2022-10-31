@@ -160,13 +160,15 @@ jobs:
             trial-target: 'twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
             job-name: 'with-coverage'
 
-          # We run selected test for GTK reactor inside X virtual framebuffer.
+          # We run the full test suite with the GI reactor against an X virtual
+          # framebuffer server.  This covers our integration with the version
+          # of Gtk packaged within our selected version of Linux above.
           - python-version: '3.7'
             tox-env: 'alldeps-gtk-withcov-posix'
-            trial-target: 'twisted.internet.test'
-            platform-deps: 'gtk_platform'
+            platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
+            trial-args: '--reactor=gi -j 4'
 
 
     steps:
@@ -210,7 +212,7 @@ jobs:
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
     - name: Install GTK system deps
-      if: matrix.platform-deps == 'gtk_platform'
+      if: matrix.platform-deps == 'gtk-platform'
       run: |
         # *-dev dependencies are for pygobject
         # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/setup.py#L129-L134

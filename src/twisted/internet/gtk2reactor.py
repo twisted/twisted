@@ -16,6 +16,12 @@ Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
 """
 
+from incremental import Version
+
+from ._deprecate import deprecatedGnomeReactor
+
+deprecatedGnomeReactor("gtk2reactor", Version("Twisted", "NEXT", 0, 0))
+
 # System Imports
 import sys
 
@@ -44,6 +50,14 @@ except (ImportError, AttributeError):
     pass  # maybe we're using pygtk before this hack existed.
 
 import gobject  # type: ignore[import]
+
+if not hasattr(gobject, "IO_HUP"):
+    # gi.repository's legacy compatibility helper raises an AttributeError with
+    # a custom error message rather than a useful ImportError, so things tend
+    # to fail loudly.  Things that import this module expect an ImportError if,
+    # well, something failed to import, and treat an AttributeError as an
+    # arbitrary application code failure, so we satisfy that expectation here.
+    raise ImportError("pygobject 2.x is not installed. Use the `gi` reactor.")
 
 if hasattr(gobject, "threads_init"):
     # recent versions of python-gtk expose this. python-gtk=2.4.1
