@@ -1,1 +1,0 @@
-twisted.web.resource.Resource.putChild now raises TypeError when the path argument is not bytes, rather than issuing a deprecation warning.

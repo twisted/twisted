@@ -1,1 +1,0 @@
-The implementation of ``trial -jN ...`` now handles test errors and failures larger than 64 kB.  It also handles other internal communication errors by logging them in the worker and attempting to send them to the parent process -- instead of crashing with ``UnknownRemoteError`` and no additional details.
