@@ -41,18 +41,6 @@ class GIReactor(_glibbase.GlibReactorBase):
         with C{registerGApplication}.
     """
 
-    _POLL_DISCONNECTED = (
-        GLib.IOCondition.HUP | GLib.IOCondition.ERR | GLib.IOCondition.NVAL
-    )
-    _POLL_IN = GLib.IOCondition.IN
-    _POLL_OUT = GLib.IOCondition.OUT
-
-    # glib's iochannel sources won't tell us about any events that we haven't
-    # asked for, even if those events aren't sensible inputs to the poll()
-    # call.
-    INFLAGS = _POLL_IN | _POLL_DISCONNECTED
-    OUTFLAGS = _POLL_OUT | _POLL_DISCONNECTED
-
     # By default no Application is registered:
     _gapplication = None
 
@@ -97,7 +85,7 @@ class PortableGIReactor(_glibbase.GlibReactorBase):
     """
 
     def __init__(self, useGtk=False):
-        _glibbase.PortableGlibReactorBase.__init__(self, GLib, None, useGtk=useGtk)
+        super().__init__(GLib, None, useGtk=useGtk)
 
     def registerGApplication(self, app):
         """

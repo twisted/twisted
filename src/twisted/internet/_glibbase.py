@@ -114,7 +114,22 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._writes: Set[IWriteDescriptor] = set()
         self._sources: Dict[FileDescriptor, int] = {}
         self._glib = glib_module
-        posixbase.PosixReactorBase.__init__(self)
+
+        self._POLL_DISCONNECTED = (
+            glib_module.IOCondition.HUP
+            | glib_module.IOCondition.ERR
+            | glib_module.IOCondition.NVAL
+        )
+        self._POLL_IN = glib_module.IOCondition.IN
+        self._POLL_OUT = glib_module.IOCondition.OUT
+
+        # glib's iochannel sources won't tell us about any events that we haven't
+        # asked for, even if those events aren't sensible inputs to the poll()
+        # call.
+        self.INFLAGS = self._POLL_IN | self._POLL_DISCONNECTED
+        self.OUTFLAGS = self._POLL_OUT | self._POLL_DISCONNECTED
+
+        super().__init__()
 
         self._source_remove = self._glib.source_remove
         self._timeout_add = self._glib.timeout_add
