@@ -94,6 +94,11 @@ class PortableGIReactor(_glibbase.GlibReactorBase):
         """
         raise NotImplementedError("GApplication is not currently supported on Windows.")
 
+    def simulate(self) -> None:
+        """
+        For compatibility only. Do nothing.
+        """
+
 
 def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
     """
