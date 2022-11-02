@@ -91,7 +91,7 @@ class GIReactor(_glibbase.GlibReactorBase):
         self._crash = app.quit
 
 
-class PortableGIReactor(_glibbase.PortableGlibReactorBase):
+class PortableGIReactor(_glibbase.GlibReactorBase):
     """
     Portable GObject Introspection event loop reactor.
     """
@@ -114,6 +114,7 @@ def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
     @param useGtk: A hint that the Gtk GUI will or will not be used.  Currently
         does not modify any behavior.
     """
+    reactor: Union[GIReactor, PortableGIReactor]
     if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)
     else:

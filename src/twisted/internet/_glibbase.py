@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
-from twisted.internet import base, posixbase, selectreactor
+from twisted.internet import base, posixbase
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
@@ -309,49 +309,3 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         self.runUntilCurrent()
         self._reschedule()
-
-
-class PortableGlibReactorBase(selectreactor.SelectReactor):
-    """
-    Base class for GObject event loop reactors that works on Windows.
-
-    Sockets aren't supported by GObject's input_add on Win32.
-    """
-
-    def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
-        self._simtag = None
-        self._glib = glib_module
-        selectreactor.SelectReactor.__init__(self)
-
-        self._source_remove = self._glib.source_remove
-        self._timeout_add = self._glib.timeout_add
-
-        self.loop = self._glib.MainLoop()
-        self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
-        self._run = self.loop.run
-
-    def crash(self):
-        selectreactor.SelectReactor.crash(self)
-        self._crash()
-
-    def run(self, installSignalHandlers=True):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self._timeout_add(0, self.simulate)
-        if self._started:
-            self._run()
-
-    def simulate(self):
-        """
-        Run simulation loops and reschedule callbacks.
-        """
-        if self._simtag is not None:
-            self._source_remove(self._simtag)
-        self.iterate()
-        timeout = self.timeout()
-        if timeout is None or timeout > 0.01:
-            timeout = 0.01
-        self._simtag = self._timeout_add(
-            int(timeout * 1000),
-            self.simulate,
-            priority=self._glib.PRIORITY_DEFAULT_IDLE,
-        )
