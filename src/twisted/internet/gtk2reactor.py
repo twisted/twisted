@@ -71,16 +71,6 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
     PyGTK+ 2 event loop reactor.
     """
 
-    _POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
-    _POLL_IN = gobject.IO_IN
-    _POLL_OUT = gobject.IO_OUT
-
-    # glib's iochannel sources won't tell us about any events that we haven't
-    # asked for, even if those events aren't sensible inputs to the poll()
-    # call.
-    INFLAGS = _POLL_IN | _POLL_DISCONNECTED
-    OUTFLAGS = _POLL_OUT | _POLL_DISCONNECTED
-
     def __init__(self, useGtk=True):
         _gtk = None
         if useGtk is True:
@@ -89,19 +79,7 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
         _glibbase.GlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 
 
-class PortableGtkReactor(_glibbase.PortableGlibReactorBase):
-    """
-    Reactor that works on Windows.
-
-    Sockets aren't supported by GTK+'s input_add on Win32.
-    """
-
-    def __init__(self, useGtk=True):
-        _gtk = None
-        if useGtk is True:
-            import gtk as _gtk
-
-        _glibbase.PortableGlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
+PortableGtkReactor = Gtk2Reactor
 
 
 def install(useGtk=True):
