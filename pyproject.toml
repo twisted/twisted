@@ -30,7 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "zope.interface >= 4.4.2",
+    "zope.interface >= 5",
     "constantly >= 15.1",
     "incremental >= 21.3.0",
     "Automat >= 0.8.0",
