@@ -35,7 +35,7 @@ dependencies = [
     "incremental >= 21.3.0",
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
-    "attrs >= 19.2.0",
+    "attrs >= 21.3.0",
     "typing_extensions >= 3.6.5",
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
