@@ -79,6 +79,9 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
         _glibbase.GlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 
 
+# We don't bother deprecating the PortableGtkReactor.
+# The original code was removed and replaced with the
+# backward compatible generic GTK reactor.
 PortableGtkReactor = Gtk2Reactor
 
 
