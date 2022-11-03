@@ -86,7 +86,7 @@ tls = [
 
 conch = [
     "pyasn1 >= 0.4",
-    "cryptography >= 2.6",
+    "cryptography >= 3.3",
     "appdirs >= 1.4.0",
     "bcrypt >= 3.0.0",
 ]
