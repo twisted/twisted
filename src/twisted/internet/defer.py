@@ -7,6 +7,7 @@ Support for results that aren't immediately available.
 
 Maintainer: Glyph Lefkowitz
 """
+from __future__ import annotations
 
 import traceback
 import warnings
@@ -377,6 +378,13 @@ class DebugInfo:
                 format = ""
 
             log.failure(format, self.failResult, debugInfo=debugInfo)
+
+
+class _NoCancel:
+    instance: _NoCancel
+
+
+_NoCancel.instance = _NoCancel()
 
 
 class Deferred(Awaitable[_DeferredResultT]):
@@ -778,6 +786,26 @@ class Deferred(Awaitable[_DeferredResultT]):
             # Waiting for another deferred -- cancel it instead.
             self.result.cancel()
 
+    def shield(self: Deferred[_T]) -> Deferred[_T]:
+        currentWrapped: Deferred[_T]
+
+        def rewrap() -> Deferred[_T]:
+            nonlocal currentWrapped
+            currentWrapped = Deferred(lambda it: it.callback(_NoCancel)).addCallback(
+                cancelBlock
+            )
+            return currentWrapped
+
+        def cancelBlock(result: _T) -> Union[_T, Deferred[_T]]:
+            if not isinstance(result, _NoCancel):
+                return result
+            return rewrap()
+
+        currentWrapped = rewrap()
+
+        self.addBoth(lambda anything: currentWrapped.callback(anything))
+        return currentWrapped
+
     def _startRunCallbacks(self, result: object) -> None:
         if self.called:
             if self._suppressAlreadyCalled:
@@ -1165,6 +1193,19 @@ def ensureDeferred(
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
             raise NotACoroutineError(f"{coro!r} is not a coroutine or a Deferred")
+
+
+def shielded(decoratee: Callable[_P, Deferred[_T]]) -> Callable[_P, Deferred[_T]]:
+    """
+    Convert the given Deferred-returning coroutine function into one which is
+    always protected from cancellation.
+    """
+
+    @wraps(decoratee)
+    def decorated(*args: _P.args, **kwargs: _P.kwargs) -> Deferred[_T]:
+        return ensureDeferred(decoratee(*args, **kwargs)).shield()
+
+    return decorated
 
 
 @comparable
