@@ -714,7 +714,7 @@ class FlattenerErrorTests(SynchronousTestCase):
                 flags=re.MULTILINE,
             ),
         )
-        self.assertTrue('RuntimeError: example' in str(failure.value))
+        self.assertTrue("RuntimeError: example" in str(failure.value))
         # The original exception is unmodified and will be logged separately if
         # unhandled.
         self.failureResultOf(failing, RuntimeError)
