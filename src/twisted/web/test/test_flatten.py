@@ -708,9 +708,7 @@ class FlattenerErrorTests(SynchronousTestCase):
                       <unrenderable>
                       <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>
                       File ".*", line \\d*, in _flattenTree
-                        element = await element
-                                  .*
-                    RuntimeError: example
+                        element = await element.*
                     """
                 ),
                 flags=re.MULTILINE,
