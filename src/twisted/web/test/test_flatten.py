@@ -706,9 +706,10 @@ class FlattenerErrorTests(SynchronousTestCase):
                     Exception while flattening:
                       \\[<unrenderable>\\]
                       <unrenderable>
-                      .*
+                      <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>
                       File ".*", line \\d*, in _flattenTree
                         element = await element
+                                  .*
                     RuntimeError: example
                     """
                 ),
