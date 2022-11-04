@@ -172,17 +172,17 @@ jobs:
 
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Get pip cache dir
       id: pip-cache
       run: |
-        echo "::set-output name=dir::$(pip cache dir)"
+        echo "{dir}={$(pip cache dir)}" >> $GITHUB_OUTPUT
 
     - name: pip cache
       uses: actions/cache@v3
@@ -262,13 +262,13 @@ jobs:
       TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         # Need history on all branches for newsfragment to work.
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
@@ -312,9 +312,9 @@ jobs:
     name: API docs build
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -329,9 +329,9 @@ jobs:
     name: Narrative docs build
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -352,10 +352,10 @@ jobs:
     name: Check release and publish on twisted-* tag
     runs-on: 'ubuntu-20.04'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
