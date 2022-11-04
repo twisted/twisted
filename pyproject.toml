@@ -52,8 +52,8 @@ dependencies = [
 # should be OK.
 test = [
     "cython-test-exception-raiser >= 1.0.2, <2",
-    "PyHamcrest >= 1.9.0",
-    "hypothesis ~= 6.0",
+    "PyHamcrest >= 2",
+    "hypothesis >= 6.56",
 ]
 
 # List of dependencies required to build the documentation and test the
