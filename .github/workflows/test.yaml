@@ -271,7 +271,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: read|write
+      issues: write
+      pull-requests: write
     needs:
       # We are waiting only for test jobs.
       - testing
