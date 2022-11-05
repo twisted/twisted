@@ -122,6 +122,14 @@ jobs:
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
 
+          # Just Python 3.11 with default settings.
+          - python-version: '3.11'
+
+          # Newest macOS and newest Python supported versions.
+          - python-version: '3.11'
+            runs-on: 'macos-12'
+            job-name: 'macos-12-default-tests'
+
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
             runs-on: 'windows-2022'
@@ -133,7 +141,7 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.10'
+          - python-version: '3.11'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
@@ -155,13 +163,15 @@ jobs:
             trial-target: 'twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
             job-name: 'with-coverage'
 
-          # We run selected test for GTK reactor inside X virtual framebuffer.
+          # We run the full test suite with the GI reactor against an X virtual
+          # framebuffer server.  This covers our integration with the version
+          # of Gtk packaged within our selected version of Linux above.
           - python-version: '3.7'
             tox-env: 'alldeps-gtk-withcov-posix'
-            trial-target: 'twisted.internet.test'
-            platform-deps: 'gtk_platform'
+            platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
+            trial-args: '--reactor=gi -j 4'
 
 
     steps:
@@ -205,7 +215,7 @@ jobs:
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
     - name: Install GTK system deps
-      if: matrix.platform-deps == 'gtk_platform'
+      if: matrix.platform-deps == 'gtk-platform'
       run: |
         # *-dev dependencies are for pygobject
         # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/setup.py#L129-L134
@@ -225,7 +235,7 @@ jobs:
     # If one of the above steps fails, fire up tmate for remote debugging.
     # This is fired for manual trigger or via the environment variable.
     - name: Tmate debug session
-      if: ${{ !cancelled() && (env.TMATE_DEBUG == 'yes' || github.event_name == 'workflow_dispatch' && inputs.debug_enabled ) }}
+      if: ${{ failure() && (env.TMATE_DEBUG == 'yes' || github.event_name == 'workflow_dispatch' && inputs.debug_enabled ) }}
       uses: mxschmitt/action-tmate@v3
       with:
         limit-access-to-actor: true

@@ -4,6 +4,7 @@ parallel = True
 source = twisted
 omit =
     .tox/*/tmp/_trial_temp/*
+    */twisted/internet/gtk2reactor.py
 
 [paths]
 source=

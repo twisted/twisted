@@ -101,7 +101,9 @@ class MainTests(TestCase):
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
-        self.assertIn(b"No module named 'doesntexist'", self.writeStream.getvalue())
+        # Just brazenly encode irrelevant implementation details here, why
+        # not.
+        self.assertIn(b"StreamOpen", self.writeStream.getvalue())
 
     def test_readInterrupted(self):
         """
