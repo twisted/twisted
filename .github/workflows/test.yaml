@@ -300,12 +300,7 @@ jobs:
       run: |
           # Report for the job log.
           coverage report --no-skip-covered --show-missing
-
-          # Report for the PR comment.
-          echo '```' > coverage-report.txt
-          coverage report --show-missing --skip-covered >> coverage-report.txt
-          diff-cover --compare-branch origin/trunk coverage.xml  >> coverage-report.txt
-          echo '```' >> coverage-report.txt
+          diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
 
     # Use the generic JS script to call our custom script
     # for sending a comment to a PR.
@@ -313,11 +308,11 @@ jobs:
       uses: actions/github-script@v3
       env:
         COMMENT_MARKER: "<!--- automatic-coverage-report -->"
-        COMMENT_BODY: coverage-report.txt
+        COMMENT_BODY: coverage-report.md
       with:
         script: |
           const script = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/pr_comment.js`)
-          // Only pass top level objects as GHA does dependecy injection.
+          // Only pass top level objects as GHA does dependency injection.
           await script({github, context, process})
 
     - name: Enforce diff coverage
