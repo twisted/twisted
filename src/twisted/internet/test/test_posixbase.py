@@ -331,7 +331,7 @@ class WakerTests(WarningCheckerTestCase):
         """
         No warnings are generated when constructing the waker.
         """
-        waker = _Waker(reactor=None)
+        waker = _Waker()
 
         warnings = self.flushWarnings()
         self.assertEqual(len(warnings), 0, warnings)

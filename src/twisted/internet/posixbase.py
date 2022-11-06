@@ -30,7 +30,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log
 from twisted.python.runtime import platform, platformType
-from ._signals import _SIGCHLDWaker, _Waker
+from ._signals import _IWaker, _SIGCHLDWaker, _Waker
 
 # Exceptions that doSelect might return frequently
 _NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")
@@ -118,7 +118,8 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
 
     # Callable that creates a waker, overrideable so that subclasses can
     # substitute their own implementation:
-    _wakerFactory = _Waker
+    def _wakerFactory(self) -> _IWaker:
+        return _Waker()
 
     def installWaker(self):
         """
@@ -128,7 +129,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         the reactor. On Windows we use a pair of sockets.
         """
         if not self.waker:
-            self.waker = self._wakerFactory(self)
+            self.waker = self._wakerFactory()
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
@@ -142,7 +143,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         super()._handleSignals()
         if platformType == "posix" and processEnabled:
             if not self._childWaker:
-                self._childWaker = _SIGCHLDWaker(self)
+                self._childWaker = _SIGCHLDWaker()
                 self._internalReaders.add(self._childWaker)
                 self.addReader(self._childWaker)
             self._childWaker.install()

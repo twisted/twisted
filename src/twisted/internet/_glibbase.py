@@ -56,6 +56,10 @@ class GlibWaker(_UnixWaker):
     Run scheduled events after waking up.
     """
 
+    def __init__(self, reactor):
+        super().__init__()
+        self.reactor = reactor
+
     def doRead(self) -> None:
         super().doRead()
         self.reactor._simulate()
@@ -106,7 +110,8 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     # Install a waker that knows it needs to call C{_simulate} in order to run
     # callbacks queued from a thread:
-    _wakerFactory = GlibWaker
+    def _wakerFactory(self) -> GlibWaker:
+        return GlibWaker(self)
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None

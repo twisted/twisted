@@ -181,9 +181,8 @@ class _FDWaker(log.Logger):
     i = None
     o = None
 
-    def __init__(self, reactor):
+    def __init__(self):
         """Initialize."""
-        self.reactor = reactor
         self.i, self.o = os.pipe()
         fdesc.setNonBlocking(self.i)
         fdesc._setCloseOnExec(self.i)
@@ -244,22 +243,19 @@ class _SIGCHLDWaker(_FDWaker):
     received.
     """
 
-    def __init__(self, reactor):
-        _FDWaker.__init__(self, reactor)
-
-    def install(self):
+    def install(self) -> None:
         """
         Install the handler necessary to make this waker active.
         """
         installHandler(self.o)
 
-    def uninstall(self):
+    def uninstall(self) -> None:
         """
         Remove the handler which makes this waker active.
         """
         installHandler(-1)
 
-    def doRead(self):
+    def doRead(self) -> None:
         """
         Having woken up the reactor in response to receipt of
         C{SIGCHLD}, reap the process which exited.
