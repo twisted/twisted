@@ -270,9 +270,7 @@ jobs:
     name: Coverage report
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: write
-      pull-requests: write
     needs:
       # We are waiting only for test jobs.
       - testing
