@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
-from twisted.internet import base, posixbase, selectreactor
+from twisted.internet import posixbase, selectreactor
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
@@ -128,7 +128,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     def _handleSignals(self):
         # First, install SIGINT and friends:
-        base._SignalReactorMixin._handleSignals(self)
+        super()._handleSignals()
         # Next, since certain versions of gtk will clobber our signal handler,
         # set all signal handlers again after the event loop has started to
         # ensure they're *really* set. We don't call this twice so we don't

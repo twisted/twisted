@@ -14,7 +14,7 @@ from typing import Sequence
 from zope.interface import classImplements, implementer
 
 from twisted.internet import error, tcp, udp
-from twisted.internet.base import ReactorBase, _SignalReactorMixin
+from twisted.internet.base import ReactorBase
 from twisted.internet.interfaces import (
     IHalfCloseableDescriptor,
     IReactorFDSet,
@@ -108,7 +108,7 @@ class _DisconnectSelectableMixin:
 
 
 @implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
-class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorBase):
+class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
     """
     A basis for reactors that use file descriptors.
 
@@ -139,7 +139,7 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin, ReactorB
         Extend the basic signal handling logic to also support
         handling SIGCHLD to know when to try to reap child processes.
         """
-        _SignalReactorMixin._handleSignals(self)
+        super()._handleSignals()
         if platformType == "posix" and processEnabled:
             if not self._childWaker:
                 self._childWaker = _SIGCHLDWaker(self)
