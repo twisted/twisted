@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
-from twisted.internet import base, posixbase, selectreactor
+from twisted.internet import posixbase, selectreactor
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
