@@ -7,6 +7,7 @@ Tests for L{twisted.internet.posixbase} and supporting code.
 import os
 
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReadDescriptor
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 from twisted.python.runtime import platform
@@ -96,7 +97,7 @@ class PosixReactorBaseTests(WarningCheckerTestCase):
 
     def test_removeAllSkipsInternalReaders(self):
         """
-        Any L{IReadDescriptors} in L{PosixReactorBase._internalReaders} are
+        Any L{IReadDescriptor}s in L{PosixReactorBase._internalReaders} are
         left alone by L{PosixReactorBase._removeAll}.
         """
         reactor = TrivialReactor()
@@ -155,10 +156,15 @@ class TimeoutReportReactor(PosixReactorBase):
         self.iterationTimeout = Deferred()
         self.now = 100
 
-    def addReader(self, reader):
+    def addReader(self, reader: IReadDescriptor) -> None:
         """
         Ignore the reader.  This is necessary because the waker will be
         added.  However, we won't actually monitor it for any events.
+        """
+
+    def removeReader(self, reader: IReadDescriptor) -> None:
+        """
+        See L{addReader}.
         """
 
     def removeAll(self):

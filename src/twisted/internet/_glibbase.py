@@ -13,14 +13,18 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from typing import Any, Callable, Dict, Set
+from types import TracebackType
+from typing import Any, Callable, Dict, Optional, Set, Type
 
 from zope.interface import implementer
+
+from typing_extensions import Literal
 
 from twisted.internet import posixbase, selectreactor
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
+from twisted.python.monkey import MonkeyPatcher
 from ._signals import _UnixWaker
 
 
@@ -63,6 +67,44 @@ class GlibWaker(_UnixWaker):
     def doRead(self) -> None:
         super().doRead()
         self.reactor._simulate()
+
+
+class _SignalGlue:
+    """
+    Integrate glib's wakeup file descriptor usage and our own.
+
+    Python supports only one wakeup file descriptor at a time and both Twisted
+    and glib want to use it.
+
+    This is a context manager that can be wrapped around the whole glib
+    reactor main loop which makes our signal handling work with glib's signal
+    handling.
+    """
+
+    def __enter__(self) -> None:
+        """
+        Disable glib's use of Python's wakeup fd feature.
+
+        Since we are going to install our own wakeup fd we don't need glib's.
+        This tricks glib into thinking it has installed its already.
+        """
+        from gi import _ossighelper as signalGlue  # type: ignore[import]
+
+        self._patcher = MonkeyPatcher()
+        self._patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
+        self._patcher.patch()
+
+    def __exit__(
+        self,
+        excType: Optional[Type[Exception]],
+        excValue: Optional[Exception],
+        traceback: Optional[TracebackType],
+    ) -> Literal[False]:
+        """
+        Restore the original internal glib state.
+        """
+        self._patcher.restore()
+        return False
 
 
 def _loopQuitter(
@@ -131,14 +173,18 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
         self._run = self.loop.run
 
-    def _handleSignals(self):
+    def _reallyStartRunning(self):
         # First, install SIGINT and friends:
-        super()._handleSignals()
+        super()._reallyStartRunning()
         # Next, since certain versions of gtk will clobber our signal handler,
         # set all signal handlers again after the event loop has started to
-        # ensure they're *really* set. We don't call this twice so we don't
-        # leak file descriptors created in the SIGCHLD initialization:
-        self.callLater(0, posixbase.PosixReactorBase._handleSignals, self)
+        # ensure they're *really* set.
+
+        def reinitSignals():
+            self._signals.uninstall()
+            self._signals.install()
+
+        self.callLater(0, reinitSignals)
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -278,10 +324,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Run the reactor.
         """
-        self.callWhenRunning(self._reschedule)
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        if self._started:
-            self._run()
+        with _SignalGlue():
+            self.callWhenRunning(self._reschedule)
+            self.startRunning(installSignalHandlers=installSignalHandlers)
+            if self._started:
+                self._run()
 
     def callLater(self, *args, **kwargs):
         """
