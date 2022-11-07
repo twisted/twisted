@@ -147,16 +147,12 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         platforms.
         """
         baseHandling = super()._signalsFactory()
-        if (
-            # If we're on a platform that uses signals for process event signaling
-            platformType == "posix"
-            # And we have the necessary dependencies for running processes
-            and processEnabled
-        ):
+        # If we're on a platform that uses signals for process event signaling
+        if platformType == "posix":
             # Compose ...
             return _MultiSignalHandling(
                 (
-                    # the given signal handling behavior ...
+                    # the base signal handling behavior ...
                     baseHandling,
                     # with our extra SIGCHLD handling behavior.
                     _ChildSignalHandling(
