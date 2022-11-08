@@ -206,7 +206,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             fileno = source
             wrapper = callback
         return self._glib.io_add_watch(
-            fileno, condition, wrapper, priority=self._glib.PRIORITY_DEFAULT_IDLE
+            fileno,
+            self._glib.PRIORITY_DEFAULT_IDLE,
+            condition,
+            wrapper,
         )
 
     def _ioEventCallback(self, source, condition):
