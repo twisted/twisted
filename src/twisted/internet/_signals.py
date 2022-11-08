@@ -292,9 +292,8 @@ class _SocketWaker(log.Logger):
 
     disconnected = 0
 
-    def __init__(self, reactor):
+    def __init__(self):
         """Initialize."""
-        self.reactor = reactor
         # Following select_trigger (from asyncore)'s example;
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
