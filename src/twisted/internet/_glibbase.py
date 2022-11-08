@@ -13,12 +13,9 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from types import TracebackType
-from typing import Any, Callable, Dict, Optional, Set, Type
+from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
-
-from typing_extensions import Literal
 
 from twisted.internet import posixbase, selectreactor
 from twisted.internet.abstract import FileDescriptor
