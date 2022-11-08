@@ -69,7 +69,7 @@ class GlibWaker(_UnixWaker):
         self.reactor._simulate()
 
 
-class _SignalGlue:
+def _signalGlue():
     """
     Integrate glib's wakeup file descriptor usage and our own.
 
@@ -80,31 +80,11 @@ class _SignalGlue:
     reactor main loop which makes our signal handling work with glib's signal
     handling.
     """
+    from gi import _ossighelper as signalGlue  # type: ignore[import]
 
-    def __enter__(self) -> None:
-        """
-        Disable glib's use of Python's wakeup fd feature.
-
-        Since we are going to install our own wakeup fd we don't need glib's.
-        This tricks glib into thinking it has installed its already.
-        """
-        from gi import _ossighelper as signalGlue  # type: ignore[import]
-
-        self._patcher = MonkeyPatcher()
-        self._patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
-        self._patcher.patch()
-
-    def __exit__(
-        self,
-        excType: Optional[Type[Exception]],
-        excValue: Optional[Exception],
-        traceback: Optional[TracebackType],
-    ) -> Literal[False]:
-        """
-        Restore the original internal glib state.
-        """
-        self._patcher.restore()
-        return False
+    patcher = MonkeyPatcher()
+    patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
+    return patcher
 
 
 def _loopQuitter(
@@ -327,7 +307,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Run the reactor.
         """
-        with _SignalGlue():
+        with _signalGlue():
             self.callWhenRunning(self._reschedule)
             self.startRunning(installSignalHandlers=installSignalHandlers)
             if self._started:
