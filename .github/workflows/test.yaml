@@ -129,6 +129,7 @@ jobs:
           - python-version: '3.11'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
+            tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.7'
