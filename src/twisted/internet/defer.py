@@ -1041,7 +1041,9 @@ class Deferred(Awaitable[_DeferredResultT]):
         return future
 
     @classmethod
-    def fromFuture(cls, future: "Future[_DeferredResultT]") -> "Deferred[_DeferredResultT]":
+    def fromFuture(
+        cls, future: "Future[_DeferredResultT]"
+    ) -> "Deferred[_DeferredResultT]":
         """
         Adapt a L{Future} to a L{Deferred}.
 
