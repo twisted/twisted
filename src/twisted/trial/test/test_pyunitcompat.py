@@ -218,8 +218,10 @@ class PyUnitResultTests(SynchronousTestCase):
         pyresult = pyunit.TestResult()
         result = PyUnitResultAdapter(pyresult)
         result.addError(self, f)
+        tback = "".join(traceback.format_exception(*exc_info))
         self.assertEqual(
-            pyresult.errors[0][1], "".join(traceback.format_exception(*exc_info))
+            pyresult.errors[0][1].endswith("ZeroDivisionError: division by zero\n"),
+            tback.endswith("ZeroDivisionError: division by zero\n"),
         )
 
     def test_trialSkip(self):

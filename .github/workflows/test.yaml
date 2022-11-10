@@ -122,8 +122,11 @@ jobs:
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
 
+          # Just Python 3.11 with default settings.
+          - python-version: '3.11'
+
           # Newest macOS and newest Python supported versions.
-          - python-version: '3.10'
+          - python-version: '3.11'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
 
@@ -138,7 +141,7 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.10'
+          - python-version: '3.11'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
@@ -293,15 +296,6 @@ jobs:
     - name: Newsfragment
       run: |
         tox -q -e newsfragment
-
-    # This is called only on code changes.
-    # If you forgot to define the right PR title you should re-run the job.
-    - name: Check PR title format
-      if: github.event_name == 'pull_request'
-      env:
-        PR_TITLE: ${{ github.event.pull_request.title }}
-        PR_BODY: ${{ github.event.pull_request.body }}
-      run: python .github/scripts/check-pr-text.py
 
 
   # Used to validate the narrative and API docs.
