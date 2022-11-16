@@ -385,6 +385,13 @@ class CFReactor(PosixReactorBase):
         finally:
             self._inCFLoop = False
 
+        assert not self.running, (
+            self._stopped,
+            self._started,
+            self._justStopped,
+            self._startedBefore,
+        )
+
     _currentSimulator = None
 
     def _scheduleSimulate(self, force=False):
