@@ -372,6 +372,14 @@ class CFReactor(PosixReactorBase):
         self._scheduleSimulate()
         return result
 
+    def startRunning(self, installSignalHandlers: bool = True) -> None:
+        """
+        Start running the reactor, then kick off the timer that advances
+        Twisted's clock to keep pace with CFRunLoop's.
+        """
+        super().startRunning(installSignalHandlers)
+        self._scheduleSimulate()
+
     _inCFLoop = False
 
     def mainLoop(self):
@@ -384,6 +392,7 @@ class CFReactor(PosixReactorBase):
             self._runner()
         finally:
             self._inCFLoop = False
+            self._stopSimulating()
 
         assert not self.running, (
             self._stopped,
@@ -392,9 +401,18 @@ class CFReactor(PosixReactorBase):
             self._startedBefore,
         )
 
-    _currentSimulator = None
+    _currentSimulator: object | None = None
 
-    def _scheduleSimulate(self, force=False):
+    def _stopSimulating(self) -> None:
+        """
+        If we have a CFRunLoopTimer registered with the CFRunLoop, invalidate
+        it and set it to None.
+        """
+        if self._currentSimulator is not None:
+            CFRunLoopTimerInvalidate(self._currentSimulator)
+            self._currentSimulator = None
+
+    def _scheduleSimulate(self, force: bool = False) -> None:
         """
         Schedule a call to C{self.runUntilCurrent}.  This will cancel the
         currently scheduled call if it is already scheduled.
@@ -408,9 +426,12 @@ class CFReactor(PosixReactorBase):
 
         @type force: C{bool}
         """
-        if self._currentSimulator is not None:
-            CFRunLoopTimerInvalidate(self._currentSimulator)
-            self._currentSimulator = None
+        self._stopSimulating()
+        if not self.running:
+            # If the reactor is not running (e.g. we are scheduling callLater
+            # calls before starting the reactor) we should not be scheduling
+            # CFRunLoopTimers against the global CFRunLoop.
+            return
         timeout = self.timeout()
         if force:
             timeout = 0.0
