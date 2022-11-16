@@ -378,7 +378,10 @@ class CFReactor(PosixReactorBase):
         Twisted's clock to keep pace with CFRunLoop's.
         """
         super().startRunning(installSignalHandlers)
-        self._scheduleSimulate()
+        # We must force the simulator to run because in addition to scheduling
+        # timed calls, super().startRunning also fires startup events which may
+        # crash the reactor.
+        self._scheduleSimulate(force=True)
 
     _inCFLoop = False
 
@@ -401,12 +404,9 @@ class CFReactor(PosixReactorBase):
             self._inCFLoop = False
             self._stopSimulating()
 
-        assert not (self.running or self._started), (
-            self._stopped,
-            self._started,
-            self._justStopped,
-            self._startedBefore,
-        )
+        assert (not self.running) and (
+            not self._started
+        ), f"{self.running=} {self._started=} {self._stopped=} {self._justStopped=} {self._startedBefore=}"
 
     _currentSimulator: object | None = None
 
