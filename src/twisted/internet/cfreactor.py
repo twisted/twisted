@@ -382,11 +382,18 @@ class CFReactor(PosixReactorBase):
 
     _inCFLoop = False
 
-    def mainLoop(self):
+    def mainLoop(self) -> None:
         """
         Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
+        if not self.running:
+            # A startup event has stopped or crashed the reactor before we have
+            # even gotten to start the main loop.  Don't bother to run anything
+            # in the main loop.  There should be a direct test for this;
+            # callLater(0, ...); callWhenRunning(crash)
+            self._stopSimulating()
+            return
         self._inCFLoop = True
         try:
             self._runner()
@@ -467,13 +474,9 @@ class CFReactor(PosixReactorBase):
         """
         Implement L{IReactorCore.crash}
         """
-        wasStarted = self._started
         PosixReactorBase.crash(self)
         if self._inCFLoop:
             self._stopNow()
-        else:
-            if wasStarted:
-                self.callLater(0, self._stopNow)
 
     def _stopNow(self):
         """
