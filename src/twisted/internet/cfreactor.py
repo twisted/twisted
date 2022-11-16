@@ -387,7 +387,7 @@ class CFReactor(PosixReactorBase):
         Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
-        if not self.running:
+        if not self._started:
             # A startup event has stopped or crashed the reactor before we have
             # even gotten to start the main loop.  Don't bother to run anything
             # in the main loop.  There should be a direct test for this;
@@ -401,7 +401,7 @@ class CFReactor(PosixReactorBase):
             self._inCFLoop = False
             self._stopSimulating()
 
-        assert not self.running, (
+        assert not (self.running or self._started), (
             self._stopped,
             self._started,
             self._justStopped,
@@ -434,7 +434,7 @@ class CFReactor(PosixReactorBase):
         @type force: C{bool}
         """
         self._stopSimulating()
-        if not self.running:
+        if not self._started:
             # If the reactor is not running (e.g. we are scheduling callLater
             # calls before starting the reactor) we should not be scheduling
             # CFRunLoopTimers against the global CFRunLoop.
