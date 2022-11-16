@@ -490,8 +490,12 @@ class CFReactor(PosixReactorBase):
         by letting the loop run for a little while and then scheduling a timed
         call to exit it.
         """
-        self.callLater(delay, self._stopNow)
-        self.mainLoop()
+        self._started = True
+        self.callLater(0, self.crash)
+        try:
+            self.mainLoop()
+        finally:
+            self._started = False
 
 
 def install(runLoop=None, runner=None):

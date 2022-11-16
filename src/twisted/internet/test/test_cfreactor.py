@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
@@ -41,6 +41,19 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
         r2.callLater(0, r2.callLater, 0, r2.stop)
         self.runReactor(r2)
         self.assertEqual(r.getDelayedCalls(), [delayed])
+
+    def test_whiteboxIterate(self) -> None:
+        """
+        C{.iterate()} starts the main loop, then crashes the reactor.
+        """
+        r = self.buildReactor()
+        x: List[int] = []
+        r.callLater(0, x.append, 1)
+        delayed = r.callLater(100, lambda: None)
+        r.iterate()
+        self.assertIs(r._currentSimulator, None)
+        self.assertEqual(r.getDelayedCalls(), [delayed])
+        self.assertEqual(x, [1])
 
 
 globals().update(CoreFoundationSpecificTests.makeTestCaseClasses())
