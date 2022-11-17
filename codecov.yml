@@ -6,7 +6,6 @@
 # the coverage.
 #
 codecov:
-  token: fb52015a-b78e-4d89-a6e0-a4829aea2efa
   require_ci_to_pass: yes
   notify:
     # We have at least 5 builds in GitHub Actions,
