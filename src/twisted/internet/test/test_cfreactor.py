@@ -8,10 +8,6 @@ if TYPE_CHECKING:
 else:
     fakeBase = object
 
-from twisted.logger import Logger
-
-l = Logger()
-
 
 class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
     """
@@ -39,28 +35,19 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
             we may wish to promote it to ensure this invariant across other
             foreign-main-loop reactors.
         """
-        l.info("building reactor 1")
         r = self.buildReactor()
-        l.info("scheduling delay 1")
         delayed = r.callLater(0, lambda: None)
-        l.info("building reactor 2")
         r2 = self.buildReactor()
-        l.info("scheduling delay 2")
 
         def stopBlocking() -> None:
-            l.info("scheduling r2stop")
             r2.callLater(0, r2stop)
 
         def r2stop() -> None:
-            l.info("r2 stop happening")
             r2.stop()
 
         r2.callLater(0, stopBlocking)
-        l.info("blocking")
         self.runReactor(r2)
-        l.info("asserting")
         self.assertEqual(r.getDelayedCalls(), [delayed])
-        l.info("done")
 
     def test_whiteboxIterate(self) -> None:
         """

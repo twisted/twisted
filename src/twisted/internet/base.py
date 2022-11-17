@@ -55,7 +55,6 @@ from twisted.internet.interfaces import (
     _ISupportsExitSignalCapturing,
 )
 from twisted.internet.protocol import ClientFactory
-from twisted.logger import Logger
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform, seconds as runtimeSeconds
@@ -71,8 +70,6 @@ if platform.supportsThreads():
     from twisted.python.threadpool import ThreadPool
 else:
     ThreadPool = None  # type: ignore[misc, assignment]
-
-_log = Logger()
 
 
 @implementer(IDelayedCall)
@@ -648,11 +645,6 @@ class ReactorBase(PluggableResolverMixin):
             )
             return
 
-        _log.info(
-            "installing signals on {cls} @ {id}",
-            cls=self.__class__.__qualname__,
-            id=id(self),
-        )
         if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
             # only handle if there isn't already a handler, e.g. for Pdb.
             signal.signal(signal.SIGINT, self.sigInt)
@@ -780,8 +772,6 @@ class ReactorBase(PluggableResolverMixin):
         # TODO: test for calling crash() multiple times, this system event
         # trigger should not be added multiple times
 
-    _sigCalled = 0
-
     def sigInt(self, number: int, frame: Optional[FrameType] = None) -> None:
         """
         Handle a SIGINT interrupt.
@@ -789,18 +779,8 @@ class ReactorBase(PluggableResolverMixin):
         @param number: See handler specification in L{signal.signal}
         @param frame: See handler specification in L{signal.signal}
         """
-        self._sigCalled += 1
-        shouldCrash = self._sigCalled > 3
-        _log.warn(
-            "Received SIGINT, shutting down reactor {reactorid} ({sigCalled}; {shouldCrash})",
-            reactorid=id(self),
-            sigCalled=self._sigCalled,
-            shouldCrash=shouldCrash,
-        )
-        if shouldCrash:
-            self.callFromThread(self.crash)
-        else:
-            self.callFromThread(self.stop)
+        log.msg("Received SIGINT, shutting down.")
+        self.callFromThread(self.stop)
         self._exitSignal = number
 
     def sigBreak(self, number: int, frame: Optional[FrameType] = None) -> None:
