@@ -406,11 +406,29 @@ class CFReactor(PosixReactorBase):
         try:
             while self._started:
                 if already:
+                    # Sometimes CFRunLoopRun (or its equivalents) may exit
+                    # early. This is really only *supposed* to happen when it
+                    # runs out of sources & timers to process, but it appears
+                    # that in cases where the reactor is being rapidly started
+                    # and crashed repeatedly, and sources are being rapidly
+                    # invalidated both inside and outside the loop (e.g. in the
+                    # Twisted test suite), CoreFoundation (possibly
+                    # incorrectly?) exits the runloop early.  To accommodate
+                    # this stress case, we make extra sure that our scheduled
+                    # timer is re-created on the loop as a CFRunLoopTimer.
                     self._scheduleSimulate()
-                    if self._currentSimulator is None:
-                        raise Exception(
-                            f"loop exited with _started=True and we might not have anything else to do {id(self)}"
-                        )
+
+                    # At this point, there may be a little more code that we
+                    # would need to put here for full correctness for a very
+                    # peculiar type of application: if you're writing a
+                    # command-line tool using cfreactor, adding *nothing* to
+                    # the reactor itself, disabling even the internal Waker
+                    # file descriptors, then there's a possibility that
+                    # CFRunLoopRun will exit early, and if we have no timers,
+                    # we might busy-loop here.  Because we cannot seem to force
+                    # this to happen under normal circumstances, we're leaving
+                    # that code out.
+
                 already = True
                 self._inCFLoop = True
                 try:
