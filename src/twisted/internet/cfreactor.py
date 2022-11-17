@@ -455,11 +455,26 @@ class CFReactor(PosixReactorBase):
                         started=self._started,
                     )
         finally:
+            _log.info(
+                "cf loop goodbye {reactorid} {started}",
+                reactorid=id(self),
+                started=self._started,
+            )
             self._stopSimulating()
 
+        _log.info(
+            "cf loop final-assert {reactorid} {started}",
+            reactorid=id(self),
+            started=self._started,
+        )
         assert (not self.running) and (
             not self._started
         ), f"{self.running=} {self._started=} {self._stopped=} {self._justStopped=} {self._startedBefore=}"
+        _log.info(
+            "cf loop clean exit {reactorid} {started}",
+            reactorid=id(self),
+            started=self._started,
+        )
 
     _currentSimulator: object | None = None
 
