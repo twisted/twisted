@@ -139,8 +139,6 @@ class CFReactor(PosixReactorBase):
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
         _log.info("cfreactor {reactorid}", reactorid=id(self))
-        # keep the loop alive forever?
-        self.callLater(99999999999, lambda: None)
 
     def _trksrc(self, kind, delta):
         """
@@ -428,15 +426,37 @@ class CFReactor(PosixReactorBase):
                 )
                 self.crash()
 
+            # we're running again, just for a moment, while we wait for some
+            # I/O to take place.  We need this to be True for callLater to not
+            # be a functional no-op.  the crash timer will set us back to
+            # _started = False again momentarily.
+            self._started = True
             self.callLater(0, docrash)
         _log.info("cf loop enter {reactorid}", reactorid=id(self))
-        self._inCFLoop = True
+        already = False
         try:
-            self._runner()
+            while self._started:
+                if already:
+                    _log.info("cf uh-oh resimulating {reactorid}", reactorid=id(self))
+                    self._scheduleSimulate()
+                    if self._currentSimulator is None:
+                        raise Exception(
+                            f"loop exited with _started=True and we might not have anything else to do {id(self)}"
+                        )
+                already = True
+                self._inCFLoop = True
+                try:
+                    self._runner()
+                finally:
+                    self._inCFLoop = False
+                    _log.info(
+                        "cf loop exit {reactorid} {started}",
+                        reactorid=id(self),
+                        started=self._started,
+                    )
         finally:
-            self._inCFLoop = False
             self._stopSimulating()
-            _log.info("cf loop exit {reactorid}", reactorid=id(self))
+
         assert (not self.running) and (
             not self._started
         ), f"{self.running=} {self._started=} {self._stopped=} {self._justStopped=} {self._startedBefore=}"
@@ -449,13 +469,13 @@ class CFReactor(PosixReactorBase):
         it and set it to None.
         """
         _log.info("cftimer simstop {reactorid}", reactorid=id(self))
-        if self._currentSimulator is not None:
-            CFRunLoopTimerInvalidate(self._currentSimulator)
-            _log.info("cftimer invalidated {reactorid}", reactorid=id(self))
-            self._trksrc("timer", -1)
-            self._currentSimulator = None
-        else:
+        if self._currentSimulator is None:
             _log.info("cftimer stopsim noop {reactorid}", reactorid=id(self))
+            return
+        CFRunLoopTimerInvalidate(self._currentSimulator)
+        _log.info("cftimer invalidated {reactorid}", reactorid=id(self))
+        self._trksrc("timer", -1)
+        self._currentSimulator = None
 
     def _scheduleSimulate(self, force: bool = False) -> None:
         """
@@ -479,9 +499,7 @@ class CFReactor(PosixReactorBase):
             # CFRunLoopTimers against the global CFRunLoop.
             _log.info("simsched earlyout {reactorid}", reactorid=id(self))
             return
-        timeout = self.timeout()
-        if force:
-            timeout = 0.0
+        timeout = 0.0 if force else self.timeout()
         if timeout is not None:
             _log.info("simsched timer time {reactorid}", reactorid=id(self))
             fireDate = CFAbsoluteTimeGetCurrent() + timeout
