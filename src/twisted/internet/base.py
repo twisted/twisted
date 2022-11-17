@@ -769,8 +769,7 @@ class ReactorBase(PluggableResolverMixin):
         """
         self._started = False
         self.running = False
-        # TODO: test for calling crash() multiple times, this system event
-        # trigger should not be added multiple times
+        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
 
     def sigInt(self, number: int, frame: Optional[FrameType] = None) -> None:
         """
@@ -898,7 +897,6 @@ class ReactorBase(PluggableResolverMixin):
         if self._registerAsIOThread:
             threadable.registerAsIOThread()
         self.fireSystemEvent("startup")
-        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
 
     def _reallyStartRunning(self) -> None:
         """
