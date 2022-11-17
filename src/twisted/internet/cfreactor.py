@@ -438,10 +438,6 @@ class CFReactor(PosixReactorBase):
         finally:
             self._stopSimulating()
 
-        assert (not self.running) and (
-            not self._started
-        ), f"{self.running=} {self._started=} {self._stopped=} {self._justStopped=} {self._startedBefore=}"
-
     _currentSimulator: object | None = None
 
     def _stopSimulating(self) -> None:
