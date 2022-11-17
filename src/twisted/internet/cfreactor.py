@@ -16,7 +16,7 @@ import sys
 
 from zope.interface import implementer
 
-from CFNetwork import (
+from CFNetwork import (  # type:ignore[import]
     CFSocketCreateRunLoopSource,
     CFSocketCreateWithNative,
     CFSocketDisableCallBacks,
@@ -29,7 +29,7 @@ from CFNetwork import (
     kCFSocketReadCallBack,
     kCFSocketWriteCallBack,
 )
-from CoreFoundation import (
+from CoreFoundation import (  # type:ignore[import]
     CFAbsoluteTimeGetCurrent,
     CFRunLoopAddSource,
     CFRunLoopAddTimer,
