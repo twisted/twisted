@@ -493,8 +493,11 @@ class CFReactor(PosixReactorBase):
         """
         Implement L{IReactorCore.stop}.
         """
+        me = id(self)
+        _log.info("cfreactor stopping {reactorid}", reactorid=me)
         PosixReactorBase.stop(self)
         self._scheduleSimulate(True)
+        _log.info("cfreactor stopped simulate scheduled {reactorid}", reactorid=me)
 
     def crash(self):
         """
