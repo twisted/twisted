@@ -83,6 +83,8 @@ class _WakerPlus(_UnixWaker):
 
 _log = Logger()
 
+_allTwistedSrcCount = 0
+
 
 @implementer(IReactorFDSet)
 class CFReactor(PosixReactorBase):
@@ -137,18 +139,23 @@ class CFReactor(PosixReactorBase):
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
         _log.info("cfreactor {reactorid}", reactorid=id(self))
+        # keep the loop alive forever?
+        self.callLater(99999999999, lambda: None)
 
     def _trksrc(self, kind, delta):
         """
         track sources
         """
+        global _allTwistedSrcCount
+        _allTwistedSrcCount += delta
         self._srcCount += delta
         _log.info(
-            "cfsrc {reactorid} {kind} {delta} {count}",
+            "cfsrc {reactorid} {kind} {delta} {instanceCount} {globalCount}",
             reactorid=id(self),
             kind=kind,
             delta=delta,
-            count=self._srcCount,
+            instanceCount=self._srcCount,
+            globalCount=_allTwistedSrcCount,
         )
 
     def installWaker(self):
@@ -395,11 +402,13 @@ class CFReactor(PosixReactorBase):
         Start running the reactor, then kick off the timer that advances
         Twisted's clock to keep pace with CFRunLoop's.
         """
+        _log.info("cf start running {id}; signals?", id=id(self))
         super().startRunning(installSignalHandlers)
         # We must force the simulator to run because in addition to scheduling
         # timed calls, super().startRunning also fires startup events which may
         # crash the reactor.
         self._scheduleSimulate(force=True)
+        _log.info("cf started running {id}; signals?", id=id(self))
 
     _inCFLoop = False
 
@@ -408,17 +417,26 @@ class CFReactor(PosixReactorBase):
         Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
-        _log.info("cfreactor.mainloop hello {reactorid}", reactorid=id(self))
-        while self._started:
-            self._inCFLoop = True
-            _log.info("cf loop enter {reactorid}", reactorid=id(self))
-            try:
-                self._runner()
-            finally:
-                self._inCFLoop = False
-                self._stopSimulating()
-                _log.info("cf loop exit {reactorid}", reactorid=id(self))
-        _log.info("cfreactor.mainloop goodbye {reactorid}", reactorid=id(self))
+        _log.info("cf loop hello {reactorid}", reactorid=id(self))
+        # we were crashed during startup.
+        if not self._started:
+            _log.info("cf loop crash-before-stop {reactorid}", reactorid=id(self))
+
+            def docrash() -> None:
+                _log.info(
+                    "cf loop crash-before-stop-crash {reactorid}", reactorid=id(self)
+                )
+                self.crash()
+
+            self.callLater(0, docrash)
+        _log.info("cf loop enter {reactorid}", reactorid=id(self))
+        self._inCFLoop = True
+        try:
+            self._runner()
+        finally:
+            self._inCFLoop = False
+            self._stopSimulating()
+            _log.info("cf loop exit {reactorid}", reactorid=id(self))
         assert (not self.running) and (
             not self._started
         ), f"{self.running=} {self._started=} {self._stopped=} {self._justStopped=} {self._startedBefore=}"

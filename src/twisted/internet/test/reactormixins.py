@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
+from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.failure import Failure
@@ -42,6 +43,8 @@ except ImportError:
     process = None
 else:
     process = _process
+
+_l = Logger()
 
 
 class TestTimeoutError(Exception):
@@ -230,6 +233,8 @@ class ReactorBuilder:
         # branch that fixes it.
         #
         # -exarkun
+        rid = id(reactor)
+        _l.info("unbuilding; internal {rid}", rid=rid)
         reactor._uninstallHandler()
         if getattr(reactor, "_internalReaders", None) is not None:
             for reader in reactor._internalReaders:
@@ -237,15 +242,18 @@ class ReactorBuilder:
                 reader.connectionLost(None)
             reactor._internalReaders.clear()
 
+        _l.info("unbuilding; disconnect {rid}", rid=rid)
         # Here's an extra thing unrelated to wakers but necessary for
         # cleaning up after the reactors we make.  -exarkun
         reactor.disconnectAll()
 
         # It would also be bad if any timed calls left over were allowed to
         # run.
+        _l.info("unbuilding; delays {rid}", rid=rid)
         calls = reactor.getDelayedCalls()
         for c in calls:
             c.cancel()
+        _l.info("unbuilding; finished {rid}", rid=rid)
 
     def buildReactor(self):
         """
