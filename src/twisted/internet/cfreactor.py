@@ -33,7 +33,7 @@ from CoreFoundation import (
     CFAbsoluteTimeGetCurrent,
     CFRunLoopAddSource,
     CFRunLoopAddTimer,
-    CFRunLoopGetMain,
+    CFRunLoopGetCurrent,
     CFRunLoopRemoveSource,
     CFRunLoopRun,
     CFRunLoopStop,
@@ -133,7 +133,7 @@ class CFReactor(PosixReactorBase):
         self._srcCount = 0
 
         if runLoop is None:
-            runLoop = CFRunLoopGetMain()
+            runLoop = CFRunLoopGetCurrent()
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
         _log.info("cfreactor {reactorid}", reactorid=id(self))
@@ -520,10 +520,7 @@ class CFReactor(PosixReactorBase):
         """
         self._started = True
         self.callLater(0, self.crash)
-        try:
-            self.mainLoop()
-        finally:
-            self._started = False
+        self.mainLoop()
 
 
 def install(runLoop=None, runner=None):
