@@ -1,3 +1,4 @@
+from time import sleep
 from typing import TYPE_CHECKING, List
 
 from twisted.trial.unittest import SynchronousTestCase
@@ -61,6 +62,29 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
         self.assertIs(r._currentSimulator, None)
         self.assertEqual(r.getDelayedCalls(), [delayed])
         self.assertEqual(x, [1])
+
+    def test_noTimers(self) -> None:
+        """
+        The loop can wake up just fine even if there are no timers in it.
+        """
+        r = self.buildReactor()
+        stopped = []
+
+        def doStop() -> None:
+            r.stop()
+            stopped.append("yes")
+
+        def sleepThenStop() -> None:
+            sleep(0.5)
+            r.callFromThread(doStop)
+
+        r.callLater(0, r.callInThread, sleepThenStop)
+        # Can't use runReactor here because it does a callLater.  This is
+        # therefore a somewhat risky test: inherently, this is the "no timed
+        # events anywhere in the reactor" test case and so we can't have a
+        # timeout for it.
+        r.run()
+        self.assertEqual(stopped, ["yes"])
 
 
 globals().update(CoreFoundationSpecificTests.makeTestCaseClasses())
