@@ -518,6 +518,12 @@ class CFReactor(PosixReactorBase):
         call to exit it.
         """
         self._started = True
+        # Since the CoreFoundation loop doesn't have the concept of "iterate"
+        # we can't ask it to do this.  Instead we will make arrangements to
+        # crash it *very* soon and then make it run.  This is a rough
+        # approximation of "an iteration".  Using crash and mainLoop here
+        # means that it's safe (as safe as anything using "iterate" can be) to
+        # do this repeatedly.
         self.callLater(0, self.crash)
         self.mainLoop()
 
