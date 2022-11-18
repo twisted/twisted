@@ -10,6 +10,15 @@ else:
     fakeBase = object
 
 
+def noop() -> None:
+    """
+    Do-nothing callable. Stub for testing.
+    """
+
+
+noop()
+
+
 class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
     """
     Tests for platform interactions of the CoreFoundation-based reactor.
@@ -23,7 +32,7 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
         """
         r = self.buildReactor()
         r.callLater(0, r.crash)
-        r.callLater(100, lambda: None)
+        r.callLater(100, noop)
         self.runReactor(r)
         self.assertIs(r._currentSimulator, None)
 
@@ -37,7 +46,7 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
             foreign-main-loop reactors.
         """
         r = self.buildReactor()
-        delayed = r.callLater(0, lambda: None)
+        delayed = r.callLater(0, noop)
         r2 = self.buildReactor()
 
         def stopBlocking() -> None:
@@ -57,7 +66,7 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
         r = self.buildReactor()
         x: List[int] = []
         r.callLater(0, x.append, 1)
-        delayed = r.callLater(100, lambda: None)
+        delayed = r.callLater(100, noop)
         r.iterate()
         self.assertIs(r._currentSimulator, None)
         self.assertEqual(r.getDelayedCalls(), [delayed])
