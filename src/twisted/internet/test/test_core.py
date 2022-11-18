@@ -298,21 +298,13 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} raises L{ReactorNotRestartable} when called when
         the reactor is being run after getting stopped priorly.
         """
-        events: List[object] = []
+        events: List[str] = []
 
         testCase = cast(SynchronousTestCase, self)
 
         def restart() -> None:
-            try:
-                reactor.run()
-            except ReactorNotRestartable:
-                # This is the good case.
-                events.append("tested")
-            except BaseException:
-                f = Failure()
-                events.append(("failed", f.getTraceback().split("\n")))
-            else:
-                events.append("entered reactor.run() :/")
+            testCase.assertRaises(ReactorNotRestartable, reactor.run)
+            events.append("tested")
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(reactor.stop)
