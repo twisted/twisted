@@ -431,21 +431,33 @@ class CFReactor(PosixReactorBase):
             while self._started:
                 if already:
                     # Sometimes CFRunLoopRun (or its equivalents) may exit
-                    # early. This is really only *supposed* to happen when it
-                    # runs out of sources & timers to process, but it appears
-                    # that in cases where the reactor is being rapidly started
-                    # and crashed repeatedly, and sources are being rapidly
-                    # invalidated both inside and outside the loop (e.g. in the
-                    # Twisted test suite), CoreFoundation (possibly
-                    # incorrectly?) exits the runloop early.  To accommodate
-                    # this stress case, we make extra sure that our scheduled
-                    # timer is re-created on the loop as a CFRunLoopTimer.
+                    # without CFRunLoopStop being called.
+
+                    # This is really only *supposed* to happen when it runs out
+                    # of sources & timers to process.  However, in full Twisted
+                    # test-suite runs we have observed, extremely rarely (once
+                    # in every 3000 tests or so) CFRunLoopRun exiting in cases
+                    # where it seems as though there *is* still some work to
+                    # do.  However, given the difficulty of reproducing the
+                    # race conditions necessary to make this happen, it's
+                    # possible that we have missed some nuance of when
+                    # CFRunLoop considers the list of work "empty" and various
+                    # callbacks and timers to be "invalidated".  Therefore we
+                    # are not fully confident that this is a platform bug, but
+                    # it is nevertheless unexpected behavior from our reading
+                    # of the documentation.
+
+                    # To accommodate this rare and slightly ambiguous stress
+                    # case, we make extra sure that our scheduled timer is
+                    # re-created on the loop as a CFRunLoopTimer, which
+                    # reliably gives the loop some work to do and 'fixes' it if
+                    # it exited due to having no active sources or timers.
                     self._scheduleSimulate()
 
                     # At this point, there may be a little more code that we
                     # would need to put here for full correctness for a very
                     # peculiar type of application: if you're writing a
-                    # command-line tool using cfreactor, adding *nothing* to
+                    # command-line tool using CFReactor, adding *nothing* to
                     # the reactor itself, disabling even the internal Waker
                     # file descriptors, then there's a possibility that
                     # CFRunLoopRun will exit early, and if we have no timers,
