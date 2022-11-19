@@ -1,4 +1,3 @@
-from time import sleep
 from typing import TYPE_CHECKING, List
 
 from twisted.trial.unittest import SynchronousTestCase
@@ -84,7 +83,6 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
             stopped.append("yes")
 
         def sleepThenStop() -> None:
-            sleep(0.5)
             r.callFromThread(doStop)
 
         r.callLater(0, r.callInThread, sleepThenStop)
