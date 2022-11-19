@@ -378,10 +378,26 @@ class CFReactor(PosixReactorBase):
         Twisted's clock to keep pace with CFRunLoop's.
         """
         super().startRunning(installSignalHandlers)
-        # We must force the simulator to run because in addition to scheduling
-        # timed calls, super().startRunning also fires startup events which may
-        # crash the reactor.
+
+        # Before 'startRunning' is called, the reactor is not attached to the
+        # CFRunLoop[1]; specifically, the CFTimer that runs all of Twisted's
+        # timers is not active and will not have been added to the loop by any
+        # application code.  Now that _running is probably[2] True, we need to
+        # ensure that timed calls will actually run on the main loop.  This
+        # call needs to be here, rather than at the top of mainLoop, because
+        # it's possible to use startRunning to *attach* a reactor to an
+        # already-running CFRunLoop, i.e. within a plugin for an application
+        # that doesn't otherwise use Twisted, rather than calling it via run().
         self._scheduleSimulate(force=True)
+
+        # [1]: readers & writers are still active in the loop, but arguably
+        #      they should not be.
+
+        # [2]: application code within a 'startup' system event trigger *may*
+        #      have already crashed the reactor and thus set _started to False,
+        #      but that specific case is handled by mainLoop, since that case
+        #      is inherently irrelevant in an attach-to-application case and is
+        #      only necessary to handle mainLoop spuriously blocking.
 
     _inCFLoop = False
 
@@ -390,16 +406,24 @@ class CFReactor(PosixReactorBase):
         Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
-        # we were crashed during startup.
         if not self._started:
+            # If we arrive here, we were crashed by application code in a
+            # 'startup' system event trigger, (or crashed manually before the
+            # application calls 'mainLoop' directly for whatever reason; sigh,
+            # this method should not be public).  However, application code
+            # doing obscure things will expect an invocation of this loop to
+            # have at least *one* pass over ready readers, writers, and delayed
+            # calls.  iterate(), in particular, is emulated in exactly this way
+            # in this reactor implementation.  In order to ensure that we enter
+            # the real implementation of the mainloop and do all of those
+            # things, we need to set _started back to True so that callLater
+            # actually schedules itself against the CFRunLoop, but immediately
+            # crash once we are in the context of the loop where we've run
+            # ready I/O and timers.
 
             def docrash() -> None:
                 self.crash()
 
-            # we're running again, just for a moment, while we wait for some
-            # I/O to take place.  We need this to be True for callLater to not
-            # be a functional no-op.  the crash timer will set us back to
-            # _started = False again momentarily.
             self._started = True
             self.callLater(0, docrash)
         already = False
