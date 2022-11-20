@@ -60,7 +60,11 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
 
     def test_whiteboxIterate(self) -> None:
         """
-        C{.iterate()} starts the main loop, then crashes the reactor.
+        C{.iterate()} should remove the CFTimer that will run Twisted's
+        callLaters from the loop, even if one is still pending.  We test this
+        state indirectly with a white-box assertion by verifying the
+        C{_currentSimulator} is set to C{None}, since CoreFoundation does not
+        allow us to enumerate all active timers or sources.
         """
         r = self.buildReactor()
         x: List[int] = []
