@@ -15,7 +15,7 @@ def noop() -> None:
     """
 
 
-noop()
+noop()  # Exercise for coverage, since it will never be called below.
 
 
 class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
