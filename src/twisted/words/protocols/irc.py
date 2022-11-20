@@ -50,7 +50,7 @@ import time
 import traceback
 from functools import reduce
 from os import path
-from typing import Optional
+from typing import List, Optional
 
 from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
@@ -1248,7 +1248,7 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
-    decodeCodecs: list[str] = ["utf-8"]
+    decodeCodecs: List[str] = ["utf-8"]
     decodeFallbackErrorhandling: str = "replace"
 
     def _reallySendLine(self, line):
@@ -2656,7 +2656,7 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
-    def dataReceived(self, data: bytes | str):
+    def dataReceived(self, data: bytes) -> None:
         if isinstance(data, str):
             data = data.encode("utf-8")
         data = data.replace(b"\r", b"")
