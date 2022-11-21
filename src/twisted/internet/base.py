@@ -644,7 +644,7 @@ class ReactorBase(PluggableResolverMixin):
         self.installWaker()
 
     # Signal handling pieces
-    _installSignalHandlers = False
+    _installSignalHandlers: bool = False
 
     def _maybeSignalsFactory(self, installSignalHandlers: bool) -> SignalHandling:
         """

@@ -296,7 +296,7 @@ class _SocketWaker(log.Logger):
 
     disconnected = 0
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize."""
         # Following select_trigger (from asyncore)'s example;
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -308,8 +308,8 @@ class _SocketWaker(log.Logger):
             server.listen(1)
             client.connect(server.getsockname())
             reader, clientaddr = server.accept()
-        client.setblocking(0)
-        reader.setblocking(0)
+        client.setblocking(False)
+        reader.setblocking(False)
         self.r = reader
         self.w = client
         self.fileno = self.r.fileno
@@ -357,7 +357,7 @@ class _FDWaker(log.Logger):
     i: int
     o: int
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize."""
         self.i, self.o = os.pipe()
         fdesc.setNonBlocking(self.i)
