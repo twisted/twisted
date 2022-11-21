@@ -151,11 +151,22 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._run = self.loop.run
 
     def _reallyStartRunning(self):
+        """
+        Make sure the reactor's signal handlers are installed despite any
+        outside interference.
+        """
         # First, install SIGINT and friends:
         super()._reallyStartRunning()
+
         # Next, since certain versions of gtk will clobber our signal handler,
         # set all signal handlers again after the event loop has started to
         # ensure they're *really* set.
+        #
+        # We don't actually know which versions of gtk do this so this might
+        # be obsolete.  If so, that would be great and this whole method can
+        # go away.  Someone needs to find out, though.
+        #
+        # https://github.com/twisted/twisted/issues/11762
 
         def reinitSignals():
             self._signals.uninstall()
