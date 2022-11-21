@@ -438,7 +438,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # *Then* build the DeferredList
         dl = DeferredList([d1, d2])
 
-        result: List[int] = []
+        result: List[List[Tuple[bool, int]]] = []
         dl.addCallback(result.append)
 
         self.assertEqual(1, len(result))
@@ -624,16 +624,14 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def testCallbackErrors(self) -> None:
         l: List[Failure] = []
-        d = Deferred().addCallback(lambda _: 1 // 0).addErrback(l.append)
+        d: Deferred[int] = Deferred()
+        d.addCallback(lambda _: 1 // 0).addErrback(l.append)
         d.callback(1)
         self.assertIsInstance(l[0].value, ZeroDivisionError)
         l = []
-        d = (
-            Deferred()
-            .addCallback(lambda _: Failure(ZeroDivisionError()))
-            .addErrback(l.append)
-        )
-        d.callback(1)
+        d2 = Deferred[int]()
+        d2.addCallback(lambda _: Failure(ZeroDivisionError())).addErrback(l.append)
+        d2.callback(1)
         self.assertIsInstance(l[0].value, ZeroDivisionError)
 
     def testUnpauseBeforeCallback(self) -> None:
