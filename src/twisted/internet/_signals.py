@@ -156,10 +156,10 @@ class _WithSignalHandling:
 
     def uninstall(self) -> None:
         """
-        Do nothing for historical reasons.
+        At the moment, do nothing (for historical reasons).
         """
-        # TODO Make this do something, someday, because cleaning up your state
-        # is a nice idea.
+        # This should really do something.
+        # https://github.com/twisted/twisted/issues/11761
 
 
 @define
