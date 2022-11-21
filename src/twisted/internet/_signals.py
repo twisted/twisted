@@ -172,6 +172,9 @@ class _MultiSignalHandling:
     a single object so the reactor doesn't have to be concerned with how those
     implementations are factored.
 
+    @ivar _signalHandlings: The other C{SignalHandling} implementations to
+        which to propagate calls.
+
     @ivar _installed: If L{install} has been called but L{uninstall} has not.
         This is used to avoid double cleanup which otherwise results (at least
         during test suite runs) because twisted.internet.reactormixins doesn't
@@ -179,17 +182,17 @@ class _MultiSignalHandling:
         cleanup logic.
     """
 
-    _delegates: Sequence[SignalHandling]
+    _signalHandlings: Sequence[SignalHandling]
     _installed: bool = False
 
     def install(self) -> None:
-        for d in self._delegates:
+        for d in self._signalHandlings:
             d.install()
         self._installed = True
 
     def uninstall(self) -> None:
         if self._installed:
-            for d in self._delegates:
+            for d in self._signalHandlings:
                 d.uninstall()
             self._installed = False
 
