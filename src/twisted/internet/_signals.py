@@ -220,6 +220,7 @@ class _ChildSignalHandling:
         Extend the basic signal handling logic to also support handling
         SIGCHLD to know when to try to reap child processes.
         """
+        assert self._childWaker is None
         self._childWaker = _SIGCHLDWaker()
         self._addInternalReader(self._childWaker)
         self._childWaker.install()
