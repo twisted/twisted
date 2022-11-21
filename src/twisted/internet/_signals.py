@@ -220,6 +220,8 @@ class _ChildSignalHandling:
         Extend the basic signal handling logic to also support handling
         SIGCHLD to know when to try to reap child processes.
         """
+        # This conditional should probably not be necessary.
+        # https://github.com/twisted/twisted/issues/11763
         if self._childWaker is None:
             self._childWaker = _SIGCHLDWaker()
             self._addInternalReader(self._childWaker)
