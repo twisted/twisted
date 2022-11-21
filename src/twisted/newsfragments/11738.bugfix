@@ -1,1 +1,1 @@
-PortableGIReactor is no longer necessary and has been removed, improving the performance of any application that was using it.
+PortableGIReactor and PortableGtkReactor are no longer necessary and are now aliases of GIReactor and Gtk2Reactor respectively, improving the performance of any applications using them.
