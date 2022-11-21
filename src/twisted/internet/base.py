@@ -646,7 +646,7 @@ class ReactorBase(PluggableResolverMixin):
     # Signal handling pieces
     _installSignalHandlers: bool = False
 
-    def _maybeSignalsFactory(self, installSignalHandlers: bool) -> SignalHandling:
+    def _makeSignalHandling(self, installSignalHandlers: bool) -> SignalHandling:
         """
         Get an appropriate signal handling object.
 
@@ -929,7 +929,7 @@ class ReactorBase(PluggableResolverMixin):
 
         self._signals.uninstall()
         self._installSignalHandlers = installSignalHandlers
-        self._signals = self._maybeSignalsFactory(installSignalHandlers)
+        self._signals = self._makeSignalHandling(installSignalHandlers)
 
         self._started = True
         self._stopped = False
