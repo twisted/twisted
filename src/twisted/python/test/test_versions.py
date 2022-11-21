@@ -94,7 +94,8 @@ class VersionsTests(TestCase):
         """
         va = Version("dummy", 1, 0, 0)
         vb = ("dummy", 1, 0, 0)  # a tuple is not a Version object
-        self.assertEqual(va.__cmp__(vb), NotImplemented)  # type: ignore[operator]
+        result = va.__cmp__(vb)  # type:ignore[arg-self]
+        type.assertEqual(result, NotImplemented)
 
     def test_repr(self):
         """
