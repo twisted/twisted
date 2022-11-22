@@ -11,10 +11,16 @@ test is over.
 @since: 12.3
 """
 
+from types import TracebackType
+from typing import Optional, Tuple, Union
+
 from zope.interface import implementer
 
 from twisted.python.components import proxyForInterface
-from twisted.trial.itrial import IReporter
+from twisted.python.failure import Failure
+from ..itrial import IReporter, ITestCase
+
+ReporterFailure = Union[Failure, Tuple[type, Exception, TracebackType]]
 
 
 @implementer(IReporter)
@@ -34,13 +40,13 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
         self.running[test.id()] = []
         self.running[test.id()].append((self.original.startTest, test))
 
-    def addFailure(self, test, fail):
+    def addFailure(self, test: ITestCase, fail: ReporterFailure) -> None:
         """
         Queue adding a failure.
         """
         self.running[test.id()].append((self.original.addFailure, test, fail))
 
-    def addError(self, test, error):
+    def addError(self, test: ITestCase, error: ReporterFailure) -> None:
         """
         Queue error adding.
         """
@@ -58,9 +64,11 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
         """
         self.running[test.id()].append((self.original.addUnexpectedSuccess, test, todo))
 
-    def addExpectedFailure(self, test, error, todo=None):
+    def addExpectedFailure(
+        self, test: ITestCase, error: ReporterFailure, todo: Optional[str] = None
+    ) -> None:
         """
-        Queue adding an unexpected failure.
+        Queue adding an expected failure.
         """
         self.running[test.id()].append(
             (self.original.addExpectedFailure, test, error, todo)

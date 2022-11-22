@@ -20,6 +20,7 @@ import linecache
 import sys
 from inspect import getmro
 from io import StringIO
+from typing import NoReturn
 
 import opcode
 
@@ -130,7 +131,7 @@ def _Traceback(stackFrames, tbFrames):
 
 
 # The set of attributes for _TracebackFrame, _Frame and _Code were taken from
-# https://docs.python.org/3.10/library/inspect.html Other Pythons may have a
+# https://docs.python.org/3.11/library/inspect.html Other Pythons may have a
 # few more attributes that should be added if needed.
 class _TracebackFrame:
     """
@@ -201,6 +202,9 @@ class _Code:
         self.co_names = ()
         self.co_nlocals = 0
         self.co_stacksize = 0
+
+    def co_positions(self):
+        return ((None, None, None, None),)
 
 
 _inlineCallbacksExtraneous = []
@@ -492,7 +496,7 @@ class Failure(BaseException):
                 return error
         return None
 
-    def raiseException(self):
+    def raiseException(self) -> NoReturn:
         """
         raise the original exception, preserving traceback
         information if available.

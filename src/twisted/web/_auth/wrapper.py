@@ -21,7 +21,7 @@ from twisted.cred.credentials import Anonymous
 from twisted.logger import Logger
 from twisted.python.components import proxyForInterface
 from twisted.web import util
-from twisted.web.resource import ErrorPage, IResource
+from twisted.web.resource import IResource, _UnsafeErrorPage
 
 
 @implementer(IResource)
@@ -52,7 +52,7 @@ class UnauthorizedResource:
             return b" ".join([scheme, b", ".join(lst)])
 
         def quoteString(s):
-            return b'"' + s.replace(b"\\", br"\\").replace(b'"', br"\"") + b'"'
+            return b'"' + s.replace(b"\\", rb"\\").replace(b'"', rb"\"") + b'"'
 
         request.setResponseCode(401)
         for fact in self._credentialFactories:
@@ -125,7 +125,7 @@ class HTTPAuthSessionWrapper:
             return UnauthorizedResource(self._credentialFactories)
         except BaseException:
             self._log.failure("Unexpected failure from credentials factory")
-            return ErrorPage(500, None, None)
+            return _UnsafeErrorPage(500, "Internal Error", "")
         else:
             return util.DeferredResource(self._login(credentials))
 
@@ -213,7 +213,7 @@ class HTTPAuthSessionWrapper:
                 "unexpected error",
                 failure=result,
             )
-            return ErrorPage(500, None, None)
+            return _UnsafeErrorPage(500, "Internal Error", "")
 
     def _selectParseHeader(self, header):
         """

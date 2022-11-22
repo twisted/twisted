@@ -1,7 +1,343 @@
+This file contains the release notes for Twisted.
+
+It only contains high-level changes that are of interest to Twisted library users.
+Users of Twisted should check the notes before planning an upgrade.
+
 Ticket numbers in this file can be looked up by visiting
-http://twistedmatrix.com/trac/ticket/<number>
+https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
+
+Twisted 22.10.0 (2022-10-30)
+============================
+
+This release contains a security fix for CVE-2022-39348.
+This is a low-severity security bug.
+
+Twisted 22.10.0rc1 release candidate was released on 2022-10-26 and there are
+no changes between the release candidate and the final release.
+
+
+Features
+--------
+
+- The ``systemd:`` endpoint parser now supports "named" file descriptors.  This is a more reliable mechanism for choosing among several inherited descriptors. (#8147)
+
+
+
+Improved Documentation
+----------------------
+
+- The ``systemd`` endpoint parser's ``index`` parameter is now documented as leading to non-deterministic results in which descriptor is selected.  The new ``name`` parameter is now documented as preferred. (#8146)
+- The implementers of Zope interfaces are once more displayed in the documentations. (#11690)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.protocols.dict, which was deprecated in 17.9, has been removed. (#11725)
+
+
+Misc
+----
+
+- #11573, #11599, #11616, #11628, #11631, #11640, #11645, #11647, #11652, #11664, #11674, #11679, #11686, #11692, #11694, #11696, #11700, #11702, #11713, #11715, #11721
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.manhole.ManholeInterpreter now captures tracebacks even if sys.excepthook has been modified. (#11638)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- The twisted.web.pages.errorPage, notFound, and forbidden each return an IResource that displays an HTML error pages safely rendered using twisted.web.template. (#11716)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.error.Error.__str__ no longer raises an exception when the error's message attribute is None. Additionally, it validates that code is a plausible 3-digit HTTP status code. (#10271)
+- The typing of the twisted.web.http_headers.Headers methods addRawHeader() and setRawHeaders() now allow mixing str and bytes, matching the runtime behavior. (#11635)
+- twisted.web.vhost.NameVirtualHost no longer echoes HTML received in the Host header without escaping it (CVE-2022-39348, GHSA-vg46-2rrj-3647). (#11716)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.resource.Resource.putChild now raises TypeError when the path argument is not bytes, rather than issuing a deprecation warning. (#8985)
+- The twisted.web.resource.ErrorPage, NoResource, and ForbiddenResource classes have been deprecated in favor of new implementations twisted.web.pages module because they permit HTML injection. (#11716)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- emailserver.tac now runs under python3.x (#11634)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- twisted.trial.unittest.SynchronousTestCase.successResultOf is now annotated as accepting coroutines. (#11657)
+
+
+Bugfixes
+~~~~~~~~
+
+- The implementation of ``trial -jN ...`` now handles test errors and failures larger than 64 kB.  It also handles other internal communication errors by logging them in the worker and attempting to send them to the parent process -- instead of crashing with ``UnknownRemoteError`` and no additional details. (#10314)
+- `trial -jN --logfile path` no longer hangs if *path* contains a directory separator. (#11580)
+
+
+Misc
+~~~~
+
+- #11649, #11661, #11677, #11710
+
+
+Twisted 22.8.0 (2022-09-06)
+===========================
+
+Twisted 22.8.0rc1 release candidate was released on 2022-08-28 and there are
+no changes between the release candidate and the final release.
+
+
+Features
+--------
+
+- twisted.internet.defer.maybeDeferred will now schedule a coroutine result as asynchronous operation and return a Deferred that fires with the result of the coroutine. (#10327)
+- Twisted now works with Cryptography versions 37 and above, and as a result, its minimum TLS protocol version has been upgraded to TLSv1.2. (#10377)
+
+
+Bugfixes
+--------
+
+- ``twisted.internet.base.DelayedCall.__repr__`` will no longer raise ``AttributeError`` if the ``DelayedCall`` was created before debug mode was enabled.  As a side-effect, ``twisted.internet.base.DelayedCall.creator`` is now defined as ``None`` in cases where previously it was undefined. (#8306)
+- twisted.internet.iocpreactor.udp now properly re-queues its listener when there is a failure condition on the read from the socket. (#10052)
+- twisted.internet.defer.inlineCallbacks no longer causes confusing StopIteration tracebacks to be added to the top of tracebacks originating in triggered callbacks (#10260)
+- The typing of twisted.internet.task.react no longer constrains the type of argv. (#10289)
+- `ContextVar.reset()` now works correctly inside `inlineCallbacks` functions and coroutines. (#10301)
+- Implement twisted.python.failure._Code.co_positions for compatibility with Python 3.11. (#10336)
+- twisted.pair.tuntap._TUNSETIFF and ._TUNGETIFF values are now correct parisc, powerpc and sparc architectures. (#10339)
+
+
+Improved Documentation
+----------------------
+
+- The release process documentation was updated to include information about
+  doing a security release. (#10324)
+- The development and policy documentation pages were moved into the same
+  directory that is now placed inside the documentation root directory. (#11575)
+
+
+Deprecations and Removals
+-------------------------
+
+- Python 3.6 is no longer supported.
+  Twisted 22.4.0 was the last version with support for Python 3.6. (#10304)
+
+
+Misc
+----
+
+- #9437, #9495, #10066, #10275, #10318, #10325, #10328, #10329, #10331, #10349, #10350, #10352, #10353, #11561, #11564, #11567, #11569, #11585, #11592, #11600, #11606, #11610, #11612, #11614
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.checkers.UNIXAuthorizedKeysFiles now uses the filesystem encoding to decode usernames before looking them up in the password database, so it works on Python 3. (#10286)
+- twisted.conch.ssh.SSHSession.request_env no longer gives a warning if the session does not implement ISessionSetEnv. (#10347)
+- The cftp command line (and `twisted.conch.scripts.cftp.SSHSession.extReceived`) no longer raises an unhandled error when receiving data on stderr from the server. (#10351)
+
+
+Misc
+~~~~
+
+- #10330
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.template.renderElement now combines consecutive, sychronously-available bytes up to a fixed size limit into a single string to pass to ``IRequest.write`` instead of passing them all separately.  This greatly reduces the number of chunks in the response. (#10348)
+
+
+Misc
+~~~~
+
+- #11604
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.maildir.MaildirMessage now use byte header to avoid incompatibility with the FileMessage which writes bytes not strings lines to a message file (#10244)
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.words.protocols.irc.IRCClient now splits overly long NOTICEs and NOTICEs containing \n before sending. (#10285)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.names.dns logs unparsable messages rather than generating a Failure instance (#9723)
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- ``trial --jobs=N --exitfirst`` is now supported. (#9654)
+
+
+Bugfixes
+~~~~~~~~
+
+- `trial --jobs=N --until-failure ...` now reports the correct number of tests run after each iteration. (#10311)
+- ``trial -jN ...`` will now pass errors and failures to ``IReporter`` methods as instances of ``WorkerException`` instead of ``str``. (#10333)
+
+
+Misc
+~~~~
+
+- #10319, #10338, #11571
+
+
+Twisted 22.4.0 (2022-04-11)
+===========================
+
+Features
+--------
+
+- twisted.python.failure.Failure tracebacks now capture module information, improving compatibility with the Raven Sentry client. (#7796)
+- twisted.python.failure.Failure objects are now compatible with dis.distb, improving compatibility with post-mortem debuggers. (#9599)
+
+
+Bugfixes
+--------
+
+- twisted.internet.interfaces.IReactorSSL.listenSSL now has correct type annotations. (#10274)
+- twisted.internet.test.test_glibbase.GlibReactorBaseTests now passes. (#10317)
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh now supports using RSA keys with SHA-2 signatures (RFC 8332) when acting as a server.  The rsa-sha2-512 and rsa-sha2-256 public key signature algorithms are automatically preferred over ssh-rsa if the client advertises support for them; the actual public keys do not need to change. (#9765)
+- twisted.conch.ssh now has an alternative Ed25519 implementation using PyNaCl, in order to support platforms that lack OpenSSL >= 1.1.1b.  The new "conch_nacl" extra has the necessary dependency. (#10208)
+
+
+Misc
+~~~~
+
+-  (#10313)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- Twisted is now compatible with h2 4.x.x. (#10182)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.http had several several defects in HTTP request parsing that could permit HTTP request smuggling. It now disallows signed Content-Length headers, forbids illegal characters in chunked extensions, forbids a ``0x`` prefix to chunk lengths, and only strips spaces and horizontal tab characters from header values. These changes address CVE-2022-24801 and GHSA-c2jg-hw38-jrqq. (#10323)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.pop3.APOPCredentials is now correctly marked as implementing twisted.cred.credentials.IUsernamHashedPassword, rather than IUsernamePassword. (#10305)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- `trial --until-failure --jobs=N` now reports the number of each test pass as it begins. (#10312)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.trial.unittest.TestCase now discards cleanup functions after running them.  Notably, this prevents them from being run an ever growing number of times with `trial -u ...`. (#10320)
+
+
+Misc
+~~~~
+
+- #10315, #10321, #10322
+
 
 Twisted 22.2.0 (2022-03-01)
 ===========================

@@ -123,9 +123,6 @@ class TrialRunnerTestsMixin:
     Mixin defining tests for L{runner.TrialRunner}.
     """
 
-    def tearDown(self):
-        self.runner._tearDownLogFile()
-
     def test_empty(self):
         """
         Empty test method, used by the other tests.
@@ -148,34 +145,15 @@ class TrialRunnerTestsMixin:
         """
         Test that a new file is opened on each run.
         """
-        oldSetUpLogFile = self.runner._setUpLogFile
-        l = []
+        logPath = FilePath(self.runner.workingDirectory).child(self.runner.logfile)
 
-        def setUpLogFile():
-            oldSetUpLogFile()
-            l.append(self.runner._logFileObserver)
-
-        self.runner._setUpLogFile = setUpLogFile
-        self.runner.run(self.test)
-        self.runner.run(self.test)
-        self.assertEqual(len(l), 2)
-        self.assertFalse(l[0] is l[1], "Should have created a new file observer")
-
-    def test_logFileGetsClosed(self):
-        """
-        Test that file created is closed during the run.
-        """
-        oldSetUpLogFile = self.runner._setUpLogFile
-        l = []
-
-        def setUpLogFile():
-            oldSetUpLogFile()
-            l.append(self.runner._logFileObject)
-
-        self.runner._setUpLogFile = setUpLogFile
-        self.runner.run(self.test)
-        self.assertEqual(len(l), 1)
-        self.assertTrue(l[0].closed)
+        for i in range(2):
+            self.runner.run(self.test)
+            logPath.restat()
+            self.assertTrue(logPath.exists())
+            # We can demonstrate it is re-opened on the next iteration by
+            # deleting the current version.
+            logPath.remove()
 
 
 class TrialRunnerTests(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
@@ -329,38 +307,10 @@ class RunnerTests(unittest.SynchronousTestCase):
         self.original = plugin.getPlugins
         plugin.getPlugins = getPlugins
 
-        self.standardReport = [
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-            "startTest",
-            "addSuccess",
-            "stopTest",
-        ]
+        # twisted.trial.test.sample has 10 test cases in it so the "standard"
+        # report expected from running it will have 10 repetitions of this
+        # sequence.
+        self.standardReport = ["startTest", "addSuccess", "stopTest"] * 10
 
     def tearDown(self):
         plugin.getPlugins = self.original
@@ -371,17 +321,6 @@ class RunnerTests(unittest.SynchronousTestCase):
     def getRunner(self):
         r = trial._makeRunner(self.config)
         r.stream = StringIO()
-        # XXX The runner should always take care of cleaning this up itself.
-        # It's not clear why this is necessary.  The runner always tears down
-        # its log file.
-        self.addCleanup(r._tearDownLogFile)
-        # XXX The runner should always take care of cleaning this up itself as
-        # well.  It's necessary because TrialRunner._setUpTestdir might raise
-        # an exception preventing Reporter.done from being run, leaving the
-        # observer added by Reporter.__init__ still present in the system.
-        # Something better needs to happen inside
-        # TrialRunner._runWithoutDecoration to remove the need for this cludge.
-        r._log = log.LogPublisher()
         return r
 
     def test_runner_can_get_reporter(self):
@@ -1063,32 +1002,6 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
 
         def writeln(self, *args):
             pass
-
-    def test_reporterDeprecations(self):
-        """
-        The runner emits a warning if it is using a result that doesn't
-        implement 'done'.
-        """
-        trialRunner = runner.TrialRunner(None)
-        result = self.FakeReporter()
-        trialRunner._makeResult = lambda: result
-
-        def f():
-            # We have to use a pyunit test, otherwise we'll get deprecation
-            # warnings about using iterate() in a test.
-            trialRunner.run(pyunit.TestCase("id"))
-
-        f()
-        warnings = self.flushWarnings([self.test_reporterDeprecations])
-
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            "%s should implement done() but doesn't. Falling back to "
-            "printErrors() and friends." % reflect.qual(result.__class__),
-        )
-        self.assertTrue(__file__.startswith(warnings[0]["filename"]))
-        self.assertEqual(len(warnings), 1)
 
 
 class QualifiedNameWalkerTests(unittest.SynchronousTestCase):

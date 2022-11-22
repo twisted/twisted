@@ -9,7 +9,7 @@ I am a virtual hosts implementation.
 
 # Twisted Imports
 from twisted.python import roots
-from twisted.web import resource
+from twisted.web import pages, resource
 
 
 class VirtualHostCollection(roots.Homogenous):
@@ -77,12 +77,13 @@ class NameVirtualHost(resource.Resource):
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host."""
         hostHeader = request.getHeader(b"host")
-        if hostHeader == None:
-            return self.default or resource.NoResource()
+        if hostHeader is None:
+            return self.default or pages.notFound()
         else:
             host = hostHeader.lower().split(b":", 1)[0]
-        return self.hosts.get(host, self.default) or resource.NoResource(
-            "host %s not in vhost map" % repr(host)
+        return self.hosts.get(host, self.default) or pages.notFound(
+            "Not Found",
+            f"host {host.decode('ascii', 'replace')!r} not in vhost map",
         )
 
     def render(self, request):

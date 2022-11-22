@@ -473,15 +473,7 @@ class _BaseMixin:
     def _assertBuffer(self, lines):
         receivedLines = self.recvlineClient.__bytes__().splitlines()
         expectedLines = lines + ([b""] * (self.HEIGHT - len(lines) - 1))
-        self.assertEqual(len(receivedLines), len(expectedLines))
-        for i in range(len(receivedLines)):
-            self.assertEqual(
-                receivedLines[i],
-                expectedLines[i],
-                b"".join(receivedLines[max(0, i - 1) : i + 1])
-                + b" != "
-                + b"".join(expectedLines[max(0, i - 1) : i + 1]),
-            )
+        self.assertEqual(receivedLines, expectedLines)
 
     def _trivialTest(self, inputLine, output):
         done = self.recvlineClient.expect(b"done")

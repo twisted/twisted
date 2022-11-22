@@ -1,1 +1,0 @@
-twisted.mail.pop3.APOPCredentials is now correctly marked as implementing twisted.cred.credentials.IUsernamHashedPassword, rather than IUsernamePassword.

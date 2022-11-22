@@ -761,7 +761,7 @@ class DummyRenderRequest(DummyRequest):  # type: ignore[misc]
     """
 
     def __init__(self) -> None:
-        super().__init__([""])
+        super().__init__([b""])
         self.site = FakeSite()
 
 
