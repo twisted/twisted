@@ -41,18 +41,6 @@ class GIReactor(_glibbase.GlibReactorBase):
         with C{registerGApplication}.
     """
 
-    _POLL_DISCONNECTED = (
-        GLib.IOCondition.HUP | GLib.IOCondition.ERR | GLib.IOCondition.NVAL
-    )
-    _POLL_IN = GLib.IOCondition.IN
-    _POLL_OUT = GLib.IOCondition.OUT
-
-    # glib's iochannel sources won't tell us about any events that we haven't
-    # asked for, even if those events aren't sensible inputs to the poll()
-    # call.
-    INFLAGS = _POLL_IN | _POLL_DISCONNECTED
-    OUTFLAGS = _POLL_OUT | _POLL_DISCONNECTED
-
     # By default no Application is registered:
     _gapplication = None
 
@@ -91,13 +79,13 @@ class GIReactor(_glibbase.GlibReactorBase):
         self._crash = app.quit
 
 
-class PortableGIReactor(_glibbase.PortableGlibReactorBase):
+class PortableGIReactor(_glibbase.GlibReactorBase):
     """
     Portable GObject Introspection event loop reactor.
     """
 
     def __init__(self, useGtk=False):
-        _glibbase.PortableGlibReactorBase.__init__(self, GLib, None, useGtk=useGtk)
+        super().__init__(GLib, None, useGtk=useGtk)
 
     def registerGApplication(self, app):
         """
@@ -105,6 +93,11 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
         will be used instead of the default one.
         """
         raise NotImplementedError("GApplication is not currently supported on Windows.")
+
+    def simulate(self) -> None:
+        """
+        For compatibility only. Do nothing.
+        """
 
 
 def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
@@ -114,6 +107,7 @@ def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
     @param useGtk: A hint that the Gtk GUI will or will not be used.  Currently
         does not modify any behavior.
     """
+    reactor: Union[GIReactor, PortableGIReactor]
     if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)
     else:
