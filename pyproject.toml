@@ -30,13 +30,13 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "zope.interface >= 4.4.2",
+    "zope.interface >= 5",
     "constantly >= 15.1",
     "incremental >= 22.10.0",
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
-    "attrs >= 19.2.0",
-    "typing_extensions >= 3.6.5",
+    "attrs >= 21.3.0",
+    "typing_extensions >= 3.10.0",
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
@@ -52,8 +52,8 @@ dependencies = [
 # should be OK.
 test = [
     "cython-test-exception-raiser >= 1.0.2, <2",
-    "PyHamcrest >= 1.9.0",
-    "hypothesis ~= 6.0",
+    "PyHamcrest >= 2",
+    "hypothesis >= 6.56",
 ]
 
 # List of dependencies required to build the documentation and test the
@@ -85,10 +85,10 @@ tls = [
 ]
 
 conch = [
-    "pyasn1",
-    "cryptography >= 2.6",
+    "pyasn1 >= 0.4",
+    "cryptography >= 3.3",
     "appdirs >= 1.4.0",
-    "bcrypt >= 3.0.0",
+    "bcrypt >= 3.1.3",
 ]
 
 conch-nacl = [
