@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 21.3.0",
+    "incremental >= 22.10.0",
 ]
 build-backend = "hatchling.build"
 
@@ -32,7 +32,7 @@ classifiers = [
 dependencies = [
     "zope.interface >= 4.4.2",
     "constantly >= 15.1",
-    "incremental >= 21.3.0",
+    "incremental >= 22.10.0",
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
     "attrs >= 19.2.0",
