@@ -112,9 +112,11 @@ jobs:
           # Any supported Python version is OK for this job.
           # We go with latest micro release for the smallest minor release
           # that we support.
+          # This is also used to run tests with minimum dependency versions.
           - python-version: '3.7'
             noipv6: '-noipv6'
-            job-name: 'default-tests-noipv6'
+            tox-env: 'mindeps-withcov-posix'
+            job-name: 'minimum-deps-noipv6'
 
           # Just Python 3.8 with default settings.
           - python-version: '3.8'
