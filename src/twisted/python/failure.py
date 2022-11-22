@@ -21,8 +21,7 @@ import sys
 import types
 from inspect import getmro
 from io import StringIO
-from typing import List, TypeVar
-from typing import NoReturn
+from typing import List, NoReturn, TypeVar
 
 import opcode
 import typing_extensions
