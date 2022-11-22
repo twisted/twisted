@@ -80,12 +80,7 @@ log = Logger()
 
 
 _T = TypeVar("_T")
-
-_ResultParam = TypeVar("_ResultParam", contravariant=True)
 _P = ParamSpec("_P")
-_R = TypeVar("_R")
-_R_co = TypeVar("_R_co", covariant=True)
-# https://github.com/python/mypy/issues/11855
 
 
 class AlreadyCalledError(Exception):
@@ -1274,14 +1269,6 @@ class Deferred(Awaitable[_DeferredResultT]):
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
 
-# _EitherCallback = Callable[[Union[_ResultParam, Failure]], Union[_R_co, Deferred[_R_co]]]
-class _EitherCallback(Protocol[_ResultParam, _P, _R_co]):
-    def __call__(
-        self, result: Union[_ResultParam, Failure], *args: _P.args, **kwargs: _P.kwargs
-    ) -> Union[_R_co, Deferred[_R_co], Failure]:
-        ...
-
-
 def ensureDeferred(
     coro: Union[
         Coroutine[Deferred[_T], Any, _T],
@@ -2009,11 +1996,9 @@ class _InternalInlineCallbacksCancelledError(Exception):
     """
 
 
-# type note: "..." is used here because we don't have a better way to express
-#     that the same arguments are accepted by the returned callable.
 def inlineCallbacks(
-    f: Callable[..., Generator[Deferred[object], object, _T]]
-) -> Callable[..., Deferred[_T]]:
+    f: Callable[_P, Generator[Deferred[object], object, _T]]
+) -> Callable[_P, Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::
@@ -2074,7 +2059,7 @@ def inlineCallbacks(
     """
 
     @wraps(f)
-    def unwindGenerator(*args: object, **kwargs: object) -> Deferred[_T]:
+    def unwindGenerator(*args: _P.args, **kwargs: _P.kwargs) -> Deferred[_T]:
         try:
             gen = f(*args, **kwargs)
         except _DefGen_Return:
