@@ -84,7 +84,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             signal.signal(signal.SIGINT, signal.default_int_handler)
         except ImportError:
             return
-        self._handleSignals()
+        self._signals.install()
 
     def stop(self):
         """
