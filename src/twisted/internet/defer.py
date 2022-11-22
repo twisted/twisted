@@ -756,7 +756,6 @@ class Deferred(Awaitable[_DeferredResultT]):
             # if C{deferred} was timed out, call the translation function,
             # if provided, otherwise just use L{cancelledToTimedOutError}
             if timedOut[0]:
-                assert not isinstance(result, Failure)
                 toCall = onTimeoutCancel or _cancelledToTimedOutError
                 return toCall(result, timeout)
             return result
