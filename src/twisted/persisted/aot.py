@@ -399,8 +399,10 @@ class AOTUnjellier:
                 inst = klass.__new__(klass)
                 if hasattr(klass, "__setstate__"):
                     self.callAfter(inst.__setstate__, state)
-                else:
+                elif isinstance(state, dict):
                     inst.__dict__ = state
+                else:
+                    inst.__dict__ = state.__getstate__()
                 return inst
 
             elif c is Ref:
