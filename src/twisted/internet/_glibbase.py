@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
-from twisted.internet import posixbase, selectreactor
+from twisted.internet import posixbase
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
@@ -138,7 +138,22 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._writes: Set[IWriteDescriptor] = set()
         self._sources: Dict[FileDescriptor, int] = {}
         self._glib = glib_module
-        posixbase.PosixReactorBase.__init__(self)
+
+        self._POLL_DISCONNECTED = (
+            glib_module.IOCondition.HUP
+            | glib_module.IOCondition.ERR
+            | glib_module.IOCondition.NVAL
+        )
+        self._POLL_IN = glib_module.IOCondition.IN
+        self._POLL_OUT = glib_module.IOCondition.OUT
+
+        # glib's iochannel sources won't tell us about any events that we haven't
+        # asked for, even if those events aren't sensible inputs to the poll()
+        # call.
+        self.INFLAGS = self._POLL_IN | self._POLL_DISCONNECTED
+        self.OUTFLAGS = self._POLL_OUT | self._POLL_DISCONNECTED
+
+        super().__init__()
 
         self._source_remove = self._glib.source_remove
         self._timeout_add = self._glib.timeout_add
@@ -352,49 +367,3 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         self.runUntilCurrent()
         self._reschedule()
-
-
-class PortableGlibReactorBase(selectreactor.SelectReactor):
-    """
-    Base class for GObject event loop reactors that works on Windows.
-
-    Sockets aren't supported by GObject's input_add on Win32.
-    """
-
-    def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
-        self._simtag = None
-        self._glib = glib_module
-        selectreactor.SelectReactor.__init__(self)
-
-        self._source_remove = self._glib.source_remove
-        self._timeout_add = self._glib.timeout_add
-
-        self.loop = self._glib.MainLoop()
-        self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
-        self._run = self.loop.run
-
-    def crash(self):
-        selectreactor.SelectReactor.crash(self)
-        self._crash()
-
-    def run(self, installSignalHandlers=True):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self._timeout_add(0, self.simulate)
-        if self._started:
-            self._run()
-
-    def simulate(self):
-        """
-        Run simulation loops and reschedule callbacks.
-        """
-        if self._simtag is not None:
-            self._source_remove(self._simtag)
-        self.iterate()
-        timeout = self.timeout()
-        if timeout is None or timeout > 0.01:
-            timeout = 0.01
-        self._simtag = self._timeout_add(
-            int(timeout * 1000),
-            self.simulate,
-            priority=self._glib.PRIORITY_DEFAULT_IDLE,
-        )
