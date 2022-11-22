@@ -256,8 +256,22 @@ def execute(
         return succeed(result)
 
 
+@overload
+def maybeDeferred(
+    f: Callable[_P, Deferred[_T]], *args: _P.args, **kwargs: _P.kwargs
+) -> "Deferred[_T]":
+    ...
+
+
+@overload
 def maybeDeferred(
     f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
+) -> "Deferred[_T]":
+    ...
+
+
+def maybeDeferred(
+    f: Callable[_P, Union[_T, Deferred[_T]]], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Invoke a function that may or may not return a L{Deferred} or coroutine.
@@ -615,30 +629,41 @@ class Deferred(Awaitable[_DeferredResultT]):
         #     the caller should treat the result as the new type, consistently.
         return cast(Deferred[_NextDeferredResultT], self)
 
+    @overload
     def addCallback(
         self,
-        callback:
-        # Union[
-        Callable[
-            Concatenate[_DeferredResultT, _P],
-            Union[_NextDeferredResultT, Deferred[_NextDeferredResultT], Failure],
-        ],
-        # Callable[
-        #     Concatenate[_DeferredResultT, _P],
-        #     _NextDeferredResultT
-        # ],
-        # Callable[
-        #     Concatenate[_DeferredResultT, _P],
-        #     Deferred[_NextDeferredResultT],
-        # ],
-        # Callable[
-        #     Concatenate[_DeferredResultT, _P],
-        #     Failure,
-        # ],
-        # ],
+        callback: Callable[Concatenate[_DeferredResultT, _P], Failure],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> "Deferred[_NextDeferredResultT]":
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addCallback(
+        self,
+        callback: Callable[
+            Concatenate[_DeferredResultT, _P], Deferred[_NextDeferredResultT]
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addCallback(
+        self,
+        callback: Callable[Concatenate[_DeferredResultT, _P], _NextDeferredResultT],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    def addCallback(
+        self,
+        callback: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "Deferred[Any]":
         """
         Convenience method for adding just a callback.
 
@@ -667,28 +692,64 @@ class Deferred(Awaitable[_DeferredResultT]):
             errbackKeywords=kwargs,
         )
 
+    @overload
     def addBoth(
         self,
-        callback: Union[
-            Callable[
-                Concatenate[Union[_DeferredResultT, Failure], _P], _NextDeferredResultT
-            ],
-            Callable[
-                Concatenate[Union[_DeferredResultT, Failure], _P],
-                Deferred[_NextDeferredResultT],
-            ],
-            Callable[Concatenate[Union[_DeferredResultT, Failure], _P], Failure],
-            Callable[
-                Concatenate[Union[_DeferredResultT, Failure], _P],
-                Union[Failure, _NextDeferredResultT],
-            ],
-            Callable[
-                Concatenate[Union[_DeferredResultT, Failure], _P],
-                Union[Failure, _NextDeferredResultT, Deferred[_NextDeferredResultT]],
-            ],
+        callback: Callable[Concatenate[Union[_DeferredResultT, Failure], _P], Failure],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[
+            Concatenate[Union[_DeferredResultT, Failure], _P],
+            Deferred[_NextDeferredResultT],
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[
+            Concatenate[Union[_DeferredResultT, Failure], _P],
+            Union[_DeferredResultT, Failure],
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[
+            Concatenate[Union[_DeferredResultT, Failure], _P], _NextDeferredResultT
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[Concatenate[_T, _P], _T],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_DeferredResultT]:
+        ...
+
+    def addBoth(
+        self,
+        callback: Any,
+        *args: Any,
+        **kwargs: Any,
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding a single callable as both a callback
@@ -710,9 +771,12 @@ class Deferred(Awaitable[_DeferredResultT]):
         timeout: float,
         clock: IReactorTime,
         onTimeoutCancel: Optional[
-            Callable[[_DeferredResultT, float], _DeferredResultT]
+            Callable[
+                [Union[_DeferredResultT, Failure], float],
+                Union[_NextDeferredResultT, Failure],
+            ]
         ] = None,
-    ) -> "Deferred[_DeferredResultT]":
+    ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         """
         Time out this L{Deferred} by scheduling it to be cancelled after
         C{timeout} seconds.
@@ -750,8 +814,8 @@ class Deferred(Awaitable[_DeferredResultT]):
         delayedCall = clock.callLater(timeout, timeItOut)
 
         def convertCancelled(
-            result: _DeferredResultT | Failure,
-        ) -> _DeferredResultT | Failure:
+            result: Union[_DeferredResultT, Failure],
+        ) -> Union[_DeferredResultT, _NextDeferredResultT, Failure]:
             # if C{deferred} was timed out, call the translation function,
             # if provided, otherwise just use L{cancelledToTimedOutError}
             if timedOut[0]:
@@ -760,18 +824,13 @@ class Deferred(Awaitable[_DeferredResultT]):
                 return toCall(result, timeout)
             return result
 
-        self.addBoth(convertCancelled)
-
-        def cancelTimeout(
-            result: Union[_DeferredResultT, Failure]
-        ) -> Union[_DeferredResultT, Failure]:
+        def cancelTimeout(result: _T) -> _T:
             # stop the pending call to cancel the deferred if it's been fired
             if delayedCall.active():
                 delayedCall.cancel()
             return result
 
-        self.addBoth(cancelTimeout)
-        return self
+        return self.addBoth(convertCancelled).addBoth(cancelTimeout)
 
     def chainDeferred(self, d: "Deferred[_DeferredResultT]") -> "Deferred[None]":
         """

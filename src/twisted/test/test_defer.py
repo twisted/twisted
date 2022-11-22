@@ -796,7 +796,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         expected = ValueError("that value is unacceptable")
 
-        def raisesException() -> NoReturn:
+        def raisesException() -> Union[NoReturn, None]:
             raise expected
 
         results: List[int] = []
@@ -844,9 +844,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         same.
         """
         d1: Deferred[None] = Deferred()
-        d2: Deferred[None] = defer.maybeDeferred(
-            lambda: d1  # type: ignore[arg-type]  # because nested Deferred
-        )
+        d2: Deferred[None] = defer.maybeDeferred(lambda: d1)
         d1.errback(Failure(RuntimeError()))
         self.assertImmediateFailure(d2, RuntimeError)
 
@@ -901,7 +899,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         callbacks are executed after the third L{Deferred} fires and before the
         first receives a result.
         """
-        results: List[Tuple[str, str]] = []
+        results: List[Union[Tuple[str, str], str]] = []
         failures: List[Failure] = []
         inner: Deferred[str] = Deferred()
 
@@ -945,30 +943,30 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         checking that we search for that callback among the whole list of
         callbacks.
         """
-        results: List[Tuple[str, Optional[str]]] = []
+        results: List[Tuple[str, Union[str, List[str], None]]] = []
         failures: List[Failure] = []
         a: Deferred[str] = Deferred()
 
-        def cb(result: str) -> Deferred[Optional[str]]:
+        def cb(result: str) -> Deferred[None]:
             results.append(("cb", result))
-            d: Deferred[Optional[str]] = Deferred()
+            d: Deferred[None] = Deferred()
 
-            def firstCallback(result: str) -> Deferred[List[str]]:
+            def firstCallback(result: None) -> Deferred[List[str]]:
                 results.append(("firstCallback", result))
                 return defer.gatherResults([a])
 
-            def secondCallback(result: str) -> None:
+            def secondCallback(result: List[str]) -> None:
                 results.append(("secondCallback", result))
 
-            d.addCallback(firstCallback)
-            d.addCallback(secondCallback)
-            d.addErrback(failures.append)
+            returner = (
+                d.addCallback(firstCallback)
+                .addCallback(secondCallback)
+                .addErrback(failures.append)
+            )
             d.callback(None)
-            return d
+            return returner
 
-        outer = defer.succeed("outer")
-        outer.addCallback(cb)
-        outer.addErrback(failures.append)
+        defer.succeed("outer").addCallback(cb).addErrback(failures.append)
         self.assertEqual([("cb", "outer"), ("firstCallback", None)], results)
         a.callback("withers")
         self.assertEqual([], failures)
@@ -983,26 +981,28 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         another L{Deferred} as a result is run after the callbacks of the other
         L{Deferred} are run.
         """
-        results: List[Tuple[str, Optional[str]]] = []
+        results: List[Tuple[str, Union[str, List[str], None]]] = []
         failures: List[Failure] = []
-        a: Deferred[Optional[str]] = Deferred()
+        a: Deferred[str] = Deferred()
 
-        def cb(result: str) -> Deferred[Optional[str]]:
+        def cb(result: str) -> Deferred[None]:
             results.append(("cb", result))
-            d: Deferred[Optional[str]] = Deferred()
+            d: Deferred[None] = Deferred()
 
-            def firstCallback(result: str) -> Deferred[List[str]]:
+            def firstCallback(result: None) -> Deferred[List[str]]:
                 results.append(("firstCallback", result))
                 return defer.gatherResults([a])
 
-            def secondCallback(result: str) -> None:
+            def secondCallback(result: List[str]) -> None:
                 results.append(("secondCallback", result))
 
-            d.addCallback(firstCallback)
-            d.addCallback(secondCallback)
-            d.addErrback(failures.append)
+            returner = (
+                d.addCallback(firstCallback)
+                .addCallback(secondCallback)
+                .addErrback(failures.append)
+            )
             d.callback(None)
-            return d
+            return returner
 
         outer: Deferred[str] = Deferred()
         outer.addCallback(cb)
@@ -1216,7 +1216,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         When these "inner" L{Deferred}s fire (even asynchronously), the
         callback chain continues.
         """
-        results: List[Tuple[str, str]] = []
+        results: List[Union[Tuple[str, str], str]] = []
         failures: List[Failure] = []
 
         # A Deferred returned in the inner callback.
@@ -1243,9 +1243,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # Create a synchronous Deferred that has a callback 'cb' that returns
         # a Deferred 'd' that has fired but is now waiting on an unfired
         # Deferred 'inner'.
-        outer = defer.succeed("outer")
-        outer.addCallback(cb)
-        outer.addCallback(results.append)
+        outer: Deferred[None] = (
+            defer.succeed("outer").addCallback(cb).addCallback(results.append)
+        )
         # At this point, the callback 'cb' has been entered, and the first
         # callback of 'd' has been called.
         self.assertEqual(
@@ -1284,9 +1284,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         # A Deferred returned in the inner callback after a callback is
         # added explicitly and directly to it.
-        inner: Deferred[Union[str, List[str]]] = Deferred()
+        inner: Deferred[str] = Deferred()
 
-        def cb(result: str) -> Deferred[str]:
+        def cb(result: str) -> Deferred[None]:
             results.append(("start-of-cb", result))
             d = defer.succeed("inner")
 
@@ -1306,10 +1306,11 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
                 results.append(("secondCallback", result))
                 return result * 2
 
-            d.addCallback(firstCallback)
-            d.addCallback(secondCallback)
-            d.addErrback(failures.append)
-            return d
+            return (
+                d.addCallback(firstCallback)
+                .addCallback(secondCallback)
+                .addErrback(failures.append)
+            )
 
         # Create a synchronous Deferred that has a callback 'cb' that returns
         # a Deferred 'd' that has fired but is now waiting on an unfired
@@ -2314,7 +2315,7 @@ class DeferredListEmptyTests(unittest.SynchronousTestCase):
         dl = DeferredList([])
         dl.addCallback(self.cb_empty)
 
-    def cb_empty(self, res: List[object]) -> None:
+    def cb_empty(self, res: List[Tuple[bool, object]]) -> None:
         self.callbackRan = 1
         self.assertEqual([], res)
 
