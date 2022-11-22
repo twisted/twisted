@@ -47,12 +47,6 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         self.signalModuleHandler = signal.getsignal(signal.SIGCHLD)
         self.oldFD = installHandler(-1)
 
-        self.assertEqual(
-            (self.signalModuleHandler, self.oldFD),
-            (signal.SIG_DFL, -1),
-            f"Previous test didn't clean up after its SIGCHLD setup: {self.signalModuleHandler} {self.oldFD}",
-        )
-
     def tearDown(self):
         """
         Restore whatever signal handler was present when setUp ran.
