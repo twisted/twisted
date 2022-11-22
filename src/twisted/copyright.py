@@ -13,7 +13,7 @@ from twisted import __version__ as version, version as _longversion
 longversion = str(_longversion)
 
 copyright = """\
-Copyright (c) 2001-2021 Twisted Matrix Laboratories.
+Copyright (c) 2001-2022 Twisted Matrix Laboratories.
 See LICENSE for details."""
 
 disclaimer = """

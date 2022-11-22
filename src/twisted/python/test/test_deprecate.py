@@ -16,7 +16,7 @@ from warnings import catch_warnings, simplefilter
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None  # type: ignore[assignment,misc]
+    invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
 

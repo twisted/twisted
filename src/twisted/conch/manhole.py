@@ -17,11 +17,15 @@ import code
 import sys
 import tokenize
 from io import BytesIO
+from traceback import format_exception
+from types import TracebackType
+from typing import Type
 
 from twisted.conch import recvline
 from twisted.internet import defer
 from twisted.python.compat import _get_async_param
 from twisted.python.htmlizer import TokenPrinter
+from twisted.python.monkey import MonkeyPatcher
 
 
 class FileWrapper:
@@ -71,6 +75,11 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.filename = filename
         self.resetBuffer()
 
+        self.monkeyPatcher = MonkeyPatcher()
+        self.monkeyPatcher.addPatch(sys, "displayhook", self.displayhook)
+        self.monkeyPatcher.addPatch(sys, "excepthook", self.excepthook)
+        self.monkeyPatcher.addPatch(sys, "stdout", FileWrapper(self.handler))
+
     def resetBuffer(self):
         """
         Reset the input buffer.
@@ -104,15 +113,20 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return more
 
     def runcode(self, *a, **kw):
-        orighook, sys.displayhook = sys.displayhook, self.displayhook
-        try:
-            origout, sys.stdout = sys.stdout, FileWrapper(self.handler)
-            try:
-                code.InteractiveInterpreter.runcode(self, *a, **kw)
-            finally:
-                sys.stdout = origout
-        finally:
-            sys.displayhook = orighook
+        with self.monkeyPatcher:
+            code.InteractiveInterpreter.runcode(self, *a, **kw)
+
+    def excepthook(
+        self,
+        excType: Type[BaseException],
+        excValue: BaseException,
+        excTraceback: TracebackType,
+    ) -> None:
+        """
+        Format exception tracebacks and write them to the output handler.
+        """
+        lines = format_exception(excType, excValue, excTraceback.tb_next)
+        self.write("".join(lines))
 
     def displayhook(self, obj):
         self.locals["_"] = obj

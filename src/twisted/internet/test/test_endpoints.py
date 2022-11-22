@@ -8,7 +8,7 @@ L{twisted.internet.endpoints}.
 """
 
 from errno import EPERM
-from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, gaierror
+from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
 from unicodedata import normalize
 from unittest import skipIf
@@ -89,10 +89,10 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 try:
     from OpenSSL.SSL import (
+        TLS_METHOD,
         Context as ContextType,
         OP_NO_SSLv3,
-        SSLv23_METHOD,
-        TLSv1_METHOD,
+        TLSv1_2_METHOD,
     )
 
     from twisted.internet.ssl import (
@@ -3121,7 +3121,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName),
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
@@ -3129,7 +3129,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3148,7 +3148,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
-        self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLS_METHOD)
         self.assertTrue(
             server._sslContextFactory._options & OP_NO_SSLv3,
         )
@@ -3248,7 +3248,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1"
             % (
                 escapedNoTrailingNewlineKeyPEMPathName,
                 escapedNoTrailingNewlineCertPEMPathName,
@@ -3259,7 +3259,7 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
-        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
@@ -3533,7 +3533,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertTrue(certOptions._options & OP_NO_SSLv3)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
@@ -3597,7 +3597,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
-        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.method, TLS_METHOD)
         self.assertIsNone(certOptions.certificate)
         self.assertIsNone(certOptions.privateKey)
 
@@ -3786,10 +3786,12 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             verifyObject(interfaces.IStreamServerEndpointStringParser, parser)
         )
 
-    def _parseStreamServerTest(self, addressFamily, addressFamilyString):
+    def _parseIndexStreamServerTest(
+        self, addressFamily: AddressFamily, addressFamilyString: str
+    ) -> None:
         """
-        Helper for unit tests for L{endpoints._SystemdParser.parseStreamServer}
-        for different address families.
+        Helper for tests for L{endpoints._SystemdParser.parseStreamServer}
+        for different address families with a descriptor identified by index.
 
         Handling of the address family given will be verify.  If there is a
         problem a test-failing exception will be raised.
@@ -3802,10 +3804,11 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         """
         reactor = object()
         descriptors = [5, 6, 7, 8, 9]
+        names = ["5.socket", "6.socket", "foo", "8.socket", "9.socket"]
         index = 3
 
         parser = self._parserClass()
-        parser._sddaemon = ListenFDs(descriptors)
+        parser._sddaemon = ListenFDs(descriptors, names)
 
         server = parser.parseStreamServer(
             reactor, domain=addressFamilyString, index=str(index)
@@ -3814,19 +3817,43 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         self.assertEqual(server.addressFamily, addressFamily)
         self.assertEqual(server.fileno, descriptors[index])
 
-    def test_parseStreamServerINET(self):
+    def _parseNameStreamServerTest(
+        self, addressFamily: AddressFamily, addressFamilyString: str
+    ) -> None:
+        """
+        Like L{_parseIndexStreamServerTest} but for descriptors identified by
+        name.
+        """
+        reactor = object()
+        descriptors = [5, 6, 7, 8, 9]
+        names = ["5.socket", "6.socket", "foo", "8.socket", "9.socket"]
+        name = "foo"
+
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs(descriptors, names)
+
+        server = parser.parseStreamServer(
+            reactor,
+            domain=addressFamilyString,
+            name=name,
+        )
+        self.assertIs(server.reactor, reactor)
+        self.assertEqual(server.addressFamily, addressFamily)
+        self.assertEqual(server.fileno, descriptors[names.index(name)])
+
+    def test_parseIndexStreamServerINET(self) -> None:
         """
         IPv4 can be specified using the string C{"INET"}.
         """
-        self._parseStreamServerTest(AF_INET, "INET")
+        self._parseIndexStreamServerTest(AF_INET, "INET")
 
-    def test_parseStreamServerINET6(self):
+    def test_parseIndexStreamServerINET6(self) -> None:
         """
         IPv6 can be specified using the string C{"INET6"}.
         """
-        self._parseStreamServerTest(AF_INET6, "INET6")
+        self._parseIndexStreamServerTest(AF_INET6, "INET6")
 
-    def test_parseStreamServerUNIX(self):
+    def test_parseIndexStreamServerUNIX(self) -> None:
         """
         A UNIX domain socket can be specified using the string C{"UNIX"}.
         """
@@ -3835,7 +3862,39 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         except ImportError:
             raise unittest.SkipTest("Platform lacks AF_UNIX support")
         else:
-            self._parseStreamServerTest(AF_UNIX, "UNIX")
+            self._parseIndexStreamServerTest(AF_UNIX, "UNIX")
+
+    def test_parseNameStreamServerINET(self) -> None:
+        """
+        IPv4 can be specified using the string C{"INET"}.
+        """
+        self._parseNameStreamServerTest(AF_INET, "INET")
+
+    def test_parseNameStreamServerINET6(self) -> None:
+        """
+        IPv6 can be specified using the string C{"INET6"}.
+        """
+        self._parseNameStreamServerTest(AF_INET6, "INET6")
+
+    def test_parseNameStreamServerUNIX(self) -> None:
+        """
+        A UNIX domain socket can be specified using the string C{"UNIX"}.
+        """
+        try:
+            from socket import AF_UNIX
+        except ImportError:
+            raise unittest.SkipTest("Platform lacks AF_UNIX support")
+        else:
+            self._parseNameStreamServerTest(AF_UNIX, "UNIX")
+
+    def test_indexAndNameMutuallyExclusive(self) -> None:
+        """
+        The endpoint cannot be defined using both C{index} and C{name}.
+        """
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs([], ())
+        with self.assertRaises(ValueError):
+            parser.parseStreamServer(reactor, domain="INET", index=0, name="foo")
 
 
 class TCP6ServerEndpointPluginTests(unittest.TestCase):

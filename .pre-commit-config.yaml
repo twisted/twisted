@@ -1,9 +1,4 @@
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.23.1
-    hooks:
-      - id: pyupgrade
-        args: ["--py36-plus"]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.9.3
@@ -14,6 +9,7 @@ repos:
     rev: 21.7b0
     hooks:
       - id: black
+        additional_dependencies: ['click<8.1']
 
   - repo: https://github.com/PyCQA/flake8
     rev: 3.9.2
