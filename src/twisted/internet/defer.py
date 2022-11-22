@@ -345,11 +345,8 @@ def passthru(arg: _T) -> _T:
 _passthru: _SyncCallback[Any, Any, Any]
 
 
-def _failthruImpl(arg: Failure) -> Failure:
+def _failthru(arg: Failure) -> Failure:
     return arg
-
-
-_failthru: _FailingRecoveryCallback[Any]
 
 
 def setDebugging(on: bool) -> None:
