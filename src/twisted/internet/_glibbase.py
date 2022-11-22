@@ -21,6 +21,7 @@ from twisted.internet import posixbase
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
+from twisted.python.monkey import MonkeyPatcher
 from ._signals import _UnixWaker
 
 
@@ -56,9 +57,31 @@ class GlibWaker(_UnixWaker):
     Run scheduled events after waking up.
     """
 
+    def __init__(self, reactor):
+        super().__init__()
+        self.reactor = reactor
+
     def doRead(self) -> None:
         super().doRead()
         self.reactor._simulate()
+
+
+def _signalGlue():
+    """
+    Integrate glib's wakeup file descriptor usage and our own.
+
+    Python supports only one wakeup file descriptor at a time and both Twisted
+    and glib want to use it.
+
+    This is a context manager that can be wrapped around the whole glib
+    reactor main loop which makes our signal handling work with glib's signal
+    handling.
+    """
+    from gi import _ossighelper as signalGlue  # type: ignore[import]
+
+    patcher = MonkeyPatcher()
+    patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
+    return patcher
 
 
 def _loopQuitter(
@@ -106,7 +129,8 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     # Install a waker that knows it needs to call C{_simulate} in order to run
     # callbacks queued from a thread:
-    _wakerFactory = GlibWaker
+    def _wakerFactory(self) -> GlibWaker:
+        return GlibWaker(self)
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
@@ -141,14 +165,29 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
         self._run = self.loop.run
 
-    def _handleSignals(self):
+    def _reallyStartRunning(self):
+        """
+        Make sure the reactor's signal handlers are installed despite any
+        outside interference.
+        """
         # First, install SIGINT and friends:
-        super()._handleSignals()
+        super()._reallyStartRunning()
+
         # Next, since certain versions of gtk will clobber our signal handler,
         # set all signal handlers again after the event loop has started to
-        # ensure they're *really* set. We don't call this twice so we don't
-        # leak file descriptors created in the SIGCHLD initialization:
-        self.callLater(0, posixbase.PosixReactorBase._handleSignals, self)
+        # ensure they're *really* set.
+        #
+        # We don't actually know which versions of gtk do this so this might
+        # be obsolete.  If so, that would be great and this whole method can
+        # go away.  Someone needs to find out, though.
+        #
+        # https://github.com/twisted/twisted/issues/11762
+
+        def reinitSignals():
+            self._signals.uninstall()
+            self._signals.install()
+
+        self.callLater(0, reinitSignals)
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -170,7 +209,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             fileno = source
             wrapper = callback
         return self._glib.io_add_watch(
-            fileno, condition, wrapper, priority=self._glib.PRIORITY_DEFAULT_IDLE
+            fileno,
+            self._glib.PRIORITY_DEFAULT_IDLE,
+            condition,
+            wrapper,
         )
 
     def _ioEventCallback(self, source, condition):
@@ -288,10 +330,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Run the reactor.
         """
-        self.callWhenRunning(self._reschedule)
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        if self._started:
-            self._run()
+        with _signalGlue():
+            self.callWhenRunning(self._reschedule)
+            self.startRunning(installSignalHandlers=installSignalHandlers)
+            if self._started:
+                self._run()
 
     def callLater(self, *args, **kwargs):
         """
