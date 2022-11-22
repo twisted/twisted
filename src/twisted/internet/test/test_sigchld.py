@@ -11,7 +11,6 @@ import errno
 import os
 import signal
 
-from twisted.python.log import msg
 from twisted.python.runtime import platformType
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -45,34 +44,16 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         Save the current SIGCHLD handler as reported by L{signal.signal} and
         the current file descriptor registered with L{installHandler}.
         """
-        handler = signal.getsignal(signal.SIGCHLD)
-        if handler != signal.SIG_DFL:
-            self.signalModuleHandler = handler
-            signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        else:
-            self.signalModuleHandler = None
-
+        self.signalModuleHandler = signal.getsignal(signal.SIGCHLD)
         self.oldFD = installHandler(-1)
-
-        if self.signalModuleHandler is not None and self.oldFD != -1:
-            msg(
-                "Previous test didn't clean up after its SIGCHLD setup: %r %r"
-                % (self.signalModuleHandler, self.oldFD)
-            )
 
     def tearDown(self):
         """
         Restore whatever signal handler was present when setUp ran.
         """
         # If tests set up any kind of handlers, clear them out.
-        installHandler(-1)
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-
-        # Now restore whatever the setup was before the test ran.
-        if self.signalModuleHandler is not None:
-            signal.signal(signal.SIGCHLD, self.signalModuleHandler)
-        elif self.oldFD != -1:
-            installHandler(self.oldFD)
+        installHandler(self.oldFD)
+        signal.signal(signal.SIGCHLD, self.signalModuleHandler)
 
     def test_isDefaultHandler(self):
         """

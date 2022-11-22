@@ -74,6 +74,10 @@ class _WakerPlus(_UnixWaker):
     do.
     """
 
+    def __init__(self, reactor):
+        super().__init__()
+        self.reactor = reactor
+
     def doRead(self):
         """
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
@@ -136,15 +140,8 @@ class CFReactor(PosixReactorBase):
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
 
-    def installWaker(self):
-        """
-        Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
-        should be exactly the same as the parent implementation.
-        """
-        if not self.waker:
-            self.waker = _WakerPlus(self)
-            self._internalReaders.add(self.waker)
-            self.addReader(self.waker)
+    def _wakerFactory(self) -> _WakerPlus:
+        return _WakerPlus(self)
 
     def _socketCallback(
         self, cfSocket, callbackType, ignoredAddress, ignoredData, context
