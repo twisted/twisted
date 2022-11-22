@@ -42,19 +42,29 @@ class ErrorTests(unittest.TestCase):
     def test_noMessageValidStatus(self):
         """
         If no C{message} argument is passed to the L{Error} constructor and the
-        C{code} argument is a valid HTTP status code, C{code} is mapped to a
-        descriptive string to which C{message} is assigned.
+        C{code} argument is a valid HTTP status code, C{message} is set to the
+        HTTP reason phrase for C{code}.
         """
         e = error.Error(b"200")
         self.assertEqual(e.message, b"OK")
+        self.assertEqual(str(e), "200 OK")
 
-    def test_noMessageInvalidStatus(self):
+    def test_noMessageForStatus(self):
         """
         If no C{message} argument is passed to the L{Error} constructor and
-        C{code} isn't a valid HTTP status code, C{message} stays L{None}.
+        C{code} isn't a known HTTP status code, C{message} stays L{None}.
         """
-        e = error.Error(b"InvalidCode")
+        e = error.Error(b"999")
         self.assertEqual(e.message, None)
+        self.assertEqual(str(e), "999")
+
+    def test_invalidStatus(self):
+        """
+        If C{code} isn't plausibly an HTTP status code (i.e., composed of
+        digits) it is rejected with L{ValueError}.
+        """
+        with self.assertRaises(ValueError):
+            error.Error(b"InvalidStatus")
 
     def test_messageExists(self):
         """
@@ -63,6 +73,7 @@ class ErrorTests(unittest.TestCase):
         """
         e = error.Error(b"200", b"My own message")
         self.assertEqual(e.message, b"My own message")
+        self.assertEqual(str(e), "200 My own message")
 
     def test_str(self):
         """
@@ -107,7 +118,7 @@ class PageRedirectTests(unittest.TestCase):
         If no C{message} argument is passed to the L{PageRedirect} constructor
         and C{code} isn't a valid HTTP status code, C{message} stays L{None}.
         """
-        e = error.PageRedirect(b"InvalidCode", location=b"/foo")
+        e = error.PageRedirect(b"999", location=b"/foo")
         self.assertEqual(e.message, None)
 
     def test_messageExistsLocationExists(self):
@@ -160,8 +171,9 @@ class InfiniteRedirectionTests(unittest.TestCase):
         constructor and C{code} isn't a valid HTTP status code, C{message} stays
         L{None}.
         """
-        e = error.InfiniteRedirection(b"InvalidCode", location=b"/foo")
+        e = error.InfiniteRedirection(b"999", location=b"/foo")
         self.assertEqual(e.message, None)
+        self.assertEqual(str(e), "999")
 
     def test_messageExistsLocationExists(self):
         """

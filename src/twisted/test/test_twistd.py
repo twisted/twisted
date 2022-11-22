@@ -49,7 +49,7 @@ from twisted.test.proto_helpers import MemoryReactor
 from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
-_twistd_unix = requireModule("twistd.scripts._twistd_unix")
+_twistd_unix = requireModule("twisted.scripts._twistd_unix")
 if _twistd_unix:
     from twisted.scripts._twistd_unix import (
         UnixApplicationRunner,
@@ -58,7 +58,7 @@ if _twistd_unix:
     )
 
 
-syslog = requireModule("twistd.python.syslog")
+syslog = requireModule("twisted.python.syslog")
 profile = requireModule("profile")
 pstats = requireModule("pstats")
 cProfile = requireModule("cProfile")

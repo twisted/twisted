@@ -398,6 +398,8 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
+        if not state:
+            state = {}
         state = {
             x.decode("utf8") if isinstance(x, bytes) else x: y for x, y in state.items()
         }

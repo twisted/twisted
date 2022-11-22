@@ -126,7 +126,7 @@ class MaildirMessage(mail.FileMessage):
         @type kw: L{dict}
         @param kw: Keyword arguments for L{FileMessage.__init__}.
         """
-        header = "Delivered-To: %s\n" % address
+        header = b"Delivered-To: %s\n" % address
         fp.write(header)
         self.size = len(header)
         mail.FileMessage.__init__(self, fp, *a, **kw)

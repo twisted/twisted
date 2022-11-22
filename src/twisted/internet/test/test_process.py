@@ -19,7 +19,6 @@ from unittest import skipIf
 
 import hamcrest
 
-import twisted
 from twisted.internet import utils
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.error import ProcessDone, ProcessTerminated
@@ -34,7 +33,6 @@ from twisted.trial.unittest import TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
-twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = False
 _uidgidSkipReason = ""
@@ -404,12 +402,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         source = networkString(
             """
 import sys
-sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
-sys.stdout.flush()""".format(
-                twistedRoot.path
-            )
+sys.stdout.flush()"""
         )
 
         r, w = os.pipe()
@@ -456,6 +451,7 @@ sys.stdout.flush()""".format(
             GatheringProtocol(),
             pyExe,
             [pyExe, b"-Wignore", b"-c", source],
+            env=properEnv,
             usePTY=self.usePTY,
         )
 

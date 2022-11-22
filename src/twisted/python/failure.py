@@ -22,6 +22,7 @@ import types
 from inspect import getmro
 from io import StringIO
 from typing import List, TypeVar
+from typing import NoReturn
 
 import opcode
 import typing_extensions
@@ -507,7 +508,7 @@ class Failure(BaseException):
                 return error
         return None
 
-    def raiseException(self):
+    def raiseException(self) -> NoReturn:
         """
         raise the original exception, preserving traceback
         information if available.

@@ -12,7 +12,12 @@ import re
 import traceback
 import types
 import warnings
-from asyncio import AbstractEventLoop, CancelledError, Future, new_event_loop
+from asyncio import (
+    AbstractEventLoop,
+    CancelledError,
+    Future,
+    new_event_loop as _new_event_loop,
+)
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -22,6 +27,7 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NoReturn,
     Optional,
     Tuple,
     Type,
@@ -791,21 +797,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} should catch an exception raised by a synchronous
         function and errback its resulting L{Deferred} with it.
         """
-        try:
-            "10" + 5  # type: ignore[operator]
-        except TypeError as e:
-            expected = str(e)
+        expected = ValueError("that value is unacceptable")
 
-        def plusFive(x: int) -> int:
-            return x + 5
+        def raisesException() -> NoReturn:
+            raise expected
 
         results: List[int] = []
         errors: List[Failure] = []
-        d = defer.maybeDeferred(plusFive, "10")
+        d = defer.maybeDeferred(raisesException)
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
-        self.assertEqual(str(errors[0].value), expected)
+        self.assertEqual(str(errors[0].value), str(expected))
 
     def test_maybeDeferredSyncFailure(self) -> None:
         """
@@ -3319,13 +3322,21 @@ def callAllSoonCalls(loop: AbstractEventLoop) -> None:
 
 
 class DeferredFutureAdapterTests(unittest.TestCase):
+    def newLoop(self) -> AbstractEventLoop:
+        """
+        Create a new event loop that will be closed at the end of the test.
+        """
+        result = _new_event_loop()
+        self.addCleanup(result.close)
+        return result
+
     def test_asFuture(self) -> None:
         """
         L{Deferred.asFuture} returns a L{asyncio.Future} which fires when
         the given L{Deferred} does.
         """
         d: Deferred[int] = Deferred()
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         self.assertEqual(aFuture.done(), False)
         d.callback(13)
@@ -3346,7 +3357,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
             called = True
 
         d: Deferred[None] = Deferred(canceler)
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
         callAllSoonCalls(loop)
@@ -3365,7 +3376,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
             dprime.callback(9)
 
         d: Deferred[None] = Deferred(canceler)
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
         callAllSoonCalls(loop)
@@ -3379,7 +3390,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         """
         d: Deferred[None] = Deferred()
         theFailure = Failure(ZeroDivisionError())
-        loop = new_event_loop()
+        loop = self.newLoop()
         future = d.asFuture(loop)
         callAllSoonCalls(loop)
         d.errback(theFailure)
@@ -3391,7 +3402,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.fromFuture} returns a L{Deferred} that fires
         when the given L{asyncio.Future} does.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture: Future[int] = Future(loop=loop)
         d = Deferred.fromFuture(aFuture)
         self.assertNoResult(d)
@@ -3405,7 +3416,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         an L{asyncio.CancelledError} when the given
         L{asyncio.Future} is cancelled.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         cancelled.cancel()
@@ -3418,7 +3429,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.fromFuture} makes a L{Deferred} which, when
         cancelled, cancels the L{asyncio.Future} it was created from.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         d.cancel()

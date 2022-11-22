@@ -1,1 +1,0 @@
-twisted.web.template.renderElement now combines consecutive, sychronously-available bytes up to a fixed size limit into a single string to pass to ``IRequest.write`` instead of passing them all separately.  This greatly reduces the number of chunks in the response.

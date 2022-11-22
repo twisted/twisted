@@ -706,9 +706,9 @@ class FlattenerErrorTests(SynchronousTestCase):
                     Exception while flattening:
                       \\[<unrenderable>\\]
                       <unrenderable>
-                      .*
+                      <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>
                       File ".*", line \\d*, in _flattenTree
-                        element = await element
+                        element = await element.*
                       File ".*defer\\.py", line \\d*, in __iter__
                         .*
                       File ".*defer\\.py", line \\d*, in unwrap
@@ -721,6 +721,7 @@ class FlattenerErrorTests(SynchronousTestCase):
                 flags=re.MULTILINE,
             ),
         )
+        self.assertIn("RuntimeError: example", str(failure.value))
         # The original exception is unmodified and will be logged separately if
         # unhandled.
         self.failureResultOf(failing, RuntimeError)

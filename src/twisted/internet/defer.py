@@ -39,7 +39,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Literal, Protocol
+from typing_extensions import Literal, ParamSpec, Protocol
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -78,6 +78,7 @@ log = Logger()
 
 
 _T = TypeVar("_T")
+_P = ParamSpec("_P")
 
 
 class AlreadyCalledError(Exception):
@@ -156,7 +157,7 @@ def fail(result: Optional[Union[Failure, BaseException]] = None) -> "Deferred[An
 
 
 def execute(
-    callable: Callable[..., _T], *args: object, **kwargs: object
+    callable: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Create a L{Deferred} from a callable and arguments.
@@ -174,7 +175,7 @@ def execute(
 
 
 def maybeDeferred(
-    f: Callable[..., _T], *args: object, **kwargs: object
+    f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     """
     Invoke a function that may or may not return a L{Deferred} or coroutine.

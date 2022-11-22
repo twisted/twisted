@@ -13,7 +13,7 @@ import os
 import struct
 import sys
 import time
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -42,6 +42,7 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
+        from twisted.conch.ssh.connection import EXTENDED_DATA_STDERR
         from twisted.conch.test import test_conch, test_ssh
         from twisted.conch.test.test_conch import FakeStdio
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
@@ -59,16 +60,38 @@ class SSHSessionTests(TestCase):
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
     """
 
-    def test_eofReceived(self):
+    def setUp(self) -> None:
+        self.stdio = FakeStdio()
+        self.channel = SSHSession()
+        self.channel.stdio = self.stdio
+        self.stderrBuffer = BytesIO()
+        self.stderr = TextIOWrapper(self.stderrBuffer)
+        self.channel.stderr = self.stderr
+
+    def test_eofReceived(self) -> None:
         """
         L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
         half of its stdio connection.
         """
-        stdio = FakeStdio()
-        channel = SSHSession()
-        channel.stdio = stdio
-        channel.eofReceived()
-        self.assertTrue(stdio.writeConnLost)
+        self.channel.eofReceived()
+        self.assertTrue(self.stdio.writeConnLost)
+
+    def test_extReceivedStderr(self) -> None:
+        """
+        L{twisted.conch.scripts.cftp.SSHSession.extReceived} decodes
+        stderr data using UTF-8 with the "backslashescape" error handling and
+        writes the result to its own stderr.
+        """
+        errorText = "\N{SNOWMAN}"
+        errorBytes = errorText.encode("utf-8")
+        self.channel.extReceived(
+            EXTENDED_DATA_STDERR,
+            errorBytes + b"\xff",
+        )
+        self.assertEqual(
+            self.stderrBuffer.getvalue(),
+            errorBytes + b"\\xff",
+        )
 
 
 class ListingTests(TestCase):

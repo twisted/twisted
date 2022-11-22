@@ -1,1 +1,0 @@
-twisted.names.dns logs unparsable messages rather than generating a Failure instance

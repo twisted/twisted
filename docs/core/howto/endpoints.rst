@@ -376,11 +376,14 @@ UNIX
    For example, ``unix:address=/var/run/web.sock:lockfile=1``.
 
 systemd
-   Supported arguments: ``domain``, ``index``.
+   Supported arguments: ``domain``, ``name``, and ``index``.
    ``domain`` indicates which socket domain the inherited file descriptor belongs to (eg INET, INET6).
+   ``name`` indicates the name of a file descriptor inherited from systemd.
+   The is set by the systemd configuration for the socket.
    ``index`` indicates an offset into the array of file descriptors which have been inherited from systemd.
+   ``name`` should be preferred over ``index`` because the order of the descriptors can be difficult to predict.
 
-   For example, ``systemd:domain=INET6:index=3``.
+   For example, ``systemd:domain=INET6:name=my-web-server``.
 
    See also :doc:`Deploying Twisted with systemd <systemd>`.
 
