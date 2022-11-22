@@ -54,10 +54,7 @@ from twisted.python.failure import Failure
 if TYPE_CHECKING:
     from twisted.python.runtime import platform
 
-    if platform.supportsThreads():
-        from twisted.python.threadpool import ThreadPool
-    else:
-        ThreadPool = object  # type: ignore[misc, assignment]
+    from twisted.python.threadpool import ThreadPool
 
 
 @implementer(IHostResolution)
