@@ -85,81 +85,6 @@ _ResultParam = TypeVar("_ResultParam", contravariant=True)
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 _R_co = TypeVar("_R_co", covariant=True)
-
-
-class _SyncCallback(Protocol[_ResultParam, _P, _R_co]):
-    def __call__(
-        self, result: _ResultParam, *args: _P.args, **kwargs: _P.kwargs
-    ) -> _R_co:
-        ...
-
-
-class _AsyncCallback(Protocol[_ResultParam, _P, _R]):
-    def __call__(
-        self, result: _ResultParam, *args: _P.args, **kwargs: _P.kwargs
-    ) -> Deferred[_R]:
-        ...
-
-
-class _FailingCallback(Protocol[_ResultParam, _P]):
-    def __call__(
-        self, result: _ResultParam, *args: _P.args, **kwargs: _P.kwargs
-    ) -> Failure:
-        ...
-
-
-class _SyncRecoveryCallback(Protocol[_P, _R_co]):
-    def __call__(self, result: Failure, *args: _P.args, **kwargs: _P.kwargs) -> _R_co:
-        ...
-
-
-class _AsyncRecoveryCallback(Protocol[_P, _R]):
-    def __call__(
-        self, result: Failure, *args: _P.args, **kwargs: _P.kwargs
-    ) -> Deferred[_R]:
-        ...
-
-
-class _FailingRecoveryCallback(Protocol[_P]):
-    def __call__(self, result: Failure, *args: _P.args, **kwargs: _P.kwargs) -> Failure:
-        ...
-
-
-class _SyncEitherCallback(Protocol[_ResultParam, _P, _R_co]):
-    def __call__(
-        self, result: Union[_ResultParam, Failure], *args: _P.args, **kwargs: _P.kwargs
-    ) -> _R_co:
-        ...
-
-
-class _AsyncEitherCallback(Protocol[_ResultParam, _P, _R]):
-    def __call__(
-        self, result: Union[_ResultParam, Failure], *args: _P.args, **kwargs: _P.kwargs
-    ) -> Deferred[_R]:
-        ...
-
-
-class _FailingEitherCallback(Protocol[_ResultParam, _P]):
-    def __call__(
-        self, result: Union[_ResultParam, Failure], *args: _P.args, **kwargs: _P.kwargs
-    ) -> Failure:
-        ...
-
-
-# class _EitherCallback(Protocol[_ResultParam, _P, _R_co]):
-#     def __call__(
-#         self, result: Union[_ResultParam, Failure], /, *args: _P.args, **kwargs: _P.kwargs
-#     ) -> Union[_R_co, Deferred[_R_co], Failure]:
-#         ...
-
-
-# _DeferredCallback: TypeAlias = Union[
-#   _SyncCallback[_T, _P, _R],
-#   _AsyncCallback[_T, _P, _R],
-#   _FailingCallback[_T, _P],
-# ]
-
-# ^ This must be expanded in-line everywhere, due to this issue:
 # https://github.com/python/mypy/issues/11855
 
 
@@ -340,9 +265,6 @@ def timeout(deferred: "Deferred[object]") -> None:
 
 def passthru(arg: _T) -> _T:
     return arg
-
-
-_passthru: _SyncCallback[Any, Any, Any]
 
 
 def _failthru(arg: Failure) -> Failure:
@@ -668,22 +590,46 @@ class Deferred(Awaitable[_DeferredResultT]):
         """
         return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
 
+    @overload
+    def addErrback(
+        self,
+        errback: Callable[Concatenate[Failure, _P], Deferred[_NextDeferredResultT]],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
+        ...
+
+    @overload
+    def addErrback(
+        self,
+        errback: Callable[Concatenate[Failure, _P], Failure],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> "Deferred[Union[_DeferredResultT]]":
+        ...
+
+    @overload
     def addErrback(
         self,
         errback: Callable[Concatenate[Failure, _P], _NextDeferredResultT],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> "Deferred[Union[_NextDeferredResultT]]":
+    ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
+        ...
+
+    def addErrback(
+        self,
+        errback: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         """
         Convenience method for adding just an errback.
 
         See L{addCallbacks}.
         """
-        # type note: passthru constrains the type of errback in a way which mypy
-        #     can't propagate through to _NextDeferredResultT, so we have to
-        #     ignore a type error.
         return self.addCallbacks(
-            _passthru,
+            passthru,
             errback,
             errbackArgs=args,
             errbackKeywords=kwargs,

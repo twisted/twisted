@@ -1286,7 +1286,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # added explicitly and directly to it.
         inner: Deferred[str] = Deferred()
 
-        def cb(result: str) -> Deferred[None]:
+        def cb(result: str) -> Deferred[Optional[List[str]]]:
             results.append(("start-of-cb", result))
             d = defer.succeed("inner")
 
@@ -3035,6 +3035,27 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.failureResultOf(d, defer.TimeoutError)
+
+    def test_errbackReturnsDeferred(self) -> None:
+        """
+        Errbacks can return Deferreds just as callbacks can.
+        """
+        d: Deferred[int] = Deferred()
+        d2: Deferred[str] = Deferred()
+        resultValues = []
+
+        def asyncErrback(result: Failure) -> Deferred[str]:
+            return d2
+
+        def syncCallback(result: Union[str, int]) -> None:
+            resultValues.append(result)
+
+        d.addErrback(asyncErrback).addCallback(syncCallback)
+        d.errback(ValueError())
+        self.assertNoResult(d)
+        self.assertEqual(resultValues, [])
+        d2.callback("result")
+        self.assertEqual(resultValues, ["result"])
 
     def test_errbackAddedBeforeTimeoutSuppressesCancellation(self) -> None:
         """
