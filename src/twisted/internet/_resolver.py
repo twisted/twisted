@@ -52,8 +52,6 @@ from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 
 if TYPE_CHECKING:
-    from twisted.python.runtime import platform
-
     from twisted.python.threadpool import ThreadPool
 
 
