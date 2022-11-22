@@ -31,7 +31,7 @@ from twisted.python.util import InsensitiveDict
 from twisted.web import http, resource, server
 from twisted.web.util import redirectTo
 
-dangerousPathError = resource.NoResource("Invalid request URL.")
+dangerousPathError = resource._UnsafeNoResource("Invalid request URL.")
 
 
 def isDangerous(path):
@@ -255,8 +255,8 @@ class File(resource.Resource, filepath.FilePath):
         """
         self.ignoredExts.append(ext)
 
-    childNotFound = resource.NoResource("File not found.")
-    forbidden = resource.ForbiddenResource()
+    childNotFound = resource._UnsafeNoResource("File not found.")
+    forbidden = resource._UnsafeForbiddenResource()
 
     def directoryListing(self):
         """

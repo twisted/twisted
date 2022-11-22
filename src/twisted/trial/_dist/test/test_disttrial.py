@@ -9,12 +9,25 @@ import os
 import sys
 from functools import partial
 from io import StringIO
+from os.path import sep
 from typing import Callable, List, Set
+from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify
 
-from attrs import Factory, define, field
-from hamcrest import assert_that, contains, equal_to, has_length, none
+from attrs import Factory, assoc, define, field
+from hamcrest import (
+    assert_that,
+    contains,
+    ends_with,
+    equal_to,
+    has_length,
+    none,
+    starts_with,
+)
+from hamcrest.core.core.allof import AllOf
+from hypothesis import given
+from hypothesis.strategies import booleans, sampled_from
 
 from twisted.internet import interfaces
 from twisted.internet.base import ReactorBase
@@ -36,7 +49,7 @@ from twisted.trial._dist.functional import (
     iterateWhile,
     sequence,
 )
-from twisted.trial._dist.worker import LocalWorker, Worker, WorkerAction
+from twisted.trial._dist.worker import LocalWorker, RunResult, Worker, WorkerAction
 from twisted.trial.reporter import (
     Reporter,
     TestResult,
@@ -303,6 +316,40 @@ class WorkerPoolTests(TestCase):
         assert_that(self.successResultOf(joining), none())
         assert_that(started.testLog.closed, equal_to(True))
         assert_that(started.testDirLock.locked, equal_to(False))
+
+    @given(
+        booleans(),
+        sampled_from(
+            [
+                "out.log",
+                f"subdir{sep}out.log",
+            ]
+        ),
+    )
+    def test_logFile(self, absolute: bool, logFile: str) -> None:
+        """
+        L{WorkerPool.start} creates a L{StartedWorkerPool} configured with a
+        log file based on the L{WorkerPoolConfig.logFile}.
+        """
+        if absolute:
+            logFile = self.parent.path + sep + logFile
+
+        config = assoc(self.config, logFile=logFile)
+
+        if absolute:
+            matches = equal_to(logFile)
+        else:
+            matches = AllOf(
+                # This might have a suffix if the configured workingDirectory
+                # was found to be in-use already so we don't add a sep suffix.
+                starts_with(config.workingDirectory.path),
+                # This should be exactly the suffix so we add a sep prefix.
+                ends_with(sep + logFile),
+            )
+
+        pool = WorkerPool(config)
+        started = self.successResultOf(pool.start(CountingReactor([])))
+        assert_that(started.testLog.name, matches)
 
 
 class DistTrialRunnerTests(TestCase):
@@ -724,11 +771,12 @@ class _LocalWorker:
     somewhere else..
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> RunResult:
         """
         Directly run C{case} in the usual way.
         """
         TrialSuite([case]).run(result)
+        return {"success": True}
 
 
 class WorkerBroken(Exception):
@@ -742,7 +790,7 @@ class _BrokenLocalWorker:
     A L{Worker} that always fails to run test cases.
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> None:
         """
         Raise an exception instead of running C{case}.
         """

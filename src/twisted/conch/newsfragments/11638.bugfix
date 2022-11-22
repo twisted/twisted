@@ -1,1 +1,0 @@
-twisted.conch.manhole.ManholeInterpreter now captures tracebacks even if sys.excepthook has been modified.

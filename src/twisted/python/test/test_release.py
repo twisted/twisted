@@ -13,10 +13,6 @@ import os
 import shutil
 import sys
 import tempfile
-import textwrap
-from io import StringIO
-from subprocess import CalledProcessError
-from unittest import skipIf
 
 from incremental import Version
 
@@ -27,7 +23,6 @@ from twisted.python._release import (
     IVCSCommand,
     NotWorkingDirectory,
     Project,
-    SphinxBuilder,
     filePathDelta,
     findTwistedProjects,
     getRepositoryCommand,
@@ -35,7 +30,6 @@ from twisted.python._release import (
     runCommand,
 )
 from twisted.python.filepath import FilePath
-from twisted.python.procutils import which
 from twisted.trial.unittest import TestCase
 
 if sys.platform != "win32":
@@ -353,160 +347,6 @@ class FilePathDeltaTests(TestCase):
             filePathDelta(FilePath("/foo/bar/bar/spam"), FilePath("/foo/bar/baz/spam")),
             ["..", "..", "baz", "spam"],
         )
-
-
-@skipIf(not which("sphinx-build"), "Sphinx not available.")
-class SphinxBuilderTests(TestCase):
-    """
-    Tests for L{SphinxBuilder}.
-
-    @note: This test case depends on twisted.web, which violates the standard
-        Twisted practice of not having anything in twisted.python depend on
-        other Twisted packages and opens up the possibility of creating
-        circular dependencies.  Do not use this as an example of how to
-        structure your dependencies.
-
-    @ivar builder: A plain L{SphinxBuilder}.
-
-    @ivar sphinxDir: A L{FilePath} representing a directory to be used for
-        containing a Sphinx project.
-
-    @ivar sourceDir: A L{FilePath} representing a directory to be used for
-        containing the source files for a Sphinx project.
-    """
-
-    confContent = """\
-                  source_suffix = '.rst'
-                  master_doc = 'index'
-                  """
-    confContent = textwrap.dedent(confContent)
-
-    indexContent = """\
-                   ==============
-                   This is a Test
-                   ==============
-
-                   This is only a test
-                   -------------------
-
-                   In case you hadn't figured it out yet, this is a test.
-                   """
-    indexContent = textwrap.dedent(indexContent)
-
-    def setUp(self):
-        """
-        Set up a few instance variables that will be useful.
-        """
-        self.builder = SphinxBuilder()
-
-        # set up a place for a fake sphinx project
-        self.twistedRootDir = FilePath(self.mktemp())
-        self.sphinxDir = self.twistedRootDir.child("docs")
-        self.sphinxDir.makedirs()
-        self.sourceDir = self.sphinxDir
-
-    def createFakeSphinxProject(self):
-        """
-        Create a fake Sphinx project for test purposes.
-
-        Creates a fake Sphinx project with the absolute minimum of source
-        files.  This includes a single source file ('index.rst') and the
-        smallest 'conf.py' file possible in order to find that source file.
-        """
-        self.sourceDir.child("conf.py").setContent(self.confContent.encode())
-        self.sourceDir.child("index.rst").setContent(self.indexContent.encode())
-
-    def verifyFileExists(self, fileDir, fileName):
-        """
-        Helper which verifies that C{fileName} exists in C{fileDir} and it has
-        some content.
-
-        @param fileDir: A path to a directory.
-        @type fileDir: L{FilePath}
-
-        @param fileName: The last path segment of a file which may exist within
-            C{fileDir}.
-        @type fileName: L{str}
-
-        @raise FailTest: If C{fileDir.child(fileName)}:
-
-                1. Does not exist.
-
-                2. Is empty.
-
-                3. In the case where it's a path to a C{.html} file, the
-                   content looks like an HTML file.
-
-        @return: L{None}
-        """
-        # check that file exists
-        fpath = fileDir.child(fileName)
-        self.assertTrue(fpath.exists())
-
-        # check that the output files have some content
-        fcontents = fpath.getContent()
-        self.assertTrue(len(fcontents) > 0)
-
-        # check that the html files are at least html-ish
-        # this is not a terribly rigorous check
-        if fpath.path.endswith(".html"):
-            self.assertIn(b"<body", fcontents)
-
-    def test_build(self):
-        """
-        Creates and builds a fake Sphinx project using a L{SphinxBuilder}.
-        """
-        self.createFakeSphinxProject()
-        self.builder.build(self.sphinxDir)
-        self.verifyBuilt()
-
-    def test_main(self):
-        """
-        Creates and builds a fake Sphinx project as if via the command line.
-        """
-        self.createFakeSphinxProject()
-        self.builder.main([self.sphinxDir.parent().path])
-        self.verifyBuilt()
-
-    def test_warningsAreErrors(self):
-        """
-        Creates and builds a fake Sphinx project as if via the command line,
-        failing if there are any warnings.
-        """
-        output = StringIO()
-        self.patch(sys, "stdout", output)
-        self.createFakeSphinxProject()
-        with self.sphinxDir.child("index.rst").open("a") as f:
-            f.write(b"\n.. _malformed-link-target\n")
-        exception = self.assertRaises(
-            SystemExit, self.builder.main, [self.sphinxDir.parent().path]
-        )
-        self.assertEqual(exception.code, 1)
-        self.assertIn("malformed hyperlink target", output.getvalue())
-        self.verifyBuilt()
-
-    def verifyBuilt(self):
-        """
-        Verify that a sphinx project has been built.
-        """
-        htmlDir = self.sphinxDir.sibling("doc")
-        self.assertTrue(htmlDir.isdir())
-        doctreeDir = htmlDir.child("doctrees")
-        self.assertFalse(doctreeDir.exists())
-
-        self.verifyFileExists(htmlDir, "index.html")
-        self.verifyFileExists(htmlDir, "genindex.html")
-        self.verifyFileExists(htmlDir, "objects.inv")
-        self.verifyFileExists(htmlDir, "search.html")
-        self.verifyFileExists(htmlDir, "searchindex.js")
-
-    def test_failToBuild(self):
-        """
-        Check that SphinxBuilder.build fails when run against a non-sphinx
-        directory.
-        """
-        # note no fake sphinx project is created
-        self.assertRaises(CalledProcessError, self.builder.build, self.sphinxDir)
 
 
 class CommandsTestMixin(StructureAssertingMixin):

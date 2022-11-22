@@ -17,9 +17,10 @@ Maintainer: Jonathan Lange
 @var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
-
 from random import randrange
-from typing import TextIO
+from typing import Callable, TextIO, TypeVar
+
+from typing_extensions import ParamSpec
 
 from twisted.internet import interfaces, utils
 from twisted.python.failure import Failure
@@ -239,9 +240,13 @@ def suppress(action="ignore", **kwarg):
 
 
 # This should be deleted, and replaced with twisted.application's code; see
-# #6016:
-def profiled(f, outputFile):
-    def _(*args, **kwargs):
+# https://github.com/twisted/twisted/issues/6016:
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+
+def profiled(f: Callable[_P, _T], outputFile: str) -> Callable[_P, _T]:
+    def _(*args: _P.args, **kwargs: _P.kwargs) -> _T:
         import profile
 
         prof = profile.Profile()
@@ -329,6 +334,7 @@ def _unusedTestDirectory(base):
         else:
             testdir = base
 
+        testdir.parent().makedirs(ignoreExistingDirectory=True)
         testDirLock = FilesystemLock(testdir.path + ".lock")
         if testDirLock.lock():
             # It is not in use
@@ -393,6 +399,7 @@ def openTestLog(path: FilePath) -> TextIO:
     """
     Open the given path such that test log messages can be written to it.
     """
+    path.parent().makedirs(ignoreExistingDirectory=True)
     # Always use UTF-8 because, considering all platforms, the system default
     # encoding can not reliably encode all code points.
     return open(path.path, "a", encoding="utf-8", errors="strict")

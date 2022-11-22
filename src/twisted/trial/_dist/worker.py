@@ -11,16 +11,18 @@ This module implements the worker classes.
 
 import os
 from typing import Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
+from unittest import TestCase
 
 from zope.interface import implementer
 
 from attrs import frozen
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypedDict
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
+from twisted.logger import Logger
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -34,7 +36,8 @@ from twisted.trial._dist import (
 from twisted.trial._dist.workerreporter import WorkerReporter
 from twisted.trial.reporter import TestResult
 from twisted.trial.runner import TestLoader, TrialSuite
-from twisted.trial.unittest import TestCase, Todo
+from twisted.trial.unittest import Todo
+from .stream import StreamOpen, StreamReceiver, StreamWrite
 
 
 @frozen(auto_exc=False)
@@ -42,10 +45,18 @@ class WorkerException(Exception):
     """
     An exception was reported by a test running in a worker process.
 
-    :ivar message: An error message describing the exception.
+    @ivar message: An error message describing the exception.
     """
 
     message: str
+
+
+class RunResult(TypedDict):
+    """
+    Represent the result of a L{workercommands.Run} command.
+    """
+
+    success: bool
 
 
 class Worker(Protocol):
@@ -53,7 +64,7 @@ class Worker(Protocol):
     An object that can run actions.
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: TestCase, result: TestResult) -> RunResult:
         """
         Run a test case.
         """
@@ -68,20 +79,52 @@ class WorkerProtocol(AMP):
     The worker-side trial distributed protocol.
     """
 
+    logger = Logger()
+
     def __init__(self, forceGarbageCollection=False):
         self._loader = TestLoader()
         self._result = WorkerReporter(self)
         self._forceGarbageCollection = forceGarbageCollection
 
     @workercommands.Run.responder
-    def run(self, testCase):
+    async def run(self, testCase: str) -> RunResult:
         """
         Run a test case by name.
         """
-        case = self._loader.loadByName(testCase)
-        suite = TrialSuite([case], self._forceGarbageCollection)
-        suite.run(self._result)
-        return {"success": True}
+        with self._result.gatherReportingResults() as results:
+            case = self._loader.loadByName(testCase)
+            suite = TrialSuite([case], self._forceGarbageCollection)
+            suite.run(self._result)
+
+        allSucceeded = True
+        for (success, result) in await DeferredList(results, consumeErrors=True):
+            if success:
+                # Nothing to do here, proceed to the next result.
+                continue
+
+            # There was some error reporting a result to the peer.
+            allSucceeded = False
+
+            # We can try to report the error but since something has already
+            # gone wrong we shouldn't be extremely confident that this will
+            # succeed.  So we will also log it (and any errors reporting *it*)
+            # to our local log.
+            self.logger.failure(
+                "Result reporting for {id} failed",
+                failure=result,
+                id=testCase,
+            )
+            try:
+                await self._result.addErrorFallible(testCase, result)
+            except BaseException:
+                # We failed to report the failure to the peer.  It doesn't
+                # seem very likely that reporting this new failure to the peer
+                # will succeed so just log it locally.
+                self.logger.failure(
+                    "Additionally, reporting the reporting failure failed."
+                )
+
+        return {"success": allSucceeded}
 
     @workercommands.Start.responder
     def start(self, directory):
@@ -97,6 +140,19 @@ class LocalWorkerAMP(AMP):
     """
     Local implementation of the manager commands.
     """
+
+    def __init__(self, boxReceiver=None, locator=None):
+        super().__init__(boxReceiver, locator)
+        self._streams = StreamReceiver()
+
+    @StreamOpen.responder
+    def streamOpen(self):
+        return {"streamId": self._streams.open()}
+
+    @StreamWrite.responder
+    def streamWrite(self, streamId, data):
+        self._streams.write(streamId, data)
+        return {}
 
     @managercommands.AddSuccess.responder
     def addSuccess(self, testName):
@@ -137,15 +193,26 @@ class LocalWorkerAMP(AMP):
     def addError(
         self,
         testName: str,
-        error: str,
         errorClass: str,
-        frames: List[str],
+        errorStreamId: int,
+        framesStreamId: int,
     ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
 
-        :param error: A message describing the error.
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to
+            the peer.
+
+        @param error: A message describing the error.
         """
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # Wrap the error message in ``WorkerException`` because it is not
         # possible to transfer arbitrary exception values over the AMP
         # connection to the main process but we must give *some* Exception
@@ -158,13 +225,24 @@ class LocalWorkerAMP(AMP):
     def addFailure(
         self,
         testName: str,
-        fail: str,
+        failStreamId: int,
         failClass: str,
-        frames: List[str],
+        framesStreamId: int,
     ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
+
+        @param failStreamId: The identifier of a stream over which the text of
+            this failure was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to the
+            peer.
         """
+        fail = b"".join(self._streams.finish(failStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
         # See addError for info about use of WorkerException here.
         failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
@@ -180,11 +258,15 @@ class LocalWorkerAMP(AMP):
 
     @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
-        self, testName: str, error: str, todo: Optional[None]
+        self, testName: str, errorStreamId: int, todo: Optional[str]
     ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
+
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
         """
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
         _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
@@ -206,14 +288,7 @@ class LocalWorkerAMP(AMP):
         self._testStream.flush()
         return {"success": True}
 
-    def _stopTest(self, result):
-        """
-        Stop the current running test case, forwarding the result.
-        """
-        self._result.stopTest(self._testCase)
-        return result
-
-    def run(self, testCase, result):
+    async def run(self, testCase: TestCase, result: TestResult) -> RunResult:
         """
         Run a test.
         """
@@ -221,8 +296,10 @@ class LocalWorkerAMP(AMP):
         self._result = result
         self._result.startTest(testCase)
         testCaseId = testCase.id()
-        d = self.callRemote(workercommands.Run, testCase=testCaseId)
-        return d.addCallback(self._stopTest)
+        try:
+            return await self.callRemote(workercommands.Run, testCase=testCaseId)  # type: ignore[no-any-return]
+        finally:
+            self._result.stopTest(testCase)
 
     def setTestStream(self, stream):
         """
