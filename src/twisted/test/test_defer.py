@@ -3038,7 +3038,8 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
 
     def test_errbackReturnsDeferred(self) -> None:
         """
-        Errbacks can return Deferreds just as callbacks can.
+        Errbacks passed to L{Deferred.addErrback} can return Deferreds just as
+        callbacks can.
         """
         d: Deferred[int] = Deferred()
         d2: Deferred[str] = Deferred()
