@@ -22,7 +22,6 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Concatenate,
     Coroutine,
     Generator,
     Generic,
@@ -41,7 +40,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Literal, ParamSpec, Protocol
+from typing_extensions import Concatenate, Literal, ParamSpec, Protocol
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
