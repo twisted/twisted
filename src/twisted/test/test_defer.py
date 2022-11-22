@@ -796,13 +796,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         expected = ValueError("that value is unacceptable")
 
-        def raisesException() -> Union[NoReturn, None]:
+        def raisesException() -> NoReturn:
             raise expected
 
         results: List[int] = []
         errors: List[Failure] = []
-        d = defer.maybeDeferred(raisesException)
-        d.addCallbacks(results.append, errors.append)
+        defer.maybeDeferred(raisesException).addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
         self.assertEqual(str(errors[0].value), str(expected))
