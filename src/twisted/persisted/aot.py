@@ -10,14 +10,13 @@ this side of Marmalade!
 """
 
 
+import copyreg as copy_reg
 import re
 import types
-
 from tokenize import generate_tokens as tokenize
-import copyreg as copy_reg
 
-from twisted.python import reflect, log
 from twisted.persisted import crefutil
+from twisted.python import log, reflect
 from twisted.python.compat import _constructMethod
 
 ###########################
@@ -400,8 +399,10 @@ class AOTUnjellier:
                 inst = klass.__new__(klass)
                 if hasattr(klass, "__setstate__"):
                     self.callAfter(inst.__setstate__, state)
-                else:
+                elif isinstance(state, dict):
                     inst.__dict__ = state
+                else:
+                    inst.__dict__ = state.__getstate__()
                 return inst
 
             elif c is Ref:

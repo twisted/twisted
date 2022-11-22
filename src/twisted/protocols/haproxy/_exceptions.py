@@ -7,7 +7,7 @@ HAProxy specific exceptions.
 """
 
 import contextlib
-from typing import Generator, Callable, Type
+from typing import Callable, Generator, Type
 
 
 class InvalidProxyHeader(Exception):

@@ -11,17 +11,15 @@ import os
 import sys
 from unittest import skipIf
 
-from twisted.conch.insults import insults
 from twisted.conch import recvline
-
-from twisted.python import reflect, components, filepath
+from twisted.conch.insults import insults
+from twisted.cred import portal
+from twisted.internet import defer, error
+from twisted.python import components, filepath, reflect
 from twisted.python.compat import iterbytes
 from twisted.python.reflect import requireModule
-from twisted.internet import defer, error
-from twisted.trial.unittest import SkipTest, TestCase
-from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
-
+from twisted.trial.unittest import SkipTest, TestCase
 
 stdio = requireModule("twisted.conch.stdio")
 properEnv = dict(os.environ)
@@ -315,20 +313,20 @@ backspace = b"\x7f"
 from twisted.cred import checkers
 
 try:
+    from twisted.conch.manhole_ssh import (
+        ConchFactory,
+        TerminalRealm,
+        TerminalSession,
+        TerminalSessionTransport,
+        TerminalUser,
+    )
     from twisted.conch.ssh import (
-        userauth,
-        transport,
         channel,
         connection,
-        session,
         keys,
-    )
-    from twisted.conch.manhole_ssh import (
-        TerminalUser,
-        TerminalSession,
-        TerminalRealm,
-        TerminalSessionTransport,
-        ConchFactory,
+        session,
+        transport,
+        userauth,
     )
 except ImportError:
     ssh = False
@@ -475,15 +473,7 @@ class _BaseMixin:
     def _assertBuffer(self, lines):
         receivedLines = self.recvlineClient.__bytes__().splitlines()
         expectedLines = lines + ([b""] * (self.HEIGHT - len(lines) - 1))
-        self.assertEqual(len(receivedLines), len(expectedLines))
-        for i in range(len(receivedLines)):
-            self.assertEqual(
-                receivedLines[i],
-                expectedLines[i],
-                b"".join(receivedLines[max(0, i - 1) : i + 1])
-                + b" != "
-                + b"".join(expectedLines[max(0, i - 1) : i + 1]),
-            )
+        self.assertEqual(receivedLines, expectedLines)
 
     def _trivialTest(self, inputLine, output):
         done = self.recvlineClient.expect(b"done")
@@ -516,7 +506,7 @@ class _SSHMixin(_BaseMixin):
         sshFactory = ConchFactory(ptl)
 
         sshKey = keys._getPersistentRSAKey(
-            filepath.FilePath(self.mktemp()), keySize=512
+            filepath.FilePath(self.mktemp()), keySize=1024
         )
         sshFactory.publicKeys[b"ssh-rsa"] = sshKey
         sshFactory.privateKeys[b"ssh-rsa"] = sshKey

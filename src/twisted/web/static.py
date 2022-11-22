@@ -13,29 +13,25 @@ import mimetypes
 import os
 import time
 import warnings
-
 from html import escape
-from typing import Any, Dict, Callable
-from zope.interface import implementer
-
-from twisted.web import server
-from twisted.web import resource
-from twisted.web import http
-from twisted.web.util import redirectTo
-
-from twisted.python.compat import nativeString, networkString
-
-from twisted.python import components, filepath, log
-from twisted.internet import abstract, interfaces
-from twisted.python.util import InsensitiveDict
-from twisted.python.runtime import platformType
-from twisted.python.url import URL
-from incremental import Version
-from twisted.python.deprecate import deprecated
-
+from typing import Any, Callable, Dict
 from urllib.parse import quote, unquote
 
-dangerousPathError = resource.NoResource("Invalid request URL.")
+from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.internet import abstract, interfaces
+from twisted.python import components, filepath, log
+from twisted.python.compat import nativeString, networkString
+from twisted.python.deprecate import deprecated
+from twisted.python.runtime import platformType
+from twisted.python.url import URL
+from twisted.python.util import InsensitiveDict
+from twisted.web import http, resource, server
+from twisted.web.util import redirectTo
+
+dangerousPathError = resource._UnsafeNoResource("Invalid request URL.")
 
 
 def isDangerous(path):
@@ -259,8 +255,8 @@ class File(resource.Resource, filepath.FilePath):
         """
         self.ignoredExts.append(ext)
 
-    childNotFound = resource.NoResource("File not found.")
-    forbidden = resource.ForbiddenResource()
+    childNotFound = resource._UnsafeNoResource("File not found.")
+    forbidden = resource._UnsafeForbiddenResource()
 
     def directoryListing(self):
         """

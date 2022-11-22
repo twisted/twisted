@@ -10,13 +10,13 @@ well.
 """
 
 
-from twisted.trial.unittest import TestCase, SynchronousTestCase
 from twisted.internet.defer import (
-    Deferred,
-    returnValue,
-    inlineCallbacks,
     CancelledError,
+    Deferred,
+    inlineCallbacks,
+    returnValue,
 )
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class StopIterationReturnTests(TestCase):

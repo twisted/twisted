@@ -5,21 +5,21 @@ Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
 
-import win32api  # type: ignore[import]
-import os
 import msvcrt
+import os
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import (
-    IHalfCloseableProtocol,
-    ITransport,
-    IConsumer,
-    IPushProducer,
-    IAddress,
-)
+import win32api  # type: ignore[import]
 
 from twisted.internet import _pollingfile, main
+from twisted.internet.interfaces import (
+    IAddress,
+    IConsumer,
+    IHalfCloseableProtocol,
+    IPushProducer,
+    ITransport,
+)
 from twisted.python.failure import Failure
 
 

@@ -17,29 +17,27 @@ This is a web server which integrates with the twisted.internet infrastructure.
 import copy
 import os
 import re
+import zlib
+from binascii import hexlify
 from html import escape
 from typing import List, Optional
 from urllib.parse import quote as _quote
 
-import zlib
-from binascii import hexlify
-
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString
-from twisted.spread.pb import Copyable, ViewPoint
+from incremental import Version
+
+from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from twisted.web import iweb, http, util
-from twisted.web.http import unquote
-from twisted.python import reflect, failure, components
-from twisted import copyright
-from twisted.web import resource
-from twisted.web.error import UnsupportedMethod
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
+from twisted.python import components, failure, reflect
+from twisted.python.compat import nativeString, networkString
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.spread.pb import Copyable, ViewPoint
+from twisted.web import http, iweb, resource, util
+from twisted.web.error import UnsupportedMethod
+from twisted.web.http import unquote
 
 NOT_DONE_YET = 1
 
@@ -337,10 +335,12 @@ class Request(Copyable, http.Request, components.Componentized):
                         "allowed": ", ".join([nativeString(x) for x in allowedMethods]),
                     }
                 )
-                epage = resource.ErrorPage(http.NOT_ALLOWED, "Method Not Allowed", s)
+                epage = resource._UnsafeErrorPage(
+                    http.NOT_ALLOWED, "Method Not Allowed", s
+                )
                 body = epage.render(self)
             else:
-                epage = resource.ErrorPage(
+                epage = resource._UnsafeErrorPage(
                     http.NOT_IMPLEMENTED,
                     "Huh?",
                     "I don't know how to treat a %s request."
@@ -352,10 +352,11 @@ class Request(Copyable, http.Request, components.Componentized):
         if body is NOT_DONE_YET:
             return
         if not isinstance(body, bytes):
-            body = resource.ErrorPage(
+            body = resource._UnsafeErrorPage(
                 http.INTERNAL_SERVER_ERROR,
                 "Request did not return bytes",
                 "Request: "
+                # GHSA-vg46-2rrj-3647 note: _PRE does HTML-escape the input.
                 + util._PRE(reflect.safe_repr(self))
                 + "<br />"
                 + "Resource: "
@@ -609,7 +610,7 @@ class GzipEncoderFactory:
     @since: 12.3
     """
 
-    _gzipCheckRegex = re.compile(br"(:?^|[\s,])gzip(:?$|[\s,])")
+    _gzipCheckRegex = re.compile(rb"(:?^|[\s,])gzip(:?$|[\s,])")
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -702,7 +703,7 @@ class Session(components.Componentized):
     @ivar lastModified: Time the C{touch()} method was last called (or time the
         session was created). A UNIX timestamp as returned by
         L{IReactorTime.seconds()}.
-    @type lastModified L{float}
+    @type lastModified: L{float}
     """
 
     sessionTimeout = 900

@@ -9,23 +9,22 @@ implementations of that interface.
 """
 
 
-from zope.interface import implementer, Interface
-
 import base64
 import hmac
 import random
 import re
 import time
-
 from binascii import hexlify
 from hashlib import md5
 
+from zope.interface import Interface, implementer
+
+from twisted.cred import error
+from twisted.cred._digest import calcHA1, calcHA2, calcResponse
+from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString
 from twisted.python.versions import Version
-from twisted.cred._digest import calcResponse, calcHA1, calcHA2
-from twisted.cred import error
 
 
 class ICredentials(Interface):

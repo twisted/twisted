@@ -8,14 +8,14 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import errno
 import inspect
+import os
 import pickle
 import signal
-import os
 import sys
 
 try:
-    import pwd as _pwd
     import grp as _grp
+    import pwd as _pwd
 except ImportError:
     pwd = None
     grp = None
@@ -25,39 +25,40 @@ else:
 
 from io import StringIO
 from unittest import skipIf
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
-from twisted.test.test_process import MockOS
-
-from twisted import plugin, logger, internet
-from twisted.application import service, app, reactors
+from twisted import internet, logger, plugin
+from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
+from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
-from twisted.internet.base import ReactorBase
-from twisted.test.proto_helpers import MemoryReactor
-from twisted.python.components import Componentized
+from twisted.logger import ILogObserver, globalLogBeginner, globalLogPublisher
 from twisted.python import util
+from twisted.python.components import Componentized
+from twisted.python.fakepwd import UserDatabase
 from twisted.python.log import ILogObserver as LegacyILogObserver, textFromEventDict
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
-from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.test.test_process import MockOS
+from twisted.trial.unittest import TestCase
 
-
-_twistd_unix = requireModule("twistd.scripts._twistd_unix")
+_twistd_unix = requireModule("twisted.scripts._twistd_unix")
 if _twistd_unix:
-    from twisted.scripts._twistd_unix import checkPID
-    from twisted.scripts._twistd_unix import UnixApplicationRunner
-    from twisted.scripts._twistd_unix import UnixAppLogger
+    from twisted.scripts._twistd_unix import (
+        UnixApplicationRunner,
+        UnixAppLogger,
+        checkPID,
+    )
 
 
-syslog = requireModule("twistd.python.syslog")
+syslog = requireModule("twisted.python.syslog")
 profile = requireModule("profile")
 pstats = requireModule("pstats")
 cProfile = requireModule("cProfile")

@@ -5,10 +5,11 @@
 Test cases for twisted.protocols.postfix module.
 """
 
-from typing import List, Dict, Tuple
-from twisted.trial import unittest
+from typing import Dict, List, Tuple
+
 from twisted.protocols import postfix
 from twisted.test.proto_helpers import StringTransport
+from twisted.trial import unittest
 
 
 class PostfixTCPMapQuoteTests(unittest.TestCase):

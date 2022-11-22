@@ -9,9 +9,8 @@ General helpers for L{twisted.web} unit tests.
 from typing import Type
 
 from twisted.internet.defer import Deferred, succeed
-from twisted.web import server
 from twisted.trial.unittest import SynchronousTestCase
-
+from twisted.web import server
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
 from twisted.web.template import Flattenable
@@ -43,7 +42,8 @@ class FlattenTestCase(SynchronousTestCase):
         """
 
         def check(result: bytes) -> bytes:
-            return self.assertEqual(result, target)  # type: ignore[no-any-return]
+            self.assertEqual(result, target)
+            return result
 
         d: Deferred[bytes] = flattenString(None, root)
         d.addCallback(check)
@@ -62,7 +62,7 @@ class FlattenTestCase(SynchronousTestCase):
             L{target}.
         @rtype: L{bytes}
         """
-        return self.successResultOf(self.assertFlattensTo(root, target))  # type: ignore[no-any-return]
+        return self.successResultOf(self.assertFlattensTo(root, target))
 
     def assertFlatteningRaises(self, root: Flattenable, exn: Type[Exception]) -> None:
         """

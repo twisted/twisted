@@ -9,8 +9,7 @@ Tests for returning Deferreds from a TestCase.
 import unittest as pyunit
 
 from twisted.internet import defer
-from twisted.trial import unittest, reporter
-from twisted.trial import util
+from twisted.trial import reporter, unittest, util
 from twisted.trial.test import detests
 
 

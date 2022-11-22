@@ -10,20 +10,68 @@ This module implements the worker classes.
 """
 
 import os
+from typing import Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
+from unittest import TestCase
 
 from zope.interface import implementer
 
+from attrs import frozen
+from typing_extensions import Protocol, TypedDict
+
+from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.error import ProcessDone
+from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.interfaces import ITransport, IAddress
-from twisted.internet.defer import Deferred
+from twisted.logger import Logger
 from twisted.protocols.amp import AMP
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedObject
-from twisted.trial.unittest import Todo
-from twisted.trial.runner import TrialSuite, TestLoader
-from twisted.trial._dist import workercommands, managercommands
-from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist import (
+    _WORKER_AMP_STDIN,
+    _WORKER_AMP_STDOUT,
+    managercommands,
+    workercommands,
+)
 from twisted.trial._dist.workerreporter import WorkerReporter
+from twisted.trial.reporter import TestResult
+from twisted.trial.runner import TestLoader, TrialSuite
+from twisted.trial.unittest import Todo
+from .stream import StreamOpen, StreamReceiver, StreamWrite
+
+
+@frozen(auto_exc=False)
+class WorkerException(Exception):
+    """
+    An exception was reported by a test running in a worker process.
+
+    @ivar message: An error message describing the exception.
+    """
+
+    message: str
+
+
+class RunResult(TypedDict):
+    """
+    Represent the result of a L{workercommands.Run} command.
+    """
+
+    success: bool
+
+
+class Worker(Protocol):
+    """
+    An object that can run actions.
+    """
+
+    async def run(self, case: TestCase, result: TestResult) -> RunResult:
+        """
+        Run a test case.
+        """
+
+
+_T = TypeVar("_T")
+WorkerAction = Callable[[Worker], Awaitable[_T]]
 
 
 class WorkerProtocol(AMP):
@@ -31,22 +79,54 @@ class WorkerProtocol(AMP):
     The worker-side trial distributed protocol.
     """
 
+    logger = Logger()
+
     def __init__(self, forceGarbageCollection=False):
         self._loader = TestLoader()
         self._result = WorkerReporter(self)
         self._forceGarbageCollection = forceGarbageCollection
 
-    def run(self, testCase):
+    @workercommands.Run.responder
+    async def run(self, testCase: str) -> RunResult:
         """
         Run a test case by name.
         """
-        case = self._loader.loadByName(testCase)
-        suite = TrialSuite([case], self._forceGarbageCollection)
-        suite.run(self._result)
-        return {"success": True}
+        with self._result.gatherReportingResults() as results:
+            case = self._loader.loadByName(testCase)
+            suite = TrialSuite([case], self._forceGarbageCollection)
+            suite.run(self._result)
 
-    workercommands.Run.responder(run)
+        allSucceeded = True
+        for (success, result) in await DeferredList(results, consumeErrors=True):
+            if success:
+                # Nothing to do here, proceed to the next result.
+                continue
 
+            # There was some error reporting a result to the peer.
+            allSucceeded = False
+
+            # We can try to report the error but since something has already
+            # gone wrong we shouldn't be extremely confident that this will
+            # succeed.  So we will also log it (and any errors reporting *it*)
+            # to our local log.
+            self.logger.failure(
+                "Result reporting for {id} failed",
+                failure=result,
+                id=testCase,
+            )
+            try:
+                await self._result.addErrorFallible(testCase, result)
+            except BaseException:
+                # We failed to report the failure to the peer.  It doesn't
+                # seem very likely that reporting this new failure to the peer
+                # will succeed so just log it locally.
+                self.logger.failure(
+                    "Additionally, reporting the reporting failure failed."
+                )
+
+        return {"success": allSucceeded}
+
+    @workercommands.Start.responder
     def start(self, directory):
         """
         Set up the worker, moving into given directory for tests to run in
@@ -55,14 +135,26 @@ class WorkerProtocol(AMP):
         os.chdir(directory)
         return {"success": True}
 
-    workercommands.Start.responder(start)
-
 
 class LocalWorkerAMP(AMP):
     """
     Local implementation of the manager commands.
     """
 
+    def __init__(self, boxReceiver=None, locator=None):
+        super().__init__(boxReceiver, locator)
+        self._streams = StreamReceiver()
+
+    @StreamOpen.responder
+    def streamOpen(self):
+        return {"streamId": self._streams.open()}
+
+    @StreamWrite.responder
+    def streamWrite(self, streamId, data):
+        self._streams.write(streamId, data)
+        return {}
+
+    @managercommands.AddSuccess.responder
     def addSuccess(self, testName):
         """
         Add a success to the reporter.
@@ -70,9 +162,12 @@ class LocalWorkerAMP(AMP):
         self._result.addSuccess(self._testCase)
         return {"success": True}
 
-    managercommands.AddSuccess.responder(addSuccess)
-
-    def _buildFailure(self, error, errorClass, frames):
+    def _buildFailure(
+        self,
+        error: WorkerException,
+        errorClass: str,
+        frames: List[str],
+    ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
 
@@ -94,26 +189,66 @@ class LocalWorkerAMP(AMP):
             )
         return failure
 
-    def addError(self, testName, error, errorClass, frames):
+    @managercommands.AddError.responder
+    def addError(
+        self,
+        testName: str,
+        errorClass: str,
+        errorStreamId: int,
+        framesStreamId: int,
+    ) -> Dict[str, bool]:
         """
         Add an error to the reporter.
+
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to
+            the peer.
+
+        @param error: A message describing the error.
         """
-        failure = self._buildFailure(error, errorClass, frames)
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
+        # Wrap the error message in ``WorkerException`` because it is not
+        # possible to transfer arbitrary exception values over the AMP
+        # connection to the main process but we must give *some* Exception
+        # (not a str) to the test result object.
+        failure = self._buildFailure(WorkerException(error), errorClass, frames)
         self._result.addError(self._testCase, failure)
         return {"success": True}
 
-    managercommands.AddError.responder(addError)
-
-    def addFailure(self, testName, fail, failClass, frames):
+    @managercommands.AddFailure.responder
+    def addFailure(
+        self,
+        testName: str,
+        failStreamId: int,
+        failClass: str,
+        framesStreamId: int,
+    ) -> Dict[str, bool]:
         """
         Add a failure to the reporter.
+
+        @param failStreamId: The identifier of a stream over which the text of
+            this failure was previously completely sent to the peer.
+
+        @param framesStreamId: The identifier of a stream over which the lines
+            of the traceback for this error were previously completely sent to the
+            peer.
         """
-        failure = self._buildFailure(fail, failClass, frames)
+        fail = b"".join(self._streams.finish(failStreamId)).decode("utf-8")
+        frames = [
+            frame.decode("utf-8") for frame in self._streams.finish(framesStreamId)
+        ]
+        # See addError for info about use of WorkerException here.
+        failure = self._buildFailure(WorkerException(fail), failClass, frames)
         self._result.addFailure(self._testCase, failure)
         return {"success": True}
 
-    managercommands.AddFailure.responder(addFailure)
-
+    @managercommands.AddSkip.responder
     def addSkip(self, testName, reason):
         """
         Add a skip to the reporter.
@@ -121,18 +256,22 @@ class LocalWorkerAMP(AMP):
         self._result.addSkip(self._testCase, reason)
         return {"success": True}
 
-    managercommands.AddSkip.responder(addSkip)
-
-    def addExpectedFailure(self, testName, error, todo):
+    @managercommands.AddExpectedFailure.responder
+    def addExpectedFailure(
+        self, testName: str, errorStreamId: int, todo: Optional[str]
+    ) -> Dict[str, bool]:
         """
         Add an expected failure to the reporter.
+
+        @param errorStreamId: The identifier of a stream over which the text
+            of this error was previously completely sent to the peer.
         """
-        _todo = Todo(todo)
+        error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
+        _todo = Todo("<unknown>" if todo is None else todo)
         self._result.addExpectedFailure(self._testCase, error, _todo)
         return {"success": True}
 
-    managercommands.AddExpectedFailure.responder(addExpectedFailure)
-
+    @managercommands.AddUnexpectedSuccess.responder
     def addUnexpectedSuccess(self, testName, todo):
         """
         Add an unexpected success to the reporter.
@@ -140,8 +279,7 @@ class LocalWorkerAMP(AMP):
         self._result.addUnexpectedSuccess(self._testCase, todo)
         return {"success": True}
 
-    managercommands.AddUnexpectedSuccess.responder(addUnexpectedSuccess)
-
+    @managercommands.TestWrite.responder
     def testWrite(self, out):
         """
         Print test output from the worker.
@@ -150,16 +288,7 @@ class LocalWorkerAMP(AMP):
         self._testStream.flush()
         return {"success": True}
 
-    managercommands.TestWrite.responder(testWrite)
-
-    def _stopTest(self, result):
-        """
-        Stop the current running test case, forwarding the result.
-        """
-        self._result.stopTest(self._testCase)
-        return result
-
-    def run(self, testCase, result):
+    async def run(self, testCase: TestCase, result: TestResult) -> RunResult:
         """
         Run a test.
         """
@@ -167,8 +296,10 @@ class LocalWorkerAMP(AMP):
         self._result = result
         self._result.startTest(testCase)
         testCaseId = testCase.id()
-        d = self.callRemote(workercommands.Run, testCase=testCaseId)
-        return d.addCallback(self._stopTest)
+        try:
+            return await self.callRemote(workercommands.Run, testCase=testCaseId)  # type: ignore[no-any-return]
+        finally:
+            self._result.stopTest(testCase)
 
     def setTestStream(self, stream):
         """
@@ -227,6 +358,12 @@ class LocalWorkerTransport:
         return LocalWorkerAddress()
 
 
+class NotRunning(Exception):
+    """
+    An operation was attempted on a worker process which is not running.
+    """
+
+
 class LocalWorker(ProcessProtocol):
     """
     Local process worker protocol. This worker runs as a local process and
@@ -237,36 +374,47 @@ class LocalWorker(ProcessProtocol):
 
     @ivar _logDirectory: The directory where logs will reside.
 
-    @ivar _logFile: The name of the main log file for tests output.
+    @ivar _logFile: The main log file for tests output.
     """
 
-    def __init__(self, ampProtocol, logDirectory, logFile):
+    def __init__(
+        self,
+        ampProtocol: LocalWorkerAMP,
+        logDirectory: FilePath,
+        logFile: TextIO,
+    ):
         self._ampProtocol = ampProtocol
         self._logDirectory = logDirectory
         self._logFile = logFile
-        self.endDeferred = Deferred()
+        self.endDeferred: Deferred = Deferred()
+
+    async def exit(self) -> None:
+        """
+        Cause the worker process to exit.
+        """
+        if self.transport is None:
+            raise NotRunning()
+
+        endDeferred = self.endDeferred
+        self.transport.closeChildFD(_WORKER_AMP_STDIN)
+        try:
+            await endDeferred
+        except ProcessDone:
+            pass
 
     def connectionMade(self):
         """
         When connection is made, create the AMP protocol instance.
         """
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
-        if not os.path.exists(self._logDirectory):
-            os.makedirs(self._logDirectory)
-        self._outLog = open(os.path.join(self._logDirectory, "out.log"), "wb")
-        self._errLog = open(os.path.join(self._logDirectory, "err.log"), "wb")
-        # Log data is received via AMP which is UTF-8 unicode.
-        # The log file should be written using a Unicode encoding, and not
-        # the default system encoding which might not be Unicode compatible.
-        self._testLog = open(
-            os.path.join(self._logDirectory, self._logFile),
-            "w",
-            encoding="utf-8",
-            errors="strict",
+        self._logDirectory.makedirs(ignoreExistingDirectory=True)
+        self._outLog = self._logDirectory.child("out.log").open("w")
+        self._errLog = self._logDirectory.child("err.log").open("w")
+        self._ampProtocol.setTestStream(self._logFile)
+        d = self._ampProtocol.callRemote(
+            workercommands.Start,
+            directory=self._logDirectory.path,
         )
-        self._ampProtocol.setTestStream(self._testLog)
-        logDirectory = self._logDirectory
-        d = self._ampProtocol.callRemote(workercommands.Start, directory=logDirectory)
         # Ignore the potential errors, the test suite will fail properly and it
         # would just print garbage.
         d.addErrback(lambda x: None)
@@ -278,7 +426,7 @@ class LocalWorker(ProcessProtocol):
         """
         self._outLog.close()
         self._errLog.close()
-        self._testLog.close()
+        self.transport = None
 
     def processEnded(self, reason):
         """

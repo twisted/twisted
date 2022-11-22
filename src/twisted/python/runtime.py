@@ -11,10 +11,9 @@ __all__ = [
 ]
 import os
 import sys
-from typing import Optional
 import warnings
-
 from time import time as seconds
+from typing import Optional
 
 
 def shortPythonVersion() -> str:

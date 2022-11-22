@@ -10,16 +10,16 @@ An implementation of the OpenSSH known_hosts database.
 
 
 import hmac
-from binascii import Error as DecodeError, b2a_base64, a2b_base64
+import sys
+from binascii import Error as DecodeError, a2b_base64, b2a_base64
 from contextlib import closing
 from hashlib import sha1
-import sys
 
 from zope.interface import implementer
 
+from twisted.conch.error import HostKeyChanged, InvalidEntry, UserRejectedKey
 from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError, FingerprintFormats
+from twisted.conch.ssh.keys import BadKeyError, FingerprintFormats, Key
 from twisted.internet import defer
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
@@ -305,7 +305,9 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             C{False} otherwise.
         @rtype: L{bool}
         """
-        return _hmacedString(self._hostSalt, hostname) == self._hostHash
+        return hmac.compare_digest(
+            _hmacedString(self._hostSalt, hostname), self._hostHash
+        )
 
     def toString(self):
         """
@@ -449,7 +451,7 @@ class KnownHostsFile:
             verified or has changed.
         @rtype: L{Deferred}
         """
-        hhk = defer.maybeDeferred(self.hasHostKey, hostname, key)
+        hhk = defer.execute(self.hasHostKey, hostname, key)
 
         def gotHasKey(result):
             if result:

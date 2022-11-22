@@ -9,7 +9,7 @@ import pickle
 import sys
 
 # Twisted Imports
-from twisted.persisted import styles, aot, crefutil
+from twisted.persisted import aot, crefutil, styles
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 
@@ -376,6 +376,10 @@ class AOTTests(TestCase):
         class UnknownType:
             @property
             def __dict__(self):
+                raise AttributeError()
+
+            @property
+            def __getstate__(self):
                 raise AttributeError()
 
         self.assertRaises(TypeError, aot.jellyToSource, UnknownType())

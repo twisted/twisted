@@ -6,6 +6,7 @@
 An API for storing HTTP header names and values.
 """
 
+from collections.abc import Sequence as _Sequence
 from typing import (
     AnyStr,
     Dict,
@@ -14,16 +15,13 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
-    TypeVar,
     Tuple,
+    TypeVar,
     Union,
-    cast,
     overload,
 )
-from collections.abc import Sequence as _Sequence
 
-from twisted.python.compat import comparable, cmp
-
+from twisted.python.compat import cmp, comparable
 
 _T = TypeVar("_T")
 
@@ -86,7 +84,7 @@ class Headers:
     def __init__(
         self,
         rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
-    ):
+    ) -> None:
         self._rawHeaders: Dict[bytes, List[bytes]] = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
@@ -112,7 +110,7 @@ class Headers:
             )
         return NotImplemented
 
-    def _encodeName(self, name: AnyStr) -> bytes:
+    def _encodeName(self, name: Union[str, bytes]) -> bytes:
         """
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1 encoded
         bytestring if required.
@@ -153,7 +151,21 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    def setRawHeaders(self, name: AnyStr, values: Sequence[AnyStr]) -> None:
+    @overload
+    def setRawHeaders(self, name: Union[str, bytes], values: Sequence[bytes]) -> None:
+        ...
+
+    @overload
+    def setRawHeaders(self, name: Union[str, bytes], values: Sequence[str]) -> None:
+        ...
+
+    @overload
+    def setRawHeaders(
+        self, name: Union[str, bytes], values: Sequence[Union[str, bytes]]
+    ) -> None:
+        ...
+
+    def setRawHeaders(self, name: Union[str, bytes], values: object) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -162,9 +174,8 @@ class Headers:
         @param values: A list of strings each one being a header value of
             the given name.
 
-        @raise TypeError: Raised if C{values} is not a L{list} of L{bytes}
-            or L{str} strings, or if C{name} is not a L{bytes} or
-            L{str} string.
+        @raise TypeError: Raised if C{values} is not a sequence of L{bytes}
+            or L{str}, or if C{name} is not L{bytes} or L{str}.
 
         @return: L{None}
         """
@@ -176,7 +187,7 @@ class Headers:
 
         if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
+                f"Header name is an instance of {type(name)!r}, not bytes or str"
             )
 
         for count, value in enumerate(values):
@@ -201,7 +212,7 @@ class Headers:
 
         self._rawHeaders[_name] = encodedValues
 
-    def addRawHeader(self, name: AnyStr, value: AnyStr) -> None:
+    def addRawHeader(self, name: Union[str, bytes], value: Union[str, bytes]) -> None:
         """
         Add a new raw value for the given header.
 
@@ -211,7 +222,7 @@ class Headers:
         """
         if not isinstance(name, (bytes, str)):
             raise TypeError(
-                "Header name is an instance of %r, " "not bytes or str" % (type(name),)
+                f"Header name is an instance of {type(name)!r}, not bytes or str"
             )
 
         if not isinstance(value, (bytes, str)):
@@ -220,11 +231,13 @@ class Headers:
                 "bytes or str" % (type(value),)
             )
 
-        # We secretly know getRawHeaders is really returning a list
-        values = cast(List[AnyStr], self.getRawHeaders(name, default=[]))
-        values.append(value)
-
-        self.setRawHeaders(name, values)
+        self._rawHeaders.setdefault(
+            _sanitizeLinearWhitespace(self._encodeName(name)), []
+        ).append(
+            _sanitizeLinearWhitespace(
+                value.encode("utf8") if isinstance(value, str) else value
+            )
+        )
 
     @overload
     def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]:

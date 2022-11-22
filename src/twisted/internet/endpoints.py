@@ -16,65 +16,65 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 import os
 import re
 import socket
-from unicodedata import normalize
 import warnings
+from typing import Optional
+from unicodedata import normalize
+
+from zope.interface import directlyProvides, implementer, provider
 
 from constantly import NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
-from zope.interface import implementer, directlyProvides, provider
-
-from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.abstract import isIPv6Address, isIPAddress
+from twisted.internet import defer, error, fdesc, interfaces, threads
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.address import (
-    _ProcessAddress,
     HostnameAddress,
     IPv4Address,
     IPv6Address,
+    _ProcessAddress,
 )
 from twisted.internet.interfaces import (
-    IStreamServerEndpointStringParser,
-    IStreamClientEndpointStringParserWithReactor,
-    IResolutionReceiver,
-    IReactorPluggableNameResolver,
     IHostnameResolver,
+    IReactorPluggableNameResolver,
+    IReactorSocket,
+    IResolutionReceiver,
+    IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpointStringParser,
 )
-from twisted.internet.protocol import ClientFactory, Factory
-from twisted.internet.protocol import ProcessProtocol, Protocol
+from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
 
 try:
-    from twisted.internet.stdio import StandardIO, PipeAddress
+    from twisted.internet.stdio import PipeAddress, StandardIO
 except ImportError:
     # fallback if pywin32 is not installed
     StandardIO = None  # type: ignore[assignment,misc]
     PipeAddress = None  # type: ignore[assignment,misc]
 
-from twisted.internet.task import LoopingCall
 from twisted.internet._resolver import HostResolution
+from twisted.internet.defer import Deferred
+from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python import deprecate, log
-from twisted.python.compat import nativeString, _matchingString
+from twisted.python.compat import _matchingString, iterbytes, nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.python.compat import iterbytes
-from twisted.internet.defer import Deferred
 from twisted.python.systemd import ListenFDs
-
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
+    from OpenSSL.SSL import Error as SSLError
+
     from twisted.internet.ssl import (
-        optionsForClientTLS,
-        PrivateCertificate,
         Certificate,
-        KeyPair,
         CertificateOptions,
+        KeyPair,
+        PrivateCertificate,
+        optionsForClientTLS,
         trustRootFromCertificates,
     )
-    from OpenSSL.SSL import Error as SSLError  # type: ignore[import]
+    from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -1408,8 +1408,7 @@ def _parseSSL(
     @type certKey: C{str}
 
     @param sslmethod: The string name of an SSL method, based on the name of a
-        constant in C{OpenSSL.SSL}.  Must be one of: "SSLv23_METHOD",
-        "SSLv2_METHOD", "SSLv3_METHOD", "TLSv1_METHOD".
+        constant in C{OpenSSL.SSL}.
     @type sslmethod: C{str}
 
     @param extraCertChain: The path of a file containing one or more
@@ -1507,7 +1506,13 @@ class _SystemdParser:
 
     prefix = "systemd"
 
-    def _parseServer(self, reactor, domain, index):
+    def _parseServer(
+        self,
+        reactor: IReactorSocket,
+        domain: str,
+        index: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> AdoptedStreamServerEndpoint:
         """
         Internal parser function for L{_parseServer} to convert the string
         arguments for a systemd server endpoint into structured arguments for
@@ -1516,21 +1521,34 @@ class _SystemdParser:
         @param reactor: An L{IReactorSocket} provider.
 
         @param domain: The domain (or address family) of the socket inherited
-            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie the
-            name of an address family from the L{socket} module, without the
-            C{"AF_"} prefix.
-        @type domain: C{str}
+            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie
+            the name of an address family from the L{socket} module, without
+            the C{"AF_"} prefix.
 
-        @param index: An offset into the list of file descriptors inherited from
-            systemd.
-        @type index: C{str}
+        @param index: If given, the decimal representation of an integer
+            giving the offset into the list of file descriptors inherited from
+            systemd.  Since the order of descriptors received from systemd is
+            hard to predict, this option should only be used if only one
+            descriptor is being inherited.  Even in that case, C{name} is
+            probably a better idea.  Either C{index} or C{name} must be given.
 
-        @return: A two-tuple of parsed positional arguments and parsed keyword
-            arguments (a tuple and a dictionary).  These can be used to
-            construct an L{AdoptedStreamServerEndpoint}.
+        @param name: If given, the name (as defined by C{FileDescriptorName}
+            in the C{[Socket]} section of a systemd service definition) of an
+            inherited file descriptor.  Either C{index} or C{name} must be
+            given.
+
+        @return: An L{AdoptedStreamServerEndpoint} which will adopt the
+            inherited listening port when it is used to listen.
         """
-        index = int(index)
-        fileno = self._sddaemon.inheritedDescriptors()[index]
+        if (index is None) == (name is None):
+            raise ValueError("Specify exactly one of descriptor index or name")
+
+        if index is not None:
+            fileno = self._sddaemon.inheritedDescriptors()[int(index)]
+        else:
+            assert name is not None
+            fileno = self._sddaemon.inheritedNamedDescriptors()[name]
+
         addressFamily = getattr(socket, "AF_" + domain)
         return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
 

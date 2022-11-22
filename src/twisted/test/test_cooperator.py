@@ -7,7 +7,7 @@ related functionality.
 """
 
 
-from twisted.internet import reactor, defer, task
+from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
 
 
@@ -139,7 +139,7 @@ class CooperatorTests(unittest.TestCase):
 
         def myiter():
             if False:
-                yield None  # type: ignore[unreachable]
+                yield None
             else:
                 raise RuntimeError()
 

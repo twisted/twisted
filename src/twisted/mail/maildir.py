@@ -9,22 +9,20 @@ Maildir-style mailbox support.
 
 import io
 import os
-import stat
 import socket
+import stat
 from hashlib import md5
+from typing import IO
 
 from zope.interface import implementer
 
-from twisted.mail import pop3
-from twisted.mail import smtp
-from twisted.protocols import basic
-from twisted.persisted import dirdbm
-from twisted.python import log, failure
-from twisted.mail import mail
-from twisted.internet import interfaces, defer, reactor
-from twisted.cred import portal, credentials, checkers
+from twisted.cred import checkers, credentials, portal
 from twisted.cred.error import UnauthorizedLogin
-from typing import IO
+from twisted.internet import defer, interfaces, reactor
+from twisted.mail import mail, pop3, smtp
+from twisted.persisted import dirdbm
+from twisted.protocols import basic
+from twisted.python import failure, log
 
 INTERNAL_ERROR = """\
 From: Twisted.mail Internals
@@ -128,7 +126,7 @@ class MaildirMessage(mail.FileMessage):
         @type kw: L{dict}
         @param kw: Keyword arguments for L{FileMessage.__init__}.
         """
-        header = "Delivered-To: %s\n" % address
+        header = b"Delivered-To: %s\n" % address
         fp.write(header)
         self.size = len(header)
         mail.FileMessage.__init__(self, fp, *a, **kw)
