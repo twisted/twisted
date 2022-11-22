@@ -58,14 +58,8 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         Restore whatever signal handler was present when setUp ran.
         """
         # If tests set up any kind of handlers, clear them out.
-        installHandler(-1)
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-
-        # Now restore whatever the setup was before the test ran.
-        if self.signalModuleHandler is not None:
-            signal.signal(signal.SIGCHLD, self.signalModuleHandler)
-        elif self.oldFD != -1:
-            installHandler(self.oldFD)
+        installHandler(self.oldFD)
+        signal.signal(signal.SIGCHLD, self.signalModuleHandler)
 
     def test_isDefaultHandler(self):
         """
