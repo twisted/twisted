@@ -266,11 +266,6 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
         hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
-        # workaround for pypy3 3.6.9 and above which returns bytes from crypt.crypt()
-        # This is fixed in pypy3 7.3.5.
-        # See L{https://foss.heptapod.net/pypy/pypy/-/issues/3395}
-        if isinstance(hashed_password, bytes):
-            return hashed_password
         return hashed_password.encode("ascii")
 
     def testGoodCredentials(self):

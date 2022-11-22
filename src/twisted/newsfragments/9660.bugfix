@@ -1,1 +1,0 @@
-twisted.internet.gireactor.PortableGIReactor.simulate and twisted.internet.gtk2reactor.PortableGtkReactor.simulate no longer raises TypeError when there are no delayed called. This was a regression introduced with the migration to Python3 in which the builtin `min` function no longer accepts `None` as an argument.

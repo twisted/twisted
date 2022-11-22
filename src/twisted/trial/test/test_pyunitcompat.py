@@ -11,16 +11,13 @@ from zope.interface import implementer
 
 from twisted.python.failure import Failure
 from twisted.trial.itrial import IReporter, ITestCase
+from twisted.trial.test import pyunitcases
 from twisted.trial.unittest import PyUnitResultAdapter, SynchronousTestCase
 
 
 class PyUnitTestTests(SynchronousTestCase):
-    class PyUnitTest(pyunit.TestCase):
-        def test_pass(self):
-            pass
-
     def setUp(self):
-        self.original = self.PyUnitTest("test_pass")
+        self.original = pyunitcases.PyUnitTest("test_pass")
         self.test = ITestCase(self.original)
 
     def test_callable(self):
@@ -221,8 +218,10 @@ class PyUnitResultTests(SynchronousTestCase):
         pyresult = pyunit.TestResult()
         result = PyUnitResultAdapter(pyresult)
         result.addError(self, f)
+        tback = "".join(traceback.format_exception(*exc_info))
         self.assertEqual(
-            pyresult.errors[0][1], "".join(traceback.format_exception(*exc_info))
+            pyresult.errors[0][1].endswith("ZeroDivisionError: division by zero\n"),
+            tback.endswith("ZeroDivisionError: division by zero\n"),
         )
 
     def test_trialSkip(self):

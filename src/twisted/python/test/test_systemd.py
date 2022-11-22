@@ -7,158 +7,174 @@ Tests for L{twisted.python.systemd}.
 
 
 import os
+from typing import Dict, Mapping, Sequence
+
+from hamcrest import assert_that, equal_to, not_
+from hypothesis import given
+from hypothesis.strategies import dictionaries, integers, lists
 
 from twisted.python.systemd import ListenFDs
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase
+from .strategies import systemdDescriptorNames
 
 
-class InheritedDescriptorsMixin:
+def buildEnvironment(count: int, pid: object) -> Dict[str, str]:
     """
-    Mixin for a L{TestCase} subclass which defines test methods for some kind of
-    systemd sd-daemon class.  In particular, it defines tests for a
-    C{inheritedDescriptors} method.
+    @param count: The number of file descriptors to indicate as inherited.
+
+    @param pid: The pid of the inheriting process to indicate.
+
+    @return: A copy of the current process environment with the I{systemd}
+        file descriptor inheritance-related environment variables added to it.
     """
-
-    def test_inheritedDescriptors(self):
-        """
-        C{inheritedDescriptors} returns a list of integers giving the file
-        descriptors which were inherited from systemd.
-        """
-        sddaemon = self.getDaemon(7, 3)
-        self.assertEqual([7, 8, 9], sddaemon.inheritedDescriptors())
-
-    def test_repeated(self):
-        """
-        Any subsequent calls to C{inheritedDescriptors} return the same list.
-        """
-        sddaemon = self.getDaemon(7, 3)
-        self.assertEqual(
-            sddaemon.inheritedDescriptors(), sddaemon.inheritedDescriptors()
-        )
+    result = os.environ.copy()
+    result["LISTEN_FDS"] = str(count)
+    result["LISTEN_FDNAMES"] = ":".join([f"{n}.socket" for n in range(count)])
+    result["LISTEN_PID"] = str(pid)
+    return result
 
 
-class MemoryOnlyMixin:
-    """
-    Mixin for a L{TestCase} subclass which creates creating a fake, in-memory
-    implementation of C{inheritedDescriptors}.  This provides verification that
-    the fake behaves in a compatible way with the real implementation.
-    """
-
-    def getDaemon(self, start, count):
-        """
-        Invent C{count} new I{file descriptors} (actually integers, attached to
-        no real file description), starting at C{start}.  Construct and return a
-        new L{ListenFDs} which will claim those integers represent inherited
-        file descriptors.
-        """
-        return ListenFDs(range(start, start + count))
-
-
-class EnvironmentMixin:
-    """
-    Mixin for a L{TestCase} subclass which creates a real implementation of
-    C{inheritedDescriptors} which is based on the environment variables set by
-    systemd.  To facilitate testing, this mixin will also create a fake
-    environment dictionary and add keys to it to make it look as if some
-    descriptors have been inherited.
-    """
-
-    def initializeEnvironment(self, count, pid):
-        """
-        Create a copy of the process environment and add I{LISTEN_FDS} and
-        I{LISTEN_PID} (the environment variables set by systemd) to it.
-        """
-        result = os.environ.copy()
-        result["LISTEN_FDS"] = str(count)
-        result["LISTEN_PID"] = str(pid)
-        return result
-
-    def getDaemon(self, start, count):
-        """
-        Create a new L{ListenFDs} instance, initialized with a fake environment
-        dictionary which will be set up as systemd would have set it up if
-        C{count} descriptors were being inherited.  The descriptors will also
-        start at C{start}.
-        """
-        fakeEnvironment = self.initializeEnvironment(count, os.getpid())
-        return ListenFDs.fromEnvironment(environ=fakeEnvironment, start=start)
-
-
-class MemoryOnlyTests(MemoryOnlyMixin, InheritedDescriptorsMixin, TestCase):
-    """
-    Apply tests to L{ListenFDs}, explicitly constructed with some fake file
-    descriptors.
-    """
-
-
-class EnvironmentTests(EnvironmentMixin, InheritedDescriptorsMixin, TestCase):
+class ListenFDsTests(SynchronousTestCase):
     """
     Apply tests to L{ListenFDs}, constructed based on an environment dictionary.
     """
 
-    def test_secondEnvironment(self):
+    @given(lists(systemdDescriptorNames(), min_size=0, max_size=10))
+    def test_fromEnvironmentEquivalence(self, names: Sequence[str]) -> None:
         """
-        Only a single L{Environment} can extract inherited file descriptors.
+        The L{ListenFDs} and L{ListenFDs.fromEnvironment} constructors are
+        equivalent for their respective representations of the same
+        information.
+
+        @param names: The names of the file descriptors to represent as
+            inherited in the test environment given to the parser.  The number
+            of descriptors represented will equal the length of this list.
         """
-        fakeEnvironment = self.initializeEnvironment(3, os.getpid())
-        first = ListenFDs.fromEnvironment(environ=fakeEnvironment)
-        second = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        numFDs = len(names)
+        descriptors = list(range(ListenFDs._START, ListenFDs._START + numFDs))
+        fds = ListenFDs.fromEnvironment(
+            {
+                "LISTEN_PID": str(os.getpid()),
+                "LISTEN_FDS": str(numFDs),
+                "LISTEN_FDNAMES": ":".join(names),
+            }
+        )
+        assert_that(fds, equal_to(ListenFDs(descriptors, tuple(names))))
+
+    def test_defaultEnviron(self) -> None:
+        """
+        If the process environment is not explicitly passed to
+        L{ListenFDs.fromEnvironment}, the real process environment dictionary
+        is used.
+        """
+        self.patch(os, "environ", buildEnvironment(5, os.getpid()))
+        sddaemon = ListenFDs.fromEnvironment()
+        self.assertEqual(list(range(3, 3 + 5)), sddaemon.inheritedDescriptors())
+
+    def test_secondEnvironment(self) -> None:
+        """
+        L{ListenFDs.fromEnvironment} removes information about the
+        inherited file descriptors from the environment mapping so that the
+        same inherited file descriptors cannot be handled repeatedly from
+        multiple L{ListenFDs} instances.
+        """
+        env = buildEnvironment(3, os.getpid())
+        first = ListenFDs.fromEnvironment(environ=env)
+        second = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual(list(range(3, 6)), first.inheritedDescriptors())
         self.assertEqual([], second.inheritedDescriptors())
 
-    def test_mismatchedPID(self):
+    def test_mismatchedPID(self) -> None:
         """
-        If the current process PID does not match the PID in the environment, no
-        inherited descriptors are reported.
+        If the current process PID does not match the PID in the
+        environment then the systemd variables in the environment were set for
+        a different process (perhaps our parent) and the inherited descriptors
+        are not intended for this process so L{ListenFDs.inheritedDescriptors}
+        returns an empty list.
         """
-        fakeEnvironment = self.initializeEnvironment(3, os.getpid() + 1)
-        sddaemon = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        env = buildEnvironment(3, os.getpid() + 1)
+        sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
-    def test_missingPIDVariable(self):
+    def test_missingPIDVariable(self) -> None:
         """
-        If the I{LISTEN_PID} environment variable is not present, no inherited
-        descriptors are reported.
+        If the I{LISTEN_PID} environment variable is not present then
+        there is no clear indication that any file descriptors were inherited
+        by this process so L{ListenFDs.inheritedDescriptors} returns an empty
+        list.
         """
-        fakeEnvironment = self.initializeEnvironment(3, os.getpid())
-        del fakeEnvironment["LISTEN_PID"]
-        sddaemon = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        env = buildEnvironment(3, os.getpid())
+        del env["LISTEN_PID"]
+        sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
-    def test_nonIntegerPIDVariable(self):
+    def test_nonIntegerPIDVariable(self) -> None:
         """
         If the I{LISTEN_PID} environment variable is set to a string that cannot
         be parsed as an integer, no inherited descriptors are reported.
         """
-        fakeEnvironment = self.initializeEnvironment(3, "hello, world")
-        sddaemon = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        env = buildEnvironment(3, "hello, world")
+        sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
-    def test_missingFDSVariable(self):
+    def test_missingFDSVariable(self) -> None:
         """
-        If the I{LISTEN_FDS} environment variable is not present, no inherited
-        descriptors are reported.
+        If the I{LISTEN_FDS} and I{LISTEN_FDNAMES} environment variables
+        are not present, no inherited descriptors are reported.
         """
-        fakeEnvironment = self.initializeEnvironment(3, os.getpid())
-        del fakeEnvironment["LISTEN_FDS"]
-        sddaemon = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        env = buildEnvironment(3, os.getpid())
+        del env["LISTEN_FDS"]
+        del env["LISTEN_FDNAMES"]
+        sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
-    def test_nonIntegerFDSVariable(self):
+    def test_nonIntegerFDSVariable(self) -> None:
         """
         If the I{LISTEN_FDS} environment variable is set to a string that cannot
         be parsed as an integer, no inherited descriptors are reported.
         """
-        fakeEnvironment = self.initializeEnvironment("hello, world", os.getpid())
-        sddaemon = ListenFDs.fromEnvironment(environ=fakeEnvironment)
+        env = buildEnvironment(3, os.getpid())
+        env["LISTEN_FDS"] = "hello, world"
+        sddaemon = ListenFDs.fromEnvironment(environ=env)
         self.assertEqual([], sddaemon.inheritedDescriptors())
 
-    def test_defaultEnviron(self):
+    @given(lists(integers(min_value=0, max_value=10), unique=True))
+    def test_inheritedDescriptors(self, descriptors: Sequence[int]) -> None:
         """
-        If the process environment is not explicitly passed to
-        L{Environment.__init__}, the real process environment dictionary is
-        used.
+        L{ListenFDs.inheritedDescriptors} returns a copy of the inherited
+        descriptors list.
         """
-        self.patch(os, "environ", {"LISTEN_PID": str(os.getpid()), "LISTEN_FDS": "5"})
-        sddaemon = ListenFDs.fromEnvironment()
-        self.assertEqual(list(range(3, 3 + 5)), sddaemon.inheritedDescriptors())
+        names = tuple(map(str, descriptors))
+        fds = ListenFDs(descriptors, names)
+        fdsCopy = fds.inheritedDescriptors()
+        assert_that(descriptors, equal_to(fdsCopy))
+        fdsCopy.append(1)
+        assert_that(descriptors, not_(equal_to(fdsCopy)))
+
+    @given(dictionaries(systemdDescriptorNames(), integers(min_value=0), max_size=10))
+    def test_inheritedNamedDescriptors(self, expected: Mapping[str, int]) -> None:
+        """
+        L{ListenFDs.inheritedNamedDescriptors} returns a mapping from the
+        descriptor names to their integer values, with items formed by
+        pairwise combination of the input descriptors and names.
+        """
+        items = list(expected.items())
+        names = [name for name, _ in items]
+        descriptors = [fd for _, fd in items]
+        fds = ListenFDs(descriptors, names)
+        assert_that(fds.inheritedNamedDescriptors(), equal_to(expected))
+
+    @given(lists(integers(min_value=0, max_value=10), unique=True))
+    def test_repeated(self, descriptors: Sequence[int]) -> None:
+        """
+        Any subsequent calls to C{inheritedDescriptors} and
+        C{inheritedNamedDescriptors} return the same list.
+        """
+        names = tuple(map(str, descriptors))
+        sddaemon = ListenFDs(descriptors, names)
+        self.assertEqual(
+            sddaemon.inheritedDescriptors(), sddaemon.inheritedDescriptors()
+        )
+        self.assertEqual(
+            sddaemon.inheritedNamedDescriptors(), sddaemon.inheritedNamedDescriptors()
+        )
