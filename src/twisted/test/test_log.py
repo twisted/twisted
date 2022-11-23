@@ -295,7 +295,7 @@ class FakeFile(list):
         pass
 
 
-IOBase.register(FakeFile)  # type: ignore[attr-defined]
+IOBase.register(FakeFile)
 
 
 class EvilStr:
