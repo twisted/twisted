@@ -10,6 +10,8 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import annotations
+
 import errno
 import gc
 import io
@@ -18,13 +20,13 @@ import signal
 import stat
 import sys
 import traceback
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Union
 
 from zope.interface import implementer
 
 from twisted.internet import abstract, error, fdesc
 from twisted.internet._baseprocess import BaseProcess
-from twisted.internet.interfaces import IProcessTransport
+from twisted.internet.interfaces import IProcessTransport, IReactorFDSet, IReactorTime
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log
 from twisted.python.runtime import platform
@@ -217,9 +219,9 @@ class ProcessReader(abstract.FileDescriptor):
     stdout and stderr.
     """
 
-    connected = True
+    connected: bool = True
 
-    def __init__(self, reactor, proc, name, fileno):
+    def __init__(self, reactor: Optional[IReactorFDSet], proc: Process, name: str, fileno: int) -> None:
         """
         Initialize, specifying a process to connect to.
         """
@@ -230,37 +232,38 @@ class ProcessReader(abstract.FileDescriptor):
         self.fd = fileno
         self.startReading()
 
-    def fileno(self):
+    def fileno(self) -> int:
         """
         Return the fileno() of my process's stderr.
         """
         return self.fd
 
-    def writeSomeData(self, data):
+    def writeSomeData(self, data: bytes) -> Exception:
         # the only time this is actually called is after .loseConnection Any
         # actual write attempt would fail, so we must avoid that. This hack
         # allows us to use .loseConnection on both readers and writers.
         assert data == b""
         return CONNECTION_LOST
 
-    def doRead(self):
+    def doRead(self) -> Union[None, failure.Failure, Exception]:
         """
         This is called when the pipe becomes readable.
         """
         return fdesc.readFromFD(self.fd, self.dataReceived)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.proc.childDataReceived(self.name, data)
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         if self.connected and not self.disconnecting:
             self.disconnecting = 1
             self.stopReading()
+            assert IReactorTime.providedBy(self.reactor)
             self.reactor.callLater(
                 0, self.connectionLost, failure.Failure(CONNECTION_DONE)
             )
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure) -> None:
         """
         Close my end of the pipe, signal the Process (which signals the
         ProcessProtocol).
