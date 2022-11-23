@@ -13,7 +13,7 @@ import io
 import os
 import socket
 from functools import wraps
-from typing import Callable, ClassVar, List, Optional, Sequence, Type
+from typing import Callable, ClassVar, List, Mapping, Optional, Sequence, Type
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -461,10 +461,10 @@ class FakeResolver:
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
 
-    def __init__(self, names):
+    def __init__(self, names: Mapping[str, str]):
         self.names = names
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.

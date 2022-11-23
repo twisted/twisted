@@ -272,7 +272,7 @@ def _flattenElement(
         dataEscaper: Callable[[Union[bytes, str]], bytes] = dataEscaper,
         renderFactory: Optional[IRenderable] = renderFactory,
         write: Callable[[bytes], object] = write,
-    ) -> Generator[Union[Generator, Deferred[Generator]], None, None]:
+    ) -> Generator[Union[Flattenable, Deferred[Flattenable]], None, None]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )
