@@ -1124,7 +1124,9 @@ class ReactorBase(PluggableResolverMixin):
         threadpoolShutdownID = None
 
         def _initThreads(self) -> None:
-            self.installNameResolver(_GAIResolver(self, self.getThreadPool))
+            self.installNameResolver(
+                _GAIResolver(cast(IReactorThreads, self), self.getThreadPool)
+            )
             self.usingThreads = True
 
         # `IReactorFromThreads` defines the first named argument as
