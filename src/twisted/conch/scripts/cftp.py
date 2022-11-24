@@ -15,7 +15,7 @@ import stat
 import struct
 import sys
 import tty
-from typing import List, Optional, Union
+from typing import List, Optional, TextIO, Union
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import channel, common, connection, filetransfer
@@ -895,7 +895,8 @@ class SSHConnection(connection.SSHConnection):
 
 class SSHSession(channel.SSHChannel):
 
-    name = b"session"
+    name: bytes = b"session"
+    stderr: TextIO = sys.stderr
 
     def channelOpen(self, foo):
         log.msg("session %s open" % self.id)
@@ -920,11 +921,64 @@ class SSHSession(channel.SSHChannel):
                 f = open(fn)
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
-    def extReceived(self, t, data):
+    def extReceived(self, t: int, data: bytes) -> None:
         if t == connection.EXTENDED_DATA_STDERR:
             log.msg("got %s stderr data" % len(data))
-            sys.stderr.write(data)
-            sys.stderr.flush()
+            # RFC 4251
+            # ========
+            # Strings are also used to store text.  In that case, US-ASCII is
+            # used for internal names, and ISO-10646 UTF-8 for text that might
+            # be displayed to the user.  The terminating null character SHOULD
+            # NOT normally be stored in the string.  For example: the US-ASCII
+            # string "testing" is represented as 00 00 00 07 t e s t i n g.
+            # The UTF-8 mapping does not alter the encoding of US-ASCII
+            # characters.
+            #
+            # RFC 4254
+            # ========
+            # Additionally, some channels can transfer several types of data.  An
+            # example of this is stderr data from interactive sessions.  Such data
+            # can be passed with SSH_MSG_CHANNEL_EXTENDED_DATA messages, where a
+            # separate integer specifies the type of data.  The available types and
+            # their interpretation depend on the type of channel.
+            #
+            #    byte      SSH_MSG_CHANNEL_EXTENDED_DATA
+            #    uint32    recipient channel
+            #    uint32    data_type_code
+            #    string    data
+            #
+            # Data sent with these messages consumes the same window as ordinary
+            # data.
+            #
+            # Currently, only the following type is defined.  Note that the value
+            # for the 'data_type_code' is given in decimal format for readability,
+            # but the values are actually uint32 values.
+            #
+            #             Symbolic name                  data_type_code
+            #             -------------                  --------------
+            #           SSH_EXTENDED_DATA_STDERR               1
+            #
+            # (end of RFC quotations)
+            #
+            # Here we decode the stderr bytes as UTF-8 and handle errors by
+            # representing undecodeable bytes with a certain escape scheme.
+            # There is no guarantee that the peer is sending UTF-8 encoded
+            # bytes but if they are not it is complex to determine what
+            # encoding they _are_ sending.  The standard says nothing about
+            # how these bytes should be decoded because the standard probably
+            # doesn't think they should be decoded at all - just handle them
+            # as bytes!  However, our stderr is a text-mode file so we *must*
+            # decode them to be able to write them out at all.  And even if we
+            # had a binary-mode file we would still /probably/ want to write
+            # bytes in a *known* encoding to it.
+            #
+            # Perhaps in the future we can somehow inspect LANG or LC_* in the
+            # remote execution environment (but I'm not sure how) and use that
+            # as a hint about which encoding to use for decoding here.
+            # Meanwhile, UTF-8 is the de facto universal interoperable
+            # encoding so: use it.
+            self.stderr.write(data.decode("utf-8", "backslashreplace"))
+            self.stderr.flush()
 
     def eofReceived(self):
         log.msg("got eof")

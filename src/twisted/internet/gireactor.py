@@ -21,24 +21,14 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
-import gi.pygtkcompat  # type: ignore[import]
-from gi.repository import GLib  # type: ignore[import]
+from typing import Union
+
+from gi.repository import GLib  # type:ignore[import]
 
 from twisted.internet import _glibbase
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.python import runtime
 
-# We require a sufficiently new version of pygobject, so always exists:
-_pygtkcompatPresent = True
-
-# Newer version of gi, so we can try to initialize compatibility layer; if
-# real pygtk was already imported we'll get ImportError at this point
-# rather than segfault, so unconditional import is fine.
-gi.pygtkcompat.enable()
-# At this point importing gobject will get you gi version, and importing
-# e.g. gtk will either fail in non-segfaulty way or use gi version if user
-# does gi.pygtkcompat.enable_gtk(). So, no need to prevent imports of
-# old school pygtk modules.
 if getattr(GLib, "threads_init", None) is not None:
     GLib.threads_init()
 
@@ -51,27 +41,11 @@ class GIReactor(_glibbase.GlibReactorBase):
         with C{registerGApplication}.
     """
 
-    _POLL_DISCONNECTED = (
-        GLib.IOCondition.HUP | GLib.IOCondition.ERR | GLib.IOCondition.NVAL
-    )
-    _POLL_IN = GLib.IOCondition.IN
-    _POLL_OUT = GLib.IOCondition.OUT
-
-    # glib's iochannel sources won't tell us about any events that we haven't
-    # asked for, even if those events aren't sensible inputs to the poll()
-    # call.
-    INFLAGS = _POLL_IN | _POLL_DISCONNECTED
-    OUTFLAGS = _POLL_OUT | _POLL_DISCONNECTED
-
     # By default no Application is registered:
     _gapplication = None
 
     def __init__(self, useGtk=False):
-        _gtk = None
-        if useGtk is True:
-            from gi.repository import Gtk as _gtk
-
-        _glibbase.GlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
+        _glibbase.GlibReactorBase.__init__(self, GLib, None)
 
     def registerGApplication(self, app):
         """
@@ -105,17 +79,13 @@ class GIReactor(_glibbase.GlibReactorBase):
         self._crash = app.quit
 
 
-class PortableGIReactor(_glibbase.PortableGlibReactorBase):
+class PortableGIReactor(_glibbase.GlibReactorBase):
     """
     Portable GObject Introspection event loop reactor.
     """
 
     def __init__(self, useGtk=False):
-        _gtk = None
-        if useGtk is True:
-            from gi.repository import Gtk as _gtk
-
-        _glibbase.PortableGlibReactorBase.__init__(self, GLib, _gtk, useGtk=useGtk)
+        super().__init__(GLib, None, useGtk=useGtk)
 
     def registerGApplication(self, app):
         """
@@ -124,14 +94,20 @@ class PortableGIReactor(_glibbase.PortableGlibReactorBase):
         """
         raise NotImplementedError("GApplication is not currently supported on Windows.")
 
+    def simulate(self) -> None:
+        """
+        For compatibility only. Do nothing.
+        """
 
-def install(useGtk=False):
+
+def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
 
-    @param useGtk: should GTK+ rather than glib event loop be
-        used (this will be slightly slower but does support GUI).
+    @param useGtk: A hint that the Gtk GUI will or will not be used.  Currently
+        does not modify any behavior.
     """
+    reactor: Union[GIReactor, PortableGIReactor]
     if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)
     else:

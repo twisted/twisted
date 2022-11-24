@@ -154,7 +154,8 @@ def _newInstance(cls, state):
     instance = _createBlank(cls)
 
     def defaultSetter(state):
-        instance.__dict__ = state
+        if isinstance(state, dict):
+            instance.__dict__ = state or {}
 
     setter = getattr(instance, "__setstate__", defaultSetter)
     setter(state)

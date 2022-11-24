@@ -16,6 +16,8 @@ from twisted.python.compat import iterbytes
 try:
     from OpenSSL import crypto
     from OpenSSL.SSL import (
+        SSL_CB_HANDSHAKE_DONE,
+        TLS_METHOD,
         Connection,
         Context,
         Error,
@@ -34,7 +36,7 @@ try:
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 16.0.0 or newer required for twisted.protocol.tls"
-    TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None  # type: ignore[assignment]
+    TLS_METHOD = TLSv1_METHOD = TLSv1_1_METHOD = TLSv1_2_METHOD = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import PrivateCertificate, optionsForClientTLS
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext, certPath
@@ -72,11 +74,7 @@ class HandshakeCallbackContextFactory:
         is done.
     """
 
-    # pyOpenSSL needs to expose this.
-    # https://bugs.launchpad.net/pyopenssl/+bug/372832
-    SSL_CB_HANDSHAKE_DONE = 0x20
-
-    def __init__(self, method=TLSv1_METHOD):
+    def __init__(self, method=TLS_METHOD):
         self._finished = Deferred()
         self._method = method
 
@@ -97,7 +95,7 @@ class HandshakeCallbackContextFactory:
         connection.  When it indicates the handshake is complete, it will fire
         C{self._finished}.
         """
-        if where & self.SSL_CB_HANDSHAKE_DONE:
+        if where & SSL_CB_HANDSHAKE_DONE:
             self._finished.callback(None)
 
     def getContext(self):
@@ -523,9 +521,10 @@ class TLSMemoryBIOTests(TestCase):
             cert = sslClientProtocol.getPeerCertificate()
             self.assertIsInstance(cert, crypto.X509)
             self.assertEqual(
-                cert.digest("sha1"),
-                # openssl x509 -noout -sha1 -fingerprint -in server.pem
-                b"23:4B:72:99:2E:5D:5E:2B:02:C3:BC:1B:7C:50:67:05:4F:60:FF:C9",
+                cert.digest("sha256"),
+                # openssl x509 -noout -sha256 -fingerprint -in server.pem
+                b"C4:F5:8E:9D:A0:AC:85:24:9B:2D:AA:2C:EC:87:DB:5F:33:22:94:"
+                b"01:94:DC:D3:42:4C:E4:B9:F5:0F:45:F2:24",
             )
 
         handshakeDeferred.addCallback(cbHandshook)
@@ -714,7 +713,7 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
-    def hugeWrite(self, method=TLSv1_METHOD):
+    def hugeWrite(self, method=TLS_METHOD):
         """
         If a very long string is passed to L{TLSMemoryBIOProtocol.write}, any
         trailing part of it which cannot be send immediately is buffered and
@@ -752,11 +751,8 @@ class TLSMemoryBIOTests(TestCase):
         connectionDeferred.addCallback(cbConnectionDone)
         return connectionDeferred
 
-    def test_hugeWrite_TLSv1(self):
+    def test_hugeWrite(self):
         return self.hugeWrite()
-
-    def test_hugeWrite_TLSv1_1(self):
-        return self.hugeWrite(method=TLSv1_1_METHOD)
 
     def test_hugeWrite_TLSv1_2(self):
         return self.hugeWrite(method=TLSv1_2_METHOD)
@@ -1023,7 +1019,7 @@ class TLSMemoryBIOTests(TestCase):
                 return getattr(self._wrapped, attr)
 
             def send(self, *args):
-                raise Error("ONO!")
+                raise Error([("SSL routines", "", "this message is probably useless")])
 
         tlsClient._tlsConnection = Wrapper(tlsClient._tlsConnection)
 
@@ -1171,62 +1167,6 @@ class TLSProducerTests(TestCase):
                 break
         self.assertEqual(tlsProtocol.transport.value(), b"")
         self.assertEqual(serverTLSProtocol.transport.value(), b"")
-
-    def test_producerDuringRenegotiation(self):
-        """
-        If we write some data to a TLS connection that is blocked waiting for a
-        renegotiation with its peer, it will pause and resume its registered
-        producer exactly once.
-
-        Renegotiation only works on TLSv1.2 or less.
-        """
-        clientProtocol, clientTransport, _ = self.setupStreamingProducer()
-        serverProtocol, serverTransport, serverProducer = self.setupStreamingProducer(
-            server=True, serverMethod=TLSv1_2_METHOD
-        )
-
-        # Do the initial handshake.
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        # Check the connection is working by exchanging data between client and server.
-        clientProtocol.transport.write(b"data from client")
-        serverProtocol.transport.write(b"data from server")
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        self.assertEqual([b"data from server"], clientProtocol.received)
-        self.assertEqual([b"data from client"], serverProtocol.received)
-
-        # no public API for this yet because it's (mostly) unnecessary, but we
-        # have to be prepared for a peer to do it to us
-        tlsc = clientTransport._tlsConnection
-        # Make sure we are on TLSv1.2 as otherwise renegociation is not supported
-        self.assertEqual("TLSv1.2", tlsc.get_cipher_version())
-        tlsc.renegotiate()
-
-        self.assertRaises(WantReadError, tlsc.do_handshake)
-
-        clientTransport._flushSendBIO()
-        serverTransport.dataReceived(self.drain(clientTransport.transport))
-        payload = b"payload"
-        serverProtocol.transport.write(payload)
-        serverProtocol.transport.loseConnection()
-
-        # give the client the server the client's response...
-        clientTransport.dataReceived(self.drain(serverTransport.transport))
-        messageThatUnblocksTheServer = self.drain(clientTransport.transport)
-
-        # split it into just enough chunks that it would provoke the producer
-        # with an incorrect implementation...
-        for fragment in (
-            messageThatUnblocksTheServer[0:1],
-            messageThatUnblocksTheServer[1:2],
-            messageThatUnblocksTheServer[2:],
-        ):
-            serverTransport.dataReceived(fragment)
-        self.assertEqual(serverTransport.transport.disconnecting, False)
-        serverProtocol.transport.unregisterProducer()
-        self.flushTwoTLSProtocols(clientTransport, serverTransport)
-        self.assertEqual(serverTransport.transport.disconnecting, True)
-        self.assertEqual([b"data from server", b"payload"], clientProtocol.received)
-        self.assertEqual(serverProducer.producerHistory, ["pause", "resume"])
 
     def test_streamingProducerPausedInNormalMode(self):
         """

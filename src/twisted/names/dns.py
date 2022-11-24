@@ -3218,6 +3218,9 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
             return
+        except ValueError as ex:
+            log.msg(f"Invalid packet ({ex}) from {addr}")
+            return
         except BaseException:
             # Nothing should trigger this, but since we're potentially
             # invoking a lot of different decoding methods, we might as well

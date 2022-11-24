@@ -378,6 +378,10 @@ class AOTTests(TestCase):
             def __dict__(self):
                 raise AttributeError()
 
+            @property
+            def __getstate__(self):
+                raise AttributeError()
+
         self.assertRaises(TypeError, aot.jellyToSource, UnknownType())
 
     def test_basicIdentity(self):

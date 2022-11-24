@@ -14,15 +14,22 @@ import sys
 from inspect import getmro
 from io import BytesIO, StringIO
 from typing import Type
-from unittest import TestCase as StdlibTestCase, expectedFailure
+from unittest import (
+    TestCase as StdlibTestCase,
+    TestSuite as PyUnitTestSuite,
+    expectedFailure,
+)
 
-from twisted.python import log, reflect
+from hamcrest import assert_that, equal_to, has_item, has_length
+
+from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.reflect import qual
 from twisted.trial import itrial, reporter, runner, unittest, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
 from twisted.trial.test import erroneous, sample
 from twisted.trial.unittest import SkipTest, Todo, makeTodo
+from .._dist.test.matchers import isFailure, matches_result, similarFrame
+from .matchers import after
 
 
 class BrokenStream:
@@ -102,6 +109,23 @@ class TestResultTests(unittest.SynchronousTestCase):
         self.assertEqual(excValue, failure.value)
         self.assertEqual(self.failureException, failure.type)
 
+    def test_somethingElse(self):
+        """
+        L{reporter.TestResult.addError} raises L{TypeError} if it is called with
+        an error that is neither a L{sys.exc_info}-like three-tuple nor a
+        L{Failure}.
+        """
+        with self.assertRaises(TypeError):
+            self.result.addError(self, "an error")
+        with self.assertRaises(TypeError):
+            self.result.addError(self, Exception("an error"))
+        with self.assertRaises(TypeError):
+            self.result.addError(
+                self, (Exception, Exception("an error"), None, "extra")
+            )
+        with self.assertRaises(TypeError):
+            self.result.addError(self, (Exception, Exception("an error")))
+
 
 class ReporterRealtimeTests(TestResultTests):
     def setUp(self):
@@ -115,14 +139,14 @@ class ErrorReportingTests(StringTest):
     def setUp(self):
         self.loader = runner.TestLoader()
         self.output = StringIO()
-        self.result = reporter.Reporter(self.output)
+        self.result: reporter.Reporter = reporter.Reporter(self.output)
 
     def getOutput(self, suite):
         result = self.getResult(suite)
         result.done()
         return self.output.getvalue()
 
-    def getResult(self, suite):
+    def getResult(self, suite: PyUnitTestSuite) -> reporter.Reporter:
         suite.run(self.result)
         return self.result
 
@@ -190,51 +214,48 @@ class ErrorReportingTests(StringTest):
         expect = [self.doubleSeparator, re.compile(r"\[(ERROR|FAIL)\]")]
         self.stringComparison(expect, output.splitlines())
 
-    def test_hiddenException(self):
+    def test_hiddenException(self) -> None:
         """
-        Check that errors in C{DelayedCall}s get reported, even if the
-        test already has a failure.
+        When a function scheduled using L{IReactorTime.callLater} in a
+        test method raises an exception that exception is added to the test
+        result as an error.
+
+        This happens even if the test also fails and the test failure is also
+        added to the test result as a failure.
 
         Only really necessary for testing the deprecated style of tests that
         use iterate() directly. See
         L{erroneous.DelayedCall.testHiddenException} for more details.
         """
-        from twisted.internet import reactor
-
-        if reflect.qual(reactor).startswith("twisted.internet.asyncioreactor"):
-            raise self.skipTest(
-                "This test does not work on the asyncio reactor, as the "
-                "traceback comes from inside asyncio, not Twisted."
-            )
-
         test = erroneous.DelayedCall("testHiddenException")
-        output = self.getOutput(test).splitlines()
-        errorQual = qual(RuntimeError)
-        match = [
-            self.doubleSeparator,
-            "[FAIL]",
-            "Traceback (most recent call last):",
-            re.compile(
-                r"^\s+File .*erroneous\.py., line \d+, in " "testHiddenException$"
+
+        result = self.getResult(PyUnitTestSuite([test]))
+        assert_that(
+            result, matches_result(errors=has_length(1), failures=has_length(1))
+        )
+        [(actualCase, error)] = result.errors
+        assert_that(test, equal_to(actualCase))
+        assert_that(
+            error,
+            isFailure(
+                type=equal_to(RuntimeError),
+                value=after(str, equal_to("something blew up")),
+                frames=has_item(similarFrame("go", "erroneous.py")),  # type: ignore[arg-type]
             ),
-            re.compile(
-                r'^\s+self\.fail\("Deliberate failure to mask the '
-                r'hidden exception"\)$'
+        )
+
+        [(actualCase, failure)] = result.failures
+        assert_that(test, equal_to(actualCase))
+        assert_that(
+            failure,
+            isFailure(
+                type=equal_to(test.failureException),
+                value=after(
+                    str, equal_to("Deliberate failure to mask the hidden exception")
+                ),
+                frames=has_item(similarFrame("testHiddenException", "erroneous.py")),  # type: ignore[arg-type]
             ),
-            "twisted.trial.unittest.FailTest: "
-            "Deliberate failure to mask the hidden exception",
-            "twisted.trial.test.erroneous.DelayedCall.testHiddenException",
-            self.doubleSeparator,
-            "[ERROR]",
-            "Traceback (most recent call last):",
-            re.compile(r"^\s+File .* in runUntilCurrent"),
-            re.compile(r"^\s+.*"),
-            re.compile(r'^\s+File .*erroneous\.py", line \d+, in go'),
-            re.compile(r"^\s+raise RuntimeError\(self.hiddenExceptionMsg\)"),
-            errorQual + ": something blew up",
-            "twisted.trial.test.erroneous.DelayedCall.testHiddenException",
-        ]
-        self.stringComparison(match, output)
+        )
 
 
 class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
@@ -246,7 +267,12 @@ class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
     def setUp(self):
         self.loader = runner.TestLoader()
         self.output = StringIO()
-        self.result = UncleanWarningsReporterWrapper(reporter.Reporter(self.output))
+        self.reporter: reporter.Reporter = reporter.Reporter(self.output)
+        self.result = UncleanWarningsReporterWrapper(self.reporter)
+
+    def getResult(self, suite: PyUnitTestSuite) -> reporter.Reporter:
+        suite.run(self.result)
+        return self.reporter
 
 
 class TracebackHandlingTests(unittest.SynchronousTestCase):
@@ -298,7 +324,14 @@ class TracebackHandlingTests(unittest.SynchronousTestCase):
         """
         test = erroneous.TestAsynchronousFail("test_fail")
         frames = self.getErrorFrames(test)
-        self.checkFrames(frames, [("_later", "twisted/trial/test/erroneous")])
+        self.checkFrames(
+            frames,
+            [
+                # This depends on the implementation of test_fail.  Currently
+                # it uses deferLater so we get a frame from the task module.
+                ("cb", "twisted/internet/task"),
+            ],
+        )
 
     def test_noFrames(self):
         result = reporter.Reporter(None)

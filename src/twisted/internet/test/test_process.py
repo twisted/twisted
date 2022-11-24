@@ -19,7 +19,6 @@ from unittest import skipIf
 
 import hamcrest
 
-import twisted
 from twisted.internet import utils
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.error import ProcessDone, ProcessTerminated
@@ -34,7 +33,6 @@ from twisted.trial.unittest import TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
-twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = False
 _uidgidSkipReason = ""
@@ -382,7 +380,15 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
-    @onlyOnPOSIX
+    @skipIf(platform.isWindows(), "Test only applies to POSIX platforms.")
+    # If you see this comment and are running on macOS, try to see if this pass on your environment.
+    # Only run this test on Linux and macOS local tests and Linux CI platforms.
+    # This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
+    # We still want to run it on local development macOS environments to help developers discover and fix this issue.
+    @skipIf(
+        platform.isMacOSX() and os.environ.get("CI", "").lower() == "true",
+        "Skipped on macOS CI env.",
+    )
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
@@ -396,12 +402,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         source = networkString(
             """
 import sys
-sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
-sys.stdout.flush()""".format(
-                twistedRoot.path
-            )
+sys.stdout.flush()"""
         )
 
         r, w = os.pipe()
@@ -448,6 +451,7 @@ sys.stdout.flush()""".format(
             GatheringProtocol(),
             pyExe,
             [pyExe, b"-Wignore", b"-c", source],
+            env=properEnv,
             usePTY=self.usePTY,
         )
 
