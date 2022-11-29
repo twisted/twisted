@@ -36,7 +36,7 @@ from typing import (
     cast,
 )
 
-from hamcrest import assert_that, equal_to, is_
+from hamcrest import assert_that, equal_to
 
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -640,11 +640,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addCallback(self._callback)
         d.unpause()
 
-    def testReturnDeferred(self) -> None:
+    def test_callbackReturnsDeferred(self) -> None:
+        """
+        Callbacks passed to L{Deferred.addCallback} can return Deferreds and
+        the next callback will not be run until that Deferred fires.
+        """
         d1: Deferred[int] = Deferred()
         d2: Deferred[int] = Deferred()
         d2.pause()
-        d1.addCallback(lambda r, d2=d2: cast(int, d2))
+        d1.addCallback(lambda r: d2)
         d1.addCallback(self._callback)
         d1.callback(1)
         assert self.callbackResults is None, "Should not have been called yet."
@@ -657,6 +661,28 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         ), "Result should have been from second deferred:{}".format(
             self.callbackResults
         )
+
+    def test_errbackReturnsDeferred(self) -> None:
+        """
+        Errbacks passed to L{Deferred.addErrback} can return Deferreds just as
+        callbacks can.
+        """
+        d: Deferred[int] = Deferred()
+        d2: Deferred[str] = Deferred()
+        resultValues = []
+
+        def asyncErrback(result: Failure) -> Deferred[str]:
+            return d2
+
+        def syncCallback(result: Union[str, int]) -> None:
+            resultValues.append(result)
+
+        d.addErrback(asyncErrback).addCallback(syncCallback)
+        d.errback(ValueError())
+        self.assertNoResult(d)
+        self.assertEqual(resultValues, [])
+        d2.callback("result")
+        self.assertEqual(resultValues, ["result"])
 
     def test_chainedPausedDeferredWithResult(self) -> None:
         """
@@ -863,10 +889,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         def g() -> Coroutine:
             return f()
 
-        assert_that(
-            self.successResultOf(defer.maybeDeferred(g)),
-            is_(result),
-        )
+        self.assertIs((self.successResultOf(defer.maybeDeferred(g))), result)
 
     def test_maybeDeferredCoroutineFailure(self) -> None:
         """
@@ -3034,28 +3057,6 @@ class DeferredAddTimeoutTests(unittest.SynchronousTestCase):
         self.assertIsInstance(dErrbacked.value, defer.CancelledError)
 
         self.failureResultOf(d, defer.TimeoutError)
-
-    def test_errbackReturnsDeferred(self) -> None:
-        """
-        Errbacks passed to L{Deferred.addErrback} can return Deferreds just as
-        callbacks can.
-        """
-        d: Deferred[int] = Deferred()
-        d2: Deferred[str] = Deferred()
-        resultValues = []
-
-        def asyncErrback(result: Failure) -> Deferred[str]:
-            return d2
-
-        def syncCallback(result: Union[str, int]) -> None:
-            resultValues.append(result)
-
-        d.addErrback(asyncErrback).addCallback(syncCallback)
-        d.errback(ValueError())
-        self.assertNoResult(d)
-        self.assertEqual(resultValues, [])
-        d2.callback("result")
-        self.assertEqual(resultValues, ["result"])
 
     def test_errbackAddedBeforeTimeoutSuppressesCancellation(self) -> None:
         """
