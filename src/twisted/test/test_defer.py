@@ -662,6 +662,36 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             self.callbackResults
         )
 
+    def test_callbackMaybeReturnsFailure(self) -> None:
+        """
+        Callbacks passed to addCallback may return Failures.
+        """
+        d: Deferred[int] = Deferred()
+
+        shouldFail = False
+        rte = RuntimeError()
+
+        def maybeFail(result: int) -> Union[int, Failure]:
+            # testing the Union return annotation here
+            if shouldFail:
+                return Failure(rte)
+            else:
+                return result + 1
+
+        d.callback(6)
+        self.assertEqual(self.successResultOf(d.addCallback(maybeFail)), 7)
+        d = Deferred[int]()
+        shouldFail = True
+        d.callback(6)
+        self.assertIs(
+            self.failureResultOf(
+                # make sure mypy still considers us a Deferred[int] here
+                d.addCallback(maybeFail).addCallback(maybeFail),
+                RuntimeError,
+            ).value,
+            rte,
+        )
+
     def test_errbackReturnsDeferred(self) -> None:
         """
         Errbacks passed to L{Deferred.addErrback} can return Deferreds just as
