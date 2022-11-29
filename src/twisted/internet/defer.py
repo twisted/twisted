@@ -184,13 +184,24 @@ def maybeDeferred(
 
 @overload
 def maybeDeferred(
+    f: Callable[_P, Coroutine[Deferred[_T], object, _T]],
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> "Deferred[_T]":
+    ...
+
+
+@overload
+def maybeDeferred(
     f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
 ) -> "Deferred[_T]":
     ...
 
 
 def maybeDeferred(
-    f: Callable[_P, Union[_T, Deferred[_T]]], *args: _P.args, **kwargs: _P.kwargs
+    f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[_T], object, _T], _T]],
+    *args: _P.args,
+    **kwargs: _P.kwargs,
 ) -> "Deferred[_T]":
     """
     Invoke a function that may or may not return a L{Deferred} or coroutine.
@@ -246,7 +257,8 @@ def maybeDeferred(
         # case.  Such values always have exactly one type: CoroutineType.
         return Deferred.fromCoroutine(result)
     else:
-        return succeed(result)
+        returned: _T = result  # type: ignore
+        return succeed(returned)
 
 
 @deprecated(
