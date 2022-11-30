@@ -651,15 +651,20 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d1.addCallback(lambda r: d2)
         d1.addCallback(self._callback)
         d1.callback(1)
-        assert self.callbackResults is None, "Should not have been called yet."
+        self.assertIsNone(self.callbackResults, "Should not have been called yet.")
         d2.callback(2)
-        assert self.callbackResults is None, "Still should not have been called yet."
+        self.assertIsNone(
+            self.callbackResults, "Still should not have been called yet."
+        )
         d2.unpause()
-        assert self.callbackResults is not None
-        assert (  # type: ignore[unreachable]
-            self.callbackResults[0][0] == 2
-        ), "Result should have been from second deferred:{}".format(
-            self.callbackResults
+        self.assertIsNotNone(self.callbackResults, "Should have been called now")
+        assert self.callbackResults is not None, "make that legible to the type checker"
+        self.assertEquals(
+            self.callbackResults[0][0],
+            2,
+            "Result should have been from second deferred:{}".format(
+                self.callbackResults
+            ),
         )
 
     def test_callbackMaybeReturnsFailure(self) -> None:
