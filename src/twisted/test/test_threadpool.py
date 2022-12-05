@@ -6,15 +6,15 @@ Tests for L{twisted.python.threadpool}
 """
 
 
+import gc
 import pickle
+import threading
 import time
 import weakref
-import gc
-import threading
 
-from twisted.trial import unittest
-from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
+from twisted.python import context, failure, threadable, threadpool
+from twisted.trial import unittest
 
 
 class Synchronization:
@@ -404,11 +404,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
             event.set()
 
         def func():
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)

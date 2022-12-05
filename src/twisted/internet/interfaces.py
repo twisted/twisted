@@ -9,6 +9,7 @@ Maintainer: Itamar Shtull-Trauring
 
 import enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     AnyStr,
     Callable,
@@ -18,25 +19,24 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TYPE_CHECKING,
+    Type,
     Union,
 )
+
+from zope.interface import Attribute, Interface
+
 from twisted.python.failure import Failure
-from zope.interface import Interface, Attribute
 
 if TYPE_CHECKING:
     from socket import AddressFamily
 
     try:
-        from OpenSSL.SSL import (  # type: ignore[import]
-            Connection as _OpenSSLConnection,
-            Context as _OpenSSLContext,
+        from OpenSSL.SSL import (
+            Connection as OpenSSLConnection,
+            Context as OpenSSLContext,
         )
     except ImportError:
-        OpenSSLConnection = OpenSSLContext = object
-    else:
-        OpenSSLConnection = _OpenSSLConnection
-        OpenSSLContext = _OpenSSLContext
+        OpenSSLConnection = OpenSSLContext = object  # type: ignore[misc,assignment]
 
     from twisted.internet.abstract import FileDescriptor
     from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
@@ -51,7 +51,6 @@ if TYPE_CHECKING:
     from twisted.internet.ssl import ClientContextFactory
     from twisted.names.dns import Query, RRHeader
     from twisted.protocols.tls import TLSMemoryBIOProtocol
-
     from twisted.python.runtime import platform
 
     if platform.supportsThreads():
@@ -107,7 +106,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred[str]":
+    def getHostByName(name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -194,10 +193,10 @@ class IHostnameResolver(Interface):
     def resolveHostName(
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
-        portNumber: int,
-        addressTypes: Sequence[IAddress],
-        transportSemantics: str,
-    ) -> IResolutionReceiver:
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
         """
         Initiate a hostname resolution.
 
@@ -712,7 +711,7 @@ class IReactorTCP(Interface):
         """
 
     def connectTCP(
-        host: bytes,
+        host: str,
         port: int,
         factory: "ClientFactory",
         timeout: float,
@@ -767,7 +766,7 @@ class IReactorSSL(Interface):
         contextFactory: "IOpenSSLContextFactory",
         backlog: int,
         interface: str,
-    ) -> int:
+    ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -1091,8 +1090,7 @@ class IReactorProcess(Interface):
         L{bytes} using the encoding given by L{sys.getfilesystemencoding}, to be
         used with the "narrow" OS APIs.  On Python 3 on Windows, L{bytes}
         arguments will be decoded up to L{unicode} using the encoding given by
-        L{sys.getfilesystemencoding} (C{mbcs} before Python 3.6, C{utf8}
-        thereafter) and given to Windows's native "wide" APIs.
+        L{sys.getfilesystemencoding} (C{utf8}) and given to Windows's native "wide" APIs.
 
         @param processProtocol: An object which will be notified of all events
             related to the created process.
@@ -2219,7 +2217,9 @@ class IOpenSSLServerConnectionCreator(Interface):
         Twisted APIs which require a provider of this interface.)
     """
 
-    def serverConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def serverConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given server protocol.
 
@@ -2241,7 +2241,9 @@ class IOpenSSLClientConnectionCreator(Interface):
         C{contextFactory}.
     """
 
-    def clientConnectionForTLS(tlsProtocol: "TLSMemoryBIOProtocol") -> "OpenSSLConnection":  # type: ignore[valid-type]
+    def clientConnectionForTLS(
+        tlsProtocol: "TLSMemoryBIOProtocol",
+    ) -> "OpenSSLConnection":
         """
         Create a connection for the given client protocol.
 
@@ -2282,7 +2284,7 @@ class IOpenSSLContextFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def getContext() -> "OpenSSLContext":  # type: ignore[valid-type]
+    def getContext() -> "OpenSSLContext":
         """
         Returns a TLS context object, suitable for securing a TLS connection.
         This context object will be appropriately customized for the connection

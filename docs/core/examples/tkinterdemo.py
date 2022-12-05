@@ -13,7 +13,8 @@ Run this example by typing in:
 """
 
 
-from tkinter import Tk, Frame, Button, LEFT
+from tkinter import LEFT, Button, Frame, Tk
+
 from twisted.internet import reactor, tksupport
 
 

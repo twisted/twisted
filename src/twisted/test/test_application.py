@@ -19,17 +19,17 @@ except ImportError:
 
 from unittest import skipIf
 
-from twisted.application import service, internet, app, reactors
+from twisted.application import app, internet, reactors, service
 from twisted.application.internet import backoffPolicy
-from twisted.internet import interfaces, defer, protocol, reactor
+from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.persisted import sob
 from twisted.plugins import twisted_reactors
-from twisted.protocols import wire, basic
+from twisted.protocols import basic, wire
 from twisted.python import usage
 from twisted.python.runtime import platformType
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.test.proto_helpers import MemoryReactor
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import SkipTest, TestCase
 
 
 class Dummy:

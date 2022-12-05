@@ -11,10 +11,10 @@ Cred plugin for UNIX user accounts.
 from zope.interface import implementer
 
 from twisted import plugin
-from twisted.cred.strcred import ICheckerFactory
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.strcred import ICheckerFactory
 from twisted.internet import defer
 
 

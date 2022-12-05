@@ -27,17 +27,17 @@ How does this thing work?
     play, the end.
 """
 
-from time import time, ctime
+from time import ctime, time
 
 from zope.interface import implementer
 
 from twisted import copyright
-from twisted.cred import portal, credentials, error as ecred
+from twisted.cred import credentials, error as ecred, portal
 from twisted.internet import defer, protocol
-from twisted.python import log, failure, reflect
+from twisted.python import failure, log, reflect
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
-from twisted.words import iwords, ewords
+from twisted.words import ewords, iwords
 from twisted.words.protocols import irc
 
 

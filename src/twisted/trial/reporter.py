@@ -9,29 +9,39 @@ Defines classes that handle the results of tests.
 """
 
 
-import sys
 import os
+import sys
 import time
-import warnings
 import unittest as pyunit
-
+import warnings
 from collections import OrderedDict
+from types import TracebackType
+from typing import TYPE_CHECKING, List, Tuple, Type, Union
 
 from zope.interface import implementer
 
-from twisted.python import reflect, log
+from typing_extensions import TypeAlias
+
+from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
+
+if TYPE_CHECKING:
+    from ._synctest import Todo
 
 try:
     from subunit import TestProtocolClient  # type: ignore[import]
 except ImportError:
     TestProtocolClient = None
 
+ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
+XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
+TrialFailure = Union[XUnitFailure, Failure]
 
-def _makeTodo(value):
+
+def _makeTodo(value: str) -> "Todo":
     """
     Return a L{Todo} object built from C{value}.
 
@@ -82,6 +92,11 @@ class TestResult(pyunit.TestResult):
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
     _DEFAULT_TODO = "Test expected to fail"
 
+    skips: List[Tuple[itrial.ITestCase, str]]
+    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
+    successes: int
+
     def __init__(self):
         super().__init__()
         self.skips = []
@@ -108,9 +123,12 @@ class TestResult(pyunit.TestResult):
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
-        if isinstance(error, tuple):
+        is_exc_info_tuple = isinstance(error, tuple) and len(error) == 3
+        if is_exc_info_tuple:
             return Failure(error[1], error[0], error[2])
-        return error
+        elif isinstance(error, Failure):
+            return error
+        raise TypeError(f"Cannot convert {error} to a Failure")
 
     def startTest(self, test):
         """
@@ -457,7 +475,7 @@ class Reporter(TestResult):
         @param args: The arguments for the format string.
         """
         s = str(format)
-        assert isinstance(s, type(""))
+        assert isinstance(s, str)
         if args:
             self._stream.write(s % args)
         else:
@@ -891,12 +909,12 @@ class _Win32Colorizer:
 
     def __init__(self, stream):
         from win32console import (  # type: ignore[import]
-            GetStdHandle,
-            STD_OUTPUT_HANDLE,
-            FOREGROUND_RED,
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
+            FOREGROUND_RED,
+            STD_OUTPUT_HANDLE,
+            GetStdHandle,
         )
 
         red, green, blue, bold = (

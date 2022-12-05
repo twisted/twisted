@@ -5,12 +5,11 @@
 Tests for L{twisted.mail.tap}.
 """
 
-from twisted.trial.unittest import TestCase
-
-from twisted.python.usage import UsageError
+from twisted.internet import defer, endpoints
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
-from twisted.internet import endpoints, defer
+from twisted.python.usage import UsageError
+from twisted.trial.unittest import TestCase
 
 
 class OptionsTests(TestCase):

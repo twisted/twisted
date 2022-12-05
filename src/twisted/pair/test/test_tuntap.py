@@ -7,41 +7,44 @@ Tests for L{twisted.pair.tuntap}.
 
 
 import os
-import struct
 import socket
-from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT, ENODEV
-from random import randrange
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
+from random import randrange
 from signal import SIGINT
+from typing import Optional
 
 from twisted.python.reflect import ObjectNotFound, namedAny
 
+platformSkip: Optional[str]
 try:
     namedAny("fcntl.ioctl")
 except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
 else:
-    platformSkip = ""
+    platformSkip = None
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import IListeningPort
-from twisted.internet.protocol import DatagramProtocol
-from twisted.pair.rawudp import RawUDPProtocol
-from twisted.pair.ip import IPProtocol
+from twisted.internet.error import CannotListenError
+from twisted.internet.interfaces import IAddress, IListeningPort, IReactorFDSet
+from twisted.internet.protocol import (
+    AbstractDatagramProtocol,
+    DatagramProtocol,
+    Factory,
+)
+from twisted.internet.task import Clock
 from twisted.pair.ethernet import EthernetProtocol
-
-from twisted.python.reflect import fullyQualifiedName
+from twisted.pair.ip import IPProtocol
+from twisted.pair.raw import IRawPacketProtocol
+from twisted.pair.rawudp import RawUDPProtocol
 from twisted.python.compat import iterbytes
 from twisted.python.log import addObserver, removeObserver, textFromEventDict
-from twisted.internet.interfaces import IAddress, IReactorFDSet
-from twisted.internet.protocol import AbstractDatagramProtocol, Factory
-from twisted.internet.task import Clock
+from twisted.python.reflect import fullyQualifiedName
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
-from twisted.internet.error import CannotListenError
-from twisted.pair.raw import IRawPacketProtocol
 
 # Let the module-scope testing subclass of this still be defined (and then not
 # used) in case we can't import from twisted.pair.testing due to platform
@@ -54,24 +57,23 @@ _IInputOutputSystem = Interface
 
 if not platformSkip:
     from twisted.pair.testing import (
-        _PI_SIZE,
-        Tunnel,
-        MemoryIOSystem,
-        _IPv4,
         _H,
+        _PI_SIZE,
+        MemoryIOSystem,
+        Tunnel,
         _ethernet,
         _ip,
+        _IPv4,
         _udp,
     )
-
     from twisted.pair.tuntap import (
-        _TUNSETIFF,
         _IFNAMSIZ,
-        _RealSystem,
-        _IInputOutputSystem,
-        TunnelFlags,
+        _TUNSETIFF,
         TunnelAddress,
+        TunnelFlags,
         TuntapPort,
+        _IInputOutputSystem,
+        _RealSystem,
     )
 else:
     skip = platformSkip
@@ -662,8 +664,7 @@ class RealDeviceTestsMixin:
     instances as the provider of that interface.
     """
 
-    if platformSkip:
-        skip = platformSkip
+    skip = platformSkip
 
     def createSystem(self):
         """

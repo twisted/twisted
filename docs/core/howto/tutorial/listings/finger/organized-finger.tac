@@ -3,11 +3,11 @@
 
 import finger
 
-from twisted.internet import protocol, reactor, defer, endpoints
+from twisted.application import internet, service, strports
+from twisted.internet import defer, endpoints, protocol, reactor
+from twisted.python import log
 from twisted.spread import pb
 from twisted.web import resource, server
-from twisted.application import internet, service, strports
-from twisted.python import log
 
 application = service.Application("finger", uid=1, gid=1)
 f = finger.FingerService("/etc/users")

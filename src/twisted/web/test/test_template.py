@@ -13,33 +13,29 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import Deferred, succeed
+from twisted.logger import globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
+from twisted.web._element import UnexposedMethodError
+from twisted.web.error import FlattenerError, MissingRenderMethod, MissingTemplateLoader
+from twisted.web.iweb import IRequest, ITemplateLoader
+from twisted.web.server import NOT_DONE_YET
 from twisted.web.template import (
     Element,
     Flattenable,
     Tag,
     TagLoader,
-    renderer,
-    tags,
     XMLFile,
     XMLString,
+    renderElement,
+    renderer,
+    tags,
 )
-from twisted.web.iweb import IRequest, ITemplateLoader
-
-from twisted.web.error import FlattenerError, MissingTemplateLoader, MissingRenderMethod
-
-from twisted.web.template import renderElement
-from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
-from twisted.web.server import NOT_DONE_YET
-
-from twisted.logger import globalLogPublisher
-from twisted.test.proto_helpers import EventLoggingObserver
-
 
 _xmlFileSuppress = SUPPRESS(
     category=DeprecationWarning,
@@ -765,7 +761,7 @@ class DummyRenderRequest(DummyRequest):  # type: ignore[misc]
     """
 
     def __init__(self) -> None:
-        super().__init__([""])
+        super().__init__([b""])
         self.site = FakeSite()
 
 

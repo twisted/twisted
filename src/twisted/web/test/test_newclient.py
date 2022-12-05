@@ -10,29 +10,38 @@ from typing import Optional
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.failure import Failure
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone, ConnectionLost
-from twisted.internet.defer import Deferred, succeed, fail, CancelledError
+from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
+from twisted.logger import globalLogPublisher
 from twisted.protocols.basic import LineReceiver
-from twisted.trial.unittest import TestCase
+from twisted.python.failure import Failure
 from twisted.test.proto_helpers import (
     AccumulatingProtocol,
     EventLoggingObserver,
     StringTransport,
     StringTransportWithDisconnection,
 )
-from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
-from twisted.web._newclient import HTTPParser, HTTPClientParser
-from twisted.web._newclient import BadResponseVersion, ParseError
-from twisted.web._newclient import ChunkedEncoder
-from twisted.web._newclient import WrongBodyLength, RequestNotSent
-from twisted.web._newclient import ConnectionAborted
-from twisted.web._newclient import BadHeaders, ExcessWrite
+from twisted.trial.unittest import TestCase
 from twisted.web._newclient import (
-    TransportProxyProducer,
+    BODY,
+    DONE,
+    HEADER,
+    STATUS,
+    UNKNOWN_LENGTH,
+    BadHeaders,
+    BadResponseVersion,
+    ChunkedEncoder,
+    ConnectionAborted,
+    ExcessWrite,
+    HTTPClientParser,
+    HTTPParser,
     LengthEnforcingConsumer,
+    ParseError,
+    RequestNotSent,
+    TransportProxyProducer,
+    WrongBodyLength,
     makeStatefulDispatcher,
 )
 from twisted.web.client import (
@@ -46,14 +55,13 @@ from twisted.web.client import (
     ResponseFailed,
     ResponseNeverReceived,
 )
-from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
+from twisted.web.http_headers import Headers
 from twisted.web.iweb import IBodyProducer, IResponse
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
 )
-from twisted.logger import globalLogPublisher
 
 
 class ArbitraryException(Exception):

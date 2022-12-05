@@ -9,19 +9,19 @@ import os
 import shutil
 import tempfile
 
-from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
+from twisted.internet.test.test_serialport import DoNothing
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.internet.test.test_serialport import DoNothing
-
+from twisted.trial import unittest
 
 testingForced = "TWISTED_FORCE_SERIAL_TESTS" in os.environ
 
 
 try:
-    from twisted.internet import serialport
     import serial  # type: ignore[import]
+
+    from twisted.internet import serialport
 except ImportError:
     if testingForced:
         raise

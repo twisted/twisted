@@ -32,27 +32,38 @@ import importlib
 import inspect
 import os
 import sys
-import time
 import types
+import unittest as pyunit
 import warnings
-
+from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-
-from twisted.python import reflect, log, failure, modules, filepath
-
-from twisted.internet import defer
-from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
-from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
-from twisted.trial._synctest import _logObserver
-
-# These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import TestSuite
+from typing import Callable, Generator, List, Optional, TextIO, Type, Union
 
 from zope.interface import implementer
 
-pyunit = __import__("unittest")
+from attrs import define
+from typing_extensions import ParamSpec, Protocol, TypeAlias, TypeGuard
+
+from twisted.internet import defer
+from twisted.python import failure, filepath, log, modules, reflect
+from twisted.trial import unittest, util
+from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
+from twisted.trial._synctest import _logObserver
+from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper, _ExitWrapper
+
+# These are imported so that they remain in the public API for t.trial.runner
+from twisted.trial.unittest import TestSuite
+from . import itrial
+
+_P = ParamSpec("_P")
+
+
+class _Debugger(Protocol):
+    def runcall(
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> object:
+        ...
 
 
 def isPackage(module):
@@ -260,26 +271,37 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-def name(thing):
+_Loadable: TypeAlias = Union[
+    modules.PythonAttribute,
+    modules.PythonModule,
+    pyunit.TestCase,
+    Type[pyunit.TestCase],
+]
+
+
+def name(thing: _Loadable) -> str:
     """
     @param thing: an object from modules (instance of PythonModule,
         PythonAttribute), a TestCase subclass, or an instance of a TestCase.
     """
+    if isinstance(thing, pyunit.TestCase):
+        return thing.id()
+
+    if isinstance(thing, (modules.PythonAttribute, modules.PythonModule)):
+        return thing.name
+
     if isTestCase(thing):
         # TestCase subclass
-        theName = reflect.qual(thing)
-    else:
-        # thing from trial, or thing from modules.
-        # this monstrosity exists so that modules' objects do not have to
-        # implement id(). -jml
-        try:
-            theName = thing.id()
-        except AttributeError:
-            theName = thing.name
-    return theName
+        return reflect.qual(thing)
+
+    # Based on the type of thing, this is unreachable.  Maybe someone calls
+    # this from un-type-checked code though.  Also, even with the type
+    # information, mypy fails to determine this is unreachable and complains
+    # about a missing return without _something_ here.
+    raise TypeError(f"Cannot name {thing!r}")
 
 
-def isTestCase(obj):
+def isTestCase(obj: type) -> TypeGuard[Type[pyunit.TestCase]]:
     """
     @return: C{True} if C{obj} is a class that contains test cases, C{False}
         otherwise. Used to find all the tests in a module.
@@ -366,6 +388,7 @@ class ErrorHolder(TestHolder):
         result.stopTest(self)
 
 
+@define
 class TestLoader:
     """
     I find tests inside function, modules, files -- whatever -- then return
@@ -390,10 +413,8 @@ class TestLoader:
     methodPrefix = "test"
     modulePrefix = "test_"
 
-    def __init__(self):
-        self.suiteFactory = TestSuite
-        self.sorter = name
-        self._importErrors = []
+    suiteFactory: Type[TestSuite] = TestSuite
+    sorter: Callable[[_Loadable], object] = name
 
     def sort(self, xs):
         """
@@ -555,9 +576,6 @@ class TestLoader:
         """
         return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
-    def loadMethod(self, method):
-        raise NotImplementedError("Can't happen on Py3")
-
     def _makeCase(self, klass, methodName):
         return klass(methodName)
 
@@ -696,7 +714,7 @@ class TestLoader:
 
     loadTestsFromName = loadByName
 
-    def loadByNames(self, names, recurse=False):
+    def loadByNames(self, names: List[str], recurse: bool = False) -> TestSuite:
         """
         Load some tests by a list of names.
 
@@ -770,29 +788,122 @@ def _qualNameWalker(qualName):
         yield (".".join(qualParts[:-index]), qualParts[-index:])
 
 
+@contextmanager
+def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
+    """
+    A context manager which obtains a lock on a trial working directory
+    and enters (L{os.chdir}) it and then reverses these things.
+
+    @param workingDirectory: A pattern for the basename of the working
+        directory to acquire.
+    """
+    currentDir = os.getcwd()
+    base = filepath.FilePath(workingDirectory)
+    testdir, testDirLock = util._unusedTestDirectory(base)
+    os.chdir(testdir.path)
+
+    yield
+
+    os.chdir(currentDir)
+    testDirLock.unlock()
+
+
+@contextmanager
+def _logFile(logfile: str) -> Generator[None, None, None]:
+    """
+    A context manager which adds a log observer and then removes it.
+
+    @param logfile: C{"-"} f or stdout logging, otherwise the path to a log
+        file to which to write.
+    """
+    if logfile == "-":
+        logFile = sys.stdout
+    else:
+        logFile = util.openTestLog(filepath.FilePath(logfile))
+
+    logFileObserver = log.FileLogObserver(logFile)
+    observerFunction = logFileObserver.emit
+    log.startLoggingWithObserver(observerFunction, 0)
+
+    yield
+
+    log.removeObserver(observerFunction)
+    logFile.close()
+
+
+class _Runner(Protocol):
+    stream: TextIO
+
+    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+        ...
+
+    def runUntilFailure(
+        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+    ) -> itrial.IReporter:
+        ...
+
+
+@define
 class TrialRunner:
     """
     A specialised runner that the trial front end uses.
+
+    @ivar reporterFactory: A callable to create a reporter to use.
+
+    @ivar mode: Either C{None} for a normal test run, L{TrialRunner.DEBUG} for
+        a run in the debugger, or L{TrialRunner.DRY_RUN} to collect and report
+        the tests but not call any of them.
+
+    @ivar logfile: The path to the file to write the test run log.
+
+    @ivar stream: The file to report results to.
+
+    @ivar profile: C{True} to run the tests with a profiler enabled.
+
+    @ivar _tracebackFormat: A format name to use with L{Failure} for reporting
+        failures.
+
+    @ivar _realTimeErrors: C{True} if errors should be reported as they
+        happen.  C{False} if they should only be reported at the end of the
+        test run in the summary.
+
+    @ivar uncleanWarnings: C{True} to report dirty reactor errors as warnings,
+        C{False} to report them as test-failing errors.
+
+    @ivar workingDirectory: A path template to a directory which will be the
+        process's working directory while the tests are running.
+
+    @ivar _forceGarbageCollection: C{True} to perform a full garbage
+        collection at least after each test.  C{False} to let garbage
+        collection run only when it normally would.
+
+    @ivar debugger: In debug mode, an object to use to launch the debugger.
+
+    @ivar _exitFirst: C{True} to stop after the first failed test.  C{False}
+        to run the whole suite.
+
+    @ivar log: An object to give to the reporter to use as a log publisher.
     """
 
     DEBUG = "debug"
     DRY_RUN = "dry-run"
 
-    def _setUpTestdir(self):
-        self._tearDownLogFile()
-        currentDir = os.getcwd()
-        base = filepath.FilePath(self.workingDirectory)
-        testdir, self._testDirLock = util._unusedTestDirectory(base)
-        os.chdir(testdir.path)
-        return currentDir
+    reporterFactory: Callable[[TextIO, str, bool, log.LogPublisher], itrial.IReporter]
+    mode: Optional[str] = None
+    logfile: str = "test.log"
+    stream: TextIO = sys.stdout
+    profile: bool = False
+    _tracebackFormat: str = "default"
+    _realTimeErrors: bool = False
+    uncleanWarnings: bool = False
+    workingDirectory: str = "_trial_temp"
+    _forceGarbageCollection: bool = False
+    debugger: Optional[_Debugger] = None
+    _exitFirst: bool = False
 
-    def _tearDownTestdir(self, oldDir):
-        os.chdir(oldDir)
-        self._testDirLock.unlock()
+    _log: log.LogPublisher = log  # type: ignore[assignment]
 
-    _log = log
-
-    def _makeResult(self):
+    def _makeResult(self) -> itrial.IReporter:
         reporter = self.reporterFactory(
             self.stream, self.tbformat, self.rterrors, self._log
         )
@@ -802,64 +913,30 @@ class TrialRunner:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
 
-    def __init__(
-        self,
-        reporterFactory,
-        mode=None,
-        logfile="test.log",
-        stream=sys.stdout,
-        profile=False,
-        tracebackFormat="default",
-        realTimeErrors=False,
-        uncleanWarnings=False,
-        workingDirectory=None,
-        forceGarbageCollection=False,
-        debugger=None,
-        exitFirst=False,
-    ):
-        self.reporterFactory = reporterFactory
-        self.logfile = logfile
-        self.mode = mode
-        self.stream = stream
-        self.tbformat = tracebackFormat
-        self.rterrors = realTimeErrors
-        self.uncleanWarnings = uncleanWarnings
-        self._result = None
-        self.workingDirectory = workingDirectory or "_trial_temp"
-        self._logFileObserver = None
-        self._logFileObject = None
-        self._forceGarbageCollection = forceGarbageCollection
-        self.debugger = debugger
-        self._exitFirst = exitFirst
-        if profile:
-            self.run = util.profiled(self.run, "profile.data")
+    @property
+    def tbformat(self) -> str:
+        return self._tracebackFormat
 
-    def _tearDownLogFile(self):
-        if self._logFileObserver is not None:
-            log.removeObserver(self._logFileObserver.emit)
-            self._logFileObserver = None
-        if self._logFileObject is not None:
-            self._logFileObject.close()
-            self._logFileObject = None
+    @property
+    def rterrors(self) -> bool:
+        return self._realTimeErrors
 
-    def _setUpLogFile(self):
-        self._tearDownLogFile()
-        if self.logfile == "-":
-            logFile = sys.stdout
-        else:
-            logFile = open(self.logfile, "a")
-        self._logFileObject = logFile
-        self._logFileObserver = log.FileLogObserver(logFile)
-        log.startLoggingWithObserver(self._logFileObserver.emit, 0)
-
-    def run(self, test):
+    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
         """
         Run the test or suite and return a result object.
         """
         test = unittest.decorate(test, ITestCase)
-        return self._runWithoutDecoration(test, self._forceGarbageCollection)
+        if self.profile:
+            run = util.profiled(self._runWithoutDecoration, "profile.data")
+        else:
+            run = self._runWithoutDecoration
+        return run(test, self._forceGarbageCollection)
 
-    def _runWithoutDecoration(self, test, forceGarbageCollection=False):
+    def _runWithoutDecoration(
+        self,
+        test: Union[pyunit.TestCase, pyunit.TestSuite],
+        forceGarbageCollection: bool = False,
+    ) -> itrial.IReporter:
         """
         Private helper that runs the given test but doesn't decorate it.
         """
@@ -868,7 +945,6 @@ class TrialRunner:
         # This should move out of the runner and be presumed to be
         # present
         suite = TrialSuite([test], forceGarbageCollection)
-        startTime = time.time()
         if self.mode == self.DRY_RUN:
             for single in _iterateTests(suite):
                 result.startTest(single)
@@ -876,39 +952,20 @@ class TrialRunner:
                 result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
+                assert self.debugger is not None
                 run = lambda: self.debugger.runcall(suite.run, result)
             else:
                 run = lambda: suite.run(result)
 
-            oldDir = self._setUpTestdir()
-            try:
-                self._setUpLogFile()
+            with _testDirectory(self.workingDirectory), _logFile(self.logfile):
                 run()
-            finally:
-                self._tearDownLogFile()
-                self._tearDownTestdir(oldDir)
 
-        endTime = time.time()
-        done = getattr(result, "done", None)
-        if done is None:
-            warnings.warn(
-                "%s should implement done() but doesn't. Falling back to "
-                "printErrors() and friends." % reflect.qual(result.__class__),
-                category=DeprecationWarning,
-                stacklevel=3,
-            )
-            result.printErrors()
-            result.writeln(result.separator)
-            result.writeln(
-                "Ran %d tests in %.3fs", result.testsRun, endTime - startTime
-            )
-            result.write("\n")
-            result.printSummary()
-        else:
-            result.done()
+        result.done()
         return result
 
-    def runUntilFailure(self, test):
+    def runUntilFailure(
+        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+    ) -> itrial.IReporter:
         """
         Repeatedly run C{test} until it fails.
         """
@@ -917,6 +974,9 @@ class TrialRunner:
             count += 1
             self.stream.write("Test Pass %d\n" % (count,))
             if count == 1:
+                # If test is a TestSuite, run *mutates it*.  So only follow
+                # this code-path once!  Otherwise the decorations accumulate
+                # forever.
                 result = self.run(test)
             else:
                 result = self._runWithoutDecoration(test)

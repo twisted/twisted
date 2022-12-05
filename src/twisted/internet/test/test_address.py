@@ -4,14 +4,17 @@
 
 import os
 import socket
-
 from unittest import skipIf
 
-from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.internet.address import IPv4Address, UNIXAddress, IPv6Address
-from twisted.internet.address import HostnameAddress
+from twisted.internet.address import (
+    HostnameAddress,
+    IPv4Address,
+    IPv6Address,
+    UNIXAddress,
+)
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 symlinkSkip = not platform._supportsSymlinks()
 

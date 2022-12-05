@@ -9,25 +9,24 @@ This is going to have to be refactored so that argument parsing is done
 by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
-# System Imports
-import os, copy
+import copy
+import os
+import sys
 
 try:
     import pwd
 except ImportError:
     pwd = None  # type: ignore[assignment]
 from io import BytesIO
-
 from xml.dom.minidom import getDOMImplementation
 
-# Twisted Imports
-from twisted.spread import pb
-from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import http, resource, server, util, static
-from twisted.web.http_headers import Headers
-from twisted.persisted import styles
 from twisted.internet import address, reactor
 from twisted.logger import Logger
+from twisted.persisted import styles
+from twisted.spread import pb
+from twisted.spread.banana import SIZE_LIMIT
+from twisted.web import http, resource, server, static, util
+from twisted.web.http_headers import Headers
 
 
 class _ReferenceableProducerWrapper(pb.Referenceable):
@@ -125,9 +124,10 @@ class Issue:
         # XXX: Argh. FIXME.
         failure = str(failure)
         self.request.write(
-            resource.ErrorPage(
+            resource._UnsafeErrorPage(
                 http.INTERNAL_SERVER_ERROR,
                 "Server Connection Lost",
+                # GHSA-vg46-2rrj-3647 note: _PRE does HTML-escape the input.
                 "Connection to distributed server lost:" + util._PRE(failure),
             ).render(self.request)
         )
@@ -353,18 +353,20 @@ class UserDirectory(resource.Resource):
         return htmlDoc.encode("utf-8")
 
     def getChild(self, name, request):
-        if name == "":
+        if name == b"":
             return self
 
-        td = ".twistd"
+        td = b".twistd"
 
-        if name[-len(td) :] == td:
+        if name.endswith(td):
             username = name[: -len(td)]
             sub = 1
         else:
             username = name
             sub = 0
         try:
+            # Decode using the filesystem encoding to reverse a transformation
+            # done in the pwd module.
             (
                 pw_name,
                 pw_passwd,
@@ -373,9 +375,9 @@ class UserDirectory(resource.Resource):
                 pw_gecos,
                 pw_dir,
                 pw_shell,
-            ) = self._pwd.getpwnam(username)
+            ) = self._pwd.getpwnam(username.decode(sys.getfilesystemencoding()))
         except KeyError:
-            return resource.NoResource()
+            return resource._UnsafeNoResource()
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription("unix", twistdsock)
@@ -384,5 +386,5 @@ class UserDirectory(resource.Resource):
         else:
             path = os.path.join(pw_dir, self.userDirName)
             if not os.path.exists(path):
-                return resource.NoResource()
+                return resource._UnsafeNoResource()
             return static.File(path)

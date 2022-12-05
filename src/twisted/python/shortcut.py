@@ -8,9 +8,10 @@ Creation of  Windows shortcuts.
 Requires win32all.
 """
 
-from win32com.shell import shell  # type: ignore[import]
-import pythoncom  # type: ignore[import]
 import os
+
+import pythoncom  # type: ignore[import]
+from win32com.shell import shell  # type: ignore[import]
 
 
 def open(filename):
