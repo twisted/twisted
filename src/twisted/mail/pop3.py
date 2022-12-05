@@ -20,22 +20,19 @@ from typing import Optional
 from zope.interface import implementer
 
 from twisted import cred
-from twisted.internet import task
-from twisted.internet import defer
-from twisted.internet import interfaces
+from twisted.internet import defer, interfaces, task
 from twisted.mail import smtp
+from twisted.mail._except import POP3ClientError, POP3Error, _POP3MessageDeleted
 from twisted.mail.interfaces import (
-    IServerFactoryPOP3 as IServerFactory,
     IMailboxPOP3 as IMailbox,
+    IServerFactoryPOP3 as IServerFactory,
 )
-from twisted.mail._except import POP3Error, _POP3MessageDeleted, POP3ClientError
-from twisted.protocols import basic
-from twisted.protocols import policies
+from twisted.protocols import basic, policies
 from twisted.python import log
 
 
 # Authentication
-@implementer(cred.credentials.IUsernamePassword)
+@implementer(cred.credentials.IUsernameHashedPassword)
 class APOPCredentials:
     """
     Credentials for use in APOP authentication.
@@ -1676,14 +1673,14 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort(b"QUIT")
 
 
-from twisted.mail._pop3client import POP3Client as AdvancedPOP3Client
 from twisted.mail._except import (
     InsecureAuthenticationDisallowed,
-    ServerErrorResponse,
     LineTooLong,
+    ServerErrorResponse,
     TLSError,
     TLSNotSupportedError,
 )
+from twisted.mail._pop3client import POP3Client as AdvancedPOP3Client
 
 __all__ = [
     # Interfaces

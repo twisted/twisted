@@ -9,9 +9,9 @@ sendmsg.
 
 from os import pipe, read, write
 from socket import SOL_SOCKET, socketpair
-from struct import unpack, pack
+from struct import pack, unpack
 
-from twisted.python.sendmsg import SCM_RIGHTS, sendmsg, recvmsg
+from twisted.python.sendmsg import SCM_RIGHTS, recvmsg, sendmsg
 
 
 def main():

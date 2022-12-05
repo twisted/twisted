@@ -8,10 +8,9 @@ Tests for L{twisted.application.runner._exit}.
 from io import StringIO
 from typing import Optional, Union
 
-from ...runner import _exit
-from .._exit import exit, ExitStatus
-
 import twisted.trial.unittest
+from ...runner import _exit
+from .._exit import ExitStatus, exit
 
 
 class ExitTests(twisted.trial.unittest.TestCase):

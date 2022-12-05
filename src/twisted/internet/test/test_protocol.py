@@ -13,18 +13,18 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import CancelledError
 from twisted.internet.interfaces import (
-    IProtocol,
-    ILoggingContext,
-    IProtocolFactory,
     IConsumer,
+    ILoggingContext,
+    IProtocol,
+    IProtocolFactory,
 )
 from twisted.internet.protocol import (
-    Protocol,
     ClientCreator,
-    Factory,
-    ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter,
+    Factory,
     FileWrapper,
+    Protocol,
+    ProtocolToConsumerAdapter,
 )
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.failure import Failure

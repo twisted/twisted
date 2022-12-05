@@ -10,29 +10,30 @@ import socket
 import struct
 from typing import Optional
 
-from zope.interface import implementer, classImplements
+from zope.interface import classImplements, implementer
 
-from twisted.internet import interfaces, error, address, main, defer
-from twisted.internet.protocol import Protocol
+from twisted.internet import address, defer, error, interfaces, main
 from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
+from twisted.internet.iocpreactor.const import (
+    ERROR_CONNECTION_REFUSED,
+    ERROR_IO_PENDING,
+    ERROR_NETWORK_UNREACHABLE,
+    SO_UPDATE_ACCEPT_CONTEXT,
+    SO_UPDATE_CONNECT_CONTEXT,
+)
+from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
+from twisted.internet.protocol import Protocol
 from twisted.internet.tcp import (
-    _SocketCloser,
     Connector as TCPConnector,
     _AbortingMixin,
     _BaseBaseClient,
     _BaseTCPClient,
-    _resolveIPv6,
     _getsockname,
+    _resolveIPv6,
+    _SocketCloser,
 )
-from twisted.python import log, failure, reflect
-
-from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
-from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
-from twisted.internet.iocpreactor.const import SO_UPDATE_CONNECT_CONTEXT
-from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
-from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
-from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
+from twisted.python import failure, log, reflect
 
 try:
     from twisted.internet._newtls import startTLS as __startTLS

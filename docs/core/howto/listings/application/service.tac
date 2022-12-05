@@ -11,8 +11,9 @@ which twistd will look for
 """
 
 import os
-from twisted.application import service, internet
-from twisted.web import static, server
+
+from twisted.application import internet, service
+from twisted.web import server, static
 
 
 def getWebService():

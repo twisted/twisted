@@ -18,19 +18,22 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import Dict, Sequence, Optional, Type, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
-from twisted.trial.unittest import SynchronousTestCase, SkipTest
-from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
-from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-
 from twisted.python import log
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.failure import Failure
+from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 
+if TYPE_CHECKING:
+    # Only bring in this name to support the type annotation below.  We don't
+    # really want to import a reactor module this early at runtime.
+    from twisted.internet import asyncioreactor
 
 # Access private APIs.
 try:
@@ -138,9 +141,7 @@ class ReactorBuilder:
         # since no one really wants to use it on other platforms.
         _reactors.extend(
             [
-                "twisted.internet.gtk2reactor.PortableGtkReactor",
                 "twisted.internet.gireactor.PortableGIReactor",
-                "twisted.internet.gtk3reactor.PortableGtk3Reactor",
                 "twisted.internet.win32eventreactor.Win32Reactor",
                 "twisted.internet.iocpreactor.reactor.IOCPReactor",
             ]
@@ -148,14 +149,11 @@ class ReactorBuilder:
     else:
         _reactors.extend(
             [
-                "twisted.internet.glib2reactor.Glib2Reactor",
-                "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
-                "twisted.internet.gtk3reactor.Gtk3Reactor",
             ]
         )
 
-        _reactors.append("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -254,8 +252,8 @@ class ReactorBuilder:
         Create and return a reactor using C{self.reactorFactory}.
         """
         try:
-            from twisted.internet.cfreactor import CFReactor
             from twisted.internet import reactor as globalReactor
+            from twisted.internet.cfreactor import CFReactor
         except ImportError:
             pass
         else:
@@ -368,3 +366,38 @@ class ReactorBuilder:
             testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
             classes[testcase.__name__] = testcase
         return classes
+
+
+def asyncioSelectorReactor(self: object) -> "asyncioreactor.AsyncioSelectorReactor":
+    """
+    Make a new asyncio reactor associated with a new event loop.
+
+    The test suite prefers this constructor because having a new event loop
+    for each reactor provides better test isolation.  The real constructor
+    prefers to re-use (or create) a global loop because of how this interacts
+    with other asyncio-based libraries and applications (though maybe it
+    shouldn't).
+
+    @param self: The L{ReactorBuilder} subclass this is being called on.  We
+        don't use this parameter but we get called with it anyway.
+    """
+    from asyncio import get_event_loop, new_event_loop, set_event_loop
+
+    from twisted.internet import asyncioreactor
+
+    asTestCase = cast(SynchronousTestCase, self)
+    originalLoop = get_event_loop()
+    loop = new_event_loop()
+    set_event_loop(loop)
+
+    @asTestCase.addCleanup
+    def cleanUp():
+        loop.close()
+        set_event_loop(originalLoop)
+
+    return asyncioreactor.AsyncioSelectorReactor(loop)
+
+
+# Give it an alias that makes the names of the generated test classes fit the
+# pattern.
+AsyncioSelectorReactor = asyncioSelectorReactor

@@ -20,17 +20,18 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 """
 
 
-import operator
 import datetime
+import operator
 from functools import reduce
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant  # type: ignore[import]
 
-from twisted.positioning import base, ipositioning, _sentence
+from constantly import ValueConstant, Values  # type: ignore[import]
+
+from twisted.positioning import _sentence, base, ipositioning
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import nativeString, iterbytes
+from twisted.python.compat import iterbytes, nativeString
 
 
 class GPGGAFixQualities(Values):

@@ -1,0 +1,1 @@
+Correct type hints for `IHostnameResolver.resolveHostName` and `IResolverSimple.getHostByName`.

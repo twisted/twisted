@@ -6,34 +6,32 @@ Test cases for L{twisted.mail.pop3} module.
 """
 
 
-import hmac
 import base64
+import hmac
 import itertools
-
-from hashlib import md5
 from collections import OrderedDict
+from hashlib import md5
 from io import BytesIO
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
-from twisted import cred
-from twisted import internet
-from twisted import mail
+import twisted.cred.checkers
+import twisted.cred.portal
+import twisted.internet.protocol
+import twisted.mail.pop3
+import twisted.mail.protocols
+from twisted import cred, internet, mail
+from twisted.cred.credentials import IUsernameHashedPassword
 from twisted.internet import defer
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
 from twisted.test.proto_helpers import LineSendingProtocol
 from twisted.trial import unittest, util
-import twisted.cred.checkers
-import twisted.cred.credentials
-import twisted.cred.portal
-import twisted.internet.protocol
-import twisted.mail.pop3
-import twisted.mail.protocols
 
 
-class UtilityTests(unittest.TestCase):
+class UtilityTests(unittest.SynchronousTestCase):
     """
     Test the various helper functions and classes used by the POP3 server
     protocol implementation.
@@ -1564,7 +1562,7 @@ class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
         ValueErrorCommandTests._flush(self)
 
 
-class POP3MiscTests(unittest.TestCase):
+class POP3MiscTests(unittest.SynchronousTestCase):
     """
     Miscellaneous tests more to do with module/package structure than
     anything to do with the Post Office Protocol.
@@ -1580,7 +1578,7 @@ class POP3MiscTests(unittest.TestCase):
             self.assertTrue(hasattr(mod, attr))
 
 
-class POP3ClientDeprecationTests(unittest.TestCase):
+class POP3ClientDeprecationTests(unittest.SynchronousTestCase):
     """
     Tests for the now deprecated L{twisted.mail.pop3client} module.
     """
@@ -1604,3 +1602,12 @@ class POP3ClientDeprecationTests(unittest.TestCase):
         )
         self.assertEqual(len(warningsShown), 1)
         pop3client  # Fake usage to please pyflakes.
+
+
+class APOPCredentialsTests(unittest.SynchronousTestCase):
+    def test_implementsIUsernamePassword(self):
+        """
+        L{APOPCredentials} implements
+        L{twisted.cred.credentials.IUsernameHashedPassword}.
+        """
+        self.assertTrue(verifyClass(IUsernameHashedPassword, pop3.APOPCredentials))

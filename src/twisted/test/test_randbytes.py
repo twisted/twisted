@@ -6,8 +6,8 @@ Test cases for L{twisted.python.randbytes}.
 """
 
 
-from twisted.trial import unittest
 from twisted.python import randbytes
+from twisted.trial import unittest
 
 
 class SecureRandomTestCaseBase:

@@ -5,29 +5,29 @@
 Tests for L{twisted.web.wsgi}.
 """
 
-from sys import exc_info
-from urllib.parse import quote as urlquote
 import tempfile
 import traceback
 import warnings
+from sys import exc_info
+from urllib.parse import quote as urlquote
 
 from zope.interface.verify import verifyObject
 
+from twisted.internet import reactor
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.error import ConnectionLost
+from twisted.logger import Logger, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet import reactor
-from twisted.internet.error import ConnectionLost
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.test.proto_helpers import EventLoggingObserver
+from twisted.trial.unittest import TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
-from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
-from twisted.logger import globalLogPublisher, Logger
-from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.web.wsgi import WSGIResource
 
 
 class SynchronousThreadPool:
@@ -1162,40 +1162,6 @@ class InputStreamTestMixin(WSGITestsMixin):
         d = self._renderAndReturnReaderResult(iterate, bytes)
         d.addCallback(self.assertEqual, [b"en eggs\n", b"and ham\n"])
         return d
-
-
-class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{StringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from StringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("StringIO.StringIO is not available.")
-        else:
-            return StringIO
-
-
-class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{cStringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from cStringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("cStringIO.StringIO is not available.")
-        else:
-            return StringIO
 
 
 class InputStreamBytesIOTests(InputStreamTestMixin, TestCase):

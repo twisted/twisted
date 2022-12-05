@@ -13,8 +13,8 @@ import string
 import struct
 
 import twisted.internet.error
-from twisted.conch.ssh import service, common
 from twisted.conch import error
+from twisted.conch.ssh import common, service
 from twisted.internet import defer
 from twisted.logger import Logger
 from twisted.python.compat import nativeString, networkString
@@ -666,6 +666,7 @@ OPEN_CONNECT_FAILED = 2
 OPEN_UNKNOWN_CHANNEL_TYPE = 3
 OPEN_RESOURCE_SHORTAGE = 4
 
+# From RFC 4254
 EXTENDED_DATA_STDERR = 1
 
 messages = {}

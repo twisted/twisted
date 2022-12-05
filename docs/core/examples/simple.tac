@@ -2,9 +2,9 @@
 #    twistd -ny simple.tac
 
 
-from twisted.application import service, internet
-from twisted.protocols import wire
+from twisted.application import internet, service
 from twisted.internet import protocol
+from twisted.protocols import wire
 from twisted.python import util
 
 application = service.Application("test")

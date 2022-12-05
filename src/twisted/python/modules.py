@@ -57,14 +57,13 @@ the modules outside the standard library's python-files directory::
 """
 
 
-# let's try to keep path imports to a minimum...
-from os.path import dirname, split as splitpath
-
-import sys
 import inspect
-from typing import cast
+import sys
 import warnings
 import zipimport
+
+# let's try to keep path imports to a minimum...
+from os.path import dirname, split as splitpath
 
 from zope.interface import Interface, implementer
 
@@ -73,7 +72,6 @@ from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.reflect import namedAny
 from twisted.python.zippath import ZipArchive
-
 
 _nothing = object()
 
@@ -263,7 +261,7 @@ class PythonAttribute:
         @param loaded: always True, for now
         @param pythonValue: the value of the attribute we're pointing to.
         """
-        self.name = name
+        self.name: str = name
         self.onObject = onObject
         self._loaded = loaded
         self.pythonValue = pythonValue
@@ -319,7 +317,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         _name = nativeString(name)
         assert not _name.endswith(".__init__")
-        self.name = _name
+        self.name: str = _name
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
@@ -398,7 +396,7 @@ class PythonModule(_ModuleIteratorHelper):
         PythonModules with the same name are equal.
         """
         if isinstance(other, PythonModule):
-            return cast(bool, other.name == self.name)
+            return other.name == self.name
         return NotImplemented
 
     def walkModules(self, importPackages=False):

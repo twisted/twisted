@@ -6,13 +6,20 @@ Test cases for L{twisted.internet.defer}.
 """
 
 
-import warnings
-import gc
 import functools
-import traceback
+import gc
 import re
+import traceback
 import types
+import warnings
+from asyncio import (
+    AbstractEventLoop,
+    CancelledError,
+    Future,
+    new_event_loop as _new_event_loop,
+)
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -20,35 +27,34 @@ from typing import (
     Generator,
     List,
     Mapping,
+    NoReturn,
     Optional,
     Tuple,
     Type,
     TypeVar,
-    TYPE_CHECKING,
     Union,
     cast,
 )
 
-from asyncio import new_event_loop, AbstractEventLoop, Future, CancelledError
+from hamcrest import assert_that, equal_to, is_
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
-    _DeferredResultT,
-    _DeferredListResultListT,
-    _DeferredListSingleResultT,
-    ensureDeferred,
     Deferred,
     DeferredFilesystemLock,
     DeferredList,
     DeferredLock,
-    DeferredSemaphore,
     DeferredQueue,
+    DeferredSemaphore,
+    _DeferredListResultListT,
+    _DeferredListSingleResultT,
+    _DeferredResultT,
+    ensureDeferred,
 )
 from twisted.internet.task import Clock
-
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.trial import unittest
 
 if TYPE_CHECKING:
     import contextvars
@@ -790,21 +796,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{defer.maybeDeferred} should catch an exception raised by a synchronous
         function and errback its resulting L{Deferred} with it.
         """
-        try:
-            "10" + 5  # type: ignore[operator]
-        except TypeError as e:
-            expected = str(e)
+        expected = ValueError("that value is unacceptable")
 
-        def plusFive(x: int) -> int:
-            return x + 5
+        def raisesException() -> NoReturn:
+            raise expected
 
         results: List[int] = []
         errors: List[Failure] = []
-        d = defer.maybeDeferred(plusFive, "10")
+        d = defer.maybeDeferred(raisesException)
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
-        self.assertEqual(str(errors[0].value), expected)
+        self.assertEqual(str(errors[0].value), str(expected))
 
     def test_maybeDeferredSyncFailure(self) -> None:
         """
@@ -848,6 +851,50 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         )
         d1.errback(Failure(RuntimeError()))
         self.assertImmediateFailure(d2, RuntimeError)
+
+    def test_maybeDeferredCoroutineSuccess(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has the same result as the coroutine returned
+        by the function.
+        """
+        result = object()
+
+        async def f() -> object:
+            return result
+
+        # Demonstrate that the function itself does not need to be a coroutine
+        # function to trigger the coroutine-handling behavior.
+        def g() -> Coroutine:
+            return f()
+
+        assert_that(
+            self.successResultOf(defer.maybeDeferred(g)),
+            is_(result),
+        )
+
+    def test_maybeDeferredCoroutineFailure(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has a L{Failure} result wrapping the exception
+        raised by the coroutine function.
+        """
+
+        class SomeException(Exception):
+            pass
+
+        async def f() -> None:
+            raise SomeException()
+
+        # Demonstrate that the function itself does not need to be a coroutine
+        # function to trigger the coroutine-handling behavior.
+        def g() -> Coroutine:
+            return f()
+
+        assert_that(
+            self.failureResultOf(defer.maybeDeferred(g)).type,
+            equal_to(SomeException),
+        )
 
     def test_innerCallbacksPreserved(self) -> None:
         """
@@ -1366,7 +1413,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             setattr,
             warnings,
             "filters",
-            warnings.filters,  # type: ignore[attr-defined]
+            warnings.filters,
         )
         warnings.filterwarnings("error", category=DeprecationWarning)
         d: Deferred[str] = Deferred()
@@ -3232,13 +3279,21 @@ def callAllSoonCalls(loop: AbstractEventLoop) -> None:
 
 
 class DeferredFutureAdapterTests(unittest.TestCase):
+    def newLoop(self) -> AbstractEventLoop:
+        """
+        Create a new event loop that will be closed at the end of the test.
+        """
+        result = _new_event_loop()
+        self.addCleanup(result.close)
+        return result
+
     def test_asFuture(self) -> None:
         """
         L{Deferred.asFuture} returns a L{asyncio.Future} which fires when
         the given L{Deferred} does.
         """
         d: Deferred[int] = Deferred()
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         self.assertEqual(aFuture.done(), False)
         d.callback(13)
@@ -3259,7 +3314,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
             called = True
 
         d: Deferred[None] = Deferred(canceler)
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
         callAllSoonCalls(loop)
@@ -3278,7 +3333,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
             dprime.callback(9)
 
         d: Deferred[None] = Deferred(canceler)
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture = d.asFuture(loop)
         aFuture.cancel()
         callAllSoonCalls(loop)
@@ -3292,7 +3347,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         """
         d: Deferred[None] = Deferred()
         theFailure = Failure(ZeroDivisionError())
-        loop = new_event_loop()
+        loop = self.newLoop()
         future = d.asFuture(loop)
         callAllSoonCalls(loop)
         d.errback(theFailure)
@@ -3304,7 +3359,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.fromFuture} returns a L{Deferred} that fires
         when the given L{asyncio.Future} does.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         aFuture: Future[int] = Future(loop=loop)
         d = Deferred.fromFuture(aFuture)
         self.assertNoResult(d)
@@ -3318,7 +3373,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         an L{asyncio.CancelledError} when the given
         L{asyncio.Future} is cancelled.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         cancelled.cancel()
@@ -3331,7 +3386,7 @@ class DeferredFutureAdapterTests(unittest.TestCase):
         L{Deferred.fromFuture} makes a L{Deferred} which, when
         cancelled, cancels the L{asyncio.Future} it was created from.
         """
-        loop = new_event_loop()
+        loop = self.newLoop()
         cancelled: Future[None] = Future(loop=loop)
         d = Deferred.fromFuture(cancelled)
         d.cancel()
@@ -3424,6 +3479,38 @@ class CoroutineContextVarsTests(unittest.TestCase):
         clock.advance(1)
 
         self.assertEqual(self.successResultOf(d), True)
+
+    def test_resetWithInlineCallbacks(self) -> None:
+        """
+        When an inlineCallbacks function resumes, we should be able to reset() a
+        contextvar that was set when it was first called.
+        """
+        clock = Clock()
+
+        var: contextvars.ContextVar[int] = contextvars.ContextVar("testvar")
+
+        @defer.inlineCallbacks
+        def yieldingDeferred() -> Generator[Deferred[Any], Any, None]:
+            # first try setting the var
+            token = var.set(3)
+
+            # after a sleep, try resetting it
+            d: Deferred[int] = Deferred()
+            clock.callLater(1, d.callback, True)
+            yield d
+            self.assertEqual(var.get(), 3)
+
+            var.reset(token)
+            # it should have gone back to what we started with (2)
+            self.assertEqual(var.get(), 2)
+
+        # we start off with the var set to 2
+        var.set(2)
+        d = yieldingDeferred()
+
+        # Advance the clock so that yieldingDeferred triggers
+        clock.advance(1)
+        self.successResultOf(d)
 
     @ensuringDeferred
     async def test_asyncWithLock(self) -> None:

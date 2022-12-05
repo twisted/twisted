@@ -8,10 +8,9 @@ Tests for L{twisted.python.versions}.
 
 import operator
 
-from twisted.python.versions import getVersionString, IncomparableVersions
-from twisted.python.versions import Version
 from incremental import _inf
 
+from twisted.python.versions import IncomparableVersions, Version, getVersionString
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
@@ -95,7 +94,8 @@ class VersionsTests(TestCase):
         """
         va = Version("dummy", 1, 0, 0)
         vb = ("dummy", 1, 0, 0)  # a tuple is not a Version object
-        self.assertEqual(va.__cmp__(vb), NotImplemented)  # type: ignore[operator]
+        result = va.__cmp__(vb)  # type:ignore[arg-type]
+        self.assertEqual(result, NotImplemented)
 
     def test_repr(self):
         """

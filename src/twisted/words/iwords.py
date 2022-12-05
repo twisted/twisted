@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 
 class IProtocolPlugin(Interface):

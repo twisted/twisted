@@ -16,19 +16,20 @@ else:
     pwd = _pwd
 
 from unittest import skipIf
+
 from zope.interface.verify import verifyObject
 
-from twisted.python import filepath, failure
-from twisted.internet import reactor, defer
-from twisted.trial.unittest import TestCase
+from twisted.internet import defer, reactor
+from twisted.logger import globalLogPublisher
+from twisted.python import failure, filepath
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import distrib, client, resource, static, server
-from twisted.web.test.test_web import DummyRequest, DummyChannel
-from twisted.web.test._util import _render
 from twisted.test import proto_helpers
+from twisted.trial.unittest import TestCase
+from twisted.web import client, distrib, resource, server, static
 from twisted.web.http_headers import Headers
-from twisted.logger import globalLogPublisher
+from twisted.web.test._util import _render
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 
 class MySite(server.Site):
@@ -394,7 +395,7 @@ class UserDirectoryTests(TestCase):
         """
         self.assertTrue(verifyObject(resource.IResource, self.directory))
 
-    def _404Test(self, name):
+    async def _404Test(self, name: bytes) -> None:
         """
         Verify that requesting the C{name} child of C{self.directory} results
         in a 404 response.
@@ -402,28 +403,24 @@ class UserDirectoryTests(TestCase):
         request = DummyRequest([name])
         result = self.directory.getChild(name, request)
         d = _render(result, request)
+        await d
+        self.assertEqual(request.responseCode, 404)
 
-        def cbRendered(ignored):
-            self.assertEqual(request.responseCode, 404)
-
-        d.addCallback(cbRendered)
-        return d
-
-    def test_getInvalidUser(self):
+    async def test_getInvalidUser(self):
         """
         L{UserDirectory.getChild} returns a resource which renders a 404
         response when passed a string which does not correspond to any known
         user.
         """
-        return self._404Test("carol")
+        await self._404Test(b"carol")
 
-    def test_getUserWithoutResource(self):
+    async def test_getUserWithoutResource(self):
         """
         L{UserDirectory.getChild} returns a resource which renders a 404
         response when passed a string which corresponds to a known user who has
         neither a user directory nor a user distrib socket.
         """
-        return self._404Test("alice")
+        await self._404Test(b"alice")
 
     def test_getPublicHTMLChild(self):
         """
@@ -435,7 +432,7 @@ class UserDirectoryTests(TestCase):
         public_html = home.child("public_html")
         public_html.makedirs()
         request = DummyRequest(["bob"])
-        result = self.directory.getChild("bob", request)
+        result = self.directory.getChild(b"bob", request)
         self.assertIsInstance(result, static.File)
         self.assertEqual(result.path, public_html.path)
 
@@ -449,7 +446,7 @@ class UserDirectoryTests(TestCase):
         home.makedirs()
         web = home.child(".twistd-web-pb")
         request = DummyRequest(["bob"])
-        result = self.directory.getChild("bob.twistd", request)
+        result = self.directory.getChild(b"bob.twistd", request)
         self.assertIsInstance(result, distrib.ResourceSubscription)
         self.assertEqual(result.host, "unix")
         self.assertEqual(abspath(result.port), web.path)

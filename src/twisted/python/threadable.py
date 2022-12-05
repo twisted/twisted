@@ -104,7 +104,7 @@ _dummyID = object()
 def getThreadID():
     if threadingmodule is None:
         return _dummyID
-    return threadingmodule.currentThread().ident
+    return threadingmodule.current_thread().ident
 
 
 def isInIOThread():

@@ -16,47 +16,48 @@ import sys
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.posixbase import PosixReactorBase, _Waker
-from twisted.internet.posixbase import _NO_FILEDESC
-
-from twisted.python import log
-
+from CFNetwork import (  # type: ignore[import]
+    CFSocketCreateRunLoopSource,
+    CFSocketCreateWithNative,
+    CFSocketDisableCallBacks,
+    CFSocketEnableCallBacks,
+    CFSocketInvalidate,
+    CFSocketSetSocketFlags,
+    kCFSocketAutomaticallyReenableReadCallBack,
+    kCFSocketAutomaticallyReenableWriteCallBack,
+    kCFSocketConnectCallBack,
+    kCFSocketReadCallBack,
+    kCFSocketWriteCallBack,
+)
 from CoreFoundation import (  # type: ignore[import]
+    CFAbsoluteTimeGetCurrent,
     CFRunLoopAddSource,
+    CFRunLoopAddTimer,
+    CFRunLoopGetCurrent,
     CFRunLoopRemoveSource,
-    CFRunLoopGetMain,
     CFRunLoopRun,
     CFRunLoopStop,
     CFRunLoopTimerCreate,
-    CFRunLoopAddTimer,
     CFRunLoopTimerInvalidate,
     kCFAllocatorDefault,
     kCFRunLoopCommonModes,
-    CFAbsoluteTimeGetCurrent,
 )
 
-from CFNetwork import (  # type: ignore[import]
-    CFSocketCreateWithNative,
-    CFSocketSetSocketFlags,
-    CFSocketEnableCallBacks,
-    CFSocketCreateRunLoopSource,
-    CFSocketDisableCallBacks,
-    CFSocketInvalidate,
-    kCFSocketWriteCallBack,
-    kCFSocketReadCallBack,
-    kCFSocketConnectCallBack,
-    kCFSocketAutomaticallyReenableReadCallBack,
-    kCFSocketAutomaticallyReenableWriteCallBack,
-)
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
+from twisted.python import log
 
+# We know that we're going to run on macOS so we can just pick the
+# POSIX-appropriate waker.  This also avoids having a dynamic base class and
+# so lets more things get type checked.
+from ._signals import _UnixWaker
 
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
 
 
-class _WakerPlus(_Waker):
+class _WakerPlus(_UnixWaker):
     """
     The normal Twisted waker will simply wake up the main loop, which causes an
     iteration to run, which in turn causes L{ReactorBase.runUntilCurrent}
@@ -73,12 +74,16 @@ class _WakerPlus(_Waker):
     do.
     """
 
+    def __init__(self, reactor):
+        super().__init__()
+        self.reactor = reactor
+
     def doRead(self):
         """
         Wake up the loop and force C{runUntilCurrent} to run immediately in the
         next timed iteration.
         """
-        result = _Waker.doRead(self)
+        result = super().doRead()
         self.reactor._scheduleSimulate(True)
         return result
 
@@ -131,19 +136,12 @@ class CFReactor(PosixReactorBase):
         self._runner = runner
 
         if runLoop is None:
-            runLoop = CFRunLoopGetMain()
+            runLoop = CFRunLoopGetCurrent()
         self._cfrunloop = runLoop
         PosixReactorBase.__init__(self)
 
-    def installWaker(self):
-        """
-        Override C{installWaker} in order to use L{_WakerPlus}; otherwise this
-        should be exactly the same as the parent implementation.
-        """
-        if not self.waker:
-            self.waker = _WakerPlus(self)
-            self._internalReaders.add(self.waker)
-            self.addReader(self.waker)
+    def _wakerFactory(self) -> _WakerPlus:
+        return _WakerPlus(self)
 
     def _socketCallback(
         self, cfSocket, callbackType, ignoredAddress, ignoredData, context
@@ -371,22 +369,121 @@ class CFReactor(PosixReactorBase):
         self._scheduleSimulate()
         return result
 
+    def startRunning(self, installSignalHandlers: bool = True) -> None:
+        """
+        Start running the reactor, then kick off the timer that advances
+        Twisted's clock to keep pace with CFRunLoop's.
+        """
+        super().startRunning(installSignalHandlers)
+
+        # Before 'startRunning' is called, the reactor is not attached to the
+        # CFRunLoop[1]; specifically, the CFTimer that runs all of Twisted's
+        # timers is not active and will not have been added to the loop by any
+        # application code.  Now that _running is probably[2] True, we need to
+        # ensure that timed calls will actually run on the main loop.  This
+        # call needs to be here, rather than at the top of mainLoop, because
+        # it's possible to use startRunning to *attach* a reactor to an
+        # already-running CFRunLoop, i.e. within a plugin for an application
+        # that doesn't otherwise use Twisted, rather than calling it via run().
+        self._scheduleSimulate(force=True)
+
+        # [1]: readers & writers are still active in the loop, but arguably
+        #      they should not be.
+
+        # [2]: application code within a 'startup' system event trigger *may*
+        #      have already crashed the reactor and thus set _started to False,
+        #      but that specific case is handled by mainLoop, since that case
+        #      is inherently irrelevant in an attach-to-application case and is
+        #      only necessary to handle mainLoop spuriously blocking.
+
     _inCFLoop = False
 
-    def mainLoop(self):
+    def mainLoop(self) -> None:
         """
         Run the runner (C{CFRunLoopRun} or something that calls it), which runs
         the run loop until C{crash()} is called.
         """
-        self._inCFLoop = True
+        if not self._started:
+            # If we arrive here, we were crashed by application code in a
+            # 'startup' system event trigger, (or crashed manually before the
+            # application calls 'mainLoop' directly for whatever reason; sigh,
+            # this method should not be public).  However, application code
+            # doing obscure things will expect an invocation of this loop to
+            # have at least *one* pass over ready readers, writers, and delayed
+            # calls.  iterate(), in particular, is emulated in exactly this way
+            # in this reactor implementation.  In order to ensure that we enter
+            # the real implementation of the mainloop and do all of those
+            # things, we need to set _started back to True so that callLater
+            # actually schedules itself against the CFRunLoop, but immediately
+            # crash once we are in the context of the loop where we've run
+            # ready I/O and timers.
+
+            def docrash() -> None:
+                self.crash()
+
+            self._started = True
+            self.callLater(0, docrash)
+        already = False
         try:
-            self._runner()
+            while self._started:
+                if already:
+                    # Sometimes CFRunLoopRun (or its equivalents) may exit
+                    # without CFRunLoopStop being called.
+
+                    # This is really only *supposed* to happen when it runs out
+                    # of sources & timers to process.  However, in full Twisted
+                    # test-suite runs we have observed, extremely rarely (once
+                    # in every 3000 tests or so) CFRunLoopRun exiting in cases
+                    # where it seems as though there *is* still some work to
+                    # do.  However, given the difficulty of reproducing the
+                    # race conditions necessary to make this happen, it's
+                    # possible that we have missed some nuance of when
+                    # CFRunLoop considers the list of work "empty" and various
+                    # callbacks and timers to be "invalidated".  Therefore we
+                    # are not fully confident that this is a platform bug, but
+                    # it is nevertheless unexpected behavior from our reading
+                    # of the documentation.
+
+                    # To accommodate this rare and slightly ambiguous stress
+                    # case, we make extra sure that our scheduled timer is
+                    # re-created on the loop as a CFRunLoopTimer, which
+                    # reliably gives the loop some work to do and 'fixes' it if
+                    # it exited due to having no active sources or timers.
+                    self._scheduleSimulate()
+
+                    # At this point, there may be a little more code that we
+                    # would need to put here for full correctness for a very
+                    # peculiar type of application: if you're writing a
+                    # command-line tool using CFReactor, adding *nothing* to
+                    # the reactor itself, disabling even the internal Waker
+                    # file descriptors, then there's a possibility that
+                    # CFRunLoopRun will exit early, and if we have no timers,
+                    # we might busy-loop here.  Because we cannot seem to force
+                    # this to happen under normal circumstances, we're leaving
+                    # that code out.
+
+                already = True
+                self._inCFLoop = True
+                try:
+                    self._runner()
+                finally:
+                    self._inCFLoop = False
         finally:
-            self._inCFLoop = False
+            self._stopSimulating()
 
-    _currentSimulator = None
+    _currentSimulator: object | None = None
 
-    def _scheduleSimulate(self, force=False):
+    def _stopSimulating(self) -> None:
+        """
+        If we have a CFRunLoopTimer registered with the CFRunLoop, invalidate
+        it and set it to None.
+        """
+        if self._currentSimulator is None:
+            return
+        CFRunLoopTimerInvalidate(self._currentSimulator)
+        self._currentSimulator = None
+
+    def _scheduleSimulate(self, force: bool = False) -> None:
         """
         Schedule a call to C{self.runUntilCurrent}.  This will cancel the
         currently scheduled call if it is already scheduled.
@@ -400,24 +497,28 @@ class CFReactor(PosixReactorBase):
 
         @type force: C{bool}
         """
-        if self._currentSimulator is not None:
-            CFRunLoopTimerInvalidate(self._currentSimulator)
+        self._stopSimulating()
+        if not self._started:
+            # If the reactor is not running (e.g. we are scheduling callLater
+            # calls before starting the reactor) we should not be scheduling
+            # CFRunLoopTimers against the global CFRunLoop.
+            return
+
+        timeout = 0.0 if force else self.timeout()
+        if timeout is None:
+            return
+
+        fireDate = CFAbsoluteTimeGetCurrent() + timeout
+
+        def simulate(cftimer, extra):
             self._currentSimulator = None
-        timeout = self.timeout()
-        if force:
-            timeout = 0.0
-        if timeout is not None:
-            fireDate = CFAbsoluteTimeGetCurrent() + timeout
+            self.runUntilCurrent()
+            self._scheduleSimulate()
 
-            def simulate(cftimer, extra):
-                self._currentSimulator = None
-                self.runUntilCurrent()
-                self._scheduleSimulate()
-
-            c = self._currentSimulator = CFRunLoopTimerCreate(
-                kCFAllocatorDefault, fireDate, 0, 0, 0, simulate, None
-            )
-            CFRunLoopAddTimer(self._cfrunloop, c, kCFRunLoopCommonModes)
+        c = self._currentSimulator = CFRunLoopTimerCreate(
+            kCFAllocatorDefault, fireDate, 0, 0, 0, simulate, None
+        )
+        CFRunLoopAddTimer(self._cfrunloop, c, kCFRunLoopCommonModes)
 
     def callLater(self, _seconds, _f, *args, **kw):
         """
@@ -438,18 +539,9 @@ class CFReactor(PosixReactorBase):
         """
         Implement L{IReactorCore.crash}
         """
-        wasStarted = self._started
         PosixReactorBase.crash(self)
-        if self._inCFLoop:
-            self._stopNow()
-        else:
-            if wasStarted:
-                self.callLater(0, self._stopNow)
-
-    def _stopNow(self):
-        """
-        Immediately stop the CFRunLoop (which must be running!).
-        """
+        if not self._inCFLoop:
+            return
         CFRunLoopStop(self._cfrunloop)
 
     def iterate(self, delay=0):
@@ -458,7 +550,14 @@ class CFReactor(PosixReactorBase):
         by letting the loop run for a little while and then scheduling a timed
         call to exit it.
         """
-        self.callLater(delay, self._stopNow)
+        self._started = True
+        # Since the CoreFoundation loop doesn't have the concept of "iterate"
+        # we can't ask it to do this.  Instead we will make arrangements to
+        # crash it *very* soon and then make it run.  This is a rough
+        # approximation of "an iteration".  Using crash and mainLoop here
+        # means that it's safe (as safe as anything using "iterate" can be) to
+        # do this repeatedly.
+        self.callLater(0, self.crash)
         self.mainLoop()
 
 

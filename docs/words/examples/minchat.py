@@ -12,8 +12,7 @@ $ python minchat.py
 """
 
 
-from twisted.words.im import basechat, baseaccount, ircsupport
-
+from twisted.words.im import baseaccount, basechat, ircsupport
 
 # A list of account objects. We might as well create them at runtime, this is
 # supposed to be a Minimalist Implementation, after all.

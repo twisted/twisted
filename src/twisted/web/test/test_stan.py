@@ -10,8 +10,8 @@ implementation.
 import sys
 from typing import NoReturn
 
-from twisted.web.template import Comment, CDATA, CharRef, Flattenable, Tag
 from twisted.trial.unittest import TestCase
+from twisted.web.template import CDATA, CharRef, Comment, Flattenable, Tag
 
 
 def proto(*a: Flattenable, **kw: Flattenable) -> Tag:
@@ -123,7 +123,7 @@ class TagTests(TestCase):
             DeprecationWarning,
             "Cloning a Tag which contains a generator is unsafe, "
             "since the generator can be consumed only once; "
-            "this is deprecated since Twisted NEXT and will raise "
+            "this is deprecated since Twisted 21.7.0 and will raise "
             "an exception in the future",
             sys.modules[Tag.__module__].__file__,
             tag.clone,
@@ -146,7 +146,7 @@ class TagTests(TestCase):
                 DeprecationWarning,
                 "Cloning a Tag which contains a coroutine is unsafe, "
                 "since the coroutine can run only once; "
-                "this is deprecated since Twisted NEXT and will raise "
+                "this is deprecated since Twisted 21.7.0 and will raise "
                 "an exception in the future",
                 sys.modules[Tag.__module__].__file__,
                 tag.clone,

@@ -12,10 +12,11 @@ from typing import Iterable, List, Optional
 
 from zope.interface import implementer
 
+from twisted.internet import interfaces, main
+from twisted.python import failure, reflect
+
 # Twisted Imports
 from twisted.python.compat import lazyByteSlice
-from twisted.python import reflect, failure
-from twisted.internet import interfaces, main
 
 
 def _dataMustBeBytes(obj):

@@ -18,23 +18,22 @@ import sys
 import time
 import weakref
 from collections import deque
-
 from io import BytesIO as StringIO
 from typing import Dict
-from zope.interface import implementer, Interface
 
-from twisted.trial import unittest
-from twisted.spread import pb, util, publish, jelly
-from twisted.internet import protocol, main, reactor, address
-from twisted.internet.error import ConnectionRefusedError
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, portal
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
+from twisted.internet import address, main, protocol, reactor
 from twisted.internet.defer import Deferred, gatherResults, succeed
+from twisted.internet.error import ConnectionRefusedError
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
 from twisted.python.compat import iterbytes
-from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
-from twisted.cred import portal, checkers, credentials
-
+from twisted.spread import jelly, pb, publish, util
 from twisted.test.proto_helpers import _FakeConnector
+from twisted.trial import unittest
 
 
 class Dummy(pb.Viewable):

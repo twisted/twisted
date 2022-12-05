@@ -16,19 +16,25 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-
 cryptography = requireModule("cryptography")
 if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
 
 pyasn1 = requireModule("pyasn1")
+_keys_pynacl = requireModule("twisted.conch.ssh._keys_pynacl")
 
 
 if cryptography and pyasn1:
+    from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.backends import default_backend
-    from twisted.conch.ssh import keys, common, sexpy
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding
 
-    ED25519_SUPPORTED = default_backend().ed25519_supported()
+    from twisted.conch.ssh import common, keys, sexpy
+
+    ED25519_SUPPORTED = (
+        default_backend().ed25519_supported() or _keys_pynacl is not None
+    )
 else:
     ED25519_SUPPORTED = False
 
@@ -767,6 +773,30 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertRaises(RuntimeError, keys.Key(self).type)
         self.assertRaises(RuntimeError, keys.Key(self).sshType)
 
+    def test_supportedSignatureAlgorithms(self):
+        """
+        L{keys.Key.supportedSignatureAlgorithms} returns the appropriate
+        public key signature algorithms for each key type.
+        """
+        self.assertEqual(
+            keys.Key(self.rsaObj).supportedSignatureAlgorithms(),
+            [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa"],
+        )
+        self.assertEqual(
+            keys.Key(self.dsaObj).supportedSignatureAlgorithms(), [b"ssh-dss"]
+        )
+        self.assertEqual(
+            keys.Key(self.ecObj).supportedSignatureAlgorithms(),
+            [b"ecdsa-sha2-nistp256"],
+        )
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key(self.ed25519Obj).supportedSignatureAlgorithms(),
+                [b"ssh-ed25519"],
+            )
+        self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
+        self.assertRaises(RuntimeError, keys.Key(self).supportedSignatureAlgorithms)
+
     def test_fromBlobUnsupportedType(self):
         """
         A C{BadKeyError} error is raised whey the blob has an unsupported
@@ -916,8 +946,8 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A private EC key is correctly generated from a private key blob.
         """
-        from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=keydata.ECDatanistp256["x"],
@@ -1308,13 +1338,57 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_signAndVerifyRSA(self):
         """
-        Signed data can be verified using RSA.
+        Signed data can be verified using RSA (with SHA-1, the default).
         """
         data = b"some-data"
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-1.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"ssh-rsa")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA1()
+            )
+        )
+
+    def test_signAndVerifyRSASHA256(self):
+        """
+        Signed data can be verified using RSA with SHA-256.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        signature = key.sign(data, signatureType=b"rsa-sha2-256")
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-256.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-256")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA256()
+            )
+        )
+
+    def test_signAndVerifyRSASHA512(self):
+        """
+        Signed data can be verified using RSA with SHA-512.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        signature = key.sign(data, signatureType=b"rsa-sha2-512")
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-512.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-512")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA512()
+            )
+        )
 
     def test_signAndVerifyDSA(self):
         """
@@ -1357,6 +1431,27 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+
+    def test_signWithWrongAlgorithm(self):
+        """
+        L{keys.Key.sign} raises L{keys.BadSignatureAlgorithmError} when
+        asked to sign with a public key algorithm that doesn't make sense
+        with the given key.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
 
     def test_verifyRSA(self):
         """
@@ -1575,6 +1670,156 @@ attr n:
                 \tf4:5e:6d:67:05:69:31:37:4c:69:0d:05:55:bb:c9:
                 \t44:58>"""
             ),
+        )
+
+
+class PyNaClKeyTests(KeyTests):
+    """
+    Key tests, but forcing the use of C{PyNaCl}.
+    """
+
+    if cryptography is None:
+        skip = skipCryptography
+    if _keys_pynacl is None:
+        skip = "Cannot run without PyNaCl"
+
+    def setUp(self):
+        super().setUp()
+        self.patch(keys, "Ed25519PublicKey", _keys_pynacl.Ed25519PublicKey)
+        self.patch(keys, "Ed25519PrivateKey", _keys_pynacl.Ed25519PrivateKey)
+
+    def test_naclPrivateBytes(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} and
+        L{_keys_pynacl.Ed25519PrivateKey.from_private_bytes} round-trip.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
+        key_bytes = key.private_bytes(
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        )
+        self.assertIsInstance(key_bytes, bytes)
+        self.assertEqual(
+            key, _keys_pynacl.Ed25519PrivateKey.from_private_bytes(key_bytes)
+        )
+
+    def test_naclPrivateBytesInvalidParameters(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} only accepts certain parameters.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        )
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+        self.assertRaises(
+            ValueError,
+            key.private_bytes,
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.BestAvailableEncryption(b"password"),
+        )
+
+    def test_naclPrivateHash(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey.__hash__} allows instances to be hashed.
+        """
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
+        d = {key: True}
+        self.assertTrue(d[key])
+
+    def test_naclPrivateEquality(self):
+        """
+        L{_keys_pynacl.Ed25519PrivateKey} implements equality test methods.
+        """
+        key1 = _keys_pynacl.Ed25519PrivateKey.generate()
+        key2 = _keys_pynacl.Ed25519PrivateKey.generate()
+        self.assertEqual(key1, key1)
+        self.assertNotEqual(key1, key2)
+        self.assertNotEqual(key1, bytes(key1))
+
+    def test_naclPublicBytes(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey.public_bytes} and
+        L{_keys_pynacl.Ed25519PublicKey.from_public_bytes} round-trip.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        key_bytes = key.public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        self.assertIsInstance(key_bytes, bytes)
+        self.assertEqual(
+            key, _keys_pynacl.Ed25519PublicKey.from_public_bytes(key_bytes)
+        )
+
+    def test_naclPublicBytesInvalidParameters(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey.public_bytes} only accepts certain parameters.
+        """
+        from cryptography.hazmat.primitives import serialization
+
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        self.assertRaises(
+            ValueError,
+            key.public_bytes,
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.Raw,
+        )
+        self.assertRaises(
+            ValueError,
+            key.public_bytes,
+            serialization.Encoding.Raw,
+            serialization.PublicFormat.PKCS1,
+        )
+
+    def test_naclPublicHash(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey.__hash__} allows instances to be hashed.
+        """
+        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        d = {key: True}
+        self.assertTrue(d[key])
+
+    def test_naclPublicEquality(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey} implements equality test methods.
+        """
+        key1 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        key2 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
+        self.assertEqual(key1, key1)
+        self.assertNotEqual(key1, key2)
+        self.assertNotEqual(key1, bytes(key1))
+
+    def test_naclVerify(self):
+        """
+        L{_keys_pynacl.Ed25519PublicKey.verify} raises appropriate exceptions.
+        """
+        key = _keys_pynacl.Ed25519PrivateKey.generate()
+        self.assertIsInstance(key, keys.Ed25519PrivateKey)
+        signature = key.sign(b"test data")
+        self.assertIsNone(key.public_key().verify(signature, b"test data"))
+        self.assertRaises(
+            InvalidSignature, key.public_key().verify, signature, b"wrong data"
+        )
+        self.assertRaises(
+            InvalidSignature, key.public_key().verify, b"0" * 64, b"test data"
         )
 
 
