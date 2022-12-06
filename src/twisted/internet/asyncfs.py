@@ -5,34 +5,32 @@
 This module contains asynchronous filesystem access functions and the threads-based implementation
 """
 
-from typing import Tuple, Iterable, Optional, Callable, cast, Any
 import os
 import os.path
 import threading
+from typing import Any, Callable, Iterable, Optional, Tuple, cast
 
-import attr
 from zope.interface import implementer, providedBy
 
+import attr
+
 from twisted.internet import reactor
-from twisted.python.filepath import FilePath
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
-    IPushProducer,
-    IReactorFileAsync,
+    DEFAULT_BUFFER_MAX,
+    DEFAULT_CHUNK_SIZE,
     FileAsyncFlags,
-    IProducer,
-    IConsumer,
     IAsyncReader,
     IAsyncWriter,
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_BUFFER_MAX,
+    IConsumer,
+    IProducer,
+    IPushProducer,
+    IReactorFileAsync,
 )
-from twisted.python.threadpool import ThreadPool
-from twisted.internet.threads import (
-    deferToThreadPool,
-    blockingCallFromThread,
-)
-from twisted.internet.defer import Deferred
+from twisted.internet.threads import blockingCallFromThread, deferToThreadPool
 from twisted.logger import Logger
+from twisted.python.filepath import FilePath
+from twisted.python.threadpool import ThreadPool
 
 log = Logger()
 

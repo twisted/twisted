@@ -3,22 +3,20 @@
 # type: ignore
 
 import os
+import os.path
 import platform
 import sys
-import time
 import tempfile
-import os.path
+import time
+
 from zope.interface import implementer
+
 from twisted.internet import asyncfs
-from twisted.internet.interfaces import (
-    IPushProducer,
-    IConsumer,
-    FileAsyncFlags,
-)
+from twisted.internet.defer import DeferredList
+from twisted.internet.interfaces import FileAsyncFlags, IConsumer, IPushProducer
+from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
-from twisted.internet.defer import DeferredList
-from twisted.logger import globalLogBeginner, textFileLogObserver, Logger
 
 log = Logger()
 observers = [textFileLogObserver(sys.stdout)]
