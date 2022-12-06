@@ -8,10 +8,9 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
-from typing import Optional, Tuple
-
 import random
 from itertools import chain
+from typing import Optional, Tuple
 
 from twisted.conch import error
 from twisted.conch.ssh import _kex, connection, transport, userauth
