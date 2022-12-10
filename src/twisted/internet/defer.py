@@ -522,6 +522,11 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         These will be executed when the 'master' callback is run.
 
+        @note: The signature of this function was designed many years before
+            PEP 612; ParamSpec provides no mechanism to annotate parameters
+            like C{callbackArgs}; this is therefore inherently less type-safe
+            than calling C{addCallback} and C{addErrback} separately.
+
         @return: C{self}.
         """
         if errback is None:
