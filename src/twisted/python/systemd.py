@@ -15,7 +15,7 @@ __all__ = ["ListenFDs"]
 from os import getpid
 from typing import Dict, List, Mapping, Optional, Sequence
 
-from attrs import Factory, define
+from attr import Factory, define
 
 
 @define
