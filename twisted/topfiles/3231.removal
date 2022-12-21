@@ -1,1 +1,0 @@
-twisted.trial.runner.suiteVisit and PyUnitTestCase as well as visitor methods, all deprecated since Twisted 8.0, have been removed.

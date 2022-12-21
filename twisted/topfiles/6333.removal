@@ -1,2 +1,0 @@
-twisted.trial.runner.DryRunVisitor is now deprecated.
-Trial uses a different method to handle --dry-run now.

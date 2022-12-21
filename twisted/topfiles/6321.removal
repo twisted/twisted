@@ -1,1 +1,0 @@
-The deprecated LENGTH, DATA, COMMA, and NUMBER NetstringReceiver parser state attributes in t.protocols.basic are removed now.

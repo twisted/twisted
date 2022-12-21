@@ -1,1 +1,0 @@
-The SSL howto now covers twisted.internet.ssl.CertificateOptions instead of the older context factories it replaces.

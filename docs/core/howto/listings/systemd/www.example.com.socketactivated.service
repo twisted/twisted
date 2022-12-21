@@ -1,0 +1,16 @@
+[Unit]
+Description=Example Web Server
+Requires=www.example.com.socket
+
+[Service]
+ExecStart=/usr/bin/twistd \
+    --nodaemon \
+    --pidfile= \
+    web --listen systemd:domain=INET:name=my-web-port --path .
+
+WorkingDirectory=/srv/www/www.example.com/static
+
+User=nobody
+Group=nobody
+
+Restart=always

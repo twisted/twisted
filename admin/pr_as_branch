@@ -1,0 +1,72 @@
+#!/bin/sh
+
+set -e
+set -u
+
+
+# Usage
+
+usage() {
+  program=$(basename "$0");
+
+  if [ $# != 0 ]; then echo "$@"; echo ""; fi;
+
+  echo "${program}: usage:";
+  echo "    ${program} pull_request_number trac_ticket_number branch_name";
+  echo "";
+  echo "Note: branch_name should not include the ticket number prefix; that ";
+  echo "will be added automatically.";
+  echo "";
+  echo "${program} creates a branch in the Twisted GitHub repository from a";
+  echo "forked pull request.  This is necessary in order to create a branch";
+  echo "that is visible to the Buildbot-based builder infrastructure.";
+}
+
+
+# Options
+
+while [ $# != 0 ]; do
+  case "$1" in
+    --help)
+      usage;
+      exit 0;
+      ;;
+    --|*) break; ;;
+  esac;
+done;
+
+if [ $# != 3 ]; then
+    usage "Invalid arguments: $*";
+    exit 1;
+fi;
+
+    PR_NUMBER="$1"; shift;
+TICKET_NUMBER="$1"; shift;
+  BRANCH_NAME="$1"; shift;
+
+
+# Do The Right Thing
+
+#repo="https://github.com/twisted/twisted.git";
+repo="git@github.com:twisted/twisted.git";
+
+wc="$(dirname "$(dirname "$0")")/.git";
+
+if [ ! -d "${wc}" ]; then
+  wc="$(mktemp -d -t twisted.XXXX)";
+
+  git clone --depth 1 --progress "${repo}" "${wc}";
+
+  cloned=true;
+else
+  cloned=false;
+fi;
+
+cd "${wc}";
+
+git fetch origin "refs/pull/${PR_NUMBER}/head";
+git push origin "FETCH_HEAD:refs/heads/${TICKET_NUMBER}-${BRANCH_NAME}";
+
+if ${cloned}; then
+  rm -fr "${wc}";
+fi;
