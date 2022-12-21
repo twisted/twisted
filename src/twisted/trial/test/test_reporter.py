@@ -46,6 +46,12 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
         expected += 2 ** 16
         self.assertEqual(expected, written)
 
+    def test_enospc2(self):
+        import sys
+        for i in range(2 ** 17):
+            print(i)
+            sys.stdout.write("z" * i)
+            sys.stdout.flush()
 
 
 class BrokenStream:
