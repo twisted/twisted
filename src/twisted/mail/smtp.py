@@ -1931,7 +1931,10 @@ class SMTPSenderFactory(protocol.ClientFactory):
         # If the initial connection succeeded, but there was a later error
         # (such as TLS validation failure), we're more interested in that than
         # "Connection was closed cleanly" or whatever.
-        if self.currentProtocol and self.currentProtocol.failureReason:
+        if (
+            self.currentProtocol is not None
+            and self.currentProtocol.failureReason is not None
+        ):
             err = self.currentProtocol.failureReason
 
         self.currentProtocol = None
