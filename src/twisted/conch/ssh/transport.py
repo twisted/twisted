@@ -14,10 +14,10 @@ Maintainer: Paul Swartz
 import binascii
 import hmac
 import struct
+import warnings
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
 from typing import Dict
-import warnings
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -92,10 +92,14 @@ class SSHCiphers:
         <digest size>) representing the outgoing MAC.
     @ivar inMAc: see outMAC, but for the incoming MAC.
     """
-    warnings.warn("Legacy SSH ciphers 'CAST5', 'Blowfish' "
-                  "were deprecated in Twisted 21.11. "
-                  "Please check and update if any is in use.",
-                  category=DeprecationWarning, stacklevel=2)
+
+    warnings.warn(
+        "Legacy SSH ciphers 'CAST5', 'Blowfish' "
+        "were deprecated in Twisted 21.11. "
+        "Please check and update if any is in use.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     deprecatedCipherMap = {
         b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
         b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
