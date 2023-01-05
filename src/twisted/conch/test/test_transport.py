@@ -19,8 +19,7 @@ from twisted.conch.error import ConchError
 from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
-from twisted.python import randbytes
-from twisted.python import reflect
+from twisted.python import randbytes, reflect
 from twisted.python.compat import iterbytes
 from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
@@ -3013,6 +3012,7 @@ class SSHCiphersTests(TestCase):
                 binascii.hexlify(outMAC.makeMAC(seqid, shortened)),
                 f"Failed HMAC test vector; key={key!r} data={data!r}",
             )
+
     def test_deprecation(self):
         """
         Test deprecation warning for legacy ciphers `CAST5`, `Blowfish`.
@@ -3031,7 +3031,8 @@ class SSHCiphersTests(TestCase):
             "Please check and update if any is in use.",
         )
         self.assertEqual(len(warningsShown), 1)
-        SSHCiphers # Fake usage to please pyflakes.
+        SSHCiphers  # Fake usage to please pyflakes.
+
 
 class TransportLoopbackTests(TestCase):
     """
