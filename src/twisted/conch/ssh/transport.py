@@ -17,6 +17,7 @@ import struct
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
 from typing import Dict
+import warnings
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -91,8 +92,19 @@ class SSHCiphers:
         <digest size>) representing the outgoing MAC.
     @ivar inMAc: see outMAC, but for the incoming MAC.
     """
-
+    warnings.warn("Legacy SSH ciphers 'CAST5', 'Blowfish' "
+                  "were deprecated in Twisted 21.11. "
+                  "Please check and update if any is in use.",
+                  category=DeprecationWarning, stacklevel=2)
+    deprecatedCipherMap = {
+        b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
+        b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
+        b"cast128-ctr": (algorithms.CAST5, 16, modes.CTR),
+    }
     cipherMap = {
+        # 3DES, ARC4 are also legacy (and ARC4 has serious security issues),
+        # `cryptography` decides not to deprecate them due to common use.
+        # https://github.com/pyca/cryptography/issues/6809
         b"3des-cbc": (algorithms.TripleDES, 24, modes.CBC),
         b"aes256-cbc": (algorithms.AES, 32, modes.CBC),
         b"aes192-cbc": (algorithms.AES, 24, modes.CBC),
@@ -103,6 +115,8 @@ class SSHCiphers:
         b"3des-ctr": (algorithms.TripleDES, 24, modes.CTR),
         b"none": (None, 0, modes.CBC),
     }
+    cipherMap.update(deprecatedCipherMap)
+
     macMap = {
         b"hmac-sha2-512": sha512,
         b"hmac-sha2-384": sha384,
@@ -280,9 +294,17 @@ def _getSupportedCiphers():
         b"aes192-cbc",
         b"aes128-ctr",
         b"aes128-cbc",
+        # 3DES, ARC4 are also legacy (and ARC4 has serious security issues),
+        # `cryptography` decides not to deprecate them due to common use.
+        # https://github.com/pyca/cryptography/issues/6809
         b"3des-ctr",
         b"3des-cbc",
     ]
+    deprecatedCiphers = [
+        b"cast128-ctr",
+    ]
+    cs.extend(deprecatedCiphers)
+
     for cipher in cs:
         algorithmClass, keySize, modeClass = SSHCiphers.cipherMap[cipher]
         try:
