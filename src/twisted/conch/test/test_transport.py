@@ -21,7 +21,7 @@ from twisted.conch.error import ConchError
 from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
-from twisted.python import randbytes, reflect
+from twisted.python import randbytes
 from twisted.python.compat import iterbytes
 from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
