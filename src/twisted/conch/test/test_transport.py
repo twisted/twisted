@@ -3026,6 +3026,7 @@ class SSHCiphersTests(TestCase):
         transportModuleName = "twisted.conch.ssh.transport"
         del sys.modules[transportModuleName]
         import importlib
+
         importlib.import_module(transportModuleName)
 
         warningsShown = self.flushWarnings()

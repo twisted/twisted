@@ -69,13 +69,17 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
+
+
 warnings.warn(
-        "Legacy SSH ciphers 'CAST5', 'Blowfish' "
-        "were deprecated in Twisted 22.11. "
-        "Please check and update if any is in use.",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
+    "Legacy SSH ciphers 'CAST5', 'Blowfish' "
+    "were deprecated in Twisted 22.11. "
+    "Please check and update if any is in use.",
+    category=DeprecationWarning,
+    stacklevel=2,
+)
+
+
 class SSHCiphers:
     """
     SSHCiphers represents all the encryption operations that need to occur
