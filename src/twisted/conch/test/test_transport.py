@@ -3037,7 +3037,7 @@ class SSHCiphersTests(TestCase):
             "were deprecated in Twisted 22.11. "
             "Please check and update if any is in use.",
         )
-        self.assertEqual(len(warningsShown), 4)
+        self.assertEqual(len(warningsShown), 5)
 
 
 class TransportLoopbackTests(TestCase):
