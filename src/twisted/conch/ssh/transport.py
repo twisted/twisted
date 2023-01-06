@@ -104,8 +104,9 @@ class SSHCiphers:
 
     deprecatedCipherMap = {
         b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
-        b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
         b"cast128-ctr": (algorithms.CAST5, 16, modes.CTR),
+        b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
+        b"blowfish-cbc": (algorithms.Blowfish, 16, modes.CBC),
     }
     cipherMap = {
         # 3DES, ARC4 are also legacy (and ARC4 has serious security issues),
@@ -308,6 +309,9 @@ def _getSupportedCiphers():
     ]
     deprecatedCiphers = [
         b"cast128-ctr",
+        b"cast128-cbc",
+        b"blowfish-ctr",
+        b"blowfish-cbc",
     ]
     cs.extend(deprecatedCiphers)
 
