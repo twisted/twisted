@@ -3037,7 +3037,11 @@ class SSHCiphersTests(TestCase):
             "were deprecated in Twisted 22.11. "
             "Please check and update if any is in use.",
         )
-        self.assertEqual(len(warningsShown), 5)
+        majorVersion = int(cryptography.__version__.split(".")[0])
+        expectedNumberOfWarnings = 1
+        if majorVersion >= 37:
+            expectedNumberOfWarnings = 5
+        self.assertEqual(len(warningsShown), expectedNumberOfWarnings)
 
 
 class TransportLoopbackTests(TestCase):
