@@ -10,7 +10,9 @@ import binascii
 import re
 import string
 import struct
+import sys
 import types
+import warnings
 from hashlib import md5, sha1, sha256, sha384, sha512
 from typing import Optional, Type
 
@@ -3020,18 +3022,21 @@ class SSHCiphersTests(TestCase):
         A deprecation warning is emitted when directly importing the
         SSHCiphers class.
         """
-        from twisted.conch.ssh.transport import SSHCiphers
+        warnings.resetwarnings()
+        transportModuleName = "twisted.conch.ssh.transport"
+        del sys.modules[transportModuleName]
+        import importlib
+        importlib.import_module(transportModuleName)
 
-        warningsShown = self.flushWarnings(offendingFunctions=[self.test_deprecation])
+        warningsShown = self.flushWarnings()
         self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]["message"],
             "Legacy SSH ciphers 'CAST5', 'Blowfish' "
-            "were deprecated in Twisted 21.11. "
+            "were deprecated in Twisted 22.11. "
             "Please check and update if any is in use.",
         )
-        self.assertEqual(len(warningsShown), 1)
-        SSHCiphers  # Fake usage to please pyflakes.
+        self.assertEqual(len(warningsShown), 4)
 
 
 class TransportLoopbackTests(TestCase):

@@ -69,8 +69,13 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
-
-
+warnings.warn(
+        "Legacy SSH ciphers 'CAST5', 'Blowfish' "
+        "were deprecated in Twisted 22.11. "
+        "Please check and update if any is in use.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
 class SSHCiphers:
     """
     SSHCiphers represents all the encryption operations that need to occur
@@ -93,13 +98,6 @@ class SSHCiphers:
     @ivar inMAc: see outMAC, but for the incoming MAC.
     """
 
-    warnings.warn(
-        "Legacy SSH ciphers 'CAST5', 'Blowfish' "
-        "were deprecated in Twisted 21.11. "
-        "Please check and update if any is in use.",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
     deprecatedCipherMap = {
         b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
         b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
