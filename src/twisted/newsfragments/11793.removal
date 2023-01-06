@@ -1,1 +1,1 @@
-Twisted Conch has removed and no longer supports legacy ciphers (CAST5, SEED, IDEA, Blowfish) as the upstream library "cryptography" has deprecated them since version 37.
+Twisted Conch has deprecated but still supports legacy ciphers (CAST5, SEED, IDEA, Blowfish) as the upstream library "cryptography" has deprecated them since version 37.
