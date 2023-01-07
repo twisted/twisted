@@ -2003,7 +2003,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_DeferredResultT]):
         """
         return self.acquire()
 
-    def __aexit__(self, exc_type: bool, exc_val: bool, exc_tb: bool) -> Deferred[bool]:
+    def __aexit__(self, exc_type: bool, exc_val: bool, exc_tb: bool) -> Deferred[Literal[False]]:
         self.release()
         # We return False to indicate that we have not consumed the
         # exception, if any.
