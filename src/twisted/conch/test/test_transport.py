@@ -3015,12 +3015,9 @@ class SSHCiphersTests(TestCase):
                 f"Failed HMAC test vector; key={key!r} data={data!r}",
             )
 
-    def test_deprecation(self):
+    def test_deprecationCAST5Blowfish(self):
         """
-        Test deprecation warning for legacy ciphers `CAST5`, `Blowfish`.
-
-        A deprecation warning is emitted when directly importing the
-        SSHCiphers class.
+        A deprecation warning is raised when importing the L{twisted.conch.transport} module.
         """
         warnings.resetwarnings()
         transportModuleName = "twisted.conch.ssh.transport"
