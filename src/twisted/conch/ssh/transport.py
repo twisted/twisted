@@ -73,7 +73,7 @@ class _MACParams(tuple):
 
 warnings.warn(
     "Legacy SSH ciphers 'CAST5', 'Blowfish' "
-    "were deprecated in Twisted 22.11. "
+    "were deprecated in Twisted NEXT. "
     "Please check and update if any is in use.",
     category=DeprecationWarning,
     stacklevel=2,
