@@ -1,1 +1,1 @@
-Twisted Conch has deprecated but still supports legacy ciphers (CAST5, SEED, IDEA, Blowfish) as the upstream library "cryptography" has deprecated them since version 37.
+twisted.conch.ssh.transport has the CAST5 and Blowfish based cipher deprecated. This was done since the same ciphers were deprecated in the cryptography library since version 37.
