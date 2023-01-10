@@ -102,7 +102,7 @@ class SSHCiphers:
     @ivar inMAc: see outMAC, but for the incoming MAC.
     """
 
-    deprecatedCipherMap = {
+    _deprecatedCipherMap = {
         b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
         b"cast128-ctr": (algorithms.CAST5, 16, modes.CTR),
         b"blowfish-ctr": (algorithms.Blowfish, 16, modes.CTR),
@@ -122,7 +122,7 @@ class SSHCiphers:
         b"3des-ctr": (algorithms.TripleDES, 24, modes.CTR),
         b"none": (None, 0, modes.CBC),
     }
-    cipherMap.update(deprecatedCipherMap)
+    cipherMap.update(_deprecatedCipherMap)
 
     macMap = {
         b"hmac-sha2-512": sha512,
@@ -307,13 +307,13 @@ def _getSupportedCiphers():
         b"3des-ctr",
         b"3des-cbc",
     ]
-    deprecatedCiphers = [
+    _deprecatedCiphers = [
         b"cast128-ctr",
         b"cast128-cbc",
         b"blowfish-ctr",
         b"blowfish-cbc",
     ]
-    cs.extend(deprecatedCiphers)
+    cs.extend(_deprecatedCiphers)
 
     for cipher in cs:
         algorithmClass, keySize, modeClass = SSHCiphers.cipherMap[cipher]
