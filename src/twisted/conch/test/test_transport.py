@@ -3037,6 +3037,7 @@ class SSHCiphersTests(TestCase):
         majorVersion = int(cryptography.__version__.split(".")[0])
         expectedNumberOfWarnings = 1
         if majorVersion >= 37:
+            # `cryptography` has raised deprecation 4 warnings + 1 warning from twisted since 37
             expectedNumberOfWarnings = 5
         self.assertEqual(len(warningsShown), expectedNumberOfWarnings)
 
