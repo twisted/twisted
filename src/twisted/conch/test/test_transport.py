@@ -3017,7 +3017,8 @@ class SSHCiphersTests(TestCase):
 
     def test_deprecationCAST5Blowfish(self):
         """
-        A deprecation warning is raised when importing the L{twisted.conch.transport} module.
+        A deprecation warning is raised when importing the
+        L{twisted.conch.transport} module.
         """
         warnings.resetwarnings()
         transportModuleName = "twisted.conch.ssh.transport"
@@ -3031,13 +3032,16 @@ class SSHCiphersTests(TestCase):
         self.assertEqual(
             warningsShown[0]["message"],
             "Legacy SSH ciphers 'CAST5', 'Blowfish' "
-            "were deprecated in Twisted 22.11. "
+            "were deprecated in Twisted NEXT. "
             "Please check and update if any is in use.",
         )
         majorVersion = int(cryptography.__version__.split(".")[0])
+        # twisted raises 1 warning regardless of the installed
+        # cryptography version
         expectedNumberOfWarnings = 1
         if majorVersion >= 37:
-            # `cryptography` has raised deprecation 4 warnings + 1 warning from twisted since 37
+            # `cryptography`, since version 37,
+            # raises 4 extra deprecation warnings during the import
             expectedNumberOfWarnings = 5
         self.assertEqual(len(warningsShown), expectedNumberOfWarnings)
 
