@@ -15,7 +15,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from enum import Enum
 from functools import wraps
 from sys import exc_info
-from types import CoroutineType, GeneratorType, MappingProxyType
+from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -2004,7 +2004,10 @@ class _ConcurrencyPrimitive(ABC, Generic[_DeferredResultT]):
         return self.acquire()
 
     def __aexit__(
-        self, exc_type: bool, exc_val: bool, exc_tb: bool
+        self,
+        __exc_type: Optional[Type[BaseException]],
+        __exc_value: Optional[BaseException],
+        __traceback: Optional[TracebackType]
     ) -> Deferred[Literal[False]]:
         self.release()
         # We return False to indicate that we have not consumed the
