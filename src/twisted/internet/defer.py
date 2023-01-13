@@ -2007,7 +2007,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_DeferredResultT]):
         self,
         __exc_type: Optional[Type[BaseException]],
         __exc_value: Optional[BaseException],
-        __traceback: Optional[TracebackType]
+        __traceback: Optional[TracebackType],
     ) -> Deferred[Literal[False]]:
         self.release()
         # We return False to indicate that we have not consumed the
