@@ -9,6 +9,7 @@ moduli file.
 
 import errno
 import os
+from typing import Dict, List, Optional, Tuple
 
 from twisted.conch.openssh_compat import primes
 from twisted.conch.ssh import common, factory, keys
@@ -66,8 +67,14 @@ class OpenSSHFactory(factory.SSHFactory):
                     privateKeys[key.sshType()] = key
         return privateKeys
 
-    def getPrimes(self):
+    def getPrimes(
+        self,
+    ) -> Optional[Dict[int, List[Tuple[int, int]]]]:  # type:ignore[override]
         try:
             return primes.parseModuliFile(self.moduliRoot + "/moduli")
         except OSError:
+            # As seen in the type:ignore[override] above, this historically
+            # handled errors by (invalidly) returning None, and we should
+            # probably fix this at some point, since callers don't need to
+            # handle None given the contract of the superclass.
             return None
