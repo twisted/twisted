@@ -83,10 +83,11 @@ class AccumulatingProtocol(protocol.Protocol):
 
     def connectionMade(self):
         self.made = 1
-        if self.factory is not None and self.factory.protocolConnectionMade is not None:
-            d = self.factory.protocolConnectionMade
-            self.factory.protocolConnectionMade = None
-            d.callback(self)
+        if self.factory is not None:
+            d = getattr(self.factory, "protocolConnectionMade", None)
+            if d is not None:
+                self.factory.protocolConnectionMade = None
+                d.callback(self)
 
     def dataReceived(self, data):
         self.data += data

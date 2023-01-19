@@ -9,16 +9,19 @@ Test cases for twisted.names.
 import copy
 import operator
 import socket
+import typing
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
+from typing import Any, List, Type
 
-from twisted.internet import defer, error, reactor
+from twisted.internet import defer, error, protocol, reactor
 from twisted.internet.defer import succeed
+from twisted.internet.testing import AccumulatingProtocol
 from twisted.names import authority, client, common, dns, server
 from twisted.names.client import Resolver
 from twisted.names.dns import SOA, Message, Query, Record_A, Record_SOA, RRHeader
-from twisted.names.error import DomainError
+from twisted.names.error import DNSQueryTimeoutError, DomainError
 from twisted.names.secondary import SecondaryAuthority, SecondaryAuthorityService
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
@@ -28,6 +31,8 @@ from twisted.test.proto_helpers import (
     waitUntilAllDisconnected,
 )
 from twisted.trial import unittest
+
+T = typing.TypeVar("T")
 
 
 def justPayload(results):
@@ -39,6 +44,34 @@ class NoFileAuthority(authority.FileAuthority):
         # Yes, skip FileAuthority
         common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
+
+
+class EasilyStartledProtocol(AccumulatingProtocol):
+    """
+    Subclass of L{AccumulatingProtocol} which drops the connection
+    as soon as it receives any data.
+    """
+
+    def dataReceived(self, data):
+        super().dataReceived(data)
+        self.transport.loseConnection()
+
+
+class RecordingServerFactory(protocol.ServerFactory):
+    """
+    Factory which records its protocol instances in a list.
+
+    @ivar instances: A list of L{Protocol} instances created by this factory.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.instances: List[AccumulatingProtocol] = []
+
+    def buildProtocol(self, addr):
+        newProtocol = super().buildProtocol(addr)
+        self.instances.append(newProtocol)
+        return newProtocol
 
 
 soa_record = dns.Record_SOA(
@@ -467,6 +500,66 @@ class ServerDNSTests(unittest.TestCase):
         resolver = Resolver(servers=[("nameserver.invalid", 53)])
         return self.assertFailure(
             resolver.lookupZone("impossible.invalid"), error.DNSLookupError
+        )
+
+    def _testHelper_zoneTransferFailure(
+        self,
+        protocolClass: Type[AccumulatingProtocol],
+        expectedFailure: Type[Exception],
+        **kwargs: Any,
+    ) -> defer.Deferred:
+        factory = RecordingServerFactory.forProtocol(protocolClass)
+        nonresponsiveTCP = reactor.listenTCP(0, factory, interface="127.0.0.1")  # type: ignore[attr-defined]
+        self.addCleanup(nonresponsiveTCP.stopListening)
+        server = nonresponsiveTCP.getHost()
+        resolver = Resolver(servers=[(server.host, server.port)])
+        d: defer.Deferred = self.assertFailure(
+            resolver.lookupZone("test-domain.com", **kwargs), expectedFailure
+        )
+
+        def _waitAnd(r, fn, *args):
+            # We need to wait a moment before calling _furtherChecks
+            # for the TCP closure to work its way through the stack
+            # and show up as accumulator.closed==True.
+            d = defer.Deferred()
+            d.addCallback(fn, *args)
+            reactor.callLater(0.01, d.callback, r)
+            return d
+
+        def _furtherChecks(
+            r: T, testCase: "ServerDNSTests", factory: RecordingServerFactory
+        ) -> T:
+            testCase.assertEqual(len(factory.instances), 1)
+            accumulator = factory.instances[0]
+            testCase.assertTrue(accumulator.made)
+            testCase.assertGreater(
+                len(accumulator.data), 0, msg="Query was received by DNS server"
+            )
+            testCase.assertTrue(accumulator.closed)
+            return r
+
+        return d.addCallback(_waitAnd, _furtherChecks, self, factory)
+
+    def test_zoneTransferConnectionDrops(self) -> defer.Deferred:
+        """
+        If the TCP connection initiated by L{Resolver.lookupZone} is lost before any
+        response is received, the deferred will errback.
+        """
+        return self._testHelper_zoneTransferFailure(
+            EasilyStartledProtocol,
+            DomainError,
+        )
+
+    test_zoneTransferConnectionDrops.todo = "Bug #3428"  # type: ignore[attr-defined]
+
+    def test_zoneTransferTimesOut(self) -> defer.Deferred:
+        """
+        The deferred returned by L{Resolver.lookupZone} fails with
+        L{DNSQueryTimeoutError} if the DNS server does not respond
+        within the timeout interval.
+        """
+        return self._testHelper_zoneTransferFailure(
+            AccumulatingProtocol, DNSQueryTimeoutError, timeout=1
         )
 
     def test_similarZonesDontInterfere(self):
