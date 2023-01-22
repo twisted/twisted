@@ -15,10 +15,10 @@ from zope.interface.verify import verifyObject
 from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
+from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python import failure, reflect
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial import unittest
 from twisted.web import error, http, iweb, resource, server
 from twisted.web.static import Data
