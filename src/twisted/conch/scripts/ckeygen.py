@@ -14,7 +14,7 @@ import socket
 import sys
 from collections.abc import Callable
 from functools import wraps
-from imp import reload
+from importlib import reload
 from typing import Any, Dict, Optional
 
 from twisted.conch.ssh import keys
