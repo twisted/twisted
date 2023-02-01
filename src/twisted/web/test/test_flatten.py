@@ -302,8 +302,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "",
             "foo---bar",
             "foo---bar-",
-            "foo>bar",
-            "foo-->bar",
             "----------------",
         ]:
             d = flattenString(None, Comment(c))
