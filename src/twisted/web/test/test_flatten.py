@@ -264,6 +264,30 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
+    def test_has_mso_comments(self):
+        """
+        Test that MSO comments are correctly recognized
+        """
+        def has_mso_comments(html_string):
+            if isinstance(html_string, bytes):
+                html_string = html_string.decode("utf-8")
+            return re.search(r"\[if .*(mso|IE)", html_string) is not None
+
+        test_cases = [
+            ('<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->', True),
+            ('<!--[if IE]> some content <![endif]-->', True),
+            ('<!--[if mso]> some content <![endif]-->', True),
+            ('<!--[if (mso)|(IE)]> some content <![endif]-->', True),
+            ('<p>This is some regular content with the word mso in it.</p>', False),
+            ('<p>This is some regular content with the word IE in it.</p>', False)
+        ]
+
+        for test_case in test_cases:
+            html_string, expected = test_case
+            result = has_mso_comments(html_string)
+            self.assertEqual(result, expected, f"Expected {expected}, but got {result} for {html_string}")
+
+
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
@@ -293,7 +317,13 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
             self.assertNotIn(b"--", content)
-            self.assertNotIn(b">", content)
+            if b"mso" in content or b"IE" in content:
+                if b">" in content:
+                    self.assertIn(b">", content)
+                    self.assertNotIn(b"&gt;", content)
+                else:
+                    self.assertNotIn(b">", content)
+                    self.assertIn(b"&gt;", content)
             if content:
                 self.assertNotEqual(content[-1], b"-")
 
@@ -303,6 +333,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "foo---bar",
             "foo---bar-",
             "----------------",
+            "foo > bar",
+            "<!--[if IE]>",
+            "<!--[if gte mso 9]>",
+            "<!--[if (mso)|(IE)]>",
         ]:
             d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
