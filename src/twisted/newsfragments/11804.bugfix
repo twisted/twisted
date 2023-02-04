@@ -1,1 +1,1 @@
-twisted.web.template.flattenString now recognizes and correctly parses MSO content.
+twisted.web.template.flattenString now distinguishes and correctly parses MSO content. 
