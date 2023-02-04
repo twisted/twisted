@@ -7,7 +7,7 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-
+import re
 from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
@@ -167,6 +167,15 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
     return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
+def has_mso_comments(html_string):
+    """
+    MSO tags contain either 'mso' or 'IE' within brackets that start with '[if '.
+    """
+    if isinstance(html_string, bytes):
+        html_string = html_string.decode("utf-8")
+    return re.search(r"\[if .*(mso|IE)", html_string) is not None
+
+
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     Escape a comment for inclusion in a document.
@@ -178,7 +187,10 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    data = data.replace(b"--", b"- - ")
+    if has_mso_comments(data):
+        data = data.replace(b"--", b"- - ")
+    else:
+        data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
     if data and data[-1:] == b"-":
         data += b" "
     return data
