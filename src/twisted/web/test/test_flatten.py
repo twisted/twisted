@@ -264,11 +264,11 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_has_mso_comments(self):
+    def test_hasMSOComments(self):
         """
         Test that MSO comments are correctly recognized
         """
-        def has_mso_comments(html_string: Union[str, bytes]) -> bool:
+        def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
             if isinstance(html_string, bytes):
                 html_string = html_string.decode("utf-8")
             return re.search(r"\[if .*(mso|IE)", html_string) is not None
@@ -284,7 +284,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         for test_case in test_cases:
             html_string, expected = test_case
-            result = has_mso_comments(html_string)
+            result = _hasMSOComments(html_string)
             self.assertEqual(result, expected, f"Expected {expected}, but got {result} for {html_string}")
 
 

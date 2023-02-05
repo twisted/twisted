@@ -167,7 +167,7 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
     return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
-def has_mso_comments(html_string: Union[str, bytes]) -> bool:
+def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
     """
     MSO tags contain either 'mso' or 'IE' within brackets that start with '[if '.
     """
@@ -187,7 +187,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    if has_mso_comments(data):
+    if _hasMSOComments(data):
         data = data.replace(b"--", b"- - ")
     else:
         data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
