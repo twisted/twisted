@@ -1,4 +1,4 @@
 twisted.web.template.flattenString now recognizes and correctly parses Microsoft Outlook conditional comments. 
 Outlook conditional comments allow us to add bits of HTML that are only read by the Word-based versions of Outlook.
-This fix is necessary for those creating email templates that include recipients that use Windows Outlook 2003 and above because that system uses Microsoft Word as a rendering engine, which can lead to some weird rendering issues.
+This fix is necessary for those creating email templates for recipients that use Windows Outlook 2003 and above because that system uses Microsoft Word as a rendering engine, which can lead to some weird rendering issues.
 In sum, we can now use MSO (Microsoft Office) tags to add HTML / CSS anywhere in an email template. 
