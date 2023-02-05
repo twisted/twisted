@@ -278,8 +278,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             ('<!--[if IE]> some content <![endif]-->', True),
             ('<!--[if mso]> some content <![endif]-->', True),
             ('<!--[if (mso)|(IE)]> some content <![endif]-->', True),
-            ('<p>This is some regular content with the word mso in it.</p>', False),
-            ('<p>This is some regular content with the word IE in it.</p>', False)
+            ('<!-- This is some regular comment with the word mso in it. -->', False),
+            ('<!-- This is some regular comment with the word IE in it. -->', False),
+            ('<p>This is some regular content with the word IE in it.</p>', False),
+            ('<p>This is some regular content with the word [mso] enclosed in brackets.</p>', False),
         ]
 
         for test_case in test_cases:
@@ -339,7 +341,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "<!--[if IE]> <![endif]-->",
             "<!--[if gte mso 9]> <![endif]-->",
             "<!--[if (mso)|(IE)]> <![endif]-->",
-            "<!-- mso is annoying -->",
+            "<!-- handling mso content is annoying -->",
         ]:
             d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
