@@ -336,9 +336,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "foo---bar-",
             "----------------",
             "foo > bar",
-            "<!--[if IE]>",
-            "<!--[if gte mso 9]>",
-            "<!--[if (mso)|(IE)]>",
+            "<!--[if IE]> <![endif]-->",
+            "<!--[if gte mso 9]> <![endif]-->",
+            "<!--[if (mso)|(IE)]> <![endif]-->",
         ]:
             d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
