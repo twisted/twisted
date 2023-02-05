@@ -296,7 +296,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         SGML comment syntax is complicated and hard to use. This rule is more
         restrictive, and more compatible:
 
-        Comments start with <!-- and end with --> and never contain -- or >.
+        Comments start with <!-- and end with --> and HTML comments never contain -- or >,
+        whereas Outlook conditional comments contain their logic within brackets 
+        that follow this format <!-- [if foo]>
 
         Also by XML syntax, a comment may not end with '-'.
 
