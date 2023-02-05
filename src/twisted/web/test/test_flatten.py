@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, List, NoReturn, Optional, Tuple, cast
+from typing import Callable, Dict, List, NoReturn, Optional, Tuple, Union, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -268,12 +268,12 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that MSO comments are correctly recognized
         """
-        def has_mso_comments(html_string):
+        def has_mso_comments(html_string: Union[str, bytes]) -> bool:
             if isinstance(html_string, bytes):
                 html_string = html_string.decode("utf-8")
             return re.search(r"\[if .*(mso|IE)", html_string) is not None
 
-        test_cases = [
+        test_cases: List[Tuple[Union[str, bytes], bool]] = [
             ('<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->', True),
             ('<!--[if IE]> some content <![endif]-->', True),
             ('<!--[if mso]> some content <![endif]-->', True),
