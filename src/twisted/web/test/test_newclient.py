@@ -14,15 +14,15 @@ from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
-from twisted.logger import globalLogPublisher
-from twisted.protocols.basic import LineReceiver
-from twisted.python.failure import Failure
-from twisted.test.proto_helpers import (
+from twisted.internet.testing import (
     AccumulatingProtocol,
     EventLoggingObserver,
     StringTransport,
     StringTransportWithDisconnection,
 )
+from twisted.logger import globalLogPublisher
+from twisted.protocols.basic import LineReceiver
+from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 from twisted.web._newclient import (
     BODY,

@@ -112,9 +112,11 @@ jobs:
           # Any supported Python version is OK for this job.
           # We go with latest micro release for the smallest minor release
           # that we support.
+          # This is also used to run tests with minimum dependency versions.
           - python-version: '3.7'
             noipv6: '-noipv6'
-            job-name: 'default-tests-noipv6'
+            tox-env: 'mindeps-withcov-posix'
+            job-name: 'minimum-deps-noipv6'
 
           # Just Python 3.8 with default settings.
           - python-version: '3.8'
@@ -211,7 +213,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox coverage
+        python -m pip install --upgrade pip tox~=3.0 coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
@@ -278,7 +280,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade pip tox~=3.0
 
     - name: Run the checks
       run: |
@@ -314,7 +316,7 @@ jobs:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade pip tox~=3.0
 
     - name: Build apidocs
       run: |
@@ -331,7 +333,7 @@ jobs:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
+        python -m pip install --upgrade pip tox~=3.0
 
     - name: Run the checks
       run: |
@@ -356,7 +358,7 @@ jobs:
 
     - name: Test
       run: |
-        python -m pip install --upgrade pip tox pep517
+        python -m pip install --upgrade pip tox~=3.0 pep517
         rm -rf dist/*
         tox -e release-prepare
 
