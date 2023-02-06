@@ -307,43 +307,41 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         @see: U{http://www.w3.org/TR/REC-xml/#sec-comments}
         """
 
-        def verifyComment(c: bytes) -> None:
+        def verifyComment(z: bytes) -> None:
             self.assertTrue(
-                c.startswith(b"<!--"),
-                f"{c!r} does not start with the comment prefix",
+                z.startswith(b"<!--"),
+                f"{z!r} does not start with the comment prefix",
             )
             self.assertTrue(
-                c.endswith(b"-->"),
-                f"{c!r} does not end with the comment suffix",
+                z.endswith(b"-->"),
+                f"{z!r} does not end with the comment suffix",
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
-            content = c[4:-3]
+            self.assertTrue(len(z) >= 7, f"{z!r} is too short to be a legal comment")
+            content = z[4:-3]
+            # breakpoint()
             self.assertNotIn(b"--", content)
             if b"mso" in content or b"IE" in content:
-                if b">" in content:
-                    self.assertIn(b">", content)
-                    self.assertNotIn(b"&gt;", content)
-                else:
-                    self.assertNotIn(b">", content)
-                    self.assertIn(b"&gt;", content)
+                self.assertIn(b">", content)
+                self.assertNotIn(b"&gt;", content)
+            else:
+                self.assertNotIn(b">", content)
             if content:
                 self.assertNotEqual(content[-1], b"-")
 
         results = []
-        for c in [
+        for z in [
             "",
             "foo---bar",
             "foo---bar-",
             "----------------",
             "foo > bar",
-            "<!--[if IE]> <![endif]-->",
-            "<!--[if gte mso 9]> <![endif]-->",
-            "<!--[if (mso)|(IE)]> <![endif]-->",
-            "<!-- handling mso content is annoying -->",
+            "[if IE]> <![endif]",
+            "[if gte mso 9]> <![endif]",
+            "[if (mso)|(IE)]> <![endif]",   
         ]:
-            d = flattenString(None, Comment(c))
+            d = flattenString(None, Comment(z))
             d.addCallback(verifyComment)
             results.append(d)
         return gatherResults(results)
