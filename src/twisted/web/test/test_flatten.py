@@ -320,7 +320,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             # illegally.
             self.assertTrue(len(z) >= 7, f"{z!r} is too short to be a legal comment")
             content = z[4:-3]
-            # breakpoint()
             self.assertNotIn(b"--", content)
             if b"mso" in content or b"IE" in content:
                 self.assertIn(b">", content)
