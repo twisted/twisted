@@ -268,27 +268,37 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         Test that MSO comments are correctly recognized
         """
+
         def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
             if isinstance(html_string, bytes):
                 html_string = html_string.decode("utf-8")
             return re.search(r"\[if .*(mso|IE)", html_string) is not None
 
         test_cases: List[Tuple[Union[str, bytes], bool]] = [
-            ('<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->', True),
-            ('<!--[if IE]> some content <![endif]-->', True),
-            ('<!--[if mso]> some content <![endif]-->', True),
-            ('<!--[if (mso)|(IE)]> some content <![endif]-->', True),
-            ('<!-- This is some regular comment with the word mso in it. -->', False),
-            ('<!-- This is some regular comment with the word IE in it. -->', False),
-            ('<p>This is some regular content with the word IE in it.</p>', False),
-            ('<p>This is some regular content with the word [mso] enclosed in brackets.</p>', False),
+            (
+                "<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->",
+                True,
+            ),
+            ("<!--[if IE]> some content <![endif]-->", True),
+            ("<!--[if mso]> some content <![endif]-->", True),
+            ("<!--[if (mso)|(IE)]> some content <![endif]-->", True),
+            ("<!-- This is some regular comment with the word mso in it. -->", False),
+            ("<!-- This is some regular comment with the word IE in it. -->", False),
+            ("<p>This is some regular content with the word IE in it.</p>", False),
+            (
+                "<p>This is some regular content with the word [mso] enclosed in brackets.</p>",
+                False,
+            ),
         ]
 
         for test_case in test_cases:
             html_string, expected = test_case
             result = _hasMSOComments(html_string)
-            self.assertEqual(result, expected, f"Expected {expected}, but got {result} for {html_string}")
-
+            self.assertEqual(
+                result,
+                expected,
+                f"Expected {expected}, but got {result} for {html_string}",
+            )
 
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
@@ -299,7 +309,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         restrictive, and more compatible:
 
         Comments start with <!-- and end with --> and HTML comments never contain -- or >,
-        whereas Outlook conditional comments contain their logic within brackets 
+        whereas Outlook conditional comments contain their logic within brackets
         that follow this format <!-- [if foo]>
 
         Also by XML syntax, a comment may not end with '-'.
@@ -338,7 +348,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "foo > bar",
             "[if IE]> <![endif]",
             "[if gte mso 9]> <![endif]",
-            "[if (mso)|(IE)]> <![endif]",   
+            "[if (mso)|(IE)]> <![endif]",
         ]:
             d = flattenString(None, Comment(z))
             d.addCallback(verifyComment)
