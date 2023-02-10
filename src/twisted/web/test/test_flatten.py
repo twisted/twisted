@@ -294,8 +294,11 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         for test_case in test_cases:
             html_string, expected = test_case
             result = _hasMSOComments(html_string)
-            self.assertEqual(result, expected, f"Expected {expected!r}, but got {result!r} for {html_string!r}")
-
+            self.assertEqual(
+                result,
+                expected,
+                f"Expected {expected!r}, but got {result!r} for {html_string!r}",
+            )
 
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
