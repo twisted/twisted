@@ -264,7 +264,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_hasMSOComments(self):
+    def test_hasMSOComments(self) -> None:
         """
         Test that MSO comments are correctly recognized
         """
@@ -294,11 +294,8 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         for test_case in test_cases:
             html_string, expected = test_case
             result = _hasMSOComments(html_string)
-            self.assertEqual(
-                result,
-                expected,
-                f"Expected {expected}, but got {result} for {html_string}",
-            )
+            self.assertEqual(result, expected, f"Expected {expected!r}, but got {result!r} for {html_string!r}")
+
 
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
