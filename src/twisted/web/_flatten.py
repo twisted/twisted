@@ -168,12 +168,54 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
 
 
 def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
-    """
-    MSO tags contain either 'mso' or 'IE' within brackets that start with '[if '.
-    """
     if isinstance(html_string, bytes):
         html_string = html_string.decode("utf-8")
-    return re.search(r"\[if .*(mso|IE)", html_string) is not None
+
+    if "[if " not in html_string:
+        return False
+
+    start_index = html_string.find("[if ")
+    section_to_check = html_string[start_index:]
+
+    mso_operator = section_to_check[4:]
+    if mso_operator.startswith("gt "):
+        mso_operator = mso_operator[3:]
+        if mso_operator.startswith("mso"):
+            return True
+        else:
+            return False
+    elif mso_operator.startswith("lt "):
+        mso_operator = mso_operator[3:]
+        if mso_operator.startswith("mso"):
+            return True
+        else:
+            return False
+    elif mso_operator.startswith("gte "):
+        mso_operator = mso_operator[4:]
+        if mso_operator.startswith("mso"):
+            return True
+        else:
+            return False
+    elif mso_operator.startswith("lte "):
+        mso_operator = mso_operator[4:]
+        if mso_operator.startswith("mso"):
+            return True
+        else:
+            return False
+    elif mso_operator.startswith("mso"):
+        return True
+    elif mso_operator.startswith("!mso"):
+        return True
+    elif mso_operator.startswith("IE"):
+        return True
+    elif mso_operator.startswith("!IE"):
+        return True
+    elif mso_operator.startswith("(mso"):
+        return True
+    elif mso_operator.startswith("(IE"):
+        return True
+    else:
+        return False
 
 
 def escapedComment(data: Union[bytes, str]) -> bytes:
