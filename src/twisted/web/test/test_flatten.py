@@ -264,41 +264,6 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_hasMSOComments(self) -> None:
-        """
-        Test that MSO comments are correctly recognized
-        """
-
-        def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
-            if isinstance(html_string, bytes):
-                html_string = html_string.decode("utf-8")
-            return re.search(r"\[if .*(mso|IE)", html_string) is not None
-
-        test_cases: List[Tuple[Union[str, bytes], bool]] = [
-            (
-                "<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->",
-                True,
-            ),
-            ("<!--[if IE]> some content <![endif]-->", True),
-            ("<!--[if mso]> some content <![endif]-->", True),
-            ("<!--[if (mso)|(IE)]> some content <![endif]-->", True),
-            ("<!-- This is some regular comment with the word mso in it. -->", False),
-            ("<!-- This is some regular comment with the word IE in it. -->", False),
-            ("<p>This is some regular content with the word IE in it.</p>", False),
-            (
-                "<p>This is some regular content with the word [mso] enclosed in brackets.</p>",
-                False,
-            ),
-        ]
-
-        for test_case in test_cases:
-            html_string, expected = test_case
-            result = _hasMSOComments(html_string)
-            self.assertEqual(
-                result,
-                expected,
-                f"Expected {expected!r}, but got {result!r} for {html_string!r}",
-            )
 
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
@@ -331,7 +296,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             self.assertTrue(len(z) >= 7, f"{z!r} is too short to be a legal comment")
             content = z[4:-3]
             self.assertNotIn(b"--", content)
-            if b"mso" in content or b"IE" in content:
+            if b"[if " in content and (b"IE" in content or b"mso" in content):
                 self.assertIn(b">", content)
                 self.assertNotIn(b"&gt;", content)
             else:
@@ -349,6 +314,14 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "[if IE]> <![endif]",
             "[if gte mso 9]> <![endif]",
             "[if (mso)|(IE)]> <![endif]",
+            "IE > mso",
+            "[if gt mso 14]> Everything above Outlook 2010 <![endif]",
+            "[if lt mso 14]> Everything below Outlook 2010 <![endif]",
+            "[if gte mso 14]> Outlook 2010 and above <![endif]",
+            "[if lte mso 14]> Outlook 2010 and below <![endif]",      
+            "[if (mso 12)|(mso 16)]> Outlook 2007 / 2016 only <![endif]",       
+            "[if !mso]><!--> All Outlooks will ignore this <!--<![endif]",     
+            "[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]",
         ]:
             d = flattenString(None, Comment(z))
             d.addCallback(verifyComment)
