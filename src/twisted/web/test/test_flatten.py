@@ -310,16 +310,16 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "foo---bar-",
             "----------------",
             "foo > bar",
+            "[if mso]> <![endif]",
             "[if IE]> <![endif]",
-            "[if gte mso 9]> <![endif]",
             "[if (mso)|(IE)]> <![endif]",
-            "IE > mso",
             "[if gt mso 14]> Everything above Outlook 2010 <![endif]",
             "[if lt mso 14]> Everything below Outlook 2010 <![endif]",
             "[if gte mso 14]> Outlook 2010 and above <![endif]",
             "[if lte mso 14]> Outlook 2010 and below <![endif]",
             "[if (mso 12)|(mso 16)]> Outlook 2007 / 2016 only <![endif]",
             "[if !mso]><!--> All Outlooks will ignore this <!--<![endif]",
+            "[if this is just something within brackets return False]",
         ]:
             d = flattenString(None, Comment(z))
             d.addCallback(verifyComment)
