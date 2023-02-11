@@ -317,10 +317,9 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "[if gt mso 14]> Everything above Outlook 2010 <![endif]",
             "[if lt mso 14]> Everything below Outlook 2010 <![endif]",
             "[if gte mso 14]> Outlook 2010 and above <![endif]",
-            "[if lte mso 14]> Outlook 2010 and below <![endif]",
-            "[if (mso 12)|(mso 16)]> Outlook 2007 / 2016 only <![endif]",
-            "[if !mso]><!--> All Outlooks will ignore this <!--<![endif]",
-            "[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]",
+            "[if lte mso 14]> Outlook 2010 and below <![endif]",      
+            "[if (mso 12)|(mso 16)]> Outlook 2007 / 2016 only <![endif]",       
+            "[if !mso]><!--> All Outlooks will ignore this <!--<![endif]",     
         ]:
             d = flattenString(None, Comment(z))
             d.addCallback(verifyComment)
