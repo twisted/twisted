@@ -7,7 +7,6 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-import re
 from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
@@ -177,6 +176,7 @@ def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
     start_index = html_string.find("[if ")
     section_to_check = html_string[start_index:]
 
+    mso_operator = section_to_check[4:]
     mso_operator = section_to_check[4:]
     if any(
         mso_operator.startswith(prefix)

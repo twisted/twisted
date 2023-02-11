@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, List, NoReturn, Optional, Tuple, Union, cast
+from typing import Callable, Dict, List, NoReturn, Optional, Tuple, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
