@@ -178,9 +178,21 @@ def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
     section_to_check = html_string[start_index:]
 
     mso_operator = section_to_check[4:]
-    if any(mso_operator.startswith(prefix) for prefix in [
-        "gt mso", "lt mso", "gte mso", "lte mso", "mso", "!mso", "IE", "!IE", "(mso", "(IE"
-    ]):
+    if any(
+        mso_operator.startswith(prefix)
+        for prefix in [
+            "gt mso",
+            "lt mso",
+            "gte mso",
+            "lte mso",
+            "mso",
+            "!mso",
+            "IE",
+            "!IE",
+            "(mso",
+            "(IE",
+        ]
+    ):
         return True
     else:
         return False
