@@ -178,25 +178,9 @@ def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
     section_to_check = html_string[start_index:]
 
     mso_operator = section_to_check[4:]
-    if mso_operator.startswith("gt mso"):
-        return True
-    elif mso_operator.startswith("lt mso"):
-        return True
-    elif mso_operator.startswith("gte mso"):
-        return True
-    elif mso_operator.startswith("lte mso"):
-        return True
-    elif mso_operator.startswith("mso"):
-        return True
-    elif mso_operator.startswith("!mso"):
-        return True
-    elif mso_operator.startswith("IE"):
-        return True
-    elif mso_operator.startswith("!IE"):
-        return True
-    elif mso_operator.startswith("(mso"):
-        return True
-    elif mso_operator.startswith("(IE"):
+    if any(mso_operator.startswith(prefix) for prefix in [
+        "gt mso", "lt mso", "gte mso", "lte mso", "mso", "!mso", "IE", "!IE", "(mso", "(IE"
+    ]):
         return True
     else:
         return False
