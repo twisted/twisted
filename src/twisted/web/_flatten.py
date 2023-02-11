@@ -186,8 +186,10 @@ def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
             "lte mso",
             "mso",
             "!mso",
+            "(!mso",
             "IE",
             "!IE",
+            "(!IE",
             "(mso",
             "(IE",
         ]
