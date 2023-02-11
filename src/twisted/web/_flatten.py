@@ -170,7 +170,7 @@ def _hasMSOComments(html_string: Union[str, bytes]) -> bool:
     if isinstance(html_string, bytes):
         html_string = html_string.decode("utf-8")
 
-    if "[if " not in html_string:
+    if not html_string.startswith("[if "):
         return False
 
     start_index = html_string.find("[if ")
