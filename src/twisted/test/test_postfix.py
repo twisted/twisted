@@ -7,8 +7,8 @@ Test cases for twisted.protocols.postfix module.
 
 from typing import Dict, List, Tuple
 
+from twisted.internet.testing import StringTransport
 from twisted.protocols import postfix
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 
 

@@ -16,11 +16,11 @@ from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.internet import address, defer, error, interfaces, protocol, reactor
+from twisted.internet.testing import StringTransport
 from twisted.protocols import amp
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.test import iosim
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 try:

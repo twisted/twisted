@@ -5,7 +5,7 @@
 Tests for L{twisted.words.im.ircsupport}.
 """
 
-from twisted.test.proto_helpers import StringTransport
+from twisted.internet.testing import StringTransport
 from twisted.words.im.basechat import ChatUI, Conversation, GroupConversation
 from twisted.words.im.ircsupport import IRCAccount, IRCProto
 from twisted.words.im.locals import OfflineError
