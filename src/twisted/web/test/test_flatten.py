@@ -272,59 +272,81 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         SGML comment syntax is complicated and hard to use. This rule is more
         restrictive, and more compatible:
 
-        Comments start with <!-- and end with --> and HTML comments never contain -- or >,
-        whereas Outlook conditional comments contain their logic within brackets
-        that follow this format <!-- [if foo]>
+        Comments start with <!-- and end with --> and and never contain -- or >.
 
         Also by XML syntax, a comment may not end with '-'.
 
         @see: U{http://www.w3.org/TR/REC-xml/#sec-comments}
         """
 
-        def verifyComment(z: bytes) -> None:
+        def verifyComment(c: bytes) -> None:
             self.assertTrue(
-                z.startswith(b"<!--"),
-                f"{z!r} does not start with the comment prefix",
+                c.startswith(b"<!--"),
+                f"{c!r} does not start with the comment prefix",
             )
             self.assertTrue(
-                z.endswith(b"-->"),
-                f"{z!r} does not end with the comment suffix",
+                c.endswith(b"-->"),
+                f"{c!r} does not end with the comment suffix",
             )
             # If it is shorter than 7, then the prefix and suffix overlap
             # illegally.
-            self.assertTrue(len(z) >= 7, f"{z!r} is too short to be a legal comment")
-            content = z[4:-3]
+            self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
+            content = c[4:-3]
             self.assertNotIn(b"--", content)
-            if b"[if " in content and (b"IE" in content or b"mso" in content):
-                self.assertIn(b">", content)
-                self.assertNotIn(b"&gt;", content)
-            else:
-                self.assertNotIn(b">", content)
+            self.assertNotIn(b">", content)
             if content:
                 self.assertNotEqual(content[-1], b"-")
 
         results = []
-        for z in [
+        for c in [
             "",
             "foo---bar",
             "foo---bar-",
+            "foo>bar",
+            "foo-->bar",
             "----------------",
-            "foo > bar",
-            "[if mso]> <![endif]",
-            "[if IE]> <![endif]",
-            "[if (mso)|(IE)]> <![endif]",
-            "[if (!mso)&(!IE)]><!--<![endif]",
-            "[if gt mso 14]> Everything above Outlook 2010 <![endif]",
-            "[if lt mso 14]> Everything below Outlook 2010 <![endif]",
-            "[if gte mso 14]> Outlook 2010 and above <![endif]",
-            "[if lte mso 14]> Outlook 2010 and below <![endif]",
-            "[if (mso 12)|(mso 16)]> Outlook 2007 / 2016 only <![endif]",
-            "[if !mso]><!--> All Outlooks will ignore this <!--<![endif]",
-            "[if this is just something within brackets return False]",
         ]:
-            d = flattenString(None, Comment(z))
+            d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
             results.append(d)
+        return gatherResults(results)
+
+    def test_hasMSOComments(self) -> Deferred[List[bytes]]:
+        """
+        Test the handling of Microsoft Outlook (MSO) specific HTML comments.
+
+        MSO conditional comments contain logic in the following format:
+            "<!--[if condition]> ... content ... <![endif]-->"
+
+        The aim of this test is to verify that the > character inside the body of MSO conditional
+            CSS comments is not escaped as &gt;, which would render the CSS logic invalid.
+        """
+
+        def validateCommentHandling(data: bytes) -> None:
+            content = data[4:-3]
+            if b"[if " in content:
+                self.assertIn(b">", content)
+                self.assertNotIn(b"&gt;", content)
+            else:
+                self.assertNotIn(b">", content)
+
+        results = []
+        for comment in [
+            "[if mso]> Show content for MSO <![endif]",
+            "[if IE]> Show content for IE <![endif]",
+            "[if (!mso)&(!IE)]> Show content for non-MSO/IE <![endif]",
+            "[if gt mso 14]> Show content for MSO > Outlook 2010 <![endif]",
+            "[if lt mso 14]> Show content for MSO < Outlook 2010 <![endif]",
+            "[if gte mso 9]> Show content for MSO >= 9 <![endif]",
+            "[if lte mso 14]> Show content for MSO <= Outlook 2010 <![endif]",
+            "[if (mso 12)|(mso 16)]> Show content for Outlook 2007/2016 <![endif]",
+            "[if !mso]> Ignored by all MSO <!--<![endif]",
+            "[if (mso)|(IE)]> Show content for MSO/IE only <![endif]",
+            "[this is just something within brackets so > can be escaped as &gt;]",
+        ]:
+            flat_string = flattenString(None, Comment(comment))
+            flat_string.addCallback(validateCommentHandling)
+            results.append(flat_string)
         return gatherResults(results)
 
     def test_serializeCDATA(self) -> None:
