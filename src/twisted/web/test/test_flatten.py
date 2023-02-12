@@ -324,7 +324,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         def validateCommentHandling(data: bytes) -> None:
             content = data[4:-3]
-            if b"[if " in content:
+            if b"[if " in content and (b"IE" in content or b"mso" in content):
                 self.assertIn(b">", content)
                 self.assertNotIn(b"&gt;", content)
             else:
@@ -342,7 +342,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             "[if (mso 12)|(mso 16)]> Show content for Outlook 2007/2016 <![endif]",
             "[if !mso]> Ignored by all MSO <!--<![endif]",
             "[if (mso)|(IE)]> Show content for MSO/IE only <![endif]",
-            "[this is just something within brackets so > can be escaped as &gt;]",
+            "[if this is just something within brackets so > can be escaped]",
         ]:
             flat_string = flattenString(None, Comment(comment))
             flat_string.addCallback(validateCommentHandling)
