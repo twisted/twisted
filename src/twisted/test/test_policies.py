@@ -12,8 +12,8 @@ from io import StringIO
 from zope.interface import Interface, implementedBy, implementer
 
 from twisted.internet import address, defer, protocol, reactor, task
+from twisted.internet.testing import StringTransport, StringTransportWithDisconnection
 from twisted.protocols import policies
-from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 from twisted.trial import unittest
 
 

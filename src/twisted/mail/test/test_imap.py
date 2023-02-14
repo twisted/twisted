@@ -33,6 +33,7 @@ from twisted.cred.portal import IRealm, Portal
 from twisted.internet import defer, error, interfaces, reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransport, StringTransportWithDisconnection
 from twisted.mail import imap4
 from twisted.mail.imap4 import MessageSet
 from twisted.mail.interfaces import (
@@ -43,7 +44,6 @@ from twisted.mail.interfaces import (
 from twisted.protocols import loopback
 from twisted.python import failure, log, util
 from twisted.python.compat import iterbytes, nativeString, networkString
-from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 try:

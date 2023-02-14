@@ -14,7 +14,7 @@ if cryptography:
 
 from twisted.internet.address import IPv6Address
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.trial import unittest
 
 

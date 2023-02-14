@@ -17,7 +17,7 @@ try:
     from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.internet import interfaces
     from twisted.internet.address import IPv4Address
-    from twisted.test.proto_helpers import StringTransport
+    from twisted.internet.testing import StringTransport
 
     skipTest = ""
 except ImportError:
