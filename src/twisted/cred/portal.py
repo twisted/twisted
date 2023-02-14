@@ -8,10 +8,9 @@ The point of integration of application and authentication.
 """
 
 
-from typing import Callable, Dict, Iterable, List, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Tuple, Type, Union
 
 from zope.interface import Interface, providedBy
-from zope.interface.interfaces import IInterface
 
 from twisted.cred import error
 from twisted.cred.checkers import ICredentialsChecker
@@ -20,7 +19,8 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python import failure, reflect
 
-_requestResult = Tuple[IInterface, object, Callable[[], None]]
+_InterfaceItself = Type[Interface]
+_requestResult = Tuple[_InterfaceItself, object, Callable[[], None]]
 
 
 class IRealm(Interface):
@@ -30,7 +30,7 @@ class IRealm(Interface):
     """
 
     def requestAvatar(
-        avatarId: bytes, mind: object, *interfaces: IInterface
+        avatarId: bytes, mind: object, *interfaces: _InterfaceItself
     ) -> Union[Deferred[_requestResult], _requestResult]:
         """
         Return avatar which provides one of the given interfaces.
@@ -66,7 +66,7 @@ class Portal:
     in the realm object and in the credentials checker objects.
     """
 
-    checkers: Dict[IInterface, ICredentialsChecker]
+    checkers: Dict[Type[Interface], ICredentialsChecker]
 
     def __init__(
         self, realm: IRealm, checkers: Iterable[ICredentialsChecker] = ()
@@ -79,14 +79,14 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
-    def listCredentialsInterfaces(self) -> List[Interface]:
+    def listCredentialsInterfaces(self) -> List[Type[Interface]]:
         """
         Return list of credentials interfaces that can be used to login.
         """
         return list(self.checkers.keys())
 
     def registerChecker(
-        self, checker: ICredentialsChecker, *credentialInterfaces: IInterface
+        self, checker: ICredentialsChecker, *credentialInterfaces: Type[Interface]
     ) -> None:
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
@@ -94,7 +94,7 @@ class Portal:
             self.checkers[credentialInterface] = checker
 
     def login(
-        self, credentials: ICredentials, mind: object, *interfaces: IInterface
+        self, credentials: ICredentials, mind: object, *interfaces: Type[Interface]
     ) -> Deferred[_requestResult]:
         """
         @param credentials: an implementor of

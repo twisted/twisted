@@ -19,7 +19,6 @@ import tty
 from typing import Callable, Dict, Tuple
 
 from zope.interface import implementer
-from zope.interface.interfaces import IInterface
 
 from twisted.conch import ttymodes
 from twisted.conch.avatar import ConchUser
@@ -51,8 +50,11 @@ except ImportError:
 @implementer(portal.IRealm)
 class UnixSSHRealm:
     def requestAvatar(
-        self, username: bytes, mind: object, *interfaces: IInterface
-    ) -> Tuple[IInterface, UnixConchUser, Callable[[], None]]:
+        self,
+        username: bytes,
+        mind: object,
+        *interfaces: portal._InterfaceItself,
+    ) -> Tuple[portal._InterfaceItself, UnixConchUser, Callable[[], None]]:
         user = UnixConchUser(username.decode())
         return interfaces[0], user, user.logout
 
