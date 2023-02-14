@@ -14,7 +14,12 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.cred import credentials, error
+from twisted.cred import error
+from twisted.cred.credentials import (
+    IAnonymous,
+    IUsernameHashedPassword,
+    IUsernamePassword,
+)
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.logger import Logger
@@ -67,7 +72,7 @@ class AllowAnonymousAccess:
     @cvar credentialInterfaces: Tuple containing L{IAnonymous}.
     """
 
-    credentialInterfaces = (credentials.IAnonymous,)
+    credentialInterfaces = (IAnonymous,)
 
     def requestAvatarId(self, credentials):
         """
@@ -98,8 +103,8 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     """
 
     credentialInterfaces = (
-        credentials.IUsernamePassword,
-        credentials.IUsernameHashedPassword,
+        IUsernamePassword,
+        IUsernameHashedPassword,
     )
 
     def __init__(self, **users):
@@ -223,13 +228,13 @@ class FilePasswordDB:
             # The passwords are stored plaintext.  We can support both
             # plaintext and hashed passwords received over the network.
             self.credentialInterfaces = (
-                credentials.IUsernamePassword,
-                credentials.IUsernameHashedPassword,
+                IUsernamePassword,
+                IUsernameHashedPassword,
             )
         else:
             # The passwords are hashed on disk.  We can support only
             # plaintext passwords received over the network.
-            self.credentialInterfaces = (credentials.IUsernamePassword,)
+            self.credentialInterfaces = (IUsernamePassword,)
 
     def __getstate__(self):
         d = dict(vars(self))
@@ -303,13 +308,15 @@ class FilePasswordDB:
                     return u, p
             raise KeyError(username)
 
-    def requestAvatarId(self, c):
+    def requestAvatarId(
+        self, credentials: IUsernamePassword
+    ) -> Deferred[Union[bytes, Tuple[()]]]:
         try:
-            u, p = self.getUser(c.username)
+            u, p = self.getUser(credentials.username)
         except KeyError:
             return defer.fail(error.UnauthorizedLogin())
         else:
-            up = credentials.IUsernamePassword(c, None)
+            up = IUsernamePassword(credentials, None)
             if self.hash:
                 if up is not None:
                     h = self.hash(up.username, up.password, p)
@@ -317,7 +324,7 @@ class FilePasswordDB:
                         return defer.succeed(u)
                 return defer.fail(error.UnauthorizedLogin())
             else:
-                return defer.maybeDeferred(c.checkPassword, p).addCallback(
+                return defer.maybeDeferred(credentials.checkPassword, p).addCallback(
                     self._cbPasswordMatch, u
                 )
 
