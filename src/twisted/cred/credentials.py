@@ -98,6 +98,9 @@ class IUsernamePassword(ICredentials):
     @ivar password: The password associated with these credentials.
     """
 
+    username: bytes
+    password: bytes
+
     def checkPassword(password):
         """
         Validate these credentials against the correct password.
