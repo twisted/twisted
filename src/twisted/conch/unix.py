@@ -5,6 +5,8 @@
 A UNIX SSH server.
 """
 
+from __future__ import annotations
+
 import fcntl
 import grp
 import os
@@ -14,8 +16,10 @@ import socket
 import struct
 import time
 import tty
+from typing import Callable, Dict, Tuple
 
 from zope.interface import implementer
+from zope.interface.interfaces import IInterface
 
 from twisted.conch import ttymodes
 from twisted.conch.avatar import ConchUser
@@ -33,6 +37,7 @@ from twisted.conch.ssh.filetransfer import (
 )
 from twisted.cred import portal
 from twisted.internet.error import ProcessExitedAlready
+from twisted.internet.interfaces import IListeningPort
 from twisted.logger import Logger
 from twisted.python import components
 from twisted.python.compat import nativeString
@@ -45,13 +50,15 @@ except ImportError:
 
 @implementer(portal.IRealm)
 class UnixSSHRealm:
-    def requestAvatar(self, username, mind, *interfaces):
-        user = UnixConchUser(username)
+    def requestAvatar(
+        self, username: bytes, mind: object, *interfaces: IInterface
+    ) -> Tuple[IInterface, UnixConchUser, Callable[[], None]]:
+        user = UnixConchUser(username.decode())
         return interfaces[0], user, user.logout
 
 
 class UnixConchUser(ConchUser):
-    def __init__(self, username):
+    def __init__(self, username: str) -> None:
         ConchUser.__init__(self)
         self.username = username
         self.pwdData = pwd.getpwnam(self.username)
@@ -60,7 +67,9 @@ class UnixConchUser(ConchUser):
             if username in userlist:
                 l.append(gid)
         self.otherGroups = l
-        self.listeners = {}  # Dict mapping (interface, port) -> listener
+        self.listeners: Dict[
+            str, IListeningPort
+        ] = {}  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(
             {
                 b"session": session.SSHSession,
@@ -116,7 +125,7 @@ class UnixConchUser(ConchUser):
         self._runAsUser(listener.stopListening)
         return 1
 
-    def logout(self):
+    def logout(self) -> None:
         # Remove all listeners.
         for listener in self.listeners.values():
             self._runAsUser(listener.stopListening)
