@@ -158,7 +158,7 @@ class DigestedCredentials:
             qop,
         )
 
-        return expected == response
+        return hmac.compare_digest(expected, response)
 
     def checkHash(self, digestHash):
         """
@@ -186,7 +186,7 @@ class DigestedCredentials:
             qop,
         )
 
-        return expected == response
+        return hmac.compare_digest(expected, response)
 
 
 class DigestCredentialFactory:
@@ -319,7 +319,7 @@ class DigestCredentialFactory:
         if len(keyParts) != 3:
             raise error.LoginFailed("Invalid response, invalid opaque value")
 
-        if keyParts[0] != nonce:
+        if not hmac.compare_digest(keyParts[0], nonce):
             raise error.LoginFailed(
                 "Invalid response, incompatible opaque/nonce values"
             )
@@ -345,7 +345,7 @@ class DigestCredentialFactory:
 
         # Verify the digest
         digest = hexlify(md5(key + self.privateKey).digest())
-        if digest != opaqueParts[0]:
+        if not hmac.compare_digest(digest, opaqueParts[0]):
             raise error.LoginFailed("Invalid response, invalid opaque value")
 
         return True
@@ -438,7 +438,7 @@ class CramMD5Credentials:
 
     def checkPassword(self, password):
         verify = hexlify(hmac.HMAC(password, self.challenge, digestmod=md5).digest())
-        return verify == self.response
+        return hmac.compare_digest(verify, self.response)
 
 
 @implementer(IUsernameHashedPassword)
@@ -456,7 +456,7 @@ class UsernameHashedPassword:
         self.hashed = hashed
 
     def checkPassword(self, password):
-        return self.hashed == password
+        return hmac.compare_digest(self.hashed, password)
 
 
 @implementer(IUsernamePassword)
@@ -466,7 +466,7 @@ class UsernamePassword:
         self.password = password
 
     def checkPassword(self, password):
-        return self.password == password
+        return hmac.compare_digest(self.password, password)
 
 
 @implementer(IAnonymous)
