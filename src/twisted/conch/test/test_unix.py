@@ -61,12 +61,18 @@ class MockProcessSpawner:
         )
 
 
+shouldSkip = (
+    "Cannot run without cryptography"
+    if cryptography is None
+    else "Unix system required"
+    if unix is None
+    else None
+)
+
+
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
 
-    if cryptography is None:
-        skip = "Cannot run without cryptography"
-    elif unix is None:
-        skip = "Unix system required"
+    skip = shouldSkip
 
     def testExecCommandEnvironment(self) -> None:
         """
@@ -93,6 +99,8 @@ class TestUnixSSHRealm(unittest.TestCase):
     """
     Tests for L{UnixSSHRealm}.
     """
+
+    skip = shouldSkip
 
     def test_unixSSHRealm(self) -> None:
         """
