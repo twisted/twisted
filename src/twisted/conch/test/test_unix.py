@@ -6,7 +6,6 @@
 from zope.interface import implementer
 
 from twisted.conch.interfaces import IConchUser
-from twisted.conch.unix import UnixConchUser, UnixSSHRealm
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
 from twisted.cred.portal import Portal
@@ -18,6 +17,9 @@ from .test_session import StubClient, StubConnection
 
 cryptography = requireModule("cryptography")
 unix = requireModule("twisted.conch.unix")
+
+if unix is not None:
+    from twisted.conch.unix import UnixConchUser, UnixSSHRealm
 
 
 @implementer(IReactorProcess)
