@@ -272,7 +272,7 @@ class FilePasswordDB:
             self._log.error("Unable to load credentials db: {e!r}", e=e)
             raise error.UnauthorizedLogin()
 
-    def getUser(self, username):
+    def getUser(self, username: bytes) -> Tuple[bytes, bytes]:
         """
         Look up the credentials for a username.
 
