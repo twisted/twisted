@@ -107,7 +107,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         IUsernameHashedPassword,
     )
 
-    def __init__(self, **users):
+    def __init__(self, **users: bytes) -> None:
         """
         Initialize the in-memory database.
 
@@ -125,7 +125,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         """
         self.users = {x.encode("ascii"): y for x, y in users.items()}
 
-    def addUser(self, username, password):
+    def addUser(self, username: bytes, password: bytes) -> None:
         """
         Set a user's password.
 
