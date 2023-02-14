@@ -24,10 +24,10 @@ import twisted.mail.protocols
 from twisted import cred, internet, mail
 from twisted.cred.credentials import IUsernameHashedPassword
 from twisted.internet import defer
+from twisted.internet.testing import LineSendingProtocol
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.test.proto_helpers import LineSendingProtocol
 from twisted.trial import unittest, util
 
 
