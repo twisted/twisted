@@ -19,7 +19,16 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python import failure, reflect
 
+# To say 'we need an Interface object', we have to say Type[Interface];
+# although zope.interface has no type/instance distinctions within the
+# implementation of Interface itself (subclassing it actually instantiates it),
+# since mypy-zope treats Interface objects *as* types, this is how you have to
+# treat it.
 _InterfaceItself = Type[Interface]
+
+# This is the result shape for both IRealm.requestAvatar and Portal.login,
+# although the former is optionally allowed to return synchronously and the
+# latter must be Deferred.
 _requestResult = Tuple[_InterfaceItself, object, Callable[[], None]]
 
 
