@@ -10,13 +10,27 @@ Basic credential checkers
 
 
 import os
+from typing import Any, Tuple, Union
 
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.cred import credentials, error
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 from twisted.logger import Logger
 from twisted.python import failure
+
+# A note on anonymity - We do not want None as the value for anonymous
+# because it is too easy to accidentally return it.  We do not want the
+# empty string, because it is too easy to mistype a password file.  For
+# example, an .htpasswd file may contain the lines: ['hello:asdf',
+# 'world:asdf', 'goodbye', ':world'].  This misconfiguration will have an
+# ill effect in any case, but accidentally granting anonymous access is a
+# worse failure mode than simply granting access to an untypeable
+# username.  We do not want an instance of 'object', because that would
+# create potential problems with persistence.
+
+ANONYMOUS: Tuple[()] = ()
 
 
 class ICredentialsChecker(Interface):
@@ -29,33 +43,20 @@ class ICredentialsChecker(Interface):
         "may check."
     )
 
-    def requestAvatarId(credentials):
+    def requestAvatarId(credentials: Any) -> Deferred[Union[bytes, Tuple[()]]]:
         """
         Validate credentials and produce an avatar ID.
 
         @param credentials: something which implements one of the interfaces in
-        C{credentialInterfaces}.
+            C{credentialInterfaces}.
 
         @return: a L{Deferred} which will fire with a L{bytes} that identifies
-        an avatar, an empty tuple to specify an authenticated anonymous user
-        (provided as L{twisted.cred.checkers.ANONYMOUS}) or fail with
-        L{UnauthorizedLogin}. Alternatively, return the result itself.
+            an avatar, an empty tuple to specify an authenticated anonymous
+            user (provided as L{twisted.cred.checkers.ANONYMOUS}) or fail with
+            L{UnauthorizedLogin}.  Alternatively, return the result itself.
 
         @see: L{twisted.cred.credentials}
         """
-
-
-# A note on anonymity - We do not want None as the value for anonymous
-# because it is too easy to accidentally return it.  We do not want the
-# empty string, because it is too easy to mistype a password file.  For
-# example, an .htpasswd file may contain the lines: ['hello:asdf',
-# 'world:asdf', 'goodbye', ':world'].  This misconfiguration will have an
-# ill effect in any case, but accidentally granting anonymous access is a
-# worse failure mode than simply granting access to an untypeable
-# username.  We do not want an instance of 'object', because that would
-# create potential problems with persistence.
-
-ANONYMOUS = ()
 
 
 @implementer(ICredentialsChecker)
