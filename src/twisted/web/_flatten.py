@@ -166,52 +166,9 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
     return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
-def _hasMSOComments(data: bytes) -> bool:
-    """
-    Check if the input C{data} contains Microsoft Office (MSO) comments.
-
-    MSO comments are conditional comments that are only interpreted by
-        Microsoft Office applications, and not other email clients.
-
-    The format of MSO conditional comments is as follows:
-        "<!--[if condition]> ... content ... <![endif]-->"
-
-    @param data: The data (bytes) to check for MSO comments.
-
-    @return: A boolean indicating whether the C{data} has MSO comments or not.
-    """
-    if not data.startswith(b"[if "):
-        return False
-
-    start_index = data.find(b"[if ")
-    section_to_check = data[start_index:]
-
-    mso_operator = section_to_check[4:]
-    if any(
-        mso_operator.startswith(prefix)
-        for prefix in [
-            b"mso",
-            b"gt mso",
-            b"lt mso",
-            b"gte mso",
-            b"lte mso",
-            b"!mso",
-            b"(mso",
-            b"(!mso",
-            b"IE",
-            b"!IE",
-            b"(!IE",
-            b"(IE",
-        ]
-    ):
-        return True
-    else:
-        return False
-
-
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
-    Escape a comment for inclusion in a document, unless it is an MSO conditional comment.
+    Escape a comment for inclusion in a document.
 
     @param data: The string to escape.
 
@@ -220,8 +177,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    if not _hasMSOComments(data):
-        data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
+    data = data.replace(b"--", b"- - ")
     if data and data[-1:] == b"-":
         data += b" "
     return data
