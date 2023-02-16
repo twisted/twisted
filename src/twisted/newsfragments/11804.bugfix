@@ -1,1 +1,1 @@
-twisted.web.template.flattenString now recognizes and correctly parses Microsoft Outlook conditional comments.
+The (>) character within comments is no longer escaped by twisted.web.template.flattenString. This update allows the correct parsing of Microsoft Outlook conditional comments.
