@@ -1,1 +1,1 @@
-The (>) character within comments is no longer escaped by twisted.web.template.flattenString. This update allows the correct parsing of Microsoft Outlook conditional comments.
+To prevent parsing errors and ensure validity when serializing HTML comments, twisted.web.template.flattenString has been updated to escape the --> sequence within comments
