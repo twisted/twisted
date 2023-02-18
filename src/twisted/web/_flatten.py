@@ -177,7 +177,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    data = data.replace(b"--", b"- - ")
+    data = data.replace(b"-->", b"--&gt;")
     if data and data[-1:] == b"-":
         data += b" "
     return data
