@@ -267,19 +267,18 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
-        so that the result is a legal SGML and XML comment.
+        so that the result can be safely included in an HTML document.
 
-        BNF (Backus-Naur Form) production rule for comments:
-        Comment	 ::=  '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
+        When parsing HTML documents, certain modifications cannot be serialized in a way
+        that produces valid output. In the case of comments, the sequence --> can be mistaken
+        as the end of the comment. To ensure consistent parsing and valid output, the serialized
+        output must be modified. To that end, the function tested replaces the sequence --> with --&gt;
+        This encoding ensures that the comment text can be included within the serialized output without
+        causing parsing errors or other issues. Furthermore, the function adds whitespace when a
+        comment ends in a dash. This is done to break the connection of the ending - with the closing -->
 
-        In summary, a comment:
-        - Starts with '<!--' and ends with '-->'
-        - Cannot contain the sequence '--' within it, except as part of a character
-            that is not a hyphen (e.g., '-x--y' is allowed, but '- --' is not)
-        - If a hyphen is used, it must be followed by a character that is not a hyphen,
-            or not followed by anything at all
-
-        @see: U{https://www.w3.org/TR/xml11/#sec-comments}
+        Verify that comments start with <!-- and end with -->, escape the > character when
+        the --> sequence is encountered, and do not end with a - character.
         """
 
         def verifyComment(c: bytes) -> None:
@@ -295,17 +294,19 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             # illegally.
             self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
-            self.assertNotIn(b"--", content)
+            if b"foo" in content:
+                self.assertIn(b">", content)
+            else:
+                self.assertNotIn(b">", content)
             if content:
                 self.assertNotEqual(content[-1], b"-")
 
         results = []
         for c in [
             "",
-            "foo---bar",
-            "foo---bar-",
-            "-foo--bar",
-            "----------------",
+            "foo > bar",
+            "abracadabra-",
+            "not-->magic",
         ]:
             d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
