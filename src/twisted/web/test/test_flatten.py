@@ -269,16 +269,14 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         The data in a L{Comment} is escaped and mangled in the flattened output
         so that the result can be safely included in an HTML document.
 
-        When parsing HTML documents, certain modifications cannot be serialized in a way
-        that produces valid output. In the case of comments, the sequence --> can be mistaken
-        as the end of the comment. To ensure consistent parsing and valid output, the serialized
-        output must be modified. To that end, the function tested replaces the sequence --> with --&gt;
-        This encoding ensures that the comment text can be included within the serialized output without
-        causing parsing errors or other issues. Furthermore, the function adds whitespace when a
-        comment ends in a dash. This is done to break the connection of the ending - with the closing -->
+        Within comments the sequence '-->' can be mistaken as the end of the comment.
+        To ensure consistent parsing and valid output, the sequence '-->' is replaced
+        with '--&gt;'. Furthermore, whitespace is added when a comment ends in a dash.
+        This is done to break the connection of the ending '-' with the closing '-->'.
 
-        Verify that comments start with <!-- and end with -->, escape the > character when
-        the --> sequence is encountered, and do not end with a - character.
+        This function verifies that comments start with '<!--' and end with '-->',
+        that the '>' character is escaped when the '-->' sequence is encountered,
+        and that comments do not end with a '-' character.
         """
 
         def verifyComment(c: bytes) -> None:
