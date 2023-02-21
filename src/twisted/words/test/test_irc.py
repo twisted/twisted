@@ -934,7 +934,7 @@ class CTCPTests(IRCTestCase):
             % {"X": irc.X_DELIM, "EOL": irc.CR + irc.LF}
         )
 
-        self.client.dataReceived(errQuery)
+        self.client.dataReceived(errQuery.encode("utf-8"))
         reply = self.file.getvalue()
 
         self.assertEqualBufferValue(reply, errReply)
@@ -1126,7 +1126,7 @@ class ClientImplementationTests(IRCTestCase):
             ":" + host + " " + code + " " + nick + " " + args + " :" + msg + "\r\n"
         )
 
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
         self.assertEqual(self.client.calls, [(func, kw)])
 
     def testYourHost(self):
@@ -1214,13 +1214,13 @@ class ClientImplementationTests(IRCTestCase):
         L{IRCClient.receivedMOTD} when I{RPL_ENDOFMOTD} is received.
         """
         lines = [
-            ":host.name 375 nickname :- host.name Message of the Day -",
-            ":host.name 372 nickname :- Welcome to host.name",
-            ":host.name 376 nickname :End of /MOTD command.",
+            b":host.name 375 nickname :- host.name Message of the Day -",
+            b":host.name 372 nickname :- Welcome to host.name",
+            b":host.name 376 nickname :End of /MOTD command.",
         ]
         for L in lines:
             self.assertEqual(self.client.calls, [])
-            self.client.dataReceived(L + "\r\n")
+            self.client.dataReceived(L + b"\r\n")
 
         self.assertEqual(
             self.client.calls,
@@ -1248,12 +1248,12 @@ class ClientImplementationTests(IRCTestCase):
         called with a list of MOTD lines.
         """
         lines = [
-            ":host.name 372 nickname :- Welcome to host.name",
-            ":host.name 376 nickname :End of /MOTD command.",
+            b":host.name 372 nickname :- Welcome to host.name",
+            b":host.name 376 nickname :End of /MOTD command.",
         ]
 
         for L in lines:
-            self.client.dataReceived(L + "\r\n")
+            self.client.dataReceived(L + b"\r\n")
 
         self.assertEqual(
             self.client.calls, [("receivedMOTD", {"motd": ["Welcome to host.name"]})]
@@ -1265,7 +1265,7 @@ class ClientImplementationTests(IRCTestCase):
 
         wholeUser = sender + "!" + ident + "@" + host
         message = ":" + wholeUser + " " + type + " " + group + " :" + msg + "\r\n"
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
         self.assertEqual(self.client.calls, [(func, kw)])
         self.client.calls = []
 
@@ -1350,7 +1350,7 @@ class ClientImplementationTests(IRCTestCase):
         if target is None:
             target = "#chan"
         message = f":Wolf!~wolf@yok.utu.fi MODE {target} {msg} {args}\r\n"
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
 
     def _parseModeChange(self, results, target=None):
         """
