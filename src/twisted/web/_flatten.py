@@ -168,7 +168,10 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
 
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
-    Escape a comment for inclusion in a document.
+    Within comments the sequence C{-->} can be mistaken as the end of the comment.
+    To ensure consistent parsing and valid output the sequence is replaced with C{--&gt;}.
+    Furthermore, whitespace is added when a comment ends in a dash. This is done to break
+    the connection of the ending C{-} with the closing C{-->}.
 
     @param data: The string to escape.
 
