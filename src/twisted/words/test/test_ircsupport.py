@@ -101,7 +101,9 @@ class IRCProtoTests(IRCTestCase):
         and reflect their information in its C{supported} attribute.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(b":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n")
+        self.proto.dataReceived(
+            b":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n"
+        )
         self.assertEqual(4, self.proto.supported.getFeature("MODES"))
 
     def test_nick(self):
