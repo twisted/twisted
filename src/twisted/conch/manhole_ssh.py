@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.conch import avatar, error as econch, interfaces as iconch
 from twisted.conch.insults import insults
 from twisted.conch.ssh import factory, session
+from twisted.cred.portal import IRealm
 from twisted.python import components
 
 
@@ -109,6 +110,7 @@ class TerminalUser(avatar.ConchUser, components.Adapter):
         self.channelLookup[b"session"] = session.SSHSession
 
 
+@implementer(IRealm)
 class TerminalRealm:
     userFactory = TerminalUser
     sessionFactory = TerminalSession
