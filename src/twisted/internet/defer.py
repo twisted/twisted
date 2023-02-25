@@ -559,6 +559,18 @@ class Deferred(Awaitable[_DeferredResultT]):
         #     the caller should treat the result as the new type, consistently.
         return self  # type:ignore[return-value]
 
+    # BEGIN way too many @overload-s for addCallback, addErrback, and addBoth:
+    # these must be accomplished with @overloads, rather than a big Union on
+    # the result type as you might expect, because the fact that
+    # _NextDeferredResultT has no bound makes mypy get confused and require the
+    # return types of functions to be combinations of Deferred and Failure
+    # rather than the actual return type.  I'm not entirely sure what about the
+    # semantics of <nothing> create this overzealousness on the part of trying
+    # to assign a type; there *might* be a mypy bug in there somewhere.
+    # Possibly https://github.com/python/typing/issues/548 is implicated here
+    # because TypeVar for the *callable* with a variadic bound might express to
+    # Mypy the actual constraint that we want on its type.
+
     @overload
     def addCallback(
         self,
@@ -754,6 +766,8 @@ class Deferred(Awaitable[_DeferredResultT]):
             callbackKeywords=kwargs,
             errbackKeywords=kwargs,
         )
+
+    # END way too many overloads
 
     def addTimeout(
         self,
