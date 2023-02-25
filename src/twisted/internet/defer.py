@@ -2035,7 +2035,7 @@ def _cancellableInlineCallbacks(
     deferred: Deferred[_T] = Deferred(cancel)
     status = _CancellationStatus(deferred)
 
-    def handleCancel(result: Failure) -> Union[Failure, _T, Deferred[_T]]:
+    def handleCancel(result: Failure) -> Deferred[_T]:
         """
         Propagate the cancellation of an C{@}L{inlineCallbacks} to the
         L{Deferred} it is waiting on.
