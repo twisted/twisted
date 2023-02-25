@@ -605,6 +605,18 @@ class Deferred(Awaitable[_DeferredResultT]):
     @overload
     def addCallback(
         self,
+        callback: Callable[
+            Concatenate[_DeferredResultT, _P],
+            Union[Deferred[_NextDeferredResultT], _NextDeferredResultT],
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextDeferredResultT]:
+        ...
+
+    @overload
+    def addCallback(
+        self,
         callback: Callable[Concatenate[_DeferredResultT, _P], _NextDeferredResultT],
         *args: _P.args,
         **kwargs: _P.kwargs,
