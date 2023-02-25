@@ -40,6 +40,7 @@ from hamcrest import assert_that, equal_to
 
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
+    _T,
     Deferred,
     DeferredFilesystemLock,
     DeferredList,
@@ -48,7 +49,6 @@ from twisted.internet.defer import (
     DeferredSemaphore,
     _DeferredListResultListT,
     _DeferredListSingleResultT,
-    _DeferredResultT,
     ensureDeferred,
 )
 from twisted.internet.task import Clock
@@ -66,10 +66,10 @@ else:
 
 
 def ensuringDeferred(
-    f: Callable[..., Coroutine[Deferred[_DeferredResultT], Any, _DeferredResultT]]
-) -> Callable[..., Deferred[_DeferredResultT]]:
+    f: Callable[..., Coroutine[Deferred[_T], Any, _T]]
+) -> Callable[..., Deferred[_T]]:
     @functools.wraps(f)
-    def wrapper(*args: object, **kwargs: object) -> Deferred[_DeferredResultT]:
+    def wrapper(*args: object, **kwargs: object) -> Deferred[_T]:
         coro = f(*args, **kwargs)
         return Deferred.fromCoroutine(coro)
 
