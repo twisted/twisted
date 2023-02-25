@@ -706,7 +706,7 @@ class Deferred(Awaitable[_SelfResultT]):
         self,
         callback: Callable[
             Concatenate[Union[_SelfResultT, Failure], _P],
-            Union[_SelfResultT, Failure],
+            Union[_NextResultT, Failure],
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
