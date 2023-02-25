@@ -1852,7 +1852,7 @@ def _inlineCallbacks(
         Generator[Deferred[_T], object, None],
         Coroutine[Deferred[_T], object, None],
     ],
-    status: _CancellationStatus,
+    status: _CancellationStatus[_T],
     context: _Context,
 ) -> None:
     """
