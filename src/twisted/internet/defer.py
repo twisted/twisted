@@ -557,7 +557,7 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         # type note: The Deferred's type has changed here, but *idiomatically*
         #     the caller should treat the result as the new type, consistently.
-        return cast(Deferred[_NextDeferredResultT], self)
+        return self  # type:ignore[return-value]
 
     @overload
     def addCallback(
