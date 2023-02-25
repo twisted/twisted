@@ -830,12 +830,19 @@ class Deferred(Awaitable[_SelfResultT]):
             return result
 
         def cancelTimeout(result: _T) -> _T:
+
             # stop the pending call to cancel the deferred if it's been fired
             if delayedCall.active():
                 delayedCall.cancel()
             return result
 
-        return self.addBoth(convertCancelled).addBoth(cancelTimeout)
+        # Note: Mypy cannot infer this type, apparently thanks to the ambiguity
+        # of _SelfResultT / _NextResultT both being unbound.  Explicitly
+        # annotating it seems to do the trick though.
+        converted: Deferred[Union[_SelfResultT, _NextResultT]] = self.addBoth(
+            convertCancelled
+        )
+        return converted.addBoth(cancelTimeout)
 
     def chainDeferred(self, d: "Deferred[_SelfResultT]") -> "Deferred[None]":
         """
