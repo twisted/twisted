@@ -641,9 +641,9 @@ class Deferred(Awaitable[_DeferredResultT]):
 
         See L{addCallbacks}.
         """
-        # Implementation Note: Any type annotations here are because the
-        # overloads above handle specifying the actual signature, and there's
-        # nothing worth type-checking in this implementation.
+        # Implementation Note: Any annotations for brevity; the overloads above
+        # handle specifying the actual signature, and there's nothing worth
+        # type-checking in this implementation.
         return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
 
     @overload
@@ -673,9 +673,7 @@ class Deferred(Awaitable[_DeferredResultT]):
     ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
         ...
 
-    def addErrback(
-        self, errback: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> "Deferred[Union[_DeferredResultT, _NextDeferredResultT]]":
+    def addErrback(self, errback: Any, *args: Any, **kwargs: Any) -> "Deferred[Any]":
         """
         Convenience method for adding just an errback.
 
@@ -730,20 +728,8 @@ class Deferred(Awaitable[_DeferredResultT]):
     ) -> Deferred[_NextDeferredResultT]:
         ...
 
-    @overload
     def addBoth(
-        self,
-        callback: Callable[Concatenate[_T, _P], _T],
-        *args: _P.args,
-        **kwargs: _P.kwargs,
-    ) -> Deferred[_DeferredResultT]:
-        ...
-
-    def addBoth(
-        self,
-        callback: Any,
-        *args: Any,
-        **kwargs: Any,
+        self, callback: Any, *args: Any, **kwargs: Any
     ) -> "Deferred[_NextDeferredResultT]":
         """
         Convenience method for adding a single callable as both a callback
