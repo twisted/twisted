@@ -3580,6 +3580,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
         L{DeferredLock} can be used as an asynchronous context manager.
         """
         lock = DeferredLock()
+        d = None  # This makes mypy check that async with doesn't suppress exceptions.
         async with lock:
             self.assertTrue(lock.locked)
             d = lock.acquire()

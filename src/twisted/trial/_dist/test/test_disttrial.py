@@ -35,10 +35,10 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
-from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist import _WORKER_AMP_STDIN
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig

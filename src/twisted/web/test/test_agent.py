@@ -29,17 +29,17 @@ from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.logger import globalLogPublisher
-from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import getDeprecationWarningString
-from twisted.python.failure import Failure
-from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.proto_helpers import (
+from twisted.internet.testing import (
     AccumulatingProtocol,
     EventLoggingObserver,
     MemoryReactorClock,
     StringTransport,
 )
+from twisted.logger import globalLogPublisher
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
