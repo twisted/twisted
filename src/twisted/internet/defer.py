@@ -694,7 +694,29 @@ class Deferred(Awaitable[_SelfResultT]):
         self,
         callback: Callable[
             Concatenate[Union[_SelfResultT, Failure], _P],
-            Deferred[_NextResultT],
+            Union[Failure, Deferred[_NextResultT]],
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[
+            Concatenate[Union[_SelfResultT, Failure], _P], Union[Failure, _NextResultT]
+        ],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_NextResultT]:
+        ...
+
+    @overload
+    def addBoth(
+        self,
+        callback: Callable[
+            Concatenate[Union[_SelfResultT, Failure], _P], Deferred[_NextResultT]
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
@@ -706,7 +728,7 @@ class Deferred(Awaitable[_SelfResultT]):
         self,
         callback: Callable[
             Concatenate[Union[_SelfResultT, Failure], _P],
-            Union[_NextResultT, Failure],
+            Union[Deferred[_NextResultT], _NextResultT],
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
@@ -722,9 +744,16 @@ class Deferred(Awaitable[_SelfResultT]):
     ) -> Deferred[_NextResultT]:
         ...
 
+    @overload
     def addBoth(
-        self, callback: Any, *args: Any, **kwargs: Any
-    ) -> "Deferred[_NextResultT]":
+        self,
+        callback: Callable[Concatenate[_T, _P], _T],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_SelfResultT]:
+        ...
+
+    def addBoth(self, callback: Any, *args: Any, **kwargs: Any) -> "Deferred[Any]":
         """
         Convenience method for adding a single callable as both a callback
         and an errback.
