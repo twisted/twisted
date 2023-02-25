@@ -39,7 +39,7 @@ class IRealm(Interface):
     """
 
     def requestAvatar(
-        avatarId: bytes, mind: object, *interfaces: _InterfaceItself
+        avatarId: bytes | Tuple[()], mind: object, *interfaces: _InterfaceItself
     ) -> Union[Deferred[_requestResult], _requestResult]:
         """
         Return avatar which provides one of the given interfaces.
