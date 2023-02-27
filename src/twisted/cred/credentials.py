@@ -98,7 +98,10 @@ class IUsernamePassword(ICredentials):
     @ivar password: The password associated with these credentials.
     """
 
-    def checkPassword(password):
+    username: bytes
+    password: bytes
+
+    def checkPassword(password: bytes) -> bool:
         """
         Validate these credentials against the correct password.
 
@@ -461,11 +464,11 @@ class UsernameHashedPassword:
 
 @implementer(IUsernamePassword)
 class UsernamePassword:
-    def __init__(self, username, password):
+    def __init__(self, username: bytes, password: bytes) -> None:
         self.username = username
         self.password = password
 
-    def checkPassword(self, password):
+    def checkPassword(self, password: bytes) -> bool:
         return self.password == password
 
 

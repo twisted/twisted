@@ -55,12 +55,12 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol, ServerFactory
 from twisted.internet.task import TaskStopped
+from twisted.internet.testing import NonStreamingProducer, StringTransport
 from twisted.protocols.loopback import collapsingPumpPolicy, loopbackAsync
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.test.iosim import connectedServerAndClient
-from twisted.test.proto_helpers import NonStreamingProducer, StringTransport
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 

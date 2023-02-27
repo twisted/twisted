@@ -9,8 +9,8 @@ import errno
 import sys
 from io import BytesIO
 
+from twisted.internet.testing import StringTransport
 from twisted.protocols.amp import AMP
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial._dist import (
     _WORKER_AMP_STDIN,
     _WORKER_AMP_STDOUT,

@@ -1,0 +1,1 @@
+`twist conch --auth=sshkey` can now authenticate users without a traceback again, thanks to twisted.conch.unix.UnixConchUser no longer being incorrectly instantiated with `bytes`.  In the course of this fix, some type hinting has also been applied to `twisted.cred.portal`.
