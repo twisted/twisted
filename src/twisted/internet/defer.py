@@ -1475,7 +1475,7 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
             d.cancel()
 
     # The Deferred that this function will return.  It will fire with the
-    # input and output of the action that completes first, or None if all of
+    # index and output of the action that completes first, or None if all of
     # the actions fail.  If it is cancelled, all of the actions will be
     # cancelled.
     final_result: Deferred[tuple[int, _T]] = Deferred(canceller=cancel)
@@ -1483,7 +1483,7 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
     # A callback for an individual action.
     def succeeded(this_output: _T, this_index: int) -> None:
         # If it is the first action to succeed then it becomes the "winner",
-        # its input/output become the externally visible result, and the rest
+        # its index/output become the externally visible result, and the rest
         # of the action Deferreds get cancelled.  If it is not the first
         # action to succeed (because some action did not support
         # cancellation), just ignore the result.  It is uncommon for this
