@@ -8,6 +8,8 @@ Support for results that aren't immediately available.
 Maintainer: Glyph Lefkowitz
 """
 
+from __future__ import annotations
+
 import traceback
 import warnings
 from abc import ABC, abstractmethod
@@ -1448,7 +1450,7 @@ class MultiFailure(Exception):
 
 def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
     """
-    Select the first available result from the sequence of Deferreds and
+     Select the first available result from the sequence of Deferreds and
     cancel the rest.
 
     @return: A cancellable L{Deferred} that fires with the index and output of
