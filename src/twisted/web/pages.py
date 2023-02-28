@@ -83,7 +83,7 @@ def errorPage(code: int, brief: str, detail: str) -> IResource:
     useful for rendering simple error pages.
 
     The resource dynamically handles all paths below it. Use
-    L{IResource.putChild()} override specific path.
+    L{IResource.putChild()} override a specific path.
 
     @param code: An integer HTTP status code which will be used for the
         response.
