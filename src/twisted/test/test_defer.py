@@ -5,6 +5,7 @@
 Test cases for L{twisted.internet.defer}.
 """
 
+from __future__ import annotations
 
 import functools
 import gc
