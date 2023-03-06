@@ -8,10 +8,9 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
-
-
 import random
 from itertools import chain
+from typing import Dict, List, Optional, Tuple
 
 from twisted.conch import error
 from twisted.conch.ssh import _kex, connection, transport, userauth
@@ -23,6 +22,8 @@ class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
     """
+
+    primes: Dict[int, List[Tuple[int, int]]]
 
     _log = Logger()
     protocol = transport.SSHServerTransport
@@ -93,7 +94,7 @@ class SSHFactory(protocol.Factory):
         """
         raise NotImplementedError("getPrivateKeys unimplemented")
 
-    def getPrimes(self):
+    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
         """
         Called when the factory is started to get Diffie-Hellman generators and
         primes to use.  Returns a dictionary mapping number of bits to lists
@@ -102,15 +103,26 @@ class SSHFactory(protocol.Factory):
         @rtype: L{dict}
         """
 
-    def getDHPrime(self, bits):
+    def getDHPrime(
+        self, bits: int, minimum: Optional[int] = None, maximum: Optional[int] = None
+    ) -> Tuple[int, int]:
         """
         Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
-        close to bits bits as possible.
+        close to ideal bits as possible.
 
-        @type bits: L{int}
-        @rtype:     L{tuple}
+        The C{minimum} and C{maximum} parameters are not used in the default implementation.
+
+        @param bits: The ideal size for a group key exchange algorithm or the actual size requested for a non-group key exchange algorithm.
+        @param minimum: The minimum accepted size for group key exchange algorithm. This is C{None} for non-group algorithms.
+        @param maximum: The maximum accepted size for group key exchange algorithm. This is C{None} for non-group algorithms.
+
+        @return: A random tuple of prime and associated generator.
         """
-        primesKeys = sorted(self.primes.keys(), key=lambda i: abs(i - bits))
+
+        def keyfunc(i: int) -> int:
+            return abs(i - bits)
+
+        primesKeys = sorted(self.primes.keys(), key=keyfunc)
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
 

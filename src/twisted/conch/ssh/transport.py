@@ -1645,7 +1645,11 @@ class SSHServerTransport(SSHTransportBase):
             return
         self.dhGexRequest = packet
         min, ideal, max = struct.unpack(">3L", packet)
-        self.g, self.p = self.factory.getDHPrime(ideal)
+        try:
+            self.g, self.p = self.factory.getDHPrime(ideal, min, max)
+        except TypeError:
+            # Fallback to backward compatibly factory.
+            self.g, self.p = self.factory.getDHPrime(ideal)
         self._startEphemeralDH()
         self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
 
