@@ -1663,7 +1663,7 @@ class IReadDescriptor(IFileDescriptor):
     This interface is generally used in conjunction with L{IReactorFDSet}.
     """
 
-    def doRead() -> Optional[Failure]:
+    def doRead() -> Union[None, Failure, Exception]:
         """
         Some data is available for reading on your descriptor.
 
@@ -1680,7 +1680,7 @@ class IWriteDescriptor(IFileDescriptor):
     This interface is generally used in conjunction with L{IReactorFDSet}.
     """
 
-    def doWrite() -> Optional[Failure]:
+    def doWrite() -> Union[None, Failure, Exception, int]:
         """
         Some data can be written to your descriptor.
 

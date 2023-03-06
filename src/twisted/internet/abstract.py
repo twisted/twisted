@@ -8,7 +8,7 @@ Support for generic select()able objects.
 
 
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union, cast
 
 from zope.interface import implementer
 
@@ -69,7 +69,7 @@ class _ConsumerMixin:
 
     """
 
-    producer = None
+    producer: Union[None, interfaces.IPushProducer, interfaces.IPullProducer] = None
     producerPaused = False
     streamingProducer = False
 
@@ -165,6 +165,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     valid to be passed to select(2).
     """
 
+    reactor: interfaces.IReactorFDSet
+
     connected = 0
     disconnected = 0
     disconnecting = 0
@@ -175,22 +177,22 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
+    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None) -> None:
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
             is given, the global reactor will be used.
         """
-        if not reactor:
+        if reactor is None:
             from twisted.internet import reactor as _reactor
-
-            reactor = _reactor  # type: ignore[assignment]
-        self.reactor = reactor
+            self.reactor = cast(interfaces.IReactorFDSet, _reactor)
+        else:
+            self.reactor = reactor
         # will be added to dataBuffer in doWrite
         self._tempDataBuffer: List[bytes] = []
         self._tempDataLen = 0
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure) -> None:
         """The connection was lost.
 
         This is called when the connection on a selectable object has been
@@ -208,7 +210,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> None:
+    def writeSomeData(self, data: bytes) -> Union[Exception, int]:
         """
         Write as much as possible of the given data, immediately.
 
@@ -222,7 +224,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             "%s does not implement writeSomeData" % reflect.qual(self.__class__)
         )
 
-    def doRead(self):
+    def doRead(self) -> Union[None, failure.Failure, Exception]:
         """
         Called when data is available for reading.
 
@@ -233,7 +235,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             "%s does not implement doRead" % reflect.qual(self.__class__)
         )
 
-    def doWrite(self):
+    def doWrite(self) -> Union[None, failure.Failure, Exception, int]:
         """
         Called when data can be written.
 
@@ -288,11 +290,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 # handler calls loseConnection(), which will want to check for
                 # this attribute.
                 self._writeDisconnected = True
-                result = self._closeWriteConnection()
-                return result
+                self._closeWriteConnection()
+                return None
         return None
 
-    def _postLoseConnection(self):
+    def _postLoseConnection(self) -> Exception:
         """Called after a loseConnection(), when all data has been written.
 
         Whatever this returns is then returned by doWrite.
@@ -300,11 +302,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # default implementation, telling reactor we're finished
         return main.CONNECTION_DONE
 
-    def _closeWriteConnection(self):
+    def _closeWriteConnection(self) -> None:
         # override in subclasses
         pass
 
-    def writeConnectionLost(self, reason):
+    def writeConnectionLost(self, reason: failure.Failure) -> None:
         # in current code should never be called
         self.connectionLost(reason)
 
@@ -320,7 +322,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # ITransport.getPeer
         raise NotImplementedError()
 
-    def _isSendBufferFull(self):
+    def _isSendBufferFull(self) -> bool:
         """
         Determine whether the user-space send buffer for this transport is full
         or not.
@@ -333,7 +335,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         return len(self.dataBuffer) + self._tempDataLen > self.bufferSize
 
-    def _maybePauseProducer(self):
+    def _maybePauseProducer(self) -> None:
         """
         Possibly pause a producer, if there is one and the send buffer is full.
         """
@@ -342,6 +344,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             # and our buffer is full,
             if self._isSendBufferFull():
                 # pause it.
+                assert interfaces.IPushProducer.providedBy(self.producer)
                 self.producerPaused = True
                 self.producer.pauseProducing()
 
@@ -388,7 +391,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._maybePauseProducer()
         self.startWriting()
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection.  It will
@@ -413,11 +416,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.startWriting()
                 self.disconnecting = 1
 
-    def loseWriteConnection(self):
+    def loseWriteConnection(self) -> None:
         self._writeDisconnecting = True
         self.startWriting()
 
-    def stopReading(self):
+    def stopReading(self) -> None:
         """Stop waiting for read availability.
 
         Call this to remove this selectable from being notified when it is
@@ -425,7 +428,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         self.reactor.removeReader(self)
 
-    def stopWriting(self):
+    def stopWriting(self) -> None:
         """Stop waiting for write availability.
 
         Call this to remove this selectable from being notified when it is ready
@@ -433,11 +436,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         self.reactor.removeWriter(self)
 
-    def startReading(self):
+    def startReading(self) -> None:
         """Start waiting for read availability."""
         self.reactor.addReader(self)
 
-    def startWriting(self):
+    def startWriting(self) -> None:
         """Start waiting for write availability.
 
         Call this to have this FileDescriptor be notified whenever it is ready for
@@ -450,10 +453,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     # first, the consumer stuff.  This requires no additional work, as
     # any object you can write to can be a consumer, really.
 
-    producer = None
-    bufferSize = 2 ** 2 ** 2 ** 2
+    bufferSize: int = 2 ** 2 ** 2 ** 2
 
-    def stopConsuming(self):
+    def stopConsuming(self) -> None:
         """Stop consuming data.
 
         This is called when a producer has lost its connection, to tell the
@@ -465,17 +467,17 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     # producer interface implementation
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if self.connected and not self.disconnecting:
             self.startReading()
 
-    def pauseProducing(self):
+    def pauseProducing(self) -> None:
         self.stopReading()
 
-    def stopProducing(self):
+    def stopProducing(self) -> None:
         self.loseConnection()
 
-    def fileno(self):
+    def fileno(self) -> int:
         """File Descriptor number for select().
 
         This method must be overridden or assigned in subclasses to

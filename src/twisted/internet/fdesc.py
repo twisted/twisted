@@ -9,6 +9,7 @@ Utility functions for dealing with POSIX file descriptors.
 
 import errno
 import os
+from typing import Callable, Optional
 
 try:
     import fcntl as _fcntl
@@ -62,7 +63,7 @@ else:
         fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
 
-def readFromFD(fd, callback):
+def readFromFD(fd: int, callback: Callable[[bytes], object]) -> Optional[Exception]:
     """
     Read from file descriptor, calling callback with resulting data.
 
@@ -89,12 +90,13 @@ def readFromFD(fd, callback):
         output = os.read(fd, 8192)
     except OSError as ioe:
         if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
-            return
+            return None
         else:
             return CONNECTION_LOST
     if not output:
         return CONNECTION_DONE
     callback(output)
+    return None
 
 
 def writeToFD(fd, data):

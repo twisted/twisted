@@ -14,7 +14,7 @@ import os
 import socket
 import struct
 import sys
-from typing import Callable, ClassVar, List, Optional
+from typing import Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -398,6 +398,7 @@ class _BaseBaseClient:
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
+    realAddress: tuple
 
     def _finishInit(self, whenDone, skt, error, reactor):
         """
@@ -697,6 +698,9 @@ class _BaseTCPClient:
     @type createInternetSocket: 0-argument callable returning
         C{socket._socketobject}.
     """
+
+    socket: socket.socket
+    realAddress: tuple
 
     _addressType = address.IPv4Address
 
