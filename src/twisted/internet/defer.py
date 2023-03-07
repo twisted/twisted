@@ -1249,13 +1249,22 @@ if TYPE_CHECKING:
     @overload
     def _DeferredList(
         deferredList: Iterable[Deferred[_DeferredResultT]],
-        fireOnOneCallback: bool = False,
-        fireOnOneErrback: bool = False,
+        fireOnOneCallback: Literal[False] = False,
+        *,
+        fireOnOneErrback: Literal[True],
         consumeErrors: bool = False,
         relayCancel: bool = False,
-    ) -> Union[
-        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
-    ]:
+    ) -> Deferred[Union[_DeferredListSingleResultT, _DeferredListResultListT]]:
+        ...
+
+    @overload
+    def _DeferredList(
+        deferredList: Iterable[Deferred[_DeferredResultT]],
+        fireOnOneCallback: Literal[True],
+        fireOnOneErrback: Literal[False] = False,
+        consumeErrors: bool = False,
+        relayCancel: bool = False,
+    ) -> Deferred[Union[_DeferredListSingleResultT, _DeferredListResultListT]]:
         ...
 
     def _DeferredList(
@@ -1264,9 +1273,7 @@ if TYPE_CHECKING:
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
         relayCancel: bool = False,
-    ) -> Union[
-        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
-    ]:
+    ) -> Deferred[Union[_DeferredListSingleResultT, _DeferredListResultListT]]:
         ...
 
     DeferredList = _DeferredList

@@ -534,6 +534,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList = DeferredList([deferredOne, deferredTwo], fireOnOneErrback=True)
         deferredList.cancel()
         result = self.successResultOf(deferredList)
+
+        # let mypy know that success == multiple return values
+        assert isinstance(result, list)
         self.assertTrue(result[0][0])
         self.assertEqual(result[0][1], "Callback Result")
         self.assertTrue(result[1][0])
