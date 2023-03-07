@@ -21,6 +21,7 @@ from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncIterator,
     Awaitable,
     Callable,
     Coroutine,
@@ -1490,34 +1491,122 @@ class MultiFailure(Exception):
         self.failures = failures
 
 
-def race(ds: Sequence[Deferred[_T]]) -> Deferred[Tuple[int, _T]]:
+class _Was(Enum):
+    caught = "caught"
+
+
+def _eager(
+    c: Callable[_P, Coroutine[Deferred[_T], object, _T]]
+) -> Callable[_P, Deferred[_T]]:
     """
-    Select the first available result from the sequence of Deferreds and
-    cancel the rest.
+    Decorate a coroutine to make it always immediately schedule itself as a
+    Deferred coroutine.
+    """
+
+    @wraps(c)
+    def r(*args: _P.args, **kw: _P.kwargs) -> Deferred[_T]:
+        return Deferred.fromCoroutine(c(*args, **kw))
+
+    return r
+
+
+@_eager
+async def race(ds: Sequence[Deferred[_T]]) -> Tuple[int, _T]:
+    """
+    Select the first available result from the sequence of Deferreds and cancel
+    the rest.
 
     @return: A cancellable L{Deferred} that fires with the index and output of
-        the element of C{ds} to have a success result first, or that fires
-        with L{MultiFailure} holding a list of their failures if they all
-        fail.
+        the element of C{ds} to have a success result first, or that fires with
+        L{MultiFailure} holding a list of their failures if they all fail.
+    """
+    failures = []
+
+    def catch(result: Failure) -> Literal[_Was.caught]:
+        failures.append(result)
+        return _Was.caught
+
+    annotated: List[Deferred[Union[Tuple[int, _T], Literal[_Was.caught]]]] = [
+        d.addCallbacks((lambda x, i=i: (i, x)), catch) for (i, d) in enumerate(ds)
+    ]
+    with FiringOrder(annotated) as order:
+        async for value in order:
+            if value is not _Was.caught:
+                return value
+    raise MultiFailure(failures)
+
+
+class FiringOrder(Generic[_T]):
+    """
+    Present an asynchronous iterator that can yield the results of a set of
+    Deferreds in the order in which they fire.
     """
 
-    def done(
-        calledBack: Union[Tuple[_T, int], List[Tuple[bool, Failure]]]
-    ) -> Tuple[int, _T]:
-        if isinstance(calledBack, tuple):
-            value, index = calledBack
-            return index, value
-        else:
-            raise MultiFailure([each for (false, each) in calledBack])
+    def __init__(self, deferreds: Sequence[Deferred[_T]] = ()) -> None:
+        """
+        Create a L{FiringOrder} with the given deferreds.
+        """
 
-    result: Deferred[Tuple[int, _T]] = DeferredList(
-        ds,
-        fireOnOneCallback=True,
-        fireOnOneErrback=False,
-        consumeErrors=True,
-        relayCancel=True,
-    ).addCallback(done)
-    return result
+        self._busy = False
+        self._deferreds: List[Deferred[_T]] = []
+        self._pending: Optional[Deferred[_T]] = None
+        self._resultQueue: List[_T] = []
+        for each in deferreds:
+            self.add(each)
+
+    def __enter__(self) -> FiringOrder[_T]:
+        """
+        Prepare for iteration.
+        """
+        return self
+
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: object) -> None:
+        """
+        Ensure that we are canceled at the end.
+        """
+        self.cancel()
+
+    def cancel(self) -> None:
+        """
+        Cancel all outstanding Deferreds.
+        """
+        for each in self._deferreds[:]:
+            each.addErrback(lambda ignore: None)
+            each.cancel()
+
+    def add(self, d: Deferred[_T]) -> None:
+        """
+        Add a new Deferred to the list of Deferreds to watch.
+        """
+        self._deferreds.append(d)
+
+        def resulted(value: _T) -> None:
+            self._deferreds.remove(d)
+            thisPending = self._pending
+            if thisPending is None:
+                self._resultQueue.append(value)
+            else:
+                self._pending = None
+                thisPending.callback(value)
+
+        d.addBoth(resulted)
+
+    async def __aiter__(self) -> AsyncIterator[_T]:
+        """
+        Yield the results in firing order.
+        """
+        if self._busy:
+            raise RuntimeError("one at a time, please")
+        self._busy = True
+        try:
+            for each in self._resultQueue:
+                yield each
+            self._resultQueue = []
+            while self._deferreds:
+                self._pending = Deferred(lambda d: self.cancel())
+                yield await self._pending
+        finally:
+            self._busy = False
 
 
 # Constants for use with DeferredList
