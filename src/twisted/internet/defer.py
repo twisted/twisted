@@ -1229,8 +1229,9 @@ if TYPE_CHECKING:
     def _DeferredList(
         deferredList: Iterable[Deferred[_DeferredResultT]],
         fireOnOneCallback: Literal[True],
-        fireOnOneErrback: bool = False,
+        fireOnOneErrback: Literal[True],
         consumeErrors: bool = False,
+        relayCancel: bool = False,
     ) -> Deferred[_DeferredListSingleResultT]:
         ...
 
@@ -1238,9 +1239,22 @@ if TYPE_CHECKING:
     def _DeferredList(
         deferredList: Iterable[Deferred[_DeferredResultT]],
         fireOnOneCallback: Literal[False] = False,
+        fireOnOneErrback: Literal[False] = False,
+        consumeErrors: bool = False,
+        relayCancel: bool = False,
+    ) -> Deferred[_DeferredListResultListT]:
+        ...
+
+    @overload
+    def _DeferredList(
+        deferredList: Iterable[Deferred[_DeferredResultT]],
+        fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[_DeferredListResultListT]:
+        relayCancel: bool = False,
+    ) -> Union[
+        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
+    ]:
         ...
 
     def _DeferredList(
@@ -1248,6 +1262,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
+        relayCancel: bool = False,
     ) -> Union[
         Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
     ]:
@@ -1288,34 +1303,45 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         fireOnOneCallback: bool = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
+        relayCancel: bool = False,
     ):
         """
         Initialize a DeferredList.
 
         @param deferredList: The deferreds to track.
+
         @param fireOnOneCallback: (keyword param) a flag indicating that this
             L{DeferredList} will fire when the first L{Deferred} in
             C{deferredList} fires with a non-failure result without waiting for
-            any of the other Deferreds.  When this flag is set, the DeferredList
-            will fire with a two-tuple: the first element is the result of the
-            Deferred which fired; the second element is the index in
-            C{deferredList} of that Deferred.
+            any of the other Deferreds.  When this flag is set, the
+            DeferredList will fire with a two-tuple: the first element is the
+            result of the Deferred which fired; the second element is the index
+            in C{deferredList} of that Deferred.
+
         @param fireOnOneErrback: (keyword param) a flag indicating that this
             L{DeferredList} will fire when the first L{Deferred} in
             C{deferredList} fires with a failure result without waiting for any
-            of the other Deferreds.  When this flag is set, if a Deferred in the
-            list errbacks, the DeferredList will errback with a L{FirstError}
-            failure wrapping the failure of that Deferred.
-        @param consumeErrors: (keyword param) a flag indicating that failures in
-            any of the included L{Deferred}s should not be propagated to
+            of the other Deferreds.  When this flag is set, if a Deferred in
+            the list errbacks, the DeferredList will errback with a
+            L{FirstError} failure wrapping the failure of that Deferred.
+
+        @param consumeErrors: (keyword param) a flag indicating that failures
+            in any of the included L{Deferred}s should not be propagated to
             errbacks added to the individual L{Deferred}s after this
             L{DeferredList} is constructed.  After constructing the
             L{DeferredList}, any errors in the individual L{Deferred}s will be
             converted to a callback result of L{None}.  This is useful to
             prevent spurious 'Unhandled error in Deferred' messages from being
             logged.  This does not prevent C{fireOnOneErrback} from working.
+
+        @param relayCancel: (keyword param) a flag indicating that calls to
+            C{.cancel()} on this L{DeferredList} should be relayed to any
+            L{Deferred}s that were passed in and have not been called yet, and
+            that any outstanding L{Deferred}s should also be cancelled when
+            this L{DeferredList} is completed.
         """
         self._deferredList = list(deferredList)
+        self._relayCancel = relayCancel
 
         # Note this contains optional result values as the DeferredList is
         # processing its results, even though the callback result will not,
@@ -1330,7 +1356,11 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         did not complete yet, or a C{(success, result)} pair if it did.
         """
 
-        Deferred.__init__(self)
+        if relayCancel:
+            Deferred.__init__(self, lambda selfAgain: self._cancelOutstanding())
+        else:
+            Deferred.__init__(self)
+
         if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback([])
 
@@ -1352,6 +1382,14 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
             )
             index = index + 1
 
+    def _cancelOutstanding(self) -> None:
+        """
+        Cancel all outstanding Deferreds.
+        """
+        for eachIndex, eachResult in enumerate(self.resultList):
+            if eachResult is None:
+                self._deferredList[eachIndex].cancel()
+
     def _cbDeferred(
         self, result: _DeferredResultT, index: int, succeeded: bool
     ) -> Optional[_DeferredResultT]:
@@ -1372,6 +1410,10 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                 # replaced by result values, so we cast it to
                 # _DeferredListResultListT to match the callback result type.
                 self.callback(cast(_DeferredListResultListT, self.resultList))
+
+            justCalled: bool = self.called
+            if justCalled and self._relayCancel:
+                self._cancelOutstanding()
 
         if succeeded == FAILURE and self.consumeErrors:
             return None
@@ -1448,7 +1490,7 @@ class MultiFailure(Exception):
         self.failures = failures
 
 
-def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
+def race(ds: Sequence[Deferred[_T]]) -> Deferred[Tuple[int, _T]]:
     """
     Select the first available result from the sequence of Deferreds and
     cancel the rest.
@@ -1458,73 +1500,24 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
         with L{MultiFailure} holding a list of their failures if they all
         fail.
     """
-    # Keep track of the Deferred for the action which completed first.  When
-    # it completes, all of the other Deferreds will get cancelled but this one
-    # shouldn't be.  Even though it "completed" it isn't really done - the
-    # caller will still be using it for something.  If we cancelled it,
-    # cancellation could propagate down to them.
-    winner: Optional[Deferred] = None
 
-    # The cancellation function for the Deferred this function returns.
-    def cancel(result: Deferred) -> None:
-        # If it is cancelled then we cancel all of the Deferreds for the
-        # individual actions because there is no longer the possibility of
-        # delivering any of their results anywhere.  We don't have to fire
-        # `result` because the Deferred will do that for us.
-        for d in to_cancel:
-            d.cancel()
+    def done(
+        calledBack: Union[Tuple[_T, int], List[Tuple[bool, Failure]]]
+    ) -> Tuple[int, _T]:
+        if isinstance(calledBack, tuple):
+            value, index = calledBack
+            return index, value
+        else:
+            raise MultiFailure([each for (false, each) in calledBack])
 
-    # The Deferred that this function will return.  It will fire with the
-    # index and output of the action that completes first, or None if all of
-    # the actions fail.  If it is cancelled, all of the actions will be
-    # cancelled.
-    final_result: Deferred[tuple[int, _T]] = Deferred(canceller=cancel)
-
-    # A callback for an individual action.
-    def succeeded(this_output: _T, this_index: int) -> None:
-        # If it is the first action to succeed then it becomes the "winner",
-        # its index/output become the externally visible result, and the rest
-        # of the action Deferreds get cancelled.  If it is not the first
-        # action to succeed (because some action did not support
-        # cancellation), just ignore the result.  It is uncommon for this
-        # callback to be entered twice.  The only way it can happen is if one
-        # of the input Deferreds has a cancellation function that fires the
-        # Deferred with a success result.
-        nonlocal winner
-        if winner is None:
-            # This is the first success.  Act on it.
-            winner = to_cancel[this_index]
-
-            # Cancel the rest.
-            for d in to_cancel:
-                if d is not winner:
-                    d.cancel()
-
-            # Fire our Deferred
-            final_result.callback((this_index, this_output))
-
-    # Keep track of how many actions have failed.  If they all fail we need to
-    # deliver failure notification on our externally visible result.
-    failure_state = []
-
-    def failed(failure: Failure, this_index: int) -> None:
-        failure_state.append((this_index, failure))
-        if len(failure_state) == len(to_cancel):
-            # Every operation failed.
-            failure_state.sort()
-            failures = [f for (ignored, f) in failure_state]
-            final_result.errback(MultiFailure(failures))
-
-    # Copy the sequence of Deferreds so we know it doesn't get mutated out
-    # from under us.
-    to_cancel = list(ds)
-    for index, d in enumerate(ds):
-        # Propagate the position of this action as well as the argument to f
-        # to the success callback so we can cancel the right Deferreds and
-        # propagate the result outwards.
-        d.addCallbacks(succeeded, failed, callbackArgs=(index,), errbackArgs=(index,))
-
-    return final_result
+    result: Deferred[Tuple[int, _T]] = DeferredList(
+        ds,
+        fireOnOneCallback=True,
+        fireOnOneErrback=False,
+        consumeErrors=True,
+        relayCancel=True,
+    ).addCallback(done)
+    return result
 
 
 # Constants for use with DeferredList
