@@ -1448,17 +1448,6 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                     log.failure("Exception raised from user supplied canceller")
 
 
-def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT], fireOnOneErrback: bool = False
-) -> List[_T]:
-    if __debug__:
-        for result in resultList:
-            assert result is not None
-            success, value = result
-            assert success
-    return [x[1] for x in resultList]
-
-
 def gatherResults(
     deferredList: Iterable[Deferred[_T]], consumeErrors: bool = False
 ) -> Deferred[List[_T]]:
@@ -1483,9 +1472,43 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
-    d = DeferredList(deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors)
-    d.addCallback(_parseDeferredListResult)
-    return cast(Deferred[List[_T]], d)
+
+    async def impl() -> List[_T]:
+        actualList = list(deferredList)
+        toWait: List[Deferred[_T]] = [Deferred() for _ in range(len(actualList))]
+        done: List[bool] = [False] * len(actualList)
+        failed = False
+
+        def saveOne(result: Union[_T, Failure], index: int) -> Union[_T, Failure, None]:
+            nonlocal failed
+            if isinstance(result, Failure):
+                try:
+                    firstUndone = done.index(False)
+                except ValueError:
+                    pass
+                else:
+                    nonlocal failed
+                    if not failed:
+                        failed = True
+                        toWait[firstUndone].errback(FirstError(result, index))
+                if consumeErrors:
+                    return None
+            else:
+                toWait[index].callback(result)
+            done[index] = True
+            return result
+
+        for index, each in enumerate(deferredList):
+            each.addBoth(saveOne, index=index)
+        return [(await eachAgain) for eachAgain in toWait]
+
+    def cancel(d: object = None) -> None:
+        for each in deferredList:
+            each.cancel()
+
+    proxy: Deferred[List[_T]] = Deferred(cancel)
+    Deferred.fromCoroutine(impl()).chainDeferred(proxy)
+    return proxy
 
 
 class MultiFailure(Exception):
