@@ -1448,6 +1448,19 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                     log.failure("Exception raised from user supplied canceller")
 
 
+def _fork(a: Deferred[_T]) -> Deferred[_T]:
+    b: Deferred[_T] = Deferred(lambda o: a.cancel())
+
+    def saveResult(result: _T) -> _T:
+        try:
+            b.callback(result)
+        finally:
+            return result
+
+    a.addBoth(saveResult)
+    return b
+
+
 def gatherResults(
     deferredList: Iterable[Deferred[_T]], consumeErrors: bool = False
 ) -> Deferred[List[_T]]:
@@ -1472,41 +1485,22 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
+    annotated = [
+        (_fork(each) if not consumeErrors else each).addBoth(lambda r, i=i: (i, r))
+        for i, each in enumerate(deferredList)
+    ]
+    # start with Nones but populate the full length of the list with _T
+    result: List[_T] = [None] * len(annotated)  # type:ignore[list-item]
+    order = FiringOrder(annotated)
 
     async def impl() -> List[_T]:
-        actualList = list(deferredList)
-        toWait: List[Deferred[_T]] = [Deferred() for _ in range(len(actualList))]
-        done: List[bool] = [False] * len(actualList)
-        failed = False
+        async for (i, value) in order:
+            if isinstance(value, Failure):
+                raise FirstError(value, i)
+            result[i] = value
+        return result
 
-        def saveOne(result: Union[_T, Failure], index: int) -> Union[_T, Failure, None]:
-            nonlocal failed
-            if isinstance(result, Failure):
-                try:
-                    firstUndone = done.index(False)
-                except ValueError:
-                    pass
-                else:
-                    nonlocal failed
-                    if not failed:
-                        failed = True
-                        toWait[firstUndone].errback(FirstError(result, index))
-                if consumeErrors:
-                    return None
-            else:
-                toWait[index].callback(result)
-            done[index] = True
-            return result
-
-        for index, each in enumerate(deferredList):
-            each.addBoth(saveOne, index=index)
-        return [(await eachAgain) for eachAgain in toWait]
-
-    def cancel(d: object = None) -> None:
-        for each in deferredList:
-            each.cancel()
-
-    proxy: Deferred[List[_T]] = Deferred(cancel)
+    proxy: Deferred[List[_T]] = Deferred(lambda x: order.cancel())
     Deferred.fromCoroutine(impl()).chainDeferred(proxy)
     return proxy
 
@@ -1630,11 +1624,12 @@ class FiringOrder(Generic[_T]):
         self._busy = True
         try:
             for each in self._resultQueue:
-                yield each
+                yield await succeed(each)
             self._resultQueue = []
             while self._deferreds:
                 self._pending = Deferred(lambda d: self.cancel())
-                yield await self._pending
+                toYield = await self._pending
+                yield toYield
         finally:
             self._busy = False
 
