@@ -14,6 +14,7 @@ import traceback
 import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
+from collections import deque
 from enum import Enum
 from functools import wraps
 from sys import exc_info
@@ -1485,13 +1486,16 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
-    annotated = [
-        (each if consumeErrors else _fork(each)).addBoth(lambda r, i=i: (i, r))
-        for i, each in enumerate(deferredList)
-    ]
+    order = FiringOrder(
+        [
+            each.addBoth(lambda r, i=i: (i, r))
+            for (i, each) in enumerate(
+                deferredList if consumeErrors else map(_fork, deferredList)
+            )
+        ]
+    )
     # start with Nones but populate the full length of the list with _T
-    result: List[_T] = [None] * len(annotated)  # type:ignore[list-item]
-    order = FiringOrder(annotated)
+    result: List[_T] = [None] * len(order)  # type:ignore[list-item]
 
     async def impl() -> List[_T]:
         async for (i, value) in order:
@@ -1574,9 +1578,15 @@ class FiringOrder(Generic[_T]):
         self._busy = False
         self._deferreds: List[Deferred[_T]] = []
         self._pending: Optional[Deferred[_T]] = None
-        self._resultQueue: List[_T] = []
+        self._resultQueue: deque[_T] = deque()
         for each in deferreds:
             self.add(each)
+
+    def __len__(self) -> int:
+        """
+        Return the number of results left to be yielded.
+        """
+        return len(self._deferreds) + len(self._resultQueue)
 
     def __enter__(self) -> FiringOrder[_T]:
         """
@@ -1623,9 +1633,9 @@ class FiringOrder(Generic[_T]):
             raise RuntimeError("one at a time, please")
         self._busy = True
         try:
-            for each in self._resultQueue:
+            while self._resultQueue:
+                each = self._resultQueue.popleft()
                 yield await succeed(each)
-            self._resultQueue = []
             while self._deferreds:
                 self._pending = Deferred(lambda d: self.cancel())
                 toYield = await self._pending
