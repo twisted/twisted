@@ -1486,7 +1486,7 @@ def gatherResults(
         from being logged.  This parameter is available since 11.1.0.
     """
     annotated = [
-        (_fork(each) if not consumeErrors else each).addBoth(lambda r, i=i: (i, r))
+        (each if consumeErrors else _fork(each)).addBoth(lambda r, i=i: (i, r))
         for i, each in enumerate(deferredList)
     ]
     # start with Nones but populate the full length of the list with _T
