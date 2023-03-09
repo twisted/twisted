@@ -1,6 +1,8 @@
 """
 Tests for L{twisted.trial.test.matchers}.
 """
+from zope.interface import Interface, implementer
+
 from hamcrest import anything, assert_that, contains_string, equal_to, not_
 from hamcrest.core.core.allof import AllOf
 from hamcrest.core.string_description import StringDescription
@@ -9,7 +11,7 @@ from hypothesis.strategies import just, sampled_from, text
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SynchronousTestCase
-from .matchers import fileContents
+from .matchers import fileContents, provides
 
 
 class FileContentsTests(SynchronousTestCase):
@@ -84,4 +86,40 @@ class FileContentsTests(SynchronousTestCase):
                 # matched against.
                 contains_string(repr(p.path)),
             ),
+        )
+
+
+class EmptyInterface(Interface):
+    ...
+
+
+class NonemptyInterface(Interface):
+    def required_method() -> None:
+        ...
+
+
+class ProvidesTests(SynchronousTestCase):
+    """
+    Tests for L{fileContents}.
+    """
+
+    def test_matches_an_implementer_instance(self) -> None:
+        @implementer(EmptyInterface)
+        class EmptyClass:
+            ...
+
+        assert_that(provides(EmptyInterface).matches(EmptyClass()), equal_to(True))
+
+    def test_rejects_a_blank_object(self) -> None:
+        assert_that(provides(NonemptyInterface).matches(object()), equal_to(False))
+
+    def test_rejects_if_implementer_decorator_missing(self) -> None:
+        class MissingDecorator:
+            """Implements NonemptyInterface, but is not marked as doing so."""
+
+            def required_method(self) -> None:
+                ...
+
+        assert_that(
+            provides(NonemptyInterface).matches(MissingDecorator()), equal_to(False)
         )

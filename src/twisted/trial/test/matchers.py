@@ -5,7 +5,11 @@
 Hamcrest matchers useful throughout the test suite.
 """
 
-from typing import IO, Callable, Optional, TypeVar
+from typing import IO, Callable, Optional, Type, TypeVar
+
+import zope.interface
+from zope.interface import Interface
+from zope.interface.verify import verifyObject
 
 from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.description import Description
@@ -93,3 +97,46 @@ def fileContents(m: Matcher[str], encoding: str = "utf-8") -> Matcher[IFilePath]
             return f.read().decode(encoding)
 
     return after(getContent, m)
+
+
+class _MatchInterfaceProvider(BaseMatcher[object]):
+    """
+    The implementation of L{provides}.
+
+    @ivar _interface_type: The zope.interface.Interface subclass to check that a given
+        object provides.
+
+    @ivar _verify_exception: The details of   This can later be used by
+        L{describe_mismatch}.
+    """
+
+    def __init__(self, interface_type: Type[Interface]):
+        self._interface_type = interface_type
+        self._verify_exception: Optional[zope.interface.Invalid] = None
+
+    def _matches(self, item: object) -> bool:
+        try:
+            verifyObject(self._interface_type, item, tentative=False)
+        except zope.interface.Invalid as e:
+            self._verify_exception = e
+            return False
+        return True
+
+    def describe_mismatch(self, item: object, description: Description) -> None:
+        if self._verify_exception is None:
+            super().describe_mismatch(item, description)
+        else:
+            description.append_description_of(item).append_text(
+                f" does not implement {fullyQualifiedName(self._interface_type)}: "
+                f" {self._verify_exception}"
+            )
+
+    def describe_to(self, description: Description) -> None:
+        description.append_text(f"provides {self._interface_type.__name__}")
+
+
+def provides(interface_type: Type[Interface]) -> Matcher[object]:
+    """
+    Create a matcher which matches objects that provide the given L{interface_type}.
+    """
+    return _MatchInterfaceProvider(interface_type)
