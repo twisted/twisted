@@ -20,7 +20,6 @@ from typing import (
     Generic,
     Iterable,
     List,
-    Literal,
     Tuple,
     TypeVar,
     Union,
@@ -28,6 +27,8 @@ from typing import (
 from zipfile import ZipFile
 
 from zope.interface import implementer
+
+from typing_extensions import Literal
 
 from twisted.python.compat import cmp, comparable
 from twisted.python.filepath import (
