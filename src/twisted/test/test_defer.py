@@ -49,7 +49,7 @@ from twisted.internet.defer import (
     DeferredLock,
     DeferredQueue,
     DeferredSemaphore,
-    MultiFailure,
+    FailureGroup,
     _DeferredListResultListT,
     _DeferredListSingleResultT,
     _DeferredResultT,
@@ -1745,7 +1745,7 @@ class RaceTests(unittest.SynchronousTestCase):
     def test_failure(self, beforeWinner: int, afterWinner: int) -> None:
         """
         When all of the L{Deferred}s passed to L{race} fire with failures,
-        the L{Deferred} return by L{race} fires with L{MultiFailure} wrapping
+        the L{Deferred} return by L{race} fires with L{FailureGroup} wrapping
         all of their failures.
 
         @param beforeWinner: A randomly selected number of Deferreds to
@@ -1761,7 +1761,7 @@ class RaceTests(unittest.SynchronousTestCase):
         for d in ds:
             d.errback(failure)
 
-        actualFailure = self.failureResultOf(raceResult, MultiFailure)
+        actualFailure = self.failureResultOf(raceResult, FailureGroup)
         assert_that(
             actualFailure.value.failures,
             equal_to([failure] * len(ds)),
@@ -1824,7 +1824,7 @@ class RaceTests(unittest.SynchronousTestCase):
         raceResult.cancel()
 
         assert_that(cancelledState, equal_to([1] * numDeferreds))
-        self.failureResultOf(raceResult, MultiFailure)
+        self.failureResultOf(raceResult, FailureGroup)
 
 
 class FirstErrorTests(unittest.SynchronousTestCase):

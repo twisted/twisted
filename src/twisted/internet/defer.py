@@ -1438,13 +1438,13 @@ def gatherResults(
     return cast(Deferred[List[_T]], d)
 
 
-class MultiFailure(Exception):
+class FailureGroup(Exception):
     """
     More than one failure occurred.
     """
 
     def __init__(self, failures: Sequence[Failure]) -> None:
-        super(MultiFailure, self).__init__()
+        super(FailureGroup, self).__init__()
         self.failures = failures
 
 
@@ -1455,7 +1455,7 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
 
     @return: A cancellable L{Deferred} that fires with the index and output of
         the element of C{ds} to have a success result first, or that fires
-        with L{MultiFailure} holding a list of their failures if they all
+        with L{FailureGroup} holding a list of their failures if they all
         fail.
     """
     # Keep track of the Deferred for the action which completed first.  When
@@ -1475,8 +1475,8 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
             d.cancel()
 
     # The Deferred that this function will return.  It will fire with the
-    # index and output of the action that completes first, or None if all of
-    # the actions fail.  If it is cancelled, all of the actions will be
+    # index and output of the action that completes first, or errback if all
+    # of the actions fail.  If it is cancelled, all of the actions will be
     # cancelled.
     final_result: Deferred[tuple[int, _T]] = Deferred(canceller=cancel)
 
@@ -1513,7 +1513,7 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
             # Every operation failed.
             failure_state.sort()
             failures = [f for (ignored, f) in failure_state]
-            final_result.errback(MultiFailure(failures))
+            final_result.errback(FailureGroup(failures))
 
     # Copy the sequence of Deferreds so we know it doesn't get mutated out
     # from under us.
