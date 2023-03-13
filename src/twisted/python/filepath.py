@@ -48,6 +48,7 @@ from typing import (
     Generic,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -143,7 +144,7 @@ class IFilePath(Interface):
             direct child of this file path.
         """
 
-    def open(mode="r"):
+    def open(mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
         """
         Opens this file path with the given mode.
 
@@ -337,7 +338,7 @@ class AbstractFilePath(Generic[AnyStr]):
         """
         raise NotImplementedError()
 
-    def open(self) -> IO[bytes]:
+    def open(self, mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
         """
         Subclasses must implement this.
         """
@@ -355,7 +356,7 @@ class AbstractFilePath(Generic[AnyStr]):
         """
         raise NotImplementedError()
 
-    def parent(self: _Self) -> _Self:
+    def parent(self) -> AbstractFilePath[AnyStr]:
         """
         Subclasses must implement this.
         """
@@ -383,7 +384,7 @@ class AbstractFilePath(Generic[AnyStr]):
         with self.open() as fp:
             return fp.read()
 
-    def parents(self: _Self) -> Iterable[_Self]:
+    def parents(self) -> Iterable[AbstractFilePath[AnyStr]]:
         """
         Retrieve an iterator of all the ancestors of this path.
 
@@ -542,12 +543,12 @@ class AbstractFilePath(Generic[AnyStr]):
         # work on win32 and for zipfiles; later I will deterimine if the
         # obvious fast implemenation does the right thing too
         f = self
-        p = f.parent()
+        p: _Self = f.parent()  # type:ignore[assignment]
         segments: List[AnyStr] = []
         while f != ancestor and p != f:
             segments[0:0] = [f.basename()]
             f = p
-            p = p.parent()
+            p = p.parent()  # type:ignore[assignment]
         if f == ancestor and segments:
             return segments
         raise ValueError(f"{ancestor!r} not parent of {self!r}")
@@ -783,6 +784,9 @@ class FilePath(AbstractFilePath[AnyStr]):
             ...
 
         def descendant(self, segments: Sequence[OtherAnyStr]) -> FilePath[OtherAnyStr]:
+            ...
+
+        def parents(self) -> Iterable[FilePath[AnyStr]]:
             ...
 
     def clonePath(
@@ -1033,7 +1037,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         os.symlink(self.path, linkFilePath.path)
 
-    def open(self, mode: str = "r") -> IO[bytes]:
+    def open(self, mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
         """
         Open this file using C{mode} or for writing if C{alwaysCreate} is
         C{True}.
@@ -1052,8 +1056,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             )
             return self.create()
         # Make sure we open with exactly one "b" in the mode.
-        mode = mode.replace("b", "")
-        return open(self.path, mode + "b")
+        return open(self.path, mode.replace("b", "") + "b")
 
     # stat methods below
 
