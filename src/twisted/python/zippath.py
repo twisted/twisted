@@ -307,6 +307,11 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
                 self.childmap[parent][child] = 1
             parent = _coerceToFilesystemEncoding(archivePathname, "")
 
+    def __cmp__(self, other: object) -> int:
+        if not isinstance(other, ZipArchive):
+            return NotImplemented
+        return cmp(self.path, other.path)
+
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, AnyStr]:
         """
         Create a ZipPath pointing at a path within the archive.

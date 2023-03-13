@@ -5,6 +5,7 @@
 Test cases covering L{twisted.python.filepath}.
 """
 
+from __future__ import annotations
 
 import errno
 import os
@@ -12,11 +13,13 @@ import pickle
 import stat
 import time
 from pprint import pformat
+from typing import IO, AnyStr, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
 
 from twisted.python import filepath
+from twisted.python.filepath import FileMode, OtherAnyStr
 from twisted.python.runtime import platform
 from twisted.python.win32 import ERROR_DIRECTORY
 from twisted.trial.unittest import SynchronousTestCase as TestCase
@@ -29,11 +32,11 @@ class BytesTestCase(TestCase):
     Override default method implementations to support byte paths.
     """
 
-    def mktemp(self):
+    def mktemp(self) -> bytes:
         """
         Return a temporary path, encoded as bytes.
         """
-        return TestCase.mktemp(self).encode("utf-8")
+        return TestCase.mktemp(self).encode("utf-8")  # type:ignore[no-any-return]
 
 
 class AbstractFilePathTests(BytesTestCase):
@@ -55,7 +58,7 @@ class AbstractFilePathTests(BytesTestCase):
     def subfile(self, *dirname):
         return open(self._mkpath(*dirname), "wb")
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.now = time.time()
         cmn = self.cmn = os.path.abspath(self.mktemp())
         self.all = [cmn]
@@ -72,13 +75,13 @@ class AbstractFilePathTests(BytesTestCase):
         self.path = filepath.FilePath(cmn)
         self.root = filepath.FilePath(b"/")
 
-    def test_verifyObject(self):
+    def test_verifyObject(self) -> None:
         """
         Instances of the path type being tested provide L{IFilePath}.
         """
         self.assertTrue(verifyObject(filepath.IFilePath, self.path))
 
-    def test_segmentsFromPositive(self):
+    def test_segmentsFromPositive(self) -> None:
         """
         Verify that the segments between two paths are correctly identified.
         """
@@ -87,7 +90,7 @@ class AbstractFilePathTests(BytesTestCase):
             [b"a", b"b", b"c"],
         )
 
-    def test_segmentsFromNegative(self):
+    def test_segmentsFromNegative(self) -> None:
         """
         Verify that segmentsFrom notices when the ancestor isn't an ancestor.
         """
@@ -97,7 +100,7 @@ class AbstractFilePathTests(BytesTestCase):
             self.path.child(b"d").child(b"c").child(b"e"),
         )
 
-    def test_walk(self):
+    def test_walk(self) -> None:
         """
         Verify that walking the path gives the same result as the known file
         hierarchy.
@@ -105,7 +108,7 @@ class AbstractFilePathTests(BytesTestCase):
         x = [foo.path for foo in self.path.walk()]
         self.assertEqual(set(x), set(self.all))
 
-    def test_parents(self):
+    def test_parents(self) -> None:
         """
         L{FilePath.parents()} should return an iterator of every ancestor of
         the L{FilePath} in question.
@@ -121,7 +124,7 @@ class AbstractFilePathTests(BytesTestCase):
             thispath = os.path.dirname(thispath)
         self.assertEqual([x.path for x in pathobj.parents()], L)
 
-    def test_validSubdir(self):
+    def test_validSubdir(self) -> None:
         """
         Verify that a valid subdirectory will show up as a directory, but not as a
         file, not as a symlink, and be listable.
@@ -133,14 +136,14 @@ class AbstractFilePathTests(BytesTestCase):
         self.assertFalse(sub1.islink(), "It's a directory.")
         self.assertEqual(sub1.listdir(), [b"file2"])
 
-    def test_invalidSubdir(self):
+    def test_invalidSubdir(self) -> None:
         """
         Verify that a subdirectory that doesn't exist is reported as such.
         """
         sub2 = self.path.child(b"sub2")
         self.assertFalse(sub2.exists(), "This directory does not exist.")
 
-    def test_validFiles(self):
+    def test_validFiles(self) -> None:
         """
         Make sure that we can read existent non-empty files.
         """
@@ -151,7 +154,7 @@ class AbstractFilePathTests(BytesTestCase):
         with f2.open() as f:
             self.assertEqual(f.read(), self.f2content)
 
-    def test_multipleChildSegments(self):
+    def test_multipleChildSegments(self) -> None:
         """
         C{fp.descendant([a, b, c])} returns the same L{FilePath} as is returned
         by C{fp.child(a).child(b).child(c)}.
@@ -160,7 +163,7 @@ class AbstractFilePathTests(BytesTestCase):
         single = self.path.child(b"a").child(b"b").child(b"c")
         self.assertEqual(multiple, single)
 
-    def test_dictionaryKeys(self):
+    def test_dictionaryKeys(self) -> None:
         """
         Verify that path instances are usable as dictionary keys.
         """
@@ -178,17 +181,17 @@ class AbstractFilePathTests(BytesTestCase):
         self.assertEqual(dictoid[f2], 5)
         self.assertEqual(len(dictoid), 2)
 
-    def test_dictionaryKeyWithString(self):
+    def test_dictionaryKeyWithString(self) -> None:
         """
         Verify that path instances are usable as dictionary keys which do not clash
         with their string counterparts.
         """
         f1 = self.path.child(b"file1")
-        dictoid = {f1: "hello"}
+        dictoid: Dict[Union[filepath.FilePath[bytes], bytes], str] = {f1: "hello"}
         dictoid[f1.path] = "goodbye"
         self.assertEqual(len(dictoid), 2)
 
-    def test_childrenNonexistentError(self):
+    def test_childrenNonexistentError(self) -> None:
         """
         Verify that children raises the appropriate exception for non-existent
         directories.
@@ -197,14 +200,14 @@ class AbstractFilePathTests(BytesTestCase):
             filepath.UnlistableError, self.path.child(b"not real").children
         )
 
-    def test_childrenNotDirectoryError(self):
+    def test_childrenNotDirectoryError(self) -> None:
         """
         Verify that listdir raises the appropriate exception for attempting to list
         a file rather than a directory.
         """
         self.assertRaises(filepath.UnlistableError, self.path.child(b"file1").children)
 
-    def test_newTimesAreFloats(self):
+    def test_newTimesAreFloats(self) -> None:
         """
         Verify that all times returned from the various new time functions are ints
         (and hopefully therefore 'high precision').
@@ -214,7 +217,7 @@ class AbstractFilePathTests(BytesTestCase):
             self.assertEqual(type(p.getModificationTime()), float)
             self.assertEqual(type(p.getStatusChangeTime()), float)
 
-    def test_oldTimesAreInts(self):
+    def test_oldTimesAreInts(self) -> None:
         """
         Verify that all times returned from the various time functions are
         integers, for compatibility.
@@ -225,12 +228,12 @@ class AbstractFilePathTests(BytesTestCase):
             self.assertEqual(type(p.getctime()), int)
 
 
-class FakeWindowsPath(filepath.FilePath):
+class FakeWindowsPath(filepath.FilePath[AnyStr]):
     """
     A test version of FilePath which overrides listdir to raise L{WindowsError}.
     """
 
-    def listdir(self):
+    def listdir(self) -> List[AnyStr]:
         """
         @raise WindowsError: always.
         """
@@ -266,7 +269,7 @@ class ListingCompatibilityTests(BytesTestCase):
         self.assertRaises(filepath.UnlistableError, fwp.children)
         self.assertRaises(WindowsError, fwp.children)
 
-    def test_alwaysCatchOSError(self):
+    def test_alwaysCatchOSError(self) -> None:
         """
         Verify that in the normal case where a directory does not exist, we will
         get an OSError.
@@ -274,7 +277,7 @@ class ListingCompatibilityTests(BytesTestCase):
         fp = filepath.FilePath(self.mktemp())
         self.assertRaises(OSError, fp.children)
 
-    def test_keepOriginalAttributes(self):
+    def test_keepOriginalAttributes(self) -> None:
         """
         Verify that the Unlistable exception raised will preserve the attributes of
         the previously-raised exception.
@@ -312,20 +315,20 @@ class ExplodingFile:
         """
         raise OSError()
 
-    def close(self):
+    def close(self) -> None:
         """
         Mark the file as having been closed.
         """
         self.closed = True
 
-    def __enter__(self):
+    def __enter__(self) -> ExplodingFile:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
         self.close()
 
 
-class TrackingFilePath(filepath.FilePath):
+class TrackingFilePath(filepath.FilePath[AnyStr]):
     """
     A subclass of L{filepath.FilePath} which maintains a list of all other paths
     created by clonePath.
@@ -343,39 +346,52 @@ class TrackingFilePath(filepath.FilePath):
     @type openedFiles: C{list} of C{file}
     """
 
-    def __init__(self, path, alwaysCreate=False, trackingList=None):
+    def __init__(
+        self,
+        path: AnyStr,
+        alwaysCreate: bool = False,
+        trackingList: Optional[
+            List[Union[TrackingFilePath[str], TrackingFilePath[bytes]]]
+        ] = None,
+    ) -> None:
         filepath.FilePath.__init__(self, path, alwaysCreate)
         if trackingList is None:
             trackingList = []
-        self.trackingList = trackingList
-        self.openedFiles = []
+        self.trackingList: List[
+            Union[TrackingFilePath[str], TrackingFilePath[bytes]]
+        ] = trackingList
+        self.openedFiles: List[IO] = []
 
-    def open(self, *a, **k):
+    def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
         Override 'open' to track all files opened by this path.
         """
-        f = filepath.FilePath.open(self, *a, **k)
+        f = filepath.FilePath.open(self, mode)
         self.openedFiles.append(f)
         return f
 
-    def openedPaths(self):
+    def openedPaths(
+        self,
+    ) -> List[Union[TrackingFilePath[str], TrackingFilePath[bytes]]]:
         """
         Return a list of all L{TrackingFilePath}s associated with this
         L{TrackingFilePath} that have had their C{open()} method called.
         """
         return [path for path in self.trackingList if path.openedFiles]
 
-    def clonePath(self, name):
+    def clonePath(
+        self, path: OtherAnyStr, alwaysCreate: bool = False
+    ) -> TrackingFilePath[OtherAnyStr]:
         """
         Override L{filepath.FilePath.clonePath} to give the new path a reference
         to the same tracking list.
         """
-        clone = TrackingFilePath(name, trackingList=self.trackingList)
+        clone = TrackingFilePath(path, trackingList=self.trackingList)
         self.trackingList.append(clone)
         return clone
 
 
-class ExplodingFilePath(filepath.FilePath):
+class ExplodingFilePath(filepath.FilePath[AnyStr]):
     """
     A specialized L{FilePath} which always returns an instance of
     L{ExplodingFile} from its C{open} method.
@@ -384,7 +400,15 @@ class ExplodingFilePath(filepath.FilePath):
         C{open} method.
     """
 
-    def __init__(self, pathName, originalExploder=None):
+    fp: ExplodingFile
+
+    def __init__(
+        self,
+        pathName: AnyStr,
+        originalExploder: Optional[
+            Union[ExplodingFilePath[str], ExplodingFilePath[bytes]]
+        ] = None,
+    ) -> None:
         """
         Initialize an L{ExplodingFilePath} with a name and a reference to the
 
@@ -400,7 +424,7 @@ class ExplodingFilePath(filepath.FilePath):
             originalExploder = self
         self._originalExploder = originalExploder
 
-    def open(self, mode=None):
+    def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
         Create, save, and return a new C{ExplodingFile}.
 
@@ -409,10 +433,15 @@ class ExplodingFilePath(filepath.FilePath):
         @return: A new C{ExplodingFile}.
         """
         f = self._originalExploder.fp = ExplodingFile()
-        return f
+        return f  # type:ignore[return-value]
 
-    def clonePath(self, name):
+    def clonePath(
+        self, name: OtherAnyStr, alwaysCreate: bool = False
+    ) -> filepath.FilePath[OtherAnyStr]:
         return ExplodingFilePath(name, self._originalExploder)
+
+
+T = TypeVar("T")
 
 
 class PermissionsTests(BytesTestCase):
@@ -420,7 +449,9 @@ class PermissionsTests(BytesTestCase):
     Test Permissions and RWX classes
     """
 
-    def assertNotUnequal(self, first, second, msg=None):
+    def assertNotUnequal(
+        self, first: T, second: object, msg: Optional[str] = None
+    ) -> T:
         """
         Tests that C{first} != C{second} is false.  This method tests the
         __ne__ method, as opposed to L{assertEqual} (C{first} == C{second}),
@@ -439,7 +470,7 @@ class PermissionsTests(BytesTestCase):
             )
         return first
 
-    def test_rwxFromBools(self):
+    def test_rwxFromBools(self) -> None:
         """
         L{RWX}'s constructor takes a set of booleans
         """
@@ -453,7 +484,7 @@ class PermissionsTests(BytesTestCase):
         rwx = filepath.RWX(True, True, True)
         self.assertTrue(rwx.read and rwx.write and rwx.execute)
 
-    def test_rwxEqNe(self):
+    def test_rwxEqNe(self) -> None:
         """
         L{RWX}'s created with the same booleans are equivalent.  If booleans
         are different, they are not equal.
@@ -468,14 +499,14 @@ class PermissionsTests(BytesTestCase):
         )
         self.assertNotEqual(3, filepath.RWX(True, True, True))
 
-    def test_rwxShorthand(self):
+    def test_rwxShorthand(self) -> None:
         """
         L{RWX}'s shorthand string should be 'rwx' if read, write, and execute
         permission bits are true.  If any of those permissions bits are false,
         the character is replaced by a '-'.
         """
 
-        def getChar(val, letter):
+        def getChar(val: bool, letter: str) -> str:
             if val:
                 return letter
             return "-"
@@ -490,15 +521,16 @@ class PermissionsTests(BytesTestCase):
                     )
         self.assertEqual(filepath.RWX(True, False, True).shorthand(), "r-x")
 
-    def test_permissionsFromStat(self):
+    def test_permissionsFromStat(self) -> None:
         """
         L{Permissions}'s constructor takes a valid permissions bitmask and
         parsaes it to produce the correct set of boolean permissions.
         """
 
-        def _rwxFromStat(statModeInt, who):
-            def getPermissionBit(what, who):
-                return (statModeInt & getattr(stat, f"S_I{what}{who}")) > 0
+        def _rwxFromStat(statModeInt: int, who: str) -> filepath.RWX:
+            def getPermissionBit(what: str, who: str) -> bool:
+                constant: int = getattr(stat, f"S_I{what}{who}")
+                return (statModeInt & constant) > 0
 
             return filepath.RWX(
                 *(getPermissionBit(what, who) for what in ("R", "W", "X"))
@@ -530,7 +562,7 @@ class PermissionsTests(BytesTestCase):
             for what in ("read", "write", "execute"):
                 self.assertTrue(getattr(getattr(perm, who), what))
 
-    def test_permissionsEq(self):
+    def test_permissionsEq(self) -> None:
         """
         Two L{Permissions}'s that are created with the same bitmask
         are equivalent
@@ -540,7 +572,7 @@ class PermissionsTests(BytesTestCase):
         self.assertNotEqual(filepath.Permissions(0o777), filepath.Permissions(0o700))
         self.assertNotEqual(3, filepath.Permissions(0o777))
 
-    def test_permissionsShorthand(self):
+    def test_permissionsShorthand(self) -> None:
         """
         L{Permissions}'s shorthand string is the RWX shorthand string for its
         user permission bits, group permission bits, and other permission bits
@@ -567,7 +599,7 @@ class FilePathTests(AbstractFilePathTests):
     class are only run against L{twisted.python.filepath}.
     """
 
-    def test_chmod(self):
+    def test_chmod(self) -> None:
         """
         L{FilePath.chmod} modifies the permissions of
         the passed file as expected (using C{os.stat} to check). We use some
@@ -579,7 +611,7 @@ class FilePathTests(AbstractFilePathTests):
                 stat.S_IMODE(os.stat(self.path.child(b"sub1").path).st_mode), mode
             )
 
-    def createLinks(self):
+    def createLinks(self) -> None:
         """
         Create several symbolic links to files and directories.
         """
@@ -591,7 +623,7 @@ class FilePathTests(AbstractFilePathTests):
         )
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_realpathSymlink(self):
+    def test_realpathSymlink(self) -> None:
         """
         L{FilePath.realpath} returns the path of the ultimate target of a
         symlink.
@@ -606,7 +638,7 @@ class FilePathTests(AbstractFilePathTests):
         )
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_realpathCyclicalSymlink(self):
+    def test_realpathCyclicalSymlink(self) -> None:
         """
         L{FilePath.realpath} raises L{filepath.LinkError} if the path is a
         symbolic link which is part of a cycle.
@@ -615,7 +647,7 @@ class FilePathTests(AbstractFilePathTests):
         os.symlink(self.path.child(b"link2").path, self.path.child(b"link1").path)
         self.assertRaises(filepath.LinkError, self.path.child(b"link2").realpath)
 
-    def test_realpathNoSymlink(self):
+    def test_realpathNoSymlink(self) -> None:
         """
         L{FilePath.realpath} returns the path itself if the path is not a
         symbolic link.
@@ -623,7 +655,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(self.path.child(b"sub1").realpath(), self.path.child(b"sub1"))
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_walkCyclicalSymlink(self):
+    def test_walkCyclicalSymlink(self) -> None:
         """
         Verify that walking a path with a cyclical symlink raises an error
         """
@@ -633,13 +665,13 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").child(b"sub1.loopylink").path,
         )
 
-        def iterateOverPath():
+        def iterateOverPath() -> List[bytes]:
             return [foo.path for foo in self.path.walk()]
 
         self.assertRaises(filepath.LinkError, iterateOverPath)
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_walkObeysDescendWithCyclicalSymlinks(self):
+    def test_walkObeysDescendWithCyclicalSymlinks(self) -> None:
         """
         Verify that, after making a path with cyclical symlinks, when the
         supplied C{descend} predicate returns C{False}, the target is not
@@ -652,29 +684,29 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").child(b"sub1.loopylink").path,
         )
 
-        def noSymLinks(path):
+        def noSymLinks(path: filepath.FilePath[bytes]) -> bool:
             return not path.islink()
 
-        def iterateOverPath():
+        def iterateOverPath() -> List[bytes]:
             return [foo.path for foo in self.path.walk(descend=noSymLinks)]
 
         self.assertTrue(iterateOverPath())
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_walkObeysDescend(self):
+    def test_walkObeysDescend(self) -> None:
         """
         Verify that when the supplied C{descend} predicate returns C{False},
         the target is not traversed.
         """
         self.createLinks()
 
-        def noSymLinks(path):
+        def noSymLinks(path: filepath.FilePath[bytes]) -> bool:
             return not path.islink()
 
         x = [foo.path for foo in self.path.walk(descend=noSymLinks)]
         self.assertEqual(set(x), set(self.all))
 
-    def test_getAndSet(self):
+    def test_getAndSet(self) -> None:
         content = b"newcontent"
         self.path.child(b"new").setContent(content)
         newcontent = self.path.child(b"new").getContent()
@@ -684,17 +716,17 @@ class FilePathTests(AbstractFilePathTests):
         newcontent = self.path.child(b"new").getContent()
         self.assertEqual(content, newcontent)
 
-    def test_getContentFileClosing(self):
+    def test_getContentFileClosing(self) -> None:
         """
         If reading from the underlying file raises an exception,
         L{FilePath.getContent} raises that exception after closing the file.
         """
-        fp = ExplodingFilePath(b"")
+        fp = ExplodingFilePath("")
         self.assertRaises(IOError, fp.getContent)
         self.assertTrue(fp.fp.closed)
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_symbolicLink(self):
+    def test_symbolicLink(self) -> None:
         """
         Verify the behavior of the C{isLink} method against links and
         non-links. Also check that the symbolic link shares the directory
@@ -709,7 +741,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(s3.isdir())
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_linkTo(self):
+    def test_linkTo(self) -> None:
         """
         Verify that symlink creates a valid symlink that is both a link and a
         file if its target is a file, or a directory if its target is a
@@ -729,7 +761,7 @@ class FilePathTests(AbstractFilePathTests):
             self.assertEqual(target.isfile(), link.isfile())
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_linkToErrors(self):
+    def test_linkToErrors(self) -> None:
         """
         Verify C{linkTo} fails in the following case:
             - the target is in a directory that doesn't exist
@@ -746,23 +778,27 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").child(b"file2"),
         )
 
-    def testMultiExt(self):
+    def testMultiExt(self) -> None:
         f3 = self.path.child(b"sub3").child(b"file3")
         exts = b".foo", b".bar", b"ext1", b"ext2", b"ext3"
         self.assertFalse(f3.siblingExtensionSearch(*exts))
         f3e = f3.siblingExtension(b".foo")
         f3e.touch()
-        self.assertFalse(not f3.siblingExtensionSearch(*exts).exists())
-        self.assertFalse(not f3.siblingExtensionSearch(b"*").exists())
+        found = f3.siblingExtensionSearch(*exts)
+        assert found is not None
+        self.assertFalse(not found.exists())
+        globbed = f3.siblingExtensionSearch(b"*")
+        assert globbed is not None
+        self.assertFalse(not globbed.exists())
         f3e.remove()
         self.assertFalse(f3.siblingExtensionSearch(*exts))
 
-    def testPreauthChild(self):
+    def testPreauthChild(self) -> None:
         fp = filepath.FilePath(b".")
         fp.preauthChild(b"foo/bar")
         self.assertRaises(filepath.InsecurePath, fp.child, "/mon\u20acy")
 
-    def testStatCache(self):
+    def testStatCache(self) -> None:
         p = self.path.child(b"stattest")
         p.touch()
         self.assertEqual(p.getsize(), 0)
@@ -781,23 +817,23 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(p.isdir())
         self.assertFalse(p.isfile())
 
-    def testPersist(self):
+    def testPersist(self) -> None:
         newpath = pickle.loads(pickle.dumps(self.path))
         self.assertEqual(self.path.__class__, newpath.__class__)
         self.assertEqual(self.path.path, newpath.path)
 
-    def testInsecureUNIX(self):
+    def testInsecureUNIX(self) -> None:
         self.assertRaises(filepath.InsecurePath, self.path.child, b"..")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"/etc")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"../..")
 
     @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
-    def testInsecureWin32(self):
+    def testInsecureWin32(self) -> None:
         self.assertRaises(filepath.InsecurePath, self.path.child, b"..\\..")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"C:randomfile")
 
     @skipIf(platform.getType() != "win32", "Test will run only on Windows.")
-    def testInsecureWin32Whacky(self):
+    def testInsecureWin32Whacky(self) -> None:
         """
         Windows has 'special' filenames like NUL and CON and COM1 and LPR
         and PRN and ... god knows what else.  They can be located anywhere in
@@ -808,7 +844,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(filepath.InsecurePath, self.path.child, b"C:CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, r"C:\CON")
 
-    def testComparison(self):
+    def testComparison(self) -> None:
         self.assertEqual(filepath.FilePath(b"a"), filepath.FilePath(b"a"))
         self.assertTrue(filepath.FilePath(b"z") > filepath.FilePath(b"a"))
         self.assertTrue(filepath.FilePath(b"z") >= filepath.FilePath(b"a"))
@@ -821,7 +857,7 @@ class FilePathTests(AbstractFilePathTests):
 
         self.assertFalse(filepath.FilePath(b"z") != filepath.FilePath(b"z"))
 
-    def test_descendantOnly(self):
+    def test_descendantOnly(self) -> None:
         """
         If C{".."} is in the sequence passed to L{FilePath.descendant},
         L{InsecurePath} is raised.
@@ -830,7 +866,7 @@ class FilePathTests(AbstractFilePathTests):
             filepath.InsecurePath, self.path.descendant, ["mon\u20acy", ".."]
         )
 
-    def testSibling(self):
+    def testSibling(self) -> None:
         p = self.path.child(b"sibling_start")
         ts = p.sibling(b"sibling_test")
         self.assertEqual(ts.dirname(), p.dirname())
@@ -838,14 +874,14 @@ class FilePathTests(AbstractFilePathTests):
         ts.createDirectory()
         self.assertIn(ts, self.path.children())
 
-    def testTemporarySibling(self):
+    def testTemporarySibling(self) -> None:
         ts = self.path.temporarySibling()
         self.assertEqual(ts.dirname(), self.path.dirname())
         self.assertNotIn(ts.basename(), self.path.listdir())
         ts.createDirectory()
         self.assertIn(ts, self.path.parent().children())
 
-    def test_temporarySiblingExtension(self):
+    def test_temporarySiblingExtension(self) -> None:
         """
         If L{FilePath.temporarySibling} is given an extension argument, it will
         produce path objects with that extension appended to their names.
@@ -854,10 +890,10 @@ class FilePathTests(AbstractFilePathTests):
         ts = self.path.temporarySibling(testExtension)
         self.assertTrue(
             ts.basename().endswith(testExtension),
-            f"{ts.basename()} does not end with {testExtension}",
+            f"{ts.basename()!r} does not end with {testExtension!r}",
         )
 
-    def test_removeDirectory(self):
+    def test_removeDirectory(self) -> None:
         """
         L{FilePath.remove} on a L{FilePath} that refers to a directory will
         recursively delete its contents.
@@ -866,7 +902,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(self.path.exists())
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_removeWithSymlink(self):
+    def test_removeWithSymlink(self) -> None:
         """
         For a path which is a symbolic link, L{FilePath.remove} just deletes
         the link, not the target.
@@ -878,7 +914,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(link.exists())
         self.assertTrue(self.path.child(b"sub1").exists())
 
-    def test_copyToDirectory(self):
+    def test_copyToDirectory(self) -> None:
         """
         L{FilePath.copyTo} makes a copy of all the contents of the directory
         named by that L{FilePath} if it is able to do so.
@@ -893,7 +929,7 @@ class FilePathTests(AbstractFilePathTests):
         oldPaths.sort()
         self.assertEqual(newPaths, oldPaths)
 
-    def test_copyToMissingDestFileClosing(self):
+    def test_copyToMissingDestFileClosing(self) -> None:
         """
         If an exception is raised while L{FilePath.copyTo} is trying to open
         source file to read from, the destination file is closed and the
@@ -903,7 +939,7 @@ class FilePathTests(AbstractFilePathTests):
         # Make it look like something to copy, even though it doesn't exist.
         # This could happen if the file is deleted between the isfile check and
         # the file actually being opened.
-        nosuch.isfile = lambda: True
+        nosuch.isfile = lambda: True  # type:ignore
 
         # We won't get as far as writing to this file, but it's still useful for
         # tracking whether we closed it.
@@ -912,7 +948,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(IOError, nosuch.copyTo, destination)
         self.assertTrue(destination.fp.closed)
 
-    def test_copyToFileClosing(self):
+    def test_copyToFileClosing(self) -> None:
         """
         If an exception is raised while L{FilePath.copyTo} is copying bytes
         between two regular files, the source and destination files are closed
@@ -924,7 +960,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(source.fp.closed)
         self.assertTrue(destination.fp.closed)
 
-    def test_copyToDirectoryItself(self):
+    def test_copyToDirectoryItself(self) -> None:
         """
         L{FilePath.copyTo} fails with an OSError or IOError (depending on
         platform, as it propagates errors from open() and write()) when
@@ -935,7 +971,7 @@ class FilePathTests(AbstractFilePathTests):
         )
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_copyToWithSymlink(self):
+    def test_copyToWithSymlink(self) -> None:
         """
         Verify that copying with followLinks=True copies symlink targets
         instead of symlinks
@@ -950,7 +986,7 @@ class FilePathTests(AbstractFilePathTests):
         )
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_copyToWithoutSymlink(self):
+    def test_copyToWithoutSymlink(self) -> None:
         """
         Verify that copying with followLinks=False copies symlinks as symlinks
         """
@@ -963,7 +999,7 @@ class FilePathTests(AbstractFilePathTests):
             os.readlink(fp.child(b"link1").path),
         )
 
-    def test_copyToMissingSource(self):
+    def test_copyToMissingSource(self) -> None:
         """
         If the source path is missing, L{FilePath.copyTo} raises L{OSError}.
         """
@@ -971,7 +1007,7 @@ class FilePathTests(AbstractFilePathTests):
         exc = self.assertRaises(OSError, path.copyTo, b"some other path")
         self.assertEqual(exc.errno, errno.ENOENT)
 
-    def test_moveTo(self):
+    def test_moveTo(self) -> None:
         """
         Verify that moving an entire directory results into another directory
         with the same content.
@@ -985,7 +1021,7 @@ class FilePathTests(AbstractFilePathTests):
         oldPaths.sort()
         self.assertEqual(newPaths, oldPaths)
 
-    def test_moveToExistsCache(self):
+    def test_moveToExistsCache(self) -> None:
         """
         A L{FilePath} that has been moved aside with L{FilePath.moveTo} no
         longer registers as existing.  Its previously non-existent target
@@ -1005,7 +1041,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(fp.exists())
         self.assertTrue(fp2.exists())
 
-    def test_moveToExistsCacheCrossMount(self):
+    def test_moveToExistsCacheCrossMount(self) -> None:
         """
         The assertion of test_moveToExistsCache should hold in the case of a
         cross-mount move.
@@ -1013,7 +1049,7 @@ class FilePathTests(AbstractFilePathTests):
         self.setUpFaultyRename()
         self.test_moveToExistsCache()
 
-    def test_moveToSizeCache(self, hook=lambda: None):
+    def test_moveToSizeCache(self, hook: Callable[[], None] = lambda: None) -> None:
         """
         L{FilePath.moveTo} clears its destination's status cache, such that
         calls to L{FilePath.getsize} after the call to C{moveTo} will report the
@@ -1044,14 +1080,18 @@ class FilePathTests(AbstractFilePathTests):
         fp.moveTo(fp2)
         self.assertEqual(fp2.getsize(), 4)
 
-    def test_moveToSizeCacheCrossMount(self):
+    def test_moveToSizeCacheCrossMount(self) -> None:
         """
         The assertion of test_moveToSizeCache should hold in the case of a
         cross-mount move.
         """
-        self.test_moveToSizeCache(hook=self.setUpFaultyRename)
 
-    def test_moveToError(self):
+        def setUp() -> None:
+            self.setUpFaultyRename()
+
+        self.test_moveToSizeCache(hook=setUp)
+
+    def test_moveToError(self) -> None:
         """
         Verify error behavior of moveTo: it should raises one of OSError or
         IOError if you want to move a path into one of its child. It's simply
@@ -1061,7 +1101,7 @@ class FilePathTests(AbstractFilePathTests):
             (OSError, IOError), self.path.moveTo, self.path.child(b"file1")
         )
 
-    def setUpFaultyRename(self):
+    def setUpFaultyRename(self) -> List[Tuple[str, str]]:
         """
         Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
         This is used to simulate a cross-device rename failure.
@@ -1071,7 +1111,7 @@ class FilePathTests(AbstractFilePathTests):
         """
         invokedWith = []
 
-        def faultyRename(src, dest):
+        def faultyRename(src: str, dest: str) -> None:
             invokedWith.append((src, dest))
             if len(invokedWith) == 1:
                 raise OSError(
@@ -1084,7 +1124,7 @@ class FilePathTests(AbstractFilePathTests):
         self.patch(os, "rename", faultyRename)
         return invokedWith
 
-    def test_crossMountMoveTo(self):
+    def test_crossMountMoveTo(self) -> None:
         """
         C{moveTo} should be able to handle C{EXDEV} error raised by
         C{os.rename} when trying to move a file on a different mounted
@@ -1100,7 +1140,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(invokedWith)
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_crossMountMoveToWithSymlink(self):
+    def test_crossMountMoveToWithSymlink(self) -> None:
         """
         By default, when moving a symlink, it should follow the link and
         actually copy the content of the linked node.
@@ -1115,7 +1155,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(invokedWith)
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
-    def test_crossMountMoveToWithoutSymlink(self):
+    def test_crossMountMoveToWithoutSymlink(self) -> None:
         """
         Verify that moveTo called with followLinks=False actually create
         another symlink.
@@ -1129,7 +1169,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(f3.getContent(), b"file 1")
         self.assertTrue(invokedWith)
 
-    def test_createBinaryMode(self):
+    def test_createBinaryMode(self) -> None:
         """
         L{FilePath.create} should always open (and write to) files in binary
         mode; line-feed octets should be unmodified.
@@ -1146,7 +1186,7 @@ class FilePathTests(AbstractFilePathTests):
             read = fp.read()
             self.assertEqual(read, b"\n")
 
-    def testOpen(self):
+    def testOpen(self) -> None:
         # Opening a file for reading when it does not already exist is an error
         nonexistent = self.path.child(b"nonexistent")
         e = self.assertRaises(IOError, nonexistent.open)
@@ -1225,7 +1265,7 @@ class FilePathTests(AbstractFilePathTests):
         del nonexistent
         self.assertRaises((OSError, IOError), existent.open)
 
-    def test_openWithExplicitBinaryMode(self):
+    def test_openWithExplicitBinaryMode(self) -> None:
         """
         Due to a bug in Python 2.7 on Windows including multiple 'b'
         characters in the mode passed to the built-in open() will cause an
@@ -1235,11 +1275,12 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b"explicit-binary")
-        with writer.open("wb") as file:
+        opener = writer.open("wb")  # type:ignore[arg-type]
+        with opener as file:
             file.write(b"abc\ndef")
         self.assertTrue(writer.exists)
 
-    def test_openWithRedundantExplicitBinaryModes(self):
+    def test_openWithRedundantExplicitBinaryModes(self) -> None:
         """
         Due to a bug in Python 2.7 on Windows including multiple 'b'
         characters in the mode passed to the built-in open() will cause an
@@ -1250,11 +1291,12 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b"multiple-binary")
-        with writer.open("wbb") as file:
+        opener = writer.open("wbb")  # type:ignore[arg-type]
+        with opener as file:
             file.write(b"abc\ndef")
         self.assertTrue(writer.exists)
 
-    def test_existsCache(self):
+    def test_existsCache(self) -> None:
         """
         Check that C{filepath.FilePath.exists} correctly restat the object if
         an operation has occurred in the mean time.
@@ -1265,7 +1307,7 @@ class FilePathTests(AbstractFilePathTests):
         fp.makedirs()
         self.assertTrue(fp.exists())
 
-    def test_makedirsMakesDirectoriesRecursively(self):
+    def test_makedirsMakesDirectoriesRecursively(self) -> None:
         """
         C{FilePath.makedirs} creates a directory at C{path}}, including
         recursively creating all parent directories leading up to the path.
@@ -1278,7 +1320,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(fp.exists())
         self.assertTrue(fp.isdir())
 
-    def test_makedirsMakesDirectoriesWithIgnoreExistingDirectory(self):
+    def test_makedirsMakesDirectoriesWithIgnoreExistingDirectory(self) -> None:
         """
         Calling C{FilePath.makedirs} with C{ignoreExistingDirectory} set to
         C{True} has no effect if directory does not exist.
@@ -1291,7 +1333,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(fp.exists())
         self.assertTrue(fp.isdir())
 
-    def test_makedirsThrowsWithExistentDirectory(self):
+    def test_makedirsThrowsWithExistentDirectory(self) -> None:
         """
         C{FilePath.makedirs} throws an C{OSError} exception
         when called on a directory that already exists.
@@ -1303,7 +1345,7 @@ class FilePathTests(AbstractFilePathTests):
 
         self.assertEqual(exception.errno, errno.EEXIST)
 
-    def test_makedirsAcceptsIgnoreExistingDirectory(self):
+    def test_makedirsAcceptsIgnoreExistingDirectory(self) -> None:
         """
         C{FilePath.makedirs} succeeds when called on a directory that already
         exists and the c{ignoreExistingDirectory} argument is set to C{True}.
@@ -1316,7 +1358,7 @@ class FilePathTests(AbstractFilePathTests):
 
         self.assertTrue(fp.exists())
 
-    def test_makedirsIgnoreExistingDirectoryExistAlreadyAFile(self):
+    def test_makedirsIgnoreExistingDirectoryExistAlreadyAFile(self) -> None:
         """
         When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
         to C{True} it throws an C{OSError} exceptions if path is a file.
@@ -1331,14 +1373,14 @@ class FilePathTests(AbstractFilePathTests):
 
         self.assertEqual(exception.errno, errno.EEXIST)
 
-    def test_makedirsRaisesNonEexistErrorsIgnoreExistingDirectory(self):
+    def test_makedirsRaisesNonEexistErrorsIgnoreExistingDirectory(self) -> None:
         """
         When C{FilePath.makedirs} is called with C{ignoreExistingDirectory} set
         to C{True} it raises an C{OSError} exception if exception errno is not
         EEXIST.
         """
 
-        def faultyMakedirs(path):
+        def faultyMakedirs(path: str) -> None:
             raise OSError(errno.EACCES, "Permission Denied")
 
         self.patch(os, "makedirs", faultyMakedirs)
@@ -1350,7 +1392,7 @@ class FilePathTests(AbstractFilePathTests):
 
         self.assertEqual(exception.errno, errno.EACCES)
 
-    def test_changed(self):
+    def test_changed(self) -> None:
         """
         L{FilePath.changed} indicates that the L{FilePath} has changed, but does
         not re-read the status information from the filesystem until it is
@@ -1373,7 +1415,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(fp.getsize(), 8)
 
     @skipIf(platform.isWindows(), "Test does not run on Windows")
-    def test_getPermissions_POSIX(self):
+    def test_getPermissions_POSIX(self) -> None:
         """
         Getting permissions for a file returns a L{Permissions} object for
         POSIX platforms (which supports separate user, group, and other
@@ -1389,7 +1431,7 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").getPermissions().shorthand(), "rwxrw-r--"
         )
 
-    def test_filePathNotDeprecated(self):
+    def test_filePathNotDeprecated(self) -> None:
         """
         While accessing L{twisted.python.filepath.FilePath.statinfo} is
         deprecated, the filepath itself is not.
@@ -1399,7 +1441,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(warningInfo, [])
 
     @skipIf(not platform.isWindows(), "Test will run only on Windows")
-    def test_getPermissions_Windows(self):
+    def test_getPermissions_Windows(self) -> None:
         """
         Getting permissions for a file returns a L{Permissions} object in
         Windows.  Windows requires a different test, because user permissions
@@ -1421,7 +1463,7 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").getPermissions().shorthand(), "r-xr-xr-x"
         )
 
-    def test_whetherBlockOrSocket(self):
+    def test_whetherBlockOrSocket(self) -> None:
         """
         Ensure that a file is not a block or socket
         """
@@ -1429,7 +1471,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertFalse(self.path.isSocket())
 
     @skipIf(not platform.isWindows(), "Test will run only on Windows")
-    def test_statinfoBitsNotImplementedInWindows(self):
+    def test_statinfoBitsNotImplementedInWindows(self) -> None:
         """
         Verify that certain file stats are not available on Windows
         """
@@ -1440,7 +1482,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(NotImplementedError, self.path.getGroupID)
 
     @skipIf(platform.isWindows(), "Test does not run on Windows")
-    def test_statinfoBitsAreNumbers(self):
+    def test_statinfoBitsAreNumbers(self) -> None:
         """
         Verify that file inode/device/nlinks/uid/gid stats are numbers in
         a POSIX environment
@@ -1456,7 +1498,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertEqual(self.path.getGroupID(), c.getGroupID())
 
     @skipIf(platform.isWindows(), "Test does not run on Windows")
-    def test_statinfoNumbersAreValid(self):
+    def test_statinfoNumbersAreValid(self) -> None:
         """
         Verify that the right numbers come back from the right accessor methods
         for file inode/device/nlinks/uid/gid (in a POSIX environment)
@@ -1472,10 +1514,10 @@ class FilePathTests(AbstractFilePathTests):
         # monkey patch in a fake restat method for self.path
         fake = FakeStat()
 
-        def fakeRestat(*args, **kwargs):
-            self.path._statinfo = fake
+        def fakeRestat(*args: object, **kwargs: object) -> None:
+            self.path._statinfo = fake  # type:ignore
 
-        self.path.restat = fakeRestat
+        self.path.restat = fakeRestat  # type:ignore
 
         # ensure that restat will need to be called to get values
         self.path._statinfo = None
@@ -1492,7 +1534,7 @@ class SetContentTests(BytesTestCase):
     Tests for L{FilePath.setContent}.
     """
 
-    def test_write(self):
+    def test_write(self) -> None:
         """
         Contents of the file referred to by a L{FilePath} can be written using
         L{FilePath.setContent}.
@@ -1504,16 +1546,16 @@ class SetContentTests(BytesTestCase):
             contents = fObj.read()
         self.assertEqual(b"hello, world", contents)
 
-    def test_fileClosing(self):
+    def test_fileClosing(self) -> None:
         """
         If writing to the underlying file raises an exception,
         L{FilePath.setContent} raises that exception after closing the file.
         """
-        fp = ExplodingFilePath(b"")
+        fp = ExplodingFilePath("")
         self.assertRaises(IOError, fp.setContent, b"blah")
         self.assertTrue(fp.fp.closed)
 
-    def test_nameCollision(self):
+    def test_nameCollision(self) -> None:
         """
         L{FilePath.setContent} will use a different temporary filename on each
         invocation, so that multiple processes, threads, or reentrant
@@ -1529,7 +1571,7 @@ class SetContentTests(BytesTestCase):
         self.assertEqual(len(openedSiblings), 2)
         self.assertNotEqual(openedSiblings[0], openedSiblings[1])
 
-    def _assertOneOpened(self, fp, extension):
+    def _assertOneOpened(self, fp: TrackingFilePath[AnyStr], extension: str) -> None:
         """
         Assert that the L{TrackingFilePath} C{fp} was used to open one sibling
         with the given extension.
@@ -1540,7 +1582,7 @@ class SetContentTests(BytesTestCase):
 
         @param extension: The extension the sibling path is expected to have
             had.
-        @type extension: L{bytes}
+        @type extension: L{str}
 
         @raise: C{self.failureException} is raised if the extension of the
             opened file is incorrect or if not exactly one file was opened
@@ -1549,22 +1591,22 @@ class SetContentTests(BytesTestCase):
         opened = fp.openedPaths()
         self.assertEqual(len(opened), 1, "expected exactly one opened file")
         self.assertTrue(
-            opened[0].basename().endswith(extension),
-            "{} does not end with {!r} extension".format(
+            opened[0].asTextMode().basename().endswith(extension),
+            "{!r} does not end with {!r} extension".format(
                 opened[0].basename(), extension
             ),
         )
 
-    def test_defaultExtension(self):
+    def test_defaultExtension(self) -> None:
         """
         L{FilePath.setContent} creates temporary files with the extension
         I{.new} if no alternate extension value is given.
         """
         fp = TrackingFilePath(self.mktemp())
         fp.setContent(b"hello")
-        self._assertOneOpened(fp, b".new")
+        self._assertOneOpened(fp, ".new")
 
-    def test_customExtension(self):
+    def test_customExtension(self) -> None:
         """
         L{FilePath.setContent} creates temporary files with a user-supplied
         extension so that if it is somehow interrupted while writing them the
@@ -1572,7 +1614,7 @@ class SetContentTests(BytesTestCase):
         """
         fp = TrackingFilePath(self.mktemp())
         fp.setContent(b"goodbye", b"-something-else")
-        self._assertOneOpened(fp, b"-something-else")
+        self._assertOneOpened(fp, "-something-else")
 
 
 class UnicodeFilePathTests(TestCase):
@@ -1581,7 +1623,7 @@ class UnicodeFilePathTests(TestCase):
     were instantiated with.
     """
 
-    def test_UnicodeInstantiation(self):
+    def test_UnicodeInstantiation(self) -> None:
         """
         L{FilePath} instantiated with a text path will return a text-mode
         FilePath.
@@ -1589,7 +1631,7 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath("./mon\u20acy")
         self.assertEqual(type(fp.path), str)
 
-    def test_UnicodeInstantiationBytesChild(self):
+    def test_UnicodeInstantiationBytesChild(self) -> None:
         """
         Calling L{FilePath.child} on a text-mode L{FilePath} with a L{bytes}
         subpath will return a bytes-mode FilePath.
@@ -1598,7 +1640,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.child("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
-    def test_UnicodeInstantiationUnicodeChild(self):
+    def test_UnicodeInstantiationUnicodeChild(self) -> None:
         """
         Calling L{FilePath.child} on a text-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
@@ -1607,7 +1649,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.child("mon\u20acy")
         self.assertEqual(type(child.path), str)
 
-    def test_UnicodeInstantiationUnicodePreauthChild(self):
+    def test_UnicodeInstantiationUnicodePreauthChild(self) -> None:
         """
         Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
@@ -1616,7 +1658,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.preauthChild("mon\u20acy")
         self.assertEqual(type(child.path), str)
 
-    def test_UnicodeInstantiationBytesPreauthChild(self):
+    def test_UnicodeInstantiationBytesPreauthChild(self) -> None:
         """
         Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a bytes
         subpath will return a bytes-mode FilePath.
@@ -1625,7 +1667,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.preauthChild("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
-    def test_BytesInstantiation(self):
+    def test_BytesInstantiation(self) -> None:
         """
         L{FilePath} instantiated with a L{bytes} path will return a bytes-mode
         FilePath.
@@ -1633,7 +1675,7 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(b"./")
         self.assertEqual(type(fp.path), bytes)
 
-    def test_BytesInstantiationBytesChild(self):
+    def test_BytesInstantiationBytesChild(self) -> None:
         """
         Calling L{FilePath.child} on a bytes-mode L{FilePath} with a bytes
         subpath will return a bytes-mode FilePath.
@@ -1642,7 +1684,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.child("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
-    def test_BytesInstantiationUnicodeChild(self):
+    def test_BytesInstantiationUnicodeChild(self) -> None:
         """
         Calling L{FilePath.child} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
@@ -1651,7 +1693,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.child("mon\u20acy")
         self.assertEqual(type(child.path), str)
 
-    def test_BytesInstantiationBytesPreauthChild(self):
+    def test_BytesInstantiationBytesPreauthChild(self) -> None:
         """
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a
         bytes subpath will return a bytes-mode FilePath.
@@ -1660,7 +1702,7 @@ class UnicodeFilePathTests(TestCase):
         child = fp.preauthChild("child-mon\u20acy".encode())
         self.assertEqual(type(child.path), bytes)
 
-    def test_BytesInstantiationUnicodePreauthChild(self):
+    def test_BytesInstantiationUnicodePreauthChild(self) -> None:
         """
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
@@ -1670,7 +1712,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertEqual(type(child.path), str)
 
     @skipIf(platform.isWindows(), "Test will not work on Windows")
-    def test_unicoderepr(self):
+    def test_unicoderepr(self) -> None:
         """
         The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
         """
@@ -1679,7 +1721,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertEqual("FilePath('/mon\u20acy')", reprOutput)
 
     @skipIf(platform.isWindows(), "Test will not work on Windows")
-    def test_bytesrepr(self):
+    def test_bytesrepr(self) -> None:
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
@@ -1688,7 +1730,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertEqual("FilePath(b'/parent-mon\\xe2\\x82\\xacy')", reprOutput)
 
     @skipIf(not platform.isWindows(), "Test only works on Windows")
-    def test_unicodereprWindows(self):
+    def test_unicodereprWindows(self) -> None:
         """
         The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
         """
@@ -1697,7 +1739,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertEqual("FilePath('C:\\\\')", reprOutput)
 
     @skipIf(not platform.isWindows(), "Test only works on Windows")
-    def test_bytesreprWindows(self):
+    def test_bytesreprWindows(self) -> None:
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
@@ -1705,7 +1747,7 @@ class UnicodeFilePathTests(TestCase):
         reprOutput = repr(fp)
         self.assertEqual("FilePath(b'C:\\\\')", reprOutput)
 
-    def test_mixedTypeGlobChildren(self):
+    def test_mixedTypeGlobChildren(self) -> None:
         """
         C{globChildren} will return the same type as the pattern argument.
         """
@@ -1713,7 +1755,7 @@ class UnicodeFilePathTests(TestCase):
         children = fp.globChildren(b"*")
         self.assertIsInstance(children[0].path, bytes)
 
-    def test_unicodeGlobChildren(self):
+    def test_unicodeGlobChildren(self) -> None:
         """
         C{globChildren} works with L{unicode}.
         """
@@ -1721,21 +1763,21 @@ class UnicodeFilePathTests(TestCase):
         children = fp.globChildren("*")
         self.assertIsInstance(children[0].path, str)
 
-    def test_unicodeBasename(self):
+    def test_unicodeBasename(self) -> None:
         """
         Calling C{basename} on an text- L{FilePath} returns L{unicode}.
         """
         fp = filepath.FilePath("./")
         self.assertIsInstance(fp.basename(), str)
 
-    def test_unicodeDirname(self):
+    def test_unicodeDirname(self) -> None:
         """
         Calling C{dirname} on a text-mode L{FilePath} returns L{unicode}.
         """
         fp = filepath.FilePath("./")
         self.assertIsInstance(fp.dirname(), str)
 
-    def test_unicodeParent(self):
+    def test_unicodeParent(self) -> None:
         """
         Calling C{parent} on a text-mode L{FilePath} will return a text-mode
         L{FilePath}.
@@ -1744,7 +1786,7 @@ class UnicodeFilePathTests(TestCase):
         parent = fp.parent()
         self.assertIsInstance(parent.path, str)
 
-    def test_mixedTypeTemporarySibling(self):
+    def test_mixedTypeTemporarySibling(self) -> None:
         """
         A L{bytes} extension to C{temporarySibling} will mean a L{bytes} mode
         L{FilePath} is returned.
@@ -1753,7 +1795,7 @@ class UnicodeFilePathTests(TestCase):
         tempSibling = fp.temporarySibling(b".txt")
         self.assertIsInstance(tempSibling.path, bytes)
 
-    def test_unicodeTemporarySibling(self):
+    def test_unicodeTemporarySibling(self) -> None:
         """
         A L{unicode} extension to C{temporarySibling} will mean a L{unicode}
         mode L{FilePath} is returned.
@@ -1762,7 +1804,7 @@ class UnicodeFilePathTests(TestCase):
         tempSibling = fp.temporarySibling(".txt")
         self.assertIsInstance(tempSibling.path, str)
 
-    def test_mixedTypeSiblingExtensionSearch(self):
+    def test_mixedTypeSiblingExtensionSearch(self) -> None:
         """
         C{siblingExtensionSearch} called with L{bytes} on a L{unicode}-mode
         L{FilePath} will return a L{list} of L{bytes}-mode L{FilePath}s.
@@ -1771,11 +1813,12 @@ class UnicodeFilePathTests(TestCase):
         sibling = filepath.FilePath(fp._asTextPath() + ".txt")
         sibling.touch()
         newPath = fp.siblingExtensionSearch(b".txt")
+        assert newPath is not None
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, bytes)
 
-    def test_unicodeSiblingExtensionSearch(self):
+    def test_unicodeSiblingExtensionSearch(self) -> None:
         """
         C{siblingExtensionSearch} called with L{unicode} on a L{unicode}-mode
         L{FilePath} will return a L{list} of L{unicode}-mode L{FilePath}s.
@@ -1785,11 +1828,12 @@ class UnicodeFilePathTests(TestCase):
         sibling.touch()
 
         newPath = fp.siblingExtensionSearch(".txt")
+        assert newPath is not None
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, str)
 
-    def test_mixedTypeSiblingExtension(self):
+    def test_mixedTypeSiblingExtension(self) -> None:
         """
         C{siblingExtension} called with L{bytes} on a L{unicode}-mode
         L{FilePath} will return a L{bytes}-mode L{FilePath}.
@@ -1803,7 +1847,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, bytes)
 
-    def test_unicodeSiblingExtension(self):
+    def test_unicodeSiblingExtension(self) -> None:
         """
         C{siblingExtension} called with L{unicode} on a L{unicode}-mode
         L{FilePath} will return a L{unicode}-mode L{FilePath}.
@@ -1817,7 +1861,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, str)
 
-    def test_mixedTypeChildSearchPreauth(self):
+    def test_mixedTypeChildSearchPreauth(self) -> None:
         """
         C{childSearchPreauth} called with L{bytes} on a L{unicode}-mode
         L{FilePath} will return a L{bytes}-mode L{FilePath}.
@@ -1829,11 +1873,12 @@ class UnicodeFilePathTests(TestCase):
         child.touch()
 
         newPath = fp.childSearchPreauth(b"text.txt")
+        assert newPath is not None
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, bytes)
 
-    def test_unicodeChildSearchPreauth(self):
+    def test_unicodeChildSearchPreauth(self) -> None:
         """
         C{childSearchPreauth} called with L{unicode} on a L{unicode}-mode
         L{FilePath} will return a L{unicode}-mode L{FilePath}.
@@ -1845,11 +1890,12 @@ class UnicodeFilePathTests(TestCase):
         child.touch()
 
         newPath = fp.childSearchPreauth("text.txt")
+        assert newPath is not None
 
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, str)
 
-    def test_asBytesModeFromUnicode(self):
+    def test_asBytesModeFromUnicode(self) -> None:
         """
         C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
         L{bytes}-mode L{FilePath}.
@@ -1859,7 +1905,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsNot(fp, newfp)
         self.assertIsInstance(newfp.path, bytes)
 
-    def test_asTextModeFromBytes(self):
+    def test_asTextModeFromBytes(self) -> None:
         """
         C{asBytesMode} on a L{unicode}-mode L{FilePath} returns a new
         L{bytes}-mode L{FilePath}.
@@ -1869,7 +1915,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsNot(fp, newfp)
         self.assertIsInstance(newfp.path, str)
 
-    def test_asBytesModeFromBytes(self):
+    def test_asBytesModeFromBytes(self) -> None:
         """
         C{asBytesMode} on a L{bytes}-mode L{FilePath} returns the same
         L{bytes}-mode L{FilePath}.
@@ -1879,7 +1925,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIs(fp, newfp)
         self.assertIsInstance(newfp.path, bytes)
 
-    def test_asTextModeFromUnicode(self):
+    def test_asTextModeFromUnicode(self) -> None:
         """
         C{asTextMode} on a L{unicode}-mode L{FilePath} returns the same
         L{unicode}-mode L{FilePath}.
@@ -1889,7 +1935,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIs(fp, newfp)
         self.assertIsInstance(newfp.path, str)
 
-    def test_asBytesModeFromUnicodeWithEncoding(self):
+    def test_asBytesModeFromUnicodeWithEncoding(self) -> None:
         """
         C{asBytesMode} with an C{encoding} argument uses that encoding when
         coercing the L{unicode}-mode L{FilePath} to a L{bytes}-mode L{FilePath}.
@@ -1898,7 +1944,7 @@ class UnicodeFilePathTests(TestCase):
         newfp = fp.asBytesMode(encoding="utf-8")
         self.assertIn(b"\xe2\x98\x83", newfp.path)
 
-    def test_asTextModeFromBytesWithEncoding(self):
+    def test_asTextModeFromBytesWithEncoding(self) -> None:
         """
         C{asTextMode} with an C{encoding} argument uses that encoding when
         coercing the L{bytes}-mode L{FilePath} to a L{unicode}-mode L{FilePath}.
@@ -1907,7 +1953,7 @@ class UnicodeFilePathTests(TestCase):
         newfp = fp.asTextMode(encoding="utf-8")
         self.assertIn("\u2603", newfp.path)
 
-    def test_asBytesModeFromUnicodeWithUnusableEncoding(self):
+    def test_asBytesModeFromUnicodeWithUnusableEncoding(self) -> None:
         """
         C{asBytesMode} with an C{encoding} argument that can't be used to encode
         the unicode path raises a L{UnicodeError}.
@@ -1916,11 +1962,11 @@ class UnicodeFilePathTests(TestCase):
         with self.assertRaises(UnicodeError):
             fp.asBytesMode(encoding="ascii")
 
-    def test_asTextModeFromBytesWithUnusableEncoding(self):
+    def test_asTextModeFromBytesWithUnusableEncoding(self) -> None:
         """
         C{asTextMode} with an C{encoding} argument that can't be used to encode
         the unicode path raises a L{UnicodeError}.
         """
-        fp = filepath.FilePath(br"\u2603")
+        fp = filepath.FilePath(rb"\u2603")
         with self.assertRaises(UnicodeError):
             fp.asTextMode(encoding="utf-32")

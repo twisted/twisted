@@ -144,7 +144,7 @@ class IFilePath(Interface):
             direct child of this file path.
         """
 
-    def open(mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
+    def open(mode: FileMode = "r") -> IO[bytes]:
         """
         Opens this file path with the given mode.
 
@@ -299,6 +299,7 @@ def _secureEnoughString(path):
 
 
 OtherAnyStr = TypeVar("OtherAnyStr", str, bytes)
+FileMode = Literal["r", "w", "a", "r+", "w+", "a+"]
 
 
 class AbstractFilePath(Generic[AnyStr]):
@@ -341,7 +342,7 @@ class AbstractFilePath(Generic[AnyStr]):
         """
         raise NotImplementedError()
 
-    def open(self, mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
+    def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
         Subclasses must implement this.
         """
@@ -454,7 +455,7 @@ class AbstractFilePath(Generic[AnyStr]):
 
     def walk(
         self: _Self,
-        descend: Optional[Callable[[AbstractFilePath[Union[AnyStr]]], bool]] = None,
+        descend: Optional[Callable[[_Self], bool]] = None,
     ) -> Iterable[_Self]:
         """
         Yield myself, then each of my children, and each of those children's
@@ -792,6 +793,25 @@ class FilePath(AbstractFilePath[AnyStr]):
         def parents(self) -> Iterable[FilePath[AnyStr]]:
             ...
 
+        # provided by @comparable
+        def __gt__(self, other: object) -> bool:
+            ...
+
+        def __ge__(self, other: object) -> bool:
+            ...
+
+        def __lt__(self, other: object) -> bool:
+            ...
+
+        def __le__(self, other: object) -> bool:
+            ...
+
+        def __eq__(self, other: object) -> bool:
+            ...
+
+        def __ne__(self, other: object) -> bool:
+            ...
+
     def clonePath(
         self, path: OtherAnyStr, alwaysCreate: bool = False
     ) -> FilePath[OtherAnyStr]:
@@ -1040,7 +1060,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         os.symlink(self.path, linkFilePath.path)
 
-    def open(self, mode: Literal["r", "w", "a"] = "r") -> IO[bytes]:
+    def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
         Open this file using C{mode} or for writing if C{alwaysCreate} is
         C{True}.
@@ -1467,7 +1487,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             ):
                 raise
 
-    def globChildren(self, pattern: OtherAnyStr) -> FilePath[OtherAnyStr]:
+    def globChildren(self, pattern: OtherAnyStr) -> List[FilePath[OtherAnyStr]]:
         """
         Assuming I am representing a directory, return a list of FilePaths
         representing my children that match the given pattern.
@@ -1484,8 +1504,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         import glob
 
         path = ourPath[-1] == sep and ourPath + pattern or sep.join([ourPath, pattern])
-        result = [self.clonePath(p) for p in glob.glob(path)]
-        return result  # type:ignore[return-value]
+        return [self.clonePath(p) for p in glob.glob(path)]
 
     def basename(self) -> AnyStr:
         """
@@ -1651,9 +1670,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             ext = extension
         ourPath = self._getPathAsSameTypeAs(ext)
         sib = self.sibling(
-            _secureEnoughString(ourPath)
-            + self.clonePath(ourPath).basename()
-            + extension
+            _secureEnoughString(ourPath) + self.clonePath(ourPath).basename() + ext
         )
         sib.requireCreate()
         return sib
