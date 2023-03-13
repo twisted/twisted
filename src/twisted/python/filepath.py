@@ -132,7 +132,7 @@ class IFilePath(Interface):
 
     sep = Attribute("The path separator to use in string representations")
 
-    def child(name):
+    def child(name: AnyStr) -> IFilePath:
         """
         Obtain a direct child of this file path.  The child may or may not
         exist.
@@ -152,12 +152,12 @@ class IFilePath(Interface):
         @raise Exception: if this file path cannot be opened.
         """
 
-    def changed():
+    def changed() -> None:
         """
         Clear any cached information about the state of this path on disk.
         """
 
-    def getsize():
+    def getsize() -> int:
         """
         Retrieve the size of this file in bytes.
 
@@ -165,7 +165,7 @@ class IFilePath(Interface):
         @raise Exception: if the size cannot be obtained.
         """
 
-    def getModificationTime():
+    def getModificationTime() -> float:
         """
         Retrieve the time of last access from this file.
 
@@ -173,7 +173,7 @@ class IFilePath(Interface):
         @rtype: L{float}
         """
 
-    def getStatusChangeTime():
+    def getStatusChangeTime() -> float:
         """
         Retrieve the time of the last status change for this file.
 
@@ -181,7 +181,7 @@ class IFilePath(Interface):
         @rtype: L{float}
         """
 
-    def getAccessTime():
+    def getAccessTime() -> float:
         """
         Retrieve the time that this file was last accessed.
 
@@ -189,7 +189,7 @@ class IFilePath(Interface):
         @rtype: L{float}
         """
 
-    def exists():
+    def exists() -> bool:
         """
         Check if this file path exists.
 
@@ -198,7 +198,7 @@ class IFilePath(Interface):
         @rtype: L{bool}
         """
 
-    def isdir():
+    def isdir() -> bool:
         """
         Check if this file path refers to a directory.
 
@@ -206,7 +206,7 @@ class IFilePath(Interface):
             otherwise.
         """
 
-    def isfile():
+    def isfile() -> bool:
         """
         Check if this file path refers to a regular file.
 
@@ -214,7 +214,7 @@ class IFilePath(Interface):
             C{False} otherwise.
         """
 
-    def children():
+    def children() -> Iterable[IFilePath]:
         """
         List the children of this path object.
 
@@ -222,21 +222,24 @@ class IFilePath(Interface):
         @raise Exception: if the file at this file path is not a directory.
         """
 
-    def basename():
+    def basename() -> Union[str, bytes]:
         """
-        Retrieve the final component of the file path's path (everything
-        after the final path separator).
+        Retrieve the final component of the file path's path (everything after
+        the final path separator).
+
+        @note: In implementors, the return type should be generic, i.e.
+            C{AbstractFilePath[str].basename()} is a C{str}.  However,
+            L{Interface} objects cannot be generic as of this writing.
 
         @return: the base name of this file path.
-        @rtype: L{str}
         """
 
-    def parent():
+    def parent() -> IFilePath:
         """
         A file path for the directory containing the file at this file path.
         """
 
-    def sibling(name):
+    def sibling(name: AnyStr) -> IFilePath:
         """
         A file path for the directory containing the file at this file path.
 
