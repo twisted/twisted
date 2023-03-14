@@ -28,13 +28,17 @@ from twisted.internet.error import (
 )
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.testing import (
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactorClock
 from twisted.trial.unittest import TestCase
 
 if requireModule("cryptography") and requireModule("pyasn1.type"):
@@ -77,7 +81,6 @@ else:
     ConchUser = object  # type: ignore[assignment,misc]
 
 from twisted.test.iosim import FakeTransport, connect
-from twisted.test.proto_helpers import StringTransport
 
 
 class AbortableFakeTransport(FakeTransport):

@@ -480,7 +480,7 @@ def bytesEnviron():
     encodekey = os.environ.encodekey
     encodevalue = os.environ.encodevalue
 
-    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}  # type: ignore[call-arg]
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
 
 def _constructMethod(cls, name, self):

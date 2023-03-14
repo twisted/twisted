@@ -8,13 +8,20 @@ import sys
 import textwrap
 import types
 from io import StringIO
+from typing import List
 
+from hamcrest import assert_that, contains_string
+from hypothesis import given
+from hypothesis.strategies import sampled_from
+
+from twisted.logger import Logger
 from twisted.python import util
 from twisted.python.filepath import FilePath
 from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
 from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.trial._dist.functional import compose
 from twisted.trial.runner import (
     DestructiveTestSuite,
     TestLoader,
@@ -22,6 +29,7 @@ from twisted.trial.runner import (
     TrialRunner,
 )
 from twisted.trial.test.test_loader import testNames
+from .matchers import fileContents
 
 pyunit = __import__("unittest")
 
@@ -31,6 +39,99 @@ def sibpath(filename):
     For finding files in twisted/trial/test
     """
     return util.sibpath(__file__, filename)
+
+
+def logSomething() -> None:
+    """
+    Emit something to L{twisted.logger}.
+    """
+    Logger().info("something")
+
+
+def parseArguments(argv: List[str]) -> trial.Options:
+    """
+    Parse an argument list using trial's argument parser.
+    """
+    config = trial.Options()
+    config.parseOptions(argv)
+    return config
+
+
+def runFromConfig(config: trial.Options) -> trial.Options:
+    """
+    Run L{logSomething} as a test method using the given configuration.
+    """
+    runner = trial._makeRunner(config)
+    runner.stream = StringIO()
+    suite = TestSuite([pyunit.FunctionTestCase(logSomething)])
+    runner.run(suite)
+    return config
+
+
+runFromArguments = compose(runFromConfig, parseArguments)
+
+
+class LogfileTests(unittest.SynchronousTestCase):
+    """
+    Tests for the --logfile option.
+    """
+
+    @given(
+        sampled_from(
+            [
+                "dir-a",
+                "dir-b",
+                "dir-c/dir-d",
+            ]
+        )
+    )
+    def test_default(self, workingDirectory: str) -> None:
+        """
+        If no value is given for the option then logs are written to a log
+        file constructed from a default value.
+        """
+        config = runFromArguments(["--temp-directory", workingDirectory])
+        logPath = FilePath(workingDirectory).preauthChild(config["logfile"])
+        assert_that(logPath, fileContents(contains_string("something")))
+
+    @given(
+        sampled_from(
+            [
+                "somelog.txt",
+                "somedir/somelog.txt",
+            ]
+        )
+    )
+    def test_relativePath(self, logfile: str) -> None:
+        """
+        If the value given for the option is a relative path then it is
+        interpreted relative to trial's own temporary working directory and
+        logs are written there.
+        """
+        config = runFromArguments(["--logfile", logfile])
+        logPath = FilePath(config["temp-directory"]).preauthChild(logfile)
+        assert_that(logPath, fileContents(contains_string("something")))
+
+    @given(
+        sampled_from(
+            [
+                "somelog.txt",
+                "somedir/somelog.txt",
+            ]
+        )
+    )
+    def test_absolutePath(self, logfile: str) -> None:
+        """
+        If the value given for the option is an absolute path then it is
+        interpreted absolutely and logs are written there.
+        """
+        # We don't want to scribble to arbitrary places on the host
+        # filesystem.  Construct an absolute path that's beneath our working
+        # directory - which trial will make into a per-run unique temporary
+        # directory.
+        logPath = FilePath(".").preauthChild(logfile)
+        runFromArguments(["--logfile", logPath.path])
+        assert_that(logPath, fileContents(contains_string("something")))
 
 
 class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
@@ -514,18 +615,6 @@ class OptionsTests(unittest.TestCase):
             "You can't specify --debug-stacktraces when using --jobs", str(error)
         )
 
-    def test_jobsConflictWithExitFirst(self):
-        """
-        C{parseOptions} raises a C{UsageError} when C{--exitfirst} is passed
-        along C{--jobs} as it's not supported yet.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/6436}
-        """
-        error = self.assertRaises(
-            UsageError, self.options.parseOptions, ["--jobs", "4", "--exitfirst"]
-        )
-        self.assertEqual("You can't specify --exitfirst when using --jobs", str(error))
-
     def test_orderConflictWithRandom(self):
         """
         C{parseOptions} raises a C{UsageError} when C{--order} is passed along
@@ -550,13 +639,13 @@ class MakeRunnerTests(unittest.TestCase):
     def test_jobs(self):
         """
         L{_makeRunner} returns a L{DistTrialRunner} instance when the C{--jobs}
-        option is passed, and passes the C{workerNumber} and C{workerArguments}
-        parameters to it.
+        option is passed.  The L{DistTrialRunner} knows how many workers to
+        run and the C{workerArguments} to pass to them.
         """
         self.options.parseOptions(["--jobs", "4", "--force-gc"])
         runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, DistTrialRunner)
-        self.assertEqual(4, runner._workerNumber)
+        self.assertEqual(4, runner._maxWorkers)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
     def test_dryRunWithJobs(self):

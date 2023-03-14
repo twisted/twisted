@@ -14,15 +14,17 @@ from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
 from random import randrange
 from signal import SIGINT
+from typing import Optional
 
 from twisted.python.reflect import ObjectNotFound, namedAny
 
+platformSkip: Optional[str]
 try:
     namedAny("fcntl.ioctl")
 except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
 else:
-    platformSkip = ""
+    platformSkip = None
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
@@ -662,8 +664,7 @@ class RealDeviceTestsMixin:
     instances as the provider of that interface.
     """
 
-    if platformSkip:
-        skip = platformSkip
+    skip = platformSkip
 
     def createSystem(self):
         """

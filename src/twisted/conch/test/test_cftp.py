@@ -13,7 +13,7 @@ import os
 import struct
 import sys
 import time
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -24,13 +24,13 @@ from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTes
 from twisted.cred import portal
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransport
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 pyasn1 = requireModule("pyasn1")
@@ -42,6 +42,7 @@ if cryptography and pyasn1:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.ssh import filetransfer
+        from twisted.conch.ssh.connection import EXTENDED_DATA_STDERR
         from twisted.conch.test import test_conch, test_ssh
         from twisted.conch.test.test_conch import FakeStdio
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
@@ -59,16 +60,38 @@ class SSHSessionTests(TestCase):
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
     """
 
-    def test_eofReceived(self):
+    def setUp(self) -> None:
+        self.stdio = FakeStdio()
+        self.channel = SSHSession()
+        self.channel.stdio = self.stdio
+        self.stderrBuffer = BytesIO()
+        self.stderr = TextIOWrapper(self.stderrBuffer)
+        self.channel.stderr = self.stderr
+
+    def test_eofReceived(self) -> None:
         """
         L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
         half of its stdio connection.
         """
-        stdio = FakeStdio()
-        channel = SSHSession()
-        channel.stdio = stdio
-        channel.eofReceived()
-        self.assertTrue(stdio.writeConnLost)
+        self.channel.eofReceived()
+        self.assertTrue(self.stdio.writeConnLost)
+
+    def test_extReceivedStderr(self) -> None:
+        """
+        L{twisted.conch.scripts.cftp.SSHSession.extReceived} decodes
+        stderr data using UTF-8 with the "backslashescape" error handling and
+        writes the result to its own stderr.
+        """
+        errorText = "\N{SNOWMAN}"
+        errorBytes = errorText.encode("utf-8")
+        self.channel.extReceived(
+            EXTENDED_DATA_STDERR,
+            errorBytes + b"\xff",
+        )
+        self.assertEqual(
+            self.stderrBuffer.getvalue(),
+            errorBytes + b"\\xff",
+        )
 
 
 class ListingTests(TestCase):
@@ -1412,6 +1435,7 @@ exit
 
 
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(not which("ssh"), "no ssh command-line client available")
 @skipIf(not which("sftp"), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
@@ -1433,6 +1457,10 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         This test is mainly here to check that
         L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
         """
+        # Get the current environment to pass along so that `ssh` and `sftp`
+        # can be found on our PATH.
+        env = dict(os.environ)
+
         fn = self.mktemp()
         with open(fn, "w") as f:
             f.write("ls .\nexit")
@@ -1452,7 +1480,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         # first need to check if we can set it. If we can, -V will just print
         # the version without doing anything else; if we can't, we will get a
         # configuration error.
-        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"))
+        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"), env)
 
         def hasPAKT(status):
             if status == 0:
@@ -1480,7 +1508,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             return args
 
         def check(result):
-            self.assertEqual(result[2], 0)
+            self.assertEqual(result[2], 0, result[1].decode("ascii"))
             for i in [
                 b"testDirectory",
                 b"testRemoveFile",
@@ -1490,5 +1518,5 @@ class OurServerSftpClientTests(CFTPClientTestBase):
                 self.assertIn(i, result[0])
 
         d.addCallback(hasPAKT)
-        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args))
+        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args, env))
         return d.addCallback(check)

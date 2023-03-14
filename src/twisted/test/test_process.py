@@ -581,8 +581,7 @@ class ProcessTests(unittest.TestCase):
 
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        and runtime.platform.getType() == "win32",
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_process(self):
@@ -621,8 +620,7 @@ class ProcessTests(unittest.TestCase):
 
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        and runtime.platform.getType() == "win32",
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_manyProcesses(self):
@@ -980,15 +978,20 @@ class PosixProcessBase:
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
+        for loc in procutils.which(commandName):
+            return FilePath(loc).asBytesMode().path
+
         binLoc = FilePath("/bin").child(commandName)
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
-            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
+            raise RuntimeError(
+                f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
+            )
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")

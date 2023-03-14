@@ -6,11 +6,12 @@
 # the coverage.
 #
 codecov:
+  token: fb52015a-b78e-4d89-a6e0-a4829aea2efa
   require_ci_to_pass: yes
   notify:
-    # We have at least 10 builds in GitHub Actions and 12 in Azure
-    # and lint + mypy + docs + ReadTheDocs
-    after_n_builds: 15
+    # We have at least 5 builds in GitHub Actions,
+    # so try not to send the reports too soon with partial results.
+    after_n_builds: 5
     wait_for_ci: yes
 
 coverage:

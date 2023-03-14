@@ -13,7 +13,7 @@ import io
 import os
 import socket
 from functools import wraps
-from typing import Callable, ClassVar, List, Optional, Sequence, Type
+from typing import Callable, ClassVar, List, Mapping, Optional, Sequence, Type
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -51,6 +51,7 @@ from twisted.internet.interfaces import (
     IReactorFDSet,
     IReactorSocket,
     IReactorTCP,
+    IReactorTime,
     IResolverSimple,
     ITLSTransport,
 )
@@ -80,11 +81,11 @@ from twisted.internet.test.reactormixins import (
     needsRunningReactor,
     stopOnError,
 )
+from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
 from twisted.test.test_tcp import (
     ClientStartStopFactory,
     ClosingFactory,
@@ -460,10 +461,10 @@ class FakeResolver:
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
 
-    def __init__(self, names):
+    def __init__(self, names: Mapping[str, str]):
         self.names = names
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.
@@ -1230,12 +1231,27 @@ def assertPeerClosedOnEMFILE(
 
     serverConnectionMade.addCallback(stopReactorIfServerAccepted)
 
-    port = listen(reactor, serverFactory)
-    listeningHost = port.getHost()
     clientFactory = MyClientFactory()
-    connect(reactor, listeningHost, clientFactory)
 
-    reactor.callWhenRunning(exhauster.exhaust)
+    if IReactorTime.providedBy(reactor):
+        # For Glib-based reactors, the exhauster should be run after the signal handler used by glib [1]
+        # and restoration of twisted signal handlers [2], thus such 2-level callLater
+        # [1] https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/gi/_ossighelper.py#L76
+        # [2] https://github.com/twisted/twisted/blob/twisted-22.4.0/src/twisted/internet/_glibbase.py#L134
+        # See also https://twistedmatrix.com/trac/ticket/10342
+        def inner():
+            port = listen(reactor, serverFactory)
+            listeningHost = port.getHost()
+            connect(reactor, listeningHost, clientFactory)
+            exhauster.exhaust()
+
+        reactor.callLater(0, reactor.callLater, 0, inner)
+    else:
+        # For reactors without callLater (ex: MemoryReactor)
+        port = listen(reactor, serverFactory)
+        listeningHost = port.getHost()
+        connect(reactor, listeningHost, clientFactory)
+        reactor.callWhenRunning(exhauster.exhaust)
 
     def stopReactorAndCloseFileDescriptors(result):
         exhauster.release()
@@ -2808,6 +2824,12 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2816,6 +2838,12 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some

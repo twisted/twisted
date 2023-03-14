@@ -5,11 +5,12 @@
 Helpers related to HTTP requests, used by tests.
 """
 
+from __future__ import annotations
 
 __all__ = ["DummyChannel", "DummyRequest"]
 
 from io import BytesIO
-from typing import Optional
+from typing import Dict, List, Optional
 
 from zope.interface import implementer, verify
 
@@ -206,6 +207,11 @@ class DummyRequest:
     uri = b"http://dummy/"
     method = b"GET"
     client: Optional[IAddress] = None
+    sitepath: List[bytes]
+    written: List[bytes]
+    prepath: List[bytes]
+    args: Dict[bytes, List[bytes]]
+    _finishedDeferreds: List[Deferred[None]]
 
     def registerProducer(self, prod, s):
         """
@@ -225,7 +231,12 @@ class DummyRequest:
     def unregisterProducer(self):
         self.go = 0
 
-    def __init__(self, postpath, session=None, client=None):
+    def __init__(
+        self,
+        postpath: list[bytes],
+        session: Optional[Session] = None,
+        client: Optional[IAddress] = None,
+    ) -> None:
         self.sitepath = []
         self.written = []
         self.finished = 0
