@@ -13,7 +13,7 @@ import linecache
 import sys
 import time
 import types
-from imp import reload
+from importlib import reload
 from types import ModuleType
 from typing import Dict
 

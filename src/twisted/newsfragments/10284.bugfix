@@ -1,2 +1,0 @@
-twisted.conch.ssh.transport.SSHTransportBase now disconnects the remote peer if the
-SSH version string is not sent in the first 4096 bytes.

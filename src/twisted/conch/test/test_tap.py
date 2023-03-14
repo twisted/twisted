@@ -5,9 +5,13 @@
 Tests for L{twisted.conch.tap}.
 """
 
+from typing import Any
+
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
+from twisted.cred.checkers import FilePasswordDB, ICredentialsChecker
 from twisted.cred.credentials import ISSHPrivateKey, IUsernamePassword, UsernamePassword
+from twisted.internet.defer import Deferred
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
@@ -37,7 +41,7 @@ class MakeServiceTests(TestCase):
 
     usernamePassword = (b"iamuser", b"thisispassword")
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a file with two users.
         """
@@ -46,7 +50,7 @@ class MakeServiceTests(TestCase):
             f.write(b":".join(self.usernamePassword))
         self.options = tap.Options()
 
-    def test_basic(self):
+    def test_basic(self) -> None:
         """
         L{tap.makeService} returns a L{StreamServerEndpointService} instance
         running on TCP port 22, and the linked protocol factory is an instance
@@ -58,7 +62,7 @@ class MakeServiceTests(TestCase):
         self.assertEqual(service.endpoint._port, 22)
         self.assertIsInstance(service.factory, OpenSSHFactory)
 
-    def test_defaultAuths(self):
+    def test_defaultAuths(self) -> None:
         """
         Make sure that if the C{--auth} command-line option is not passed,
         the default checkers are (for backwards compatibility): SSH and UNIX
@@ -81,7 +85,7 @@ class MakeServiceTests(TestCase):
             "There should be %d checkers by default" % (numCheckers,),
         )
 
-    def test_authAdded(self):
+    def test_authAdded(self) -> None:
         """
         The C{--auth} command-line option will add a checker to the list of
         checkers, and it should be the only auth checker
@@ -89,7 +93,7 @@ class MakeServiceTests(TestCase):
         self.options.parseOptions(["--auth", "file:" + self.filename])
         self.assertEqual(len(self.options["credCheckers"]), 1)
 
-    def test_multipleAuthAdded(self):
+    def test_multipleAuthAdded(self) -> None:
         """
         Multiple C{--auth} command-line options will add all checkers specified
         to the list ofcheckers, and there should only be the specified auth
@@ -105,32 +109,33 @@ class MakeServiceTests(TestCase):
         )
         self.assertEqual(len(self.options["credCheckers"]), 2)
 
-    def test_authFailure(self):
+    def test_authFailure(self) -> Any:
         """
         The checker created by the C{--auth} command-line option returns a
         L{Deferred} that fails with L{UnauthorizedLogin} when
         presented with credentials that are unknown to that checker.
         """
         self.options.parseOptions(["--auth", "file:" + self.filename])
-        checker = self.options["credCheckers"][-1]
-        invalid = UsernamePassword(self.usernamePassword[0], "fake")
+        checker: FilePasswordDB = self.options["credCheckers"][-1]
+        self.assertIsInstance(checker, FilePasswordDB)
+        invalid = UsernamePassword(self.usernamePassword[0], b"fake")
         # Wrong password should raise error
         return self.assertFailure(
             checker.requestAvatarId(invalid), error.UnauthorizedLogin
         )
 
-    def test_authSuccess(self):
+    def test_authSuccess(self) -> Deferred[None]:
         """
         The checker created by the C{--auth} command-line option returns a
         L{Deferred} that returns the avatar id when presented with credentials
         that are known to that checker.
         """
         self.options.parseOptions(["--auth", "file:" + self.filename])
-        checker = self.options["credCheckers"][-1]
+        checker: ICredentialsChecker = self.options["credCheckers"][-1]
         correct = UsernamePassword(*self.usernamePassword)
         d = checker.requestAvatarId(correct)
 
-        def checkSuccess(username):
+        def checkSuccess(username: bytes) -> None:
             self.assertEqual(username, correct.username)
 
         return d.addCallback(checkSuccess)

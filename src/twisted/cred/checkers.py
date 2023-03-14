@@ -10,13 +10,32 @@ Basic credential checkers
 
 
 import os
+from typing import Any, Dict, Optional, Tuple, Union
 
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.cred import credentials, error
+from twisted.cred import error
+from twisted.cred.credentials import (
+    IAnonymous,
+    IUsernameHashedPassword,
+    IUsernamePassword,
+)
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 from twisted.logger import Logger
 from twisted.python import failure
+
+# A note on anonymity - We do not want None as the value for anonymous
+# because it is too easy to accidentally return it.  We do not want the
+# empty string, because it is too easy to mistype a password file.  For
+# example, an .htpasswd file may contain the lines: ['hello:asdf',
+# 'world:asdf', 'goodbye', ':world'].  This misconfiguration will have an
+# ill effect in any case, but accidentally granting anonymous access is a
+# worse failure mode than simply granting access to an untypeable
+# username.  We do not want an instance of 'object', because that would
+# create potential problems with persistence.
+
+ANONYMOUS: Tuple[()] = ()
 
 
 class ICredentialsChecker(Interface):
@@ -29,33 +48,20 @@ class ICredentialsChecker(Interface):
         "may check."
     )
 
-    def requestAvatarId(credentials):
+    def requestAvatarId(credentials: Any) -> Deferred[Union[bytes, Tuple[()]]]:
         """
         Validate credentials and produce an avatar ID.
 
         @param credentials: something which implements one of the interfaces in
-        C{credentialInterfaces}.
+            C{credentialInterfaces}.
 
         @return: a L{Deferred} which will fire with a L{bytes} that identifies
-        an avatar, an empty tuple to specify an authenticated anonymous user
-        (provided as L{twisted.cred.checkers.ANONYMOUS}) or fail with
-        L{UnauthorizedLogin}. Alternatively, return the result itself.
+            an avatar, an empty tuple to specify an authenticated anonymous
+            user (provided as L{twisted.cred.checkers.ANONYMOUS}) or fail with
+            L{UnauthorizedLogin}.  Alternatively, return the result itself.
 
         @see: L{twisted.cred.credentials}
         """
-
-
-# A note on anonymity - We do not want None as the value for anonymous
-# because it is too easy to accidentally return it.  We do not want the
-# empty string, because it is too easy to mistype a password file.  For
-# example, an .htpasswd file may contain the lines: ['hello:asdf',
-# 'world:asdf', 'goodbye', ':world'].  This misconfiguration will have an
-# ill effect in any case, but accidentally granting anonymous access is a
-# worse failure mode than simply granting access to an untypeable
-# username.  We do not want an instance of 'object', because that would
-# create potential problems with persistence.
-
-ANONYMOUS = ()
 
 
 @implementer(ICredentialsChecker)
@@ -66,7 +72,7 @@ class AllowAnonymousAccess:
     @cvar credentialInterfaces: Tuple containing L{IAnonymous}.
     """
 
-    credentialInterfaces = (credentials.IAnonymous,)
+    credentialInterfaces = (IAnonymous,)
 
     def requestAvatarId(self, credentials):
         """
@@ -97,11 +103,11 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     """
 
     credentialInterfaces = (
-        credentials.IUsernamePassword,
-        credentials.IUsernameHashedPassword,
+        IUsernamePassword,
+        IUsernameHashedPassword,
     )
 
-    def __init__(self, **users):
+    def __init__(self, **users: bytes) -> None:
         """
         Initialize the in-memory database.
 
@@ -119,7 +125,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         """
         self.users = {x.encode("ascii"): y for x, y in users.items()}
 
-    def addUser(self, username, password):
+    def addUser(self, username: bytes, password: bytes) -> None:
         """
         Set a user's password.
 
@@ -162,8 +168,8 @@ class FilePasswordDB:
     """
 
     cache = False
-    _credCache = None
-    _cacheTimestamp = 0
+    _credCache: Optional[Dict[bytes, bytes]] = None
+    _cacheTimestamp: float = 0
     _log = Logger()
 
     def __init__(
@@ -222,13 +228,13 @@ class FilePasswordDB:
             # The passwords are stored plaintext.  We can support both
             # plaintext and hashed passwords received over the network.
             self.credentialInterfaces = (
-                credentials.IUsernamePassword,
-                credentials.IUsernameHashedPassword,
+                IUsernamePassword,
+                IUsernameHashedPassword,
             )
         else:
             # The passwords are hashed on disk.  We can support only
             # plaintext passwords received over the network.
-            self.credentialInterfaces = (credentials.IUsernamePassword,)
+            self.credentialInterfaces = (IUsernamePassword,)
 
     def __getstate__(self):
         d = dict(vars(self))
@@ -271,7 +277,7 @@ class FilePasswordDB:
             self._log.error("Unable to load credentials db: {e!r}", e=e)
             raise error.UnauthorizedLogin()
 
-    def getUser(self, username):
+    def getUser(self, username: bytes) -> Tuple[bytes, bytes]:
         """
         Look up the credentials for a username.
 
@@ -302,13 +308,15 @@ class FilePasswordDB:
                     return u, p
             raise KeyError(username)
 
-    def requestAvatarId(self, c):
+    def requestAvatarId(
+        self, credentials: IUsernamePassword
+    ) -> Deferred[Union[bytes, Tuple[()]]]:
         try:
-            u, p = self.getUser(c.username)
+            u, p = self.getUser(credentials.username)
         except KeyError:
             return defer.fail(error.UnauthorizedLogin())
         else:
-            up = credentials.IUsernamePassword(c, None)
+            up = IUsernamePassword(credentials, None)
             if self.hash:
                 if up is not None:
                     h = self.hash(up.username, up.password, p)
@@ -316,7 +324,7 @@ class FilePasswordDB:
                         return defer.succeed(u)
                 return defer.fail(error.UnauthorizedLogin())
             else:
-                return defer.maybeDeferred(c.checkPassword, p).addCallback(
+                return defer.maybeDeferred(credentials.checkPassword, p).addCallback(
                     self._cbPasswordMatch, u
                 )
 

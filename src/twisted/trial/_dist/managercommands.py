@@ -7,7 +7,7 @@ Commands for reporting test success of failure to the manager.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Boolean, Command, ListOf, Unicode
+from twisted.protocols.amp import Boolean, Command, Integer, Unicode
 
 NativeString = Unicode
 
@@ -28,9 +28,9 @@ class AddError(Command):
 
     arguments = [
         (b"testName", NativeString()),
-        (b"error", NativeString()),
         (b"errorClass", NativeString()),
-        (b"frames", ListOf(NativeString())),
+        (b"errorStreamId", Integer()),
+        (b"framesStreamId", Integer()),
     ]
     response = [(b"success", Boolean())]
 
@@ -42,9 +42,9 @@ class AddFailure(Command):
 
     arguments = [
         (b"testName", NativeString()),
-        (b"fail", NativeString()),
+        (b"failStreamId", Integer()),
         (b"failClass", NativeString()),
-        (b"frames", ListOf(NativeString())),
+        (b"framesStreamId", Integer()),
     ]
     response = [(b"success", Boolean())]
 
@@ -65,7 +65,7 @@ class AddExpectedFailure(Command):
 
     arguments = [
         (b"testName", NativeString()),
-        (b"error", NativeString()),
+        (b"errorStreamId", Integer()),
         (b"todo", NativeString()),
     ]
     response = [(b"success", Boolean())]

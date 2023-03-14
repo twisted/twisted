@@ -21,9 +21,9 @@ from twisted.conch.insults.insults import (
     privateModes,
 )
 from twisted.internet.protocol import Protocol
+from twisted.internet.testing import StringTransport
 from twisted.python.compat import iterbytes
 from twisted.python.constants import ValueConstant, Values
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
 
 

@@ -342,18 +342,24 @@ class StubConnection:
         """
         Record the sent data.
         """
+        if self.closes.get(channel):
+            return
         self.data.setdefault(channel, []).append(data)
 
     def sendExtendedData(self, channel, type, data):
         """
         Record the sent extended data.
         """
+        if self.closes.get(channel):
+            return
         self.extData.setdefault(channel, []).append((type, data))
 
     def sendRequest(self, channel, request, data, wantReply=False):
         """
         Record the sent channel request.
         """
+        if self.closes.get(channel):
+            return
         self.requests.setdefault(channel, []).append((request, data, wantReply))
         if wantReply:
             return defer.succeed(None)
@@ -362,6 +368,8 @@ class StubConnection:
         """
         Record the sent EOF.
         """
+        if self.closes.get(channel):
+            return
         self.eofs[channel] = True
 
     def sendClose(self, channel):

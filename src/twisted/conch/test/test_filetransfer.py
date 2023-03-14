@@ -16,11 +16,11 @@ from hamcrest import assert_that, equal_to
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
+from twisted.internet.testing import StringTransport
 from twisted.protocols import loopback
 from twisted.python import components
 from twisted.python.compat import _PY37PLUS
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 try:
@@ -855,6 +855,9 @@ class ConstantsTests(TestCase):
             self.assertEqual(v, getattr(filetransfer, k))
 
 
+# We don't run on Windows, as we don't have an SFTP file server implemented in conch.ssh for Windows.
+# As soon as there is such an implementation, we can run these tests on Windows.
+@skipIf(not unix, "can't run on non-posix computers")
 @skipIf(not cryptography, "Cannot run without cryptography")
 class RawPacketDataServerTests(TestCase):
     """

@@ -1034,9 +1034,9 @@ class _TagFactory:
     """
     A factory for L{Tag} objects; the implementation of the L{tags} object.
 
-    This allows for the syntactic convenience of C{from twisted.web.html import
-    tags; tags.a(href="linked-page.html")}, where 'a' can be basically any HTML
-    tag.
+    This allows for the syntactic convenience of C{from twisted.web.template
+    import tags; tags.a(href="linked-page.html")}, where 'a' can be basically
+    any HTML tag.
 
     The class is not exposed publicly because you only ever need one of these,
     and we already made it for you.

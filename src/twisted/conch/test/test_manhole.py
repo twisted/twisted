@@ -8,6 +8,7 @@
 Tests for L{twisted.conch.manhole}.
 """
 
+import sys
 import traceback
 from typing import Optional
 
@@ -23,7 +24,7 @@ from twisted.conch.test.test_recvline import (
     stdio,
 )
 from twisted.internet import defer, error
-from twisted.test.proto_helpers import StringTransport
+from twisted.internet.testing import StringTransport
 from twisted.trial import unittest
 
 
@@ -148,9 +149,6 @@ class WriterTests(unittest.TestCase):
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
 
-    def wfd(self, d):
-        return defer.waitForDeferred(d)
-
     def test_SimpleExpression(self):
         """
         Evaluate simple expression.
@@ -244,10 +242,21 @@ class ManholeLoopbackMixin:
                     + defaultFunctionName.encode("utf-8"),
                     b"Exception: foo bar baz",
                     b">>> done",
-                ]
+                ],
             )
 
-        return done.addCallback(finished)
+        done.addCallback(finished)
+        return done
+
+    def test_ExceptionWithCustomExcepthook(
+        self,
+    ):
+        """
+        Raised exceptions are handled the same way even if L{sys.excepthook}
+        has been modified from its original value.
+        """
+        self.patch(sys, "excepthook", lambda *args: None)
+        return self.test_Exception()
 
     def test_ControlC(self):
         """

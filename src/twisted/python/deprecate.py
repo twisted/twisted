@@ -10,14 +10,14 @@ To mark a method, function, or class as being deprecated do this::
     from incremental import Version
     from twisted.python.deprecate import deprecated
 
-    @deprecated(Version("Twisted", 8, 0, 0))
+    @deprecated(Version("Twisted", 22, 10, 0))
     def badAPI(self, first, second):
         '''
         Docstring for badAPI.
         '''
         ...
 
-    @deprecated(Version("Twisted", 16, 0, 0))
+    @deprecated(Version("Twisted", 22, 10, 0))
     class BadClass:
         '''
         Docstring for BadClass.
@@ -34,7 +34,7 @@ To deprecate properties you can use::
 
     class OtherwiseUndeprecatedClass:
 
-        @deprecatedProperty(Version('Twisted', 16, 0, 0))
+        @deprecatedProperty(Version("Twisted", 22, 10, 0))
         def badProperty(self):
             '''
             Docstring for badProperty.
@@ -54,7 +54,7 @@ To mark module-level attributes as being deprecated you can use::
     ...
 
     deprecatedModuleAttribute(
-        Version("Twisted", 8, 0, 0),
+        Version("Twisted", 22, 10, 0),
         "Use goodAttribute instead.",
         "your.full.module.name",
         "badAttribute")
@@ -68,7 +68,7 @@ can be used as the C{moduleName} parameter.
 To mark an optional, keyword parameter of a function or method as deprecated
 without deprecating the function itself, you can use::
 
-    @deprecatedKeywordParameter(Version("Twisted", 19, 2, 0), 'baz')
+    @deprecatedKeywordParameter(Version("Twisted", 22, 10, 0), "baz")
     def someFunction(foo, bar=0, baz=None):
         ...
 

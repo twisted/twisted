@@ -36,6 +36,7 @@ from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import ILogObserver, globalLogBeginner, globalLogPublisher
 from twisted.python import util
 from twisted.python.components import Componentized
@@ -45,11 +46,10 @@ from twisted.python.reflect import requireModule
 from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
 from twisted.scripts import twistd
-from twisted.test.proto_helpers import MemoryReactor
 from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
-_twistd_unix = requireModule("twistd.scripts._twistd_unix")
+_twistd_unix = requireModule("twisted.scripts._twistd_unix")
 if _twistd_unix:
     from twisted.scripts._twistd_unix import (
         UnixApplicationRunner,
@@ -58,7 +58,7 @@ if _twistd_unix:
     )
 
 
-syslog = requireModule("twistd.python.syslog")
+syslog = requireModule("twisted.python.syslog")
 profile = requireModule("profile")
 pstats = requireModule("pstats")
 cProfile = requireModule("cProfile")

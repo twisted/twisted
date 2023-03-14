@@ -491,8 +491,8 @@ class LoopTests(unittest.TestCase):
 
     def test_withCountIntervalZero(self):
         """
-        L{task.LoopingCall.withCount} with interval set to 0
-        will call the countCallable 1.
+        L{task.LoopingCall.withCount} with interval set to 0 calls the
+        countCallable with a count of 1.
         """
         clock = task.Clock()
         accumulator = []
@@ -506,10 +506,14 @@ class LoopTests(unittest.TestCase):
         loop.clock = clock
         deferred = loop.start(0, now=False)
 
-        clock.advance(0)
+        # Even though we have a no-delay loop,
+        # a single iteration of the reactor will not trigger the looping call
+        # multiple times.
+        # This is why we explicitly iterate multiple times.
+        clock.pump([0] * 5)
         self.successResultOf(deferred)
 
-        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+        self.assertEqual([1] * 5, accumulator)
 
     def test_withCountIntervalZeroDelay(self):
         """
@@ -534,20 +538,20 @@ class LoopTests(unittest.TestCase):
         loop.clock = clock
         loop.start(0, now=False)
 
-        clock.advance(0)
+        clock.pump([0] * 2)
         # Loop will block at the third call.
-        self.assertEqual([1, 1], accumulator)
+        self.assertEqual([1] * 2, accumulator)
 
         # Even if more time pass, the loops is not
         # advanced.
-        clock.advance(2)
-        self.assertEqual([1, 1], accumulator)
+        clock.pump([1] * 2)
+        self.assertEqual([1] * 2, accumulator)
 
         # Once the waiting call got a result the loop continues without
         # observing any delay in countCallable.
         deferred.callback(None)
-        clock.advance(0)
-        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+        clock.pump([0] * 4)
+        self.assertEqual([1] * 5, accumulator)
 
     def test_withCountIntervalZeroDelayThenNonZeroInterval(self):
         """
@@ -558,33 +562,69 @@ class LoopTests(unittest.TestCase):
         deferred = defer.Deferred()
         accumulator = []
 
+        # The amount of time to let pass (the number of 1 second steps to
+        # take) before the looping function returns an unfired Deferred.
+        stepsBeforeDelay = 2
+
+        # The amount of time to let pass (the number of 1 second steps to
+        # take) after the looping function returns an unfired Deferred before
+        # fiddling with the loop interval.
+        extraTimeAfterDelay = 5
+
+        # The new value to set for the loop interval when fiddling with it.
+        mutatedLoopInterval = 2
+
+        # The amount of time to let pass (in one jump) after fiddling with the
+        # loop interval.
+        durationOfDelay = 9
+
+        # This is the amount of time that passed between the
+        # Deferred-returning call of the looping function and the next time it
+        # gets a chance to run.
+        skippedTime = extraTimeAfterDelay + durationOfDelay
+
+        # This is the number of calls that would have been made to the
+        # function in that amount of time if the unfired Deferred hadn't been
+        # preventing calls and if the clock hadn't made a large jump after the
+        # Deferred fired.
+        expectedSkipCount = skippedTime // mutatedLoopInterval
+
+        # Because of #5962 LoopingCall sees an unrealistic time for the second
+        # call (it seems 1.0 but on a real reactor it will see 2.0) which
+        # causes it to calculate the skip count incorrectly.  Fudge our
+        # expectation here until #5962 is fixed.
+        expectedSkipCount += 1
+
         def foo(cnt):
             accumulator.append(cnt)
-            if len(accumulator) == 2:
+            if len(accumulator) == stepsBeforeDelay:
                 return deferred
 
         loop = task.LoopingCall.withCount(foo)
         loop.clock = clock
         loop.start(0, now=False)
 
-        # Even if a lot of time pass, loop will block at the third call.
-        clock.advance(10)
-        self.assertEqual([1, 1], accumulator)
+        # Even if a lot of time passes the loop will stop iterating once the
+        # Deferred is returned.  1 * stepsBeforeDelay is enough time to get to
+        # the Deferred result.  The extraTimeAfterDelay shows us it isn't
+        # still iterating afterwards.
+        clock.pump([1] * (stepsBeforeDelay + extraTimeAfterDelay))
+        self.assertEqual([1] * stepsBeforeDelay, accumulator)
 
         # When a new interval is set, once the waiting call got a result the
         # loop continues with the new interval.
-        loop.interval = 2
+        loop.interval = mutatedLoopInterval
         deferred.callback(None)
 
+        clock.advance(durationOfDelay)
         # It will count skipped steps since the last loop call.
-        clock.advance(7)
-        self.assertEqual([1, 1, 3], accumulator)
+        self.assertEqual([1, 1, expectedSkipCount], accumulator)
 
-        clock.advance(2)
-        self.assertEqual([1, 1, 3, 1], accumulator)
+        clock.advance(1 * mutatedLoopInterval)
+        self.assertEqual([1, 1, expectedSkipCount, 1], accumulator)
 
-        clock.advance(4)
-        self.assertEqual([1, 1, 3, 1, 2], accumulator)
+        clock.advance(2 * mutatedLoopInterval)
+        self.assertEqual([1, 1, expectedSkipCount, 1, 2], accumulator)
 
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is

@@ -151,7 +151,7 @@ class ProcServerMixin:
     SYSTEM_NAME = "LINUX"
 
     try:
-        from pwd import getpwuid
+        from pwd import getpwuid  # type:ignore[misc]
 
         def getUsername(self, uid, getpwuid=getpwuid):
             return getpwuid(uid)[0]

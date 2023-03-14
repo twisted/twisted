@@ -8,17 +8,35 @@ be used by test modules to exercise different features of trial's test runner.
 
 See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
+
+Some of these tests are also used by L{twisted.trial._dist.test}.
 """
 
 
 from unittest import skipIf
 
 from twisted.internet import defer, protocol, reactor
+from twisted.internet.task import deferLater
 from twisted.trial import unittest, util
 
 
 class FoolishError(Exception):
     pass
+
+
+class LargeError(Exception):
+    """
+    An exception which has a string representation of at least a specified
+    number of characters.
+    """
+
+    def __init__(self, minSize: int) -> None:
+        Exception.__init__(self)
+        self.minSize = minSize
+
+    def __str__(self):
+        large = "x" * self.minSize
+        return f"LargeError<I fail: {large}>"
 
 
 class FailureInSetUpMixin:
@@ -100,23 +118,44 @@ class TestAsynchronousFail(unittest.TestCase):
     Test failures for L{unittest.TestCase} based classes.
     """
 
-    def test_fail(self):
+    text = "I fail"
+
+    def test_fail(self) -> defer.Deferred[None]:
         """
         A test which fails in the callback of the returned L{defer.Deferred}.
         """
-        d = defer.Deferred()
-        d.addCallback(self._later)
-        reactor.callLater(0, d.callback, None)
-        return d
+        return deferLater(reactor, 0, self.fail, "I fail later")  # type: ignore[arg-type]
 
-    def _later(self, res):
-        self.fail("I fail later")
+    def test_failGreaterThan64k(self) -> defer.Deferred[None]:
+        """
+        A test which fails in the callback of the returned L{defer.Deferred}
+        with a very long string.
+        """
+        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2 ** 16)  # type: ignore[arg-type]
 
-    def test_exception(self):
+    def test_exception(self) -> None:
         """
         A test which raises an exception synchronously.
         """
-        raise Exception("I fail")
+        raise Exception(self.text)
+
+    def test_exceptionGreaterThan64k(self) -> None:
+        """
+        A test which raises an exception with a long string representation
+        synchronously.
+        """
+        raise LargeError(2 ** 16)
+
+    def test_exceptionGreaterThan64kEncoded(self) -> None:
+        """
+        A test which synchronously raises an exception with a long string
+        representation including non-ascii content.
+        """
+        # The exception text itself is not greater than 64k but SNOWMAN
+        # encodes to 3 bytes with UTF-8 so the length of the UTF-8 encoding of
+        # the string representation of this exception will be greater than 2
+        # ** 16.
+        raise Exception("\N{SNOWMAN}" * 2 ** 15)
 
 
 class ErrorTest(unittest.SynchronousTestCase):
@@ -204,3 +243,19 @@ def unexpectedException(self):
 
     >>> 1/0
     """
+
+
+class EventuallyFailingTestCase(unittest.SynchronousTestCase):
+    """
+    A test suite that fails after it is run a few times.
+    """
+
+    n: int = 0
+
+    def test_it(self):
+        """
+        Run successfully a few times and then fail forever after.
+        """
+        self.n += 1
+        if self.n >= 5:
+            self.fail("eventually failing")
