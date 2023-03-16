@@ -117,7 +117,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])
 
-    def test_getPrimes(self):
+    def test_getPrimes(self) -> None:
         """
         L{OpenSSHFactory.getPrimes} should return the available primes
         in the moduli directory.

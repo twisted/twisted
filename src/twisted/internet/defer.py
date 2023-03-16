@@ -30,6 +30,7 @@ from typing import (
     Mapping,
     NoReturn,
     Optional,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -1635,6 +1636,95 @@ def gatherResults(
     d = DeferredList(deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors)
     d.addCallback(_parseDeferredListResult)
     return cast(Deferred[List[_T]], d)
+
+
+class FailureGroup(Exception):
+    """
+    More than one failure occurred.
+    """
+
+    def __init__(self, failures: Sequence[Failure]) -> None:
+        super(FailureGroup, self).__init__()
+        self.failures = failures
+
+
+def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
+    """
+    Select the first available result from the sequence of Deferreds and
+    cancel the rest.
+
+    @return: A cancellable L{Deferred} that fires with the index and output of
+        the element of C{ds} to have a success result first, or that fires
+        with L{FailureGroup} holding a list of their failures if they all
+        fail.
+    """
+    # Keep track of the Deferred for the action which completed first.  When
+    # it completes, all of the other Deferreds will get cancelled but this one
+    # shouldn't be.  Even though it "completed" it isn't really done - the
+    # caller will still be using it for something.  If we cancelled it,
+    # cancellation could propagate down to them.
+    winner: Optional[Deferred] = None
+
+    # The cancellation function for the Deferred this function returns.
+    def cancel(result: Deferred) -> None:
+        # If it is cancelled then we cancel all of the Deferreds for the
+        # individual actions because there is no longer the possibility of
+        # delivering any of their results anywhere.  We don't have to fire
+        # `result` because the Deferred will do that for us.
+        for d in to_cancel:
+            d.cancel()
+
+    # The Deferred that this function will return.  It will fire with the
+    # index and output of the action that completes first, or errback if all
+    # of the actions fail.  If it is cancelled, all of the actions will be
+    # cancelled.
+    final_result: Deferred[tuple[int, _T]] = Deferred(canceller=cancel)
+
+    # A callback for an individual action.
+    def succeeded(this_output: _T, this_index: int) -> None:
+        # If it is the first action to succeed then it becomes the "winner",
+        # its index/output become the externally visible result, and the rest
+        # of the action Deferreds get cancelled.  If it is not the first
+        # action to succeed (because some action did not support
+        # cancellation), just ignore the result.  It is uncommon for this
+        # callback to be entered twice.  The only way it can happen is if one
+        # of the input Deferreds has a cancellation function that fires the
+        # Deferred with a success result.
+        nonlocal winner
+        if winner is None:
+            # This is the first success.  Act on it.
+            winner = to_cancel[this_index]
+
+            # Cancel the rest.
+            for d in to_cancel:
+                if d is not winner:
+                    d.cancel()
+
+            # Fire our Deferred
+            final_result.callback((this_index, this_output))
+
+    # Keep track of how many actions have failed.  If they all fail we need to
+    # deliver failure notification on our externally visible result.
+    failure_state = []
+
+    def failed(failure: Failure, this_index: int) -> None:
+        failure_state.append((this_index, failure))
+        if len(failure_state) == len(to_cancel):
+            # Every operation failed.
+            failure_state.sort()
+            failures = [f for (ignored, f) in failure_state]
+            final_result.errback(FailureGroup(failures))
+
+    # Copy the sequence of Deferreds so we know it doesn't get mutated out
+    # from under us.
+    to_cancel = list(ds)
+    for index, d in enumerate(ds):
+        # Propagate the position of this action as well as the argument to f
+        # to the success callback so we can cancel the right Deferreds and
+        # propagate the result outwards.
+        d.addCallbacks(succeeded, failed, callbackArgs=(index,), errbackArgs=(index,))
+
+    return final_result
 
 
 # Constants for use with DeferredList
