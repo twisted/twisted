@@ -470,6 +470,19 @@ class PermissionsTests(BytesTestCase):
             )
         return first
 
+    def test_test(self) -> None:
+        """
+        Self-test for assertNotUnequal to make sure the assertion works.
+        """
+        with self.assertRaises(AssertionError) as ae:
+            self.assertNotUnequal(3, 4, "custom message")
+        self.assertIn("__ne__ not implemented correctly", str(ae.exception))
+        self.assertIn("custom message", str(ae.exception))
+        with self.assertRaises(AssertionError) as ae2:
+            self.assertNotUnequal(4, 3)
+        self.assertIn("__ne__ not implemented correctly", str(ae2.exception))
+        self.assertNotUnequal(3, 3)
+
     def test_rwxFromBools(self) -> None:
         """
         L{RWX}'s constructor takes a set of booleans
