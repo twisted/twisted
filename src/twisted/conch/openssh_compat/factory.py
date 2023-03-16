@@ -67,14 +67,8 @@ class OpenSSHFactory(factory.SSHFactory):
                     privateKeys[key.sshType()] = key
         return privateKeys
 
-    def getPrimes(
-        self,
-    ) -> Optional[Dict[int, List[Tuple[int, int]]]]:  # type:ignore[override]
+    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
         try:
             return primes.parseModuliFile(self.moduliRoot + "/moduli")
         except OSError:
-            # As seen in the type:ignore[override] above, this historically
-            # handled errors by (invalidly) returning None, and we should
-            # probably fix this at some point, since callers don't need to
-            # handle None given the contract of the superclass.
             return None

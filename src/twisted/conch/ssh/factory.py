@@ -12,7 +12,7 @@ Maintainer: Paul Swartz
 
 import random
 from itertools import chain
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from twisted.conch import error
 from twisted.conch.ssh import _kex, connection, transport, userauth
@@ -25,7 +25,7 @@ class SSHFactory(protocol.Factory):
     A Factory for SSH servers.
     """
 
-    primes: Dict[int, List[Tuple[int, int]]]
+    primes: Optional[Dict[int, List[Tuple[int, int]]]]
 
     _log = Logger()
     protocol = transport.SSHServerTransport
@@ -35,7 +35,7 @@ class SSHFactory(protocol.Factory):
         b"ssh-connection": connection.SSHConnection,
     }
 
-    def startFactory(self):
+    def startFactory(self) -> None:
         """
         Check for public and private keys.
         """
@@ -96,13 +96,11 @@ class SSHFactory(protocol.Factory):
         """
         raise NotImplementedError("getPrivateKeys unimplemented")
 
-    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
+    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
         """
         Called when the factory is started to get Diffie-Hellman generators and
-        primes to use.  Returns a dictionary mapping number of bits to lists
-        of tuple of (generator, prime).
-
-        @rtype: L{dict}
+        primes to use.  Returns a dictionary mapping number of bits to lists of
+        tuple of (generator, prime).
         """
 
     def getDHPrime(self, bits: int) -> Tuple[int, int]:
@@ -114,6 +112,7 @@ class SSHFactory(protocol.Factory):
         def keyfunc(i: int) -> int:
             return abs(i - bits)
 
+        assert self.primes is not None, "Factory should have been started by now."
         primesKeys = sorted(self.primes.keys(), key=keyfunc)
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
