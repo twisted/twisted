@@ -680,7 +680,7 @@ def _asFilesystemBytes(path: Union[bytes, str], encoding: Optional[str] = "") ->
     else:
         if not encoding:
             encoding = sys.getfilesystemencoding()
-        return path.encode(encoding)
+        return path.encode(encoding, errors="surrogateescape")
 
 
 def _asFilesystemText(path: Union[bytes, str], encoding: Optional[str] = None) -> str:
@@ -701,7 +701,7 @@ def _asFilesystemText(path: Union[bytes, str], encoding: Optional[str] = None) -
     else:
         if encoding is None:
             encoding = sys.getfilesystemencoding()
-        return path.decode(encoding)
+        return path.decode(encoding, errors="surrogateescape")
 
 
 def _coerceToFilesystemEncoding(
