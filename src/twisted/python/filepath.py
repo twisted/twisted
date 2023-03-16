@@ -19,6 +19,7 @@ from os.path import (
     dirname,
     exists,
     isabs,
+    islink,
     join as joinpath,
     normpath,
     splitext,
@@ -81,23 +82,6 @@ _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
 _Self = TypeVar("_Self", bound="AbstractFilePath")
 
 
-def _stub_islink(path):
-    """
-    Always return C{False} if the operating system does not support symlinks.
-
-    @param path: A path string.
-    @type path: L{str}
-
-    @return: C{False}
-    @rtype: L{bool}
-    """
-    return False
-
-
-try:
-    from os.path import islink
-except ImportError:
-    islink = _stub_islink
 randomBytes = os.urandom
 armor = base64.urlsafe_b64encode
 
