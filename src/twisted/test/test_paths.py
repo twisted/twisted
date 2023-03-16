@@ -1861,6 +1861,19 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsInstance(newPath, filepath.FilePath)
         self.assertIsInstance(newPath.path, str)
 
+    def test_selfSiblingExtensionSearch(self) -> None:
+        """
+        C{siblingExtension} passed an empty string should return the same path,
+        in the type of its argument.
+        """
+        exists = filepath.FilePath(self.mktemp())
+        exists.touch()
+        notExists = filepath.FilePath(self.mktemp())
+        self.assertEqual(exists.siblingExtensionSearch(b""), exists.asBytesMode())
+        self.assertEqual(exists.siblingExtensionSearch(""), exists.asTextMode())
+        self.assertEqual(notExists.siblingExtensionSearch(""), None)
+        self.assertEqual(notExists.siblingExtensionSearch(b""), None)
+
     def test_mixedTypeChildSearchPreauth(self) -> None:
         """
         C{childSearchPreauth} called with L{bytes} on a L{unicode}-mode
