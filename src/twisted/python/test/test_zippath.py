@@ -51,6 +51,12 @@ class ZipFilePathTests(AbstractFilePathTests):
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b".zip") for x in self.all]
 
+    def test_sibling(self) -> None:
+        """
+        L{ZipPath.sibling} returns a path at the same level.
+        """
+        self.assertEqual(self.path.child("one").sibling("two"), self.path.child("two"))
+
     def test_zipPathRepr(self):
         """
         Make sure that invoking ZipPath's repr prints the correct class name
