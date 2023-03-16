@@ -796,7 +796,7 @@ class FilePathTests(AbstractFilePathTests):
     def testPreauthChild(self) -> None:
         fp = filepath.FilePath(b".")
         fp.preauthChild(b"foo/bar")
-        self.assertRaises(filepath.InsecurePath, fp.child, "/mon\u20acy")
+        self.assertRaises(filepath.InsecurePath, fp.preauthChild, "/mon\u20acy")
 
     def testStatCache(self) -> None:
         p = self.path.child(b"stattest")
