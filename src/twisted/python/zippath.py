@@ -290,8 +290,9 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
         self.path = archivePathname
         self.zipfile = ZipFile(_coerceToFilesystemEncoding("", archivePathname))
         zfname = self.zipfile.filename
-        if zfname is None:
-            raise ValueError("ZipFile")
+        assert (
+            zfname is not None
+        ), "zipfile must have filename when initialized with a path"
         self._zipfileFilename = _coerceToFilesystemEncoding(archivePathname, zfname)
         self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, "")
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
