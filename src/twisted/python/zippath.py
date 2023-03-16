@@ -153,14 +153,11 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         return ZipPath(self.archive, joiner.join([pathInArchive, path]))
 
     def sibling(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, _ArchiveStr]:
-        parent: Union[
-            ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]
-        ] = self.parent()
+        parent: Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]
         rightTypedParent: Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ArchiveStr]]
-        if isinstance(parent, ZipArchive):
-            rightTypedParent = self.archive
-        else:
-            rightTypedParent = parent
+
+        parent = self.parent()
+        rightTypedParent = self.archive if isinstance(parent, ZipArchive) else parent
         child: ZipPath[OtherAnyStr, _ArchiveStr] = rightTypedParent.child(path)
         return child
 
