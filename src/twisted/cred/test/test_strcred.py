@@ -26,6 +26,11 @@ crypt = requireModule("crypt")
 pwd = requireModule("pwd")
 spwd = requireModule("spwd")
 
+try:
+    has_method_crypt = getattr(crypt, "METHOD_CRYPT", None) in crypt.methods
+except AttributeError:
+    has_method_crypt = False
+
 
 def getInvalidAuthType():
     """
@@ -153,6 +158,7 @@ class AnonymousCheckerTests(TestCase):
 
 @skipIf(not pwd, "Required module not available: pwd")
 @skipIf(not crypt, "Required module not available: crypt")
+@skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
 @skipIf(not spwd, "Required module not available: spwd")
 class UnixCheckerTests(TestCase):
 
@@ -281,6 +287,7 @@ class CryptTests(TestCase):
     L{crypt} has functions for encrypting password.
     """
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_verifyCryptedPassword(self):
         """
         L{cred_unix.verifyCryptedPassword}
@@ -329,6 +336,7 @@ class CryptTests(TestCase):
             )
             self.assertFalse(result)
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_verifyCryptedPasswordOSError(self):
         """
         L{cred_unix.verifyCryptedPassword} when OSError is raised
