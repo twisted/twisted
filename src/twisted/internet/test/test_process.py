@@ -23,7 +23,6 @@ from twisted.internet import utils
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet.interfaces import IProcessTransport, IReactorProcess
-from twisted.internet.process import _getFileActions
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.compat import networkString
@@ -51,6 +50,7 @@ except ImportError:
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
 else:
     process = _process
+    from twisted.internet.process import _getFileActions
 
 
 def _getRealMaxOpenFiles() -> int:
@@ -1134,6 +1134,7 @@ CLOSE = 9999
 DUP2 = 10101
 
 
+@onlyOnPOSIX
 class GetFileActionsTests(SynchronousTestCase):
     """
     Tests to make sure that the file actions computed for posix_spawn are
