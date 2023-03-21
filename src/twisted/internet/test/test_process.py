@@ -82,7 +82,7 @@ def onlyOnPOSIX(testMethod):
 
     @return: the C{testMethod} argument.
     """
-    if os.name == "posix":
+    if os.name != "posix":
         testMethod.skip = "Test only applies to POSIX platforms."
     return testMethod
 
