@@ -396,14 +396,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
     @skipIf(platform.isWindows(), "Test only applies to POSIX platforms.")
-    # If you see this comment and are running on macOS, try to see if this pass on your environment.
-    # Only run this test on Linux and macOS local tests and Linux CI platforms.
-    # This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
-    # We still want to run it on local development macOS environments to help developers discover and fix this issue.
-    @skipIf(
-        platform.isMacOSX() and os.environ.get("CI", "").lower() == "true",
-        "Skipped on macOS CI env.",
-    )
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
