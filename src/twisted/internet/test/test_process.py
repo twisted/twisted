@@ -23,13 +23,14 @@ from twisted.internet import utils
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet.interfaces import IProcessTransport, IReactorProcess
+from twisted.internet.process import _getFileActions
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
@@ -1126,4 +1127,97 @@ class ReapingNonePidsLogsProperly(TestCase):
             str(error.value),
             self.expected_message,
             "Wrong error message logged",
+        )
+
+
+CLOSE = 9999
+DUP2 = 10101
+
+
+class GetFileActionsTests(SynchronousTestCase):
+    """
+    Tests to make sure that the file actions computed for posix_spawn are
+    correct.
+    """
+
+    def test_nothing(self) -> None:
+        """
+        If there are no open FDs and no requested child FDs, there's nothing to
+        do.
+        """
+        self.assertEqual(_getFileActions([], {}, CLOSE, DUP2), [])
+
+    def test_closeNoCloexec(self) -> None:
+        """
+        If a file descriptor is not requested but it is not close-on-exec, it
+        should be closed.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {}, CLOSE, DUP2), [(CLOSE, 0)])
+
+    def test_closeWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is not requested, no
+        action should be taken.
+        """
+        self.assertEqual(_getFileActions([(0, True)], {}, CLOSE, DUP2), [])
+
+    def test_moveWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is moved, then there should be a dup2 but no close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {3: 0}, CLOSE, DUP2), [(DUP2, 0, 3)]
+        )
+
+    def test_moveNoCloexec(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it is moved, then there
+        should be a dup2 followed by a close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, False)], {3: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 3), (CLOSE, 0)],
+        )
+
+    def test_stayPut(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it's left in the same
+        place, then there should be no actions taken.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {0: 0}, CLOSE, DUP2), [])
+
+    def test_cloexecStayPut(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it's left in the same place,
+        then we need to DUP2 it elsewhere, close the original, then DUP2 it
+        back so it doesn't get closed by the implicit exec at the end of
+        posix_spawn's file actions.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {0: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 1), (DUP2, 1, 0), (CLOSE, 1)],
+        )
+
+    def test_inheritableConflict(self) -> None:
+        """
+        If our file descriptor mapping requests that file descriptors change
+        places, we must DUP2 them to a new location before DUP2ing them back.
+        """
+        self.assertEqual(
+            _getFileActions(
+                [(0, False), (1, False)],
+                {
+                    0: 1,
+                    1: 0,
+                },
+                CLOSE,
+                DUP2,
+            ),
+            [
+                (DUP2, 0, 2),  # we're working on the desired fd 0 for the
+                # child, so we are about to overwrite 0.
+                (DUP2, 1, 0),  # move 1 to 0, also closing 0
+                (DUP2, 2, 1),  # move 2 to 1, closing previous 1
+                (CLOSE, 2),  # done with 2
+            ],
         )
