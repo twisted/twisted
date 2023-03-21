@@ -446,14 +446,20 @@ sys.stdout.flush()"""
 
         reactor = self.buildReactor()
 
-        reactor.callWhenRunning(
-            reactor.spawnProcess,
-            GatheringProtocol(),
-            pyExe,
-            [pyExe, b"-Wignore", b"-c", source],
-            env=properEnv,
-            usePTY=self.usePTY,
-        )
+        def doSpawn() -> None:
+            try:
+                reactor.spawnProcess(
+                    GatheringProtocol(),
+                    pyExe,
+                    [pyExe, b"-Wignore", b"-c", source],
+                    env=properEnv,
+                    usePTY=self.usePTY,
+                )
+            except BaseException:
+                err()
+                reactor.stop()
+
+        reactor.callWhenRunning(doSpawn)
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
