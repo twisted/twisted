@@ -56,11 +56,7 @@ else:
 def _getRealMaxOpenFiles() -> int:
     from resource import RLIMIT_NOFILE, getrlimit
 
-    potentialLimits = [getrlimit(RLIMIT_NOFILE)[0]]
-    try:
-        potentialLimits.append(os.sysconf("SC_OPEN_MAX"))
-    except ValueError:
-        pass
+    potentialLimits = [getrlimit(RLIMIT_NOFILE)[0], os.sysconf("SC_OPEN_MAX")]
     if platform.isMacOSX():
         # The OPEN_MAX macro is still used on macOS.  Sometimes, you can open
         # file descriptors that go all the way up to SC_OPEN_MAX or
@@ -466,20 +462,14 @@ sys.stdout.flush()"""
 
         reactor = self.buildReactor()
 
-        def doSpawn() -> None:
-            try:
-                reactor.spawnProcess(
-                    GatheringProtocol(),
-                    pyExe,
-                    [pyExe, b"-Wignore", b"-c", source],
-                    env=properEnv,
-                    usePTY=self.usePTY,
-                )
-            except BaseException:
-                err()
-                reactor.stop()
-
-        reactor.callWhenRunning(doSpawn)
+        reactor.callWhenRunning(
+            reactor.spawnProcess,
+            GatheringProtocol(),
+            pyExe,
+            [pyExe, b"-Wignore", b"-c", source],
+            env=properEnv,
+            usePTY=self.usePTY,
+        )
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
@@ -912,7 +902,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b"hello", b'"', b" \t|<>^&", br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b"hello", b'"', b" \t|<>^&", rb'"\\"hello\\"', rb'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
         if isinstance(allChars, str):
