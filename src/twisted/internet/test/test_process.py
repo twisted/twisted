@@ -39,21 +39,38 @@ _uidgidSkipReason = ""
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
-    import resource as _resource
-
     from twisted.internet import process as _process
 
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
 except ImportError:
-    resource = None
     process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
 else:
-    resource = _resource
     process = _process
+
+
+def _getRealMaxOpenFiles() -> int:
+    from resource import RLIMIT_NOFILE, getrlimit
+
+    potentialLimits = [getrlimit(RLIMIT_NOFILE)[0]]
+    try:
+        potentialLimits.append(os.sysconf("SC_OPEN_MAX"))
+    except ValueError:
+        pass
+    if platform.isMacOSX():
+        # The OPEN_MAX macro is still used on macOS.  Sometimes, you can open
+        # file descriptors that go all the way up to SC_OPEN_MAX or
+        # RLIMIT_NOFILE (which *should* be the same) but OPEN_MAX still trumps
+        # in some circumstances.  In particular, when using the posix_spawn
+        # family of functions, file_actions on files greater than OPEN_MAX
+        # return a EBADF errno.  Since this macro is deprecated on every other
+        # UNIX, it's not exposed by Python, since you're really supposed to get
+        # these values somewhere else...
+        potentialLimits.append(0x2800)
+    return min(potentialLimits)
 
 
 def onlyOnPOSIX(testMethod):
@@ -64,7 +81,7 @@ def onlyOnPOSIX(testMethod):
 
     @return: the C{testMethod} argument.
     """
-    if resource is None:
+    if os.name == "posix":
         testMethod.skip = "Test only applies to POSIX platforms."
     return testMethod
 
@@ -99,6 +116,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     """
 
     requiredInterfaces = [IReactorProcess]
+    usePTY: bool
 
     def test_processTransportInterface(self):
         """
@@ -431,7 +449,8 @@ sys.stdout.flush()"""
         # might at least hypothetically select.)
 
         fudgeFactor = 17
-        unlikelyFD = resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor
+        hardResourceLimit = _getRealMaxOpenFiles()
+        unlikelyFD = hardResourceLimit - fudgeFactor
 
         os.dup2(w, unlikelyFD)
         self.addCleanup(os.close, unlikelyFD)
