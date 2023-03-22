@@ -1635,7 +1635,7 @@ class FiringOrder(Generic[_T]):
         try:
             while self._resultQueue:
                 each = self._resultQueue.popleft()
-                yield await succeed(each)
+                yield each
             while self._deferreds:
                 self._pending = Deferred(lambda d: self.cancel())
                 toYield = await self._pending
