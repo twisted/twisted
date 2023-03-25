@@ -24,11 +24,11 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
+from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
 from twisted.protocols import basic, loopback
 from twisted.python.util import LineLog
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
 from twisted.trial.unittest import TestCase
 
 sslSkip: Optional[str]
@@ -1771,7 +1771,8 @@ class SendmailTests(TestCase):
         The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
         L{twisted.internet.reactor}.
         """
-        args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
+        fullSpec = inspect.getfullargspec(smtp.sendmail)
+        defaults = fullSpec[3]
         self.assertEqual(reactor, defaults[2])
 
     def _honorsESMTPArguments(self, username, password):

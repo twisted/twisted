@@ -12,7 +12,7 @@ import string
 import struct
 import types
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Optional, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
@@ -292,7 +292,7 @@ class MockFactory(factory.SSHFactory):
             b"ssh-dsa": keys.Key.fromString(keydata.privateDSA_openssh),
         }
 
-    def getPrimes(self):
+    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
         """
         Diffie-Hellman primes that can be used for key exchange algorithms
         that use group exchange to establish a prime / generator group.
@@ -307,7 +307,7 @@ class MockFactory(factory.SSHFactory):
         # tests.
         # See OpenSSHFactory.getPrimes.
         group14 = _kex.getDHGeneratorAndPrime(b"diffie-hellman-group14-sha1")
-        return {2048: (group14,), 4096: ((5, 7),)}
+        return {2048: [group14], 4096: [(5, 7)]}
 
 
 class MockOldFactoryPublicKeys(MockFactory):

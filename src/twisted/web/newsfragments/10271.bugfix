@@ -1,1 +1,0 @@
-twisted.web.error.Error.__str__ no longer raises an exception when the error's message attribute is None. Additionally, it validates that code is a plausible 3-digit HTTP status code.

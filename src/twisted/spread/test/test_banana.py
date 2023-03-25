@@ -7,10 +7,10 @@ from functools import partial
 from io import BytesIO
 
 from twisted.internet import main, protocol
+from twisted.internet.testing import StringTransport
 from twisted.python import failure
 from twisted.python.compat import iterbytes
 from twisted.spread import banana
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 _maxint = 9223372036854775807

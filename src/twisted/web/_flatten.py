@@ -7,7 +7,6 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-
 from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
@@ -169,7 +168,10 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
 
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
-    Escape a comment for inclusion in a document.
+    Within comments the sequence C{-->} can be mistaken as the end of the comment.
+    To ensure consistent parsing and valid output the sequence is replaced with C{--&gt;}.
+    Furthermore, whitespace is added when a comment ends in a dash. This is done to break
+    the connection of the ending C{-} with the closing C{-->}.
 
     @param data: The string to escape.
 
@@ -178,7 +180,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
+    data = data.replace(b"-->", b"--&gt;")
     if data and data[-1:] == b"-":
         data += b" "
     return data
@@ -272,7 +274,7 @@ def _flattenElement(
         dataEscaper: Callable[[Union[bytes, str]], bytes] = dataEscaper,
         renderFactory: Optional[IRenderable] = renderFactory,
         write: Callable[[bytes], object] = write,
-    ) -> Generator[Union[Generator, Deferred[Generator]], None, None]:
+    ) -> Generator[Union[Flattenable, Deferred[Flattenable]], None, None]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )

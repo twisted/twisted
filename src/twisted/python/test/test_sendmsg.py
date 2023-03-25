@@ -166,10 +166,10 @@ def _spawn(script, outputFD):
         [
             pyExe,
             FilePath(__file__).sibling(script + ".py").asTextMode().path,
-            b"%d" % (outputFD,),
+            b"17",
         ],
         env=env,
-        childFDs={0: "w", 1: "r", 2: "r", outputFD: outputFD},
+        childFDs={0: "w", 1: "r", 2: "r", 17: outputFD},
     )
     return sspp
 
