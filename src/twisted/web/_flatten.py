@@ -6,6 +6,7 @@
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
+from __future__ import annotations
 
 from inspect import iscoroutine
 from io import BytesIO
