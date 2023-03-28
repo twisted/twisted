@@ -1,1 +1,1 @@
-Avoid copying slotData on every call to _getSlotValue.
+`twisted.web.template` now avoids unnecessary copying and is faster, particularly for templates with deep nesting.
