@@ -1,0 +1,1 @@
+Avoid copying slotData on every call to _getSlotValue.
