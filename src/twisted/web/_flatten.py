@@ -6,6 +6,7 @@
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
+from __future__ import annotations
 
 from inspect import iscoroutine
 from io import BytesIO
@@ -194,7 +195,7 @@ def _getSlotValue(
     """
     Find the value of the named slot in the given stack of slot data.
     """
-    for slotFrame in slotData[::-1]:
+    for slotFrame in reversed(slotData):
         if slotFrame is not None and name in slotFrame:
             return slotFrame[name]
     else:
