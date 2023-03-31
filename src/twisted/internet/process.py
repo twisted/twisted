@@ -18,7 +18,8 @@ import signal
 import stat
 import sys
 import traceback
-from typing import TYPE_CHECKING, Callable, Dict, Optional
+from collections import defaultdict
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 _PS_CLOSE: int
 _PS_DUP2: int
@@ -629,6 +630,83 @@ def _listOpenFDs():
     return detector._listOpenFDs()
 
 
+def _getFileActions(
+    fdState: List[Tuple[int, bool]],
+    childToParentFD: Dict[int, int],
+    doClose: int,
+    doDup2: int,
+) -> List[Tuple[int, ...]]:
+    """
+    Get the C{file_actions} parameter for C{posix_spawn} based on the
+    parameters describing the current process state.
+
+    @param fdState: A list of 2-tuples of (file descriptor, close-on-exec
+        flag).
+
+    @param doClose: the integer to use for the 'close' instruction
+
+    @param doDup2: the integer to use for the 'dup2' instruction
+    """
+    fdStateDict = dict(fdState)
+    parentToChildren: Dict[int, List[int]] = defaultdict(list)
+    for inChild, inParent in childToParentFD.items():
+        parentToChildren[inParent].append(inChild)
+    allocated = set(fdStateDict)
+    allocated |= set(childToParentFD.values())
+    allocated |= set(childToParentFD.keys())
+    nextFD = 0
+
+    def allocateFD() -> int:
+        nonlocal nextFD
+        while nextFD in allocated:
+            nextFD += 1
+        allocated.add(nextFD)
+        return nextFD
+
+    result: List[Tuple[int, ...]] = []
+    relocations = {}
+    for inChild, inParent in sorted(childToParentFD.items()):
+        # The parent FD will later be reused by a child FD.
+        parentToChildren[inParent].remove(inChild)
+        if parentToChildren[inChild]:
+            new = relocations[inChild] = allocateFD()
+            result.append((doDup2, inChild, new))
+        if inParent in relocations:
+            result.append((doDup2, relocations[inParent], inChild))
+            if not parentToChildren[inParent]:
+                result.append((doClose, relocations[inParent]))
+        else:
+            if inParent == inChild:
+                if fdStateDict[inParent]:
+                    # If the child is attempting to inherit the parent as-is,
+                    # and it is not close-on-exec, the job is already done; we
+                    # can bail.  Otherwise...
+
+                    tempFD = allocateFD()
+                    # The child wants to inherit the parent as-is, so the
+                    # handle must be heritable.. dup2 makes the new descriptor
+                    # inheritable by default, *but*, per the man page, “if
+                    # fildes and fildes2 are equal, then dup2() just returns
+                    # fildes2; no other changes are made to the existing
+                    # descriptor”, so we need to dup it somewhere else and dup
+                    # it back before closing the temporary place we put it.
+                    result.extend(
+                        [
+                            (doDup2, inParent, tempFD),
+                            (doDup2, tempFD, inChild),
+                            (doClose, tempFD),
+                        ]
+                    )
+            else:
+                result.append((doDup2, inParent, inChild))
+
+    for eachFD, uninheritable in fdStateDict.items():
+        if eachFD not in childToParentFD and not uninheritable:
+            result.append((doClose, eachFD))
+
+    return result
+
+
 @implementer(IProcessTransport)
 class Process(_BaseProcess):
     """
@@ -791,33 +869,16 @@ class Process(_BaseProcess):
         ):
             return False
         fdmap = kwargs.get("fdmap")
-        dupSources = set(fdmap.values())
-        shouldEventuallyClose = _listOpenFDs()
-        closeBeforeDup = []
-        closeAfterDup = []
-        for eachFD in shouldEventuallyClose:
+        fdState = []
+        for eachFD in _listOpenFDs():
             try:
                 isCloseOnExec = fcntl.fcntl(eachFD, fcntl.F_GETFD, fcntl.FD_CLOEXEC)
             except OSError:
                 pass
             else:
-                if eachFD not in fdmap and not isCloseOnExec:
-                    (closeAfterDup if eachFD in dupSources else closeBeforeDup).append(
-                        (_PS_CLOSE, eachFD)
-                    )
-
+                fdState.append((eachFD, isCloseOnExec))
         if environment is None:
             environment = {}
-
-        fileActions = (
-            closeBeforeDup
-            + [
-                (_PS_DUP2, parentFD, childFD)
-                for (childFD, parentFD) in fdmap.items()
-                if childFD != parentFD
-            ]
-            + closeAfterDup
-        )
 
         setSigDef = [
             everySignal
@@ -829,7 +890,9 @@ class Process(_BaseProcess):
             executable,
             args,
             environment,
-            file_actions=fileActions,
+            file_actions=_getFileActions(
+                fdState, fdmap, doClose=_PS_CLOSE, doDup2=_PS_DUP2
+            ),
             setsigdef=setSigDef,
         )
         self.status = -1
