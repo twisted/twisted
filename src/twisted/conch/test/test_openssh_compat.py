@@ -17,11 +17,11 @@ from twisted.trial.unittest import TestCase
 
 doSkip = False
 skipReason = ""
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 else:
     doSkip = True
-    skipReason = "Cannot run without cryptography or PyASN1"
+    skipReason = "Cannot run without cryptography"
 
 if not hasattr(os, "geteuid"):
     doSkip = True
