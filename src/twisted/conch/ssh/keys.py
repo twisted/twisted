@@ -571,7 +571,19 @@ class Key:
             return cls(load_pem_private_key(data, passphrase, default_backend()))
 
         if kind == b"RSA":
-            if len(decodedKey) == 2:  # Alternate RSA key
+            if len(decodedKey) == 2:
+                # Alternate RSA key
+                # See https://github.com/twisted/twisted/issues/3008
+                warnings.warn(
+                    (
+                        "Using this RSA private key was deprecated in "
+                        "Twisted NEXT. You can continue to use the RSA key by "
+                        "converting it to the OpenSSH private key format "
+                        "openssh-key-v1 or newer."
+                    ),
+                    category=DeprecationWarning,
+                    stacklevel=4,
+                )
                 decodedKey = decodedKey[0]
             if len(decodedKey) < 6:
                 raise BadKeyError("RSA key failed to decode properly")

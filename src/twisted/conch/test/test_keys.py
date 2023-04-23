@@ -281,10 +281,7 @@ class KeyTests(unittest.TestCase):
             ),
             keys.Key.fromString(keydata.privateRSA_openssh),
         )
-        self.assertEqual(
-            keys.Key.fromString(keydata.privateRSA_openssh_alternate),
-            keys.Key.fromString(keydata.privateRSA_openssh),
-        )
+
         self._testPublicPrivateFromString(
             keydata.publicDSA_openssh,
             keydata.privateDSA_openssh,
@@ -299,6 +296,37 @@ class KeyTests(unittest.TestCase):
                 "Ed25519",
                 keydata.Ed25519Data,
             )
+
+    def test_fromOpenSSH_alternate(self):
+        """
+        Some versions of OpenSSH generate these (slightly different keys)
+        It is not any standard key format and was probably a bug in OpenSSH at
+        some point.
+
+        When loading such a key a deprecation warning is raised.
+        """
+        referenceKey = keys.Key.fromString(keydata.privateRSA_openssh)
+        # No warnings are raised when loading a standard OpenSSSH private key.
+        warningsShown = self.flushWarnings([self.test_fromOpenSSH_alternate])
+        self.assertEqual(len(warningsShown), 0)
+
+        alternateKey = keys.Key.fromString(keydata.privateRSA_openssh_alternate)
+        # The "alternate" format will raise a warning
+        warningsShown = self.flushWarnings([self.test_fromOpenSSH_alternate])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]["message"],
+            (
+                "Using this RSA private key was deprecated in Twisted NEXT. "
+                "You can continue to use the RSA key by converting it to the "
+                "OpenSSH private key format openssh-key-v1 or newer."
+            ),
+        )
+
+        # The alternate is succesfully loaded and has the same values as the
+        # key loaded using a newer OpenSSH key format.
+        self.assertEqual(referenceKey, alternateKey)
 
     def test_fromOpenSSHErrors(self):
         """

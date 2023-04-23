@@ -1,0 +1,3 @@
+twisted.conch.ssh.keys.Key support for loading "alternate" OpenSSH private keys is now deprecated.
+These are some private keys that at some point were handled by OpenSSH but for which no specification exists.
+For more info about these OpenSSH keys see https://github.com/twisted/twisted/issues/3008.
