@@ -1,3 +1,2 @@
-The `pyasn1` dependency was updated to depend on version below 0.5.0.
-`pyasn1` intorduce a few changes that so far we know that break the Twisted
-test suite.
+The `pyasn1` dependency was updated to depend on a version below 0.5.0.
+`pyasn1` introduce changes that break the Twisted test suite.
