@@ -23,7 +23,7 @@ from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
 keys: Optional[ModuleType] = None
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.checkers import SSHProtocolChecker
     from twisted.conch.ssh import keys, transport, userauth
     from twisted.conch.ssh.common import NS
@@ -903,7 +903,7 @@ class SSHUserAuthClientTests(unittest.TestCase):
 class LoopbackTests(unittest.TestCase):
 
     if keys is None:
-        skip = "cannot run without cryptography or PyASN1"
+        skip = "cannot run without cryptography"
 
     class Factory:
         class Service:
@@ -962,7 +962,7 @@ class LoopbackTests(unittest.TestCase):
 
 class ModuleInitializationTests(unittest.TestCase):
     if keys is None:
-        skip = "cannot run without cryptography or PyASN1"
+        skip = "cannot run without cryptography"
 
     def test_messages(self):
         # Several message types have value 60, check that MSG_USERAUTH_PK_OK

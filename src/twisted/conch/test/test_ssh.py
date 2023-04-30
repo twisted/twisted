@@ -26,7 +26,6 @@ from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
 cryptography = requireModule("cryptography")
-pyasn1 = requireModule("pyasn1")
 
 if cryptography:
     from twisted.conch import avatar, error
@@ -312,7 +311,7 @@ class SuperEchoTransport:
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
 
-if cryptography is not None and pyasn1 is not None:
+if cryptography is not None:
     from twisted.conch import checkers
     from twisted.conch.ssh import (
         channel,
@@ -554,9 +553,6 @@ class SSHProtocolTests(unittest.TestCase):
 
     if not cryptography:
         skip = "can't run without cryptography"
-
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
 
     def _ourServerOurClientTest(self, name=b"session", **kwargs):
         """
@@ -866,9 +862,6 @@ class SSHFactoryTests(unittest.TestCase):
     if not cryptography:
         skip = "can't run without cryptography"
 
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
-
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
         sshFactory.getPrimes = lambda: primes
@@ -980,9 +973,6 @@ class MPTests(unittest.TestCase):
 
     if not cryptography:
         skip = "can't run without cryptography"
-
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
 
     if cryptography:
         getMP = staticmethod(common.getMP)
