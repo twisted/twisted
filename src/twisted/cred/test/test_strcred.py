@@ -419,7 +419,6 @@ class FileDBCheckerTests(TestCase):
 
 @skipIf(not pwd, "Required module not available: pwd")
 @skipIf(not requireModule("cryptography"), "cryptography is not available")
-@skipIf(not requireModule("pyasn1"), "pyasn1 is not available")
 class SSHCheckerTests(TestCase):
     """
     Tests for the C{--auth=sshkey:...} checker.  The majority of the
