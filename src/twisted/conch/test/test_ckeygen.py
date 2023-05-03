@@ -22,7 +22,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.scripts.ckeygen import (
         _getKeyOrDefault,
         _saveKey,
@@ -38,7 +38,7 @@ if requireModule("cryptography") and requireModule("pyasn1"):
         Key,
     )
 else:
-    skip = "cryptography and pyasn1 required for twisted.conch.scripts.ckeygen"
+    skip = "cryptography required for twisted.conch.scripts.ckeygen"
 
 
 def makeGetpass(*passphrases):

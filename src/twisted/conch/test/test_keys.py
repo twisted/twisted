@@ -20,11 +20,10 @@ cryptography = requireModule("cryptography")
 if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
 
-pyasn1 = requireModule("pyasn1")
 _keys_pynacl = requireModule("twisted.conch.ssh._keys_pynacl")
 
 
-if cryptography and pyasn1:
+if cryptography:
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
@@ -49,8 +48,6 @@ class KeyTests(unittest.TestCase):
 
     if cryptography is None:
         skip = skipCryptography
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
 
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
@@ -279,10 +276,6 @@ class KeyTests(unittest.TestCase):
             keys.Key.fromString(
                 keydata.privateRSA_openssh_encrypted, passphrase=b"encrypted"
             ),
-            keys.Key.fromString(keydata.privateRSA_openssh),
-        )
-        self.assertEqual(
-            keys.Key.fromString(keydata.privateRSA_openssh_alternate),
             keys.Key.fromString(keydata.privateRSA_openssh),
         )
         self._testPublicPrivateFromString(
@@ -1155,10 +1148,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes an RSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
-        self.assertEqual(key.toString("openssh"), keydata.privateRSA_openssh)
-        self.assertEqual(
-            key.toString("openssh", passphrase=b"encrypted"),
-            keydata.privateRSA_openssh_encrypted,
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateRSA_openssh)
+        self.assertTrue(
+            key.toString("openssh", passphrase=b"encrypted").find(b"DEK-Info") > 0
         )
         self.assertEqual(
             key.public().toString("openssh"), keydata.publicRSA_openssh[:-8]
@@ -1191,7 +1183,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes a DSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
-        self.assertEqual(key.toString("openssh"), keydata.privateDSA_openssh)
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateDSA_openssh)
         self.assertEqual(
             key.public().toString("openssh", comment=b"comment"),
             keydata.publicDSA_openssh,

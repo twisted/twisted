@@ -26,11 +26,10 @@ from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
 
-pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
 dependencySkip: Optional[str]
-if pyasn1 and cryptography:
+if cryptography:
     dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
     from cryptography.hazmat.backends import default_backend
@@ -42,9 +41,7 @@ if pyasn1 and cryptography:
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
-    if not pyasn1:
-        dependencySkip = "Cannot run without PyASN1"
-    elif not cryptography:
+    if not cryptography:
         dependencySkip = "can't run without cryptography"
     X25519_SUPPORTED = False
 
