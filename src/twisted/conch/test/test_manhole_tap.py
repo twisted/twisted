@@ -15,9 +15,8 @@ from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
-pyasn1 = requireModule("pyasn1")
 
-if cryptography and pyasn1:
+if cryptography:
     from twisted.conch import manhole_ssh, manhole_tap
 
 
@@ -28,9 +27,6 @@ class MakeServiceTests(TestCase):
 
     if not cryptography:
         skip = "can't run without cryptography"
-
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
 
     usernamePassword = (b"iamuser", b"thisispassword")
 

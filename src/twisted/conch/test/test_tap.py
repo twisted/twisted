@@ -16,11 +16,10 @@ from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
-pyasn1 = requireModule("pyasn1")
 unix = requireModule("twisted.conch.unix")
 
 
-if cryptography and pyasn1 and unix:
+if cryptography and unix:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
@@ -32,9 +31,6 @@ class MakeServiceTests(TestCase):
 
     if not cryptography:
         skip = "can't run without cryptography"
-
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
 
     if not unix:
         skip = "can't run on non-posix computers"
