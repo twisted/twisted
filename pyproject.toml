@@ -65,6 +65,9 @@ dev-release = [
     "readthedocs-sphinx-ext ~= 2.2",
     # We can move to v6 once we no longer need to support Python 3.7.
     "sphinx >= 5, <7",
+    # This is due to cachecontrol not being compatible with urllib3>=2.0
+    # See https://github.com/ionrock/cachecontrol/issues/293
+    "urllib3 <2",
 ]
 
 # All the extra tools used to help with the development process.
