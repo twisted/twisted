@@ -127,6 +127,11 @@ jobs:
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
 
+          # Newest Python 3.12 available in GitHub Actions.
+          # This should help prepare for a future stable Python release.
+          # https://github.com/actions/python-versions/releases
+          - python-version: '3.12.0-alpha.7'
+
           # Newest macOS and newest Python supported versions.
           - python-version: '3.11'
             runs-on: 'macos-12'
