@@ -3777,7 +3777,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
         used as an asynchronous context manager.
         """
         lock = DeferredLock()
-        with self.assertRaisesRegexp(Exception, "some specific exception"):
+        with self.assertRaisesRegex(Exception, "some specific exception"):
             async with lock:
                 self.assertTrue(lock.locked)
                 raise Exception("some specific exception")
