@@ -16,7 +16,7 @@ from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names
+from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
