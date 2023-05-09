@@ -605,12 +605,12 @@ class DistTrialRunnerTests(TestCase):
                 processProtocol,
                 executable,
                 args,
-                env,
-                path,
-                uid,
-                gid,
-                usePTY,
-                childFDs,
+                env=None,
+                path=None,
+                uid=None,
+                gid=None,
+                usePTY=False,
+                childFDs=None,
             ):
                 pass
 
