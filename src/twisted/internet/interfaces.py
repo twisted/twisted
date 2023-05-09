@@ -1070,12 +1070,12 @@ class IReactorProcess(Interface):
         processProtocol: "IProcessProtocol",
         executable: Union[bytes, str],
         args: Sequence[Union[bytes, str]],
-        env: Optional[Mapping[AnyStr, AnyStr]],
-        path: Union[bytes, str],
-        uid: int,
-        gid: int,
-        usePTY: bool,
-        childFDs: Mapping[int, Union[int, str]],
+        env: Optional[Mapping[AnyStr, AnyStr]] = None,
+        path: Union[None, bytes, str] = None,
+        uid: Optional[int] = None,
+        gid: Optional[int] = None,
+        usePTY: bool = False,
+        childFDs: Optional[Mapping[int, Union[int, str]]] = None,
     ) -> "IProcessTransport":
         """
         Spawn a process, with a process protocol.
