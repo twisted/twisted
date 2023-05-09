@@ -2,21 +2,21 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib  # type:ignore
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
+from constantly import FlagConstant, Flags, NamedConstant, Names  # type:ignore
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -466,7 +466,7 @@ class Certificate(CertBase):
         return self.dump(crypto.FILETYPE_PEM)
 
     @classmethod
-    def loadPEM(Class, data):
+    def loadPEM(Class, data: bytes) -> Certificate:
         """
         Load a certificate from a PEM-format data string.
 
@@ -883,6 +883,91 @@ class KeyPair(PublicKey):
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber), self
         )
+
+
+def _getSubjectAltNames(c: Certificate) -> List[str]:
+    """
+    get all the SAN names for a given cert
+    """
+    from cryptography.x509 import DNSName, ExtensionOID, load_pem_x509_certificate
+
+    return [
+        value
+        for extension in load_pem_x509_certificate(c.dumpPEM()).extensions
+        for value in extension.value.get_values_for_type(DNSName)
+        if extension.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+    ]
+
+
+@attr.s(auto_attribs=True)
+class PEMObjects:
+    """
+    A collection of objects loaded from a PEM encoded file.
+    """
+
+    certificates: List[Certificate]
+    keyPairs: List[KeyPair]
+
+    @classmethod
+    def fromLines(cls, pemlines: Iterable[bytes]) -> PEMObjects:
+        """
+        Load some objects from the lines of a PEM binary file.
+        """
+        certBlobs: List[bytes] = []
+        keyBlobs: List[bytes] = []
+        blobs = [b""]
+        for line in pemlines:
+            if line.startswith(b"-----BEGIN"):
+                blobs = certBlobs if b"CERTIFICATE" in line else keyBlobs
+                blobs.append(b"")
+            blobs[-1] += line
+            blobs[-1] += b"\n"
+        return cls(
+            keyPairs=[
+                KeyPair.load(keyBlob, crypto.FILETYPE_PEM) for keyBlob in keyBlobs
+            ],
+            certificates=[Certificate.loadPEM(certBlob) for certBlob in certBlobs],
+        )
+
+    def inferDomainMapping(self) -> Dict[str, OpenSSLCertificateOptions]:
+        """
+        Return a mapping of DNS name to L{OpenSSLCertificateOptions}.
+        """
+
+        privateCerts = []
+
+        certificatesByFingerprint = dict(
+            [
+                (certificate.getPublicKey().keyHash(), certificate)
+                for certificate in self.certificates
+            ]
+        )
+
+        for keyPair in self.keyPairs:
+            matchingCertificate = certificatesByFingerprint.pop(keyPair.keyHash(), None)
+            if matchingCertificate is None:
+                # log something?
+                continue
+            privateCerts.append(
+                (
+                    _getSubjectAltNames(matchingCertificate),
+                    PrivateCertificate.fromCertificateAndKeyPair(
+                        matchingCertificate, keyPair
+                    ),
+                )
+            )
+
+        noPrivateKeys = set(certificatesByFingerprint.values())
+        result = {}
+        for names, privateCert in privateCerts:
+            options = OpenSSLCertificateOptions(
+                certificate=privateCert.original,
+                privateKey=privateCert.privateKey.original,
+                extraCertChain=list(noPrivateKeys),
+            )
+            for dnsName in names:
+                result[dnsName] = options
+        return result
 
 
 class IOpenSSLTrustRoot(Interface):
