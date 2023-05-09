@@ -8,6 +8,7 @@ from twisted.internet.endpoints import (
     _TCP6ServerParser,
     _TLSClientEndpointParser,
 )
+from twisted.protocols._sni import TLSParser as _TLSServerParser
 from twisted.protocols.haproxy._parser import (
     HAProxyServerParser as _HAProxyServerParser,
 )
@@ -17,3 +18,4 @@ tcp6ServerEndpointParser = _TCP6ServerParser()
 stdioEndpointParser = _StandardIOParser()
 tlsClientEndpointParser = _TLSClientEndpointParser()
 _haProxyServerEndpointParser = _HAProxyServerParser()
+_tlsServerEndpointParser = _TLSServerParser()

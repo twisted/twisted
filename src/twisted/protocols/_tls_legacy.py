@@ -36,7 +36,7 @@ CreatorFactory = Callable[
 ]
 
 
-SingleArgFactory = Callable[[TLSMemoryBIOProtocol], Connection]
+SingleArgFactory = Callable[["TLSMemoryBIOProtocol"], Connection]
 
 
 def old(

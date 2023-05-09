@@ -13,10 +13,10 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type:ignore
+from OpenSSL._util import lib as pyOpenSSLlib
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type:ignore
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -33,6 +33,7 @@ from twisted.python import log, util
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
 
@@ -894,8 +895,8 @@ def _getSubjectAltNames(c: Certificate) -> List[str]:
     return [
         value
         for extension in load_pem_x509_certificate(c.dumpPEM()).extensions
-        for value in extension.value.get_values_for_type(DNSName)
         if extension.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        for value in extension.value.get_values_for_type(DNSName)
     ]
 
 
@@ -907,6 +908,20 @@ class PEMObjects:
 
     certificates: List[Certificate]
     keyPairs: List[KeyPair]
+
+    @classmethod
+    def fromDirectory(cls, directory: FilePath) -> PEMObjects:
+        """
+        Load a single PEMObjects from all the PEMs in a big directory.
+        """
+        self = PEMObjects([], [])
+        for fp in directory.walk():
+            if fp.basename().endswith(".pem") and fp.isfile():
+                with fp.open() as f:
+                    subself = cls.fromLines(f)
+                    self.certificates.extend(subself.certificates)
+                    self.keyPairs.extend(subself.keyPairs)
+        return self
 
     @classmethod
     def fromLines(cls, pemlines: Iterable[bytes]) -> PEMObjects:
@@ -921,7 +936,6 @@ class PEMObjects:
                 blobs = certBlobs if b"CERTIFICATE" in line else keyBlobs
                 blobs.append(b"")
             blobs[-1] += line
-            blobs[-1] += b"\n"
         return cls(
             keyPairs=[
                 KeyPair.load(keyBlob, crypto.FILETYPE_PEM) for keyBlob in keyBlobs
@@ -957,13 +971,19 @@ class PEMObjects:
                 )
             )
 
-        noPrivateKeys = set(certificatesByFingerprint.values())
+        noPrivateKeys = [
+            Certificate.load(dumped)
+            for dumped in set(
+                each.dump() for each in certificatesByFingerprint.values()
+            )
+        ]
+
         result = {}
         for names, privateCert in privateCerts:
             options = OpenSSLCertificateOptions(
                 certificate=privateCert.original,
                 privateKey=privateCert.privateKey.original,
-                extraCertChain=list(noPrivateKeys),
+                extraCertChain=[noKey.original for noKey in noPrivateKeys],
             )
             for dnsName in names:
                 result[dnsName] = options
@@ -1752,7 +1772,7 @@ class OpenSSLCertificateOptions:
     def __setstate__(self, state):
         self.__dict__ = state
 
-    def getContext(self):
+    def getContext(self) -> SSL.Context:
         """
         Return an L{OpenSSL.SSL.Context} object.
         """
