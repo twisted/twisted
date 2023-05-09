@@ -19,6 +19,7 @@ from incremental import Version
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
+from twisted.internet.interfaces import IOpenSSLContextFactory
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
@@ -320,6 +321,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     @rtype: L{tuple}
     """
 
+    @implementer(IOpenSSLContextFactory)
     class ContextFactory:
         def getContext(self):
             """

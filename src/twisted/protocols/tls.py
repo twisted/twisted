@@ -206,7 +206,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        self._tlsConnection = self.factory._createConnection(self)
+        self._tlsConnection = self.factory._creatorCallable(self)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -626,14 +626,8 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _creatorInterface: the interface which L{_connectionCreator} is
-        expected to implement.
-    @type _creatorInterface: L{zope.interface.interfaces.IInterface}
-
-    @ivar _connectionCreator: a callable which creates an OpenSSL Connection
-        object.
-    @type _connectionCreator: 1-argument callable taking
-        L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
+    @ivar _creatorCallable: A callable for creating a L{Connection} from a
+        L{TLSMemoryBIOProtocol}.
     """
 
     protocol = TLSMemoryBIOProtocol
@@ -720,13 +714,3 @@ class TLSMemoryBIOFactory(WrappingFactory):
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
         return f"{logPrefix} (TLS)"
-
-    def _createConnection(self, tlsProtocol: TLSMemoryBIOProtocol) -> Connection:
-        """
-        Create an OpenSSL connection and set it up good.
-
-        @param tlsProtocol: The protocol which is establishing the connection.
-
-        @return: an OpenSSL connection object for C{tlsProtocol} to use
-        """
-        return self._creatorCallable(tlsProtocol)
