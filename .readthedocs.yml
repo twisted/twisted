@@ -16,11 +16,14 @@ sphinx:
 # offline archive of the actual docs website that everyone uses most frequently
 # and should be kept working; if it's breaking then probably something is wrong
 # with the website as well.
-
 formats: all
 
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+
 python:
-  version: 3.8
   system_packages: False
   install:
     - method: pip
