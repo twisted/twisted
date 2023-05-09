@@ -80,7 +80,6 @@ class ServerNameIndictionConfiguration:
                     segments = name.split(b".")
                     segments[0] = b"*"
                     wildcardName = b".".join(segments)
-                    print(f"wildcard lookup {wildcardName!r} for {name!r}")
                     candidate = self.contextLookup(wildcardName)
 
             if candidate is None:
