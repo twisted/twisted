@@ -58,7 +58,7 @@ class ServerNameIndictionConfiguration:
     """ """
 
     def __init__(
-        self, contextLookup: Callable[[bytes | None], Optional[Context]]
+        self, contextLookup: Callable[[Optional[bytes]], Optional[Context]]
     ) -> None:
         """
         Initialize a L{ServerNameIndictionConfiguration} with a callable that
@@ -73,7 +73,7 @@ class ServerNameIndictionConfiguration:
     ) -> IOpenSSLServerConnectionCreator:
         """ """
 
-        def lookupAndSetup(name: bytes | None) -> Context:
+        def lookupAndSetup(name: Optional[bytes]) -> Context:
             candidate = self.contextLookup(name)
             if candidate is None:
                 if name is not None:
