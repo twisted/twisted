@@ -1189,16 +1189,13 @@ class ClientTLSOptions:
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
-    @type _hostname: L{unicode}
 
     @ivar _hostnameBytes: The hostname to verify, decoded into IDNA-encoded
         bytes.  This is passed to APIs which think that hostnames are bytes,
         such as OpenSSL's SNI implementation.
-    @type _hostnameBytes: L{bytes}
 
     @ivar _hostnameASCII: The hostname, as transcoded into IDNA ASCII-range
         unicode code points.  This is pre-transcoded because the
@@ -1206,13 +1203,17 @@ class ClientTLSOptions:
         C{idna} package from PyPI for internationalized domain names, rather
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
-    @type _hostnameASCII: L{unicode}
 
     @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
         Will be L{False} if C{_hostname} is an IP address or L{True} if
         C{_hostname} is a DNSName
-    @type _hostnameIsDnsName: L{bool}
     """
+
+    _ctx: SSL.Context
+    _hostname: str
+    _hostnameASCII: str
+    _hostnameIsDnsName: bool
+    _hostnameBytes: bytes
 
     def __init__(
         self,
