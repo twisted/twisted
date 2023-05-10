@@ -1281,6 +1281,9 @@ class ClientTLSOptions:
         """
         if self._ctx is None:
             self._ctx = self._createContext()
+            # Note: remember client options for testing.  See
+            # twisted.internet.test.test_endpoints.tlsHostnameFromEndpoint
+            self._ctx._clientOptions = self
             self._ctx.set_info_callback(
                 _tolerateErrors(self._identityVerifyingInfoCallback)
             )
