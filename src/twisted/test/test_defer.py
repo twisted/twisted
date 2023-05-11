@@ -36,6 +36,7 @@ from typing import (
     Union,
     cast,
 )
+from unittest import mock
 
 from hamcrest import assert_that, empty, equal_to, is_
 from hypothesis import given
@@ -1565,6 +1566,48 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         localz, globalz = fail.frames[0][-2:]
         self.assertEqual([], localz)
         self.assertEqual([], globalz)
+
+    def test_errbackAwaitTwiceNoDebug(self) -> None:
+        """
+        test that awaiting a failed Deferred clears its result
+        https://twistedmatrix.com/trac/ticket/10222
+        """
+        defer.setDebugging(False)
+        d: Deferred[None] = Deferred()
+
+        class MyError(Exception):
+            pass
+
+        async def c() -> object:
+            with self.assertRaises(MyError):
+                await d
+
+            self.assertIsNone(await d)
+            return mock.sentinel.done
+
+        d2 = Deferred.fromCoroutine(c())
+        d.errback(MyError())
+        self.assertIsNone(d._debugInfo)
+        self.assertIs(self.successResultOf(d2), mock.sentinel.done)
+
+    def test_callbackAwaitTwiceNoDebug(self) -> None:
+        """
+        test that awaiting a done Deferred clears its result
+        https://twistedmatrix.com/trac/ticket/10222
+        """
+
+        defer.setDebugging(False)
+        d: Deferred[object] = Deferred()
+
+        async def c() -> object:
+            self.assertIs(await d, mock.sentinel.result)
+            self.assertIsNone(await d)
+            return mock.sentinel.done
+
+        d2 = Deferred.fromCoroutine(c())
+        d.callback(mock.sentinel.result)
+        self.assertIsNone(d._debugInfo)
+        self.assertIs(self.successResultOf(d2), mock.sentinel.done)
 
     def test_errbackWithNoArgs(self) -> None:
         """
@@ -3381,7 +3424,7 @@ class EnsureDeferredTests(unittest.TestCase):
 
         def run() -> Generator[Deferred[str], None, str]:
             d = defer.succeed("foo")
-            res = cast(str, (yield from d))
+            res: str = (yield from d)
             return res
 
         # It's a generator...
