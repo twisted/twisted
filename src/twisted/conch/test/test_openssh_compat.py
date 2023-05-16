@@ -17,11 +17,11 @@ from twisted.trial.unittest import TestCase
 
 doSkip = False
 skipReason = ""
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 else:
     doSkip = True
-    skipReason = "Cannot run without cryptography or PyASN1"
+    skipReason = "Cannot run without cryptography"
 
 if not hasattr(os, "geteuid"):
     doSkip = True
@@ -117,7 +117,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])
 
-    def test_getPrimes(self):
+    def test_getPrimes(self) -> None:
         """
         L{OpenSSHFactory.getPrimes} should return the available primes
         in the moduli directory.

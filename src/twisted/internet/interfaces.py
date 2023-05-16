@@ -18,6 +18,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
 )
 
@@ -102,7 +103,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(name: str, timeout: Sequence[int]) -> "Deferred[str]":
+    def getHostByName(name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Resolve the domain name C{name} into an IP address.
 
@@ -189,10 +190,10 @@ class IHostnameResolver(Interface):
     def resolveHostName(
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
-        portNumber: int,
-        addressTypes: Sequence[IAddress],
-        transportSemantics: str,
-    ) -> IResolutionReceiver:
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
         """
         Initiate a hostname resolution.
 
@@ -1069,12 +1070,12 @@ class IReactorProcess(Interface):
         processProtocol: "IProcessProtocol",
         executable: Union[bytes, str],
         args: Sequence[Union[bytes, str]],
-        env: Optional[Mapping[AnyStr, AnyStr]],
-        path: Union[bytes, str],
-        uid: int,
-        gid: int,
-        usePTY: bool,
-        childFDs: Mapping[int, Union[int, str]],
+        env: Optional[Mapping[AnyStr, AnyStr]] = None,
+        path: Union[None, bytes, str] = None,
+        uid: Optional[int] = None,
+        gid: Optional[int] = None,
+        usePTY: bool = False,
+        childFDs: Optional[Mapping[int, Union[int, str]]] = None,
     ) -> "IProcessTransport":
         """
         Spawn a process, with a process protocol.

@@ -1,0 +1,2 @@
+BadZipfile (with a small f) has been deprecated since Python 3.2,
+use BadZipFile (big F) instead, added in 3.2.

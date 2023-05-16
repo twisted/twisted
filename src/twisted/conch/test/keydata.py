@@ -283,38 +283,6 @@ Zrcid5rr3dXSMEbK4tdeQZvPtUg1Uaol3N7bNClIIdvWdPx+5S9T95wJcLnkoHam
 rXp0IjScTxfLP+Cq5V6lJ94/pX8Ppoj1FdZfNxeS4NYFSRA7kvY=
 -----END RSA PRIVATE KEY-----"""
 
-# Some versions of OpenSSH generate these (slightly different keys): the PKCS#1
-# structure is wrapped in an extra ASN.1 SEQUENCE and there's an empty SEQUENCE
-# following it. It is not any standard key format and was probably a bug in
-# OpenSSH at some point.
-privateRSA_openssh_alternate = b"""-----BEGIN RSA PRIVATE KEY-----
-MIIEqDCCBKICAQACggEBANVqrHgj1tYb7CWhUMR3Y1CERQFVQhQqKuDQYO7U6aOt
-Svo5Bl6EVXVfADa/b6oqP4MmN8FpLlv98PPSfdaYzTpAeNXKqBjAEZMkCQyBTI/3
-nO0TFmqkBOlJd8PkVWSzeWieLAjrrOgELSF3BaeO71MwDaXluz1q4gk2b/00031v
-Rv+H2qkpJ6r/rfWF5j4auHodSrHqwFr3MN8fwqTk7z+RSZZA1Rl3LTfDXuydpjpE
-pcKkKd3Vupw9RbPGLBhk1bo936t/zUKsp/EYC6BYFWILpCpuQ8PkBJ81o0eORu0z
-pWW9vDspbgILV9906BO0NzV+g18gJmCm3K2Lxmx5mPcCAwEAAQKCAQAhTAhmoijV
-tPuOD3IbhQkAufJON/AcV0vjUX+eI6fkOphVG+qLepgevNi6sfmJEhhgrOjMC04J
-WkBqui+Z+LMkYIS5zmmVmvni/B9RTScV2ysnre+0aay+fRDrhkdwc7QAh5UVOzf5
-5xTngLtoHhvm3btzY7ln5rInf8/PMJvCmP3ZGDYvNi7xPYF6n+EDLUfbNFFiOd1P
-6ayoi9nW84TEF7lxnQYIQnhNu8Uq9MNYzVUr7b4zXwTqe+YEJGPyLdc9G2zVnGND
-L5KIjT5u2hg32A8lZ4kduUY0XsnOxIvtklozBw/fhgj5kunb6zgINsnNzQoBSFs5
-PnrKxoCp3NQ5AoGBANlwBtjivNR4kVCU1MEbiThsRmRaUaCaBz1IjwNRzGsSjn0a
-sWXncXU54DIFdY0YTK+TsUmxZl94YnrRDMrmTUOznPRrfeYMmNzPIWKO1S4S3gSu
-1yRugzGiFaJEPSKpYiYiubLtVAqdCIOnBw3/GRiO2Ksd2kicMWgRoWZt49gdAoGB
-APtEF4ukNr4eNx2n9mFsBMSq3Xg+B4weMwKuAxSHg3rlnn0IZ6jyqr8ScM9yqafH
-Cx2I1SD9nGPKRzBVTovEz/R/FqSSEnShCcLEbpyMM++l5ffgK61PXBGqGoQ3W/16
-6sPNfLDI5B9UY7XHr9/0Caf8xyX8XOmR15LFmB5W07EjAoGAUa/pkp+UC0qEZT6U
-szuSELV0uIzJ78kOATL6L2gSoQMmrs9RaBRMJpsopAIzCF/hp3CYATR5XlKOxM82
-vB9LVazrwVOEx+FhqErUov9ADYAfEqlQwCoYdZQMBpsWUKhL7EHNe+/3S8l1AmjE
-mLiGiBhaQ+cCM5ciZJODDEUqfO0CgYBpZjfGQN0hxQTzsLg+R5R8dvwt6z85PJXD
-QwFRxEKX8+gWpMbu7NRJEFA4BO47zdfQzMwyaZAHoBtan/4xzR46fnEeGZQaTk8M
-319S1dEXbuzXnLZVnduOIV+8JIi2/K+r8O+kLLDcn4awAxK4i+LdD8DuIz1KUP4v
-uClGWL+2JwKBgGYW+SA00FQlvGExrIL775w1Hn5KVQJolQ0Kk74ev+FA+pCnVHAx
-6Xj84Ga3Inea693V0jBGyuLXXkGbz7VINVGqJdze2zQpSCHb1nT8fuUvU/ecCXC5
-5KB2pq16dCI0nE8Xyz/gquVepSfeP6V/D6aI9RXWXzcXkuDWBUkQO5L2MAA=
------END RSA PRIVATE KEY-----"""
-
 # New format introduced in OpenSSH 6.5
 privateRSA_openssh_new = b"""-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
@@ -653,5 +621,4 @@ __all__ = [
     "publicDSA_openssh",
     "publicRSA_lsh",
     "publicRSA_openssh",
-    "privateRSA_openssh_alternate",
 ]

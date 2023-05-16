@@ -22,4 +22,4 @@ For a PR to be accepted:
 * All automated checks must pass
 * The changeset must have 100% patch test coverage
 
-Extensive contribution guidelines are [available online](https://docs.twisted.org/en/latest/core/development/dev-process.html)
+Extensive contribution guidelines are [available online](https://docs.twisted.org/en/latest/development/dev-process.html)

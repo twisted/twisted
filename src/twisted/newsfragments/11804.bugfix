@@ -1,0 +1,1 @@
+To prevent parsing errors and ensure validity when serializing HTML comments, twisted.web.template.flattenString has been updated to escape the --> sequence within comments.
