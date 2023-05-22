@@ -41,7 +41,7 @@ from twisted.python.log import msg
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
-if requireModule("cryptography") and requireModule("pyasn1.type"):
+if requireModule("cryptography"):
     from twisted.conch.avatar import ConchUser
     from twisted.conch.checkers import InMemorySSHKeyDB, SSHPublicKeyChecker
     from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
@@ -69,7 +69,7 @@ if requireModule("cryptography") and requireModule("pyasn1.type"):
         publicRSA_openssh,
     )
 else:
-    skip = "can't run w/o cryptography and pyasn1"
+    skip = "can't run w/o cryptography"
     SSHFactory = object  # type: ignore[assignment,misc]
     SSHUserAuthServer = object  # type: ignore[assignment,misc]
     SSHConnection = object  # type: ignore[assignment,misc]

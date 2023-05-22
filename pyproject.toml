@@ -59,18 +59,22 @@ test = [
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
-    "towncrier ~= 22.8",
-    "pydoctor ~= 22.9.0",
-    "sphinx-rtd-theme ~= 0.5",
-    "readthedocs-sphinx-ext ~= 2.1",
-    "sphinx >= 4.1.2, <6",
+    "towncrier ~= 22.12",
+    "pydoctor ~= 23.4.0",
+    "sphinx-rtd-theme ~= 1.2",
+    "readthedocs-sphinx-ext ~= 2.2",
+    # We can move to v6 once we no longer need to support Python 3.7.
+    "sphinx >= 5, <7",
+    # This is due to cachecontrol not being compatible with urllib3>=2.0
+    # See https://github.com/ionrock/cachecontrol/issues/293
+    "urllib3 <2",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
-    # TODO: support python-subunit in py3.10 https://twistedmatrix.com/trac/ticket/10115
+    # TODO: support python-subunit in py3.10 https://github.com/twisted/twisted/issues/10115
     "python-subunit ~= 1.4; python_version < '3.10'",
     "twistedchecker ~= 0.7",
     "coverage >= 6b1, <7",
@@ -85,7 +89,6 @@ tls = [
 ]
 
 conch = [
-    "pyasn1 >= 0.4",
     "cryptography >= 3.3",
     "appdirs >= 1.4.0",
     "bcrypt >= 3.1.3",
