@@ -213,6 +213,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
+        openssl version
         python -m pip install --upgrade pip tox~=3.0 coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
