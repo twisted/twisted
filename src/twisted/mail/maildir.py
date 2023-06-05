@@ -559,7 +559,7 @@ class MaildirMailbox(pop3.Mailbox):
         @raise IndexError: When the index does not correspond to a message in
             the mailbox.
         """
-        return open(self.list[i])
+        return open(self.list[i], "rb")
 
     def getUidl(self, i):
         """
