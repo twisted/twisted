@@ -31,10 +31,6 @@ class Ed25519PublicKey(ed25519.Ed25519PublicKey):
     def __ne__(self, other: object) -> bool:
         return not (self == other)
 
-    @classmethod
-    def from_public_bytes(cls, data: bytes) -> ed25519.Ed25519PublicKey:
-        return cls(data)
-
     def public_bytes(
         self,
         encoding: serialization.Encoding,
@@ -74,11 +70,7 @@ class Ed25519PrivateKey(ed25519.Ed25519PrivateKey):
 
     @classmethod
     def generate(cls) -> ed25519.Ed25519PrivateKey:
-        return cls(bytes(SigningKey.generate()))
-
-    @classmethod
-    def from_private_bytes(cls, data: bytes) -> ed25519.Ed25519PrivateKey:
-        return cls(data)
+        return cls.from_private_bytes(bytes(SigningKey.generate()))
 
     def public_key(self) -> ed25519.Ed25519PublicKey:
         return Ed25519PublicKey(bytes(self._key.verify_key))
