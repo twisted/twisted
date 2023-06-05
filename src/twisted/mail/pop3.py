@@ -1182,7 +1182,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{bytes}
         @return: The transformed string.
         """
-        return chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        return chunk.encode('iso_8859_1').replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
 
     def finishedFileTransfer(self, lastsent):
         """

@@ -89,15 +89,15 @@ def initializeMaildir(dir):
     @type dir: L{bytes}
     @param dir: The path name for a user directory.
     """
-    dir = os.fsdecode(dir)
+    dir = os.fsencode(dir)
     if not os.path.isdir(dir):
         os.mkdir(dir, 0o700)
-        for subdir in ["new", "cur", "tmp", ".Trash"]:
+        for subdir in [b"new", b"cur", b"tmp", b".Trash"]:
             os.mkdir(os.path.join(dir, subdir), 0o700)
-        for subdir in ["new", "cur", "tmp"]:
-            os.mkdir(os.path.join(dir, ".Trash", subdir), 0o700)
+        for subdir in [b"new", b"cur", b"tmp"]:
+            os.mkdir(os.path.join(dir, b".Trash", subdir), 0o700)
         # touch
-        open(os.path.join(dir, ".Trash", "maildirfolder"), "w").close()
+        open(os.path.join(dir, b".Trash", b"maildirfolder"), "wb").close()
 
 
 class MaildirMessage(mail.FileMessage):
@@ -151,7 +151,7 @@ class MaildirMessage(mail.FileMessage):
         @return: A deferred which returns the name of the file holding the
             message.
         """
-        self.finalName = self.finalName + ",S=%d" % self.size
+        self.finalName = self.finalName + b",S=%d" % self.size
         return mail.FileMessage.eomReceived(self)
 
 
@@ -246,15 +246,15 @@ class AbstractMaildirDomain:
         @return: A message receiver for this user.
         """
         if isinstance(user, str):
-            name, domain = user.split("@", 1)
+            name, domain = user.split(b"@", 1)
         else:
             name, domain = user.dest.local, user.dest.domain
         dir = self.userDirectory(name)
         fname = _generateMaildirName()
-        filename = os.path.join(dir, "tmp", fname)
-        fp = open(filename, "w")
+        filename = os.path.join(dir, b"tmp", fname)
+        fp = open(filename, "wb")
         return MaildirMessage(
-            f"{name}@{domain}", fp, filename, os.path.join(dir, "new", fname)
+            f"{name}@{domain}", fp, filename, os.path.join(dir, b"new", fname)
         )
 
     def willRelay(self, user, protocol):
@@ -434,7 +434,7 @@ class _MaildirMailboxAppendMessageTask:
         successfully.
         """
         while True:
-            newname = os.path.join(self.mbox.path, "new", _generateMaildirName())
+            newname = os.path.join(self.mbox.path, b"new", _generateMaildirName())
             try:
                 self.osrename(self.tmpname, newname)
                 break
@@ -466,7 +466,7 @@ class _MaildirMailboxAppendMessageTask:
         tries = 0
         self.fh = -1
         while True:
-            self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
+            self.tmpname = os.path.join(self.mbox.path, b"tmp", _generateMaildirName())
             try:
                 self.fh = self.osopen(self.tmpname, attr, 0o600)
                 return None
@@ -513,7 +513,7 @@ class MaildirMailbox(pop3.Mailbox):
         self.list = []
         self.deleted = {}
         initializeMaildir(path)
-        for name in ("cur", "new"):
+        for name in (b"cur", b"new"):
             for file in os.listdir(os.path.join(path, name)):
                 self.list.append((file, os.path.join(path, name, file)))
         self.list.sort()
@@ -593,7 +593,7 @@ class MaildirMailbox(pop3.Mailbox):
             the mailbox.
         """
         trashFile = os.path.join(
-            self.path, ".Trash", "cur", os.path.basename(self.list[i])
+            self.path, b".Trash", b"cur", os.path.basename(self.list[i])
         )
         os.rename(self.list[i], trashFile)
         self.deleted[self.list[i]] = trashFile
@@ -795,7 +795,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if name not in self.dbm:
             if not self.postmaster:
                 return None
-            name = "postmaster"
+            name = b"postmaster"
         dir = os.path.join(self.root, name)
         if not os.path.exists(dir):
             initializeMaildir(dir)

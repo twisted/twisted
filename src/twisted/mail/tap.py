@@ -170,7 +170,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         [Example: 'example.com=/tmp/example.com']
         """
         try:
-            name, path = domain.split("=")
+            name, path = domain.split(b"=")
         except ValueError:
             raise usage.UsageError(
                 "Argument to --maildirdbmdomain must be of the form 'name=path'"
@@ -188,7 +188,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add a user and password to the last specified domain.
         """
         try:
-            user, password = user_pass.split("=", 1)
+            user, password = user_pass.split(b"=", 1)
         except ValueError:
             raise usage.UsageError(
                 "Argument to --user must be of the form 'user=password'"
