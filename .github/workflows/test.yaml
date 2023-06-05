@@ -51,7 +51,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-20.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-22.04' }}"
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -263,7 +263,7 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -307,7 +307,7 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -324,7 +324,7 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -347,7 +347,7 @@ jobs:
   # The files are published only when a tag is created.
   release-publish:
     name: Check release and publish on twisted-* tag
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-22.04'
     steps:
     - uses: actions/checkout@v3
 
