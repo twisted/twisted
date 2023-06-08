@@ -4,6 +4,7 @@ Handler for the various legacy things that a C{contextFactory} can be.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Union
+from warnings import warn
 
 from OpenSSL.SSL import Connection, Context
 
@@ -74,6 +75,7 @@ def _convertToAppropriateFactory(
     connectionSetup: ConnectionHook,
     contextSetup: ContextHook,
 ) -> SingleArgFactory:
+
     if isClient:
         if IOpenSSLClientConnectionCreatorFactory.providedBy(creator):
             return creator.createClientCreator(
@@ -88,5 +90,21 @@ def _convertToAppropriateFactory(
             ).serverConnectionForTLS
         if IOpenSSLServerConnectionCreator.providedBy(creator):
             return old(creator.serverConnectionForTLS, connectionSetup, contextSetup)
-    assert IOpenSSLContextFactory.providedBy(creator)
-    return older(creator.getContext, connectionSetup, contextSetup)
+    if IOpenSSLContextFactory.providedBy(creator):
+        return older(creator.getContext, connectionSetup, contextSetup)
+
+    # Maximum ancient-compatibility fallback.
+    itype = "Client" if isClient else "Server"
+    warn(
+        f"{creator} does not explicitly provide any OpenSSL connection-"
+        f"creator {itype} interface; "
+        f"neither IOpenSSL{itype}ConnectionCreatorFactory, nor IOpenSSL"
+        f"{itype}ConnectionCreator, nor IOpenSSLContextFactory."
+    )
+    getContext = getattr(creator, "getContext", None)
+    assert getContext is not None, f"{creator} does not even have a `getContext` method"
+    assert isinstance(
+        getContext(), Context
+    ), f"{creator}'s `getContext` method doesn't return a `Context`"
+
+    return older(getContext, connectionSetup, contextSetup)
