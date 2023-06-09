@@ -1209,7 +1209,7 @@ class ClientTLSOptions:
         C{_hostname} is a DNSName
     """
 
-    _ctx: SSL.Context
+    _ctx: Optional[SSL.Context]
     _hostname: str
     _hostnameASCII: str
     _hostnameIsDnsName: bool
