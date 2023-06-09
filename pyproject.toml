@@ -94,12 +94,6 @@ conch = [
     "bcrypt >= 3.1.3",
 ]
 
-conch-nacl = [
-    "twisted[conch]",
-    # Used to support Ed25519 keys on systems with OpenSSL < 1.1.1b
-    "PyNaCl",
-]
-
 serial = [
     "pyserial >= 3.0",
     "pywin32 != 226; platform_system == 'Windows'",

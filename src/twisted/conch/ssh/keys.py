@@ -13,7 +13,6 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
-from typing import Optional, Type
 
 import bcrypt
 from cryptography import utils
@@ -61,18 +60,8 @@ _secToNist = {
 }
 
 
-Ed25519PublicKey: Optional[Type[ed25519.Ed25519PublicKey]]
-Ed25519PrivateKey: Optional[Type[ed25519.Ed25519PrivateKey]]
-
-if default_backend().ed25519_supported():
-    Ed25519PublicKey = ed25519.Ed25519PublicKey
-    Ed25519PrivateKey = ed25519.Ed25519PrivateKey
-else:  # pragma: no cover
-    try:
-        from twisted.conch.ssh._keys_pynacl import Ed25519PrivateKey, Ed25519PublicKey
-    except ImportError:
-        Ed25519PublicKey = None
-        Ed25519PrivateKey = None
+Ed25519PublicKey = ed25519.Ed25519PublicKey
+Ed25519PrivateKey = ed25519.Ed25519PrivateKey
 
 
 class BadKeyError(Exception):
