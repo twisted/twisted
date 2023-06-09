@@ -28,12 +28,14 @@ try:
         WantReadError,
     )
 
+    from twisted.protocols._tls_legacy import LegacyContextFactoryWarning
     from twisted.protocols.tls import (
         TLSMemoryBIOFactory,
         TLSMemoryBIOProtocol,
         _ProducerMembrane,
         _PullToPush,
     )
+
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 16.0.0 or newer required for twisted.protocol.tls"
@@ -1503,6 +1505,95 @@ class TLSProducerTests(TestCase):
         is called.
         """
         self.registerProducerAfterConnectionLost(False)
+
+    def test_maximumCompatibilityWarning(self) -> None:
+        """
+        Test for compatibility with very old style context factories (i.e. just
+        objects with a C{getContext} method) or broken context factories.
+        """
+
+        class ExtremelyOldStyle:
+            def __repr__(self):
+                return "extremely old style context factory"
+
+            def getContext(self) -> Context:
+                return Context(TLS_METHOD)
+
+        def f() -> None:
+            oldStyle: IOpenSSLContextFactory = (
+                ExtremelyOldStyle()  # type:ignore[assignment]
+            )
+            TLSMemoryBIOFactory(oldStyle, True, Factory.forProtocol(Protocol))
+
+        self.maxDiff = 999
+        expectedMessage = (
+            "extremely old style context factory does not explicitly provide "
+            "any OpenSSL connection-creator Client interface; neither "
+            "IOpenSSLClientConnectionCreatorFactory, nor "
+            "IOpenSSLClientConnectionCreator, nor IOpenSSLContextFactory."
+        )
+        self.assertWarns(LegacyContextFactoryWarning, expectedMessage, __file__, f)
+
+    def test_brokenContextFactoryErrors(self) -> None:
+        """
+        If a broken object is passed as a context factory, useful error
+        messages in TypeErrors should be returned.
+        """
+
+        class HasGetContextButBroken:
+            def __repr__(self) -> str:
+                return "has get context but broken"
+
+            def getContext(self) -> None:
+                ...
+
+        class JustBroken:
+            def __repr__(self) -> str:
+                return "just broken"
+
+        broken1: IOpenSSLContextFactory = (
+            HasGetContextButBroken()  # type:ignore[assignment]
+        )
+        broken2: IOpenSSLContextFactory = JustBroken()  # type:ignore[assignment]
+
+        def test1() -> None:
+            with self.assertRaises(TypeError) as te:
+                TLSMemoryBIOFactory(broken1, True, Factory.forProtocol(Protocol))
+            self.assertEqual(
+                str(te.exception),
+                "has get context but broken's `getContext` method doesn't return a `Context`",
+            )
+
+        def test2() -> None:
+            with self.assertRaises(TypeError) as te2:
+                TLSMemoryBIOFactory(broken2, True, Factory.forProtocol(Protocol))
+            self.assertEqual(
+                str(te2.exception),
+                "just broken does not even have a `getContext` method",
+            )
+
+        self.assertWarns(
+            LegacyContextFactoryWarning,
+            (
+                "has get context but broken does not explicitly provide any "
+                "OpenSSL connection-creator Client interface; neither "
+                "IOpenSSLClientConnectionCreatorFactory, nor "
+                "IOpenSSLClientConnectionCreator, nor IOpenSSLContextFactory."
+            ),
+            __file__,
+            test1,
+        )
+        self.assertWarns(
+            LegacyContextFactoryWarning,
+            (
+                "just broken does not explicitly provide any OpenSSL "
+                "connection-creator Client interface; neither "
+                "IOpenSSLClientConnectionCreatorFactory, nor "
+                "IOpenSSLClientConnectionCreator, nor IOpenSSLContextFactory."
+            ),
+            __file__,
+            test2,
+        )
 
 
 class NonStreamingProducerTests(TestCase):

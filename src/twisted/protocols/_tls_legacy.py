@@ -40,6 +40,12 @@ CreatorFactory = Callable[
 SingleArgFactory = Callable[["TLSMemoryBIOProtocol"], Connection]
 
 
+class LegacyContextFactoryWarning(Warning):
+    """
+    You should be using a newer TLS context configuration interface.
+    """
+
+
 def old(
     oldMethod: SingleArgFactory,
     connectionSetup: ConnectionHook,
@@ -96,14 +102,15 @@ def oldest(
         f"{creator} does not explicitly provide any OpenSSL connection-"
         f"creator {itype} interface; "
         f"neither IOpenSSL{itype}ConnectionCreatorFactory, nor IOpenSSL"
-        f"{itype}ConnectionCreator, nor IOpenSSLContextFactory."
+        f"{itype}ConnectionCreator, nor IOpenSSLContextFactory.",
+        LegacyContextFactoryWarning,
+        stacklevel=4,
     )
     getContext = getattr(creator, "getContext", None)
-    assert getContext is not None, f"{creator} does not even have a `getContext` method"
-    assert isinstance(
-        getContext(), Context
-    ), f"{creator}'s `getContext` method doesn't return a `Context`"
-
+    if getContext is None:
+        raise TypeError(f"{creator} does not even have a `getContext` method")
+    if not isinstance(getContext(), Context):
+        raise TypeError(f"{creator}'s `getContext` method doesn't return a `Context`")
     return older(getContext, connectionSetup, contextSetup)
 
 
