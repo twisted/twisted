@@ -11,6 +11,7 @@ import gc
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
 
+from twisted.internet.interfaces import IOpenSSLContextFactory
 from twisted.python.compat import iterbytes
 
 try:
@@ -65,6 +66,7 @@ from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
+@implementer(IOpenSSLContextFactory)
 class HandshakeCallbackContextFactory:
     """
     L{HandshakeCallbackContextFactory} is a factory for SSL contexts which
@@ -1365,6 +1367,9 @@ class TLSProducerTests(TestCase):
                 # otherwise just take in data:
                 self.l.append(data)
                 return len(data)
+
+            def get_context(self):
+                pass
 
             def set_connect_state(self):
                 pass

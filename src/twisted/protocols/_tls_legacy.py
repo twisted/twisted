@@ -45,6 +45,11 @@ def old(
     connectionSetup: ConnectionHook,
     contextSetup: ContextHook,
 ) -> SingleArgFactory:
+    """
+    Compatibility shim for (client/server)ConnectionForTLS to
+    create(Client/Server)Creator signature.
+    """
+
     def convert(p: TLSMemoryBIOProtocol) -> Connection:
         connection = oldMethod(p)
         connectionSetup(connection)
@@ -59,6 +64,11 @@ def older(
     connectionSetup: ConnectionHook,
     contextSetup: ContextHook,
 ) -> SingleArgFactory:
+    """
+    Compatibility shim for L{IOpenSSLContextFactory.getContext}-style method to
+    create(Client/Server)Creator.
+    """
+
     def convert(p: TLSMemoryBIOProtocol) -> Connection:
         context = olderMethod()
         connection = Connection(context, None)
@@ -69,12 +79,47 @@ def older(
     return convert
 
 
+def oldest(
+    isClient: bool,
+    creator: object,
+    connectionSetup: ConnectionHook,
+    contextSetup: ContextHook,
+) -> SingleArgFactory:
+    """
+    Comptibility shim that does largely the same thing as L{older} but for
+    things that don't even properly implement the old-style interface; check
+    explicitly for the method and try to provide a useful assert if the object
+    is just the wrong type rather than simply using an older API.
+    """
+    itype = "Client" if isClient else "Server"
+    warn(
+        f"{creator} does not explicitly provide any OpenSSL connection-"
+        f"creator {itype} interface; "
+        f"neither IOpenSSL{itype}ConnectionCreatorFactory, nor IOpenSSL"
+        f"{itype}ConnectionCreator, nor IOpenSSLContextFactory."
+    )
+    getContext = getattr(creator, "getContext", None)
+    assert getContext is not None, f"{creator} does not even have a `getContext` method"
+    assert isinstance(
+        getContext(), Context
+    ), f"{creator}'s `getContext` method doesn't return a `Context`"
+
+    return older(getContext, connectionSetup, contextSetup)
+
+
 def _convertToAppropriateFactory(
     isClient: bool,
     creator: SomeConnectionCreator,
     connectionSetup: ConnectionHook,
     contextSetup: ContextHook,
 ) -> SingleArgFactory:
+    """
+    Upgrade a connection creator / context-factory-ish object into something
+    with a signature like the most recent interface for building OpenSSL
+    context objects (L{IOpenSSLClientCreationCreatorFactory}), accounting for
+    all the various interfaces older versions of Twisted used for context
+    configuration.
+    """
 
     if isClient:
         if IOpenSSLClientConnectionCreatorFactory.providedBy(creator):
@@ -93,18 +138,4 @@ def _convertToAppropriateFactory(
     if IOpenSSLContextFactory.providedBy(creator):
         return older(creator.getContext, connectionSetup, contextSetup)
 
-    # Maximum ancient-compatibility fallback.
-    itype = "Client" if isClient else "Server"
-    warn(
-        f"{creator} does not explicitly provide any OpenSSL connection-"
-        f"creator {itype} interface; "
-        f"neither IOpenSSL{itype}ConnectionCreatorFactory, nor IOpenSSL"
-        f"{itype}ConnectionCreator, nor IOpenSSLContextFactory."
-    )
-    getContext = getattr(creator, "getContext", None)
-    assert getContext is not None, f"{creator} does not even have a `getContext` method"
-    assert isinstance(
-        getContext(), Context
-    ), f"{creator}'s `getContext` method doesn't return a `Context`"
-
-    return older(getContext, connectionSetup, contextSetup)
+    return oldest(isClient, creator, connectionSetup, contextSetup)
