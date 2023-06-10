@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional
 
 from zope.interface import Interface, implementer
 
@@ -33,7 +33,6 @@ from twisted.python import log, util
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
-from twisted.python.filepath import FilePath
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
 
@@ -884,123 +883,6 @@ class KeyPair(PublicKey):
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber), self
         )
-
-
-def _getSubjectAltNames(c: Certificate) -> List[str]:
-    """
-    get all the SAN names for a given cert
-    """
-    from cryptography.x509 import DNSName, ExtensionOID, load_pem_x509_certificate
-
-    return [
-        value
-        for extension in load_pem_x509_certificate(c.dumpPEM()).extensions
-        if extension.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME
-        for value in extension.value.get_values_for_type(DNSName)
-    ]
-
-
-@attr.s(auto_attribs=True)
-class PEMObjects:
-    """
-    A collection of objects loaded from a PEM encoded file.
-    """
-
-    certificates: List[Certificate]
-    keyPairs: List[KeyPair]
-
-    @classmethod
-    def fromDirectory(cls, directory: FilePath) -> PEMObjects:
-        """
-        Load a single PEMObjects from all the PEMs in a big directory.
-        """
-        self = PEMObjects([], [])
-        for fp in directory.walk():
-            if fp.basename().endswith(".pem") and fp.isfile():
-                with fp.open() as f:
-                    subself = cls.fromLines(f)
-                    self.certificates.extend(subself.certificates)
-                    self.keyPairs.extend(subself.keyPairs)
-        return self
-
-    @classmethod
-    def fromLines(cls, pemlines: Iterable[bytes]) -> PEMObjects:
-        """
-        Load some objects from the lines of a PEM binary file.
-        """
-        certBlobs: List[bytes] = []
-        keyBlobs: List[bytes] = []
-        blobs = [b""]
-        for line in pemlines:
-            if line.startswith(b"-----BEGIN"):
-                blobs = certBlobs if b"CERTIFICATE" in line else keyBlobs
-                blobs.append(b"")
-            blobs[-1] += line
-        return cls(
-            keyPairs=[
-                KeyPair.load(keyBlob, crypto.FILETYPE_PEM) for keyBlob in keyBlobs
-            ],
-            certificates=[Certificate.loadPEM(certBlob) for certBlob in certBlobs],
-        )
-
-    def inferDomainMapping(self) -> Dict[str, OpenSSLCertificateOptions]:
-        """
-        Return a mapping of DNS name to L{OpenSSLCertificateOptions}.
-        """
-
-        privateCerts = []
-
-        certificatesByFingerprint = dict(
-            [
-                (certificate.getPublicKey().keyHash(), certificate)
-                for certificate in self.certificates
-            ]
-        )
-
-        for keyPair in self.keyPairs:
-            matchingCertificate = certificatesByFingerprint.pop(keyPair.keyHash(), None)
-            if matchingCertificate is None:
-                # log something?
-                continue
-            privateCerts.append(
-                (
-                    _getSubjectAltNames(matchingCertificate),
-                    PrivateCertificate.fromCertificateAndKeyPair(
-                        matchingCertificate, keyPair
-                    ),
-                )
-            )
-
-        noPrivateKeys = [
-            Certificate.load(dumped)
-            for dumped in set(
-                each.dump() for each in certificatesByFingerprint.values()
-            )
-        ]
-
-        def hashDN(dn: DN) -> Tuple[Tuple[str, str], ...]:
-            return tuple(sorted(dn.items()))
-
-        bySubject = {
-            hashDN(eachIntermediate.getSubject()): eachIntermediate
-            for eachIntermediate in noPrivateKeys
-        }
-
-        result = {}
-        for names, privateCert in privateCerts:
-            chain = []
-            chained = privateCert
-            while hashDN(chained.getIssuer()) in bySubject:
-                chained = bySubject[hashDN(chained.getIssuer())]
-                chain.append(chained.original)
-            options = OpenSSLCertificateOptions(
-                certificate=privateCert.original,
-                privateKey=privateCert.privateKey.original,
-                extraCertChain=chain,
-            )
-            for dnsName in names:
-                result[dnsName] = options
-        return result
 
 
 class IOpenSSLTrustRoot(Interface):

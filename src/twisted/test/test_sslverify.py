@@ -52,6 +52,7 @@ if requireModule("OpenSSL"):
     from cryptography.x509.oid import NameOID
 
     from twisted.internet import ssl
+    from twisted.protocols._sni import PEMObjects
     from ._ca_with_intermediate import createCA, createIntermediate, createLeaf
 
     try:
@@ -628,7 +629,7 @@ class PEMCollectionTests(SynchronousTestCase):
                 obj
             )
 
-        objs = sslverify.PEMObjects.fromDirectory(fp)
+        objs = PEMObjects.fromDirectory(fp)
         mapping = objs.inferDomainMapping()
         self.assertEqual(
             set(mapping.keys()),

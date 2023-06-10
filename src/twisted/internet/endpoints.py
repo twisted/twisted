@@ -17,7 +17,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Optional, Sequence, Type
+from typing import Any, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -37,10 +37,12 @@ from twisted.internet.interfaces import (
     IAddress,
     IHostnameResolver,
     IHostResolution,
+    IReactorCore,
     IReactorPluggableNameResolver,
     IReactorSocket,
     IResolutionReceiver,
     IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
@@ -66,8 +68,10 @@ from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from OpenSSL.SSL import Error as SSLError
-
+    from OpenSSL.SSL import Context, Error as SSLError
+except ImportError:
+    TLSMemoryBIOFactory = None
+else:
     from twisted.internet.ssl import (
         Certificate,
         CertificateOptions,
@@ -76,10 +80,13 @@ try:
         optionsForClientTLS,
         trustRootFromCertificates,
     )
+    from twisted.protocols._sni import (
+        PEMObjects,
+        ServerNameIndictionConfiguration,
+        TLSServerEndpoint,
+    )
     from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
-except ImportError:
-    TLSMemoryBIOFactory = None
-else:
+
     TLSMemoryBIOFactory = _TLSMemoryBIOFactory
 
 __all__ = [
@@ -2336,3 +2343,46 @@ class _TLSClientEndpointParser:
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
+
+
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _TLSServerEndpointParser:
+    """
+    TLS server endpoint parser.
+    """
+
+    prefix: str = "tls"
+
+    def _actualParseStreamServer(
+        self,
+        reactor: IReactorCore,
+        path: str,
+        port: str = "443",
+        backlog: str = "50",
+        interface: str = "::",
+    ) -> IStreamServerEndpoint:
+        """
+        Actual parsing method, with detailed signature breaking out all parameters.
+        """
+        subEndpoint = TCP6ServerEndpoint(reactor, int(port), int(backlog), interface)
+        certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
+
+        def lookup(name: Optional[bytes]) -> Optional[Context]:
+            if name is None:
+                name = list(certMap.keys())[0].encode()
+            options = certMap.get(name.decode())
+            if options is None:
+                return None
+            ctx = options.getContext()
+            return ctx
+
+        contextFactory = ServerNameIndictionConfiguration(lookup)
+        return TLSServerEndpoint(subEndpoint, contextFactory)
+
+    def parseStreamServer(
+        self, reactor: IReactorCore, *args: Any, **kwargs: Any
+    ) -> IStreamServerEndpoint:
+        """
+        Parse a TLS stream server.
+        """
+        return self._actualParseStreamServer(reactor, *args, **kwargs)

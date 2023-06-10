@@ -1,20 +1,28 @@
-from typing import Any, Callable, Optional, Union
+from __future__ import annotations
+
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from zope.interface import implementer
 
+from OpenSSL.crypto import FILETYPE_PEM
 from OpenSSL.SSL import Connection, Context
 
-from twisted.internet._sslverify import PEMObjects
+import attr
+
 from twisted.internet.defer import Deferred
-from twisted.internet.endpoints import TCP6ServerEndpoint
 from twisted.internet.interfaces import (
     IListeningPort,
     IOpenSSLServerConnectionCreator,
     IOpenSSLServerConnectionCreatorFactory,
     IProtocolFactory,
-    IReactorCore,
     IStreamServerEndpoint,
-    IStreamServerEndpointStringParser,
+)
+from twisted.internet.ssl import (
+    DN,
+    Certificate,
+    CertificateOptions,
+    KeyPair,
+    PrivateCertificate,
 )
 from twisted.protocols._tls_legacy import SomeConnectionCreator
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
@@ -91,11 +99,8 @@ class ServerNameIndictionConfiguration:
         return SNIConnectionCreator(lookupAndSetup, connectionSetupHook)
 
 
-from twisted.plugin import IPlugin
-
-
 @implementer(IStreamServerEndpoint)
-class TLSEndpoint(object):
+class TLSServerEndpoint(object):
     def __init__(
         self, endpoint: IStreamServerEndpoint, contextFactory: SomeConnectionCreator
     ) -> None:
@@ -108,44 +113,116 @@ class TLSEndpoint(object):
         )
 
 
-@implementer(IPlugin, IStreamServerEndpointStringParser)
-class TLSParser:
+def _getSubjectAltNames(c: Certificate) -> List[str]:
     """
-    TLS server endpoint parser.
+    get all the SAN names for a given cert
+    """
+    from cryptography.x509 import DNSName, ExtensionOID, load_pem_x509_certificate
+
+    return [
+        value
+        for extension in load_pem_x509_certificate(c.dumpPEM()).extensions
+        if extension.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        for value in extension.value.get_values_for_type(DNSName)
+    ]
+
+
+@attr.s(auto_attribs=True)
+class PEMObjects:
+    """
+    A collection of objects loaded from a PEM encoded file.
     """
 
-    prefix: str = "tls"
+    certificates: List[Certificate]
+    keyPairs: List[KeyPair]
 
-    def _actualParseStreamServer(
-        self,
-        reactor: IReactorCore,
-        path: str,
-        port: str = "443",
-        backlog: str = "50",
-        interface: str = "::",
-    ) -> IStreamServerEndpoint:
+    @classmethod
+    def fromDirectory(cls, directory: FilePath) -> PEMObjects:
         """
-        Actual parsing method, with detailed signature breaking out all parameters.
+        Load a single PEMObjects from all the PEMs in a big directory.
         """
-        subEndpoint = TCP6ServerEndpoint(reactor, int(port), int(backlog), interface)
-        certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
+        self = PEMObjects([], [])
+        for fp in directory.walk():
+            if fp.basename().endswith(".pem") and fp.isfile():
+                with fp.open() as f:
+                    subself = cls.fromLines(f)
+                    self.certificates.extend(subself.certificates)
+                    self.keyPairs.extend(subself.keyPairs)
+        return self
 
-        def lookup(name: Optional[bytes]) -> Optional[Context]:
-            if name is None:
-                name = list(certMap.keys())[0].encode()
-            options = certMap.get(name.decode())
-            if options is None:
-                return None
-            ctx = options.getContext()
-            return ctx
-
-        contextFactory = ServerNameIndictionConfiguration(lookup)
-        return TLSEndpoint(subEndpoint, contextFactory)
-
-    def parseStreamServer(
-        self, reactor: IReactorCore, *args: Any, **kwargs: Any
-    ) -> IStreamServerEndpoint:
+    @classmethod
+    def fromLines(cls, pemlines: Iterable[bytes]) -> PEMObjects:
         """
-        Parse a TLS stream server.
+        Load some objects from the lines of a PEM binary file.
         """
-        return self._actualParseStreamServer(reactor, *args, **kwargs)
+        certBlobs: List[bytes] = []
+        keyBlobs: List[bytes] = []
+        blobs = [b""]
+        for line in pemlines:
+            if line.startswith(b"-----BEGIN"):
+                blobs = certBlobs if b"CERTIFICATE" in line else keyBlobs
+                blobs.append(b"")
+            blobs[-1] += line
+        return cls(
+            keyPairs=[KeyPair.load(keyBlob, FILETYPE_PEM) for keyBlob in keyBlobs],
+            certificates=[Certificate.loadPEM(certBlob) for certBlob in certBlobs],
+        )
+
+    def inferDomainMapping(self) -> Dict[str, CertificateOptions]:
+        """
+        Return a mapping of DNS name to L{OpenSSLCertificateOptions}.
+        """
+
+        privateCerts = []
+
+        certificatesByFingerprint = dict(
+            [
+                (certificate.getPublicKey().keyHash(), certificate)
+                for certificate in self.certificates
+            ]
+        )
+
+        for keyPair in self.keyPairs:
+            matchingCertificate = certificatesByFingerprint.pop(keyPair.keyHash(), None)
+            if matchingCertificate is None:
+                # log something?
+                continue
+            privateCerts.append(
+                (
+                    _getSubjectAltNames(matchingCertificate),
+                    PrivateCertificate.fromCertificateAndKeyPair(
+                        matchingCertificate, keyPair
+                    ),
+                )
+            )
+
+        noPrivateKeys = [
+            Certificate.load(dumped)
+            for dumped in set(
+                each.dump() for each in certificatesByFingerprint.values()
+            )
+        ]
+
+        def hashDN(dn: DN) -> Tuple[Tuple[str, str], ...]:
+            return tuple(sorted(dn.items()))
+
+        bySubject = {
+            hashDN(eachIntermediate.getSubject()): eachIntermediate
+            for eachIntermediate in noPrivateKeys
+        }
+
+        result = {}
+        for names, privateCert in privateCerts:
+            chain = []
+            chained = privateCert
+            while hashDN(chained.getIssuer()) in bySubject:
+                chained = bySubject[hashDN(chained.getIssuer())]
+                chain.append(chained.original)
+            options = CertificateOptions(
+                certificate=privateCert.original,
+                privateKey=privateCert.privateKey.original,
+                extraCertChain=chain,
+            )
+            for dnsName in names:
+                result[dnsName] = options
+        return result
