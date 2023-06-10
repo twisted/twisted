@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from zope.interface import Interface, implementer
 
@@ -978,12 +978,25 @@ class PEMObjects:
             )
         ]
 
+        def hashDN(dn: DN) -> Tuple[Tuple[str, str], ...]:
+            return tuple(sorted(dn.items()))
+
+        bySubject = {
+            hashDN(eachIntermediate.getSubject()): eachIntermediate
+            for eachIntermediate in noPrivateKeys
+        }
+
         result = {}
         for names, privateCert in privateCerts:
+            chain = []
+            chained = privateCert
+            while hashDN(chained.getIssuer()) in bySubject:
+                chained = bySubject[hashDN(chained.getIssuer())]
+                chain.append(chained.original)
             options = OpenSSLCertificateOptions(
                 certificate=privateCert.original,
                 privateKey=privateCert.privateKey.original,
-                extraCertChain=[noKey.original for noKey in noPrivateKeys],
+                extraCertChain=chain,
             )
             for dnsName in names:
                 result[dnsName] = options
