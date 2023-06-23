@@ -7,11 +7,12 @@ Tests for ssh/transport.py and the classes therein.
 
 
 import binascii
+import hashlib
 import re
 import string
 import struct
 import types
-from hashlib import md5, sha1, sha256, sha384, sha512
+from hashlib import sha1, sha256, sha384, sha512
 from typing import Dict, List, Optional, Tuple, Type
 
 from twisted import __version__ as twisted_version
@@ -65,6 +66,19 @@ else:
         def NS(self, arg):
             return b""
 
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 def skipWithoutX25519(f):
     if not X25519_SUPPORTED:
