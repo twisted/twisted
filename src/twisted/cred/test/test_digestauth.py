@@ -8,8 +8,10 @@ L{twisted.cred.credentials}.
 
 
 import base64
+import hashlib
+
 from binascii import hexlify
-from hashlib import md5, sha1
+from hashlib import sha1
 
 from zope.interface.verify import verifyObject
 
@@ -24,6 +26,20 @@ from twisted.cred.error import LoginFailed
 from twisted.internet.address import IPv4Address
 from twisted.python.compat import networkString
 from twisted.trial.unittest import TestCase
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 def b64encode(s):
@@ -175,7 +191,6 @@ class DigestAuthTests(TestCase):
 
         response = hashA1 + b":" + nonce + b":" + hashA2
         expected = hexlify(_hash(response).digest())
-
         digest = calcResponse(hashA1, hashA2, _algorithm, nonce, None, None, None)
         self.assertEqual(expected, digest)
 
