@@ -12,7 +12,7 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 """
 
 import re
-from hashlib import md5
+import hashlib
 from typing import List
 
 from twisted.internet import defer, error, interfaces
@@ -28,6 +28,20 @@ from twisted.python import log
 
 OK = b"+OK"
 ERR = b"-ERR"
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class _ListSetter:

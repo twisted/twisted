@@ -9,6 +9,7 @@ import email.message
 import email.parser
 import errno
 import glob
+import hashlib
 import io
 import os
 import pickle
@@ -18,7 +19,6 @@ import sys
 import tempfile
 import textwrap
 import time
-from hashlib import md5
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -56,6 +56,20 @@ from twisted.python import failure, log
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platformType
 from twisted.trial.unittest import TestCase
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
