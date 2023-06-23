@@ -5,13 +5,27 @@
 Tests for L{twisted.python.zipstream}
 """
 
+import hashlib
 import random
 import struct
 import zipfile
-from hashlib import md5
 
 from twisted.python import filepath, zipstream
 from twisted.trial import unittest
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class FileEntryMixin:

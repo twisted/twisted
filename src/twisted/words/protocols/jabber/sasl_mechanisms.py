@@ -9,14 +9,28 @@ Protocol agnostic implementations of SASL authentication mechanisms.
 
 
 import binascii
+import hashlib
 import os
 import random
 import time
-from hashlib import md5
 
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import networkString
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class ISASLMechanism(Interface):
