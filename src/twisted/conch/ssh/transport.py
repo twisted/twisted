@@ -13,7 +13,6 @@ Maintainer: Paul Swartz
 
 import binascii
 import hmac
-import hashlib
 import struct
 import zlib
 from hashlib import sha1, sha256, sha384, sha512
@@ -31,24 +30,11 @@ from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, networkString
+from twisted.python.compat import iterbytes, networkString, md5
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
 
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 def _mpFromBytes(data):
     """Make an SSH multiple-precision integer from big-endian L{bytes}.

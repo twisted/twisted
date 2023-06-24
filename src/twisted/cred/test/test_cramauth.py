@@ -5,25 +5,12 @@
 Tests for L{twisted.cred}'s implementation of CRAM-MD5.
 """
 
-import hashlib
 from binascii import hexlify
 from hmac import HMAC
 
 from twisted.cred.credentials import CramMD5Credentials, IUsernameHashedPassword
+from twisted.python.compat import md5
 from twisted.trial.unittest import TestCase
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class CramMD5CredentialsTests(TestCase):

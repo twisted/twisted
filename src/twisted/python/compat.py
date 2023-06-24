@@ -22,6 +22,7 @@ the latest version of Python directly from your code, if possible.
 """
 
 
+import hashlib
 import inspect
 import os
 import platform
@@ -142,6 +143,20 @@ deprecatedModuleAttribute(
     __name__,
     "xrange",
 )
+
+
+def md5(data=b'', **kwargs):
+    """
+    Wrapper around hashlib.md5
+    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
+    OpenSSL FIPS mode is enabled:
+    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
+    """
+
+    try:
+        return hashlib.md5(data, **kwargs)
+    except ValueError:
+        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 @deprecated(Version("Twisted", 21, 2, 0), replacement="d.items()")

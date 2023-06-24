@@ -10,7 +10,6 @@ implementations of that interface.
 
 
 import base64
-import hashlib
 import hmac
 import random
 import re
@@ -22,24 +21,10 @@ from zope.interface import Interface, implementer
 
 from twisted.cred import error
 from twisted.cred._digest import calcHA1, calcHA2, calcResponse
-from twisted.python.compat import nativeString, networkString
+from twisted.python.compat import nativeString, networkString, md5
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.versions import Version
-
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class ICredentials(Interface):

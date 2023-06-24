@@ -13,7 +13,6 @@ Post-office Protocol version 3.
 
 import base64
 import binascii
-import hashlib
 import warnings
 from typing import Optional
 
@@ -29,20 +28,7 @@ from twisted.mail.interfaces import (
 )
 from twisted.protocols import basic, policies
 from twisted.python import log
-
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
+from twisted.python.compat import md5
 
 
 # Authentication

@@ -4,7 +4,6 @@
 # See LICENSE for details.
 
 
-import hashlib
 import warnings
 from binascii import hexlify
 from functools import lru_cache
@@ -28,25 +27,11 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
 )
 from twisted.python import log, util
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, md5
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
-
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class TLSVersion(Names):

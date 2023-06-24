@@ -7,7 +7,6 @@ Tests for ssh/transport.py and the classes therein.
 
 
 import binascii
-import hashlib
 import re
 import string
 import struct
@@ -21,7 +20,7 @@ from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes
+from twisted.python.compat import iterbytes, md5
 from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
@@ -66,19 +65,6 @@ else:
         def NS(self, arg):
             return b""
 
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 def skipWithoutX25519(f):
     if not X25519_SUPPORTED:

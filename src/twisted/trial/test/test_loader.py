@@ -6,7 +6,6 @@ Tests for loading tests by name.
 """
 
 
-import hashlib
 import os
 import sys
 import unittest as pyunit
@@ -18,26 +17,13 @@ from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
 from twisted.python.modules import getModule
+from twisted.python.compat import md5
 from twisted.python.reflect import ModuleNotFound
 from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial.itrial import ITestCase
 from twisted.trial.test import packages
 from .matchers import after
-
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 def testNames(tests):

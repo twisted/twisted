@@ -8,7 +8,6 @@ Maildir-style mailbox support.
 """
 
 import io
-import hashlib
 import os
 import socket
 import stat
@@ -23,6 +22,7 @@ from twisted.mail import mail, pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.protocols import basic
 from twisted.python import failure, log
+from twisted.python.compat import md5
 
 INTERNAL_ERROR = """\
 From: Twisted.mail Internals
@@ -31,19 +31,6 @@ Subject: An Error Occurred
   An internal server error has occurred.  Please contact the
   server administrator.
 """
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 class _MaildirNameGenerator:

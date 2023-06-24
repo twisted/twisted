@@ -8,7 +8,6 @@ Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 
 
 import binascii
-import hashlib
 import struct
 import unicodedata
 import warnings
@@ -31,7 +30,7 @@ from typing_extensions import Literal
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, nativeString
+from twisted.python.compat import iterbytes, nativeString, md5
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
@@ -46,20 +45,6 @@ except ImportError:
         decode_rfc6979_signature as decode_dss_signature,
         encode_rfc6979_signature as encode_dss_signature,
     )
-
-
-def md5(data=b'', **kwargs):
-    """
-    Wrapper around hashlib.md5
-    Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when
-    OpenSSL FIPS mode is enabled:
-    ValueError: error:060800A3:digital envelope routines:EVP_DigestInit_ex:disabled for fips
-    """
-
-    try:
-        return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
 
 
 # Curve lookup table
