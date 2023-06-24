@@ -267,6 +267,61 @@ jobs:
         fail_ci_if_error: true
 
 
+  fips-tests:
+    # Define the host in which the container is deployed
+    runs-on: ubuntu-latest
+
+    # Define container inside which the steps are executed
+    container:
+      image: photon:5.0
+      env:
+        NODE_ENV: development
+        USER: test
+        USER_HOMEDIR: /home/test
+      options: --cpus 2
+
+    # Steps as normal.
+    steps:
+    - name: Setup the container
+      run: |
+        tdnf remove -y toybox
+        tdnf update -y
+        tdnf install -y sed
+        tdnf install -y \
+                coreutils-selinux \
+                openssl-fips-provider \
+                python3-pip \
+                python3-devel \
+                build-essential \
+                git \
+                shadow \
+                tzdata
+
+        pip3 install tox~=3.0
+
+    - uses: actions/checkout@v3
+      with:
+        path: twisted
+
+    - name: Prepare for testenv
+      run: |
+        # run tests from user context
+        # for example, test_checker.py tests fail if run as root
+        useradd -m ${USER}
+        cp -r twisted ${USER_HOMEDIR}
+        chown -R ${USER} ${USER_HOMEDIR}
+
+    - name: Run tests
+      run: |
+        # if docker service is running with LimitNOFILE=infinity
+        # few tests (like test_tcp.py) use everything available
+        # so, don't hog the host's resources while testing by
+        # reducing file limits here.
+        ulimit -S -n 1024
+        ulimit -H -n 1024
+        ulimit -a
+        su - ${USER} -c "cd twisted && tox -e alldeps-nocov-posix"
+
 
   static-checks:
     runs-on: ubuntu-20.04
