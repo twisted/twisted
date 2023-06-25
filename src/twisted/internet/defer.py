@@ -797,6 +797,11 @@ class Deferred(Awaitable[_DeferredResultT]):
                 self._debugInfo = DebugInfo()
             self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
+
+        # Clear the canceller to avoid any circular references. This is safe to
+        # do as the canceller does not get called after the deferred has fired
+        self._canceller = None
+
         self.result = result
         self._runCallbacks()
 
