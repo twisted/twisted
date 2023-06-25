@@ -1,0 +1,1 @@
+Fix circular references when using `defer.inlineCallbacks`.
