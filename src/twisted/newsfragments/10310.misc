@@ -1,1 +1,1 @@
-Fix circular references when using a `Deferred` with a canceller that references the `Deferred`, e.g. `DelayedCall` and `inlineCallbacks`.
+When using a `Deferred` with a canceller that references the `Deferred` (ex. `DelayedCall` and `inlineCallbacks`), a canceller reference from the `Derefferd` is removed a soon as the `Deferred` is called. In this way, the canceller should have a higher change of being garbage collected.
