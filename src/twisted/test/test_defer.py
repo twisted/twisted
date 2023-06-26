@@ -1712,6 +1712,8 @@ class _TestCircularCanceller:
     c.f. L{DeferredTest.test_canceller_circular_reference}
     """
 
+    deferred: Optional[Deferred[Any]] = None
+
     def __call__(self, deferred: Deferred[Any]) -> None:
         pass
 
