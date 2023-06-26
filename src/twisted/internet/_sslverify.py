@@ -159,11 +159,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError  # type: ignore[import]
-        from service_identity.pyopenssl import (  # type: ignore[import]
-            verify_hostname,
-            verify_ip_address,
-        )
+        from service_identity import VerificationError
+        from service_identity.pyopenssl import verify_hostname, verify_ip_address
 
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
