@@ -12,7 +12,9 @@ import gc
 import re
 import traceback
 import types
+import unittest as pyunit
 import warnings
+import weakref
 from asyncio import (
     AbstractEventLoop,
     CancelledError,
@@ -58,6 +60,7 @@ from twisted.internet.defer import (
 )
 from twisted.internet.task import Clock
 from twisted.python import log
+from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 
@@ -1677,6 +1680,40 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         for thing in thingsThatAreNotCoroutines:
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference(self) -> None:
+        """
+        Test that a circular reference between a `Deferred` and its canceller
+        is broken when the deferred is resolved.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = _TestCircularCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+
+        deferred.callback(None)
+
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+
+
+class _TestCircularCanceller:
+    """
+    c.f. L{DeferredTest.test_canceller_circular_reference}
+    """
+
+    def __call__(self, deferred: Deferred[Any]) -> None:
+        pass
 
 
 def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]]]:
