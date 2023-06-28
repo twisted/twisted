@@ -128,7 +128,7 @@ jobs:
           - python-version: '3.10'
 
           # Latest Python 3.12 with default settings.
-          - python-version: '3.12'
+          - python-version: '3.12.0-beta.3'
 
           # Newest macOS and newest Python supported versions.
           - python-version: '3.11'
