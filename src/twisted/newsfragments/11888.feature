@@ -1,0 +1,1 @@
+Support was added for Python 3.12 beta release.
