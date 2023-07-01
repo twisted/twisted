@@ -1684,8 +1684,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference(self) -> None:
         """
-        Test that a circular reference between a `Deferred` and its canceller
-        is broken when the deferred is resolved.
+        A circular reference between a `Deferred` and its canceller
+        is broken when the deferred is called.
         """
 
         # Create a canceller and weak reference to track if its been freed.
@@ -1707,15 +1707,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertIsNone(weakCanceller())
 
 
-class _TestCircularCanceller:
+class DummyCanceller:
     """
-    c.f. L{DeferredTest.test_canceller_circular_reference}
+    A callable that does nothing.
+    It is intended to be used just to get an object reference
+    to support GC related tests.
     """
 
     deferred: Optional[Deferred[Any]] = None
 
-    def __call__(self, deferred: Deferred[Any]) -> None:
-        pass
+    def __call__(self, deferred: Deferred[Any]) -> None:  # pragma: no cover
+        """
+        This is not expected to be called as part of the current test suite.
+        """
 
 
 def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]]]:
