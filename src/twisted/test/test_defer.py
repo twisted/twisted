@@ -17,8 +17,8 @@ from asyncio import (
     AbstractEventLoop,
     CancelledError,
     Future,
-    new_event_loop as _new_event_loop,
     ensure_future,
+    new_event_loop as _new_event_loop,
 )
 from typing import (
     TYPE_CHECKING,
@@ -1685,6 +1685,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{Deferred.fromCoroutine} should properly process pending futures
         """
         result = object()
+
         async def test() -> object:
             return result
 
@@ -1697,7 +1698,6 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             self.successResultOf(d),
             is_(result),
         )
-
 
 
 def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]]]:
