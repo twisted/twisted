@@ -1696,6 +1696,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # deferred to the canceller to create the circular reference.
         deferred: Deferred[Any] = Deferred(canceller)
         canceller.deferred = deferred
+        weakDeferred = weakref.ref(deferred)
 
         deferred.callback(None)
 
@@ -1705,6 +1706,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # Once all local references have been dropped, the canceller should have
         # been freed.
         self.assertIsNone(weakCanceller())
+        self.assertIsNone(weakDeferred())
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference_errback(self) -> None:
@@ -1721,6 +1723,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # deferred to the canceller to create the circular reference.
         deferred: Deferred[Any] = Deferred(canceller)
         canceller.deferred = deferred
+        weakDeferred = weakref.ref(deferred)
 
         failure = Failure(Exception("The test demands failures."))
         deferred.errback(failure)
@@ -1735,6 +1738,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # Once all local references have been dropped, the canceller should have
         # been freed.
         self.assertIsNone(weakCanceller())
+        self.assertIsNone(weakDeferred())
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference_non_final(self) -> None:
