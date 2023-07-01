@@ -13,7 +13,7 @@ from __future__ import annotations
 import traceback
 import warnings
 from abc import ABC, abstractmethod
-from asyncio import AbstractEventLoop, Future, iscoroutine
+from asyncio import AbstractEventLoop, Future, iscoroutine, isfuture
 from enum import Enum
 from functools import wraps
 from sys import exc_info
@@ -1873,6 +1873,9 @@ def _inlineCallbacks(
             # itself throws an exception.
             status.deferred.callback(callbackValue)
             return
+
+        if isfuture(result) and not result.done():
+            result = Deferred.fromFuture(result)
 
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.

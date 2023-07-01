@@ -17,6 +17,7 @@ from asyncio import (
     AbstractEventLoop,
     CancelledError,
     Future,
+    ensure_future,
     new_event_loop as _new_event_loop,
 )
 from typing import (
@@ -1677,6 +1678,26 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         for thing in thingsThatAreNotCoroutines:
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
+
+    @ensuringDeferred
+    async def test_fromCoroutineWithEnsureFuture(self) -> None:
+        """
+        L{Deferred.fromCoroutine} should properly process pending futures
+        """
+        result = object()
+
+        async def test() -> object:
+            return result
+
+        async def ensure_wrapper() -> object:
+            return await ensure_future(test())
+
+        d = await Deferred.fromCoroutine(ensure_wrapper())
+
+        assert_that(
+            self.successResultOf(d),
+            is_(result),
+        )
 
 
 def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]]]:
