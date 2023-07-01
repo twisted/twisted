@@ -1700,6 +1700,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         deferred.callback(None)
 
+        # We manually remove the reference from the local
+        # function scope, to avoid interfering with the test.
         del deferred
         del canceller
 
