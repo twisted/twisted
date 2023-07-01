@@ -145,7 +145,7 @@ deprecatedModuleAttribute(
 )
 
 
-def md5(data=b'', **kwargs):
+def md5(data=b"", **kwargs):
     """
     Wrapper around hashlib.md5
     Attempt call with 'usedforsecurity=False' if we get a ValueError, which happens when

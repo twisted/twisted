@@ -30,7 +30,7 @@ from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, networkString, md5
+from twisted.python.compat import iterbytes, md5, networkString
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString

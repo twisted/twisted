@@ -27,7 +27,7 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
 )
 from twisted.python import log, util
-from twisted.python.compat import nativeString, md5
+from twisted.python.compat import md5, nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom

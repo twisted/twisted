@@ -30,7 +30,7 @@ from typing_extensions import Literal
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, nativeString, md5
+from twisted.python.compat import iterbytes, md5, nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 

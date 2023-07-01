@@ -11,8 +11,8 @@ Calculations for HTTP Digest authentication.
 
 from binascii import hexlify
 from hashlib import sha1
-from twisted.python.compat import md5
 
+from twisted.python.compat import md5
 
 # The digest math
 

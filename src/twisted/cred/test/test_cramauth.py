@@ -56,9 +56,7 @@ class CramMD5CredentialsTests(TestCase):
         """
         c = CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hexlify(
-            HMAC(b"thewrongsecret", chal, digestmod=md5).digest()
-        )
+        c.response = hexlify(HMAC(b"thewrongsecret", chal, digestmod=md5).digest())
         self.assertFalse(c.checkPassword(b"secret"))
 
     def test_setResponse(self):

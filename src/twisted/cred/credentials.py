@@ -14,14 +14,13 @@ import hmac
 import random
 import re
 import time
-
 from binascii import hexlify
 
 from zope.interface import Interface, implementer
 
 from twisted.cred import error
 from twisted.cred._digest import calcHA1, calcHA2, calcResponse
-from twisted.python.compat import nativeString, networkString, md5
+from twisted.python.compat import md5, nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
 from twisted.python.versions import Version

@@ -55,13 +55,12 @@ from twisted.internet.test.test_tcp import (
     StreamTransportTestsMixin,
     WriteSequenceTestsMixin,
 )
-from twisted.python.compat import nativeString, md5
+from twisted.python.compat import md5, nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.log import addObserver, err, removeObserver
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-
 
 sendmsg = requireModule("twisted.python.sendmsg")
 sendmsgSkipReason = ""

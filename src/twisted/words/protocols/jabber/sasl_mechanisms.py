@@ -15,7 +15,7 @@ import time
 
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.compat import networkString, md5
+from twisted.python.compat import md5, networkString
 
 
 class ISASLMechanism(Interface):

@@ -16,8 +16,8 @@ from hamcrest import assert_that, equal_to, has_properties
 from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
-from twisted.python.modules import getModule
 from twisted.python.compat import md5
+from twisted.python.modules import getModule
 from twisted.python.reflect import ModuleNotFound
 from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
