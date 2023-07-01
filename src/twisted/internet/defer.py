@@ -13,7 +13,7 @@ from __future__ import annotations
 import traceback
 import warnings
 from abc import ABC, abstractmethod
-from asyncio import AbstractEventLoop, Future, iscoroutine
+from asyncio import AbstractEventLoop, Future, iscoroutine, isfuture
 from enum import Enum
 from functools import wraps
 from sys import exc_info
@@ -1874,7 +1874,8 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        if isinstance(result, Deferred):
+        is_not_done_future = isfuture(result) and not result.done()
+        if isinstance(result, Deferred) or is_not_done_future:
             # a deferred was yielded, get the result.
             def gotResult(r: object) -> None:
                 if waiting[0]:
@@ -1883,6 +1884,8 @@ def _inlineCallbacks(
                 else:
                     _inlineCallbacks(r, gen, status, context)
 
+            if is_not_done_future:
+                result = Deferred.fromFuture(result)
             result.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
