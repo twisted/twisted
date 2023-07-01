@@ -1874,8 +1874,10 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        is_not_done_future = isfuture(result) and not result.done()
-        if isinstance(result, Deferred) or is_not_done_future:
+        if isfuture(result) and not result.done():
+            result = Deferred.fromFuture(result)
+
+        if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
             def gotResult(r: object) -> None:
                 if waiting[0]:
@@ -1884,8 +1886,6 @@ def _inlineCallbacks(
                 else:
                     _inlineCallbacks(r, gen, status, context)
 
-            if is_not_done_future:
-                result = Deferred.fromFuture(result)
             result.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
