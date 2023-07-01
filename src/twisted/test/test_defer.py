@@ -12,7 +12,9 @@ import gc
 import re
 import traceback
 import types
+import unittest as pyunit
 import warnings
+import weakref
 from asyncio import (
     AbstractEventLoop,
     CancelledError,
@@ -58,6 +60,7 @@ from twisted.internet.defer import (
 )
 from twisted.internet.task import Clock
 from twisted.python import log
+from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 
@@ -1677,6 +1680,109 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         for thing in thingsThatAreNotCoroutines:
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference_callback(self) -> None:
+        """
+        A circular reference between a `Deferred` and its canceller
+        is broken when the deferred is called.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = DummyCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+        weakDeferred = weakref.ref(deferred)
+
+        deferred.callback(None)
+
+        # We manually remove the reference from the local
+        # function scope, to avoid interfering with the test.
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+        self.assertIsNone(weakDeferred())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference_errback(self) -> None:
+        """
+        A circular reference between a `Deferred` and its canceller
+        is broken when the deferred fails.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = DummyCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+        weakDeferred = weakref.ref(deferred)
+
+        failure = Failure(Exception("The test demands failures."))
+        deferred.errback(failure)
+
+        # We need to get the failure out of the deferred otherwise the test will
+        # fail due to unhandled error.
+        self.failureResultOf(deferred)
+
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+        self.assertIsNone(weakDeferred())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference_non_final(self) -> None:
+        """
+        A circular reference between a `Deferred` and its canceller is broken
+        when the deferred is called, even if another deferred gets added to its
+        chain.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = DummyCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+
+        deferred.addCallback(lambda _: Deferred())
+        deferred.callback(None)
+
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+
+
+class DummyCanceller:
+    """
+    A callable that does nothing.
+    It is intended to be used just to get an object reference
+    to support GC related tests.
+    """
+
+    deferred: Optional[Deferred[Any]] = None
+
+    def __call__(self, deferred: Deferred[Any]) -> None:  # pragma: no cover
+        """
+        This is not expected to be called as part of the current test suite.
+        """
 
 
 def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]]]:
@@ -3550,7 +3656,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 class CoroutineContextVarsTests(unittest.TestCase):
-
     if contextvars is None:
         skip = "contextvars is not available"  # type: ignore[unreachable]
 
@@ -3582,7 +3687,6 @@ class CoroutineContextVarsTests(unittest.TestCase):
         # context is 1 when the function is defined
         @defer.inlineCallbacks
         def testFunction() -> Generator[Deferred[Any], Any, None]:
-
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
@@ -3747,7 +3851,6 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         # context is 1 when the function is defined
         async def testFunction() -> bool:
-
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
