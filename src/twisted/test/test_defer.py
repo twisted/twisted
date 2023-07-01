@@ -1757,9 +1757,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferred: Deferred[Any] = Deferred(canceller)
         canceller.deferred = deferred
 
-        deferred.callback(None)
-
         deferred.addCallback(lambda _: Deferred())
+        deferred.callback(None)
 
         del deferred
         del canceller
