@@ -1682,14 +1682,14 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
-    def test_canceller_circular_reference(self) -> None:
+    def test_canceller_circular_reference_callback(self) -> None:
         """
         A circular reference between a `Deferred` and its canceller
         is broken when the deferred is called.
         """
 
         # Create a canceller and weak reference to track if its been freed.
-        canceller = _TestCircularCanceller()
+        canceller = DummyCanceller()
         weakCanceller = weakref.ref(canceller)
 
         # Create a Deferred with the above canceller, adding a reference to the
@@ -1698,6 +1698,64 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         canceller.deferred = deferred
 
         deferred.callback(None)
+
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference_errback(self) -> None:
+        """
+        A circular reference between a `Deferred` and its canceller
+        is broken when the deferred fails.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = DummyCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+
+        failure = Failure(Exception("The test demands failures."))
+        deferred.errback(failure)
+
+        # We need to get the failure out of the deferred otherwise the test will
+        # fail due to unhandled error.
+        self.failureResultOf(deferred)
+
+        del deferred
+        del canceller
+
+        # Once all local references have been dropped, the canceller should have
+        # been freed.
+        self.assertIsNone(weakCanceller())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_canceller_circular_reference_non_final(self) -> None:
+        """
+        A circular reference between a `Deferred` and its canceller is broken
+        when the deferred is called, even if another deferred gets added to its
+        chain.
+        """
+
+        # Create a canceller and weak reference to track if its been freed.
+        canceller = DummyCanceller()
+        weakCanceller = weakref.ref(canceller)
+
+        # Create a Deferred with the above canceller, adding a reference to the
+        # deferred to the canceller to create the circular reference.
+        deferred: Deferred[Any] = Deferred(canceller)
+        canceller.deferred = deferred
+
+        deferred.callback(None)
+
+        deferred.addCallback(lambda _: Deferred())
 
         del deferred
         del canceller
@@ -3593,7 +3651,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 class CoroutineContextVarsTests(unittest.TestCase):
-
     if contextvars is None:
         skip = "contextvars is not available"  # type: ignore[unreachable]
 
@@ -3625,7 +3682,6 @@ class CoroutineContextVarsTests(unittest.TestCase):
         # context is 1 when the function is defined
         @defer.inlineCallbacks
         def testFunction() -> Generator[Deferred[Any], Any, None]:
-
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
@@ -3790,7 +3846,6 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         # context is 1 when the function is defined
         async def testFunction() -> bool:
-
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
