@@ -39,6 +39,7 @@ from typing import (
     Union,
     cast,
 )
+from unittest.mock import Mock
 
 from hamcrest import assert_that, empty, equal_to, is_
 from hypothesis import given
@@ -1681,6 +1682,26 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         for thing in thingsThatAreNotCoroutines:
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
+
+    def test_inlineCallbacksCancel(self) -> None:
+        """
+        Cancelling an inlineCallbacks Deferred propagates to the underlying
+        Deferred being waited on.
+        """
+        cancellerMock = Mock()
+        d = Deferred(cancellerMock)
+
+        @defer.inlineCallbacks
+        def testFunc() -> Any:
+            yield d
+
+        funcD = testFunc()
+        self.assertFalse(funcD.called)
+
+        funcD.cancel()
+
+        cancellerMock.assert_called_once()
+        self.failureResultOf(funcD)
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference_callback(self) -> None:
