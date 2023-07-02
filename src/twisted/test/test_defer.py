@@ -1782,6 +1782,37 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         obj: Set[Any] = set()
         objWeakRef = weakref.ref(obj)
 
+        @defer.inlineCallbacks
+        def func(a: Any) -> Any:
+            yield a
+            return a
+
+        # Run the function
+        funcD = func(obj)
+        assert funcD.called
+
+        funcDWeakRef = weakref.ref(funcD)
+
+        # Delete the local references to obj and funcD.
+        del obj
+        del funcD
+
+        # The object has been freed if the weak reference returns None.
+        self.assertIsNone(objWeakRef())
+        self.assertIsNone(funcDWeakRef())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_coroutineNoCircularReference(self) -> None:
+        """
+        Tests that there is no circular dependency when using
+        L{Deferred.fromCoroutine}, so that the machinery gets cleaned up
+        immediately rather than waiting for a GC.
+        """
+
+        # Create an object and weak reference to track if its gotten freed.
+        obj: Set[Any] = set()
+        objWeakRef = weakref.ref(obj)
+
         async def func(a: Any) -> Any:
             return a
 
