@@ -579,7 +579,6 @@ class ApplicationRunnerTests(TestCase):
 
         @implementer(service.IService, service.IProcess)
         class FakeService:
-
             parent = None
             running = None
             name = None
@@ -1015,8 +1014,9 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         then a warning is displayed.
         """
 
-        # Flush any existing warnings.
-        self.flushWarnings()
+        # Assert that there were no existing warnings.
+        existing_warnings = self.flushWarnings()
+        self.assertEqual([], existing_warnings)
 
         currentUid = os.getuid()
         self._setUID("morefoo", currentUid, "morebar", 4343)
