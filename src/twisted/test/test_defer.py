@@ -1689,7 +1689,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         Deferred being waited on.
         """
         cancellerMock = Mock()
-        d = Deferred(cancellerMock)
+        d: Deferred[Any] = Deferred(cancellerMock)
 
         @defer.inlineCallbacks
         def testFunc() -> Any:
