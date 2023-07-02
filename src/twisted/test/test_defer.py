@@ -1683,25 +1683,36 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         for thing in thingsThatAreNotCoroutines:
             self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
 
-    def test_inlineCallbacksCancel(self) -> None:
+    def test_inlineCallbacksCancelCaptured(self) -> None:
         """
-        Cancelling an inlineCallbacks Deferred propagates to the underlying
-        Deferred being waited on.
+        Cancelling an `inlineCallbacks` correctly handles the function catching
+        the `CancelledError`.
         """
-        cancellerMock = Mock()
-        d: Deferred[Any] = Deferred(cancellerMock)
+        cancellerMock1 = Mock()
+        cancellerMock2 = Mock()
+        d1: Deferred[Any] = Deferred(cancellerMock1)
+        d2: Deferred[Any] = Deferred(cancellerMock2)
 
         @defer.inlineCallbacks
         def testFunc() -> Any:
-            yield d
+            try:
+                yield d1
+            except Exception:
+                pass
+
+            yield d2
 
         funcD = testFunc()
         self.assertFalse(funcD.called)
 
         funcD.cancel()
 
-        cancellerMock.assert_called_once()
+        cancellerMock1.assert_called_once()
+
+        funcD.cancel()
         self.failureResultOf(funcD)
+
+        cancellerMock2.assert_called_once()
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference_callback(self) -> None:
