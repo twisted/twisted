@@ -276,8 +276,6 @@ jobs:
       image: photon:5.0
       env:
         NODE_ENV: development
-        USER: test
-        USER_HOMEDIR: /home/test
       options: --cpus 2
 
     # Steps as normal.
@@ -295,9 +293,10 @@ jobs:
                 build-essential \
                 git \
                 shadow \
-                tzdata
+                tzdata \
+                nodejs
 
-        pip3 install tox~=3.0
+        pip3 install tox~=3.0 coverage
 
     - uses: actions/checkout@v3
       with:
@@ -307,9 +306,9 @@ jobs:
       run: |
         # run tests from user context
         # for example, test_checker.py tests fail if run as root
-        useradd -m ${USER}
-        cp -r twisted ${USER_HOMEDIR}
-        chown -R ${USER} ${USER_HOMEDIR}
+        useradd -m test
+        cp -r twisted /home/test
+        chown -R test /home/test
 
     - name: Run tests
       run: |
@@ -320,7 +319,25 @@ jobs:
         ulimit -S -n 1024
         ulimit -H -n 1024
         ulimit -a
-        su - ${USER} -c "cd twisted && tox -e alldeps-nocov-posix"
+        su - test -c "cd twisted && tox -e alldeps-withcov-posix"
+
+    - name: Prepare for coverage
+      if: ${{ !cancelled() }}
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML generated is to be used with 3rd party tools like diff-cover.
+        su - test -c "cd twisted && python -m coverage combine"
+        su - test -c "cd twisted && python -m coverage xml -o coverage.xml -i"
+        su - test -c "cd twisted && python -m coverage report --skip-covered"
+
+    - uses: codecov/codecov-action@v3
+      if: ${{ !cancelled() }}
+      with:
+        files: coverage.xml
+        name: fips-coverage
+        working-directory: /home/test/twisted
+        fail_ci_if_error: true
 
 
   static-checks:
