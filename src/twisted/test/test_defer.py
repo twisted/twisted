@@ -39,7 +39,6 @@ from typing import (
     Union,
     cast,
 )
-from unittest.mock import Mock
 
 from hamcrest import assert_that, empty, equal_to, is_
 from hypothesis import given
@@ -1688,10 +1687,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         Cancelling an `inlineCallbacks` correctly handles the function catching
         the `CancelledError`.
         """
-        cancellerMock1 = Mock()
-        cancellerMock2 = Mock()
-        d1: Deferred[Any] = Deferred(cancellerMock1)
-        d2: Deferred[Any] = Deferred(cancellerMock2)
+        canceller1Calls: List[Deferred[Any]] = []
+        canceller2Calls: List[Deferred[Any]] = []
+        d1: Deferred[Any] = Deferred(canceller1Calls.append)
+        d2: Deferred[Any] = Deferred(canceller2Calls.append)
 
         @defer.inlineCallbacks
         def testFunc() -> Any:
@@ -1707,12 +1706,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         funcD.cancel()
 
-        cancellerMock1.assert_called_once()
+        self.assertEqual(canceller1Calls, [d1])
 
         funcD.cancel()
         self.failureResultOf(funcD)
 
-        cancellerMock2.assert_called_once()
+        self.assertEqual(canceller2Calls, [d2])
 
     @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
     def test_canceller_circular_reference_callback(self) -> None:
