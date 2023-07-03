@@ -108,10 +108,10 @@ class SSHCiphers:
         b"none": (None, 0, modes.CBC),
     }
     macMap = {
-        b"hmac-sha2-512": sha512,
-        b"hmac-sha2-384": sha384,
-        b"hmac-sha2-256": sha256,
-        b"hmac-sha1": sha1,
+        b"hmac-sha2-512": sha512,  # type: ignore[dict-item]
+        b"hmac-sha2-384": sha384,  # type: ignore[dict-item]
+        b"hmac-sha2-256": sha256,  # type: ignore[dict-item]
+        b"hmac-sha1": sha1,  # type: ignore[dict-item]
         b"hmac-md5": md5,
         b"none": None,
     }
