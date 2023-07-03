@@ -1014,6 +1014,7 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         then a warning is displayed.
         """
 
+        # FIXME:https://github.com/twisted/twisted/issues/10332
         # Assert that there were no existing warnings.
         existing_warnings = self.flushWarnings()
         self.assertEqual([], existing_warnings)
