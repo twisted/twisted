@@ -1,0 +1,1 @@
+Twisted currently doesn't work at all when openssl fips is enabled in the host due to md5 algorithm usage in various places. This patch makes it possible to use Twisted without any problems when fips is enabled. Also added GHA tests for the same.
