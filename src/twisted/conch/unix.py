@@ -35,6 +35,7 @@ from twisted.conch.ssh.filetransfer import (
     FXF_WRITE,
 )
 from twisted.cred import portal
+from twisted.cred.error import LoginDenied
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.interfaces import IListeningPort
 from twisted.logger import Logger
@@ -51,10 +52,12 @@ except ImportError:
 class UnixSSHRealm:
     def requestAvatar(
         self,
-        username: bytes,
+        username: bytes | Tuple[()],
         mind: object,
         *interfaces: portal._InterfaceItself,
     ) -> Tuple[portal._InterfaceItself, UnixConchUser, Callable[[], None]]:
+        if not isinstance(username, bytes):
+            raise LoginDenied("UNIX SSH realm does not authorize anonymous sessions.")
         user = UnixConchUser(username.decode())
         return interfaces[0], user, user.logout
 
