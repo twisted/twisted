@@ -216,6 +216,14 @@ class _InputStream:
             return self._wrapped.readlines()
         return self._wrapped.readlines(size)
 
+    def seek(self, pos):
+        """
+        Pass through to the underlying C{seek}.
+
+        This is called in a WSGI application thread, not the I/O thread.
+        """
+        self._wrapped.seek(pos)
+
     def __iter__(self):
         """
         Pass through to the underlying C{__iter__}.
