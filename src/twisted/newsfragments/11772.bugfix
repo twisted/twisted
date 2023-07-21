@@ -1,0 +1,1 @@
+Deferred's type annotations have been made more comprehensive, precise, correct, and strict.  You may notice new type errors in your applications; be sure to check on those because they may represent real type errors!
