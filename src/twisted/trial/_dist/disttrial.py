@@ -441,15 +441,35 @@ class DistTrialRunner:
             await startedPool.join()
 
     def _run(self, test: Union[TestCase, TestSuite], untilFailure: bool) -> IReporter:
-        result: Union[Failure, DistReporter]
+        result: Union[Failure, DistReporter, None] = None
+        reactorStopping: bool = False
+        testsInProgress: Deferred[object]
 
-        def capture(r):
+        def capture(r: Union[Failure, DistReporter]) -> None:
             nonlocal result
             result = r
 
-        d = Deferred.fromCoroutine(self.runAsync(test, untilFailure))
-        d.addBoth(capture)
-        d.addBoth(lambda ignored: self._reactor.stop())
+        def maybeStopTests() -> None | Deferred[object]:
+            nonlocal reactorStopping
+            reactorStopping = True
+            if result is None:
+                testsInProgress.cancel()
+                return testsInProgress
+            return None
+
+        def maybeStopReactor(result: object) -> object:
+            if not reactorStopping:
+                self._reactor.stop()
+            return result
+
+        self._reactor.addSystemEventTrigger("before", "shutdown", maybeStopTests)
+
+        testsInProgress = (
+            Deferred.fromCoroutine(self.runAsync(test, untilFailure))
+            .addBoth(capture)
+            .addBoth(maybeStopReactor)
+        )
+
         self._reactor.run()
 
         if isinstance(result, Failure):
@@ -458,7 +478,7 @@ class DistTrialRunner:
         # mypy can't see that raiseException raises an exception so we can
         # only get here if result is not a Failure, so tell mypy result is
         # certainly a DistReporter at this point.
-        assert isinstance(result, DistReporter)
+        assert isinstance(result, DistReporter), f"{result} is not DistReporter"
 
         # Unwrap the DistReporter to give the caller some regular IReporter
         # object.  DistReporter isn't type annotated correctly so fix it here.

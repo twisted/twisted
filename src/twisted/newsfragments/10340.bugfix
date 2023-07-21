@@ -1,0 +1,1 @@
+`trial -j` no longer causes a traceback on exit when stopped with control-C.
