@@ -129,8 +129,7 @@ class CountingReactor(MemoryReactorClock):
         # be nice, this is rather hard-coded to disttrial's current
         # implementation.
         if "before" in self.triggers:
-            if "shutdown" in self.triggers["before"]:
-                self.triggers["before"]["shutdown"][0][0]()
+            self.triggers["before"]["shutdown"][0][0]()
         self.stopCount += 1
 
     def run(self):
