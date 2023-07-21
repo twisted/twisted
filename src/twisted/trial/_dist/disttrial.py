@@ -13,7 +13,17 @@ import os
 import sys
 from functools import partial
 from os.path import isabs
-from typing import Awaitable, Callable, Iterable, List, Sequence, TextIO, Union, cast
+from typing import (
+    Awaitable,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TextIO,
+    Union,
+    cast,
+)
 from unittest import TestCase, TestSuite
 
 from attrs import define, field, frozen
@@ -449,7 +459,7 @@ class DistTrialRunner:
             nonlocal result
             result = r
 
-        def maybeStopTests() -> None | Deferred[object]:
+        def maybeStopTests() -> Optional[Deferred[object]]:
             nonlocal reactorStopping
             reactorStopping = True
             if result is None:
