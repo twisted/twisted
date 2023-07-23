@@ -1,1 +1,7 @@
-`trial -j` no longer causes a traceback on exit when stopped with control-C.
+When interrupted with control-C, `trial -j` no longer obscures tracebacks for
+any errors caused by that interruption with an `UnboundLocalError` due to a bug
+in its own implementation.  Note that there are still several internal
+tracebacks that will be emitted upon exiting, because tearing down the test
+runner mid-suite is still not an entirely clean operation, but it should at
+least be possible to see errors reported from, for example, a test that is
+hanging more clearly.
