@@ -286,7 +286,9 @@ class MaildirMessageTests(TestCase):
         the correct file size and the temporary file has been closed and removed.
         """
         final = self.successResultOf(self.fp.eomReceived())
-        self.assertEqual(final, f"{self.final},S={os.path.getsize(final)}".encode("iso_8859_1"))
+        self.assertEqual(
+            final, f"{self.final},S={os.path.getsize(final)}".encode("iso_8859_1")
+        )
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 

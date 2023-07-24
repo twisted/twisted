@@ -58,7 +58,9 @@ class OptionsTests(TestCase):
         self.addCleanup(service.stopService)
         self.assertEqual(len(options["smtp"]), 1)
         self.assertIsInstance(service.services[1].factory, protocols.SMTPFactory)
-        self.assertIsInstance(service.services[1].endpoint, endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
         self.assertEqual(service.services[1].endpoint._port, 1234)
 
     def test_endpointPOP3(self):
@@ -74,7 +76,9 @@ class OptionsTests(TestCase):
         self.addCleanup(service.stopService)
         self.assertEqual(len(options["pop3"]), 1)
         self.assertIsInstance(service.services[1].factory, protocols.POP3Factory)
-        self.assertIsInstance(service.services[1].endpoint, endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
         self.assertEqual(service.services[1].endpoint._port, 1234)
 
     def test_protoDefaults(self):
@@ -89,10 +93,14 @@ class OptionsTests(TestCase):
         self.addCleanup(service.stopService)
 
         self.assertEqual(len(options["pop3"]), 1)
-        self.assertIsInstance(service.services[1].endpoint, endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
 
         self.assertEqual(len(options["smtp"]), 1)
-        self.assertIsInstance(service.services[1].endpoint, endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
 
     def test_protoDisable(self):
         """

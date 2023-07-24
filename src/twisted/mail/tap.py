@@ -236,6 +236,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         if not self["no-pop3"] and len(self["pop3"]) == 0:
             self["pop3"].append("tcp:8110")
 
+
 class AliasUpdater:
     """
     A callable object which updates the aliases for a domain from an aliases(5)
