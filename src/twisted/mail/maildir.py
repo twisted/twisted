@@ -75,8 +75,8 @@ class _MaildirNameGenerator:
         self.n = self.n + 1
         t = self._clock.seconds()
         seconds = str(int(t))
-        microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
+        microseconds = b"%07d" % (int((t - int(t)) * 10e6),)
+        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}".encode("iso_8859_1")
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
