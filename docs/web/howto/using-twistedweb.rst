@@ -770,7 +770,7 @@ exists.
 There is a small set of known mime types and encodings which augment the default mime types provided by the Python standard library `mimetypes`.
 You can always modify the content type and encoding mappings by manipulating the instance variables.
 
-For example to recognize WOFF File Format 2.0 and set the right Content-Type header you can modify the `contentTypes` member of an instance::
+For example to recognize WOFF File Format 2.0 and set the right Content-Type header you can modify the `contentTypes` member of an instance:
 
 .. code-block:: python
 
