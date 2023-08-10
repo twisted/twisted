@@ -21,6 +21,7 @@ from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
 from twisted.trial.unittest import TestCase
+from twisted.python.compat import fips
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -66,6 +67,9 @@ def strip(f):
 
 
 class POP3ClientLoginTests(TestCase):
+    if fips:
+        skip = "skip when fips enabled"
+
     def testNegativeGreeting(self):
         p, t = setUp(greet=False)
         p.allowInsecureLogin = True

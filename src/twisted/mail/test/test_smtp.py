@@ -28,6 +28,7 @@ from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
 from twisted.protocols import basic, loopback
+from twisted.python.compat import fips
 from twisted.python.util import LineLog
 from twisted.trial.unittest import TestCase
 
@@ -519,6 +520,9 @@ class DummyRealm:
 
 
 class AuthTests(TestCase, LoopbackMixin):
+    if fips:
+        skip = "skip when fips enabled"
+
     def test_crammd5Auth(self):
         """
         L{ESMTPClient} can authenticate using the I{CRAM-MD5} SASL mechanism.

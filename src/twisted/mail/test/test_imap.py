@@ -43,7 +43,7 @@ from twisted.mail.interfaces import (
 )
 from twisted.protocols import loopback
 from twisted.python import failure, log, util
-from twisted.python.compat import iterbytes, nativeString, networkString
+from twisted.python.compat import fips, iterbytes, nativeString, networkString
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 try:
@@ -3475,6 +3475,9 @@ class TestChecker:
 
 
 class AuthenticatorTests(IMAP4HelperMixin, TestCase):
+    if fips:
+        skip = "skip when fips enabled"
+
     def setUp(self):
         IMAP4HelperMixin.setUp(self)
 

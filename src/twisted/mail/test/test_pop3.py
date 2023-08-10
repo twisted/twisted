@@ -27,7 +27,7 @@ from twisted.internet.testing import LineSendingProtocol
 from twisted.mail import pop3
 from twisted.protocols import loopback
 from twisted.python import failure
-from twisted.python.compat import md5
+from twisted.python.compat import fips, md5
 from twisted.trial import unittest, util
 
 
@@ -1028,12 +1028,16 @@ class SASLTests(unittest.TestCase):
     """
     Tests for L{pop3.POP3}'s SASL implementation.
     """
+    if fips:
+        skip = "skip when fips enabled"
+
 
     def test_ValidLogin(self):
         """
         A CRAM-MD5-based SASL login attempt succeeds if it uses a username and
         a hashed password known to the server's credentials checker.
         """
+
         p = pop3.POP3()
         p.factory = TestServerFactory()
         p.factory.challengers = {b"CRAM-MD5": cred.credentials.CramMD5Credentials}
