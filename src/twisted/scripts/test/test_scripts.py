@@ -12,6 +12,7 @@ from os import chdir, devnull, getcwd
 from subprocess import PIPE, Popen
 from sys import executable
 
+from twisted.python.compat import fips
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
@@ -135,6 +136,9 @@ class ZshIntegrationTests(TestCase, ZshScriptTestMixin):
     """
     Test that zsh completion functions are generated without error
     """
+
+    if fips:
+        skip = "skip when fips enableD"
 
     generateFor = [
         ("twistd", "twisted.scripts.twistd.ServerOptions"),
