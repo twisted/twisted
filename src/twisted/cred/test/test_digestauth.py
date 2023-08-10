@@ -22,7 +22,7 @@ from twisted.cred.credentials import (
 )
 from twisted.cred.error import LoginFailed
 from twisted.internet.address import IPv4Address
-from twisted.python.compat import md5, networkString
+from twisted.python.compat import fips, md5, networkString
 from twisted.trial.unittest import TestCase
 
 
@@ -59,6 +59,9 @@ class DigestAuthTests(TestCase):
     L{DigestCredentialFactory}.  Because this mixin defines C{setUp}, it
     must be inherited before L{TestCase}.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         """

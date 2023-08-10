@@ -9,7 +9,7 @@ from binascii import hexlify
 from hmac import HMAC
 
 from twisted.cred.credentials import CramMD5Credentials, IUsernameHashedPassword
-from twisted.python.compat import md5
+from twisted.python.compat import fips, md5
 from twisted.trial.unittest import TestCase
 
 
@@ -17,6 +17,9 @@ class CramMD5CredentialsTests(TestCase):
     """
     Tests for L{CramMD5Credentials}.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     def test_idempotentChallenge(self):
         """
