@@ -22,6 +22,7 @@ from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.test import iosim
 from twisted.trial.unittest import TestCase
+from twisted.python.compat import fips
 
 try:
     from twisted.internet import ssl as _ssl
@@ -2325,7 +2326,11 @@ def tempSelfSigned():
 
 
 if ssl is not None:
-    tempcert = tempSelfSigned()
+    try:
+        tempcert = tempSelfSigned()
+    except Exception as e:
+        if fips:
+            skip = "skip when fips enabled"
 
 
 @skipIf(skipSSL, "SSL not available")

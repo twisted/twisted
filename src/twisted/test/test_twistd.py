@@ -1009,6 +1009,7 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         """
         self._setUID("foo", 5151, "bar", 4242)
 
+    @skipIf(os.geteuid() == 0, "skip if run as root")
     def test_setUidSameAsCurrentUid(self):
         """
         If the specified UID is the same as the current UID of the process,

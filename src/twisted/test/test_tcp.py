@@ -17,6 +17,7 @@ from zope.interface import implementer
 
 import hamcrest
 
+from twisted.python.compat import fips
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
@@ -1177,6 +1178,7 @@ class ProperlyCloseFilesMixin:
             return hamcrest.equal_to(errno.WSAENOTSOCK)
         return hamcrest.equal_to(errno.EBADF)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_properlyCloseFiles(self):
         """
         Test that lost connections properly have their underlying socket

@@ -19,7 +19,7 @@ from incremental import Version
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
-from twisted.python.compat import nativeString
+from twisted.python.compat import fips, nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.reflect import requireModule
@@ -718,6 +718,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
     """
     Tests for L{sslverify.OpenSSLOptions}.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         """
@@ -1748,6 +1750,9 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
     ECDH-related integration tests for L{OpenSSLOptions}.
     """
 
+    if fips:
+        skip = "skip when fips enabled"
+
     def test_ellipticCurveDiffieHellman(self):
         """
         Connections use ECDH when OpenSSL supports it.
@@ -1851,6 +1856,7 @@ class TrustRootTests(TestCase):
         opts.getContext()
         self.assertTrue(fc._defaultVerifyPathsSet)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_trustRootPlatformRejectsUntrustedCA(self):
         """
         Specifying a C{trustRoot} of L{platformTrust} when initializing
@@ -1882,6 +1888,7 @@ class TrustRootTests(TestCase):
         err = cWrapped.lostReason.value
         self.assertEqual(err.args[0][0][2], "tlsv1 alert unknown ca")
 
+    @skipIf(fips, "skip when fips enabled")
     def test_trustRootSpecificCertificate(self):
         """
         Specifying a L{Certificate} object for L{trustRoot} will result in that
@@ -1904,6 +1911,9 @@ class ServiceIdentityTests(SynchronousTestCase):
     Tests for the verification of the peer's service's identity via the
     C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     if skipSSL:
         skip = skipSSL
@@ -2612,6 +2622,9 @@ class MultipleCertificateTrustRootTests(TestCase):
     Test the behavior of the trustRootFromCertificates() API call.
     """
 
+    if fips:
+        skip = "skip when fips enabled"
+
     if skipSSL:
         skip = skipSSL
 
@@ -3255,6 +3268,9 @@ class KeyPairTests(TestCase):
     """
     Tests for L{sslverify.KeyPair}.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     if skipSSL:
         skip = skipSSL
