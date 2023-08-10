@@ -6,7 +6,7 @@ Tests for L{twisted.words.protocols.jabber.sasl_mechanisms}.
 """
 
 
-from twisted.python.compat import networkString
+from twisted.python.compat import fips, networkString
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
 
@@ -41,6 +41,8 @@ class DigestMD5Tests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.DigestMD5}.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         self.mechanism = sasl_mechanisms.DigestMD5(

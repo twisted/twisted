@@ -15,6 +15,8 @@ from twisted.test import proto_helpers
 from twisted.trial import unittest
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
+from twisted.python.compat import fips
+from unittest import skipIf
 
 
 class RealmTests(unittest.TestCase):
@@ -776,6 +778,9 @@ pb.setUnjellyableForClass(TestMind, service.PBMindReference)
 
 
 class PBProtocolTests(unittest.TestCase):
+    if fips:
+        skip = "skip when fips enabled"
+
     def setUp(self):
         self.realm = service.InMemoryWordsRealm("realmname")
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
