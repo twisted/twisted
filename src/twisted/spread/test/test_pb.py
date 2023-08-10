@@ -31,9 +31,10 @@ from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.testing import _FakeConnector
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
-from twisted.python.compat import iterbytes
+from twisted.python.compat import fips, iterbytes
 from twisted.spread import jelly, pb, publish, util
 from twisted.trial import unittest
+from unittest import skipIf
 
 
 class Dummy(pb.Viewable):
@@ -655,6 +656,10 @@ class NewStyleCachedTests(unittest.TestCase):
 
 
 class BrokerTests(unittest.TestCase):
+
+    if fips:
+        skip = "skip when fips enabled"
+
     thunkResult = None
 
     def tearDown(self):
@@ -1291,6 +1296,9 @@ class NewCredLeakTests(unittest.TestCase):
     Tests to try to trigger memory leaks.
     """
 
+    if fips:
+        skip = "skip when fips enabled"
+
     def test_logoutLeak(self):
         """
         The server does not leak a reference when the client disconnects
@@ -1344,6 +1352,10 @@ class NewCredTests(unittest.TestCase):
     """
     Tests related to the L{twisted.cred} support in PB.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
+
 
     def setUp(self):
         """
@@ -1863,6 +1875,7 @@ class NSPTests(unittest.TestCase):
         self.addCleanup(self.port.stopListening)
         self.portno = self.port.getHost().port
 
+    @skipIf(fips, "skip when fips enabled")
     def test_NSP(self):
         """
         An L{IPerspective} implementation which does not subclass
