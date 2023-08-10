@@ -144,6 +144,12 @@ deprecatedModuleAttribute(
     "xrange",
 )
 
+try:
+    from _hashlib import get_fips_mode
+    fips = get_fips_mode()
+except ImportError:
+    fips = False
+
 
 def md5(data=b"", **kwargs):
     """
@@ -155,8 +161,11 @@ def md5(data=b"", **kwargs):
 
     try:
         return hashlib.md5(data, **kwargs)
-    except ValueError:
-        return hashlib.md5(data, **kwargs, usedforsecurity=False)
+    except ValueError as e:
+        if fips:
+            raise Exception("fips is enabled and md5 usage found")
+
+        raise Exception(f"Error {e}")
 
 
 @deprecated(Version("Twisted", 21, 2, 0), replacement="d.items()")
