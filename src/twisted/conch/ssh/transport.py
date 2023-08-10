@@ -30,7 +30,7 @@ from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, md5, networkString
+from twisted.python.compat import fips, iterbytes, md5, networkString
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
@@ -93,12 +93,6 @@ class SSHCiphers:
     """
 
     cipherMap = {
-        b"3des-cbc": (algorithms.TripleDES, 24, modes.CBC),
-        b"blowfish-cbc": (algorithms.Blowfish, 16, modes.CBC),
-        b"aes256-cbc": (algorithms.AES, 32, modes.CBC),
-        b"aes192-cbc": (algorithms.AES, 24, modes.CBC),
-        b"aes128-cbc": (algorithms.AES, 16, modes.CBC),
-        b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
         b"aes128-ctr": (algorithms.AES, 16, modes.CTR),
         b"aes192-ctr": (algorithms.AES, 24, modes.CTR),
         b"aes256-ctr": (algorithms.AES, 32, modes.CTR),
@@ -107,6 +101,19 @@ class SSHCiphers:
         b"cast128-ctr": (algorithms.CAST5, 16, modes.CTR),
         b"none": (None, 0, modes.CBC),
     }
+
+    if not fips:
+        NonFipscipherMap = {
+            b"3des-cbc": (algorithms.TripleDES, 24, modes.CBC),
+            b"blowfish-cbc": (algorithms.Blowfish, 16, modes.CBC),
+            b"aes256-cbc": (algorithms.AES, 32, modes.CBC),
+            b"aes192-cbc": (algorithms.AES, 24, modes.CBC),
+            b"aes128-cbc": (algorithms.AES, 16, modes.CBC),
+            b"cast128-cbc": (algorithms.CAST5, 16, modes.CBC),
+        }
+        for k, v in NonFipscipherMap.items():
+            cipherMap[k] = v
+
     macMap = {
         b"hmac-sha2-512": sha512,  # type: ignore[dict-item]
         b"hmac-sha2-384": sha384,  # type: ignore[dict-item]
@@ -279,18 +286,21 @@ def _getSupportedCiphers():
     supportedCiphers = []
     cs = [
         b"aes256-ctr",
-        b"aes256-cbc",
         b"aes192-ctr",
-        b"aes192-cbc",
         b"aes128-ctr",
-        b"aes128-cbc",
         b"cast128-ctr",
-        b"cast128-cbc",
         b"blowfish-ctr",
-        b"blowfish-cbc",
         b"3des-ctr",
-        b"3des-cbc",
     ]
+    if not fips:
+        cs += [
+            b"aes256-cbc",
+            b"aes192-cbc",
+            b"aes128-cbc",
+            b"blowfish-cbc",
+            b"cast128-cbc",
+            b"3des-cbc",
+        ]
     for cipher in cs:
         algorithmClass, keySize, modeClass = SSHCiphers.cipherMap[cipher]
         try:
