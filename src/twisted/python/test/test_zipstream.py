@@ -10,8 +10,9 @@ import struct
 import zipfile
 
 from twisted.python import filepath, zipstream
-from twisted.python.compat import md5
+from twisted.python.compat import fips, md5
 from twisted.trial import unittest
+from unittest import skipIf
 
 
 class FileEntryMixin:
@@ -276,6 +277,7 @@ class ZipstreamTests(unittest.TestCase):
     # kind of a gross function anyway.  We should really write an abstract
     # copyTo/moveTo that operates on FilePath and make sure ZipPath can support
     # it, then just deprecate / remove this stuff.
+    @skipIf(fips, "skip when fips enabled")
     def _unzipIterChunkyTest(self, compression, chunksize, lower, upper):
         """
         unzipIterChunky should unzip the given number of bytes per iteration.
