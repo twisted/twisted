@@ -11,6 +11,8 @@ from io import BytesIO
 from typing import TYPE_CHECKING, List, Optional, Tuple
 from unittest import SkipTest, skipIf
 
+from twisted.python.compat import fips
+
 from zope.interface.declarations import implementer
 from zope.interface.verify import verifyObject
 
@@ -28,7 +30,13 @@ from twisted.internet.error import (
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
-from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+try:
+    from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+except Exception as e:
+    if "fips is enabled and md5 usage found" in str(e) and fips:
+        skip = "skip when fips enabled"
+
+
 from twisted.internet.testing import (
     AccumulatingProtocol,
     EventLoggingObserver,
@@ -805,24 +813,28 @@ class IntegrationTestingMixin:
     Transport-to-Agent integration tests for both HTTP and HTTPS.
     """
 
+    @skipIf(fips, "skip when fips enabled")
     def test_integrationTestIPv4(self):
         """
         L{Agent} works over IPv4.
         """
         self.integrationTest(b"example.com", EXAMPLE_COM_IP, IPv4Address)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_integrationTestIPv4Address(self):
         """
         L{Agent} works over IPv4 when hostname is an IPv4 address.
         """
         self.integrationTest(b"127.0.0.7", "127.0.0.7", IPv4Address)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_integrationTestIPv6(self):
         """
         L{Agent} works over IPv6.
         """
         self.integrationTest(b"ipv6.example.com", EXAMPLE_COM_V6_IP, IPv6Address)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_integrationTestIPv6Address(self):
         """
         L{Agent} works over IPv6 when hostname is an IPv6 address.

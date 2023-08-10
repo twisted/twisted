@@ -17,6 +17,7 @@ from twisted.cred.checkers import (
     AllowAnonymousAccess,
     InMemoryUsernamePasswordDatabaseDontUse,
 )
+from twisted.python.compat import fips
 from twisted.cred.credentials import IUsernamePassword
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ConnectionDone
@@ -33,6 +34,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.static import Data
 from twisted.web.test.test_web import DummyRequest
 
+from unittest import skipIf
 
 def b64encode(s):
     return base64.b64encode(s).strip()
@@ -182,6 +184,7 @@ class DigestAuthTests(RequestMixin, unittest.TestCase):
         """
         self.assertTrue(verifyObject(ICredentialFactory, self.credentialFactory))
 
+    @skipIf(fips, "skip when fips enabled")
     def test_getChallenge(self):
         """
         The challenge issued by L{DigestCredentialFactory.getChallenge} must
@@ -199,6 +202,7 @@ class DigestAuthTests(RequestMixin, unittest.TestCase):
         for v in challenge.values():
             self.assertNotIn(b"\n", v)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_getChallengeWithoutClientIP(self):
         """
         L{DigestCredentialFactory.getChallenge} can issue a challenge even if
@@ -274,6 +278,7 @@ class UnauthorizedResourceTests(RequestMixin, unittest.TestCase):
             [b'basic realm="example\\\\\\"foo"'],
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_renderQuotesDigest(self):
         """
         The digest value included in the I{WWW-Authenticate} header
