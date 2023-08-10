@@ -25,6 +25,7 @@ from twisted.conch.test.test_recvline import (
 )
 from twisted.internet import defer, error
 from twisted.internet.testing import StringTransport
+from twisted.python.compat import fips
 from twisted.trial import unittest
 
 
@@ -424,6 +425,9 @@ class ManholeLoopbackSSHTests(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin
     """
     Test manhole loopback over SSH.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     if ssh is None:
         skip = "cryptography requirements missing"

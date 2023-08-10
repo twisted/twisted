@@ -24,6 +24,10 @@ from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from twisted.python.compat import fips
+
+if fips:
+    skip = "skip when fips enabled"
 
 cryptography = requireModule("cryptography")
 

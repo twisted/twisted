@@ -11,6 +11,9 @@ from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
 from typing import Optional
+from twisted.python.compat import fips
+from unittest import skipIf
+
 
 cryptSkip: Optional[str]
 try:
@@ -231,6 +234,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
+    @skipIf(os.geteuid() == 0, "skip if running as root")
     def test_checkKeyAsRoot(self):
         """
         If the key file is readable, L{SSHPublicKeyDatabase.checkKey} should
@@ -877,6 +881,7 @@ class SSHPublicKeyCheckerTests(TestCase):
         )
         self.flushLoggedErrors(_DummyException)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_usernameReturnedOnSuccess(self):
         """
         L{checker.SSHPublicKeyChecker.requestAvatarId}, if successful,

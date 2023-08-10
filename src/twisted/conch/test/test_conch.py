@@ -29,6 +29,8 @@ from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import SkipTest, TestCase
+from twisted.python.compat import fips
+from unittest import skipIf
 
 try:
     from twisted.conch.test.test_ssh import (
@@ -426,6 +428,7 @@ class ForwardingMixin(ConchServerSetupMixin):
         d.addCallback(self.assertEqual, b"test\n")
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def test_remoteToLocalForwarding(self):
         """
         Test that we can use whatever client to forward a port from the server
@@ -620,6 +623,9 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
     OpenSSH.
     """
 
+    if fips:
+        skip = "skip when fips enabled"
+
     def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo):
         """
         Call execute() method of L{OpenSSHClientMixin} with an ssh option that
@@ -710,6 +716,8 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin, TestCase
     """
     Connection forwarding tests run against the OpenSSL command line client.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     @skipIf(not HAS_IPV6, "Requires IPv6 support")
     def test_localToRemoteForwardingV6(self):
@@ -729,12 +737,17 @@ class OpenSSHClientRekeyTests(RekeyTestsMixin, OpenSSHClientMixin, TestCase):
     """
     Rekeying tests run against the OpenSSL command line client.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
 
 class CmdLineClientTests(ForwardingMixin, TestCase):
     """
     Connection forwarding tests run against the Conch command line client.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     if runtime.platformType == "win32":
         skip = "can't run cmdline client on win32"

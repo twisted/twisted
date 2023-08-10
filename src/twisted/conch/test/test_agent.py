@@ -7,8 +7,10 @@ Tests for L{twisted.conch.ssh.agent}.
 
 import struct
 
+from twisted.python.compat import fips
 from twisted.test import iosim
 from twisted.trial import unittest
+from unittest import skipIf
 
 try:
     import cryptography as _cryptography
@@ -280,6 +282,7 @@ class AgentIdentityRequestsTests(AgentTestBase):
             b"another comment",
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_signDataRSA(self):
         """
         Sign data with an RSA private key and then verify it with the public

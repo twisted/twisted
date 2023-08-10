@@ -17,7 +17,7 @@ from twisted.cred import portal
 from twisted.internet import defer, error
 from twisted.internet.testing import StringTransport
 from twisted.python import components, filepath, reflect
-from twisted.python.compat import iterbytes
+from twisted.python.compat import fips, iterbytes
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import SkipTest, TestCase
 
@@ -705,6 +705,8 @@ class RecvlineLoopbackTelnetTests(_TelnetMixin, TestCase, RecvlineLoopbackMixin)
 
 
 class RecvlineLoopbackSSHTests(_SSHMixin, TestCase, RecvlineLoopbackMixin):
+    if fips:
+        skip = "skip when fips enabled"
     pass
 
 
@@ -775,7 +777,9 @@ class HistoricRecvlineLoopbackTelnetTests(
 class HistoricRecvlineLoopbackSSHTests(
     _SSHMixin, TestCase, HistoricRecvlineLoopbackMixin
 ):
-    pass
+   if fips:
+       skip = "skip when fips enabled"
+   pass
 
 
 @skipIf(

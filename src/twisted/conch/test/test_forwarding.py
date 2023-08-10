@@ -12,8 +12,14 @@ cryptography = requireModule("cryptography")
 if cryptography:
     from twisted.conch.ssh import forwarding
 
+from twisted.python.compat import fips
 from twisted.internet.address import IPv6Address
-from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+
+try:
+    from twisted.internet.test.test_endpoints import deterministicResolvingReactor
+except Exception as e:
+    if "ips is enabled and md5 usage found" in str(e) and fips:
+        skip = "skip when fips enabled"
 from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.trial import unittest
 

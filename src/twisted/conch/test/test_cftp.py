@@ -18,6 +18,7 @@ from unittest import skipIf
 
 from zope.interface import implementer
 
+from twisted.python.compat import fips
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
@@ -939,6 +940,8 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
     Due to the spawned process you can not add a debugger breakpoint for the
     client code.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
@@ -1035,6 +1038,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(self.assertEqual, [homeDir.path, os.getcwd(), "", homeDir.path])
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testChAttrs(self):
         """
         Check that 'ls -l' output includes the access permissions and that
@@ -1137,6 +1141,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         )
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testWildcardGet(self):
         """
         Test that 'get' works correctly when given wildcard parameters.
@@ -1225,6 +1230,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(_checkPut)
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testWildcardPut(self):
         """
         What happens if you issue a 'put' command and include a wildcard (i.e.
@@ -1287,6 +1293,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(self.assertEqual, b"")
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def test_existingRemoteDirectory(self):
         """
         Test that a C{mkdir} on an existing directory fails with the
@@ -1313,6 +1320,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(self.assertEqual, b"")
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testRename(self):
         """
         Test that we can rename a file.
@@ -1335,6 +1343,8 @@ class OurServerBatchFileTests(CFTPClientTestBase):
     Functional tests which launch a SFTP server over localhost and checks csftp
     in batch interface.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
@@ -1399,6 +1409,7 @@ exit
         d.addCallback(_cbCheckResult)
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testError(self):
         """
         Test that an error in the batch file stops running the batch.
@@ -1415,6 +1426,7 @@ exit
         d.addCallback(_cbCheckResult)
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def testIgnoredError(self):
         """
         Test that a minus sign '-' at the front of a line ignores
@@ -1440,6 +1452,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)

@@ -12,9 +12,11 @@ from textwrap import dedent
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
+from twisted.python.compat import fips
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+from unittest import skipIf
 
 cryptography = requireModule("cryptography")
 if cryptography is None:
@@ -251,6 +253,7 @@ class KeyTests(unittest.TestCase):
         for k, v in data.items():
             self.assertEqual(privateKey.data()[k], v)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fromOpenSSH(self):
         """
         Test that keys are correctly generated from OpenSSH strings.
@@ -325,6 +328,7 @@ SUrCyZXsNh6VXwjs3gKQ
             keys.Key.fromString(privateDSAData + b"\n"),
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fromNewerOpenSSH(self):
         """
         Newer versions of OpenSSH generate encrypted keys which have a longer
@@ -339,6 +343,7 @@ SUrCyZXsNh6VXwjs3gKQ
         )
         self.assertEqual(key, key2)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fromOpenSSH_v1_format(self):
         """
         OpenSSH 6.5 introduced a newer "openssh-key-v1" private key format
@@ -445,6 +450,7 @@ SUrCyZXsNh6VXwjs3gKQ
             b"\x00\x00\x00\x07ssh-foo" + b"\x00\x00\x00\x01\x01" * 5,
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fromStringNormalizesUnicodePassphrase(self):
         """
         L{keys.Key.fromString} applies Normalization Form KC to Unicode
@@ -464,6 +470,7 @@ SUrCyZXsNh6VXwjs3gKQ
             passphrase="unassigned \uFFFF",
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fromStringErrors(self):
         """
         keys.Key.fromString should raise BadKeyError when the key is invalid.
@@ -688,6 +695,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         badKey = keys.Key(b"")
         self.assertRaises(RuntimeError, badKey.data)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fingerprintdefault(self):
         """
         Test that the fingerprint method returns fingerprint in
@@ -702,6 +710,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             "63:15:b3:0e:e6:4f:50:de:91:48:3d:01:6b:b3:13:c1",
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_fingerprint_md5_hex(self):
         """
         fingerprint method generates key fingerprint in
@@ -1138,6 +1147,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertRaises(RuntimeError, badKey.privateBlob)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_toOpenSSHRSA(self):
         """
         L{keys.Key.toString} serializes an RSA key in OpenSSH format.
@@ -1296,6 +1306,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key.fromString(keydata.privateDSA_openssh)
         self.assertEqual(key.toString("agentv3"), keydata.privateDSA_agentv3)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_toStringNormalizesUnicodePassphrase(self):
         """
         L{keys.Key.toString} applies Normalization Form KC to Unicode
@@ -1323,6 +1334,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         self.assertRaises(keys.BadKeyError, keys.Key(self.rsaObj).toString, "bad_type")
 
+    @skipIf(fips, "skip when fips enabled")
     def test_signAndVerifyRSA(self):
         """
         Signed data can be verified using RSA (with SHA-1, the default).

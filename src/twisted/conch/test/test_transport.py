@@ -20,11 +20,12 @@ from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, md5
+from twisted.python.compat import fips, iterbytes, md5
 from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
+from unittest import skipIf
 
 cryptography = requireModule("cryptography")
 
@@ -1463,6 +1464,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     Tests for SSHServerTransport.
     """
 
+    @skipIf(fips, "skip when fips enabled")
     def test__getHostKeys(self):
         """
         L{transport.SSHServerTransport._getHostKeys} returns host keys from
@@ -1765,6 +1767,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertRaises(AttributeError)
         self.assertRaises(UnsupportedAlgorithm)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_KEXDH_INIT_GROUP14(self):
         """
         KEXDH_INIT messages are processed when the
@@ -2086,6 +2089,8 @@ class ServerSSHTransportDHGroupExchangeSHA1Tests(
     """
     diffie-hellman-group-exchange-sha1 tests for SSHServerTransport.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
 
 class ServerSSHTransportDHGroupExchangeSHA256Tests(
@@ -2096,6 +2101,8 @@ class ServerSSHTransportDHGroupExchangeSHA256Tests(
     """
     diffie-hellman-group-exchange-sha256 tests for SSHServerTransport.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
 
 class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
@@ -2103,6 +2110,7 @@ class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
     Elliptic Curve Diffie-Hellman tests for SSHServerTransport.
     """
 
+    @skipIf(fips, "skip when fips enabled")
     def test_KEX_ECDH_INIT(self):
         """
         Test that the KEXDH_INIT message causes the server to send a
@@ -2340,6 +2348,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         return (exchangeHash, signature, common.NS(self.blob) + fMP)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_KEXDH_REPLY(self):
         """
         Test that the KEXDH_REPLY message verifies the server.
@@ -2425,6 +2434,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
             [(transport.MSG_SERVICE_REQUEST, b"\x00\x00\x00\x0bMockService")],
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_disconnectKEXDH_REPLYBadSignature(self):
         """
         Test that KEXDH_REPLY disconnects if the signature is bad.
@@ -2436,6 +2446,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
             lambda _: self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_disconnectKEX_ECDH_REPLYBadSignature(self):
         """
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
@@ -2598,6 +2609,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         return (exchangeHash, signature, common.NS(self.blob) + fMP)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_KEX_DH_GEX_REPLY(self):
         """
         Test that the KEX_DH_GEX_REPLY message results in a verified
@@ -2614,6 +2626,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         d.addCallback(_cbTestKEX_DH_GEX_REPLY)
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def test_disconnectGEX_REPLYBadSignature(self):
         """
         Test that KEX_DH_GEX_REPLY disconnects if the signature is bad.
@@ -2625,6 +2638,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
             lambda _: self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
         )
 
+    @skipIf(fips, "skip when fips enabled")
     def test_disconnectKEX_ECDH_REPLYBadSignature(self):
         """
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
@@ -2751,6 +2765,7 @@ class ClientSSHTransportECDHBaseCase(ClientSSHTransportBaseCase):
 
         return (exchangeHash, signature, common.NS(pubKey.blob()) + common.NS(encPub))
 
+    @skipIf(fips, "skip when fips enabled")
     def test_KEXDH_REPLY(self):
         """
         Test that the KEXDH_REPLY message completes the key exchange.
@@ -2766,6 +2781,7 @@ class ClientSSHTransportECDHBaseCase(ClientSSHTransportBaseCase):
         d.addCallback(_cbTestKEXDH_REPLY)
         return d
 
+    @skipIf(fips, "skip when fips enabled")
     def test_disconnectKEXDH_REPLYBadSignature(self):
         """
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
@@ -2881,6 +2897,7 @@ class GetMACTests(TestCase):
         """
         self.assertGetMAC(b"hmac-sha1", sha1, digestSize=20, blockPadSize=44)
 
+    @skipIf(fips, "skip when fips enabled")
     def test_hmacmd5(self):
         """
         When L{SSHCiphers._getMAC} is called with the C{b"hmac-md5"} MAC
@@ -2956,6 +2973,7 @@ class SSHCiphersTests(TestCase):
             self.assertEqual(decCipher.decrypt(enc), key[:bs])
             self.assertEqual(decCipher.decrypt(enc2), key[:bs])
 
+    @skipIf(fips, "skip when fips enabled")
     def test_setKeysMACs(self):
         """
         Test that setKeys sets up the MACs.
@@ -2983,6 +3001,7 @@ class SSHCiphersTests(TestCase):
             self.assertEqual(outMac.makeMAC(seqid, data), mac)
             self.assertTrue(inMac.verify(seqid, data, mac))
 
+    @skipIf(fips, "skip when fips enabled")
     def test_makeMAC(self):
         """
         L{SSHCiphers.makeMAC} computes the HMAC of an outgoing SSH message with
@@ -3015,6 +3034,8 @@ class TransportLoopbackTests(TestCase):
     """
     Test the server transport and client transport against each other,
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     if dependencySkip:
         skip = dependencySkip

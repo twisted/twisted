@@ -34,7 +34,7 @@ from twisted.internet.testing import (
     StringTransport,
 )
 from twisted.logger import LogLevel, globalLogPublisher
-from twisted.python.compat import networkString
+from twisted.python.compat import fips, networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
@@ -704,6 +704,8 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     Tests for L{SSHCommandClientEndpoint} when using the C{newConnection}
     constructor.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         """
@@ -1312,6 +1314,9 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     Tests for L{SSHCommandClientEndpoint} when using the C{existingConnection}
     constructor.
     """
+
+    if fips:
+        skip = "skip when fips enabled"
 
     def setUp(self):
         """
