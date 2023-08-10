@@ -58,7 +58,7 @@ from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import nativeString
+from twisted.python.compat import fips, nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -66,6 +66,7 @@ from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
 from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
 from twisted.trial import unittest
+
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
@@ -110,7 +111,10 @@ try:
 
     skipSSL = False
     skipSSLReason = ""
-except ImportError as e:
+except (Exception, ImportError) as e:
+    if "fips is enabled and md5 usage found" in str(e) and fips:
+        skip = "skip when fips enabled"
+
     skipSSL = True
     skipSSLReason = str(e)
 

@@ -5,6 +5,10 @@
 Tests for L{twisted.internet._newtls}.
 """
 
+from twisted.python.compat import fips
+
+if fips:
+    skip = "skip when fips enabled"
 
 from twisted.internet import interfaces
 from twisted.internet.test.connectionmixins import (

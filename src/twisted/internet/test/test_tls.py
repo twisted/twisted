@@ -35,10 +35,13 @@ from twisted.internet.test.test_tcp import (
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
 )
-from twisted.python.compat import networkString
+from twisted.python.compat import fips, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest
+
+if fips:
+    skip = "skip when fips enabled"
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM

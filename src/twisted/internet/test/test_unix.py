@@ -55,7 +55,7 @@ from twisted.internet.test.test_tcp import (
     StreamTransportTestsMixin,
     WriteSequenceTestsMixin,
 )
-from twisted.python.compat import md5, nativeString
+from twisted.python.compat import fips, md5, nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.log import addObserver, err, removeObserver
@@ -68,6 +68,9 @@ if requireModule("twisted.python.sendmsg") is not None:
     sendmsgSkipReason = (
         "sendmsg extension unavailable, " "extended UNIX features disabled"
     )
+
+if fips:
+    skip = "skip when fips enabled"
 
 
 class UNIXFamilyMixin:

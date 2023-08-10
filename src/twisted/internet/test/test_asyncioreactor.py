@@ -19,7 +19,9 @@ from asyncio import (
 )
 from unittest import skipIf
 
+from twisted.python.compat import fips
 from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+from twisted.python.compat import fips
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
@@ -137,6 +139,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
             platform.getType(),
         ),
     )
+    @skipIf(fips, "skip when fips enabled")
     def test_defaultNotASelectorEventLoopFromGlobalPolicy(self):
         """
         On Windows Python 3.5 to 3.7, L{get_event_loop()} returns a
@@ -152,6 +155,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     @skipIf(
         not hasWindowsProactorEventLoopPolicy, "WindowsProactorEventLoop not available"
     )
+    @skipIf(fips, "skip when fips enabled")
     def test_WindowsProactorEventLoop(self):
         """
         L{AsyncioSelectorReactor} will raise a L{TypeError}
@@ -191,6 +195,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         not hasWindowsSelectorEventLoopPolicy,
         "WindowsSelectorEventLoopPolicy only on Windows",
     )
+    @skipIf(fips, "skip when fips enabled")
     def test_WindowsSelectorEventLoopPolicy(self):
         """
         L{AsyncioSelectorReactor} will work if
