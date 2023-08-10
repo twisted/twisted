@@ -16,13 +16,14 @@ from hamcrest import assert_that, equal_to, has_properties
 from hamcrest.core.matcher import Matcher
 
 from twisted.python import filepath, util
-from twisted.python.compat import md5
+from twisted.python.compat import fips, md5
 from twisted.python.modules import getModule
 from twisted.python.reflect import ModuleNotFound
 from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial.itrial import ITestCase
 from twisted.trial.test import packages
+from unittest import skipIf
 from .matchers import after
 
 
@@ -624,6 +625,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
     def test_sortPackagesDefaultOrder(self):
         self.loadSortedPackages()
 
+    @skipIf(fips, "skip when fips enabled")
     def test_sortPackagesSillyOrder(self):
         def sillySorter(s):
             # This has to work on fully-qualified class names and class
