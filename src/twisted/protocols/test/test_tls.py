@@ -11,7 +11,7 @@ import gc
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import iterbytes
+from twisted.python.compat import fips, iterbytes
 
 try:
     from OpenSSL import crypto
@@ -292,6 +292,9 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         L{connectedServerAndClient}, rather than returning L{Deferred}s.
     """
 
+    if fips:
+        skip = "skip when fips enabled"
+
     def test_handshakeNotification(self):
         """
         The completion of the TLS handshake calls C{handshakeCompleted} on
@@ -325,6 +328,8 @@ class TLSMemoryBIOTests(TestCase):
     Tests for the implementation of L{ISSLTransport} which runs over another
     L{ITransport}.
     """
+    if fips:
+        skip = "skip when fips enabled"
 
     def test_interfaces(self):
         """
