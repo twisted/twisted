@@ -446,6 +446,12 @@ class AOTTests(TestCase):
         self.assertIs(oj[0][0], oj)
         self.assertEqual(oj[0][1], 4321)
 
+    def testIndentify(self):
+        self.assertEqual(
+            aot.jellyToSource({"hello": {"world": []}}),
+            "app={\n  'hello':{\n    'world':[],\n    },\n  }",
+        )
+
 
 class CrefUtilTests(TestCase):
     """
