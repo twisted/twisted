@@ -1328,7 +1328,8 @@ class SynchronousTestCase(_Assertions):
         )
         if not os.path.exists(base):
             os.makedirs(base)
-        dirname = tempfile.mkdtemp("", "", base)
+        # workaround https://github.com/python/cpython/issues/51574
+        dirname = os.path.relpath(tempfile.mkdtemp("", "", base))
         return os.path.join(dirname, "temp")
 
     def _getSuppress(self):
