@@ -231,13 +231,17 @@ def indentify(s):
     out = []
     stack = []
     l = ["", s]
+
+    def readline():
+        return l.pop().replace("\0", "")
+
     for (
         tokenType,
         tokenString,
         (startRow, startColumn),
         (endRow, endColumn),
         logicalLine,
-    ) in tokenize(l.pop):
+    ) in tokenize(readline):
         if tokenString in ["[", "(", "{"]:
             stack.append(tokenString)
         elif tokenString in ["]", ")", "}"]:
