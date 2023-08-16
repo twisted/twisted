@@ -447,10 +447,16 @@ class AOTTests(TestCase):
         self.assertEqual(oj[0][1], 4321)
 
     def testIndentify(self):
+        """
+        The generated serialization is indented.
+        """
         self.assertEqual(
             aot.jellyToSource({"hello": {"world": []}}),
-            "app={\n  'hello':{\n    'world':[],\n    },\n  }",
-        )
+            """app={
+  'hello':{
+      'world':[],
+     },
+   }""")
 
 
 class CrefUtilTests(TestCase):
