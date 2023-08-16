@@ -233,8 +233,6 @@ def indentify(s):
     l = ["", s]
 
     def readline():
-        # tokenize no longer supports null bytes in source code since 3.12
-        # see https://github.com/python/cpython/issues/102856
         return l.pop().replace("\0", "")
 
     for (
