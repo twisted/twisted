@@ -9,6 +9,7 @@ Maintainer: Glyph Lefkowitz
 """
 from __future__ import annotations
 
+import inspect
 import traceback
 import warnings
 from abc import ABC, abstractmethod
@@ -1341,8 +1342,9 @@ class Deferred(Awaitable[_SelfResultT]):
 
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
-        # asyncio.iscoroutine identifies generators as coroutines, too.
-        if iscoroutine(coro):
+        # asyncio.iscoroutine <3.12 identifies generators as coroutines, too.
+        # for >=3.12 we need to check isgenerator also
+        if iscoroutine(coro) or inspect.isgenerator(coro):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
