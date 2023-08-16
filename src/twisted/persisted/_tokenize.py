@@ -242,6 +242,7 @@ Floatnumber = group(Pointfloat, Expfloat)
 Imagnumber = group(r"[0-9](?:_?[0-9])*[jJ]", Floatnumber + r"[jJ]")
 Number = group(Imagnumber, Floatnumber, Intnumber)
 
+
 # Return the empty string, plus all of the valid string prefixes.
 def _all_string_prefixes():
     # The valid string prefixes. Only contain the lower case versions,
@@ -518,7 +519,7 @@ def detect_encoding(readline):
             return None
         encoding = _get_normal_name(match.group(1))
         try:
-            codec = lookup(encoding)
+            lookup(encoding)
         except LookupError:
             # This behaviour mimics the Python interpreter
             if filename is None:
@@ -574,7 +575,7 @@ def open(filename):
         text = TextIOWrapper(buffer, encoding, line_buffering=True)
         text.mode = "r"
         return text
-    except:
+    except BaseException:
         buffer.close()
         raise
 
@@ -605,6 +606,8 @@ def tokenize(readline):
 
 
 def _tokenize(readline, encoding):
+    strstart = None
+    endprog = None
     lnum = parenlev = continued = 0
     numchars = "0123456789"
     contstr, needcont = "", 0
