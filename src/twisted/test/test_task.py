@@ -482,7 +482,7 @@ class LoopTests(unittest.TestCase):
         # There is still an epsilon of inaccuracy here; 0.1 is not quite
         # exactly 1/10 in binary, so we need to push our clock over the
         # threshold.
-        epsilon = timespan - sum([interval] * count)
+        epsilon = timespan - sum_compat([interval] * count)
         clock.advance(epsilon)
         secondsValue = clock.seconds()
         # The following two assertions are here to ensure that if the values of
@@ -498,7 +498,7 @@ class LoopTests(unittest.TestCase):
             f"{secondsValue} should be greater than or equal to {timespan}",
         )
 
-        self.assertEqual(sum(accumulator), count)
+        self.assertEqual(sum_compat(accumulator), count)
         self.assertNotIn(0, accumulator)
 
     def test_withCountIntervalZero(self):
