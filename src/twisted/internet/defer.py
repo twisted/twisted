@@ -1344,6 +1344,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # asyncio.iscoroutine <3.12 identifies generators as coroutines, too.
         # for >=3.12 we need to check isgenerator also
+        # see https://github.com/python/cpython/issues/102748
         if iscoroutine(coro) or inspect.isgenerator(coro):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
