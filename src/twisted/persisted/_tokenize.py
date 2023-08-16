@@ -287,7 +287,7 @@ String = group(
 # Sorting in reverse order puts the long operators before their prefixes.
 # Otherwise if = came before ==, == would get recognized as two instances
 # of =.
-Special = group(*map(re.escape, sorted(EXACT_TOKEN_TYPES, reverse=True)))
+Special = group(*(re.escape(x) for x in sorted(EXACT_TOKEN_TYPES, reverse=True)))
 Funny = group(r"\r?\n", Special)
 
 PlainToken = group(Number, Funny, String, Name)
@@ -886,15 +886,6 @@ def main():
     except Exception as err:
         perror("unexpected error: %s" % err)
         raise
-
-
-def _generate_tokens_from_c_tokenizer(source):
-    """Tokenize a source reading Python code as unicode strings using the internal C tokenizer"""
-    import _tokenize as c_tokenizer
-
-    for info in c_tokenizer.TokenizerIter(source):
-        tok, type, lineno, end_lineno, col_off, end_col_off, line = info
-        yield TokenInfo(type, tok, (lineno, col_off), (end_lineno, end_col_off), line)
 
 
 if __name__ == "__main__":
