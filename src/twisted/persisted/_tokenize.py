@@ -1,4 +1,9 @@
-"""Tokenization help for Python programs.
+"""
+FIXME:https://github.com/twisted/twisted/issues/3843
+This can be removed once t.persisted.aot is removed.
+New code should not make use of this.
+
+Tokenization help for Python programs.
 vendored from https://github.com/python/cpython/blob/6b825c1b8a14460641ca6f1647d83005c68199aa/Lib/tokenize.py
 Licence: https://docs.python.org/3/license.html
 
