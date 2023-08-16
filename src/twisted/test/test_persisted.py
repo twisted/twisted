@@ -7,6 +7,7 @@ import copyreg
 import io
 import pickle
 import sys
+import textwrap
 
 # Twisted Imports
 from twisted.persisted import aot, crefutil, styles
@@ -452,11 +453,14 @@ class AOTTests(TestCase):
         """
         self.assertEqual(
             aot.jellyToSource({"hello": {"world": []}}),
-            """app={
-  'hello':{
-      'world':[],
-     },
-   }""",
+            textwrap.dedent(
+                """\
+                app={
+                  'hello':{
+                    'world':[],
+                    },
+                  }""",
+            ),
         )
 
 
