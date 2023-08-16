@@ -467,8 +467,13 @@ class LoopTests(unittest.TestCase):
         for x in range(count):
             clock.advance(interval)
 
-        # work around https://github.com/python/cpython/issues/100425 on py312
-        def sum(items):
+        def sum_compat(items):
+            """
+            Make sure the result is more precise.
+            On Python 3.11 or older this can be a float with ~ 0.00001
+            in precision difference.
+            See: https://github.com/python/cpython/issues/100425
+            """
             total = 0.0
             for item in items:
                 total += item
