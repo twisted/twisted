@@ -260,7 +260,7 @@ def _all_string_prefixes():
     return result
 
 
-@functools.lru_cache
+@functools.lru_cache(None)
 def _compile(expr):
     return re.compile(expr, re.UNICODE)
 
