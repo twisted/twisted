@@ -456,7 +456,8 @@ class AOTTests(TestCase):
   'hello':{
       'world':[],
      },
-   }""")
+   }""",
+        )
 
 
 class CrefUtilTests(TestCase):
