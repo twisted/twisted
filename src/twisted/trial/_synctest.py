@@ -1328,7 +1328,10 @@ class SynchronousTestCase(_Assertions):
         )
         if not os.path.exists(base):
             os.makedirs(base)
-        # workaround https://github.com/python/cpython/issues/51574
+        # With 3.11 or older mkdtemp returns a relative path.
+        # With newer it is absolute.
+        # Here we make sure we always handle a relative path.
+        # See https://github.com/python/cpython/issues/51574
         dirname = os.path.relpath(tempfile.mkdtemp("", "", base))
         return os.path.join(dirname, "temp")
 
