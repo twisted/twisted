@@ -11,6 +11,9 @@ https://twisted.org/trac/ticket/<number>
 Twisted 23.8.0.rc1 (2023-08-17)
 ===============================
 
+This is the last release with support for Python 3.7.
+
+
 Features
 --------
 
