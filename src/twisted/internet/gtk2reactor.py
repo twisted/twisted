@@ -20,7 +20,7 @@ from incremental import Version
 
 from ._deprecate import deprecatedGnomeReactor
 
-deprecatedGnomeReactor("gtk2reactor", Version("Twisted", "NEXT", 0, 0))
+deprecatedGnomeReactor("gtk2reactor", Version("Twisted", 23, 8, 0, release_candidate=1))
 
 # System Imports
 import sys
