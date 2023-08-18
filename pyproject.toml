@@ -61,7 +61,7 @@ test = [
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
-    "towncrier ~= 22.12",
+    "towncrier ~= 23.6",
     "pydoctor ~= 23.4.0",
     "sphinx-rtd-theme ~= 1.2",
     "readthedocs-sphinx-ext ~= 2.2",
