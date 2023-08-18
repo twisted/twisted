@@ -3,6 +3,8 @@ cgi.parse_header, cgi.parse_multipart and cgi.FieldStorage backported from
 https://github.com/python/cpython/blob/60edc70a9374f1cc6ecff5974e438d58fec29985/Lib/cgi.py
 Licence: https://docs.python.org/3/license.html
 """
+from __future__ import annotations
+
 import locale
 import os
 import sys
