@@ -1,6 +1,4 @@
 # Read from file, announce on the web, irc, xml-rpc
-import html
-
 from twisted.application import internet, service, strports
 from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic

@@ -1,6 +1,4 @@
 # Do everything properly, and componentize
-import html
-
 from zope.interface import Interface, implementer
 
 from twisted.application import internet, service, strports
