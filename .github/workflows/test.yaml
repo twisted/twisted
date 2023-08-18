@@ -103,7 +103,7 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          - python-version: '3.7.1'
+          - python-version: '3.8.0'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
 
@@ -113,7 +113,7 @@ jobs:
           # We go with latest micro release for the smallest minor release
           # that we support.
           # This is also used to run tests with minimum dependency versions.
-          - python-version: '3.7'
+          - python-version: '3.8'
             noipv6: '-noipv6'
             tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
@@ -137,7 +137,7 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.7'
+          - python-version: '3.8'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -172,7 +172,7 @@ jobs:
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          - python-version: '3.7'
+          - python-version: '3.8'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
