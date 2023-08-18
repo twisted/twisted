@@ -568,7 +568,7 @@ class Protocol(BaseProtocol):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason: failure.Failure = connectionDone):
+    def connectionLost(self, reason: failure.Failure = connectionDone) -> None:
         """
         Called when the connection is shut down.
 

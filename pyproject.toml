@@ -654,7 +654,6 @@ module = [
     'twisted.mail.relaymanager',
     'twisted.web.test.test_util',
     'twisted.web.util',
-    'twisted.words.im.basesupport',
 ]
 
 [[tool.mypy.overrides]]
