@@ -273,6 +273,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        # Need full history for various diff checks to work.
+        fetch-depth: 0
 
     - name: Get main branch for any diff checks
       run: |
