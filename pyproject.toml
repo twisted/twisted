@@ -653,7 +653,6 @@ allow_incomplete_defs = true
 module = [
     'twisted.mail.relaymanager',
     'twisted.web.test.test_util',
-    'twisted.web.util',
 ]
 
 [[tool.mypy.overrides]]
