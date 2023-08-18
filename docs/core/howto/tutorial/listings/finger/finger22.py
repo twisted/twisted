@@ -1,6 +1,4 @@
 # Do everything properly, and componentize
-import cgi
-
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL
