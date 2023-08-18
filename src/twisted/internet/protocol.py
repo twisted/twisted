@@ -11,7 +11,7 @@ Twisted.  The Protocol class contains some introductory material.
 
 
 import random
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from zope.interface import implementer
 
@@ -553,7 +553,7 @@ class Protocol(BaseProtocol):
         """
         return self.__class__.__name__
 
-    def dataReceived(self, data: bytes):
+    def dataReceived(self, data: bytes) -> None:
         """
         Called whenever data is received.
 
@@ -581,7 +581,7 @@ class Protocol(BaseProtocol):
 
 @implementer(interfaces.IConsumer)
 class ProtocolToConsumerAdapter(components.Adapter):
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> None:
         self.original.dataReceived(data)
 
     def registerProducer(self, producer, streaming):
@@ -598,10 +598,10 @@ components.registerAdapter(
 
 @implementer(interfaces.IProtocol)
 class ConsumerToProtocolAdapter(components.Adapter):
-    def dataReceived(self, data: bytes):
+    def dataReceived(self, data: bytes) -> None:
         self.original.write(data)
 
-    def connectionLost(self, reason: failure.Failure):
+    def connectionLost(self, reason: failure.Failure) -> None:
         pass
 
     def makeConnection(self, transport):
@@ -625,23 +625,23 @@ class ProcessProtocol(BaseProtocol):
 
     transport: Optional[interfaces.IProcessTransport] = None
 
-    def childDataReceived(self, childFD: int, data: bytes):
+    def childDataReceived(self, childFD: int, data: bytes) -> None:
         if childFD == 1:
             self.outReceived(data)
         elif childFD == 2:
             self.errReceived(data)
 
-    def outReceived(self, data: bytes):
+    def outReceived(self, data: bytes) -> None:
         """
         Some data was received from stdout.
         """
 
-    def errReceived(self, data: bytes):
+    def errReceived(self, data: bytes) -> None:
         """
         Some data was received from stderr.
         """
 
-    def childConnectionLost(self, childFD: int):
+    def childConnectionLost(self, childFD: int) -> None:
         if childFD == 0:
             self.inConnectionLost()
         elif childFD == 1:
@@ -664,14 +664,14 @@ class ProcessProtocol(BaseProtocol):
         This will be called when stderr is closed.
         """
 
-    def processExited(self, reason: failure.Failure):
+    def processExited(self, reason: failure.Failure) -> None:
         """
         This will be called when the subprocess exits.
 
         @type reason: L{twisted.python.failure.Failure}
         """
 
-    def processEnded(self, reason: failure.Failure):
+    def processEnded(self, reason: failure.Failure) -> None:
         """
         Called when the child process exits and all file descriptors
         associated with it have been closed.
@@ -746,7 +746,7 @@ class AbstractDatagramProtocol:
         self.transport = transport
         self.doStart()
 
-    def datagramReceived(self, datagram: bytes, addr):
+    def datagramReceived(self, datagram: bytes, addr: Any) -> None:
         """
         Called when a datagram is received.
 
@@ -796,7 +796,7 @@ class ConnectedDatagramProtocol(DatagramProtocol):
         @param datagram: the string received from the transport.
         """
 
-    def connectionFailed(self, failure: failure.Failure):
+    def connectionFailed(self, failure: failure.Failure) -> None:
         """
         Called if connecting failed.
 
@@ -821,7 +821,7 @@ class FileWrapper:
     def __init__(self, file):
         self.file = file
 
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> None:
         try:
             self.file.write(data)
         except BaseException:

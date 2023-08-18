@@ -577,6 +577,7 @@ module = [
     'twisted.test.test_plugin',
     'twisted.internet.testing',
     'twisted.internet.test.test_base',
+    'twisted.internet.protocol',
 ]
 
 [[tool.mypy.overrides]]
@@ -645,7 +646,6 @@ check_untyped_defs = false
 allow_incomplete_defs = true
 module = [
     'twisted.internet.posixbase',
-    'twisted.internet.protocol',
 ]
 
 [[tool.mypy.overrides]]
