@@ -8,6 +8,48 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 23.8.0.rc1 (2023-08-18)
+===============================
+
+No significant changes.
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+No significant changes.
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 23.8.0.rc1 (2023-08-17)
 ===============================
 
