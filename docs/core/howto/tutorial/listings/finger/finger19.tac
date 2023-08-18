@@ -1,5 +1,5 @@
 # Do everything properly, and componentize
-import cgi
+import html
 
 from zope.interface import Interface, implementer
 
@@ -198,7 +198,7 @@ class UserStatus(resource.Resource):
 
     def render_GET(self, request):
         d = self.service.getUser(self.user)
-        d.addCallback(cgi.escape)
+        d.addCallback(html.escape)
         d.addCallback(lambda m: "<h1>%s</h1>" % self.user + "<p>%s</p>" % m)
         d.addCallback(request.write)
         d.addCallback(lambda _: request.finish())

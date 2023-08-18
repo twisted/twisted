@@ -1,5 +1,5 @@
 # Do everything properly, and componentize
-import cgi
+import html
 
 from zope.interface import Interface, implementer
 

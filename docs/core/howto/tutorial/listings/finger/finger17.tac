@@ -1,5 +1,5 @@
 # Read from file, announce on the web, irc, xml-rpc
-import cgi
+import html
 
 from twisted.application import internet, service, strports
 from twisted.internet import defer, endpoints, protocol, reactor
