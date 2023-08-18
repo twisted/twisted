@@ -846,7 +846,7 @@ class Request:
 
         self.requestHeaders: Headers = Headers()
         self.received_cookies = {}
-        self.responseHeaders = Headers()
+        self.responseHeaders: Headers = Headers()
         self.cookies = []  # outgoing cookies
         self.transport = self.channel.transport
 
