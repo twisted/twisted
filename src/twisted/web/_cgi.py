@@ -9,7 +9,6 @@ import locale
 import os
 import sys
 import tempfile
-import urllib.parse
 from collections.abc import Mapping
 from email.message import Message
 from email.parser import FeedParser
@@ -23,6 +22,122 @@ of a POST request. POST requests larger than this size will result in a
 ValueError being raised during parsing. The default value of this variable is 0,
 meaning the request size is unlimited.
 """
+
+
+# backport parse_qsl with separator kwarg
+# https://github.com/python/cpython/issues/87133
+if sys.version_info >= (3, 8, 8):
+    from urllib.parse import parse_qsl as _parse_qsl
+else:
+    from urllib.parse import unquote
+
+    # Helpers for bytes handling
+    # For 3.2, we deliberately require applications that
+    # handle improperly quoted URLs to do their own
+    # decoding and encoding. If valid use cases are
+    # presented, we may relax this by using latin-1
+    # decoding internally for 3.3
+    _implicit_encoding = "ascii"
+    _implicit_errors = "strict"
+
+    def _noop(obj):
+        return obj
+
+    def _encode_result(obj, encoding=_implicit_encoding, errors=_implicit_errors):
+        return obj.encode(encoding, errors)
+
+    def _decode_args(args, encoding=_implicit_encoding, errors=_implicit_errors):
+        return tuple(x.decode(encoding, errors) if x else "" for x in args)
+
+    def _coerce_args(*args):
+        # Invokes decode if necessary to create str args
+        # and returns the coerced inputs along with
+        # an appropriate result coercion function
+        #   - noop for str inputs
+        #   - encoding function otherwise
+        str_input = isinstance(args[0], str)
+        for arg in args[1:]:
+            # We special-case the empty string to support the
+            # "scheme=''" default argument to some functions
+            if arg and isinstance(arg, str) != str_input:
+                raise TypeError("Cannot mix str and non-str arguments")
+        if str_input:
+            return args + (_noop,)
+        return _decode_args(args) + (_encode_result,)
+
+    def _parse_qsl(
+        qs,
+        keep_blank_values=False,
+        strict_parsing=False,
+        encoding="utf-8",
+        errors="replace",
+        max_num_fields=None,
+        separator="&",
+    ):
+        """Parse a query given as a string argument.
+
+        Arguments:
+
+        qs: percent-encoded query string to be parsed
+
+        keep_blank_values: flag indicating whether blank values in
+            percent-encoded queries should be treated as blank strings.
+            A true value indicates that blanks should be retained as blank
+            strings.  The default false value indicates that blank values
+            are to be ignored and treated as if they were  not included.
+
+        strict_parsing: flag indicating what to do with parsing errors. If
+            false (the default), errors are silently ignored. If true,
+            errors raise a ValueError exception.
+
+        encoding and errors: specify how to decode percent-encoded sequences
+            into Unicode characters, as accepted by the bytes.decode() method.
+
+        max_num_fields: int. If set, then throws a ValueError
+            if there are more than n fields read by parse_qsl().
+
+        separator: str. The symbol to use for separating the query arguments.
+            Defaults to &.
+
+        Returns a list, as G-d intended.
+        """
+        qs, _coerce_result = _coerce_args(qs)
+        separator, _ = _coerce_args(separator)
+
+        if not separator or (not isinstance(separator, (str, bytes))):
+            raise ValueError("Separator must be of type string or bytes.")
+
+        # If max_num_fields is defined then check that the number of fields
+        # is less than max_num_fields. This prevents a memory exhaustion DOS
+        # attack via post bodies with many fields.
+        if max_num_fields is not None:
+            num_fields = 1 + qs.count(separator)
+            if max_num_fields < num_fields:
+                raise ValueError("Max number of fields exceeded")
+
+        pairs = [s1 for s1 in qs.split(separator)]
+        r = []
+        for name_value in pairs:
+            if not name_value and not strict_parsing:
+                continue
+            nv = name_value.split("=", 1)
+            if len(nv) != 2:
+                if strict_parsing:
+                    raise ValueError("bad query field: %r" % (name_value,))
+                # Handle case of a control-name with no equal sign
+                if keep_blank_values:
+                    nv.append("")
+                else:
+                    continue
+            if len(nv[1]) or keep_blank_values:
+                name = nv[0].replace("+", " ")
+                name = unquote(name, encoding=encoding, errors=errors)
+                name = _coerce_result(name)
+                value = nv[1].replace("+", " ")
+                value = unquote(value, encoding=encoding, errors=errors)
+                value = _coerce_result(value)
+                r.append((name, value))
+        return r
 
 
 def _parseparam(s):
@@ -424,7 +539,7 @@ class FieldStorage:
         qs = qs.decode(self.encoding, self.errors)
         if self.qs_on_post:
             qs += "&" + self.qs_on_post
-        query = urllib.parse.parse_qsl(
+        query = _parse_qsl(
             qs,
             self.keep_blank_values,
             self.strict_parsing,
@@ -445,7 +560,7 @@ class FieldStorage:
             raise ValueError("Invalid boundary in multipart form: %r" % (ib,))
         self.list = []
         if self.qs_on_post:
-            query = urllib.parse.parse_qsl(
+            query = _parse_qsl(
                 self.qs_on_post,
                 self.keep_blank_values,
                 self.strict_parsing,
