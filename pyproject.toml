@@ -576,6 +576,7 @@ module = [
     'twisted.words.*',
     'twisted.test.test_plugin',
     'twisted.internet.testing',
+    'twisted.internet.test.test_base',
 ]
 
 [[tool.mypy.overrides]]
@@ -645,7 +646,6 @@ allow_incomplete_defs = true
 module = [
     'twisted.internet.posixbase',
     'twisted.internet.protocol',
-    'twisted.internet.test.test_base',
 ]
 
 [[tool.mypy.overrides]]
