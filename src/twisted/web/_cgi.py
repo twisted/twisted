@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from email.message import Message
 from email.parser import FeedParser
 from io import BytesIO, StringIO, TextIOWrapper
+from typing import Any
 
 maxlen = 0
 """
@@ -75,10 +76,10 @@ class MiniFieldStorage:
     list = None
     type = None
     file = None
-    type_options = {}
+    type_options: dict[Any, Any] = {}
     disposition = None
-    disposition_options = {}
-    headers = {}
+    disposition_options: dict[Any, Any] = {}
+    headers: dict[Any, Any] = {}
 
     def __init__(self, name, value):
         """Constructor from field name and value."""
