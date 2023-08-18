@@ -1,0 +1,1 @@
+Drop dependency on the deprecated ``cgi`` module by vendoring used parts.
