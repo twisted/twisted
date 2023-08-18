@@ -65,7 +65,7 @@ else:
             return args + (_noop,)
         return _decode_args(args) + (_encode_result,)
 
-    def _parse_qsl(
+    def _parse_qsl(  # type: ignore[misc]
         qs,
         keep_blank_values=False,
         strict_parsing=False,
