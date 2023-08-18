@@ -26,7 +26,7 @@ meaning the request size is unlimited.
 
 # backport parse_qsl with separator kwarg
 # https://github.com/python/cpython/issues/87133
-if sys.version_info >= (3, 8, 8):
+if (3, 9) > sys.version_info >= (3, 8, 8) or sys.version_info >= (3, 9, 2):
     from urllib.parse import parse_qsl as _parse_qsl
 else:
     from urllib.parse import unquote
