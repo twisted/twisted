@@ -649,12 +649,6 @@ module = [
 ]
 
 [[tool.mypy.overrides]]
-allow_incomplete_defs = true
-module = [
-    'twisted.mail.relaymanager',
-]
-
-[[tool.mypy.overrides]]
 allow_untyped_defs = false
 module = [
     'twisted.web.test.test_flatten',
