@@ -17,17 +17,18 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = "MIT"
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.7.1"
+requires-python = ">=3.8.0"
 authors = [
     { name = "Twisted Matrix Laboratories", email = "twisted-python@twistedmatrix.com" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "zope.interface >= 5",
@@ -63,8 +64,7 @@ dev-release = [
     "pydoctor ~= 23.4.0",
     "sphinx-rtd-theme ~= 1.2",
     "readthedocs-sphinx-ext ~= 2.2",
-    # We can move to v6 once we no longer need to support Python 3.7.
-    "sphinx >= 5, <7",
+    "sphinx >= 6, <7",
     # This is due to cachecontrol not being compatible with urllib3>=2.0
     # See https://github.com/ionrock/cachecontrol/issues/293
     "urllib3 <2",
@@ -104,12 +104,8 @@ http2 = [
     "priority >= 1.1.0, < 2.0",
 ]
 
-contextvars = [
-    "contextvars >= 2.4, < 3; python_version < '3.7'",
-]
-
 all-non-platform = [
-    "twisted[test,tls,conch,serial,http2,contextvars]",
+    "twisted[test,tls,conch,serial,http2]",
 ]
 
 macos-platform = [
