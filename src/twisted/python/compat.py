@@ -144,11 +144,13 @@ deprecatedModuleAttribute(
     "xrange",
 )
 
+fips = False
 try:
-    from _hashlib import get_fips_mode
-    fips = get_fips_mode()
+    import _hashlib
+    if hasattr(_hashlib, "get_fips_mode"):
+        fips = _hashlib.get_fips_mode()
 except ImportError:
-    fips = False
+    pass
 
 
 def md5(data=b"", **kwargs):
