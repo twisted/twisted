@@ -618,7 +618,6 @@ module = [
     'twisted.runner.inetdtap',
     'twisted.runner.procmontap',
     'twisted.runner.inetdconf',
-    'twisted.runner.test.test_procmontap',
 ]
 
 [[tool.mypy.overrides]]
@@ -651,4 +650,5 @@ module = [
     'twisted.web._flatten',
     'twisted.web._stan',
     'twisted.web.template',
+    'twisted.runner.test.test_procmontap',
 ]
