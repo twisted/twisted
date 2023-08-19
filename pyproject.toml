@@ -584,7 +584,6 @@ module = [
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 module = [
-    'twisted.application.test.test_service',
     'twisted.python._pydoctor',
     'twisted.python._release',
     'twisted.python._shellcomp',
@@ -649,4 +648,5 @@ module = [
     'twisted.python.test.test_textattributes',
     'twisted.python.test.test_runtime',
     'twisted.python.test.test_htmlizer',
+    'twisted.application.test.test_service',
 ]
