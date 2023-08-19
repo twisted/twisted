@@ -604,7 +604,6 @@ module = [
     'twisted.python.roots',
     'twisted.python.shortcut',
     'twisted.python.syslog',
-    'twisted.python.test.test_dist3',
     'twisted.python.zippath',
     'twisted.runner.inetdtap',
     'twisted.runner.inetdconf',
