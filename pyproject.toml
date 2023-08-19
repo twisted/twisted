@@ -616,7 +616,6 @@ module = [
     'twisted.python.threadpool',
     'twisted.python.zippath',
     'twisted.runner.inetdtap',
-    'twisted.runner.procmontap',
     'twisted.runner.inetdconf',
 ]
 
@@ -651,4 +650,5 @@ module = [
     'twisted.web._stan',
     'twisted.web.template',
     'twisted.runner.test.test_procmontap',
+    'twisted.runner.procmontap',
 ]
