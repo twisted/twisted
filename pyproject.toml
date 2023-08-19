@@ -598,7 +598,6 @@ module = [
     'twisted.python.log',
     'twisted.python.monkey',
     'twisted.python.procutils',
-    'twisted.python.randbytes',
     'twisted.python.release',
     'twisted.python.roots',
     'twisted.python.shortcut',
@@ -649,4 +648,5 @@ module = [
     'twisted.python.test.test_runtime',
     'twisted.python.test.test_htmlizer',
     'twisted.application.test.test_service',
+    'twisted.python.randbytes',
 ]
