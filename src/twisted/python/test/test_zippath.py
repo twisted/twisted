@@ -14,19 +14,19 @@ from twisted.python.zippath import ZipArchive
 from twisted.test.test_paths import AbstractFilePathTests
 
 
-def zipit(dirname, zfname):
+def zipit(dirname: str | bytes, zfname: str | bytes) -> None:
     """
     Create a zipfile on zfname, containing the contents of dirname'
     """
-    dirname = _coerceToFilesystemEncoding("", dirname)
-    zfname = _coerceToFilesystemEncoding("", zfname)
+    coercedDirname = _coerceToFilesystemEncoding("", dirname)
+    coercedZfname = _coerceToFilesystemEncoding("", zfname)
 
-    with zipfile.ZipFile(zfname, "w") as zf:
+    with zipfile.ZipFile(coercedZfname, "w") as zf:
         for (
             root,
             ignored,
             files,
-        ) in os.walk(dirname):
+        ) in os.walk(coercedDirname):
             for fname in files:
                 fspath = os.path.join(root, fname)
                 arcpath = os.path.join(root, fname)[len(dirname) + 1 :]
@@ -39,7 +39,7 @@ class ZipFilePathTests(AbstractFilePathTests):
     and L{ZipArchive}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         AbstractFilePathTests.setUp(self)
         zipit(self.cmn, self.cmn + b".zip")
         self.nativecmn = _coerceToFilesystemEncoding("", self.cmn)
@@ -47,7 +47,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b".zip") for x in self.all]
 
-    def test_zipPathRepr(self):
+    def test_zipPathRepr(self) -> None:
         """
         Make sure that invoking ZipPath's repr prints the correct class name
         and an absolute path to the zip file.
@@ -68,7 +68,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         # Check using a path without the cwd prepended
         self.assertEqual(repr(child), pathRepr)
 
-    def test_zipPathReprParentDirSegment(self):
+    def test_zipPathReprParentDirSegment(self) -> None:
         """
         The repr of a ZipPath with C{".."} in the internal part of its path
         includes the C{".."} rather than applying the usual parent directory
@@ -80,7 +80,7 @@ class ZipFilePathTests(AbstractFilePathTests):
         )
         self.assertEqual(repr(child), pathRepr)
 
-    def test_zipArchiveRepr(self):
+    def test_zipArchiveRepr(self) -> None:
         """
         Make sure that invoking ZipArchive's repr prints the correct class
         name and an absolute path to the zip file.
