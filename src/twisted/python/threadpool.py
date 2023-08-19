@@ -9,6 +9,8 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
+from __future__ import annotations
+
 from threading import Thread, current_thread
 from typing import Any, Callable, List, Optional, TypeVar
 
