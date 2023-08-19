@@ -4,7 +4,7 @@
 """
 Test cases covering L{twisted.python.zippath}.
 """
-
+from __future__ import annotations
 
 import os
 import zipfile
