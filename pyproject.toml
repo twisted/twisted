@@ -608,7 +608,6 @@ module = [
     'twisted.python.test.test_htmlizer',
     'twisted.python.test.test_runtime',
     'twisted.python.test.test_setup',
-    'twisted.python.test.test_textattributes',
     'twisted.python.zippath',
     'twisted.runner.inetdtap',
     'twisted.runner.inetdconf',
@@ -651,4 +650,5 @@ module = [
     'twisted.python.test.test_win32',
     'twisted.python.test.test_versions',
     'twisted.python.test.test_tzhelper',
+    'twisted.python.test.test_textattributes',
 ]
