@@ -15,14 +15,6 @@ from io import StringIO, BytesIO
 from twisted.web import _cgi as cgi
 
 
-class HackedSysModule:
-    # The regression test will have real values in sys.argv, which
-    # will completely confuse the test of the cgi module
-    argv = []
-    stdin = sys.stdin
-
-cgi.sys = HackedSysModule()
-
 parse_strict_test_cases = [
     ("", {}),
     ("&", ValueError("bad query field: ''")),
