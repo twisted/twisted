@@ -1,13 +1,18 @@
+"""
+tests for vendored twisted.web._cgi
+backported from
+https://github.com/python/cpython/blob/60edc70a9374f1cc6ecff5974e438d58fec29985/Lib/test/test_cgi.py
+Licence: https://docs.python.org/3/license.html
+"""
+
 import os
 import sys
 import tempfile
 import unittest
 from collections import namedtuple
 from io import StringIO, BytesIO
-from test import support
-from test.support import warnings_helper
 
-cgi = warnings_helper.import_deprecated("cgi")
+from twisted.web import _cgi as cgi
 
 
 class HackedSysModule:
@@ -17,40 +22,6 @@ class HackedSysModule:
     stdin = sys.stdin
 
 cgi.sys = HackedSysModule()
-
-class ComparableException:
-    def __init__(self, err):
-        self.err = err
-
-    def __str__(self):
-        return str(self.err)
-
-    def __eq__(self, anExc):
-        if not isinstance(anExc, Exception):
-            return NotImplemented
-        return (self.err.__class__ == anExc.__class__ and
-                self.err.args == anExc.args)
-
-    def __getattr__(self, attr):
-        return getattr(self.err, attr)
-
-def do_test(buf, method):
-    env = {}
-    if method == "GET":
-        fp = None
-        env['REQUEST_METHOD'] = 'GET'
-        env['QUERY_STRING'] = buf
-    elif method == "POST":
-        fp = BytesIO(buf.encode('latin-1')) # FieldStorage expects bytes
-        env['REQUEST_METHOD'] = 'POST'
-        env['CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
-        env['CONTENT_LENGTH'] = str(len(buf))
-    else:
-        raise ValueError("unknown method: %s" % method)
-    try:
-        return cgi.parse(fp, env, strict_parsing=1)
-    except Exception as err:
-        return ComparableException(err)
 
 parse_strict_test_cases = [
     ("", {}),
@@ -175,12 +146,6 @@ Content-Length: 3
 
     def test_strict(self):
         for orig, expect in parse_strict_test_cases:
-            # Test basic parsing
-            d = do_test(orig, "GET")
-            self.assertEqual(d, expect, "Error parsing %s method GET" % repr(orig))
-            d = do_test(orig, "POST")
-            self.assertEqual(d, expect, "Error parsing %s method POST" % repr(orig))
-
             env = {'QUERY_STRING': orig}
             fs = cgi.FieldStorage(environ=env)
             if isinstance(expect, dict):
@@ -222,21 +187,6 @@ Content-Length: 3
                         self.assertEqual(fs.getvalue(key), expect_val)
                     else:
                         self.assertEqual(fs.getvalue(key), expect_val[0])
-
-    @warnings_helper.ignore_warnings(category=DeprecationWarning)
-    def test_log(self):
-        cgi.log("Testing")
-
-        cgi.logfp = StringIO()
-        cgi.initlog("%s", "Testing initlog 1")
-        cgi.log("%s", "Testing log 2")
-        self.assertEqual(cgi.logfp.getvalue(), "Testing initlog 1\nTesting log 2\n")
-        if os.path.exists(os.devnull):
-            cgi.logfp = None
-            cgi.logfile = os.devnull
-            cgi.initlog("%s", "Testing log 3")
-            self.addCleanup(cgi.closelog)
-            cgi.log("Testing log 4")
 
     def test_fieldstorage_readline(self):
         # FieldStorage uses readline, which has the capacity to read all
@@ -574,12 +524,6 @@ this is the content of the fake file
         self.assertEqual(
             cgi.parse_header('form-data; name="files"; filename="fo\\"o;bar"'),
             ("form-data", {"name": "files", "filename": 'fo"o;bar'}))
-
-    def test_all(self):
-        not_exported = {
-            "logfile", "logfp", "initlog", "dolog", "nolog", "closelog", "log",
-            "maxlen", "valid_boundary"}
-        support.check__all__(self, cgi, not_exported=not_exported)
 
 
 BOUNDARY = "---------------------------721837373350705526688164684"
