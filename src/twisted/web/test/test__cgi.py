@@ -5,12 +5,22 @@ https://github.com/python/cpython/blob/60edc70a9374f1cc6ecff5974e438d58fec29985/
 Licence: https://docs.python.org/3/license.html
 """
 
+import sys
 import tempfile
 import unittest
 from collections import namedtuple
 from io import BytesIO
+from unittest import mock
 
 from twisted.web import _cgi as cgi
+
+
+class HackedSysModule:
+    # The regression test will have real values in sys.argv, which
+    # will completely confuse the test of the cgi module
+    argv = []
+    stdin = sys.stdin
+
 
 parse_strict_test_cases = [
     ("", {}),
@@ -137,6 +147,7 @@ Content-Length: 3
             result["submit-name"][0].encode("utf8", "surrogateescape"),
         )
 
+    @mock.patch("twisted.web._cgi.sys", HackedSysModule())
     def test_fieldstorage_properties(self):
         fs = cgi.FieldStorage()
         self.assertFalse(fs)
@@ -145,6 +156,7 @@ Content-Length: 3
         fs.list.append(namedtuple("MockFieldStorage", "name")("fieldvalue"))
         self.assertTrue(fs)
 
+    @mock.patch("twisted.web._cgi.sys", HackedSysModule())
     def test_fieldstorage_invalid(self):
         self.assertRaises(
             TypeError,
