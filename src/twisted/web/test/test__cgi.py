@@ -4,6 +4,7 @@ backported from
 https://github.com/python/cpython/blob/60edc70a9374f1cc6ecff5974e438d58fec29985/Lib/test/test_cgi.py
 Licence: https://docs.python.org/3/license.html
 """
+from __future__ import annotations
 
 import sys
 import tempfile
@@ -18,7 +19,7 @@ from twisted.web import _cgi as cgi
 class HackedSysModule:
     # The regression test will have real values in sys.argv, which
     # will completely confuse the test of the cgi module
-    argv = []
+    argv: list[str] = []
     stdin = sys.stdin
 
 
