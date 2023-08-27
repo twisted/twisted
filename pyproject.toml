@@ -65,9 +65,6 @@ dev-release = [
     "sphinx-rtd-theme ~= 1.2",
     "readthedocs-sphinx-ext ~= 2.2",
     "sphinx >= 6, <7",
-    # This is due to cachecontrol not being compatible with urllib3>=2.0
-    # See https://github.com/ionrock/cachecontrol/issues/293
-    "urllib3 <2",
 ]
 
 # All the extra tools used to help with the development process.
