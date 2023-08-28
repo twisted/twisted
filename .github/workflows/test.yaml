@@ -279,6 +279,10 @@ jobs:
         # Need full history for various diff checks to work.
         fetch-depth: 0
 
+    - name: Get main branch for any diff checks
+      run: |
+        git fetch origin trunk:trunk
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
