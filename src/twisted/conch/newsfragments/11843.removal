@@ -1,5 +1,0 @@
-PyAsn1 has been removed as a conch dependency.
-
-twisted.conch.ssh.keys.Key no longer supports loading "alternate" OpenSSH private keys.
-These are some private keys that at some point were handled by OpenSSH but for which no specification exists.
-For more info about these OpenSSH keys see https://github.com/twisted/twisted/issues/3008.
