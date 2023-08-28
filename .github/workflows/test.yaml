@@ -8,7 +8,9 @@ name: CI
 
 on:
   push:
-    branches: [ trunk ]
+    branches:
+     - trunk
+     - release-*
     tags:
       - twisted-*
   pull_request:
@@ -274,8 +276,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        # Need history on all branches for newsfragment to work.
+        # Need full history for various diff checks to work.
         fetch-depth: 0
+
+    - name: Get main branch for any diff checks
+      run: |
+        git fetch origin trunk:trunk
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -289,20 +295,7 @@ jobs:
     - name: Run the checks
       run: |
         python --version
-        tox --parallel -e lint,mypy
-
-    - name: Revert merge commit for a release branch
-      if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
-      env:
-        BRANCH_SHA: ${{ github.event.after }}
-        BRANCH_NAME: ${{ github.head_ref }}
-      run: |
-        git checkout -b $BRANCH_NAME
-        git reset --hard $BRANCH_SHA
-
-    - name: Newsfragment
-      run: |
-        tox -q -e newsfragment
+        tox --parallel -e lint,mypy,newsfragment
 
 
   # Used to validate the narrative and API docs.

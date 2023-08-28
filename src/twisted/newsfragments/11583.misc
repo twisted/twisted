@@ -1,0 +1,2 @@
+twisted.python._release.CheckNewsfragmentScript was removed as we now use
+towncrier upstream checks for PR CI.
