@@ -7,6 +7,7 @@ Test cases for L{twisted.internet.defer}.
 
 from __future__ import annotations
 
+import contextvars
 import functools
 import gc
 import re
@@ -22,7 +23,6 @@ from asyncio import (
     new_event_loop as _new_event_loop,
 )
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -63,14 +63,6 @@ from twisted.python import log
 from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
-if TYPE_CHECKING:
-    import contextvars
-else:
-    try:
-        import contextvars
-    except ImportError:
-        contextvars = None
 
 
 def ensuringDeferred(
@@ -3718,9 +3710,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 class CoroutineContextVarsTests(unittest.TestCase):
-    if contextvars is None:
-        skip = "contextvars is not available"  # type: ignore[unreachable]
-
     def test_withInlineCallbacks(self) -> None:
         """
         When an inlineCallbacks function is called, the context is taken from
