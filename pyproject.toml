@@ -571,6 +571,11 @@ module = [
     'twisted.trial.*',
     'twisted.web.*',
     'twisted.words.*',
+    'twisted.test.test_plugin',
+    'twisted.internet.testing',
+    'twisted.internet.test.test_base',
+    'twisted.internet.protocol',
+    'twisted.internet.posixbase',
 ]
 
 [[tool.mypy.overrides]]
@@ -631,27 +636,6 @@ module = [
     'twisted.internet.abstract',
     'twisted.internet.iocpreactor.tcp',
     'twisted.internet.tcp',
-]
-
-[[tool.mypy.overrides]]
-allow_untyped_defs = true
-check_untyped_defs = false
-allow_incomplete_defs = true
-module = [
-    'twisted.internet.posixbase',
-    'twisted.internet.protocol',
-    'twisted.internet.test.test_base',
-    'twisted.internet.testing',
-    'twisted.test.test_plugin',
-]
-
-[[tool.mypy.overrides]]
-allow_incomplete_defs = true
-module = [
-    'twisted.mail.relaymanager',
-    'twisted.web.test.test_util',
-    'twisted.web.util',
-    'twisted.words.im.basesupport',
 ]
 
 [[tool.mypy.overrides]]

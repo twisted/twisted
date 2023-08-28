@@ -10,10 +10,12 @@ Assorted functionality which is commonly useful when writing unit tests.
 from collections.abc import Sequence
 from io import BytesIO
 from socket import AF_INET, AF_INET6
-from typing import Any, Callable
+from typing import Callable
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
+
+from typing_extensions import ParamSpec
 
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
@@ -55,6 +57,8 @@ __all__ = [
     "waitUntilAllDisconnected",
     "EventLoggingObserver",
 ]
+
+_P = ParamSpec("_P")
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -547,8 +551,13 @@ class MemoryReactor:
         raise NotImplementedError()
 
     def addSystemEventTrigger(
-        self, phase: str, eventType: str, callable: Callable[..., Any], *args, **kw
-    ):
+        self,
+        phase: str,
+        eventType: str,
+        callable: Callable[_P, object],
+        *args: _P.args,
+        **kw: _P.kwargs,
+    ) -> None:
         """
         Fake L{IReactorCore.run}.
         Keep track of trigger by appending it to
@@ -564,7 +573,9 @@ class MemoryReactor:
         """
         raise NotImplementedError()
 
-    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
+    def callWhenRunning(
+        self, callable: Callable[_P, object], *args: _P.args, **kw: _P.kwargs
+    ) -> None:
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
