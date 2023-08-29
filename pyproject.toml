@@ -637,6 +637,8 @@ module = [
     'twisted.runner.test.test_procmontap',
     'twisted.runner.procmontap',
     'twisted.python.threadpool',
+    'twisted._threads._pool',
+    'twisted._threads._team',
     'twisted.python.test.test_zippath',
     'twisted.python.test.test_win32',
     'twisted.python.test.test_versions',

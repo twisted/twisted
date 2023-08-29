@@ -9,11 +9,13 @@ workers.
 
 
 from collections import deque
+from typing import Callable, Optional, Set
 
 from zope.interface import implementer
 
 from . import IWorker
 from ._convenience import Quit
+from ._ithreads import IExclusiveWorker
 
 
 class Statistics:
@@ -32,7 +34,9 @@ class Statistics:
     @type backloggedWorkCount: L{int}
     """
 
-    def __init__(self, idleWorkerCount, busyWorkerCount, backloggedWorkCount):
+    def __init__(
+        self, idleWorkerCount: int, busyWorkerCount: int, backloggedWorkCount: int
+    ) -> None:
         self.idleWorkerCount = idleWorkerCount
         self.busyWorkerCount = busyWorkerCount
         self.backloggedWorkCount = backloggedWorkCount
@@ -70,7 +74,12 @@ class Team:
         next available opportunity; set in the coordinator.
     """
 
-    def __init__(self, coordinator, createWorker, logException):
+    def __init__(
+        self,
+        coordinator: IExclusiveWorker,
+        createWorker: Callable[[], Optional[IWorker]],
+        logException: Callable[[], None],
+    ):
         """
         @param coordinator: an L{IExclusiveWorker} which will coordinate access
             to resources on this L{Team}; that is to say, an
@@ -91,13 +100,13 @@ class Team:
         self._logException = logException
 
         # Don't touch these except from the coordinator.
-        self._idle = set()
+        self._idle: Set[IWorker] = set()
         self._busyCount = 0
-        self._pending = deque()
+        self._pending: "deque[Callable[..., object]]" = deque()
         self._shouldQuitCoordinator = False
         self._toShrink = 0
 
-    def statistics(self):
+    def statistics(self) -> Statistics:
         """
         Gather information on the current status of this L{Team}.
 
@@ -105,7 +114,7 @@ class Team:
         """
         return Statistics(len(self._idle), self._busyCount, len(self._pending))
 
-    def grow(self, n):
+    def grow(self, n: int) -> None:
         """
         Increase the the number of idle workers by C{n}.
 
@@ -115,14 +124,14 @@ class Team:
         self._quit.check()
 
         @self._coordinator.do
-        def createOneWorker():
+        def createOneWorker() -> None:
             for x in range(n):
                 worker = self._createWorker()
                 if worker is None:
                     return
                 self._recycleWorker(worker)
 
-    def shrink(self, n=None):
+    def shrink(self, n: Optional[int] = None) -> None:
         """
         Decrease the number of idle workers by C{n}.
 
@@ -133,7 +142,7 @@ class Team:
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
 
-    def _quitIdlers(self, n=None):
+    def _quitIdlers(self, n: Optional[int] = None) -> None:
         """
         The implmentation of C{shrink}, performed by the coordinator worker.
 
@@ -149,7 +158,7 @@ class Team:
         if self._shouldQuitCoordinator and self._busyCount == 0:
             self._coordinator.quit()
 
-    def do(self, task):
+    def do(self, task: Callable[..., object]) -> None:
         """
         Perform some work in a worker created by C{createWorker}.
 
@@ -158,7 +167,7 @@ class Team:
         self._quit.check()
         self._coordinator.do(lambda: self._coordinateThisTask(task))
 
-    def _coordinateThisTask(self, task):
+    def _coordinateThisTask(self, task: Callable[..., object]) -> None:
         """
         Select a worker to dispatch to, either an idle one or a new one, and
         perform it.
@@ -174,21 +183,22 @@ class Team:
             # to create workers.
             self._pending.append(task)
             return
+        not_none_worker = worker
         self._busyCount += 1
 
         @worker.do
-        def doWork():
+        def doWork() -> None:
             try:
                 task()
             except BaseException:
                 self._logException()
 
             @self._coordinator.do
-            def idleAndPending():
+            def idleAndPending() -> None:
                 self._busyCount -= 1
-                self._recycleWorker(worker)
+                self._recycleWorker(not_none_worker)
 
-    def _recycleWorker(self, worker):
+    def _recycleWorker(self, worker: IWorker) -> None:
         """
         Called only from coordinator.
 
@@ -209,7 +219,7 @@ class Team:
             self._idle.remove(worker)
             worker.quit()
 
-    def quit(self):
+    def quit(self) -> None:
         """
         Stop doing work and shut down all idle workers.
         """
@@ -217,6 +227,6 @@ class Team:
         # In case all the workers are idle when we do this.
 
         @self._coordinator.do
-        def startFinishing():
+        def startFinishing() -> None:
             self._shouldQuitCoordinator = True
             self._quitIdlers()

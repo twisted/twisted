@@ -117,7 +117,7 @@ class ThreadPool:
         @rtype: L{int}
         """
         stats = self._team.statistics()
-        return stats.idleWorkerCount + stats.busyWorkerCount  # type: ignore[no-any-return]
+        return stats.idleWorkerCount + stats.busyWorkerCount
 
     @property
     def working(self) -> list[None]:
@@ -161,7 +161,7 @@ class ThreadPool:
                     worker.
                 @rtype: L{int}
                 """
-                return self._team.statistics().backloggedWorkCount  # type: ignore[no-any-return]
+                return self._team.statistics().backloggedWorkCount
 
         return NotAQueue()
 
