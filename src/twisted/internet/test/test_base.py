@@ -66,7 +66,7 @@ class FakeReactor:
         # IReactorTime.getDelayedCalls
         pass
 
-    def seconds(self) -> float:
+    def seconds(self) -> float:  # type: ignore[empty-body]
         # IReactorTime.seconds
         pass
 
