@@ -5,7 +5,7 @@
 Exceptions in L{twisted.mail}.
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 
 class IMAP4Exception(Exception):
@@ -116,12 +116,11 @@ class SMTPClientError(SMTPError):
             desirable, they will be attempted, otherwise the delivery will be
             failed.
         """
-        if not TYPE_CHECKING:
-            if isinstance(resp, str):
-                resp = resp.encode("utf-8")
+        if isinstance(resp, str):  # type: ignore[unreachable]
+            resp = resp.encode("utf-8")  # type: ignore[unreachable]
 
-            if isinstance(log, str):
-                log = log.encode("utf-8")
+        if isinstance(log, str):
+            log = log.encode("utf-8")  # type: ignore[unreachable]
 
         self.code = code
         self.resp = resp
