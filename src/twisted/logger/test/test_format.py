@@ -163,7 +163,9 @@ class TimeFormattingTests(unittest.TestCase):
         if tzset is None:
             raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
-        def testForTimeZone(name: str, expectedDST: str, expectedSTD: str) -> None:
+        def testForTimeZone(
+            name: str, expectedDST: Optional[str], expectedSTD: str
+        ) -> None:
             setTZ(name)
 
             localSTD = mktime((2007, 1, 31, 0, 0, 0, 2, 31, 0))
