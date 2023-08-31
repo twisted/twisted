@@ -1,2 +1,0 @@
-utcfromtimestamp has been deprecated since Python 3.12,
-use fromtimestamp(x, timezone.utc).replace(tzinfo=None) instead.

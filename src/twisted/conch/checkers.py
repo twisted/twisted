@@ -43,7 +43,7 @@ class UserRecord(Tuple[str, str, int, int, str, str, str]):
     """
 
     @property
-    def pw_dir(self) -> str:
+    def pw_dir(self) -> str:  # type: ignore[empty-body]
         ...
 
 
