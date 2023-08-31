@@ -8,9 +8,10 @@ Test cases covering L{twisted.python.zippath}.
 
 import os
 import zipfile
+from typing import Union
 
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.zippath import ZipArchive
+from twisted.python.zippath import ZipArchive, ZipPath
 from twisted.test.test_paths import AbstractFilePathTests
 
 
@@ -39,6 +40,9 @@ class ZipFilePathTests(AbstractFilePathTests):
     and L{ZipArchive}.
     """
 
+    path: ZipArchive[bytes]  # type:ignore[assignment]
+    root: ZipArchive[bytes]  # type:ignore[assignment]
+
     def setUp(self):
         AbstractFilePathTests.setUp(self)
         zipit(self.cmn, self.cmn + b".zip")
@@ -47,12 +51,18 @@ class ZipFilePathTests(AbstractFilePathTests):
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b".zip") for x in self.all]
 
+    def test_sibling(self) -> None:
+        """
+        L{ZipPath.sibling} returns a path at the same level.
+        """
+        self.assertEqual(self.path.child("one").sibling("two"), self.path.child("two"))
+
     def test_zipPathRepr(self):
         """
         Make sure that invoking ZipPath's repr prints the correct class name
         and an absolute path to the zip file.
         """
-        child = self.path.child("foo")
+        child: Union[ZipPath[str, bytes], ZipPath[str, str]] = self.path.child("foo")
         pathRepr = "ZipPath({!r})".format(
             os.path.abspath(self.nativecmn + ".zip" + os.sep + "foo"),
         )

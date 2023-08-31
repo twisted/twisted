@@ -13,11 +13,14 @@ this side of Marmalade!
 import copyreg as copy_reg
 import re
 import types
-from tokenize import generate_tokens as tokenize
 
 from twisted.persisted import crefutil
 from twisted.python import log, reflect
 from twisted.python.compat import _constructMethod
+
+# tokenize from py3.11 is vendored to work around https://github.com/python/cpython/issues/105238
+# on 3.12
+from ._tokenize import generate_tokens as tokenize
 
 ###########################
 # Abstract Object Classes #

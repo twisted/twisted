@@ -267,16 +267,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     def test_commentEscaping(self) -> Deferred[List[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
-        so that the result is a legal SGML and XML comment.
+        so that the result can be safely included in an HTML document.
 
-        SGML comment syntax is complicated and hard to use. This rule is more
-        restrictive, and more compatible:
-
-        Comments start with <!-- and end with --> and never contain -- or >.
-
-        Also by XML syntax, a comment may not end with '-'.
-
-        @see: U{http://www.w3.org/TR/REC-xml/#sec-comments}
+        Test that C{>} is escaped when the sequence C{-->} is encountered
+        within a comment, and that comments do not end with C{-}.
         """
 
         def verifyComment(c: bytes) -> None:
@@ -292,19 +286,19 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             # illegally.
             self.assertTrue(len(c) >= 7, f"{c!r} is too short to be a legal comment")
             content = c[4:-3]
-            self.assertNotIn(b"--", content)
-            self.assertNotIn(b">", content)
+            if b"foo" in content:
+                self.assertIn(b">", content)
+            else:
+                self.assertNotIn(b">", content)
             if content:
                 self.assertNotEqual(content[-1], b"-")
 
         results = []
         for c in [
             "",
-            "foo---bar",
-            "foo---bar-",
-            "foo>bar",
-            "foo-->bar",
-            "----------------",
+            "foo > bar",
+            "abracadabra-",
+            "not-->magic",
         ]:
             d = flattenString(None, Comment(c))
             d.addCallback(verifyComment)
@@ -685,7 +679,7 @@ class FlattenerErrorTests(SynchronousTestCase):
             def __repr__(self) -> str:
                 return "<unrenderable>"
 
-            def lookupRenderMethod(
+            def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
             ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
                 ...

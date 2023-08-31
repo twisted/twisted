@@ -14,7 +14,7 @@ import os
 import sys
 import time
 from importlib import invalidate_caches as invalidateImportCaches
-from typing import Callable
+from typing import Callable, TypeVar
 
 from zope.interface import Interface
 
@@ -22,6 +22,8 @@ from twisted import plugin
 from twisted.python.filepath import FilePath
 from twisted.python.log import addObserver, removeObserver, textFromEventDict
 from twisted.trial import unittest
+
+_T = TypeVar("_T")
 
 
 class ITestPlugin(Interface):
@@ -96,7 +98,7 @@ class PluginTests(unittest.TestCase):
         """
         self.package.child("dropin.cache").remove()
 
-    def _withCacheness(meth: Callable):
+    def _withCacheness(meth: Callable[[_T], object]) -> Callable[[_T], None]:
         """
         This is a paranoid test wrapper, that calls C{meth} 2 times, clear the
         cache, and calls it 2 other times. It's supposed to ensure that the

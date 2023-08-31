@@ -31,14 +31,14 @@ from hypothesis.strategies import booleans, sampled_from
 
 from twisted.internet import interfaces
 from twisted.internet.base import ReactorBase
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
-from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist import _WORKER_AMP_STDIN
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
@@ -125,6 +125,11 @@ class CountingReactor(MemoryReactorClock):
         See L{IReactorCore.stop}.
         """
         MemoryReactorClock.stop(self)
+        # TODO: implementing this more comprehensively in MemoryReactor would
+        # be nice, this is rather hard-coded to disttrial's current
+        # implementation.
+        if "before" in self.triggers:
+            self.triggers["before"]["shutdown"][0][0]()
         self.stopCount += 1
 
     def run(self):
@@ -139,6 +144,9 @@ class CountingReactor(MemoryReactorClock):
 
         for f, args, kwargs in self.whenRunningHooks:
             f(*args, **kwargs)
+        self.stop()
+        # do not count internal 'stop' against trial-initiated .stop() count
+        self.stopCount -= 1
 
 
 class CountingReactorTests(SynchronousTestCase):
@@ -461,6 +469,15 @@ class DistTrialRunnerTests(TestCase):
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
 
+    def test_runUnexpectedErrorCtrlC(self) -> None:
+        """
+        If the reactor is stopped by C-c (i.e. `run` returns before the test
+        case's Deferred has been fired) we should cancel the pending test run.
+        """
+        runner = self.getRunner(workerPoolFactory=LocalWorkerPool)
+        with self.assertRaises(CancelledError):
+            runner.run(self.suite)
+
     def test_runUnexpectedWorkerError(self) -> None:
         """
         If for some reason the worker process cannot run a test, the error is
@@ -605,12 +622,12 @@ class DistTrialRunnerTests(TestCase):
                 processProtocol,
                 executable,
                 args,
-                env,
-                path,
-                uid,
-                gid,
-                usePTY,
-                childFDs,
+                env=None,
+                path=None,
+                uid=None,
+                gid=None,
+                usePTY=False,
+                childFDs=None,
             ):
                 pass
 

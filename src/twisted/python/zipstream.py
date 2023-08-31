@@ -33,7 +33,7 @@ class ChunkingZipFile(zipfile.ZipFile):
 
         fheader = self.fp.read(zipfile.sizeFileHeader)
         if fheader[0:4] != zipfile.stringFileHeader:
-            raise zipfile.BadZipfile("Bad magic number for file header")
+            raise zipfile.BadZipFile("Bad magic number for file header")
 
         fheader = struct.unpack(zipfile.structFileHeader, fheader)
         fname = self.fp.read(fheader[zipfile._FH_FILENAME_LENGTH])
@@ -48,7 +48,7 @@ class ChunkingZipFile(zipfile.ZipFile):
             fname_str = fname.decode("cp437")
 
         if fname_str != zinfo.orig_filename:
-            raise zipfile.BadZipfile(
+            raise zipfile.BadZipFile(
                 'File name in directory "%s" and header "%s" differ.'
                 % (zinfo.orig_filename, fname_str)
             )
@@ -58,7 +58,7 @@ class ChunkingZipFile(zipfile.ZipFile):
         elif zinfo.compress_type == zipfile.ZIP_DEFLATED:
             return DeflatedZipFileEntry(self, zinfo.compress_size)
         else:
-            raise zipfile.BadZipfile(
+            raise zipfile.BadZipFile(
                 "Unsupported compression method %d for file %s"
                 % (zinfo.compress_type, name)
             )

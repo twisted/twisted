@@ -16,7 +16,7 @@ from hypothesis.strategies import sampled_from
 
 from twisted.logger import Logger
 from twisted.python import util
-from twisted.python.filepath import FilePath
+from twisted.python.filepath import FilePath, IFilePath
 from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
@@ -91,7 +91,7 @@ class LogfileTests(unittest.SynchronousTestCase):
         file constructed from a default value.
         """
         config = runFromArguments(["--temp-directory", workingDirectory])
-        logPath = FilePath(workingDirectory).preauthChild(config["logfile"])
+        logPath: IFilePath = FilePath(workingDirectory).preauthChild(config["logfile"])
         assert_that(logPath, fileContents(contains_string("something")))
 
     @given(
@@ -109,7 +109,7 @@ class LogfileTests(unittest.SynchronousTestCase):
         logs are written there.
         """
         config = runFromArguments(["--logfile", logfile])
-        logPath = FilePath(config["temp-directory"]).preauthChild(logfile)
+        logPath: IFilePath = FilePath(config["temp-directory"]).preauthChild(logfile)
         assert_that(logPath, fileContents(contains_string("something")))
 
     @given(
@@ -131,7 +131,8 @@ class LogfileTests(unittest.SynchronousTestCase):
         # directory.
         logPath = FilePath(".").preauthChild(logfile)
         runFromArguments(["--logfile", logPath.path])
-        assert_that(logPath, fileContents(contains_string("something")))
+        iPath: IFilePath = logPath
+        assert_that(iPath, fileContents(contains_string("something")))
 
 
 class ForceGarbageCollectionTests(unittest.SynchronousTestCase):

@@ -6,7 +6,7 @@
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
-
+from __future__ import annotations
 
 from inspect import iscoroutine
 from io import BytesIO
@@ -169,7 +169,10 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
 
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
-    Escape a comment for inclusion in a document.
+    Within comments the sequence C{-->} can be mistaken as the end of the comment.
+    To ensure consistent parsing and valid output the sequence is replaced with C{--&gt;}.
+    Furthermore, whitespace is added when a comment ends in a dash. This is done to break
+    the connection of the ending C{-} with the closing C{-->}.
 
     @param data: The string to escape.
 
@@ -178,7 +181,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
+    data = data.replace(b"-->", b"--&gt;")
     if data and data[-1:] == b"-":
         data += b" "
     return data
@@ -192,7 +195,7 @@ def _getSlotValue(
     """
     Find the value of the named slot in the given stack of slot data.
     """
-    for slotFrame in slotData[::-1]:
+    for slotFrame in reversed(slotData):
         if slotFrame is not None and name in slotFrame:
             return slotFrame[name]
     else:

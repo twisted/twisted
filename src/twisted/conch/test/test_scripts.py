@@ -14,10 +14,6 @@ from twisted.trial.unittest import TestCase
 doSkip = False
 skipReason = ""
 
-if not requireModule("pyasn1"):
-    doSkip = True
-    skipReason = "Cannot run without PyASN1"
-
 if not requireModule("cryptography"):
     doSkip = True
     cryptoSkip = "can't run w/o cryptography"

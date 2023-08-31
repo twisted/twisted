@@ -60,7 +60,7 @@ class ManagedRelayerMixin:
         del self.messages[0]
         del self.names[0]
 
-    def connectionLost(self, reason: Failure = connectionDone):
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
         """
         called when connection is broken
 

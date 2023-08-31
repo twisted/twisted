@@ -21,10 +21,10 @@ from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.internet.protocol import Protocol
+from twisted.internet.testing import AccumulatingProtocol
 from twisted.protocols import policies
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
-from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.trial.unittest import SkipTest, TestCase
 
 
