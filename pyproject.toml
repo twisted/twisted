@@ -17,17 +17,18 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = "MIT"
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.7.1"
+requires-python = ">=3.8.0"
 authors = [
     { name = "Twisted Matrix Laboratories", email = "twisted-python@twistedmatrix.com" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "zope.interface >= 5",
@@ -59,23 +60,18 @@ test = [
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
-    "towncrier ~= 22.12",
+    "towncrier ~= 23.6",
     "pydoctor ~= 23.4.0",
     "sphinx-rtd-theme ~= 1.2",
     "readthedocs-sphinx-ext ~= 2.2",
-    # We can move to v6 once we no longer need to support Python 3.7.
-    "sphinx >= 5, <7",
-    # This is due to cachecontrol not being compatible with urllib3>=2.0
-    # See https://github.com/ionrock/cachecontrol/issues/293
-    "urllib3 <2",
+    "sphinx >= 6, <7",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
-    # TODO: support python-subunit in py3.10 https://github.com/twisted/twisted/issues/10115
-    "python-subunit ~= 1.4; python_version < '3.10'",
+    "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
     "coverage >= 6b1, <7",
 ]
@@ -104,12 +100,8 @@ http2 = [
     "priority >= 1.1.0, < 2.0",
 ]
 
-contextvars = [
-    "contextvars >= 2.4, < 3; python_version < '3.7'",
-]
-
 all-non-platform = [
-    "twisted[test,tls,conch,serial,http2,contextvars]",
+    "twisted[test,tls,conch,serial,http2]",
 ]
 
 macos-platform = [
@@ -134,10 +126,9 @@ gtk-platform = [
 ]
 
 mypy = [
-    "twisted[dev,all-non-platform,conch-nacl]",
-    "mypy==0.981",
-    "mypy-zope==0.3.11",
-    "mypy-extensions==0.4.3",
+    "twisted[dev,all-non-platform]",
+    "mypy~=1.5.1",
+    "mypy-zope~=1.0.1",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -292,3 +283,367 @@ known_zope = "zope"
 known_openssl = "OpenSSL"
 combine_as_imports = true
 skip = "src/twisted/logger/__init__.py,src/twisted/internet/reactor.py"
+
+[tool.mypy]
+namespace_packages = true
+plugins = ["mypy_zope:plugin"]
+# Increase our expectations
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+show_column_numbers = true
+show_error_codes = true
+strict_optional = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_ignores = true
+# These are too strict for us at the moment
+disallow_any_decorated = false
+disallow_any_explicit = false
+disallow_any_expr = false
+disallow_any_generics = false
+disallow_any_unimported = false
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+strict_equality = false
+# Disable some checks until the effected modules fully adopt mypy
+
+[[tool.mypy.overrides]]
+allow_untyped_defs = true
+check_untyped_defs = false
+module = [
+    'twisted._threads.*',
+    'twisted.application.app',
+    'twisted.application.internet',
+    'twisted.application.service',
+    'twisted.application.test.test_internet',
+    'twisted.conch.*',
+    'twisted.cred.*',
+    'twisted.enterprise.*',
+    'twisted.internet._baseprocess',
+    'twisted.internet._dumbwin32proc',
+    'twisted.internet._glibbase',
+    'twisted.internet._newtls',
+    'twisted.internet._pollingfile',
+    'twisted.internet._posixserialport',
+    'twisted.internet._posixstdio',
+    'twisted.internet._producer_helpers',
+    'twisted.internet._signals',
+    'twisted.internet._threadedselect',
+    'twisted.internet._win32serialport',
+    'twisted.internet._win32stdio',
+    'twisted.internet.address',
+    'twisted.internet.asyncioreactor',
+    'twisted.internet.cfreactor',
+    'twisted.internet.default',
+    'twisted.internet.endpoints',
+    'twisted.internet.epollreactor',
+    'twisted.internet.error',
+    'twisted.internet.fdesc',
+    'twisted.internet.gireactor',
+    'twisted.internet.glib2reactor',
+    'twisted.internet.gtk2reactor',
+    'twisted.internet.gtk3reactor',
+    'twisted.internet.inotify',
+    'twisted.internet.iocpreactor.abstract',
+    'twisted.internet.iocpreactor.interfaces',
+    'twisted.internet.iocpreactor.reactor',
+    'twisted.internet.iocpreactor.udp',
+    'twisted.internet.kqreactor',
+    'twisted.internet.main',
+    'twisted.internet.pollreactor',
+    'twisted.internet.process',
+    'twisted.internet.pyuisupport',
+    'twisted.internet.selectreactor',
+    'twisted.internet.serialport',
+    'twisted.internet.ssl',
+    'twisted.internet.test._posixifaces',
+    'twisted.internet.test._win32ifaces',
+    'twisted.internet.test.connectionmixins',
+    'twisted.internet.test.fakeendpoint',
+    'twisted.internet.test.modulehelpers',
+    'twisted.internet.test.process_helper',
+    'twisted.internet.test.reactormixins',
+    'twisted.internet.test.test_abstract',
+    'twisted.internet.test.test_address',
+    'twisted.internet.test.test_asyncioreactor',
+    'twisted.internet.test.test_baseprocess',
+    'twisted.internet.test.test_default',
+    'twisted.internet.test.test_defer_await',
+    'twisted.internet.test.test_defer_yieldfrom',
+    'twisted.internet.test.test_endpoints',
+    'twisted.internet.test.test_epollreactor',
+    'twisted.internet.test.test_error',
+    'twisted.internet.test.test_fdset',
+    'twisted.internet.test.test_filedescriptor',
+    'twisted.internet.test.test_gireactor',
+    'twisted.internet.test.test_glibbase',
+    'twisted.internet.test.test_inlinecb',
+    'twisted.internet.test.test_inotify',
+    'twisted.internet.test.test_iocp',
+    'twisted.internet.test.test_kqueuereactor',
+    'twisted.internet.test.test_main',
+    'twisted.internet.test.test_newtls',
+    'twisted.internet.test.test_pollingfile',
+    'twisted.internet.test.test_posixbase',
+    'twisted.internet.test.test_posixprocess',
+    'twisted.internet.test.test_process',
+    'twisted.internet.test.test_protocol',
+    'twisted.internet.test.test_resolver',
+    'twisted.internet.test.test_serialport',
+    'twisted.internet.test.test_sigchld',
+    'twisted.internet.test.test_socket',
+    'twisted.internet.test.test_stdio',
+    'twisted.internet.test.test_tcp',
+    'twisted.internet.test.test_testing',
+    'twisted.internet.test.test_threads',
+    'twisted.internet.test.test_time',
+    'twisted.internet.test.test_tls',
+    'twisted.internet.test.test_udp',
+    'twisted.internet.test.test_udp_internals',
+    'twisted.internet.test.test_unix',
+    'twisted.internet.test.test_win32events',
+    'twisted.internet.test.test_win32serialport',
+    'twisted.internet.threads',
+    'twisted.internet.tksupport',
+    'twisted.internet.udp',
+    'twisted.internet.unix',
+    'twisted.internet.utils',
+    'twisted.internet.win32eventreactor',
+    'twisted.internet.wxreactor',
+    'twisted.internet.wxsupport',
+    'twisted.logger.*',
+    'twisted.mail.*',
+    'twisted.names.*',
+    'twisted.pair.*',
+    'twisted.persisted.*',
+    'twisted.plugin.*',
+    'twisted.plugins.*',
+    'twisted.positioning.*',
+    'twisted.protocols.amp',
+    'twisted.protocols.basic',
+    'twisted.protocols.dict',
+    'twisted.protocols.finger',
+    'twisted.protocols.ftp',
+    'twisted.protocols.htb',
+    'twisted.protocols.ident',
+    'twisted.protocols.loopback',
+    'twisted.protocols.memcache',
+    'twisted.protocols.pcp',
+    'twisted.protocols.policies',
+    'twisted.protocols.portforward',
+    'twisted.protocols.postfix',
+    'twisted.protocols.shoutcast',
+    'twisted.protocols.sip',
+    'twisted.protocols.socks',
+    'twisted.protocols.stateful',
+    'twisted.protocols.tls',
+    'twisted.protocols.wire',
+    'twisted.protocols.test.test_basic',
+    'twisted.protocols.test.test_tls',
+    'twisted.python.failure',
+    'twisted.python.filepath',
+    'twisted.python.formmethod',
+    'twisted.python.logfile',
+    'twisted.python.modules',
+    'twisted.python.rebuild',
+    'twisted.python.reflect',
+    'twisted.python.test.test_components',
+    'twisted.python.test.test_constants',
+    'twisted.python.test.test_deprecate',
+    'twisted.python.test.test_fakepwd',
+    'twisted.python.test.test_inotify',
+    'twisted.python.test.test_pydoctor',
+    'twisted.python.test.test_release',
+    'twisted.python.test.test_sendmsg',
+    'twisted.python.test.test_shellcomp',
+    'twisted.python.test.test_syslog',
+    'twisted.python.test.test_systemd',
+    'twisted.python.test.test_url',
+    'twisted.python.test.test_urlpath',
+    'twisted.python.test.test_util',
+    'twisted.python.test.test_zipstream',
+    'twisted.python.text',
+    'twisted.python.threadable',
+    'twisted.python.urlpath',
+    'twisted.python.usage',
+    'twisted.python.util',
+    'twisted.python.win32',
+    'twisted.python.zipstream',
+    'twisted.runner.procmon',
+    'twisted.runner.inetd',
+    'twisted.runner.test.test_procmon',
+    'twisted.runner.test.test_inetdconf',
+    'twisted.scripts.*',
+    'twisted.spread.*',
+    'twisted.tap.*',
+    'twisted.test.crash_test_dummy',
+    'twisted.test.iosim',
+    'twisted.test.mock_win32process',
+    'twisted.test.myrebuilder1',
+    'twisted.test.myrebuilder2',
+    'twisted.test.plugin_basic',
+    'twisted.test.plugin_extra1',
+    'twisted.test.plugin_extra2',
+    'twisted.test.process_tester',
+    'twisted.test.process_twisted',
+    'twisted.test.ssl_helpers',
+    'twisted.test.stdio_test_consumer',
+    'twisted.test.stdio_test_halfclose',
+    'twisted.test.stdio_test_hostpeer',
+    'twisted.test.stdio_test_lastwrite',
+    'twisted.test.stdio_test_loseconn',
+    'twisted.test.stdio_test_producer',
+    'twisted.test.stdio_test_write',
+    'twisted.test.stdio_test_writeseq',
+    'twisted.test.test_abstract',
+    'twisted.test.test_adbapi',
+    'twisted.test.test_amp',
+    'twisted.test.test_application',
+    'twisted.test.test_compat',
+    'twisted.test.test_context',
+    'twisted.test.test_cooperator',
+    'twisted.test.test_defgen',
+    'twisted.test.test_dict',
+    'twisted.test.test_dirdbm',
+    'twisted.test.test_error',
+    'twisted.test.test_factories',
+    'twisted.test.test_failure',
+    'twisted.test.test_fdesc',
+    'twisted.test.test_finger',
+    'twisted.test.test_formmethod',
+    'twisted.test.test_ftp',
+    'twisted.test.test_ftp_options',
+    'twisted.test.test_htb',
+    'twisted.test.test_ident',
+    'twisted.test.test_internet',
+    'twisted.test.test_iosim',
+    'twisted.test.test_iutils',
+    'twisted.test.test_lockfile',
+    'twisted.test.test_log',
+    'twisted.test.test_logfile',
+    'twisted.test.test_loopback',
+    'twisted.test.test_main',
+    'twisted.test.test_memcache',
+    'twisted.test.test_modules',
+    'twisted.test.test_monkey',
+    'twisted.test.test_paths',
+    'twisted.test.test_pcp',
+    'twisted.test.test_persisted',
+    'twisted.test.test_policies',
+    'twisted.test.test_postfix',
+    'twisted.test.test_process',
+    'twisted.test.test_protocols',
+    'twisted.test.test_randbytes',
+    'twisted.test.test_rebuild',
+    'twisted.test.test_reflect',
+    'twisted.test.test_roots',
+    'twisted.test.test_shortcut',
+    'twisted.test.test_sip',
+    'twisted.test.test_sob',
+    'twisted.test.test_socks',
+    'twisted.test.test_ssl',
+    'twisted.test.test_sslverify',
+    'twisted.test.test_stateful',
+    'twisted.test.test_stdio',
+    'twisted.test.test_strerror',
+    'twisted.test.test_strports',
+    'twisted.test.test_task',
+    'twisted.test.test_tcp',
+    'twisted.test.test_tcp_internals',
+    'twisted.test.test_text',
+    'twisted.test.test_threadable',
+    'twisted.test.test_threadpool',
+    'twisted.test.test_threads',
+    'twisted.test.test_tpfile',
+    'twisted.test.test_twistd',
+    'twisted.test.test_twisted',
+    'twisted.test.test_udp',
+    'twisted.test.test_unix',
+    'twisted.test.test_usage',
+    'twisted.test.testutils',
+    'twisted.trial.*',
+    'twisted.web.*',
+    'twisted.words.*',
+    'twisted.test.test_plugin',
+    'twisted.internet.testing',
+    'twisted.internet.test.test_base',
+    'twisted.internet.protocol',
+    'twisted.internet.posixbase',
+]
+
+[[tool.mypy.overrides]]
+allow_untyped_defs = true
+module = [
+    'twisted.application.test.test_service',
+    'twisted.python._pydoctor',
+    'twisted.python._release',
+    'twisted.python._shellcomp',
+    'twisted.python._textattributes',
+    'twisted.python.compat',
+    'twisted.python.components',
+    'twisted.python.context',
+    'twisted.python.deprecate',
+    'twisted.python.fakepwd',
+    'twisted.python.htmlizer',
+    'twisted.python.lockfile',
+    'twisted.python.log',
+    'twisted.python.monkey',
+    'twisted.python.procutils',
+    'twisted.python.randbytes',
+    'twisted.python.release',
+    'twisted.python.roots',
+    'twisted.python.shortcut',
+    'twisted.python.syslog',
+    'twisted.python.test.test_dist3',
+    'twisted.python.test.test_htmlizer',
+    'twisted.python.test.test_runtime',
+    'twisted.python.test.test_setup',
+    'twisted.python.test.test_textattributes',
+    'twisted.python.test.test_tzhelper',
+    'twisted.python.test.test_versions',
+    'twisted.python.test.test_win32',
+    'twisted.python.test.test_zippath',
+    'twisted.python.threadpool',
+    'twisted.python.zippath',
+    'twisted.runner.inetdtap',
+    'twisted.runner.procmontap',
+    'twisted.runner.inetdconf',
+    'twisted.runner.test.test_procmontap',
+]
+
+[[tool.mypy.overrides]]
+warn_return_any = false
+module = [
+    'twisted.conch.ssh.keys',
+    'twisted.names._rfc1982',
+    'twisted.names.dns',
+    'twisted.words.protocols.jabber.jid',
+]
+
+[[tool.mypy.overrides]]
+allow_untyped_defs = true
+check_untyped_defs = false
+warn_return_any = false
+module = [
+    'twisted.internet._sslverify',
+    'twisted.internet.abstract',
+    'twisted.internet.iocpreactor.tcp',
+    'twisted.internet.tcp',
+]
+
+[[tool.mypy.overrides]]
+allow_untyped_defs = false
+module = [
+    'twisted.web.test.test_flatten',
+    'twisted.web.test.test_stan',
+    'twisted.web.test.test_template',
+    'twisted.web._element',
+    'twisted.web._flatten',
+    'twisted.web._stan',
+    'twisted.web.template',
+]
