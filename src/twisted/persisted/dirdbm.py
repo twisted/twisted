@@ -28,7 +28,7 @@ import pickle
 from twisted.python.filepath import FilePath
 
 try:
-    _open  # type: ignore[has-type]
+    _open  # type: ignore[has-type, used-before-def]
 except NameError:
     _open = open
 

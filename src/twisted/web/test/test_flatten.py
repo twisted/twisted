@@ -679,7 +679,7 @@ class FlattenerErrorTests(SynchronousTestCase):
             def __repr__(self) -> str:
                 return "<unrenderable>"
 
-            def lookupRenderMethod(
+            def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
             ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
                 ...

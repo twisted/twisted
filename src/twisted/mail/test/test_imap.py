@@ -7105,9 +7105,9 @@ class CopyWorkerTests(TestCase):
 class TLSTests(IMAP4HelperMixin, TestCase):
     serverCTX = None
     clientCTX = None
-    if ServerTLSContext:
+    if ServerTLSContext:  # type: ignore[truthy-function]
         serverCTX = ServerTLSContext()
-    if ClientTLSContext:
+    if ClientTLSContext:  # type: ignore[truthy-function]
         clientCTX = ClientTLSContext()
 
     def loopback(self):
