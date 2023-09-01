@@ -269,7 +269,7 @@ class UnlistableError(OSError):
         self.originalException = originalException
 
 
-def _secureEnoughString(path):
+def _secureEnoughString(path: AnyStr) -> AnyStr:
     """
     Compute a string usable as a new, temporary filename.
 

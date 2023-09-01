@@ -28,7 +28,7 @@ from zipfile import ZipFile
 
 from zope.interface import implementer
 
-from typing_extensions import Literal
+from typing_extensions import Literal, Self
 
 from twisted.python.compat import cmp, comparable
 from twisted.python.filepath import (
@@ -273,7 +273,7 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
     _zipfileFilename: AnyStr
 
     @property
-    def archive(self):
+    def archive(self) -> Self:  # type: ignore[override]
         return self
 
     def __init__(self, archivePathname: AnyStr) -> None:

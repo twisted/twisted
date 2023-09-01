@@ -37,7 +37,7 @@ dependencies = [
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
-    "typing_extensions >= 3.10.0",
+    "typing_extensions >= 4.0.0",
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
@@ -446,7 +446,6 @@ module = [
     'twisted.protocols.test.test_basic',
     'twisted.protocols.test.test_tls',
     'twisted.python.failure',
-    'twisted.python.filepath',
     'twisted.python.formmethod',
     'twisted.python.logfile',
     'twisted.python.modules',
@@ -597,7 +596,6 @@ module = [
     'twisted.python.roots',
     'twisted.python.shortcut',
     'twisted.python.syslog',
-    'twisted.python.zippath',
     'twisted.runner.inetdtap',
     'twisted.runner.inetdconf',
 ]
@@ -646,4 +644,6 @@ module = [
     'twisted.python.test.test_htmlizer',
     'twisted.application.test.test_service',
     'twisted.python.randbytes',
+    'twisted.python.zippath',
+    'twisted.python.filepath',
 ]
