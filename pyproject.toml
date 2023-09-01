@@ -288,6 +288,7 @@ skip = "src/twisted/logger/__init__.py,src/twisted/internet/reactor.py"
 namespace_packages = true
 plugins = ["mypy_zope:plugin"]
 # Increase our expectations
+strict = true
 check_untyped_defs = true
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
@@ -310,6 +311,7 @@ disallow_subclassing_any = false
 disallow_untyped_calls = false
 disallow_untyped_decorators = false
 strict_equality = false
+no_implicit_reexport = false
 # Disable some checks until the effected modules fully adopt mypy
 
 [[tool.mypy.overrides]]
@@ -618,32 +620,4 @@ module = [
     'twisted.internet.abstract',
     'twisted.internet.iocpreactor.tcp',
     'twisted.internet.tcp',
-]
-
-[[tool.mypy.overrides]]
-allow_untyped_defs = false
-module = [
-    'twisted.web.test.test_flatten',
-    'twisted.web.test.test_stan',
-    'twisted.web.test.test_template',
-    'twisted.web._element',
-    'twisted.web._flatten',
-    'twisted.web._stan',
-    'twisted.web.template',
-    'twisted.runner.test.test_procmontap',
-    'twisted.runner.procmontap',
-    'twisted.python.threadpool',
-    'twisted._threads._pool',
-    'twisted._threads._team',
-    'twisted.python.test.test_zippath',
-    'twisted.python.test.test_win32',
-    'twisted.python.test.test_versions',
-    'twisted.python.test.test_tzhelper',
-    'twisted.python.test.test_textattributes',
-    'twisted.python.test.test_runtime',
-    'twisted.python.test.test_htmlizer',
-    'twisted.application.test.test_service',
-    'twisted.python.randbytes',
-    'twisted.python.zippath',
-    'twisted.python.filepath',
 ]
