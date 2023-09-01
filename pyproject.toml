@@ -579,7 +579,6 @@ module = [
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 module = [
-    'twisted.application.test.test_service',
     'twisted.python._pydoctor',
     'twisted.python._release',
     'twisted.python._shellcomp',
@@ -594,26 +593,13 @@ module = [
     'twisted.python.log',
     'twisted.python.monkey',
     'twisted.python.procutils',
-    'twisted.python.randbytes',
     'twisted.python.release',
     'twisted.python.roots',
     'twisted.python.shortcut',
     'twisted.python.syslog',
-    'twisted.python.test.test_dist3',
-    'twisted.python.test.test_htmlizer',
-    'twisted.python.test.test_runtime',
-    'twisted.python.test.test_setup',
-    'twisted.python.test.test_textattributes',
-    'twisted.python.test.test_tzhelper',
-    'twisted.python.test.test_versions',
-    'twisted.python.test.test_win32',
-    'twisted.python.test.test_zippath',
-    'twisted.python.threadpool',
     'twisted.python.zippath',
     'twisted.runner.inetdtap',
-    'twisted.runner.procmontap',
     'twisted.runner.inetdconf',
-    'twisted.runner.test.test_procmontap',
 ]
 
 [[tool.mypy.overrides]]
@@ -646,4 +632,18 @@ module = [
     'twisted.web._flatten',
     'twisted.web._stan',
     'twisted.web.template',
+    'twisted.runner.test.test_procmontap',
+    'twisted.runner.procmontap',
+    'twisted.python.threadpool',
+    'twisted._threads._pool',
+    'twisted._threads._team',
+    'twisted.python.test.test_zippath',
+    'twisted.python.test.test_win32',
+    'twisted.python.test.test_versions',
+    'twisted.python.test.test_tzhelper',
+    'twisted.python.test.test_textattributes',
+    'twisted.python.test.test_runtime',
+    'twisted.python.test.test_htmlizer',
+    'twisted.application.test.test_service',
+    'twisted.python.randbytes',
 ]
