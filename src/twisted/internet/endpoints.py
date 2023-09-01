@@ -2351,6 +2351,7 @@ class _TLSServerEndpointParser:
     TLS server endpoint parser.
     """
 
+    _log = Logger()
     prefix: str = "tls"
 
     def _actualParseStreamServer(
@@ -2368,11 +2369,23 @@ class _TLSServerEndpointParser:
         certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
 
         def lookup(name: Optional[bytes]) -> Optional[Context]:
+            nonlocal certMap
             if name is None:
-                name = list(certMap.keys())[0].encode()
+                allNames = list(certMap.keys())
+                name = allNames[0].encode() if allNames else b""
             options = certMap.get(name.decode())
             if options is None:
-                return None
+                self._log.error(
+                    "could not find domain {name}, re-loading {path}",
+                    name=name,
+                    path=path,
+                )
+                certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
+                options = certMap.get(name.decode())
+                if options is None:
+                    from OpenSSL.SSL import TLS_METHOD
+
+                    return Context(TLS_METHOD)
             ctx = options.getContext()
             return ctx
 

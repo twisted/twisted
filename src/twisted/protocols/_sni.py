@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from zope.interface import implementer
@@ -38,12 +39,16 @@ class SNIConnectionCreator(object):
     ):
         self.contextLookup = contextLookup
         self.connectionSetupHook = connectionSetupHook
-        self.defaultContext = self.contextLookup(None)
+
+    @cached_property
+    def defaultContext(self) -> Context:
+        defaultContext = self.contextLookup(None)
 
         def selectContext(connection: Connection) -> None:
             connection.set_context(self.contextLookup(connection.get_servername()))
 
-        self.defaultContext.set_tlsext_servername_callback(selectContext)
+        defaultContext.set_tlsext_servername_callback(selectContext)
+        return defaultContext
 
     def serverConnectionForTLS(
         self,
