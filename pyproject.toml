@@ -71,8 +71,7 @@ dev-release = [
 dev = [
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
-    # TODO: support python-subunit in py3.10 https://github.com/twisted/twisted/issues/10115
-    "python-subunit ~= 1.4; python_version < '3.10'",
+    "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
     "coverage >= 6b1, <7",
 ]
