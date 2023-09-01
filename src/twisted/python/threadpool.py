@@ -28,7 +28,7 @@ _R = TypeVar("_R")
 
 class _SupportsQsize(Protocol):
     def qsize(self) -> int:
-        pass
+        ...
 
 
 class _State(TypedDict):
