@@ -218,7 +218,7 @@ class Tag:
         @return: a clone of C{obj}.
         """
         if hasattr(obj, "clone"):
-            return obj.clone(deep)  # type: ignore[union-attr]
+            return obj.clone(deep)
         elif isinstance(obj, (list, tuple)):
             return [self._clone(x, deep) for x in obj]
         elif isgenerator(obj):

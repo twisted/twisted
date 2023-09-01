@@ -1,1 +1,0 @@
-`twisted.web.template` now avoids some unecessary evaluation of type annotations and is faster.

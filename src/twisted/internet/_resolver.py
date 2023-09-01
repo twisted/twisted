@@ -49,7 +49,6 @@ from twisted.internet.interfaces import (
 from twisted.internet.threads import deferToThreadPool
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
-from twisted.python.failure import Failure
 
 if TYPE_CHECKING:
     from twisted.python.threadpool import ThreadPool
@@ -247,26 +246,25 @@ class SimpleResolverComplexifier:
 
         resolution = HostResolution(hostName)
         resolutionReceiver.resolutionBegan(resolution)
-        onAddress = self._simpleResolver.getHostByName(hostName)
-
-        def addressReceived(address: str) -> None:
-            resolutionReceiver.addressResolved(IPv4Address("TCP", address, portNumber))
-
-        def errorReceived(error: Failure) -> None:
-            if not error.check(DNSLookupError):
-                self._log.failure(
+        (
+            self._simpleResolver.getHostByName(hostName)
+            .addCallback(
+                lambda address: resolutionReceiver.addressResolved(
+                    IPv4Address("TCP", address, portNumber)
+                )
+            )
+            .addErrback(
+                lambda error: None
+                if error.check(DNSLookupError)
+                else self._log.failure(
                     "while looking up {name} with {resolver}",
                     error,
                     name=hostName,
                     resolver=self._simpleResolver,
                 )
-
-        onAddress.addCallbacks(addressReceived, errorReceived)
-
-        def finish(result: None) -> None:
-            resolutionReceiver.resolutionComplete()
-
-        onAddress.addCallback(finish)
+            )
+            .addCallback(lambda nothing: resolutionReceiver.resolutionComplete())
+        )
         return resolution
 
 
