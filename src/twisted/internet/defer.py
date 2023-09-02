@@ -2129,7 +2129,11 @@ def _cancellableInlineCallbacks(
 
         return status.deferred
 
-    _inlineCallbacks(None, gen, status, _copy_context())
+    # error: Argument 2 to "_inlineCallbacks" has incompatible type
+    # "Generator[Deferred[_T], object, _T] | Coroutine[Deferred[_T], object, _T]";
+    # expected
+    # "Generator[Deferred[_T], object, None] | Coroutine[Deferred[_T], object, None]"
+    _inlineCallbacks(None, gen, status, _copy_context())  # type: ignore[arg-type]
 
     return deferred
 

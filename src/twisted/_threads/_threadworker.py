@@ -7,6 +7,8 @@ Implementation of an L{IWorker} based on native threads and queues.
 """
 
 
+from typing import Callable
+
 from zope.interface import implementer
 
 from ._convenience import Quit
@@ -48,7 +50,7 @@ class ThreadWorker:
 
         startThread(work)
 
-    def do(self, task):
+    def do(self, task: Callable[..., object]) -> None:
         """
         Perform the given task on the thread owned by this L{ThreadWorker}.
 
@@ -86,7 +88,7 @@ class LockWorker:
         self._lock = lock
         self._local = local
 
-    def do(self, work):
+    def do(self, work: Callable[..., object]) -> None:
         """
         Do the given work on this thread, with the mutex acquired.  If this is
         called re-entrantly, return and wait for the outer invocation to do the
