@@ -306,7 +306,7 @@ class ThreadedResolver:
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: str | Failure, name: str, lookupDeferred: Deferred[str]
+        self, result: Union[str, Failure], name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
