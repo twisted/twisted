@@ -1922,8 +1922,8 @@ class _CancellationStatus(Generic[_SelfResultT]):
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[_T], object, None],
-        Coroutine[Deferred[_T], object, None],
+        Generator[Deferred[object], object, _T],
+        Coroutine[Deferred[object], object, _T],
     ],
     status: _CancellationStatus[_T],
     context: _Context,
@@ -2086,8 +2086,8 @@ def _inlineCallbacks(
 
 def _cancellableInlineCallbacks(
     gen: Union[
-        Generator["Deferred[_T]", object, _T],
-        Coroutine["Deferred[_T]", object, _T],
+        Generator["Deferred[object]", object, _T],
+        Coroutine["Deferred[object]", object, _T],
     ]
 ) -> Deferred[_T]:
     """
@@ -2129,11 +2129,7 @@ def _cancellableInlineCallbacks(
 
         return status.deferred
 
-    # error: Argument 2 to "_inlineCallbacks" has incompatible type
-    # "Generator[Deferred[_T], object, _T] | Coroutine[Deferred[_T], object, _T]";
-    # expected
-    # "Generator[Deferred[_T], object, None] | Coroutine[Deferred[_T], object, None]"
-    _inlineCallbacks(None, gen, status, _copy_context())  # type: ignore[arg-type]
+    _inlineCallbacks(None, gen, status, _copy_context())
 
     return deferred
 
