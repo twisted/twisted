@@ -204,13 +204,17 @@ class WorkerPool:
             _WORKER_AMP_STDIN: "w",
             _WORKER_AMP_STDOUT: "r",
         }
-        environ = os.environ.copy()
-        # Add an environment variable containing the raw sys.path, to be used
-        # by subprocesses to try to make it identical to the parent's.
-        environ["PYTHONPATH"] = os.pathsep.join(sys.path)
-        for worker in protocols:
+
+        for x, worker in enumerate(protocols):
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
+
+            environ = os.environ.copy()
+            # Add an environment variable containing the raw sys.path, to be used
+            # by subprocesses to try to make it identical to the parent's.
+            environ["PYTHONPATH"] = os.pathsep.join(sys.path)
+            environ["TWISTED_TRIAL_PARALLEL_INDEX"] = str(x)
+
             spawner(worker, sys.executable, args=args, childFDs=childFDs, env=environ)
 
     async def start(self, reactor: IReactorProcess) -> StartedWorkerPool:

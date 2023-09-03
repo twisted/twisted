@@ -239,7 +239,7 @@ class WorkerPoolTests(TestCase):
         """
         protocols = [ProcessProtocol() for i in range(4)]
         arguments = []
-        environment = {}
+        environments = []
 
         def fakeSpawnProcess(
             processProtocol,
@@ -254,7 +254,7 @@ class WorkerPoolTests(TestCase):
         ):
             arguments.append(executable)
             arguments.extend(args)
-            environment.update(env)
+            environments.append(env)
 
         self.pool._launchWorkerProcesses(fakeSpawnProcess, protocols, ["foo"])
         self.assertEqual(arguments[0], arguments[1])
@@ -263,7 +263,9 @@ class WorkerPoolTests(TestCase):
         # The child process runs with PYTHONPATH set to exactly the parent's
         # import search path so that the child has a good chance of finding
         # the same source files the parent would have found.
-        self.assertEqual(os.pathsep.join(sys.path), environment["PYTHONPATH"])
+        self.assertEqual(os.pathsep.join(sys.path), environments[0]["PYTHONPATH"])
+        parallel_indexes = set(e["TWISTED_TRIAL_PARALLEL_INDEX"] for e in environments)
+        self.assertEqual(set(["0", "1", "2", "3"]), parallel_indexes)
 
     def test_run(self):
         """
