@@ -2238,13 +2238,9 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         self.release()
         return r
 
-    # You might wonder: "WTF is self_319AA2A8B18F4B8EA296D75F279EB07F?"
-    # It's self_ + a GUID, which is to say: "it's not a string that will ever
-    # be used as a name in kwargs".
-    # Positional-only arguments, starting in Python 3.8, would be a better
-    # alternative.
     def run(
-        self_319AA2A8B18F4B8EA296D75F279EB07F: _ConcurrencyPrimitiveT,
+        self: _ConcurrencyPrimitiveT,
+        /,
         f: Callable[..., _SelfResultT],
         *args: object,
         **kwargs: object,
@@ -2264,11 +2260,9 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         """
 
         def execute(ignoredResult: object) -> Deferred[_SelfResultT]:
-            return maybeDeferred(f, *args, **kwargs).addBoth(
-                self_319AA2A8B18F4B8EA296D75F279EB07F._releaseAndReturn
-            )
+            return maybeDeferred(f, *args, **kwargs).addBoth(self._releaseAndReturn)
 
-        return self_319AA2A8B18F4B8EA296D75F279EB07F.acquire().addCallback(execute)
+        return self.acquire().addCallback(execute)
 
     def __aenter__(self: _ConcurrencyPrimitiveT) -> Deferred[_ConcurrencyPrimitiveT]:
         """
