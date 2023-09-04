@@ -8,6 +8,7 @@ DNS protocol implementation.
 Future Plans:
     - Get rid of some toplevels, maybe.
 """
+from __future__ import annotations
 
 # System imports
 import inspect
@@ -16,7 +17,7 @@ import socket
 import struct
 from io import BytesIO
 from itertools import chain
-from typing import Optional, SupportsInt, Union
+from typing import Optional, Sequence, SupportsInt, Union, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -315,7 +316,7 @@ def _nameToLabels(name):
     return labels
 
 
-def domainString(domain):
+def domainString(domain: str | bytes) -> bytes:
     """
     Coerce a domain name string to bytes.
 
@@ -378,7 +379,36 @@ def _isSubdomainOf(descendantName, ancestorName):
     return descendantLabels[-len(ancestorLabels) :] == ancestorLabels
 
 
-def str2time(s):
+def _str2time(s: str) -> int:
+    suffixes = (
+        ("S", 1),
+        ("M", 60),
+        ("H", 60 * 60),
+        ("D", 60 * 60 * 24),
+        ("W", 60 * 60 * 24 * 7),
+        ("Y", 60 * 60 * 24 * 365),
+    )
+    s = s.upper().strip()
+    for (suff, mult) in suffixes:
+        if s.endswith(suff):
+            return int(float(s[:-1]) * mult)
+    try:
+        return int(s)
+    except ValueError:
+        raise ValueError("Invalid time interval specifier: " + s)
+
+
+@overload
+def str2time(s: Union[str, bytes, int]) -> int:
+    ...
+
+
+@overload
+def str2time(s: None) -> None:
+    ...
+
+
+def str2time(s: Union[str, bytes, int, None]) -> Union[int, None]:
     """
     Parse a string description of an interval into an integer number of seconds.
 
@@ -395,26 +425,12 @@ def str2time(s):
     @return: an L{int} giving the interval represented by the string C{s}, or
         whatever C{s} is if it is not a string.
     """
-    suffixes = (
-        ("S", 1),
-        ("M", 60),
-        ("H", 60 * 60),
-        ("D", 60 * 60 * 24),
-        ("W", 60 * 60 * 24 * 7),
-        ("Y", 60 * 60 * 24 * 365),
-    )
     if isinstance(s, bytes):
-        s = s.decode("ascii")
+        return _str2time(s.decode("ascii"))
 
     if isinstance(s, str):
-        s = s.upper().strip()
-        for (suff, mult) in suffixes:
-            if s.endswith(suff):
-                return int(float(s[:-1]) * mult)
-        try:
-            s = int(s)
-        except ValueError:
-            raise ValueError("Invalid time interval specifier: " + s)
+        return _str2time(s)
+
     return s
 
 
@@ -474,7 +490,7 @@ class IEncodableRecord(IEncodable, IRecord):
 
 @implementer(IEncodable)
 class Charstr:
-    def __init__(self, string=b""):
+    def __init__(self, string: bytes = b""):
         if not isinstance(string, bytes):
             raise ValueError(f"{string!r} is not a byte string")
         self.string = string
@@ -532,7 +548,7 @@ class Name:
     @type name: L{bytes}
     """
 
-    def __init__(self, name=b""):
+    def __init__(self, name: bytes | str = b""):
         """
         @param name: A name.
         @type name: L{bytes} or L{str}
@@ -1544,7 +1560,13 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     def _suffix(self):
         return socket.inet_ntop(AF_INET6, self.suffix)
 
-    def __init__(self, prefixLen=0, suffix="::", prefix=b"", ttl=None):
+    def __init__(
+        self,
+        prefixLen: int = 0,
+        suffix: bytes | str = "::",
+        prefix: bytes | str = b"",
+        ttl: Union[str, bytes, int, None] = None,
+    ):
         """
         @param suffix: An IPv6 address suffix in in RFC 2373 format.
         @type suffix: L{bytes} or L{str}
@@ -1914,7 +1936,12 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("cpu", _nicebytes), ("os", _nicebytes), "ttl")
     compareAttributes = ("cpu", "os", "ttl")
 
-    def __init__(self, cpu=b"", os=b"", ttl=None):
+    def __init__(
+        self,
+        cpu: bytes = b"",
+        os: bytes = b"",
+        ttl: Union[str, bytes, int, None] = None,
+    ):
         self.cpu, self.os = cpu, os
         self.ttl = str2time(ttl)
 
@@ -2364,8 +2391,12 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
 
 
 def _compactRepr(
-    obj, alwaysShow=None, flagNames=None, fieldNames=None, sectionNames=None
-):
+    obj: object,
+    alwaysShow: Sequence[str] | None = None,
+    flagNames: Sequence[str] | None = None,
+    fieldNames: Sequence[str] | None = None,
+    sectionNames: Sequence[str] | None = None,
+) -> str:
     """
     Return a L{str} representation of C{obj} which only shows fields with
     non-default values, flags which are True and sections which have been

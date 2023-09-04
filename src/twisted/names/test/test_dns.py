@@ -9,7 +9,6 @@ Tests for twisted.names.dns.
 
 import struct
 from io import BytesIO
-from typing import cast
 
 from zope.interface.verify import verifyClass
 
@@ -4860,15 +4859,12 @@ class Foo:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return cast(
-            str,
-            dns._compactRepr(
-                self,
-                alwaysShow="alwaysShowField".split(),
-                fieldNames="field1 field2 alwaysShowField".split(),
-                flagNames="flagTrue flagFalse".split(),
-                sectionNames="section1 section2".split(),
-            ),
+        return dns._compactRepr(
+            self,
+            alwaysShow="alwaysShowField".split(),
+            fieldNames="field1 field2 alwaysShowField".split(),
+            flagNames="flagTrue flagFalse".split(),
+            sectionNames="section1 section2".split(),
         )
 
 
