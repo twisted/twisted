@@ -379,6 +379,7 @@ def _isSubdomainOf(descendantName, ancestorName):
     return descendantLabels[-len(ancestorLabels) :] == ancestorLabels
 
 
+# helper function for str2time, needed to appease mypy see GH-11956 
 def _str2time(s: str) -> int:
     suffixes = (
         ("S", 1),
