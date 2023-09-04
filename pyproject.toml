@@ -507,6 +507,7 @@ module = [
     'twisted.persisted.aot',
     'twisted.persisted.sob',
     'twisted.persisted.styles',
+    'twisted.plugin',
     'twisted.plugins.cred_unix',
     'twisted.positioning._sentence',
     'twisted.positioning.nmea',
