@@ -27,7 +27,7 @@ class InvalidFormat(Exception):
     """
 
 
-def parse(jidstring: str) -> Tuple[Union[str | None], str, Union[str, None]]:
+def parse(jidstring: str) -> Tuple[Union[str, None], str, Union[str, None]]:
     """
     Parse given JID string into its respective parts and apply stringprep.
 
@@ -76,7 +76,7 @@ def parse(jidstring: str) -> Tuple[Union[str | None], str, Union[str, None]]:
 
 def prep(
     user: Union[str, None], host: str, resource: Union[str, None]
-) -> Tuple[Union[str | None], str, Union[str, None]]:
+) -> Tuple[Union[str, None], str, Union[str, None]]:
     """
     Perform stringprep on all JID fragments.
 
