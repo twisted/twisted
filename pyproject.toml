@@ -605,7 +605,6 @@ module = [
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 check_untyped_defs = false
-warn_return_any = false
 module = [
     'twisted.internet._sslverify',
     'twisted.internet.abstract',
