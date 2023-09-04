@@ -166,7 +166,7 @@ class Str2TimeTests(unittest.TestCase):
         """
         If an invalid suffix is given, L{dns.str2time} raises L{ValueError}.
         """
-        self.assertRaises(ValueError, dns.str2time, "Q")
+        self.assertRaises(ValueError, dns.str2time, "1Q")
 
 
 class NameTests(unittest.TestCase):
