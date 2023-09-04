@@ -603,18 +603,8 @@ module = [
 ]
 
 [[tool.mypy.overrides]]
-warn_return_any = false
-module = [
-    'twisted.conch.ssh.keys',
-    'twisted.names._rfc1982',
-    'twisted.names.dns',
-    'twisted.words.protocols.jabber.jid',
-]
-
-[[tool.mypy.overrides]]
 allow_untyped_defs = true
 check_untyped_defs = false
-warn_return_any = false
 module = [
     'twisted.internet._sslverify',
     'twisted.internet.abstract',
