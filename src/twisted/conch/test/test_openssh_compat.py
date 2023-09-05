@@ -34,7 +34,7 @@ class OpenSSHFactoryTests(TestCase):
     Tests for L{OpenSSHFactory}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.factory = OpenSSHFactory()
         self.keysDir = FilePath(self.mktemp())
         self.keysDir.makedirs()
@@ -71,7 +71,7 @@ class OpenSSHFactoryTests(TestCase):
         self.patch(os, "seteuid", self.mockos.seteuid)
         self.patch(os, "setegid", self.mockos.setegid)
 
-    def test_getPublicKeys(self):
+    def test_getPublicKeys(self) -> None:
         """
         L{OpenSSHFactory.getPublicKeys} should return the available public keys
         in the data directory
@@ -81,7 +81,7 @@ class OpenSSHFactoryTests(TestCase):
         keyTypes = keys.keys()
         self.assertEqual(list(keyTypes), [b"ssh-rsa"])
 
-    def test_getPrivateKeys(self):
+    def test_getPrivateKeys(self) -> None:
         """
         Will return the available private keys in the data directory, ignoring
         key files which failed to be loaded.
@@ -93,7 +93,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
-    def test_getPrivateKeysAsRoot(self):
+    def test_getPrivateKeysAsRoot(self) -> None:
         """
         L{OpenSSHFactory.getPrivateKeys} should switch to root if the keys
         aren't readable by the current user.

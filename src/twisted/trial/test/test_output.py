@@ -37,7 +37,7 @@ class ImportErrorsTests(packages.SysPathManglingTest):
     is what we expect.
     """
 
-    def debug(self):
+    def debug(self) -> None:
         pass
 
     parent = "_testImportErrors"
@@ -59,7 +59,7 @@ class ImportErrorsTests(packages.SysPathManglingTest):
         super().assertNotIn(containee, container, *args, **kwargs)
         return container
 
-    def test_trialRun(self):
+    def test_trialRun(self) -> None:
         self.runTrial()
 
     def test_nonexistentModule(self):

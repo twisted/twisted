@@ -233,7 +233,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 observer: ILogObserver,
                 predicates: Iterable[LogLevelFilterPredicate],
                 negativeObserver: ILogObserver = cast(ILogObserver, lambda event: None),
-            ):
+            ) -> None:
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = list(predicates)
                 FilteringLogObserver.__init__(

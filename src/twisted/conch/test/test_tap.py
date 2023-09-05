@@ -136,7 +136,7 @@ class MakeServiceTests(TestCase):
 
         return d.addCallback(checkSuccess)
 
-    def test_checkers(self):
+    def test_checkers(self) -> None:
         """
         The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
         L{ISSHPrivateKey} and L{IUsernamePassword} interfaces registered as
