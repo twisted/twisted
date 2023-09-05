@@ -128,21 +128,21 @@ class JIDTests(unittest.TestCase):
         j = jid.JID("user@host")
         self.assertIdentical(j, j.userhostJID())
 
-    def test_fullHost(self):
+    def test_fullHost(self) -> None:
         """
         Test giving a string representation of the JID with only a host part.
         """
         j = jid.JID(tuple=(None, "host", None))
         self.assertEqual("host", j.full())
 
-    def test_fullHostResource(self):
+    def test_fullHostResource(self) -> None:
         """
         Test giving a string representation of the JID with host, resource.
         """
         j = jid.JID(tuple=(None, "host", "resource"))
         self.assertEqual("host/resource", j.full())
 
-    def test_fullUserHost(self):
+    def test_fullUserHost(self) -> None:
         """
         Test giving a string representation of the JID with user, host.
         """
