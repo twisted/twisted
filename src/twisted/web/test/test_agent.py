@@ -11,8 +11,6 @@ from io import BytesIO
 from typing import TYPE_CHECKING, List, Optional, Tuple
 from unittest import SkipTest, skipIf
 
-from twisted.python.compat import fips
-
 from zope.interface.declarations import implementer
 from zope.interface.verify import verifyObject
 
@@ -30,6 +28,8 @@ from twisted.internet.error import (
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
+from twisted.python.compat import fips
+
 try:
     from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 except Exception as e:

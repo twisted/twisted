@@ -12,8 +12,8 @@ cryptography = requireModule("cryptography")
 if cryptography:
     from twisted.conch.ssh import forwarding
 
-from twisted.python.compat import fips
 from twisted.internet.address import IPv6Address
+from twisted.python.compat import fips
 
 try:
     from twisted.internet.test.test_endpoints import deterministicResolvingReactor

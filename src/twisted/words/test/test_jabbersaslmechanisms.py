@@ -41,6 +41,7 @@ class DigestMD5Tests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.DigestMD5}.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

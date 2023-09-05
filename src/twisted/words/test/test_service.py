@@ -6,17 +6,17 @@ Tests for L{twisted.words.service}.
 """
 
 import time
+from unittest import skipIf
 
 from twisted.cred import checkers, credentials, portal
 from twisted.internet import address, defer, reactor
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
+from twisted.python.compat import fips
 from twisted.spread import pb
 from twisted.test import proto_helpers
 from twisted.trial import unittest
 from twisted.words import ewords, service
 from twisted.words.protocols import irc
-from twisted.python.compat import fips
-from unittest import skipIf
 
 
 class RealmTests(unittest.TestCase):

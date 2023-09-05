@@ -25,12 +25,11 @@ from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
 from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
+from twisted.python.compat import fips
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.compat import fips
-from unittest import skipIf
 
 try:
     from twisted.conch.test.test_ssh import (
@@ -716,6 +715,7 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin, TestCase
     """
     Connection forwarding tests run against the OpenSSL command line client.
     """
+
     if fips:
         skip = "skip when fips enabled"
 
@@ -737,6 +737,7 @@ class OpenSSHClientRekeyTests(RekeyTestsMixin, OpenSSHClientMixin, TestCase):
     """
     Rekeying tests run against the OpenSSL command line client.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

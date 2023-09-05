@@ -19,7 +19,6 @@ from asyncio import (
 )
 from unittest import skipIf
 
-from twisted.python.compat import fips
 from twisted.internet.asyncioreactor import AsyncioSelectorReactor
 from twisted.python.compat import fips
 from twisted.python.runtime import platform

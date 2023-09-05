@@ -704,6 +704,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     Tests for L{SSHCommandClientEndpoint} when using the C{newConnection}
     constructor.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

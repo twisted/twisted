@@ -19,10 +19,10 @@ from twisted.internet import address, defer, error, interfaces, protocol, reacto
 from twisted.internet.testing import StringTransport
 from twisted.protocols import amp
 from twisted.python import filepath
+from twisted.python.compat import fips
 from twisted.python.failure import Failure
 from twisted.test import iosim
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import fips
 
 try:
     from twisted.internet import ssl as _ssl

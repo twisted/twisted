@@ -8,11 +8,11 @@ Tests for L{twisted.python.zipstream}
 import random
 import struct
 import zipfile
+from unittest import skipIf
 
 from twisted.python import filepath, zipstream
 from twisted.python.compat import fips, md5
 from twisted.trial import unittest
-from unittest import skipIf
 
 
 class FileEntryMixin:

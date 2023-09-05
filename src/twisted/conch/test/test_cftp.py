@@ -18,7 +18,6 @@ from unittest import skipIf
 
 from zope.interface import implementer
 
-from twisted.python.compat import fips
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
@@ -28,6 +27,7 @@ from twisted.internet.task import Clock
 from twisted.internet.testing import StringTransport
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
+from twisted.python.compat import fips
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
@@ -940,6 +940,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
     Due to the spawned process you can not add a debugger breakpoint for the
     client code.
     """
+
     if fips:
         skip = "skip when fips enabled"
 
@@ -1343,6 +1344,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
     Functional tests which launch a SFTP server over localhost and checks csftp
     in batch interface.
     """
+
     if fips:
         skip = "skip when fips enabled"
 
@@ -1452,6 +1454,7 @@ class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

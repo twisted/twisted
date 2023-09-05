@@ -1028,9 +1028,9 @@ class SASLTests(unittest.TestCase):
     """
     Tests for L{pop3.POP3}'s SASL implementation.
     """
+
     if fips:
         skip = "skip when fips enabled"
-
 
     def test_ValidLogin(self):
         """

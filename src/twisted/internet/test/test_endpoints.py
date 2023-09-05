@@ -67,7 +67,6 @@ from twisted.python.systemd import ListenFDs
 from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
 from twisted.trial import unittest
 
-
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
 noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(
     "key.pem.no_trailing_newline"

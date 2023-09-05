@@ -20,6 +20,7 @@ import weakref
 from collections import deque
 from io import BytesIO as StringIO
 from typing import Dict
+from unittest import skipIf
 
 from zope.interface import Interface, implementer
 
@@ -34,7 +35,6 @@ from twisted.python import failure, log
 from twisted.python.compat import fips, iterbytes
 from twisted.spread import jelly, pb, publish, util
 from twisted.trial import unittest
-from unittest import skipIf
 
 
 class Dummy(pb.Viewable):
@@ -1355,7 +1355,6 @@ class NewCredTests(unittest.TestCase):
 
     if fips:
         skip = "skip when fips enabled"
-
 
     def setUp(self):
         """

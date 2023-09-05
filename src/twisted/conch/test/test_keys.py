@@ -9,6 +9,7 @@ Tests for L{twisted.conch.ssh.keys}.
 import base64
 import os
 from textwrap import dedent
+from unittest import skipIf
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
@@ -16,7 +17,6 @@ from twisted.python.compat import fips
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
-from unittest import skipIf
 
 cryptography = requireModule("cryptography")
 if cryptography is None:

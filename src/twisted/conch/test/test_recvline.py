@@ -777,9 +777,9 @@ class HistoricRecvlineLoopbackTelnetTests(
 class HistoricRecvlineLoopbackSSHTests(
     _SSHMixin, TestCase, HistoricRecvlineLoopbackMixin
 ):
-   if fips:
-       skip = "skip when fips enabled"
-   pass
+    if fips:
+        skip = "skip when fips enabled"
+    pass
 
 
 @skipIf(

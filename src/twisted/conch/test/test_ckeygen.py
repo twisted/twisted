@@ -18,10 +18,10 @@ from twisted.conch.test.keydata import (
     privateRSA_openssh_encrypted,
     publicRSA_openssh,
 )
+from twisted.python.compat import fips
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
-from twisted.python.compat import fips
 
 if requireModule("cryptography"):
     from twisted.conch.scripts.ckeygen import (
@@ -64,6 +64,7 @@ class KeyGenTests(TestCase):
     """
     Tests for various functions used to implement the I{ckeygen} script.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

@@ -13,6 +13,7 @@ import struct
 import types
 from hashlib import sha1, sha256, sha384, sha512
 from typing import Dict, List, Optional, Tuple, Type
+from unittest import skipIf
 
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
@@ -25,7 +26,6 @@ from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
-from unittest import skipIf
 
 cryptography = requireModule("cryptography")
 
@@ -2089,6 +2089,7 @@ class ServerSSHTransportDHGroupExchangeSHA1Tests(
     """
     diffie-hellman-group-exchange-sha1 tests for SSHServerTransport.
     """
+
     if fips:
         skip = "skip when fips enabled"
 
@@ -2101,6 +2102,7 @@ class ServerSSHTransportDHGroupExchangeSHA256Tests(
     """
     diffie-hellman-group-exchange-sha256 tests for SSHServerTransport.
     """
+
     if fips:
         skip = "skip when fips enabled"
 
@@ -3034,6 +3036,7 @@ class TransportLoopbackTests(TestCase):
     """
     Test the server transport and client transport against each other,
     """
+
     if fips:
         skip = "skip when fips enabled"
 

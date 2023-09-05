@@ -20,8 +20,8 @@ from twisted.mail.pop3 import (
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
-from twisted.trial.unittest import TestCase
 from twisted.python.compat import fips
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext

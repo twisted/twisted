@@ -147,6 +147,7 @@ deprecatedModuleAttribute(
 fips = False
 try:
     import _hashlib
+
     if hasattr(_hashlib, "get_fips_mode"):
         fips = _hashlib.get_fips_mode()
 except ImportError:

@@ -7,6 +7,7 @@ Tests for L{twisted.web._auth}.
 
 
 import base64
+from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -17,12 +18,12 @@ from twisted.cred.checkers import (
     AllowAnonymousAccess,
     InMemoryUsernamePasswordDatabaseDontUse,
 )
-from twisted.python.compat import fips
 from twisted.cred.credentials import IUsernamePassword
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ConnectionDone
 from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import globalLogPublisher
+from twisted.python.compat import fips
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.web._auth import basic, digest
@@ -34,7 +35,6 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.static import Data
 from twisted.web.test.test_web import DummyRequest
 
-from unittest import skipIf
 
 def b64encode(s):
     return base64.b64encode(s).strip()

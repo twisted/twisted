@@ -718,6 +718,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
     """
     Tests for L{sslverify.OpenSSLOptions}.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

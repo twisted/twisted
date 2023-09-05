@@ -328,6 +328,7 @@ class TLSMemoryBIOTests(TestCase):
     Tests for the implementation of L{ISSLTransport} which runs over another
     L{ITransport}.
     """
+
     if fips:
         skip = "skip when fips enabled"
 

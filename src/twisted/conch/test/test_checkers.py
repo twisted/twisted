@@ -11,9 +11,9 @@ from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
 from typing import Optional
-from twisted.python.compat import fips
 from unittest import skipIf
 
+from twisted.python.compat import fips
 
 cryptSkip: Optional[str]
 try:

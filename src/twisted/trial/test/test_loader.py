@@ -11,6 +11,7 @@ import sys
 import unittest as pyunit
 from operator import attrgetter
 from types import ModuleType
+from unittest import skipIf
 
 from hamcrest import assert_that, equal_to, has_properties
 from hamcrest.core.matcher import Matcher
@@ -23,7 +24,6 @@ from twisted.trial import reporter, runner, unittest
 from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial.itrial import ITestCase
 from twisted.trial.test import packages
-from unittest import skipIf
 from .matchers import after
 
 

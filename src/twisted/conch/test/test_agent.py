@@ -6,11 +6,11 @@ Tests for L{twisted.conch.ssh.agent}.
 """
 
 import struct
+from unittest import skipIf
 
 from twisted.python.compat import fips
 from twisted.test import iosim
 from twisted.trial import unittest
-from unittest import skipIf
 
 try:
     import cryptography as _cryptography
