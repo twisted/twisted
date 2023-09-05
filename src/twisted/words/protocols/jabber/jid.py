@@ -146,7 +146,7 @@ class JID:
     def __init__(
         self,
         str: Union[str, None] = None,
-        tuple: Union[Tuple[str, str, str], None] = None,
+        tuple: Union[Tuple[Union[str, None], str, Union[str, None]], None] = None,
     ):
         if str:
             user, host, res = parse(str)
