@@ -1858,7 +1858,7 @@ class Command(metaclass=_CommandMeta):
         @return: An instance of this L{Command}'s C{commandType}.
         """
         allowedNames = set()
-        for (argName, ignored) in cls.arguments:
+        for argName, ignored in cls.arguments:
             allowedNames.add(_wireNameToPythonIdentifier(argName))
 
         for intendedArg in objects:

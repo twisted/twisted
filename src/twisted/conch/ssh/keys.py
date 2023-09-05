@@ -35,7 +35,6 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
-
     from cryptography.hazmat.primitives.asymmetric.utils import (
         decode_dss_signature,
         encode_dss_signature,

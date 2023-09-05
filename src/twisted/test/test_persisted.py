@@ -398,7 +398,7 @@ class AOTTests(TestCase):
             "goodbye \n\t\u1010 world!",
             1,
             1.0,
-            100 ** 100,
+            100**100,
             unittest,
             aot.AOTJellier,
             d,

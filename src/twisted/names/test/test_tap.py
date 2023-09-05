@@ -107,7 +107,6 @@ class OptionsTests(SynchronousTestCase):
         # there should be no others (and it leaving a callLater lying about
         # should rightly cause the test to fail).
         if platform.getType() != "posix":
-
             # We want the delayed calls on the reactor, which should be all of
             # ours from the threaded resolver cleanup
             from twisted.internet import reactor

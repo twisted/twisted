@@ -158,7 +158,7 @@ class NetstringPerformanceTester(PerformanceTester):
             chunks to be checked.
         @type number: C{int}
         """
-        chunkSize = 2 ** number
+        chunkSize = 2**number
         numberOfChunks = chunkSize
         while numberOfChunks:
             self.testCombination(chunkSize, numberOfChunks)

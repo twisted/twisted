@@ -753,7 +753,7 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
-_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 @implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)

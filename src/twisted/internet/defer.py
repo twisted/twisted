@@ -807,7 +807,6 @@ class Deferred(Awaitable[_SelfResultT]):
             return result
 
         def cancelTimeout(result: _T) -> _T:
-
             # stop the pending call to cancel the deferred if it's been fired
             if delayedCall.active():
                 delayedCall.cancel()
@@ -1402,7 +1401,6 @@ _DeferredListResultItemT = Tuple[bool, _SelfResultT]
 _DeferredListResultListT = List[_DeferredListResultItemT]
 
 if TYPE_CHECKING:
-
     # The result type is different depending on whether fireOnOneCallback
     # is True or False.  The type system is not flexible enough to handle
     # that in a class definition, so instead we pretend that DeferredList

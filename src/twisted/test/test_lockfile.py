@@ -113,7 +113,7 @@ class UtilTests(TestCase):
         passed a PID which does not correspond to any process.
         """
         # Hopefully there is no process with PID 2 ** 31 - 1
-        exc = self.assertRaises(OSError, lockfile.kill, 2 ** 31 - 1, 0)
+        exc = self.assertRaises(OSError, lockfile.kill, 2**31 - 1, 0)
         self.assertEqual(exc.errno, errno.ESRCH)
 
     def test_noKillCall(self):

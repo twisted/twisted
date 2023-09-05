@@ -75,7 +75,6 @@ else:
 
 @implementer(IDelayedCall)
 class DelayedCall:
-
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -1056,7 +1055,7 @@ class ReactorBase(PluggableResolverMixin):
             # while we're in this loop.
             count = 0
             total = len(self.threadCallQueue)
-            for (f, a, kw) in self.threadCallQueue:
+            for f, a, kw in self.threadCallQueue:
                 try:
                     f(*a, **kw)
                 except BaseException:

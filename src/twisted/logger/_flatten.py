@@ -79,7 +79,7 @@ def flattenEvent(event: LogEvent) -> None:
 
     keyFlattener = KeyFlattener()
 
-    for (literalText, fieldName, formatSpec, conversion) in aFormatter.parse(
+    for literalText, fieldName, formatSpec, conversion in aFormatter.parse(
         event["log_format"]
     ):
         if fieldName is None:

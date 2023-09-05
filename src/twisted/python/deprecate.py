@@ -671,7 +671,7 @@ def _passedSignature(signature, positional, keyword):
     result = {}
     kwargs = None
     numPositional = 0
-    for (n, (name, param)) in enumerate(signature.parameters.items()):
+    for n, (name, param) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
             result[name] = positional[n:]

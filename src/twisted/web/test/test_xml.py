@@ -297,7 +297,7 @@ alert("I hate you");
         nodes = microdom.parseString(s).documentElement.childNodes
         nodes2 = microdom.parseString(s2).documentElement.childNodes
         self.assertEqual(len(nodes), 3)
-        for (n, n2) in zip(nodes, nodes2):
+        for n, n2 in zip(nodes, nodes2):
             self.assertTrue(isinstance(n, microdom.Element))
             self.assertEqual(n.nodeName, "b")
             self.assertTrue(n.isEqualToNode(n2))

@@ -327,7 +327,7 @@ class RawUDPTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
-            e.addProto(2 ** 16, protocol.DatagramProtocol())
+            e.addProto(2**16, protocol.DatagramProtocol())
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass
@@ -340,7 +340,7 @@ class RawUDPTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
-            e.addProto(2 ** 16 + 1, protocol.DatagramProtocol())
+            e.addProto(2**16 + 1, protocol.DatagramProtocol())
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass
