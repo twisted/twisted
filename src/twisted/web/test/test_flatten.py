@@ -158,7 +158,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
 
         class WithRenderer(Element):
-            def __init__(self, value: str, loader: Optional[ITemplateLoader]):
+            def __init__(self, value: str, loader: Optional[ITemplateLoader]) -> None:
                 self.value = value
                 super().__init__(loader)
 
@@ -186,7 +186,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         @implementer(IRenderable)
         class Arbitrary:
-            def __init__(self, value: Flattenable):
+            def __init__(self, value: Flattenable) -> None:
                 self.value = value
 
             def render(self, request: Optional[IRequest]) -> Flattenable:
@@ -632,6 +632,7 @@ class FlattenerErrorTests(SynchronousTestCase):
         If a L{FlattenerError} is created with traceback frames, they are
         included in the string representation of the exception.
         """
+
         # Try to be realistic in creating the data passed in for the traceback
         # frames.
         def f() -> None:
@@ -679,7 +680,7 @@ class FlattenerErrorTests(SynchronousTestCase):
             def __repr__(self) -> str:
                 return "<unrenderable>"
 
-            def lookupRenderMethod(
+            def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
             ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
                 ...

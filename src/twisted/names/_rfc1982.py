@@ -53,7 +53,7 @@ class SerialNumber(FancyStrMixin):
         ("_serialBits", "serialBits", "%d"),
     )
 
-    def __init__(self, number, serialBits=32):
+    def __init__(self, number: int, serialBits: int = 32):
         """
         Construct an L{SerialNumber} instance.
 
@@ -68,9 +68,9 @@ class SerialNumber(FancyStrMixin):
         """
         self._serialBits = serialBits
         self._modulo = 2 ** serialBits
-        self._halfRing = 2 ** (serialBits - 1)
+        self._halfRing: int = 2 ** (serialBits - 1)
         self._maxAdd = 2 ** (serialBits - 1) - 1
-        self._number = int(number) % self._modulo
+        self._number: int = int(number) % self._modulo
 
     def _convertOther(self, other: object) -> "SerialNumber":
         """
@@ -139,15 +139,15 @@ class SerialNumber(FancyStrMixin):
         Allow I{greater than} comparison with another L{SerialNumber} instance.
         """
         try:
-            other = self._convertOther(other)
+            other_sn = self._convertOther(other)
         except TypeError:
             return NotImplemented
         return (
-            self._number < other._number
-            and (other._number - self._number) > self._halfRing
+            self._number < other_sn._number
+            and (other_sn._number - self._number) > self._halfRing
         ) or (
-            self._number > other._number
-            and (self._number - other._number) < self._halfRing
+            self._number > other_sn._number
+            and (self._number - other_sn._number) < self._halfRing
         )
 
     def __le__(self, other: object) -> bool:

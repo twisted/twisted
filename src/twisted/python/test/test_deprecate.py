@@ -500,7 +500,7 @@ def callTestFunction():
         self.package.moveTo(self.package.sibling(b"twisted_renamed_helper"))
 
         # Make sure importlib notices we've changed importable packages:
-        if invalidate_caches:
+        if invalidate_caches:  # type: ignore[truthy-function]
             invalidate_caches()
 
         # Import the newly renamed version

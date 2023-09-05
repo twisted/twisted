@@ -507,6 +507,13 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
 
+    def test_q(self) -> None:
+        """
+        There is a property '_queue' for legacy purposes
+        """
+        pool = threadpool.ThreadPool(0, 1)
+        self.assertEqual(pool._queue.qsize(), 0)
+
 
 class RaceConditionTests(unittest.SynchronousTestCase):
     def setUp(self):

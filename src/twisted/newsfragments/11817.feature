@@ -1,1 +1,0 @@
-`twisted.internet.defer.race` has been added as a way to get the first available result from a list of Deferreds.

@@ -9,10 +9,12 @@ Maintainer: Glyph Lefkowitz
 """
 from __future__ import annotations
 
+import inspect
 import traceback
 import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
+from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
 from sys import exc_info
@@ -41,7 +43,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Concatenate, Literal, ParamSpec, Protocol
+from typing_extensions import Concatenate, Literal, ParamSpec
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -49,32 +51,6 @@ from twisted.python import lockfile
 from twisted.python.compat import _PYPY, cmp, comparable
 from twisted.python.deprecate import deprecated, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
-
-
-class _Context(Protocol):
-    def run(self, f: Callable[..., object], *args: object, **kwargs: object) -> object:
-        ...
-
-
-try:
-    from contextvars import copy_context as __copy_context
-
-    _contextvarsSupport = True
-
-except ImportError:
-    _contextvarsSupport = False
-
-    class _NoContext:
-        @staticmethod
-        def run(f: Callable[..., object], *args: object, **kwargs: object) -> object:
-            return f(*args, **kwargs)
-
-    def _copy_context() -> Type[_NoContext]:
-        return _NoContext
-
-
-else:
-    _copy_context = __copy_context  # type: ignore[assignment]
 
 log = Logger()
 
@@ -1341,8 +1317,10 @@ class Deferred(Awaitable[_SelfResultT]):
 
         @raise ValueError: If C{coro} is not a coroutine or generator.
         """
-        # asyncio.iscoroutine identifies generators as coroutines, too.
-        if iscoroutine(coro):
+        # asyncio.iscoroutine <3.12 identifies generators as coroutines, too.
+        # for >=3.12 we need to check isgenerator also
+        # see https://github.com/python/cpython/issues/102748
+        if iscoroutine(coro) or inspect.isgenerator(coro):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
@@ -2260,13 +2238,9 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         self.release()
         return r
 
-    # You might wonder: "WTF is self_319AA2A8B18F4B8EA296D75F279EB07F?"
-    # It's self_ + a GUID, which is to say: "it's not a string that will ever
-    # be used as a name in kwargs".
-    # Positional-only arguments, starting in Python 3.8, would be a better
-    # alternative.
     def run(
-        self_319AA2A8B18F4B8EA296D75F279EB07F: _ConcurrencyPrimitiveT,
+        self: _ConcurrencyPrimitiveT,
+        /,
         f: Callable[..., _SelfResultT],
         *args: object,
         **kwargs: object,
@@ -2286,11 +2260,9 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         """
 
         def execute(ignoredResult: object) -> Deferred[_SelfResultT]:
-            return maybeDeferred(f, *args, **kwargs).addBoth(
-                self_319AA2A8B18F4B8EA296D75F279EB07F._releaseAndReturn
-            )
+            return maybeDeferred(f, *args, **kwargs).addBoth(self._releaseAndReturn)
 
-        return self_319AA2A8B18F4B8EA296D75F279EB07F.acquire().addCallback(execute)
+        return self.acquire().addCallback(execute)
 
     def __aenter__(self: _ConcurrencyPrimitiveT) -> Deferred[_ConcurrencyPrimitiveT]:
         """
