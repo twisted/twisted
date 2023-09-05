@@ -52,15 +52,15 @@ class SkipDecoratorUsedOnMethods(TestCase):
     def test_shouldNeverRunWithEmptyReason(self):
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldShouldRun(self):
+    def test_shouldShouldRun(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
     @skipIf(False, "should not skip")
-    def test_shouldShouldRunWithSkipIfFalse(self):
+    def test_shouldShouldRunWithSkipIfFalse(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
     @skipIf(False, "")
-    def test_shouldShouldRunWithSkipIfFalseEmptyReason(self):
+    def test_shouldShouldRunWithSkipIfFalseEmptyReason(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
 
@@ -89,5 +89,5 @@ class SkipAttributeOnMethods(TestCase):
 
     test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
 
-    def test_shouldNotSkip(self):
+    def test_shouldNotSkip(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")

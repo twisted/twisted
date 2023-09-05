@@ -33,7 +33,7 @@ class SearchHostsFileTests(SynchronousTestCase, GoodTempPathMixin):
     particular hostname in a I{hosts(5)}-style file.
     """
 
-    def test_findAddress(self):
+    def test_findAddress(self) -> None:
         """
         If there is an IPv4 address for the hostname passed to L{searchFileFor},
         it is returned.
@@ -42,7 +42,7 @@ class SearchHostsFileTests(SynchronousTestCase, GoodTempPathMixin):
         hosts.setContent(b"10.2.3.4 foo.example.com\n")
         self.assertEqual("10.2.3.4", searchFileFor(hosts.path, b"foo.example.com"))
 
-    def test_notFoundAddress(self):
+    def test_notFoundAddress(self) -> None:
         """
         If there is no address information for the hostname passed to
         L{searchFileFor}, L{None} is returned.
@@ -51,7 +51,7 @@ class SearchHostsFileTests(SynchronousTestCase, GoodTempPathMixin):
         hosts.setContent(b"10.2.3.4 foo.example.com\n")
         self.assertIsNone(searchFileFor(hosts.path, b"bar.example.com"))
 
-    def test_firstAddress(self):
+    def test_firstAddress(self) -> None:
         """
         The first address associated with the given hostname is returned.
         """
@@ -63,7 +63,7 @@ class SearchHostsFileTests(SynchronousTestCase, GoodTempPathMixin):
         )
         self.assertEqual("::1", searchFileFor(hosts.path, b"foo.example.com"))
 
-    def test_searchFileForAliases(self):
+    def test_searchFileForAliases(self) -> None:
         """
         For a host with a canonical name and one or more aliases,
         L{searchFileFor} can find an address given any of the names.
@@ -87,7 +87,7 @@ class SearchHostsFileForAllTests(SynchronousTestCase, GoodTempPathMixin):
     particular hostname in a I{hosts(5)}-style file.
     """
 
-    def test_allAddresses(self):
+    def test_allAddresses(self) -> None:
         """
         L{searchFileForAll} returns a list of all addresses associated with the
         name passed to it.
@@ -103,7 +103,7 @@ class SearchHostsFileForAllTests(SynchronousTestCase, GoodTempPathMixin):
             searchFileForAll(hosts, b"foobar.example.com"),
         )
 
-    def test_caseInsensitively(self):
+    def test_caseInsensitively(self) -> None:
         """
         L{searchFileForAll} searches for names case-insensitively.
         """
@@ -111,14 +111,14 @@ class SearchHostsFileForAllTests(SynchronousTestCase, GoodTempPathMixin):
         hosts.setContent(b"127.0.0.1     foobar.EXAMPLE.com\n")
         self.assertEqual(["127.0.0.1"], searchFileForAll(hosts, b"FOOBAR.example.com"))
 
-    def test_readError(self):
+    def test_readError(self) -> None:
         """
         If there is an error reading the contents of the hosts file,
         L{searchFileForAll} returns an empty list.
         """
         self.assertEqual([], searchFileForAll(self.path(), b"example.com"))
 
-    def test_malformedIP(self):
+    def test_malformedIP(self) -> None:
         """
         L{searchFileForAll} ignores any malformed IP addresses associated with
         the name passed to it.
@@ -143,7 +143,7 @@ class HostsTests(SynchronousTestCase, GoodTempPathMixin):
     Tests for the I{hosts(5)}-based L{twisted.names.hosts.Resolver}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         f = self.path()
         f.setContent(
             b"""
@@ -165,7 +165,7 @@ malformed
         self.ttl = 4200
         self.resolver = Resolver(f.path, self.ttl)
 
-    def test_defaultPath(self):
+    def test_defaultPath(self) -> None:
         """
         The default hosts file used by L{Resolver} is I{/etc/hosts} if no value
         is given for the C{file} initializer parameter.
@@ -173,7 +173,7 @@ malformed
         resolver = Resolver()
         self.assertEqual(b"/etc/hosts", resolver.file)
 
-    def test_getHostByName(self):
+    def test_getHostByName(self) -> None:
         """
         L{hosts.Resolver.getHostByName} returns a L{Deferred} which fires with a
         string giving the address of the queried name as found in the resolver's
@@ -190,7 +190,7 @@ malformed
         ]
         self.successResultOf(gatherResults(ds))
 
-    def test_lookupAddress(self):
+    def test_lookupAddress(self) -> None:
         """
         L{hosts.Resolver.lookupAddress} returns a L{Deferred} which fires with A
         records from the hosts file.
@@ -205,7 +205,7 @@ malformed
             answers,
         )
 
-    def test_lookupIPV6Address(self):
+    def test_lookupIPV6Address(self) -> None:
         """
         L{hosts.Resolver.lookupIPV6Address} returns a L{Deferred} which fires
         with AAAA records from the hosts file.
@@ -224,7 +224,7 @@ malformed
             answers,
         )
 
-    def test_lookupAllRecords(self):
+    def test_lookupAllRecords(self) -> None:
         """
         L{hosts.Resolver.lookupAllRecords} returns a L{Deferred} which fires
         with A records from the hosts file.
@@ -236,7 +236,7 @@ malformed
             answers,
         )
 
-    def test_notImplemented(self):
+    def test_notImplemented(self) -> None:
         """
         L{hosts.Resolver} fails with L{NotImplementedError} for L{IResolver}
         methods it doesn't implement.
@@ -245,12 +245,12 @@ malformed
             self.resolver.lookupMailExchange(b"EXAMPLE"), NotImplementedError
         )
 
-    def test_query(self):
+    def test_query(self) -> None:
         d = self.resolver.query(Query(b"EXAMPLE"))
         [answer], authority, additional = self.successResultOf(d)
         self.assertEqual(answer.payload.dottedQuad(), "1.1.1.1")
 
-    def test_lookupAddressNotFound(self):
+    def test_lookupAddressNotFound(self) -> None:
         """
         L{hosts.Resolver.lookupAddress} returns a L{Deferred} which fires with
         L{dns.DomainError} if the name passed in has no addresses in the hosts
@@ -258,21 +258,21 @@ malformed
         """
         self.failureResultOf(self.resolver.lookupAddress(b"foueoa"), DomainError)
 
-    def test_lookupIPV6AddressNotFound(self):
+    def test_lookupIPV6AddressNotFound(self) -> None:
         """
         Like L{test_lookupAddressNotFound}, but for
         L{hosts.Resolver.lookupIPV6Address}.
         """
         self.failureResultOf(self.resolver.lookupIPV6Address(b"foueoa"), DomainError)
 
-    def test_lookupAllRecordsNotFound(self):
+    def test_lookupAllRecordsNotFound(self) -> None:
         """
         Like L{test_lookupAddressNotFound}, but for
         L{hosts.Resolver.lookupAllRecords}.
         """
         self.failureResultOf(self.resolver.lookupAllRecords(b"foueoa"), DomainError)
 
-    def test_lookupMalformed(self):
+    def test_lookupMalformed(self) -> None:
         """
         L{hosts.Resolver.lookupAddress} returns a L{Deferred} which fires with
         the valid addresses from the hosts file, ignoring any entries that
@@ -285,7 +285,7 @@ malformed
             answer,
         )
 
-    def test_lookupIPV6Malformed(self):
+    def test_lookupIPV6Malformed(self) -> None:
         """
         Like L{test_lookupAddressMalformed}, but for
         L{hosts.Resolver.lookupIPV6Address}.

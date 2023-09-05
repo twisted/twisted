@@ -41,16 +41,16 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     Tests for the Conch scripts.
     """
 
-    def test_conch(self):
+    def test_conch(self) -> None:
         self.scriptTest("conch/conch")
 
-    def test_cftp(self):
+    def test_cftp(self) -> None:
         self.scriptTest("conch/cftp")
 
-    def test_ckeygen(self):
+    def test_ckeygen(self) -> None:
         self.scriptTest("conch/ckeygen")
 
-    def test_tkconch(self):
+    def test_tkconch(self) -> None:
         self.scriptTest("conch/tkconch")
 
 

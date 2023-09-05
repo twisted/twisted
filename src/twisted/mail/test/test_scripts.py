@@ -14,5 +14,5 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     Tests for all one of mail's scripts.
     """
 
-    def test_mailmail(self):
+    def test_mailmail(self) -> None:
         self.scriptTest("mail/mailmail")
