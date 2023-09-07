@@ -881,7 +881,6 @@ module = [
     'twisted.trial.test.sample',
     'twisted.trial.test.test_doctest',
     'twisted.trial.test.test_output',
-    'twisted.trial.test.test_skip',
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',

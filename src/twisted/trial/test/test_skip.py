@@ -18,10 +18,10 @@ class SkipDecoratorUsedOnClass(TestCase):
     this class.
     """
 
-    def test_shouldNeverRun_1(self):
+    def test_shouldNeverRun_1(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldNeverRun_2(self):
+    def test_shouldNeverRun_2(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -32,10 +32,10 @@ class SkipDecoratorUsedOnClassWithEmptyReason(TestCase):
     this class, even if the reason is an empty string
     """
 
-    def test_shouldNeverRun_1(self):
+    def test_shouldNeverRun_1(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldNeverRun_2(self):
+    def test_shouldNeverRun_2(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -45,11 +45,11 @@ class SkipDecoratorUsedOnMethods(TestCase):
     """
 
     @skipIf(True, "skipIf decorator used so skip test")
-    def test_shouldNeverRun(self):
+    def test_shouldNeverRun(self) -> None:
         raise Exception("Test should skip and never reach here")
 
     @skipIf(True, "")
-    def test_shouldNeverRunWithEmptyReason(self):
+    def test_shouldNeverRunWithEmptyReason(self) -> None:
         raise Exception("Test should skip and never reach here")
 
     def test_shouldShouldRun(self) -> None:
@@ -72,10 +72,10 @@ class SkipAttributeOnClass(TestCase):
 
     skip = "'skip' attribute set on this class, so skip all tests"
 
-    def test_one(self):
+    def test_one(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_two(self):
+    def test_two(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -84,7 +84,7 @@ class SkipAttributeOnMethods(TestCase):
     Only methods where @skipIf decorator is used should be skipped.
     """
 
-    def test_one(self):
+    def test_one(self) -> None:
         raise Exception("Should never reach here")
 
     test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
