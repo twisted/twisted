@@ -43,7 +43,7 @@ class RootsTests(unittest.TestCase):
 
     def testConstrained(self) -> None:
         class const(roots.Constrained):
-            def nameConstraint(self, name):
+            def nameConstraint(self, name: str) -> bool:
                 return name == "x"
 
         c = const()

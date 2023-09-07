@@ -866,7 +866,6 @@ module = [
     'twisted.test.test_lockfile',
     'twisted.test.test_monkey',
     'twisted.test.test_rebuild',
-    'twisted.test.test_roots',
     'twisted.trial._asyncrunner',
     'twisted.trial._dist.distreporter',
     'twisted.trial._dist.disttrial',
