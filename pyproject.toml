@@ -879,7 +879,6 @@ module = [
     'twisted.trial.test.packages',
     'twisted.trial.test.pyunitcases',
     'twisted.trial.test.sample',
-    'twisted.trial.test.test_doctest',
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',
