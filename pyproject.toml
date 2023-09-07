@@ -861,7 +861,6 @@ module = [
     'twisted.test.mock_win32process',
     'twisted.test.ssl_helpers',
     'twisted.test.test_formmethod',
-    'twisted.test.test_htb',
     'twisted.trial._asyncrunner',
     'twisted.trial._dist.distreporter',
     'twisted.trial._dist.disttrial',
