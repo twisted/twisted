@@ -862,7 +862,6 @@ module = [
     'twisted.test.ssl_helpers',
     'twisted.test.test_formmethod',
     'twisted.test.test_htb',
-    'twisted.test.test_iosim',
     'twisted.trial._asyncrunner',
     'twisted.trial._dist.distreporter',
     'twisted.trial._dist.disttrial',
