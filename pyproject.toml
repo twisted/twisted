@@ -891,7 +891,6 @@ module = [
     'twisted.web.test._util',
     'twisted.web.test.test_client',
     'twisted.web.test.test_error',
-    'twisted.web.test.test_html',
     'twisted.web.vhost',
     'twisted.words.im.baseaccount',
     'twisted.words.im.basechat',
