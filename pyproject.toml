@@ -863,7 +863,6 @@ module = [
     'twisted.test.test_formmethod',
     'twisted.test.test_htb',
     'twisted.test.test_iosim',
-    'twisted.test.test_lockfile',
     'twisted.trial._asyncrunner',
     'twisted.trial._dist.distreporter',
     'twisted.trial._dist.disttrial',
