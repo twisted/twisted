@@ -16,7 +16,7 @@ class AngleTests(TestCase):
     Tests for the L{twisted.positioning.base.Angle} class.
     """
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         """
         The repr of an empty angle says that is of unknown type and unknown
         value.
@@ -24,7 +24,7 @@ class AngleTests(TestCase):
         a = base.Angle()
         self.assertEqual("<Angle of unknown type (unknown value)>", repr(a))
 
-    def test_variation(self):
+    def test_variation(self) -> None:
         """
         The repr of an empty variation says that it is a variation of unknown
         value.
@@ -32,7 +32,7 @@ class AngleTests(TestCase):
         a = base.Angle(angleType=Angles.VARIATION)
         self.assertEqual("<Variation (unknown value)>", repr(a))
 
-    def test_unknownType(self):
+    def test_unknownType(self) -> None:
         """
         The repr of an angle of unknown type but a given value displays that
         type and value in its repr.
@@ -40,7 +40,7 @@ class AngleTests(TestCase):
         a = base.Angle(1.0)
         self.assertEqual("<Angle of unknown type (1.0 degrees)>", repr(a))
 
-    def test_bogusType(self):
+    def test_bogusType(self) -> None:
         """
         Trying to create an angle with a bogus type raises C{ValueError}.
         """
@@ -52,7 +52,7 @@ class HeadingTests(TestCase):
     Tests for the L{twisted.positioning.base.Heading} class.
     """
 
-    def test_simple(self):
+    def test_simple(self) -> None:
         """
         Tests that a simple heading has a value in decimal degrees, which is
         also its value when converted to a float. Its variation, and by
@@ -64,7 +64,7 @@ class HeadingTests(TestCase):
         self.assertIsNone(h.variation)
         self.assertIsNone(h.correctedHeading)
 
-    def test_headingWithoutVariationRepr(self):
+    def test_headingWithoutVariationRepr(self) -> None:
         """
         A repr of a heading with no variation reports its value and that the
         variation is unknown.
@@ -73,7 +73,7 @@ class HeadingTests(TestCase):
         expectedRepr = "<Heading (1.0 degrees, unknown variation)>"
         self.assertEqual(repr(heading), expectedRepr)
 
-    def test_headingWithVariationRepr(self):
+    def test_headingWithVariationRepr(self) -> None:
         """
         A repr of a heading with known variation reports its value and the
         value of that variation.
@@ -83,32 +83,32 @@ class HeadingTests(TestCase):
         reprTemplate = "<Heading ({0} degrees, <Variation ({1} degrees)>)>"
         self.assertEqual(repr(heading), reprTemplate.format(angle, variation))
 
-    def test_valueEquality(self):
+    def test_valueEquality(self) -> None:
         """
         Headings with the same values compare equal.
         """
         self.assertEqual(base.Heading(1.0), base.Heading(1.0))
 
-    def test_valueInequality(self):
+    def test_valueInequality(self) -> None:
         """
         Headings with different values compare unequal.
         """
         self.assertNotEqual(base.Heading(1.0), base.Heading(2.0))
 
-    def test_zeroHeadingEdgeCase(self):
+    def test_zeroHeadingEdgeCase(self) -> None:
         """
         Headings can be instantiated with a value of 0 and no variation.
         """
         base.Heading(0)
 
-    def test_zeroHeading180DegreeVariationEdgeCase(self):
+    def test_zeroHeading180DegreeVariationEdgeCase(self) -> None:
         """
         Headings can be instantiated with a value of 0 and a variation of 180
         degrees.
         """
         base.Heading(0, 180)
 
-    def _badValueTest(self, **kw):
+    def _badValueTest(self, **kw: float) -> None:
         """
         Helper function for verifying that bad values raise C{ValueError}.
 
@@ -116,50 +116,50 @@ class HeadingTests(TestCase):
         """
         self.assertRaises(ValueError, base.Heading.fromFloats, **kw)
 
-    def test_badAngleValueEdgeCase(self):
+    def test_badAngleValueEdgeCase(self) -> None:
         """
         Headings can not be instantiated with a value of 360 degrees.
         """
         self._badValueTest(angleValue=360.0)
 
-    def test_badVariationEdgeCase(self):
+    def test_badVariationEdgeCase(self) -> None:
         """
         Headings can not be instantiated with a variation of -180 degrees.
         """
         self._badValueTest(variationValue=-180.0)
 
-    def test_negativeHeading(self):
+    def test_negativeHeading(self) -> None:
         """
         Negative heading values raise C{ValueError}.
         """
         self._badValueTest(angleValue=-10.0)
 
-    def test_headingTooLarge(self):
+    def test_headingTooLarge(self) -> None:
         """
         Heading values greater than C{360.0} raise C{ValueError}.
         """
         self._badValueTest(angleValue=370.0)
 
-    def test_variationTooNegative(self):
+    def test_variationTooNegative(self) -> None:
         """
         Variation values less than C{-180.0} raise C{ValueError}.
         """
         self._badValueTest(variationValue=-190.0)
 
-    def test_variationTooPositive(self):
+    def test_variationTooPositive(self) -> None:
         """
         Variation values greater than C{180.0} raise C{ValueError}.
         """
         self._badValueTest(variationValue=190.0)
 
-    def test_correctedHeading(self):
+    def test_correctedHeading(self) -> None:
         """
         A heading with a value and a variation has a corrected heading.
         """
         h = base.Heading.fromFloats(1.0, variationValue=-10.0)
         self.assertEqual(h.correctedHeading, base.Angle(11.0, Angles.HEADING))
 
-    def test_correctedHeadingOverflow(self):
+    def test_correctedHeadingOverflow(self) -> None:
         """
         A heading with a value and a variation has the appropriate corrected
         heading value, even when the variation puts it across the 360 degree
@@ -168,7 +168,7 @@ class HeadingTests(TestCase):
         h = base.Heading.fromFloats(359.0, variationValue=-2.0)
         self.assertEqual(h.correctedHeading, base.Angle(1.0, Angles.HEADING))
 
-    def test_correctedHeadingOverflowEdgeCase(self):
+    def test_correctedHeadingOverflowEdgeCase(self) -> None:
         """
         A heading with a value and a variation has the appropriate corrected
         heading value, even when the variation puts it exactly at the 360
@@ -177,7 +177,7 @@ class HeadingTests(TestCase):
         h = base.Heading.fromFloats(359.0, variationValue=-1.0)
         self.assertEqual(h.correctedHeading, base.Angle(0.0, Angles.HEADING))
 
-    def test_correctedHeadingUnderflow(self):
+    def test_correctedHeadingUnderflow(self) -> None:
         """
         A heading with a value and a variation has the appropriate corrected
         heading value, even when the variation puts it under the 0 degree
@@ -186,7 +186,7 @@ class HeadingTests(TestCase):
         h = base.Heading.fromFloats(1.0, variationValue=2.0)
         self.assertEqual(h.correctedHeading, base.Angle(359.0, Angles.HEADING))
 
-    def test_correctedHeadingUnderflowEdgeCase(self):
+    def test_correctedHeadingUnderflowEdgeCase(self) -> None:
         """
         A heading with a value and a variation has the appropriate corrected
         heading value, even when the variation puts it exactly at the 0
@@ -195,7 +195,7 @@ class HeadingTests(TestCase):
         h = base.Heading.fromFloats(1.0, variationValue=1.0)
         self.assertEqual(h.correctedHeading, base.Angle(0.0, Angles.HEADING))
 
-    def test_setVariationSign(self):
+    def test_setVariationSign(self) -> None:
         """
         Setting the sign of a heading changes the variation sign.
         """
@@ -205,7 +205,7 @@ class HeadingTests(TestCase):
         h.setSign(-1)
         self.assertEqual(h.variation.inDecimalDegrees, -1.0)
 
-    def test_setBadVariationSign(self):
+    def test_setBadVariationSign(self) -> None:
         """
         Setting the sign of a heading to values that aren't C{-1} or C{1}
         raises C{ValueError} and does not affect the heading.
@@ -220,7 +220,7 @@ class HeadingTests(TestCase):
         self.assertRaises(ValueError, h.setSign, 50)
         self.assertEqual(h.variation.inDecimalDegrees, 1.0)
 
-    def test_setUnknownVariationSign(self):
+    def test_setUnknownVariationSign(self) -> None:
         """
         Setting the sign on a heading with unknown variation raises
         C{ValueError}.
@@ -231,14 +231,14 @@ class HeadingTests(TestCase):
 
 
 class CoordinateTests(TestCase):
-    def test_float(self):
+    def test_float(self) -> None:
         """
         Coordinates can be converted to floats.
         """
         coordinate = base.Coordinate(10.0)
         self.assertEqual(float(coordinate), 10.0)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Coordinates that aren't explicitly latitudes or longitudes have an
         appropriate repr.
@@ -247,7 +247,7 @@ class CoordinateTests(TestCase):
         expectedRepr = f"<Angle of unknown type ({10.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
-    def test_positiveLatitude(self):
+    def test_positiveLatitude(self) -> None:
         """
         Positive latitudes have a repr that specifies their type and value.
         """
@@ -255,7 +255,7 @@ class CoordinateTests(TestCase):
         expectedRepr = f"<Latitude ({10.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
-    def test_negativeLatitude(self):
+    def test_negativeLatitude(self) -> None:
         """
         Negative latitudes have a repr that specifies their type and value.
         """
@@ -263,7 +263,7 @@ class CoordinateTests(TestCase):
         expectedRepr = f"<Latitude ({-50.0} degrees)>"
         self.assertEqual(repr(coordinate), expectedRepr)
 
-    def test_positiveLongitude(self):
+    def test_positiveLongitude(self) -> None:
         """
         Positive longitudes have a repr that specifies their type and value.
         """
@@ -271,7 +271,7 @@ class CoordinateTests(TestCase):
         expectedRepr = f"<Longitude ({50.0} degrees)>"
         self.assertEqual(repr(longitude), expectedRepr)
 
-    def test_negativeLongitude(self):
+    def test_negativeLongitude(self) -> None:
         """
         Negative longitudes have a repr that specifies their type and value.
         """
@@ -279,30 +279,30 @@ class CoordinateTests(TestCase):
         expectedRepr = f"<Longitude ({-50.0} degrees)>"
         self.assertEqual(repr(longitude), expectedRepr)
 
-    def test_bogusCoordinateType(self):
+    def test_bogusCoordinateType(self) -> None:
         """
         Creating coordinates with bogus types rasies C{ValueError}.
         """
         self.assertRaises(ValueError, base.Coordinate, 150.0, "BOGUS")
 
-    def test_angleTypeNotCoordinate(self):
+    def test_angleTypeNotCoordinate(self) -> None:
         """
         Creating coordinates with angle types that aren't coordinates raises
         C{ValueError}.
         """
         self.assertRaises(ValueError, base.Coordinate, 150.0, Angles.HEADING)
 
-    def test_equality(self):
+    def test_equality(self) -> None:
         """
         Coordinates with the same value and type are equal.
         """
 
-        def makeCoordinate():
+        def makeCoordinate() -> base.Coordinate:
             return base.Coordinate(1.0, Angles.LONGITUDE)
 
         self.assertEqual(makeCoordinate(), makeCoordinate())
 
-    def test_differentAnglesInequality(self):
+    def test_differentAnglesInequality(self) -> None:
         """
         Coordinates with different values aren't equal.
         """
@@ -310,7 +310,7 @@ class CoordinateTests(TestCase):
         c2 = base.Coordinate(-1.0)
         self.assertNotEqual(c1, c2)
 
-    def test_differentTypesInequality(self):
+    def test_differentTypesInequality(self) -> None:
         """
         Coordinates with the same values but different types aren't equal.
         """
@@ -318,7 +318,7 @@ class CoordinateTests(TestCase):
         c2 = base.Coordinate(1.0, Angles.LONGITUDE)
         self.assertNotEqual(c1, c2)
 
-    def test_sign(self):
+    def test_sign(self) -> None:
         """
         Setting the sign on a coordinate sets the sign of the value of the
         coordinate.
@@ -329,7 +329,7 @@ class CoordinateTests(TestCase):
         c.setSign(-1)
         self.assertEqual(c.inDecimalDegrees, -50.0)
 
-    def test_badVariationSign(self):
+    def test_badVariationSign(self) -> None:
         """
         Setting a bogus sign value (not -1 or 1) on a coordinate raises
         C{ValueError} and doesn't affect the coordinate.
@@ -346,35 +346,35 @@ class CoordinateTests(TestCase):
         self.assertRaises(ValueError, c.setSign, 50)
         self.assertEqual(c.inDecimalDegrees, 50.0)
 
-    def test_northernHemisphere(self):
+    def test_northernHemisphere(self) -> None:
         """
         Positive latitudes are in the northern hemisphere.
         """
         coordinate = base.Coordinate(1.0, Angles.LATITUDE)
         self.assertEqual(coordinate.hemisphere, Directions.NORTH)
 
-    def test_easternHemisphere(self):
+    def test_easternHemisphere(self) -> None:
         """
         Positive longitudes are in the eastern hemisphere.
         """
         coordinate = base.Coordinate(1.0, Angles.LONGITUDE)
         self.assertEqual(coordinate.hemisphere, Directions.EAST)
 
-    def test_southernHemisphere(self):
+    def test_southernHemisphere(self) -> None:
         """
         Negative latitudes are in the southern hemisphere.
         """
         coordinate = base.Coordinate(-1.0, Angles.LATITUDE)
         self.assertEqual(coordinate.hemisphere, Directions.SOUTH)
 
-    def test_westernHemisphere(self):
+    def test_westernHemisphere(self) -> None:
         """
         Negative longitudes are in the western hemisphere.
         """
         coordinate = base.Coordinate(-1.0, Angles.LONGITUDE)
         self.assertEqual(coordinate.hemisphere, Directions.WEST)
 
-    def test_badHemisphere(self):
+    def test_badHemisphere(self) -> None:
         """
         Accessing the hemisphere for a coordinate that can't compute it
         raises C{ValueError}.
@@ -382,7 +382,7 @@ class CoordinateTests(TestCase):
         coordinate = base.Coordinate(1.0, None)
         self.assertRaises(ValueError, lambda: coordinate.hemisphere)
 
-    def test_latitudeTooLarge(self):
+    def test_latitudeTooLarge(self) -> None:
         """
         Creating a latitude with a value greater than or equal to 90 degrees
         raises C{ValueError}.
@@ -390,7 +390,7 @@ class CoordinateTests(TestCase):
         self.assertRaises(ValueError, _makeLatitude, 150.0)
         self.assertRaises(ValueError, _makeLatitude, 90.0)
 
-    def test_latitudeTooSmall(self):
+    def test_latitudeTooSmall(self) -> None:
         """
         Creating a latitude with a value less than or equal to -90 degrees
         raises C{ValueError}.
@@ -398,7 +398,7 @@ class CoordinateTests(TestCase):
         self.assertRaises(ValueError, _makeLatitude, -150.0)
         self.assertRaises(ValueError, _makeLatitude, -90.0)
 
-    def test_longitudeTooLarge(self):
+    def test_longitudeTooLarge(self) -> None:
         """
         Creating a longitude with a value greater than or equal to 180 degrees
         raises C{ValueError}.
@@ -406,7 +406,7 @@ class CoordinateTests(TestCase):
         self.assertRaises(ValueError, _makeLongitude, 250.0)
         self.assertRaises(ValueError, _makeLongitude, 180.0)
 
-    def test_longitudeTooSmall(self):
+    def test_longitudeTooSmall(self) -> None:
         """
         Creating a longitude with a value less than or equal to -180 degrees
         raises C{ValueError}.
@@ -414,7 +414,7 @@ class CoordinateTests(TestCase):
         self.assertRaises(ValueError, _makeLongitude, -250.0)
         self.assertRaises(ValueError, _makeLongitude, -180.0)
 
-    def test_inDegreesMinutesSeconds(self):
+    def test_inDegreesMinutesSeconds(self) -> None:
         """
         Coordinate values can be accessed in degrees, minutes, seconds.
         """
@@ -424,7 +424,7 @@ class CoordinateTests(TestCase):
         c = base.Coordinate(50.213, Angles.LATITUDE)
         self.assertEqual(c.inDegreesMinutesSeconds, (50, 12, 46))
 
-    def test_unknownAngleInDegreesMinutesSeconds(self):
+    def test_unknownAngleInDegreesMinutesSeconds(self) -> None:
         """
         If the vaue of a coordinate is L{None}, its values in degrees,
         minutes, seconds is also L{None}.
@@ -433,14 +433,14 @@ class CoordinateTests(TestCase):
         self.assertIsNone(c.inDegreesMinutesSeconds)
 
 
-def _makeLatitude(value):
+def _makeLatitude(value: float) -> base.Coordinate:
     """
     Builds and returns a latitude of given value.
     """
     return base.Coordinate(value, Angles.LATITUDE)
 
 
-def _makeLongitude(value):
+def _makeLongitude(value: float) -> base.Coordinate:
     """
     Builds and returns a longitude of given value.
     """
@@ -452,7 +452,7 @@ class AltitudeTests(TestCase):
     Tests for the L{twisted.positioning.base.Altitude} class.
     """
 
-    def test_value(self):
+    def test_value(self) -> None:
         """
         Altitudes can be instantiated and reports the correct value in
         meters and feet, as well as when converted to float.
@@ -462,14 +462,14 @@ class AltitudeTests(TestCase):
         self.assertEqual(altitude.inMeters, 1.0)
         self.assertEqual(altitude.inFeet, 1.0 / base.METERS_PER_FOOT)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Altitudes report their type and value in their repr.
         """
         altitude = base.Altitude(1.0)
         self.assertEqual(repr(altitude), "<Altitude (1.0 m)>")
 
-    def test_equality(self):
+    def test_equality(self) -> None:
         """
         Altitudes with equal values compare equal.
         """
@@ -477,7 +477,7 @@ class AltitudeTests(TestCase):
         secondAltitude = base.Altitude(1.0)
         self.assertEqual(firstAltitude, secondAltitude)
 
-    def test_inequality(self):
+    def test_inequality(self) -> None:
         """
         Altitudes with different values don't compare equal.
         """
@@ -491,7 +491,7 @@ class SpeedTests(TestCase):
     Tests for the L{twisted.positioning.base.Speed} class.
     """
 
-    def test_value(self):
+    def test_value(self) -> None:
         """
         Speeds can be instantiated, and report their value in meters
         per second, and can be converted to floats.
@@ -500,27 +500,27 @@ class SpeedTests(TestCase):
         self.assertEqual(speed.inMetersPerSecond, 50.0)
         self.assertEqual(float(speed), 50.0)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Speeds report their type and value in their repr.
         """
         speed = base.Speed(50.0)
         self.assertEqual(repr(speed), "<Speed (50.0 m/s)>")
 
-    def test_negativeSpeeds(self):
+    def test_negativeSpeeds(self) -> None:
         """
         Creating a negative speed raises C{ValueError}.
         """
         self.assertRaises(ValueError, base.Speed, -1.0)
 
-    def test_inKnots(self):
+    def test_inKnots(self) -> None:
         """
         A speed can be converted into its value in knots.
         """
         speed = base.Speed(1.0)
         self.assertEqual(1 / base.MPS_PER_KNOT, speed.inKnots)
 
-    def test_asFloat(self):
+    def test_asFloat(self) -> None:
         """
         A speed can be converted into a C{float}.
         """
@@ -532,7 +532,7 @@ class ClimbTests(TestCase):
     Tests for L{twisted.positioning.base.Climb}.
     """
 
-    def test_simple(self):
+    def test_simple(self) -> None:
         """
         Speeds can be instantiated, and report their value in meters
         per second, and can be converted to floats.
@@ -541,14 +541,14 @@ class ClimbTests(TestCase):
         self.assertEqual(climb.inMetersPerSecond, 42.0)
         self.assertEqual(float(climb), 42.0)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Climbs report their type and value in their repr.
         """
         climb = base.Climb(42.0)
         self.assertEqual(repr(climb), "<Climb (42.0 m/s)>")
 
-    def test_negativeClimbs(self):
+    def test_negativeClimbs(self) -> None:
         """
         Climbs can have negative values, and still report that value
         in meters per second and when converted to floats.
@@ -557,14 +557,14 @@ class ClimbTests(TestCase):
         self.assertEqual(climb.inMetersPerSecond, -42.0)
         self.assertEqual(float(climb), -42.0)
 
-    def test_speedInKnots(self):
+    def test_speedInKnots(self) -> None:
         """
         A climb can be converted into its value in knots.
         """
         climb = base.Climb(1.0)
         self.assertEqual(1 / base.MPS_PER_KNOT, climb.inKnots)
 
-    def test_asFloat(self):
+    def test_asFloat(self) -> None:
         """
         A climb can be converted into a C{float}.
         """
@@ -576,7 +576,7 @@ class PositionErrorTests(TestCase):
     Tests for L{twisted.positioning.base.PositionError}.
     """
 
-    def test_allUnset(self):
+    def test_allUnset(self) -> None:
         """
         In an empty L{base.PositionError} with no invariant testing, all
         dilutions of positions are L{None}.
@@ -586,7 +586,7 @@ class PositionErrorTests(TestCase):
         self.assertIsNone(positionError.hdop)
         self.assertIsNone(positionError.vdop)
 
-    def test_allUnsetWithInvariant(self):
+    def test_allUnsetWithInvariant(self) -> None:
         """
         In an empty L{base.PositionError} with invariant testing, all
         dilutions of positions are L{None}.
@@ -596,14 +596,14 @@ class PositionErrorTests(TestCase):
         self.assertIsNone(positionError.hdop)
         self.assertIsNone(positionError.vdop)
 
-    def test_withoutInvariant(self):
+    def test_withoutInvariant(self) -> None:
         """
         L{base.PositionError}s can be instantiated with just a HDOP.
         """
         positionError = base.PositionError(hdop=1.0)
         self.assertEqual(positionError.hdop, 1.0)
 
-    def test_withInvariant(self):
+    def test_withInvariant(self) -> None:
         """
         Creating a simple L{base.PositionError} with just a HDOP while
         checking the invariant works.
@@ -611,7 +611,7 @@ class PositionErrorTests(TestCase):
         positionError = base.PositionError(hdop=1.0, testInvariant=True)
         self.assertEqual(positionError.hdop, 1.0)
 
-    def test_invalidWithoutInvariant(self):
+    def test_invalidWithoutInvariant(self) -> None:
         """
         Creating a L{base.PositionError} with values set to an impossible
         combination works if the invariant is not checked.
@@ -621,7 +621,7 @@ class PositionErrorTests(TestCase):
         self.assertEqual(error.hdop, 1.0)
         self.assertEqual(error.vdop, 1.0)
 
-    def test_invalidWithInvariant(self):
+    def test_invalidWithInvariant(self) -> None:
         """
         Creating a L{base.PositionError} with values set to an impossible
         combination raises C{ValueError} if the invariant is being tested.
@@ -635,7 +635,7 @@ class PositionErrorTests(TestCase):
             testInvariant=True,
         )
 
-    def test_setDOPWithoutInvariant(self):
+    def test_setDOPWithoutInvariant(self) -> None:
         """
         You can set the PDOP value to value inconsisted with HDOP and VDOP
         when not checking the invariant.
@@ -644,7 +644,7 @@ class PositionErrorTests(TestCase):
         pe.pdop = 100.0
         self.assertEqual(pe.pdop, 100.0)
 
-    def test_setDOPWithInvariant(self):
+    def test_setDOPWithInvariant(self) -> None:
         """
         Attempting to set the PDOP value to value inconsisted with HDOP and
         VDOP when checking the invariant raises C{ValueError}.
@@ -652,7 +652,7 @@ class PositionErrorTests(TestCase):
         pe = base.PositionError(hdop=1.0, vdop=1.0, testInvariant=True)
         pdop = pe.pdop
 
-        def setPDOP(pe):
+        def setPDOP(pe: base.PositionError) -> None:
             pe.pdop = 100.0
 
         self.assertRaises(ValueError, setPDOP, pe)
@@ -660,7 +660,13 @@ class PositionErrorTests(TestCase):
 
     REPR_TEMPLATE = "<PositionError (pdop: %s, hdop: %s, vdop: %s)>"
 
-    def _testDOP(self, pe, pdop, hdop, vdop):
+    def _testDOP(
+        self,
+        pe: base.PositionError,
+        pdop: float | None,
+        hdop: float | None,
+        vdop: float | None,
+    ) -> None:
         """
         Tests the DOP values in a position error, and the repr of that
         position error.
@@ -679,7 +685,7 @@ class PositionErrorTests(TestCase):
         self.assertEqual(pe.vdop, vdop)
         self.assertEqual(repr(pe), self.REPR_TEMPLATE % (pdop, hdop, vdop))
 
-    def test_positionAndHorizontalSet(self):
+    def test_positionAndHorizontalSet(self) -> None:
         """
         The VDOP is correctly determined from PDOP and HDOP.
         """
@@ -688,7 +694,7 @@ class PositionErrorTests(TestCase):
         pe = base.PositionError(pdop=pdop, hdop=hdop)
         self._testDOP(pe, pdop, hdop, vdop)
 
-    def test_positionAndVerticalSet(self):
+    def test_positionAndVerticalSet(self) -> None:
         """
         The HDOP is correctly determined from PDOP and VDOP.
         """
@@ -697,7 +703,7 @@ class PositionErrorTests(TestCase):
         pe = base.PositionError(pdop=pdop, vdop=vdop)
         self._testDOP(pe, pdop, hdop, vdop)
 
-    def test_horizontalAndVerticalSet(self):
+    def test_horizontalAndVerticalSet(self) -> None:
         """
         The PDOP is correctly determined from HDOP and VDOP.
         """
@@ -712,7 +718,7 @@ class BeaconInformationTests(TestCase):
     Tests for L{twisted.positioning.base.BeaconInformation}.
     """
 
-    def test_minimal(self):
+    def test_minimal(self) -> None:
         """
         For an empty beacon information object, the number of used
         beacons is zero, the number of seen beacons is zero, and the
@@ -727,13 +733,13 @@ class BeaconInformationTests(TestCase):
 
     satelliteKwargs = {"azimuth": 1, "elevation": 1, "signalToNoiseRatio": 1.0}
 
-    def test_simple(self):
+    def test_simple(self) -> None:
         """
         Tests a beacon information with a bunch of satellites, none of
         which used in computing a fix.
         """
 
-        def _buildSatellite(**kw):
+        def _buildSatellite(**kw: float) -> base.Satellite:
             kwargs = dict(self.satelliteKwargs)
             kwargs.update(kw)
             return base.Satellite(**kwargs)
@@ -762,7 +768,7 @@ class BeaconInformationTests(TestCase):
             "])>",
         )
 
-    def test_someSatellitesUsed(self):
+    def test_someSatellitesUsed(self) -> None:
         """
         Tests a beacon information with a bunch of satellites, some of
         them used in computing a fix.
@@ -799,7 +805,7 @@ class PositioningBeaconTests(TestCase):
     Tests for L{base.PositioningBeacon}.
     """
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         Tests that L{base.PositioningBeacon} implements L{IPositioningBeacon}.
         """
@@ -807,7 +813,7 @@ class PositioningBeaconTests(TestCase):
         self.assertTrue(implements)
         verify.verifyObject(IPositioningBeacon, base.PositioningBeacon(1))
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Tests the repr of a positioning beacon.
         """
@@ -819,7 +825,7 @@ class SatelliteTests(TestCase):
     Tests for L{twisted.positioning.base.Satellite}.
     """
 
-    def test_minimal(self):
+    def test_minimal(self) -> None:
         """
         Tests a minimal satellite that only has a known PRN.
 
@@ -835,7 +841,7 @@ class SatelliteTests(TestCase):
             repr(s), "<Satellite (1), azimuth: None, " "elevation: None, snr: None>"
         )
 
-    def test_simple(self):
+    def test_simple(self) -> None:
         """
         Tests a minimal satellite that only has a known PRN.
 

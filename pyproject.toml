@@ -831,7 +831,6 @@ module = [
     'twisted.positioning.base',
     'twisted.positioning.ipositioning',
     'twisted.positioning.test.receiver',
-    'twisted.positioning.test.test_base',
     'twisted.python._release',
     'twisted.python._shellcomp',
     'twisted.python._textattributes',
