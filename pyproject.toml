@@ -889,7 +889,6 @@ module = [
     'twisted.web.rewrite',
     'twisted.web.script',
     'twisted.web.test._util',
-    'twisted.web.test.test_client',
     'twisted.web.vhost',
     'twisted.words.im.baseaccount',
     'twisted.words.im.basechat',
