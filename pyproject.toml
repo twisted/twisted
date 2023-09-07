@@ -893,7 +893,6 @@ module = [
     'twisted.web.test.test_error',
     'twisted.web.test.test_html',
     'twisted.web.test.test_http_headers',
-    'twisted.web.test.test_script',
     'twisted.web.vhost',
     'twisted.words.im.baseaccount',
     'twisted.words.im.basechat',
