@@ -857,7 +857,6 @@ module = [
     'twisted.spread.interfaces',
     'twisted.tap.portforward',
     'twisted.tap.socks',
-    'twisted.test.crash_test_dummy',
     'twisted.test.mock_win32process',
     'twisted.trial._asyncrunner',
     'twisted.trial._dist.distreporter',
