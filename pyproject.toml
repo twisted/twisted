@@ -499,7 +499,6 @@ module = [
     'twisted.names.test.test_rootresolve',
     'twisted.names.test.test_server',
     'twisted.names.test.test_srvconnect',
-    'twisted.names.test.test_tap',
     'twisted.pair.test.test_tuntap',
     'twisted.pair.testing',
     'twisted.pair.tuntap',
