@@ -48,14 +48,14 @@ class IRCProtoTests(IRCTestCase):
     Tests for L{IRCProto}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.account = IRCAccount(
             "Some account", False, "alice", None, "example.com", 6667
         )
         self.proto = IRCProto(self.account, StubChatUI(), None)
         self.transport = StringTransport()
 
-    def test_login(self):
+    def test_login(self) -> None:
         """
         When L{IRCProto} is connected to a transport, it sends I{NICK} and
         I{USER} commands with the username from the account object.
@@ -66,7 +66,7 @@ class IRCProtoTests(IRCTestCase):
             "NICK alice\r\n" "USER alice foo bar :Twisted-IM user\r\n",
         )
 
-    def test_authenticate(self):
+    def test_authenticate(self) -> None:
         """
         If created with an account with a password, L{IRCProto} sends a
         I{PASS} command before the I{NICK} and I{USER} commands.
@@ -80,7 +80,7 @@ class IRCProtoTests(IRCTestCase):
             "USER alice foo bar :Twisted-IM user\r\n",
         )
 
-    def test_channels(self):
+    def test_channels(self) -> None:
         """
         If created with an account with a list of channels, L{IRCProto}
         joins each of those channels after registering.
@@ -95,7 +95,7 @@ class IRCProtoTests(IRCTestCase):
             "JOIN #bar\r\n",
         )
 
-    def test_isupport(self):
+    def test_isupport(self) -> None:
         """
         L{IRCProto} can interpret I{ISUPPORT} (I{005}) messages from the server
         and reflect their information in its C{supported} attribute.
@@ -104,7 +104,7 @@ class IRCProtoTests(IRCTestCase):
         self.proto.dataReceived(":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n")
         self.assertEqual(4, self.proto.supported.getFeature("MODES"))
 
-    def test_nick(self):
+    def test_nick(self) -> None:
         """
         IRC NICK command changes the nickname of a user.
         """
@@ -116,7 +116,7 @@ class IRCProtoTests(IRCTestCase):
         self.assertIn("newnick", self.proto._ingroups)
         self.assertNotIn("alice1", self.proto._ingroups)
 
-    def test_part(self):
+    def test_part(self) -> None:
         """
         IRC PART command removes a user from an IRC channel.
         """
@@ -130,7 +130,7 @@ class IRCProtoTests(IRCTestCase):
         self.assertNotIn("group1", self.proto._ingroups["alice1"])
         self.assertNotIn("group2", self.proto._ingroups["alice1"])
 
-    def test_quit(self):
+    def test_quit(self) -> None:
         """
         IRC QUIT command removes a user from all IRC channels.
         """
@@ -144,7 +144,7 @@ class IRCProtoTests(IRCTestCase):
         self.assertTrue(len(self.proto._ingroups["alice1"]) == 0)
         self.proto.dataReceived(":alice3 QUIT\r\n")
 
-    def test_topic(self):
+    def test_topic(self) -> None:
         """
         IRC TOPIC command changes the topic of an IRC channel.
         """
@@ -155,7 +155,7 @@ class IRCProtoTests(IRCTestCase):
         self.assertEqual(groupConversation.topic, "newtopic")
         self.assertEqual(groupConversation.topicSetBy, "alice1")
 
-    def test_privmsg(self):
+    def test_privmsg(self) -> None:
         """
         PRIVMSG sends a private message to a user or channel.
         """
@@ -175,7 +175,7 @@ class IRCProtoTests(IRCTestCase):
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice"))
         self.assertFalse(hasattr(conversation, "message"))
 
-    def test_action(self):
+    def test_action(self) -> None:
         """
         CTCP ACTION to a user or channel.
         """
@@ -195,7 +195,7 @@ class IRCProtoTests(IRCTestCase):
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice"))
         self.assertFalse(hasattr(conversation, "message"))
 
-    def test_rplNamreply(self):
+    def test_rplNamreply(self) -> None:
         """
         RPL_NAMREPLY server response (353) lists all the users in a channel.
         RPL_ENDOFNAMES server response (363) is sent at the end of RPL_NAMREPLY
@@ -221,7 +221,7 @@ class IRCProtoTests(IRCTestCase):
         groupConversation = self.proto.getGroupConversation("bnl")
         self.assertEqual(expectedNamReplies["bnl"], groupConversation.members)
 
-    def test_rplTopic(self):
+    def test_rplTopic(self) -> None:
         """
         RPL_TOPIC server response (332) is sent when a channel's topic is changed
         """
@@ -229,7 +229,7 @@ class IRCProtoTests(IRCTestCase):
         self.proto.dataReceived(":example.com 332 alice, #foo :Some random topic\r\n")
         self.assertEqual("Some random topic", self.proto._topics["foo"])
 
-    def test_sendMessage(self):
+    def test_sendMessage(self) -> None:
         """
         L{IRCPerson.sendMessage}
         """
@@ -250,7 +250,7 @@ class IRCProtoTests(IRCTestCase):
             self.transport.io.getvalue(), b"PRIVMSG alice :\x01ACTION smiles\x01\r\n"
         )
 
-    def test_sendGroupMessage(self):
+    def test_sendGroupMessage(self) -> None:
         """
         L{IRCGroup.sendGroupMessage}
         """
