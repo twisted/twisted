@@ -905,7 +905,6 @@ module = [
     'twisted.words.protocols.jabber.xmpp_stringprep',
     'twisted.words.tap',
     'twisted.words.test.test_ircsupport',
-    'twisted.words.test.test_tap',
     'twisted.words.xmpproutertap',
 ]
 
