@@ -769,7 +769,6 @@ module = [
     'twisted.conch.ssh._kex',
     'twisted.conch.ssh.address',
     'twisted.conch.ssh.common',
-    'twisted.conch.test.test_address',
     'twisted.conch.test.test_openssh_compat',
     'twisted.conch.test.test_unix',
     'twisted.conch.ui.ansi',
