@@ -5,11 +5,13 @@
 """
 Tests for L{twisted.python.lockfile}.
 """
-
+from __future__ import annotations
 
 import errno
 import os
 from unittest import skipIf, skipUnless
+
+from typing_extensions import NoReturn
 
 from twisted.python import lockfile
 from twisted.python.reflect import requireModule
@@ -35,7 +37,7 @@ class UtilTests(TestCase):
     Tests for the helper functions used to implement L{FilesystemLock}.
     """
 
-    def test_symlinkEEXIST(self):
+    def test_symlinkEEXIST(self) -> None:
         """
         L{lockfile.symlink} raises L{OSError} with C{errno} set to L{EEXIST}
         when an attempt is made to create a symlink which already exists.
@@ -49,7 +51,7 @@ class UtilTests(TestCase):
         platform.isWindows(),
         "special rename EIO handling only necessary and correct on " "Windows.",
     )
-    def test_symlinkEIOWindows(self):
+    def test_symlinkEIOWindows(self) -> None:
         """
         L{lockfile.symlink} raises L{OSError} with C{errno} set to L{EIO} when
         the underlying L{rename} call fails with L{EIO}.
@@ -60,14 +62,14 @@ class UtilTests(TestCase):
         """
         name = self.mktemp()
 
-        def fakeRename(src, dst):
+        def fakeRename(src: str, dst: str) -> NoReturn:
             raise OSError(errno.EIO, None)
 
         self.patch(lockfile, "rename", fakeRename)
         exc = self.assertRaises(IOError, lockfile.symlink, name, "foo")
         self.assertEqual(exc.errno, errno.EIO)
 
-    def test_readlinkENOENT(self):
+    def test_readlinkENOENT(self) -> None:
         """
         L{lockfile.readlink} raises L{OSError} with C{errno} set to L{ENOENT}
         when an attempt is made to read a symlink which does not exist.
@@ -80,7 +82,7 @@ class UtilTests(TestCase):
         platform.isWindows(),
         "special readlink EACCES handling only necessary and " "correct on Windows.",
     )
-    def test_readlinkEACCESWindows(self):
+    def test_readlinkEACCESWindows(self) -> None:
         """
         L{lockfile.readlink} raises L{OSError} with C{errno} set to L{EACCES}
         on Windows when the underlying file open attempt fails with C{EACCES}.
@@ -91,7 +93,7 @@ class UtilTests(TestCase):
         """
         name = self.mktemp()
 
-        def fakeOpen(path, mode):
+        def fakeOpen(path: str, mode: str) -> NoReturn:
             raise OSError(errno.EACCES, None)
 
         self.patch(lockfile, "_open", fakeOpen)
@@ -99,7 +101,7 @@ class UtilTests(TestCase):
         self.assertEqual(exc.errno, errno.EACCES)
 
     @skipIf(skipKill, skipKillReason)
-    def test_kill(self):
+    def test_kill(self) -> None:
         """
         L{lockfile.kill} returns without error if passed the PID of a
         process which exists and signal C{0}.
@@ -107,7 +109,7 @@ class UtilTests(TestCase):
         lockfile.kill(os.getpid(), 0)
 
     @skipIf(skipKill, skipKillReason)
-    def test_killESRCH(self):
+    def test_killESRCH(self) -> None:
         """
         L{lockfile.kill} raises L{OSError} with errno of L{ESRCH} if
         passed a PID which does not correspond to any process.
@@ -116,7 +118,7 @@ class UtilTests(TestCase):
         exc = self.assertRaises(OSError, lockfile.kill, 2 ** 31 - 1, 0)
         self.assertEqual(exc.errno, errno.ESRCH)
 
-    def test_noKillCall(self):
+    def test_noKillCall(self) -> None:
         """
         Verify that when L{lockfile.kill} does end up as None (e.g. on Windows
         without pywin32), it doesn't end up being called and raising a
@@ -129,8 +131,8 @@ class UtilTests(TestCase):
 
 
 class LockingTests(TestCase):
-    def _symlinkErrorTest(self, errno):
-        def fakeSymlink(source, dest):
+    def _symlinkErrorTest(self, errno: int) -> None:
+        def fakeSymlink(source: str, dest: str) -> NoReturn:
             raise OSError(errno, None)
 
         self.patch(lockfile, "symlink", fakeSymlink)
@@ -140,7 +142,7 @@ class LockingTests(TestCase):
         exc = self.assertRaises(OSError, lock.lock)
         self.assertEqual(exc.errno, errno)
 
-    def test_symlinkError(self):
+    def test_symlinkError(self) -> None:
         """
         An exception raised by C{symlink} other than C{EEXIST} is passed up to
         the caller of L{FilesystemLock.lock}.
@@ -151,7 +153,7 @@ class LockingTests(TestCase):
         platform.isWindows(),
         "POSIX-specific error propagation not expected on Windows.",
     )
-    def test_symlinkErrorPOSIX(self):
+    def test_symlinkErrorPOSIX(self) -> None:
         """
         An L{OSError} raised by C{symlink} on a POSIX platform with an errno of
         C{EACCES} or C{EIO} is passed to the caller of L{FilesystemLock.lock}.
@@ -162,7 +164,7 @@ class LockingTests(TestCase):
         self._symlinkErrorTest(errno.EACCES)
         self._symlinkErrorTest(errno.EIO)
 
-    def test_cleanlyAcquire(self):
+    def test_cleanlyAcquire(self) -> None:
         """
         If the lock has never been held, it can be acquired and the C{clean}
         and C{locked} attributes are set to C{True}.
@@ -173,7 +175,7 @@ class LockingTests(TestCase):
         self.assertTrue(lock.clean)
         self.assertTrue(lock.locked)
 
-    def test_cleanlyRelease(self):
+    def test_cleanlyRelease(self) -> None:
         """
         If a lock is released cleanly, it can be re-acquired and the C{clean}
         and C{locked} attributes are set to C{True}.
@@ -189,7 +191,7 @@ class LockingTests(TestCase):
         self.assertTrue(lock.clean)
         self.assertTrue(lock.locked)
 
-    def test_cannotLockLocked(self):
+    def test_cannotLockLocked(self) -> None:
         """
         If a lock is currently locked, it cannot be locked again.
         """
@@ -201,7 +203,7 @@ class LockingTests(TestCase):
         self.assertFalse(secondLock.lock())
         self.assertFalse(secondLock.locked)
 
-    def test_uncleanlyAcquire(self):
+    def test_uncleanlyAcquire(self) -> None:
         """
         If a lock was held by a process which no longer exists, it can be
         acquired, the C{clean} attribute is set to C{False}, and the
@@ -209,7 +211,7 @@ class LockingTests(TestCase):
         """
         owner = 12345
 
-        def fakeKill(pid, signal):
+        def fakeKill(pid: int, signal: int) -> None:
             if signal != 0:
                 raise OSError(errno.EPERM, None)
             if pid == owner:
@@ -226,14 +228,14 @@ class LockingTests(TestCase):
 
         self.assertEqual(lockfile.readlink(lockf), str(os.getpid()))
 
-    def test_lockReleasedBeforeCheck(self):
+    def test_lockReleasedBeforeCheck(self) -> None:
         """
         If the lock is initially held but then released before it can be
         examined to determine if the process which held it still exists, it is
         acquired and the C{clean} and C{locked} attributes are set to C{True}.
         """
 
-        def fakeReadlink(name):
+        def fakeReadlink(name: str) -> str:
             # Pretend to be another process releasing the lock.
             lockfile.rmlink(lockf)
             # Fall back to the real implementation of readlink.
@@ -242,7 +244,7 @@ class LockingTests(TestCase):
 
         readlinkPatch = self.patch(lockfile, "readlink", fakeReadlink)
 
-        def fakeKill(pid, signal):
+        def fakeKill(pid: int, signal: int) -> None:
             if signal != 0:
                 raise OSError(errno.EPERM, None)
             if pid == 43125:
@@ -261,7 +263,7 @@ class LockingTests(TestCase):
         platform.isWindows(),
         "special rename EIO handling only necessary and correct on " "Windows.",
     )
-    def test_lockReleasedDuringAcquireSymlink(self):
+    def test_lockReleasedDuringAcquireSymlink(self) -> None:
         """
         If the lock is released while an attempt is made to acquire
         it, the lock attempt fails and C{FilesystemLock.lock} returns
@@ -271,7 +273,7 @@ class LockingTests(TestCase):
         RemoveDirectory) which is not atomic.
         """
 
-        def fakeSymlink(src, dst):
+        def fakeSymlink(src: str, dst: str) -> NoReturn:
             # While another process id doing os.rmdir which the Windows
             # implementation of rmlink does, a rename call will fail with EIO.
             raise OSError(errno.EIO, None)
@@ -287,14 +289,14 @@ class LockingTests(TestCase):
         platform.isWindows(),
         "special readlink EACCES handling only necessary and " "correct on Windows.",
     )
-    def test_lockReleasedDuringAcquireReadlink(self):
+    def test_lockReleasedDuringAcquireReadlink(self) -> None:
         """
         If the lock is initially held but is released while an attempt
         is made to acquire it, the lock attempt fails and
         L{FilesystemLock.lock} returns C{False}.
         """
 
-        def fakeReadlink(name):
+        def fakeReadlink(name: str) -> NoReturn:
             # While another process is doing os.rmdir which the
             # Windows implementation of rmlink does, a readlink call
             # will fail with EACCES.
@@ -308,8 +310,10 @@ class LockingTests(TestCase):
         self.assertFalse(lock.lock())
         self.assertFalse(lock.locked)
 
-    def _readlinkErrorTest(self, exceptionType, errno):
-        def fakeReadlink(name):
+    def _readlinkErrorTest(
+        self, exceptionType: type[OSError] | type[IOError], errno: int
+    ) -> None:
+        def fakeReadlink(name: str) -> NoReturn:
             raise exceptionType(errno, None)
 
         self.patch(lockfile, "readlink", fakeReadlink)
@@ -324,7 +328,7 @@ class LockingTests(TestCase):
         self.assertEqual(exc.errno, errno)
         self.assertFalse(lock.locked)
 
-    def test_readlinkError(self):
+    def test_readlinkError(self) -> None:
         """
         An exception raised by C{readlink} other than C{ENOENT} is passed up to
         the caller of L{FilesystemLock.lock}.
@@ -336,7 +340,7 @@ class LockingTests(TestCase):
         platform.isWindows(),
         "POSIX-specific error propagation not expected on Windows.",
     )
-    def test_readlinkErrorPOSIX(self):
+    def test_readlinkErrorPOSIX(self) -> None:
         """
         Any L{IOError} raised by C{readlink} on a POSIX platform passed to the
         caller of L{FilesystemLock.lock}.
@@ -347,14 +351,14 @@ class LockingTests(TestCase):
         self._readlinkErrorTest(IOError, errno.ENOSYS)
         self._readlinkErrorTest(IOError, errno.EACCES)
 
-    def test_lockCleanedUpConcurrently(self):
+    def test_lockCleanedUpConcurrently(self) -> None:
         """
         If a second process cleans up the lock after a first one checks the
         lock and finds that no process is holding it, the first process does
         not fail when it tries to clean up the lock.
         """
 
-        def fakeRmlink(name):
+        def fakeRmlink(name: str) -> None:
             rmlinkPatch.restore()
             # Pretend to be another process cleaning up the lock.
             lockfile.rmlink(lockf)
@@ -363,7 +367,7 @@ class LockingTests(TestCase):
 
         rmlinkPatch = self.patch(lockfile, "rmlink", fakeRmlink)
 
-        def fakeKill(pid, signal):
+        def fakeKill(pid: int, signal: int) -> None:
             if signal != 0:
                 raise OSError(errno.EPERM, None)
             if pid == 43125:
@@ -378,18 +382,18 @@ class LockingTests(TestCase):
         self.assertTrue(lock.clean)
         self.assertTrue(lock.locked)
 
-    def test_rmlinkError(self):
+    def test_rmlinkError(self) -> None:
         """
         An exception raised by L{rmlink} other than C{ENOENT} is passed up
         to the caller of L{FilesystemLock.lock}.
         """
 
-        def fakeRmlink(name):
+        def fakeRmlink(name: str) -> NoReturn:
             raise OSError(errno.ENOSYS, None)
 
         self.patch(lockfile, "rmlink", fakeRmlink)
 
-        def fakeKill(pid, signal):
+        def fakeKill(pid: int, signal: int) -> None:
             if signal != 0:
                 raise OSError(errno.EPERM, None)
             if pid == 43125:
@@ -407,14 +411,14 @@ class LockingTests(TestCase):
         self.assertEqual(exc.errno, errno.ENOSYS)
         self.assertFalse(lock.locked)
 
-    def test_killError(self):
+    def test_killError(self) -> None:
         """
         If L{kill} raises an exception other than L{OSError} with errno set to
         C{ESRCH}, the exception is passed up to the caller of
         L{FilesystemLock.lock}.
         """
 
-        def fakeKill(pid, signal):
+        def fakeKill(pid: int, signal: int) -> NoReturn:
             raise OSError(errno.EPERM, None)
 
         self.patch(lockfile, "kill", fakeKill)
@@ -429,7 +433,7 @@ class LockingTests(TestCase):
         self.assertEqual(exc.errno, errno.EPERM)
         self.assertFalse(lock.locked)
 
-    def test_unlockOther(self):
+    def test_unlockOther(self) -> None:
         """
         L{FilesystemLock.unlock} raises L{ValueError} if called for a lock
         which is held by a different process.
@@ -439,7 +443,7 @@ class LockingTests(TestCase):
         lock = lockfile.FilesystemLock(lockf)
         self.assertRaises(ValueError, lock.unlock)
 
-    def test_isLocked(self):
+    def test_isLocked(self) -> None:
         """
         L{isLocked} returns C{True} if the named lock is currently locked,
         C{False} otherwise.

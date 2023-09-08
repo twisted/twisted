@@ -5,7 +5,7 @@
 Tests for L{twisted.conch.tap}.
 """
 
-from typing import Any
+from typing import Any, Tuple, Union
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
@@ -131,12 +131,12 @@ class MakeServiceTests(TestCase):
         correct = UsernamePassword(*self.usernamePassword)
         d = checker.requestAvatarId(correct)
 
-        def checkSuccess(username: bytes) -> None:
+        def checkSuccess(username: Union[bytes, Tuple[()]]) -> None:
             self.assertEqual(username, correct.username)
 
         return d.addCallback(checkSuccess)
 
-    def test_checkers(self):
+    def test_checkers(self) -> None:
         """
         The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
         L{ISSHPrivateKey} and L{IUsernamePassword} interfaces registered as

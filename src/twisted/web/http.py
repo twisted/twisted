@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import AnyStr, Callable, Optional, Tuple
+from typing import AnyStr, Callable, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -126,7 +126,7 @@ from twisted.internet.interfaces import IProtocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import _PY37PLUS, nativeString, networkString
+from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
@@ -835,7 +835,7 @@ class Request:
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -846,7 +846,7 @@ class Request:
 
         self.requestHeaders: Headers = Headers()
         self.received_cookies = {}
-        self.responseHeaders = Headers()
+        self.responseHeaders: Headers = Headers()
         self.cookies = []  # outgoing cookies
         self.transport = self.channel.transport
 
@@ -983,41 +983,29 @@ class Request:
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    if _PY37PLUS:
-                        cgiArgs = cgi.parse_multipart(
-                            self.content,
-                            pdict,
-                            encoding="utf8",
-                            errors="surrogateescape",
-                        )
-                    else:
-                        cgiArgs = cgi.parse_multipart(self.content, pdict)
+                    cgiArgs = cgi.parse_multipart(
+                        self.content,
+                        pdict,
+                        encoding="utf8",
+                        errors="surrogateescape",
+                    )
 
-                    if _PY37PLUS:
-                        # The parse_multipart function on Python 3.7+
-                        # decodes the header bytes as iso-8859-1 and
-                        # decodes the body bytes as utf8 with
-                        # surrogateescape -- we want bytes
-                        self.args.update(
-                            {
-                                x.encode("iso-8859-1"): [
-                                    z.encode("utf8", "surrogateescape")
-                                    if isinstance(z, str)
-                                    else z
-                                    for z in y
-                                ]
-                                for x, y in cgiArgs.items()
-                                if isinstance(x, str)
-                            }
-                        )
-                    else:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update(
-                            {x.encode("iso-8859-1"): y for x, y in cgiArgs.items()}
-                        )
+                    # The parse_multipart function on Python 3.7+
+                    # decodes the header bytes as iso-8859-1 and
+                    # decodes the body bytes as utf8 with
+                    # surrogateescape -- we want bytes
+                    self.args.update(
+                        {
+                            x.encode("iso-8859-1"): [
+                                z.encode("utf8", "surrogateescape")
+                                if isinstance(z, str)
+                                else z
+                                for z in y
+                            ]
+                            for x, y in cgiArgs.items()
+                            if isinstance(x, str)
+                        }
+                    )
                 except Exception as e:
                     # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -1110,7 +1098,7 @@ class Request:
         """
         return self.received_cookies.get(key)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 

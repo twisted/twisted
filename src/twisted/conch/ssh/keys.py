@@ -13,7 +13,6 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
-from typing import Optional, Type
 
 import bcrypt
 from cryptography import utils
@@ -26,6 +25,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
+from typing_extensions import Literal
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
@@ -61,18 +61,8 @@ _secToNist = {
 }
 
 
-Ed25519PublicKey: Optional[Type[ed25519.Ed25519PublicKey]]
-Ed25519PrivateKey: Optional[Type[ed25519.Ed25519PrivateKey]]
-
-if default_backend().ed25519_supported():
-    Ed25519PublicKey = ed25519.Ed25519PublicKey
-    Ed25519PrivateKey = ed25519.Ed25519PrivateKey
-else:  # pragma: no cover
-    try:
-        from twisted.conch.ssh._keys_pynacl import Ed25519PrivateKey, Ed25519PublicKey
-    except ImportError:
-        Ed25519PublicKey = None
-        Ed25519PrivateKey = None
+Ed25519PublicKey = ed25519.Ed25519PublicKey
+Ed25519PrivateKey = ed25519.Ed25519PrivateKey
 
 
 class BadKeyError(Exception):
@@ -1003,7 +993,7 @@ class Key:
         else:
             raise BadFingerPrintFormat(f"Unsupported fingerprint format: {format}")
 
-    def type(self):
+    def type(self) -> Literal["RSA", "DSA", "EC", "Ed25519"]:
         """
         Return the type of the object we wrap.  Currently this can only be
         'RSA', 'DSA', 'EC', or 'Ed25519'.
@@ -1104,59 +1094,59 @@ class Key:
             return 256
         return self._keyObject.key_size
 
-    def data(self):
+    def data(self) -> dict:
         """
         Return the values of the public key as a dictionary.
 
         @rtype: L{dict}
         """
         if isinstance(self._keyObject, rsa.RSAPublicKey):
-            numbers = self._keyObject.public_numbers()
+            rsa_pub_numbers = self._keyObject.public_numbers()
             return {
-                "n": numbers.n,
-                "e": numbers.e,
+                "n": rsa_pub_numbers.n,
+                "e": rsa_pub_numbers.e,
             }
         elif isinstance(self._keyObject, rsa.RSAPrivateKey):
-            numbers = self._keyObject.private_numbers()
+            rsa_priv_numbers = self._keyObject.private_numbers()
             return {
-                "n": numbers.public_numbers.n,
-                "e": numbers.public_numbers.e,
-                "d": numbers.d,
-                "p": numbers.p,
-                "q": numbers.q,
+                "n": rsa_priv_numbers.public_numbers.n,
+                "e": rsa_priv_numbers.public_numbers.e,
+                "d": rsa_priv_numbers.d,
+                "p": rsa_priv_numbers.p,
+                "q": rsa_priv_numbers.q,
                 # Use a trick: iqmp is q^-1 % p, u is p^-1 % q
-                "u": rsa.rsa_crt_iqmp(numbers.q, numbers.p),
+                "u": rsa.rsa_crt_iqmp(rsa_priv_numbers.q, rsa_priv_numbers.p),
             }
         elif isinstance(self._keyObject, dsa.DSAPublicKey):
-            numbers = self._keyObject.public_numbers()
+            dsa_pub_numbers = self._keyObject.public_numbers()
             return {
-                "y": numbers.y,
-                "g": numbers.parameter_numbers.g,
-                "p": numbers.parameter_numbers.p,
-                "q": numbers.parameter_numbers.q,
+                "y": dsa_pub_numbers.y,
+                "g": dsa_pub_numbers.parameter_numbers.g,
+                "p": dsa_pub_numbers.parameter_numbers.p,
+                "q": dsa_pub_numbers.parameter_numbers.q,
             }
         elif isinstance(self._keyObject, dsa.DSAPrivateKey):
-            numbers = self._keyObject.private_numbers()
+            dsa_priv_numbers = self._keyObject.private_numbers()
             return {
-                "x": numbers.x,
-                "y": numbers.public_numbers.y,
-                "g": numbers.public_numbers.parameter_numbers.g,
-                "p": numbers.public_numbers.parameter_numbers.p,
-                "q": numbers.public_numbers.parameter_numbers.q,
+                "x": dsa_priv_numbers.x,
+                "y": dsa_priv_numbers.public_numbers.y,
+                "g": dsa_priv_numbers.public_numbers.parameter_numbers.g,
+                "p": dsa_priv_numbers.public_numbers.parameter_numbers.p,
+                "q": dsa_priv_numbers.public_numbers.parameter_numbers.q,
             }
         elif isinstance(self._keyObject, ec.EllipticCurvePublicKey):
-            numbers = self._keyObject.public_numbers()
+            ec_pub_numbers = self._keyObject.public_numbers()
             return {
-                "x": numbers.x,
-                "y": numbers.y,
+                "x": ec_pub_numbers.x,
+                "y": ec_pub_numbers.y,
                 "curve": self.sshType(),
             }
         elif isinstance(self._keyObject, ec.EllipticCurvePrivateKey):
-            numbers = self._keyObject.private_numbers()
+            ec_priv_numbers = self._keyObject.private_numbers()
             return {
-                "x": numbers.public_numbers.x,
-                "y": numbers.public_numbers.y,
-                "privateValue": numbers.private_value,
+                "x": ec_priv_numbers.public_numbers.x,
+                "y": ec_priv_numbers.public_numbers.y,
+                "privateValue": ec_priv_numbers.private_value,
                 "curve": self.sshType(),
             }
         elif isinstance(self._keyObject, ed25519.Ed25519PublicKey):

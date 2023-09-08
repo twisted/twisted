@@ -111,7 +111,7 @@ class AbstractClientMixin:
     def connectionMade(self):
         self._protoBase.connectionMade(self)
 
-    def connectionLost(self, reason: Failure = connectionDone):
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
         self.account._clientLost(self, reason)
         self.unregisterAsAccountClient()
         return self._protoBase.connectionLost(self, reason)  # type: ignore[arg-type]

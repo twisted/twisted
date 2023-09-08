@@ -488,7 +488,7 @@ class Options(dict):
 
         if hasattr(self, "subCommands"):
             cmdDicts = []
-            for (cmd, short, parser, desc) in self.subCommands:  # type: ignore[attr-defined]
+            for (cmd, short, parser, desc) in self.subCommands:
                 cmdDicts.append(
                     {
                         "long": cmd,

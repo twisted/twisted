@@ -8,7 +8,9 @@ name: CI
 
 on:
   push:
-    branches: [ trunk ]
+    branches:
+     - trunk
+     - release-*
     tags:
       - twisted-*
   pull_request:
@@ -69,7 +71,7 @@ jobs:
         # The Python version on which the job is executed.
         # We need at least one value here, so we go with latest Python version
         # that we support..
-        python-version: ['3.10']
+        python-version: ['3.11']
         # Just use the default OS.
         runs-on: ['']
         # Human readable short description for this job.
@@ -103,7 +105,7 @@ jobs:
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          - python-version: '3.7.1'
+          - python-version: '3.8.0'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
             # Older pyhon is only on 20.04.
@@ -128,8 +130,11 @@ jobs:
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
 
-          # Just Python 3.11 with default settings.
-          - python-version: '3.11'
+          # Just Python 3.10 with default settings.
+          - python-version: '3.10'
+
+          # Just Python 3.12 with default settings.
+          - python-version: '3.12'
 
           # Newest macOS and newest Python supported versions.
           - python-version: '3.11'
@@ -138,7 +143,7 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.7'
+          - python-version: '3.8'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -173,7 +178,7 @@ jobs:
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          - python-version: '3.7'
+          - python-version: '3.8'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
@@ -188,6 +193,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
 
     - name: Get pip cache dir
       id: pip-cache
@@ -275,7 +281,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        # Need history on all branches for newsfragment to work.
+        # Need full history for various diff checks to work.
         fetch-depth: 0
 
     - name: Set up Python
@@ -290,20 +296,7 @@ jobs:
     - name: Run the checks
       run: |
         python --version
-        tox --parallel -e lint,mypy
-
-    - name: Revert merge commit for a release branch
-      if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release-')
-      env:
-        BRANCH_SHA: ${{ github.event.after }}
-        BRANCH_NAME: ${{ github.head_ref }}
-      run: |
-        git checkout -b $BRANCH_NAME
-        git reset --hard $BRANCH_SHA
-
-    - name: Newsfragment
-      run: |
-        tox -q -e newsfragment
+        tox --parallel -e lint,mypy,newsfragment
 
 
   # Used to validate the narrative and API docs.
