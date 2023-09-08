@@ -319,6 +319,8 @@ Classes
 
 Classes are deprecated by raising a warning when they are access from within their module, using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
 
+This can trigger the warnings at important time.
+
 .. code-block:: python
 
     class SSLContextFactory:
@@ -445,12 +447,33 @@ Modules cannot have properties, so module attributes should be deprecated using 
 Modules
 ^^^^^^^
 
-To deprecate an entire module, :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
+To deprecate an entire module there are two options:
 
-There are two other options:
+* Put a `warnings.warn()` call into the top-level code of the module, with `stacklevel=3`.
+* Deprecate all of the attributes of the module and sub-modules using :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>`.
 
-* Put a warnings.warn() call into the top-level code of the module.
-* Deprecate all of the attributes of the module.
+Using a single `deprecatedModuleAttribute` on the parent module will not work.
+For example if we have `twisted.old_code.sub.module.SomeClass` and you add the deprecation to `twisted` for the name `old_code`,
+a warning is raised for `from twisted import old_code`,
+but is not raised from `from twisted.old_code.sub.module import SomeClass`.
+
+This is why it's recommended to just use `warnings.warn()` at the top level of the module.
+
+.. code-block:: python
+
+    """
+    The normal docstring of the top-level package.
+
+    This package is now deprecated.
+    """
+    import warnings
+
+    from incremental import Version, getVersionString
+
+    warningString = "twisted.old_code was deprecated at {}".format(
+        getVersionString(Version("Twisted", "NEXT", 0, 0))
+    )
+    warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 
 
 Testing Deprecation Code
@@ -551,6 +574,19 @@ Making calls to the deprecated code without raising these warnings can be done u
 
             self.assertEqual('some-value', user.homePath)
 
+        def test_getUserNonexistentDatabase(self):
+            """
+            The nesting of callDeprecated with assertRaises can result in ugly code.
+
+            This is an example of nesting.
+            """
+            self.db = checkers.FilePasswordDB('test_thisbetternoteverexist.db')
+            self.assertRaises(
+                error.UnauthorizedLogin,
+                self.callDeprecated,
+                    Version("Twisted", 1, 2, 0),
+                    self.db.getUser, 'user',
+                )
 
 Tests which need to use deprecated classes should use the :py:meth:`getDeprecatedModuleAttribute <twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute>` helper.
 
@@ -573,3 +609,43 @@ Tests which need to use deprecated classes should use the :py:meth:`getDeprecate
             creds = UsernameHashedPassword(b"foo", b"bar")
             self.assertEqual(creds.username, b"foo")
             self.assertEqual(creds.hashed, b"bar")
+
+
+Deprecation for whole packages or modules can be tested using the `importlib.reload` helper.
+
+.. code-block:: python
+
+    from importlib import reload
+
+    import twisted.old_code
+    from twisted import old_code
+    from twisted.trial import unittest
+
+
+    class OldCodeDeprecationTests(unittest.TestCase):
+        """
+        Ensures that importing twisted.old_code directly or as a
+        module of twisted raises a deprecation warning.
+        """
+
+        def test_deprecationDirect(self) -> None:
+            """
+            A direct import will raise the deprecation warning.
+            """
+            reload(twisted.old_code)
+            warnings = self.flushWarnings([self.test_deprecationDirect])
+            self.assertEqual(1, len(warnings))
+            self.assertEqual(
+                "twisted.old_code was deprecated at Twisted NEXT", warnings[0]["message"]
+            )
+
+        def test_deprecationSubModule(self) -> None:
+            """
+            An import as a sub-module will raise the deprecation warning.
+            """
+            reload(old_code)
+            warnings = self.flushWarnings([self.test_deprecationSubModule])
+            self.assertEqual(1, len(warnings))
+            self.assertEqual(
+                "twisted.old_code was deprecated at Twisted NEXT", warnings[0]["message"]
+            )

@@ -1,0 +1,2 @@
+The development documentation for deprecating API was updated to cover
+examples on how to deprecate a whole module or a class and test the deprecation.
