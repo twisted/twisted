@@ -22,7 +22,7 @@ class OptionsTests(SynchronousTestCase):
     are parsed.
     """
 
-    def test_malformedSecondary(self):
+    def test_malformedSecondary(self) -> None:
         """
         If the value supplied for an I{--secondary} option does not provide a
         server IP address, optional port number, and domain name,
@@ -40,7 +40,7 @@ class OptionsTests(SynchronousTestCase):
             ["--secondary", "1.2.3.4:hello/example.com"],
         )
 
-    def test_secondary(self):
+    def test_secondary(self) -> None:
         """
         An argument of the form C{"ip/domain"} is parsed by L{Options} for the
         I{--secondary} option and added to its list of secondaries, using the
@@ -50,7 +50,7 @@ class OptionsTests(SynchronousTestCase):
         options.parseOptions(["--secondary", "1.2.3.4/example.com"])
         self.assertEqual([(("1.2.3.4", PORT), ["example.com"])], options.secondaries)
 
-    def test_secondaryExplicitPort(self):
+    def test_secondaryExplicitPort(self) -> None:
         """
         An argument of the form C{"ip:port/domain"} can be used to specify an
         alternate port number for which to act as a secondary.
@@ -59,7 +59,7 @@ class OptionsTests(SynchronousTestCase):
         options.parseOptions(["--secondary", "1.2.3.4:5353/example.com"])
         self.assertEqual([(("1.2.3.4", 5353), ["example.com"])], options.secondaries)
 
-    def test_secondaryAuthorityServices(self):
+    def test_secondaryAuthorityServices(self) -> None:
         """
         After parsing I{--secondary} options, L{Options} constructs a
         L{SecondaryAuthorityService} instance for each configured secondary.
@@ -83,7 +83,7 @@ class OptionsTests(SynchronousTestCase):
         self.assertEqual(secondary.primary, "1.2.3.5")
         self.assertEqual(secondary._port, 5354)
 
-    def test_recursiveConfiguration(self):
+    def test_recursiveConfiguration(self) -> None:
         """
         Recursive DNS lookups, if enabled, should be a last-resort option.
         Any other lookup method (cache, local lookup, etc.) should take
@@ -111,7 +111,7 @@ class OptionsTests(SynchronousTestCase):
             # ours from the threaded resolver cleanup
             from twisted.internet import reactor
 
-            for x in reactor._newTimedCalls:
+            for x in reactor._newTimedCalls:  # type: ignore[attr-defined]
                 self.assertEqual(x.func.__func__, ThreadedResolver._cleanup)
                 x.cancel()
 
