@@ -16,7 +16,7 @@ class WordsDeprecationTests(unittest.TestCase):
     module of twisted raises a deprecation warning.
     """
 
-    def test_deprecationDirect(self):
+    def test_deprecationDirect(self) -> None:
         """
         A direct import will raise the deprecation warning.
         """
@@ -27,7 +27,7 @@ class WordsDeprecationTests(unittest.TestCase):
             "twisted.words was deprecated at Twisted NEXT", warnings[0]["message"]
         )
 
-    def test_deprecationRootPackage(self):
+    def test_deprecationRootPackage(self) -> None:
         """
         Importing as sub-module of C{twisted} raises the deprecation warning.
         """
