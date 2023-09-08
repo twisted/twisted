@@ -9,6 +9,7 @@ CoreFoundation main loop used by macOS.
 This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
 """
+from __future__ import annotations
 
 __all__ = ["install", "CFReactor"]
 
