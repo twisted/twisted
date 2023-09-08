@@ -445,12 +445,17 @@ Modules cannot have properties, so module attributes should be deprecated using 
 Modules
 ^^^^^^^
 
-To deprecate an entire module, :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` can be used on the parent package's ``__init__.py``.
+To deprecate an entire module there are two options:
 
-There are two other options:
+* Put a `warnings.warn()` call into the top-level code of the module, with `stacklevel=3`.
+* Deprecate all of the attributes of the module and sub-modules using :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>`.
 
-* Put a warnings.warn() call into the top-level code of the module.
-* Deprecate all of the attributes of the module.
+Using a single `deprecatedModuleAttribute` on the parent module will not work.
+For example if we have `twisted.old_code.sub.module.SomeClass` and you add the deprecation to `twisted` for the name `old_code`,
+a warning is raised for `from twisted import old_code`,
+but is not raised from `from twisted.old_code.sub.module import SomeClass`.
+
+This is why it's recommended to just use `warnings.warn()` at the top level of the module.
 
 
 Testing Deprecation Code
