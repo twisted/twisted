@@ -419,7 +419,6 @@ module = [
     'twisted.internet.test.test_asyncioreactor',
     'twisted.internet.test.test_base',
     'twisted.internet.test.test_baseprocess',
-    'twisted.internet.test.test_defer_await',
     'twisted.internet.test.test_defer_yieldfrom',
     'twisted.internet.test.test_endpoints',
     'twisted.internet.test.test_epollreactor',
