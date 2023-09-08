@@ -12,28 +12,28 @@ from twisted.trial import unittest
 
 class WordsDeprecationTests(unittest.TestCase):
     """
-    Ensures that importing twisted.words or any sub-package
-    raises a deprecation warning.
+    Ensures that importing twisted.words directly or as a
+    module of twisted raises a deprecation warning.
     """
 
     def test_deprecationDirect(self):
         """
-        An import direct will raise the deprecation
+        A direct import will raise the deprecation warning.
         """
         reload(twisted.words)
         warnings = self.flushWarnings([self.test_deprecationDirect])
         self.assertEqual(1, len(warnings))
         self.assertEqual(
-            "twisted.words is deprecated since Twisted NEXT", warnings[0]["message"]
+            "twisted.words was deprecated at Twisted NEXT", warnings[0]["message"]
         )
 
     def test_deprecationRootPackage(self):
         """
-        An import direct will raise the deprecation
+        Importing as sub-module of C{twisted} raises the deprecation warning.
         """
         reload(words)
         warnings = self.flushWarnings([self.test_deprecationRootPackage])
         self.assertEqual(1, len(warnings))
         self.assertEqual(
-            "twisted.words is deprecated since Twisted NEXT", warnings[0]["message"]
+            "twisted.words was deprecated at Twisted NEXT", warnings[0]["message"]
         )

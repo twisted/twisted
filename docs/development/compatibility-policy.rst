@@ -578,3 +578,30 @@ Tests which need to use deprecated classes should use the :py:meth:`getDeprecate
             creds = UsernameHashedPassword(b"foo", b"bar")
             self.assertEqual(creds.username, b"foo")
             self.assertEqual(creds.hashed, b"bar")
+
+Deprecation for whole packages or modules can be tested using the `importlib.reload` helper.
+
+.. code-block:: python
+
+    from importlib import reload
+
+    import twisted.words
+    from twisted.trial import unittest
+
+
+    class WordsDeprecationTests(unittest.TestCase):
+        """
+        Ensures that importing twisted.words directly or as a
+        module of twisted raises a deprecation warning.
+        """
+
+        def test_deprecationDirect(self):
+            """
+            A direct import will raise the deprecation warning.
+            """
+            reload(twisted.words)
+            warnings = self.flushWarnings([self.test_deprecationDirect])
+            self.assertEqual(1, len(warnings))
+            self.assertEqual(
+                "twisted.words was deprecated at Twisted NEXT", warnings[0]["message"]
+            )
