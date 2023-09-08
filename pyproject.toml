@@ -379,7 +379,6 @@ module = [
     'twisted.conch.test.test_telnet',
     'twisted.conch.test.test_transport',
     'twisted.conch.test.test_userauth',
-    'twisted.conch.test.test_window',
     'twisted.conch.ui.tkvt100',
     'twisted.conch.unix',
     'twisted.cred.checkers',
