@@ -7,6 +7,7 @@ Helper classes for twisted.test.test_ssl.
 They are in a separate module so they will not prevent test_ssl importing if
 pyOpenSSL is unavailable.
 """
+from __future__ import annotations
 
 from OpenSSL import SSL
 

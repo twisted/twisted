@@ -3,6 +3,8 @@
 """
 Test cases for positioning primitives.
 """
+from __future__ import annotations
+
 from zope.interface import verify
 
 from twisted.positioning import base

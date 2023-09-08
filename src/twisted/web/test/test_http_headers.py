@@ -4,7 +4,7 @@
 """
 Tests for L{twisted.web.http_headers}.
 """
-
+from __future__ import annotations
 
 from typing import Sequence
 
