@@ -12,7 +12,7 @@ import warnings
 
 from incremental import Version, getVersionString
 
-warningString = "twisted.words is deprecated since {}".format(
+warningString = "twisted.words was deprecated at {}".format(
     getVersionString(Version("Twisted", "NEXT", 0, 0))
 )
 warnings.warn(warningString, DeprecationWarning, stacklevel=3)
