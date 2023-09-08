@@ -117,12 +117,10 @@ jobs:
           # We go with latest micro release for the smallest minor release
           # that we support.
           # This is also used to run tests with minimum dependency versions.
-          # And we run on the oldest Ubuntu we can get from GitHub Actions.
-          - python-version: '3.7'
+          - python-version: '3.8'
             noipv6: '-noipv6'
             tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
-            runs-on: 'ubuntu-20.04'
 
           # Just Python 3.8 with default settings.
           - python-version: '3.8'
