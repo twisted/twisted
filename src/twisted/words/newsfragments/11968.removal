@@ -1,0 +1,2 @@
+twisted.words package is now deprecated.
+The XMMP and IRC protocols don't have an active maintainer.
