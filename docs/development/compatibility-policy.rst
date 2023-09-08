@@ -457,6 +457,22 @@ but is not raised from `from twisted.old_code.sub.module import SomeClass`.
 
 This is why it's recommended to just use `warnings.warn()` at the top level of the module.
 
+.. code-block:: python
+
+    """
+    The normal docstring of the top-level package.
+
+    This package is now deprecated.
+    """
+    import warnings
+
+    from incremental import Version, getVersionString
+
+    warningString = "twisted.old_code was deprecated at {}".format(
+        getVersionString(Version("Twisted", "NEXT", 0, 0))
+    )
+    warnings.warn(warningString, DeprecationWarning, stacklevel=3)
+
 
 Testing Deprecation Code
 ------------------------
