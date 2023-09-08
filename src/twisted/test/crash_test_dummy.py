@@ -1,21 +1,23 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import annotations
 
+from typing import Literal
 
 from zope.interface import Interface, implementer
 
 from twisted.python import components
 
 
-def foo():
+def foo() -> Literal[2]:
     return 2
 
 
 class X:
-    def __init__(self, x):
+    def __init__(self, x: str) -> None:
         self.x = x
 
-    def do(self):
+    def do(self) -> None:
         # print 'X',self.x,'doing!'
         pass
 
@@ -30,7 +32,7 @@ class IX(Interface):
 
 @implementer(IX)
 class XA(components.Adapter):
-    def method(self):
+    def method(self) -> None:
         # Kick start :(
         pass
 
