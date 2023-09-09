@@ -45,6 +45,7 @@ from twisted.internet.interfaces import (
     IHostnameResolver,
     IProtocol,
     IReactorCore,
+    IReactorFromThreads,
     IReactorPluggableNameResolver,
     IReactorPluggableResolver,
     IReactorThreads,
@@ -305,7 +306,7 @@ class ThreadedResolver:
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: str, name: str, lookupDeferred: Deferred[str]
+        self, result: Union[str, Failure], name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -336,7 +337,7 @@ class ThreadedResolver:
             timeoutDelay = 60
         userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
-            self.reactor,
+            cast(IReactorFromThreads, self.reactor),
             cast(IReactorThreads, self.reactor).getThreadPool(),
             socket.gethostbyname,
             name,
@@ -345,7 +346,9 @@ class ThreadedResolver:
             timeoutDelay, self._cleanup, name, lookupDeferred
         )
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
-        lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
+        _: Deferred[None] = lookupDeferred.addBoth(
+            self._checkTimeout, name, lookupDeferred
+        )
         return userDeferred
 
 
