@@ -25,7 +25,7 @@ class IWorker(Interface):
     All methods on this interface must be thread-safe.
     """
 
-    def do(task: Callable[..., object]) -> None:
+    def do(task: Callable[[], None]) -> None:
         """
         Perform the given task.
 

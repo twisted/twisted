@@ -50,7 +50,7 @@ class ThreadWorker:
 
         startThread(work)
 
-    def do(self, task: Callable[..., object]) -> None:
+    def do(self, task: Callable[[], None]) -> None:
         """
         Perform the given task on the thread owned by this L{ThreadWorker}.
 
@@ -88,7 +88,7 @@ class LockWorker:
         self._lock = lock
         self._local = local
 
-    def do(self, work: Callable[..., object]) -> None:
+    def do(self, work: Callable[[], None]) -> None:
         """
         Do the given work on this thread, with the mutex acquired.  If this is
         called re-entrantly, return and wait for the outer invocation to do the
