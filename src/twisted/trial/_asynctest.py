@@ -299,8 +299,10 @@ class TestCase(SynchronousTestCase):
         finally:
             self._undeprecateReactor(reactor)
 
-    def addCleanup(
-        self, f: Callable[_P, object], /, *args: _P.args, **kwargs: _P.kwargs
+    # f should be a positional only argument but that is a breaking change
+    # see https://github.com/twisted/twisted/issues/11967
+    def addCleanup(  # type: ignore[override]
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
     ) -> None:
         """
         Extend the base cleanup feature with support for cleanup functions which

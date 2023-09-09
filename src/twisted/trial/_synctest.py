@@ -1074,8 +1074,10 @@ class SynchronousTestCase(_Assertions):
 
         result.stopTest(self)
 
-    def addCleanup(
-        self, f: Callable[_P, object], /, *args: _P.args, **kwargs: _P.kwargs
+    # f should be a positional only argument but that is a breaking change
+    # see https://github.com/twisted/twisted/issues/11967
+    def addCleanup(  # type: ignore[override]
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
     ) -> None:
         """
         Add the given function to a list of functions to be called after the
