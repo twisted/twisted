@@ -14,6 +14,7 @@ import sys
 from functools import partial
 from os.path import isabs
 from typing import (
+    Any,
     Awaitable,
     Callable,
     Iterable,
@@ -90,7 +91,7 @@ class WorkerPoolConfig:
     """
 
     numWorkers: int
-    workingDirectory: FilePath
+    workingDirectory: FilePath[Any]
     workerArguments: Sequence[str]
     logFile: str
 
@@ -115,7 +116,7 @@ class StartedWorkerPool:
         processes.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[Any]
     testDirLock: FilesystemLock
     testLog: TextIO
     workers: List[LocalWorker]
@@ -123,7 +124,7 @@ class StartedWorkerPool:
 
     _logger = Logger()
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[Any]) -> None:
         """
         Run an action on all of the workers in the pool.
         """
@@ -165,7 +166,7 @@ class WorkerPool:
     def _createLocalWorkers(
         self,
         protocols: Iterable[LocalWorkerAMP],
-        workingDirectory: FilePath,
+        workingDirectory: FilePath[Any],
         logFile: TextIO,
     ) -> List[LocalWorker]:
         """

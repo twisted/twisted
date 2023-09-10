@@ -4,7 +4,7 @@
 """
 Tests for L{twisted.python.log}.
 """
-
+from __future__ import annotations
 
 import calendar
 import logging
@@ -287,7 +287,7 @@ class LogTests(unittest.SynchronousTestCase):
         self.assertIsInstance(errors[0], RuntimeError)
 
 
-class FakeFile(list):
+class FakeFile(list[bytes]):
     def write(self, bytes):
         self.append(bytes)
 
