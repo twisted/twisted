@@ -175,7 +175,7 @@ class ElementTests(TestCase):
         raise a comprehensible exception.
         """
         te = self.assertRaises(TypeError, renderer)
-        self.assertEqual(str(te), "expose() takes at least 1 argument (0 given)")
+        self.assertEqual(str(te), "Expose.__call__() missing 1 required positional argument: 'f'")
 
     def test_renderGetDirectlyError(self) -> None:
         """
