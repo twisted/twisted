@@ -2532,7 +2532,7 @@ _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
 
 
-class MyBox(dict[_KT, _VT]):
+class MyBox(Dict[_KT, _VT]):
     """
     A unique dict subclass.
     """

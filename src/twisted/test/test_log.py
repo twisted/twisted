@@ -13,6 +13,7 @@ import sys
 import time
 import warnings
 from io import IOBase, StringIO
+from typing import List
 
 from twisted.logger import (
     LogBeginner,
@@ -287,7 +288,7 @@ class LogTests(unittest.SynchronousTestCase):
         self.assertIsInstance(errors[0], RuntimeError)
 
 
-class FakeFile(list[bytes]):
+class FakeFile(List[bytes]):
     def write(self, bytes):
         self.append(bytes)
 
