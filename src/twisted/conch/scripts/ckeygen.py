@@ -5,7 +5,7 @@
 """
 Implementation module for the `ckeygen` command.
 """
-
+from __future__ import annotations
 
 import getpass
 import os
