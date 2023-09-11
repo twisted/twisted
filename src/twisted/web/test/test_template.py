@@ -217,7 +217,6 @@ class XMLFileReprTests(TestCase):
 
 
 class XMLLoaderTestsMixin:
-
     deprecatedUse: bool
     """
     C{True} if this use of L{XMLFile} is deprecated and should emit
@@ -330,7 +329,7 @@ class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
         """
         fp = FilePath(self.mktemp())
         fp.setContent(self.templateString.encode("utf8"))
-        return XMLFile(fp.path)  # type: ignore[arg-type]
+        return XMLFile(fp.path)
 
 
 class FlattenIntegrationTests(FlattenTestCase):
@@ -728,7 +727,7 @@ class TestFailureElement(Element):
         "</p>"
     )
 
-    def __init__(self, failure: Failure, loader: object = None):
+    def __init__(self, failure: Failure, loader: object = None) -> None:
         self.failure = failure
 
 

@@ -8,7 +8,9 @@ name: CI
 
 on:
   push:
-    branches: [ trunk ]
+    branches:
+     - trunk
+     - release-*
     tags:
       - twisted-*
   pull_request:
@@ -51,7 +53,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-20.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-22.04' }}"
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -106,6 +108,8 @@ jobs:
           - python-version: '3.8.0'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
+            # Older pyhon is only on 20.04.
+            runs-on: 'ubuntu-20.04'
 
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
@@ -217,6 +221,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
+        openssl version
         python -m pip install --upgrade pip tox~=3.0 coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
@@ -267,7 +272,7 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -276,10 +281,6 @@ jobs:
       with:
         # Need full history for various diff checks to work.
         fetch-depth: 0
-
-    - name: Get main branch for any diff checks
-      run: |
-        git fetch origin trunk:trunk
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -302,7 +303,7 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -319,7 +320,7 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -342,7 +343,7 @@ jobs:
   # The files are published only when a tag is created.
   release-publish:
     name: Check release and publish on twisted-* tag
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-22.04'
     steps:
     - uses: actions/checkout@v3
 

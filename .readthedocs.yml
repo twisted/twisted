@@ -24,7 +24,6 @@ build:
     python: "3.11"
 
 python:
-  system_packages: False
   install:
     - method: pip
       path: .

@@ -116,7 +116,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         PID file.
         """
         pidFile = PIDFile(self.filePath(self.pidFileContent))
-        pidFile.isRunning = lambda: True  # type: ignore[assignment]
+        pidFile.isRunning = lambda: True  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
         runner.run()
@@ -171,7 +171,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         def read() -> int:
             raise OSError(errno.EACCES, "Permission denied")
 
-        pidFile.read = read  # type: ignore[assignment]
+        pidFile.read = read  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
@@ -233,7 +233,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 observer: ILogObserver,
                 predicates: Iterable[LogLevelFilterPredicate],
                 negativeObserver: ILogObserver = cast(ILogObserver, lambda event: None),
-            ):
+            ) -> None:
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = list(predicates)
                 FilteringLogObserver.__init__(

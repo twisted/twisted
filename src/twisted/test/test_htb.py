@@ -10,10 +10,10 @@ from .test_pcp import DummyConsumer
 class DummyClock:
     time = 0
 
-    def set(self, when):
+    def set(self, when: int) -> None:
         self.time = when
 
-    def __call__(self):
+    def __call__(self) -> int:
         return self.time
 
 
@@ -23,17 +23,17 @@ class SomeBucket(htb.Bucket):
 
 
 class TestBucketBase(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self._realTimeFunc = htb.time
         self.clock = DummyClock()
         htb.time = self.clock
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         htb.time = self._realTimeFunc
 
 
 class BucketTests(TestBucketBase):
-    def testBucketSize(self):
+    def testBucketSize(self) -> None:
         """
         Testing the size of the bucket.
         """
@@ -41,7 +41,7 @@ class BucketTests(TestBucketBase):
         fit = b.add(1000)
         self.assertEqual(100, fit)
 
-    def testBucketDrain(self):
+    def testBucketDrain(self) -> None:
         """
         Testing the bucket's drain rate.
         """
@@ -51,7 +51,7 @@ class BucketTests(TestBucketBase):
         fit = b.add(1000)
         self.assertEqual(20, fit)
 
-    def test_bucketEmpty(self):
+    def test_bucketEmpty(self) -> None:
         """
         L{htb.Bucket.drip} returns C{True} if the bucket is empty after that drip.
         """
@@ -66,19 +66,19 @@ class BucketTests(TestBucketBase):
 
 
 class BucketNestingTests(TestBucketBase):
-    def setUp(self):
+    def setUp(self) -> None:
         TestBucketBase.setUp(self)
         self.parent = SomeBucket()
         self.child1 = SomeBucket(self.parent)
         self.child2 = SomeBucket(self.parent)
 
-    def testBucketParentSize(self):
+    def testBucketParentSize(self) -> None:
         # Use up most of the parent bucket.
         self.child1.add(90)
         fit = self.child2.add(90)
         self.assertEqual(10, fit)
 
-    def testBucketParentRate(self):
+    def testBucketParentRate(self) -> None:
         # Make the parent bucket drain slower.
         self.parent.rate = 1
         # Fill both child1 and parent.
@@ -96,13 +96,13 @@ class BucketNestingTests(TestBucketBase):
 
 
 class ConsumerShaperTests(TestBucketBase):
-    def setUp(self):
+    def setUp(self) -> None:
         TestBucketBase.setUp(self)
         self.underlying = DummyConsumer()
         self.bucket = SomeBucket()
         self.shaped = htb.ShapedConsumer(self.underlying, self.bucket)
 
-    def testRate(self):
+    def testRate(self) -> None:
         # Start off with a full bucket, so the burst-size doesn't factor in
         # to the calculations.
         delta_t = 10
@@ -112,7 +112,7 @@ class ConsumerShaperTests(TestBucketBase):
         self.shaped.resumeProducing()
         self.assertEqual(len(self.underlying.getvalue()), delta_t * self.bucket.rate)
 
-    def testBucketRefs(self):
+    def testBucketRefs(self) -> None:
         self.assertEqual(self.bucket._refcount, 1)
         self.shaped.stopProducing()
         self.assertEqual(self.bucket._refcount, 0)
