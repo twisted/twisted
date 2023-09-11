@@ -1890,6 +1890,11 @@ class TestRFC9112Section932(unittest.TestCase):
             b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
             b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
         )
+        # The TCP data contains 2 requests,
+        # but only 1 request was dispatched,
+        # as the first request was not yet finalized.
         self.assertEqual(len(qr.queue), 1)
+        # The first request is finalized and the
+        # second request is dispatched right away.
         qr.queue[0].finish()
         self.assertEqual(len(qr.queue), 2)
