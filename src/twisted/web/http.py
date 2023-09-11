@@ -2250,6 +2250,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
+        assert (
+            not self._handlingRequest
+        ), "when handling a request, we MUST be in raw mode to buffer the incoming data without parsing it"
         self.resetTimeout()
 
         self._receivedHeaderSize += len(line)
@@ -2431,14 +2434,17 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def dataReceived(self, data):
-        """
-        Data was received from the network.  Process it.
-        """
-        # If we're currently handling a request, buffer this data.
+    def rawDataReceived(self, data):
+        # If we're currently handling a request, we'll be in raw mode. Buffer
+        # any data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2450,9 +2456,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
 
-    def rawDataReceived(self, data):
         self.resetTimeout()
 
         try:

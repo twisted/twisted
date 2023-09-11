@@ -8,6 +8,7 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 from io import BytesIO
+from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -15,12 +16,14 @@ from zope.interface.verify import verifyObject
 from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
-from twisted.internet.testing import EventLoggingObserver
+from twisted.internet.testing import EventLoggingObserver, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python import failure, reflect
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.web import error, http, iweb, resource, server
+from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET, Request, Site
 from twisted.web.static import Data
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 from ._util import assertIsFilesystemTemporary
@@ -1849,3 +1852,39 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
 
         factory = http.HTTPFactory()
         self.assertIs(factory.reactor, reactor)
+
+
+class QueueResource(Resource):
+    isLeaf = True
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.queue: List[Request] = []
+
+    def render_GET(self, request: Request) -> int:
+        self.queue.append(request)
+        return NOT_DONE_YET
+
+
+class TestRFC9112Section932(unittest.TestCase):
+    """
+    Verify that HTTP/1.1 request ordering is preserved.
+    """
+
+    def test_multipleRequestsInOneSegment(self) -> None:
+        """
+        Twisted MUST NOT respond to a second HTTP/1.1 request while the first
+        is still pending.
+        """
+        qr = QueueResource()
+        site = Site(qr)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        proto.dataReceived(
+            b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+            b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
+        )
+        self.assertEqual(len(qr.queue), 1)
+        qr.queue[0].finish()
+        self.assertEqual(len(qr.queue), 2)
