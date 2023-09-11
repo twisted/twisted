@@ -619,7 +619,7 @@ class RoundtripDNSTests(unittest.TestCase):
             (100, 50, b"s", b"http+I2L+I2C+I2R", b"", b"_http._tcp.gatech.edu"),
         ]
 
-        for (order, preference, flags, service, regexp, replacement) in naptrs:
+        for order, preference, flags, service, regexp, replacement in naptrs:
             rin = dns.Record_NAPTR(
                 order, preference, flags, service, regexp, replacement
             )
