@@ -223,7 +223,7 @@ def _getKeyOrDefault(
     if not filename:
         filename = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         if platform.system() == "Windows":
-            filename = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
+            filename = os.path.expanduser(Rf"%HOMEPATH %\.ssh\id_{keyTypeName}")
         filename = (
             inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
