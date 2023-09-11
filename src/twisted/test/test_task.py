@@ -666,7 +666,7 @@ class LoopTests(unittest.TestCase):
 
         self.assertEqual(len(L), 3, "got %d iterations, not 3" % (len(L),))
 
-        for (a, b, c, d) in L:
+        for a, b, c, d in L:
             self.assertEqual(a, "a")
             self.assertEqual(b, "b")
             self.assertIsNone(c)
@@ -1033,7 +1033,7 @@ class _FakeReactor:
             self._clock.advance(calls[0].getTime() - self.seconds())
         shutdownTriggers = self._shutdownTriggers
         self._shutdownTriggers = None
-        for (trigger, args) in shutdownTriggers["before"] + shutdownTriggers["during"]:
+        for trigger, args in shutdownTriggers["before"] + shutdownTriggers["during"]:
             trigger(*args)
 
     def stop(self):
