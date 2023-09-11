@@ -1868,7 +1868,7 @@ class QueueResource(Resource):
         self.dispatchedRequests: List[Request] = []
 
     def render_GET(self, request: Request) -> int:
-        self.queue.append(request)
+        self.dispatchedRequests.append(request)
         return NOT_DONE_YET
 
 
@@ -1894,8 +1894,8 @@ class TestRFC9112Section932(unittest.TestCase):
         # The TCP data contains 2 requests,
         # but only 1 request was dispatched,
         # as the first request was not yet finalized.
-        self.assertEqual(len(qr.queue), 1)
+        self.assertEqual(len(qr.dispatchedRequests), 1)
         # The first request is finalized and the
         # second request is dispatched right away.
-        qr.queue[0].finish()
-        self.assertEqual(len(qr.queue), 2)
+        qr.dispatchedRequests[0].finish()
+        self.assertEqual(len(qr.dispatchedRequests), 2)
