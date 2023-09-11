@@ -1864,7 +1864,7 @@ class QueueResource(Resource):
 
     def __init__(self) -> None:
         super().__init__()
-        self.queue: List[Request] = []
+        self.dispatchedRequests: List[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.queue.append(request)
