@@ -1476,9 +1476,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
 
     def test_representationOfCertificate(self):
         """
-        Test that the repr of L{sslverify.Certificate} returns
-        a human-readable string containing some basic information about the
-        certificate.
+        The repr of L{sslverify.Certificate} returns
+        a human-readable string containing the subject of the certificate itself, and the subject of the signing CA.
         """
         c = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
         self.assertEqual(
