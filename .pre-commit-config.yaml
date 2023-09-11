@@ -6,7 +6,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 21.7b0
     hooks:
       - id: black
         additional_dependencies: ['click<8.1']
