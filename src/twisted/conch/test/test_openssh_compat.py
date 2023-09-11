@@ -105,7 +105,7 @@ class OpenSSHFactoryTests(TestCase):
         # And restore the right mode when seteuid is called
         savedSeteuid = os.seteuid
 
-        def seteuid(euid):
+        def seteuid(euid: int) -> None:
             keyFile.chmod(0o777)
             return savedSeteuid(euid)
 
