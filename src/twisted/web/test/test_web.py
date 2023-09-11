@@ -1855,11 +1855,17 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
 
 
 class QueueResource(Resource):
+    """
+    Add all requests to an internal queue,
+    without responding to the requests.
+    You can access the requests from the queue and handle their response.
+    """
+
     isLeaf = True
 
     def __init__(self) -> None:
         super().__init__()
-        self.queue: List[Request] = []
+        self.dispatchedRequests: List[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.queue.append(request)
@@ -1885,6 +1891,11 @@ class TestRFC9112Section932(unittest.TestCase):
             b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
             b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
         )
+        # The TCP data contains 2 requests,
+        # but only 1 request was dispatched,
+        # as the first request was not yet finalized.
         self.assertEqual(len(qr.queue), 1)
+        # The first request is finalized and the
+        # second request is dispatched right away.
         qr.queue[0].finish()
         self.assertEqual(len(qr.queue), 2)
