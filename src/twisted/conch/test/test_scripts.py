@@ -30,7 +30,10 @@ except ImportError:
 else:
     try:
         tkinter.Tk().destroy()
-    except tkinter.TclError as e:
+    except (tkinter.TclError, RuntimeError) as e:
+        # On GitHub Action the macOS Python might not support the version of TK
+        # provided by the OS and it will raise a RuntimeError
+        # See: https://github.com/actions/setup-python/issues/649
         doSkip = True
         skipReason = "Can't test Tkinter: " + str(e)
 
