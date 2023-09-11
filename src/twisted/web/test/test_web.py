@@ -1855,6 +1855,11 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
 
 
 class QueueResource(Resource):
+    """
+    Add all requests to an internal queue,
+    without responding to the requests.
+    You can access the requests from the queue and handle their response.
+    """
     isLeaf = True
 
     def __init__(self) -> None:
