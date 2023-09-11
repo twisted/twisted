@@ -731,7 +731,7 @@ class FunctionalTests(TestCase):
 
         assert_that(self.successResultOf(d), equal_to(42))
 
-    def test_countingCalls(self):
+    def test_countingCalls(self) -> None:
         """
         ``countingCalls`` decorates a function so that it is called with an
         increasing counter and passes the return value through.

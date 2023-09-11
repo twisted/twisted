@@ -3566,7 +3566,7 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
         """
         L{twisted.internet.defer.timeout} is deprecated.
         """
-        deferred: Deferred[None] = Deferred()
+        deferred: Deferred[object] = Deferred()
         defer.timeout(deferred)
         self.assertFailure(deferred, defer.TimeoutError)
         warningsShown = self.flushWarnings([self.test_deprecatedTimeout])

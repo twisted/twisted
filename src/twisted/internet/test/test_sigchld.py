@@ -5,7 +5,7 @@
 Tests for L{twisted.internet._sigchld}, an alternate, superior SIGCHLD
 monitoring API.
 """
-
+from __future__ import annotations
 
 import errno
 import os
@@ -27,7 +27,7 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
     L{installHandler} and L{isDefaultHandler} APIs.
     """
 
-    def pipe(self):
+    def pipe(self) -> tuple[int, int]:
         """
         Create a non-blocking pipe which will be closed after the currently
         running test.

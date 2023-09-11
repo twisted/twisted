@@ -301,6 +301,7 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unreachable = true
 warn_unused_ignores = true
+disallow_untyped_decorators = true
 # These are too strict for us at the moment
 disallow_any_decorated = false
 disallow_any_explicit = false
@@ -309,7 +310,6 @@ disallow_any_generics = false
 disallow_any_unimported = false
 disallow_subclassing_any = false
 disallow_untyped_calls = false
-disallow_untyped_decorators = false
 strict_equality = false
 no_implicit_reexport = false
 # Disable some checks until the effected modules fully adopt mypy
@@ -769,7 +769,6 @@ module = [
     'twisted.conch.ssh._kex',
     'twisted.conch.ssh.address',
     'twisted.conch.ssh.common',
-    'twisted.conch.test.test_openssh_compat',
     'twisted.conch.test.test_unix',
     'twisted.conch.ui.ansi',
     'twisted.cred._digest',
@@ -792,16 +791,10 @@ module = [
     'twisted.internet.test._win32ifaces',
     'twisted.internet.test.fakeendpoint',
     'twisted.internet.test.modulehelpers',
-    'twisted.internet.test.test_default',
-    'twisted.internet.test.test_gireactor',
-    'twisted.internet.test.test_kqueuereactor',
-    'twisted.internet.test.test_sigchld',
-    'twisted.internet.test.test_testing',
     'twisted.internet.test.test_win32serialport',
     'twisted.mail._except',
     'twisted.mail.bounce',
     'twisted.mail.interfaces',
-    'twisted.mail.test.test_bounce',
     'twisted.names._rfc1982',
     'twisted.names.error',
     'twisted.names.resolve',
@@ -812,8 +805,6 @@ module = [
     'twisted.pair.raw',
     'twisted.pair.rawudp',
     'twisted.pair.test.test_ethernet',
-    'twisted.pair.test.test_ip',
-    'twisted.pair.test.test_rawudp',
     'twisted.persisted._token',
     'twisted.persisted.crefutil',
     'twisted.persisted.dirdbm',
