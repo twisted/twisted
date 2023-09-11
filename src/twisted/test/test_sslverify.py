@@ -1487,9 +1487,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
 
     def test_representationOfCertificateNoCN(self):
         """
-        Test that the repr of L{sslverify.Certificate} returns
-        a human-readable string containing some basic information about the
-        certificate when the ceritificate has no CN.
+        Repr of a L{sslverify.Certificate} for which both the certificate and the signing CA have no subject, contains the empty string as the subject.
         """
         ubuntuOneGoDaddyPem = textwrap.dedent(
             """\
