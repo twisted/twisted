@@ -451,7 +451,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     # any object you can write to can be a consumer, really.
 
     producer = None
-    bufferSize = 2 ** 2 ** 2 ** 2
+    bufferSize = 2**2**2**2
 
     def stopConsuming(self):
         """Stop consuming data.
