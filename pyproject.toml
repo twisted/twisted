@@ -795,7 +795,6 @@ module = [
     'twisted.mail._except',
     'twisted.mail.bounce',
     'twisted.mail.interfaces',
-    'twisted.mail.test.test_bounce',
     'twisted.names._rfc1982',
     'twisted.names.error',
     'twisted.names.resolve',
