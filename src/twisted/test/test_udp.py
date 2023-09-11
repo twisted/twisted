@@ -17,7 +17,6 @@ from twisted.trial.unittest import TestCase
 
 
 class Mixin:
-
     started = 0
     stopped = 0
 
@@ -48,7 +47,6 @@ class Server(Mixin, protocol.DatagramProtocol):
 
 
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
-
     packetReceived = None
     refused = 0
 
@@ -570,7 +568,6 @@ class ReactorShutdownInteractionTests(TestCase):
     "This reactor does not support multicast",
 )
 class MulticastTests(TestCase):
-
     if (
         os.environ.get("INFRASTRUCTURE") == "AZUREPIPELINES"
         and runtime.platform.isMacOSX()
