@@ -394,7 +394,7 @@ class NonStreamingProducerTests(TestCase):
 class _SupportsName(Protocol):
     @property
     def __name__(self) -> str:
-        pass
+        ...
 
 
 class DeprecationTests(TestCase):
