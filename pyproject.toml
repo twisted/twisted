@@ -806,7 +806,6 @@ module = [
     'twisted.pair.rawudp',
     'twisted.pair.test.test_ethernet',
     'twisted.pair.test.test_ip',
-    'twisted.pair.test.test_rawudp',
     'twisted.persisted._token',
     'twisted.persisted.crefutil',
     'twisted.persisted.dirdbm',
