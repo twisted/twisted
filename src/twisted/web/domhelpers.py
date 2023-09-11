@@ -4,12 +4,22 @@
 
 """
 A library for performing interesting tasks with DOM objects.
-"""
 
+This module is now deprecated.
+"""
+import warnings
 from io import StringIO
+
+from incremental import Version, getVersionString
 
 from twisted.web import microdom
 from twisted.web.microdom import escape, getElementsByTagName, unescape
+
+warningString = "twisted.web.domhelpers was deprecated at {}".format(
+    getVersionString(Version("Twisted", "NEXT", 0, 0))
+)
+warnings.warn(warningString, DeprecationWarning, stacklevel=3)
+
 
 # These modules are imported here as a shortcut.
 escape
