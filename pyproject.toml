@@ -793,7 +793,6 @@ module = [
     'twisted.internet.test.fakeendpoint',
     'twisted.internet.test.modulehelpers',
     'twisted.internet.test.test_gireactor',
-    'twisted.internet.test.test_kqueuereactor',
     'twisted.internet.test.test_win32serialport',
     'twisted.mail._except',
     'twisted.mail.bounce',
