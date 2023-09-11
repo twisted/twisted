@@ -872,12 +872,12 @@ def formatFileSize(size):
     """
     if size < 1024:
         return "%iB" % size
-    elif size < (1024 ** 2):
+    elif size < (1024**2):
         return "%iK" % (size / 1024)
-    elif size < (1024 ** 3):
-        return "%iM" % (size / (1024 ** 2))
+    elif size < (1024**3):
+        return "%iM" % (size / (1024**2))
     else:
-        return "%iG" % (size / (1024 ** 3))
+        return "%iG" % (size / (1024**3))
 
 
 class DirectoryLister(resource.Resource):
