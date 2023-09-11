@@ -261,7 +261,7 @@ class Options(dict):
             if not args:
                 args = [self.defaultSubCommand]
             sub, rest = args[0], args[1:]
-            for (cmd, short, parser, doc) in self.subCommands:
+            for cmd, short, parser, doc in self.subCommands:
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
                     self.subOptions = parser()
@@ -488,7 +488,7 @@ class Options(dict):
 
         if hasattr(self, "subCommands"):
             cmdDicts = []
-            for (cmd, short, parser, desc) in self.subCommands:
+            for cmd, short, parser, desc in self.subCommands:
                 cmdDicts.append(
                     {
                         "long": cmd,
