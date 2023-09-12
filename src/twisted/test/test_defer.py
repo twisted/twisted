@@ -42,6 +42,7 @@ from typing import (
 from hamcrest import assert_that, empty, equal_to
 from hypothesis import given
 from hypothesis.strategies import integers
+from typing_extensions import assert_type
 
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -66,7 +67,7 @@ from twisted.trial import unittest
 
 
 def ensuringDeferred(
-    f: Callable[..., Coroutine[Deferred[_T], Any, _T]]
+    f: Callable[..., Coroutine[Deferred[Any], Any, _T]]
 ) -> Callable[..., Deferred[_T]]:
     @functools.wraps(f)
     def wrapper(*args: object, **kwargs: object) -> Deferred[_T]:
@@ -846,6 +847,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         results: List[int] = []
         errors: List[Failure] = []
         d = defer.maybeDeferred(plusFive, 10)
+        assert_type(d, Deferred[int])
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(errors, [])
         self.assertEqual(results, [15])
@@ -929,6 +931,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return result + 1
 
         coroutineDeferred = defer.maybeDeferred(g)
+        assert_type(coroutineDeferred, Deferred[int])
         modifiedDeferred = coroutineDeferred.addCallback(typedCallback)
         self.assertEqual(self.successResultOf(modifiedDeferred), 8)
 
@@ -2700,6 +2703,15 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         lock.release()
         self.assertFalse(lock.locked)
+
+        def returnsInt() -> Deferred[int]:
+            return defer.succeed(2)
+
+        async def returnsCoroInt() -> int:
+            return 1
+
+        assert_type(lock.run(returnsInt), Deferred[int])
+        assert_type(lock.run(returnsCoroInt), Deferred[int])
 
     def test_cancelLockAfterAcquired(self) -> None:
         """
