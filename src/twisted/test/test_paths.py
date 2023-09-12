@@ -360,7 +360,7 @@ class TrackingFilePath(filepath.FilePath[AnyStr]):
         self.trackingList: List[
             Union[TrackingFilePath[str], TrackingFilePath[bytes]]
         ] = trackingList
-        self.openedFiles: List[IO] = []
+        self.openedFiles: List[IO[bytes]] = []
 
     def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
