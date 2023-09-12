@@ -2442,9 +2442,30 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def rawDataReceived(self, data):
-        # If we're currently handling a request, we'll be in raw mode. Buffer
-        # any data.
+    def rawDataReceived(self, data: bytes) -> None:
+        """
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
+
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
+        """
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
