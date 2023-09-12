@@ -5,7 +5,7 @@
 """
 Static resources for L{twisted.web}.
 """
-
+from __future__ import annotations
 
 import errno
 import itertools
@@ -14,12 +14,13 @@ import os
 import time
 import warnings
 from html import escape
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Sequence
 from urllib.parse import quote, unquote
 
 from zope.interface import implementer
 
 from incremental import Version
+from typing_extensions import Literal
 
 from twisted.internet import abstract, interfaces
 from twisted.python import components, filepath, log
@@ -165,7 +166,7 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
     return type, enc
 
 
-class File(resource.Resource, filepath.FilePath):
+class File(resource.Resource, filepath.FilePath[str]):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -206,8 +207,13 @@ class File(resource.Resource, filepath.FilePath):
     type = None
 
     def __init__(
-        self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0
-    ):
+        self,
+        path: str,
+        defaultType: str = "text/html",
+        ignoredExts: Sequence[str] = (),
+        registry: Registry | None = None,
+        allowExt: Literal[0] = 0,
+    ) -> None:
         """
         Create a file with the given path.
 

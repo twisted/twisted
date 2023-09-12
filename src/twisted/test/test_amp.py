@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-from typing import Dict, Type
+from typing import Dict, Type, TypeVar
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -2528,7 +2528,11 @@ class NoNetworkProtocol(amp.AMP):
     MagicSchemaCommand.responder(lambda s, weird: {})
 
 
-class MyBox(dict):
+_KT = TypeVar("_KT")
+_VT = TypeVar("_VT")
+
+
+class MyBox(Dict[_KT, _VT]):
     """
     A unique dict subclass.
     """

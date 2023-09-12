@@ -302,11 +302,11 @@ warn_return_any = true
 warn_unreachable = true
 warn_unused_ignores = true
 disallow_untyped_decorators = true
+disallow_any_generics = true
 # These are too strict for us at the moment
 disallow_any_decorated = false
 disallow_any_explicit = false
 disallow_any_expr = false
-disallow_any_generics = false
 disallow_any_unimported = false
 disallow_subclassing_any = false
 disallow_untyped_calls = false

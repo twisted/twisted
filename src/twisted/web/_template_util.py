@@ -856,7 +856,7 @@ class XMLFile:
     An L{ITemplateLoader} that loads and parses XML from a file.
     """
 
-    def __init__(self, path: FilePath):
+    def __init__(self, path: FilePath[Any]):
         """
         Run the parser on a file.
 
@@ -873,7 +873,7 @@ class XMLFile:
         self._loadedTemplate: Optional[List["Flattenable"]] = None
         """The loaded document, or L{None}, if not loaded."""
 
-        self._path: FilePath = path
+        self._path: FilePath[Any] = path
         """The file that is being loaded from."""
 
     def _loadDoc(self) -> List["Flattenable"]:
