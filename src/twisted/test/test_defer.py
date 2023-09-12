@@ -931,7 +931,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return result + 1
 
         coroutineDeferred = defer.maybeDeferred(g)
-        assert_type(coroutineDeferred, Deferred[int])
+        assert_type(coroutineDeferred, Deferred[Any])
         modifiedDeferred = coroutineDeferred.addCallback(typedCallback)
         self.assertEqual(self.successResultOf(modifiedDeferred), 8)
 
