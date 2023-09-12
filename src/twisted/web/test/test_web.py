@@ -1899,3 +1899,32 @@ class TestRFC9112Section932(unittest.TestCase):
         # second request is dispatched right away.
         qr.dispatchedRequests[0].finish()
         self.assertEqual(len(qr.dispatchedRequests), 2)
+
+    def test_multipleRequestsInDifferentSegments(self) -> None:
+        """
+        Twisted MUST NOT respond to a second HTTP/1.1 request while the first
+        is still pending, even if the second request is received in a separate
+        TCP package.
+        """
+        qr = QueueResource()
+        site = Site(qr)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        raw_data = (
+            b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+            b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
+        )
+        # Just go byte by byte for the extreme case in which each byte is
+        # received in a separate TCP package.
+        for chunk in iterbytes(raw_data):
+            proto.dataReceived(chunk)
+        # The TCP data contains 2 requests,
+        # but only 1 request was dispatched,
+        # as the first request was not yet finalized.
+        self.assertEqual(len(qr.dispatchedRequests), 1)
+        # The first request is finalized and the
+        # second request is dispatched right away.
+        qr.dispatchedRequests[0].finish()
+        self.assertEqual(len(qr.dispatchedRequests), 2)
+
