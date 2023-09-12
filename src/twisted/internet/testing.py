@@ -5,17 +5,16 @@
 """
 Assorted functionality which is commonly useful when writing unit tests.
 """
+from __future__ import annotations
 
-
-from collections.abc import Sequence
 from io import BytesIO
 from socket import AF_INET, AF_INET6
-from typing import Callable
+from typing import Callable, Iterator, Sequence, overload
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, Self
 
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
@@ -37,9 +36,10 @@ from twisted.internet.interfaces import (
     ITransport,
 )
 from twisted.internet.task import Clock
-from twisted.logger import ILogObserver
+from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
 from twisted.python import failure
+from twisted.trial.unittest import TestCase
 
 __all__ = [
     "AccumulatingProtocol",
@@ -910,7 +910,7 @@ def waitUntilAllDisconnected(reactor, protocols):
 
 
 @implementer(ILogObserver)
-class EventLoggingObserver(Sequence):
+class EventLoggingObserver(Sequence[LogEvent]):
     """
     L{ILogObserver} That stores its events in a list for later inspection.
     This class is similar to L{LimitedHistoryLogObserver} save that the
@@ -921,26 +921,34 @@ class EventLoggingObserver(Sequence):
     @type _events: L{list}
     """
 
-    def __init__(self):
-        self._events = []
+    def __init__(self) -> None:
+        self._events: list[LogEvent] = []
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._events)
 
-    def __getitem__(self, index):
+    @overload
+    def __getitem__(self, index: int) -> LogEvent:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[LogEvent]:
+        ...
+
+    def __getitem__(self, index: int | slice) -> LogEvent | Sequence[LogEvent]:
         return self._events[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[LogEvent]:
         return iter(self._events)
 
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         @see: L{ILogObserver}
         """
         self._events.append(event)
 
     @classmethod
-    def createWithCleanup(cls, testInstance, publisher):
+    def createWithCleanup(cls, testInstance: TestCase, publisher: LogPublisher) -> Self:
         """
         Create an L{EventLoggingObserver} instance that observes the provided
         publisher and will be cleaned up with addCleanup().

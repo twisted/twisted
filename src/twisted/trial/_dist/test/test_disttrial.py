@@ -759,7 +759,7 @@ class StartedWorkerPoolBroken:
     always raise an exception.
     """
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         raise WorkerPoolBroken()
 
     async def join(self) -> None:
@@ -821,11 +821,11 @@ class StartedLocalWorkerPool:
     A started L{LocalWorkerPool}.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[str]
     workers: List[Worker]
-    _stopped: Deferred
+    _stopped: Deferred[None]
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         """
         Run the action with each local worker.
         """

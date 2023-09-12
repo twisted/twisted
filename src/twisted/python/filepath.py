@@ -43,6 +43,7 @@ from stat import (
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     AnyStr,
     Callable,
     Dict,
@@ -79,7 +80,7 @@ from twisted.python.win32 import (
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
-_Self = TypeVar("_Self", bound="AbstractFilePath")
+_Self = TypeVar("_Self", bound="AbstractFilePath[Any]")
 
 
 randomBytes = os.urandom
