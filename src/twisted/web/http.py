@@ -2250,9 +2250,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        assert (
-            not self._handlingRequest
-        ), "when handling a request, we MUST be in raw mode to buffer the incoming data without parsing it"
         self.resetTimeout()
 
         self._receivedHeaderSize += len(line)
