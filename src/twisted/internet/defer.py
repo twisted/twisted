@@ -1437,7 +1437,9 @@ if TYPE_CHECKING:
     DeferredList = _DeferredList
 
 
-class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef]
+class DeferredList(  # type: ignore[no-redef] # noqa:F811
+    Deferred[_DeferredListResultListT]
+):
     """
     L{DeferredList} is a tool for collecting the results of several Deferreds.
 
