@@ -1927,4 +1927,3 @@ class TestRFC9112Section932(unittest.TestCase):
         # second request is dispatched right away.
         qr.dispatchedRequests[0].finish()
         self.assertEqual(len(qr.dispatchedRequests), 2)
-
