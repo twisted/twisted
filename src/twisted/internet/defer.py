@@ -161,7 +161,7 @@ def maybeDeferred(
 
 @overload
 def maybeDeferred(
-    f: Callable[_P, Coroutine[Deferred[_T], object, _T]],
+    f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> "Deferred[_T]":
@@ -176,7 +176,7 @@ def maybeDeferred(
 
 
 def maybeDeferred(
-    f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[_T], object, _T], _T]],
+    f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[Any], Any, _T], _T]],
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> "Deferred[_T]":
@@ -1327,8 +1327,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
 def ensureDeferred(
     coro: Union[
-        Coroutine[Deferred[_T], Any, _T],
-        Generator[Deferred[_T], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
+        Generator[Deferred[Any], Any, _T],
         Deferred[_T],
     ]
 ) -> Deferred[_T]:
@@ -1925,8 +1925,8 @@ class _CancellationStatus(Generic[_SelfResultT]):
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[object], object, _T],
-        Coroutine[Deferred[object], object, _T],
+        Generator[Deferred[Any], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
     ],
     status: _CancellationStatus[_T],
     context: _Context,
@@ -2145,7 +2145,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
 
 
 def inlineCallbacks(
-    f: Callable[_P, Generator[Deferred[object], object, _T]]
+    f: Callable[_P, Generator[Deferred[Any], Any, _T]]
 ) -> Callable[_P, Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
@@ -2250,7 +2250,7 @@ class _ConcurrencyPrimitive(ABC):
     def run(
         self: Self,
         /,
-        f: Callable[_P, Coroutine[Deferred[_T], object, _T]],
+        f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> Deferred[_T]:
@@ -2265,7 +2265,7 @@ class _ConcurrencyPrimitive(ABC):
     def run(
         self: Self,
         /,
-        f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[_T], object, _T], _T]],
+        f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[Any], Any, _T], _T]],
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> Deferred[_T]:
