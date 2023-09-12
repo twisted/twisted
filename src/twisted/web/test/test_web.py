@@ -19,6 +19,7 @@ from twisted.internet.task import Clock
 from twisted.internet.testing import EventLoggingObserver, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python import failure, reflect
+from twisted.python.compat import iterbytes
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.web import error, http, iweb, resource, server
@@ -1927,4 +1928,3 @@ class TestRFC9112Section932(unittest.TestCase):
         # second request is dispatched right away.
         qr.dispatchedRequests[0].finish()
         self.assertEqual(len(qr.dispatchedRequests), 2)
-
