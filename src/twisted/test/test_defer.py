@@ -920,6 +920,20 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         async def f() -> int:
             return 7
 
+        coroutineDeferred = defer.maybeDeferred(f)
+        assert_type(coroutineDeferred, Deferred[int])
+        self.assertEqual(self.successResultOf(coroutineDeferred), 7)
+
+    def test_maybeDeferredCoroutineSuccessIndirect(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has the same result as the coroutine returned
+        by the function.
+        """
+
+        async def f() -> int:
+            return 7
+
         # Demonstrate that the function itself does not need to be a coroutine
         # function to trigger the coroutine-handling behavior.
         def g() -> Coroutine[Deferred[int], Any, Any]:
