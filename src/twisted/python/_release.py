@@ -13,16 +13,12 @@ which must run on multiple platforms (eg the setup.py script).
 """
 
 import os
-import sys
 from subprocess import STDOUT, CalledProcessError, check_output
 from typing import Dict
 
 from zope.interface import Interface, implementer
 
 from twisted.python.compat import execfile
-
-# Types of newsfragments.
-NEWSFRAGMENT_TYPES = ["doc", "bugfix", "misc", "feature", "removal"]
 
 
 def runCommand(args, **kwargs):
@@ -283,98 +279,3 @@ class NotWorkingDirectory(Exception):
     Raised when a directory does not appear to be a repository directory of a
     supported VCS.
     """
-
-
-class CheckNewsfragmentScript:
-    """
-    A thing for checking whether a checkout has a newsfragment.
-    """
-
-    def __init__(self, _print):
-        self._print = _print
-
-    def main(self, args):
-        """
-        Run the script.
-
-        @type args: L{list} of L{str}
-        @param args: The command line arguments to process. This must contain
-            one string: the path to the root of the Twisted checkout.
-        """
-        if len(args) != 1:
-            sys.exit("Must specify one argument: the Twisted checkout")
-
-        encoding = sys.stdout.encoding or "ascii"
-        location = os.path.abspath(args[0])
-
-        branch = (
-            runCommand([b"git", b"rev-parse", b"--abbrev-ref", "HEAD"], cwd=location)
-            .decode(encoding)
-            .strip()
-        )
-
-        # diff-filter=d to exclude deleted newsfiles (which will happen on the
-        # release branch)
-        r = (
-            runCommand(
-                [
-                    b"git",
-                    b"diff",
-                    b"--name-only",
-                    b"origin/trunk...",
-                    b"--diff-filter=d",
-                ],
-                cwd=location,
-            )
-            .decode(encoding)
-            .strip()
-        )
-
-        if not r:
-            self._print("On trunk or no diffs from trunk; no need to look at this.")
-            sys.exit(0)
-
-        files = r.strip().split(os.linesep)
-
-        self._print("Looking at these files:")
-        for change in files:
-            self._print(change)
-        self._print("----")
-
-        if len(files) == 1:
-            if files[0] == os.sep.join(["docs", "fun", "Twisted.Quotes"]):
-                self._print("Quotes change only; no newsfragment needed.")
-                sys.exit(0)
-
-        newsfragments = []
-
-        for change in files:
-            if os.sep + "newsfragments" + os.sep in change:
-                if "." in change and change.rsplit(".", 1)[1] in NEWSFRAGMENT_TYPES:
-                    newsfragments.append(change)
-
-        if branch.startswith("release-"):
-            if newsfragments:
-                self._print("No newsfragments should be on the release branch.")
-                sys.exit(1)
-            else:
-                self._print("Release branch with no newsfragments, all good.")
-                sys.exit(0)
-
-        if os.environ.get("GITHUB_HEAD_REF", "") == "pre-commit-ci-update-config":
-            # The run was triggered by pre-commit.ci.
-            if newsfragments:
-                self._print(
-                    "No newsfragments should be present on an autoupdated branch."
-                )
-                sys.exit(1)
-            else:
-                self._print("Autoupdated branch with no newsfragments, all good.")
-                sys.exit(0)
-
-        for change in newsfragments:
-            self._print("Found " + change)
-            sys.exit(0)
-
-        self._print("No newsfragment found. Have you committed it?")
-        sys.exit(1)

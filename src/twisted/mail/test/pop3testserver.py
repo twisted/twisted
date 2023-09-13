@@ -216,7 +216,6 @@ def printMessage(msg):
 
 
 def processArg(arg):
-
     if arg.lower() == "no_ssl":
         global SSL_SUPPORT
         SSL_SUPPORT = False
@@ -282,7 +281,6 @@ def processArg(arg):
 
 
 def main():
-
     if len(sys.argv) < 2:
         printMessage("POP3 with no messages")
     else:

@@ -74,7 +74,6 @@ class DomainQueuer:
 
 
 class RelayerMixin:
-
     # XXX - This is -totally- bogus
     # It opens about a -hundred- -billion- files
     # and -leaves- them open!

@@ -7,6 +7,7 @@ Test cases for L{twisted.internet.defer}.
 
 from __future__ import annotations
 
+import contextvars
 import functools
 import gc
 import re
@@ -22,7 +23,6 @@ from asyncio import (
     new_event_loop as _new_event_loop,
 )
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -64,14 +64,6 @@ from twisted.python import log
 from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
-if TYPE_CHECKING:
-    import contextvars
-else:
-    try:
-        import contextvars
-    except ImportError:
-        contextvars = None
 
 
 def ensuringDeferred(
@@ -329,20 +321,20 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         )
 
     def testEmptyDeferredList(self) -> None:
-        result: List[_DeferredListResultListT] = []
+        result: List[_DeferredListResultListT[None]] = []
 
         def cb(
-            resultList: _DeferredListResultListT,
-            result: List[_DeferredListResultListT] = result,
+            resultList: _DeferredListResultListT[None],
+            result: List[_DeferredListResultListT[None]] = result,
         ) -> None:
             result.append(resultList)
 
-        dl1: Deferred[_DeferredListResultListT] = DeferredList([])
+        dl1: Deferred[_DeferredListResultListT[None]] = DeferredList([])
         dl1.addCallbacks(cb)
         self.assertEqual(result, [[]])
 
         result[:] = []
-        dl2: Deferred[_DeferredListSingleResultT] = DeferredList(
+        dl2: Deferred[_DeferredListSingleResultT[None]] = DeferredList(
             [], fireOnOneCallback=True
         )
         dl2.addCallbacks(cb)
@@ -396,7 +388,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         errorTrap: List[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        resultLists: List[_DeferredListResultListT] = []
+        resultLists: List[_DeferredListResultListT[None]] = []
         dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
@@ -404,7 +396,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(1, len(resultLists))
         firstResult = resultLists[0][0]
         assert firstResult is not None
-        self.assertEqual("Bang", firstResult[1].value.args[0])
+        self.assertEqual("Bang", firstResult[1].value.args[0])  # type: ignore[attr-defined]
 
     def testDeferredListConsumeErrors(self) -> None:
         d1: Deferred[None] = Deferred()
@@ -413,7 +405,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         errorTrap: List[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        resultLists: List[_DeferredListResultListT] = []
+        resultLists: List[_DeferredListResultListT[None]] = []
         dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
@@ -421,7 +413,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(1, len(resultLists))
         firstResult = resultLists[0][0]
         assert firstResult is not None
-        self.assertEqual("Bang", firstResult[1].value.args[0])
+        self.assertEqual("Bang", firstResult[1].value.args[0])  # type: ignore[attr-defined]
 
     def testDeferredListFireOnOneErrorWithAlreadyFiredDeferreds(self) -> None:
         # Create some deferreds, and errback one
@@ -482,7 +474,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertTrue(result[0][0])
         self.assertEqual(result[0][1], "Callback Result")
         self.assertFalse(result[1][0])
-        self.assertTrue(result[1][1].check(defer.CancelledError))
+        self.assertTrue(result[1][1].check(defer.CancelledError))  # type: ignore[attr-defined]
 
     def test_cancelDeferredListWithFireOnOneCallback(self) -> None:
         """
@@ -956,7 +948,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         # Demonstrate that the function itself does not need to be a coroutine
         # function to trigger the coroutine-handling behavior.
-        def g() -> Coroutine:
+        def g() -> Coroutine[None, None, None]:
             return f()
 
         assert_that(
@@ -1950,7 +1942,7 @@ def _setupRaceState(numDeferreds: int) -> tuple[list[int], list[Deferred[object]
     ds: list[Deferred[object]] = []
     for n in range(numDeferreds):
 
-        def cancel(d: Deferred, n: int = n) -> None:
+        def cancel(d: Deferred[object], n: int = n) -> None:
             cancelledState[n] += 1
 
         ds.append(Deferred(canceller=cancel))
@@ -2726,7 +2718,7 @@ class DeferredListEmptyTests(unittest.SynchronousTestCase):
 
     def testDeferredListEmpty(self) -> None:
         """Testing empty DeferredList."""
-        dl = DeferredList([])
+        dl: Deferred[_DeferredListResultListT[object]] = DeferredList([])
         dl.addCallback(self.cb_empty)
 
     def cb_empty(self, res: List[Tuple[bool, object]]) -> None:
@@ -3666,7 +3658,7 @@ class TimeoutErrorTests(unittest.TestCase, ImmediateFailureMixin):
         """
         L{twisted.internet.defer.timeout} is deprecated.
         """
-        deferred: Deferred[None] = Deferred()
+        deferred: Deferred[object] = Deferred()
         defer.timeout(deferred)
         self.assertFailure(deferred, defer.TimeoutError)
         warningsShown = self.flushWarnings([self.test_deprecatedTimeout])
@@ -3810,9 +3802,6 @@ class DeferredFutureAdapterTests(unittest.TestCase):
 
 
 class CoroutineContextVarsTests(unittest.TestCase):
-    if contextvars is None:
-        skip = "contextvars is not available"  # type: ignore[unreachable]
-
     def test_withInlineCallbacks(self) -> None:
         """
         When an inlineCallbacks function is called, the context is taken from
