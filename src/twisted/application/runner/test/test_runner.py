@@ -36,7 +36,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
     Tests for L{Runner}.
     """
 
-    def filePath(self, content: Optional[bytes] = None) -> FilePath:
+    def filePath(self, content: Optional[bytes] = None) -> FilePath[str]:
         filePath = FilePath(self.mktemp())
         if content is not None:
             filePath.setContent(content)
@@ -233,7 +233,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 observer: ILogObserver,
                 predicates: Iterable[LogLevelFilterPredicate],
                 negativeObserver: ILogObserver = cast(ILogObserver, lambda event: None),
-            ):
+            ) -> None:
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = list(predicates)
                 FilteringLogObserver.__init__(

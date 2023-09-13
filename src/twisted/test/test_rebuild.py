@@ -1,10 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
 
 import os
 import sys
 import types
+
+from typing_extensions import NoReturn
 
 from twisted.python import rebuild
 from twisted.trial.unittest import TestCase
@@ -37,10 +40,10 @@ class HashRaisesRuntimeError:
     @ivar hashCalled: C{bool} set to True when __hash__ is called.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.hashCalled = False
 
-    def __hash__(self):
+    def __hash__(self) -> NoReturn:
         self.hashCalled = True
         raise RuntimeError("not a TypeError!")
 
@@ -54,7 +57,7 @@ class RebuildTests(TestCase):
     Simple testcase for rebuilding, to at least exercise the code.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.libPath = self.mktemp()
         os.mkdir(self.libPath)
         self.fakelibPath = os.path.join(self.libPath, "twisted_rebuild_fakelib")
@@ -62,10 +65,10 @@ class RebuildTests(TestCase):
         open(os.path.join(self.fakelibPath, "__init__.py"), "w").close()
         sys.path.insert(0, self.libPath)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         sys.path.remove(self.libPath)
 
-    def test_FileRebuild(self):
+    def test_FileRebuild(self) -> None:
         import shutil
         import time
 
@@ -96,7 +99,7 @@ class RebuildTests(TestCase):
         self.assertEqual(i.a(), "d")
         self.assertEqual(a.a(), "b")
 
-    def test_Rebuild(self):
+    def test_Rebuild(self) -> None:
         """
         Rebuilding an unchanged module.
         """
@@ -113,7 +116,7 @@ class RebuildTests(TestCase):
 
         self.assertEqual(f, crash_test_dummy.foo)
 
-    def test_ComponentInteraction(self):
+    def test_ComponentInteraction(self) -> None:
         x = crash_test_dummy.XComponent()
         x.setAdapter(crash_test_dummy.IX, crash_test_dummy.XA)
         x.getComponent(crash_test_dummy.IX)
@@ -135,13 +138,13 @@ class RebuildTests(TestCase):
             crash_test_dummy.IX,
         )
 
-    def test_UpdateInstance(self):
+    def test_UpdateInstance(self) -> None:
         global Foo, Buz
 
         b = Buz()
 
         class Foo:
-            def foo(self):
+            def foo(self) -> None:
                 """
                 Dummy method
                 """
@@ -153,13 +156,13 @@ class RebuildTests(TestCase):
         assert hasattr(b, "foo"), "Missing method on rebuilt instance"
         assert hasattr(b, "x"), "Missing class attribute on rebuilt instance"
 
-    def test_BananaInteraction(self):
+    def test_BananaInteraction(self) -> None:
         from twisted.python import rebuild
         from twisted.spread import banana
 
         rebuild.latestClass(banana.Banana)
 
-    def test_hashException(self):
+    def test_hashException(self) -> None:
         """
         Rebuilding something that has a __hash__ that raises a non-TypeError
         shouldn't cause rebuild to die.
@@ -167,7 +170,7 @@ class RebuildTests(TestCase):
         global unhashableObject
         unhashableObject = HashRaisesRuntimeError()
 
-        def _cleanup():
+        def _cleanup() -> None:
             global unhashableObject
             unhashableObject = None
 
@@ -175,7 +178,7 @@ class RebuildTests(TestCase):
         rebuild.rebuild(rebuild)
         self.assertTrue(unhashableObject.hashCalled)
 
-    def test_Sensitive(self):
+    def test_Sensitive(self) -> None:
         """
         L{twisted.python.rebuild.Sensitive}
         """
@@ -183,7 +186,7 @@ class RebuildTests(TestCase):
         from twisted.python.rebuild import Sensitive
 
         class TestSensitive(Sensitive):
-            def test_method(self):
+            def test_method(self) -> None:
                 """
                 Dummy method
                 """
@@ -210,7 +213,7 @@ class RebuildTests(TestCase):
         # Test a class
         self.assertEqual(TestSensitive, testSensitive.latestVersionOf(TestSensitive))
 
-        def myFunction():
+        def myFunction() -> None:
             """
             Dummy method
             """
@@ -224,15 +227,15 @@ class NewStyleTests(TestCase):
     Tests for rebuilding new-style classes of various sorts.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.m = types.ModuleType("whipping")
         sys.modules["whipping"] = self.m
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         del sys.modules["whipping"]
         del self.m
 
-    def test_slots(self):
+    def test_slots(self) -> None:
         """
         Try to rebuild a new style class with slots defined.
         """
@@ -246,7 +249,7 @@ class NewStyleTests(TestCase):
         self.assertEqual(inst.a, 7)
         self.assertIs(type(inst), self.m.SlottedClass)
 
-    def test_typeSubclass(self):
+    def test_typeSubclass(self) -> None:
         """
         Try to rebuild a base type subclass.
         """

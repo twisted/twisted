@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import AnyStr, Callable, Optional, Tuple
+from typing import AnyStr, Callable, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -753,7 +753,7 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
-_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 @implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
@@ -835,7 +835,7 @@ class Request:
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -1098,7 +1098,7 @@ class Request:
         """
         return self.received_cookies.get(key)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 
@@ -2431,14 +2431,38 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def dataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
-        Data was received from the network.  Process it.
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
+
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
         """
-        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2450,9 +2474,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
 
-    def rawDataReceived(self, data):
         self.resetTimeout()
 
         try:

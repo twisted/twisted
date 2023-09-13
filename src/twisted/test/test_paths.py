@@ -360,7 +360,7 @@ class TrackingFilePath(filepath.FilePath[AnyStr]):
         self.trackingList: List[
             Union[TrackingFilePath[str], TrackingFilePath[bytes]]
         ] = trackingList
-        self.openedFiles: List[IO] = []
+        self.openedFiles: List[IO[bytes]] = []
 
     def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
@@ -1259,7 +1259,6 @@ class FilePathTests(AbstractFilePathTests):
         # super append mode should let us read and write and also position the
         # cursor at the end of the file, without erasing everything.
         with appender.open("a+") as f:
-
             # The order of these lines may seem surprising, but it is
             # necessary. The cursor is not at the end of the file until after
             # the first write.
@@ -1516,6 +1515,7 @@ class FilePathTests(AbstractFilePathTests):
         Verify that the right numbers come back from the right accessor methods
         for file inode/device/nlinks/uid/gid (in a POSIX environment)
         """
+
         # specify fake statinfo information
         class FakeStat:
             st_ino = 200

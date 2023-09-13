@@ -482,7 +482,6 @@ class HTTPClientParser(HTTPParser):
                 b"transfer-encoding"
             )
             if transferEncodingHeaders:
-
                 # This could be a KeyError.  However, that would mean we do not
                 # know how to decode the response body, so failing the request
                 # is as good a behavior as any.  Perhaps someday we will want
@@ -569,7 +568,7 @@ class HTTPClientParser(HTTPParser):
 
 
 _VALID_METHOD = re.compile(
-    br"\A[%s]+\Z"
+    rb"\A[%s]+\Z"
     % (
         bytes().join(
             (
@@ -620,7 +619,7 @@ def _ensureValidMethod(method):
     raise ValueError(f"Invalid method {method!r}")
 
 
-_VALID_URI = re.compile(br"\A[\x21-\x7e]+\Z")
+_VALID_URI = re.compile(rb"\A[\x21-\x7e]+\Z")
 
 
 def _ensureValidURI(uri):

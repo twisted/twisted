@@ -26,7 +26,6 @@ from twisted.python.filepath import FilePath
 
 
 class ClientOptions(options.ConchOptions):
-
     synopsis = """Usage:   cftp [options] [user@]host
          cftp [options] [user@]host[:dir[/]]
          cftp [options] [user@]host[:file [localfile]]
@@ -140,7 +139,6 @@ class FileWrapper:
 
 
 class StdioClient(basic.LineReceiver):
-
     _pwd = pwd
 
     ps = "cftp> "
@@ -894,7 +892,6 @@ class SSHConnection(connection.SSHConnection):
 
 
 class SSHSession(channel.SSHChannel):
-
     name: bytes = b"session"
     stderr: TextIO = sys.stderr
 

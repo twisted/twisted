@@ -15,6 +15,7 @@ import time
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     AnyStr,
     Dict,
     Generic,
@@ -45,7 +46,7 @@ ZIP_PATH_SEP = "/"  # In zipfiles, "/" is universally used as the
 
 _ArchiveStr = TypeVar("_ArchiveStr", bytes, str)
 _ZipStr = TypeVar("_ZipStr", bytes, str)
-_ZipSelf = TypeVar("_ZipSelf", bound="ZipPath")
+_ZipSelf = TypeVar("_ZipSelf", bound="ZipPath[Any, Any]")
 
 
 @comparable

@@ -250,7 +250,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         transport.
         """
         try:
-            bytes = self._tlsConnection.bio_read(2 ** 15)
+            bytes = self._tlsConnection.bio_read(2**15)
         except WantReadError:
             # There may be nothing in the send BIO right now.
             pass
@@ -271,7 +271,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # there is no guarantee that a single recv call will do it all.
         while not self._lostTLSConnection:
             try:
-                bytes = self._tlsConnection.recv(2 ** 15)
+                bytes = self._tlsConnection.recv(2**15)
             except WantReadError:
                 # The newly received bytes might not have been enough to produce
                 # any application data.
@@ -507,7 +507,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return
 
         # A TLS payload is 16kB max
-        bufferSize = 2 ** 14
+        bufferSize = 2**14
 
         # How far into the input we've gotten so far
         alreadySent = 0
