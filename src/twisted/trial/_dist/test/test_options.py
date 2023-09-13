@@ -18,13 +18,13 @@ class WorkerOptionsTests(TestCase):
     Tests for L{WorkerOptions}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Build an L{WorkerOptions} object to be used in the tests.
         """
         self.options = WorkerOptions()
 
-    def test_standardOptions(self):
+    def test_standardOptions(self) -> None:
         """
         L{WorkerOptions} supports a subset of standard options supported by
         trial.
@@ -37,7 +37,7 @@ class WorkerOptionsTests(TestCase):
         self.assertEqual(2000, sys.getrecursionlimit())
         self.assertFalse(gc.isenabled())
 
-    def test_coverage(self):
+    def test_coverage(self) -> None:
         """
         L{WorkerOptions.coverdir} returns the C{coverage} child directory of
         the current directory to be used for storing coverage data.

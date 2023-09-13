@@ -161,7 +161,7 @@ def posixGetLinkLocalIPv6Addresses():
     IPv6 addresses available on the system, as reported by I{getifaddrs(3)}.
     """
     retList = []
-    for (interface, family, address) in _interfaces():
+    for interface, family, address in _interfaces():
         interface = nativeString(interface)
         address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith("fe80:"):

@@ -110,7 +110,7 @@ def objectSaveHook(pythonObject: object) -> JSONDict:
         supports, a specially-formatted dictionary; otherwise, a marker
         dictionary indicating that it could not be serialized.
     """
-    for (predicate, uuid, saver, loader) in classInfo:
+    for predicate, uuid, saver, loader in classInfo:
         if predicate(pythonObject):
             result = saver(pythonObject)
             result["__class_uuid__"] = str(uuid)

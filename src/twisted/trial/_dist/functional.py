@@ -114,7 +114,7 @@ def countingCalls(f: Callable[[int], _A]) -> Callable[[], _A]:
     """
     counter = 0
 
-    def g():
+    def g() -> _A:
         nonlocal counter
         try:
             result = f(counter)

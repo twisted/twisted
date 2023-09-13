@@ -1,1 +1,0 @@
-reactor.spawnProcess() now uses posix_spawnp when possible, making it much more efficient
