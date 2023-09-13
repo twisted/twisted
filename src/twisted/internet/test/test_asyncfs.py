@@ -22,7 +22,7 @@ log = Logger()
 observers = [textFileLogObserver(sys.stdout)]
 globalLogBeginner.beginLoggingTo(observers)
 
-EIGHT_MEG_OF_BLAH = "blah" * (2 ** 21)  # needed to overwhelm RAM buffers
+EIGHT_MEG_OF_BLAH = "blah" * (2**21)  # needed to overwhelm RAM buffers
 
 
 @implementer(IConsumer)

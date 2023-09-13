@@ -2760,7 +2760,7 @@ class _ISupportsExitSignalCapturing(Interface):
 
 
 DEFAULT_CHUNK_SIZE = 4096
-DEFAULT_BUFFER_MAX = 2 ** 22  # 4 megabytes
+DEFAULT_BUFFER_MAX = 2**22  # 4 megabytes
 
 
 class IAsyncReader(Interface):
