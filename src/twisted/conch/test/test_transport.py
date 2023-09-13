@@ -12,7 +12,7 @@ import string
 import struct
 import types
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Optional, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
@@ -26,11 +26,10 @@ from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
 from twisted.trial.unittest import TestCase
 
-pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
 dependencySkip: Optional[str]
-if pyasn1 and cryptography:
+if cryptography:
     dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
     from cryptography.hazmat.backends import default_backend
@@ -42,9 +41,7 @@ if pyasn1 and cryptography:
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
-    if not pyasn1:
-        dependencySkip = "Cannot run without PyASN1"
-    elif not cryptography:
+    if not cryptography:
         dependencySkip = "can't run without cryptography"
     X25519_SUPPORTED = False
 
@@ -292,7 +289,7 @@ class MockFactory(factory.SSHFactory):
             b"ssh-dsa": keys.Key.fromString(keydata.privateDSA_openssh),
         }
 
-    def getPrimes(self):
+    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
         """
         Diffie-Hellman primes that can be used for key exchange algorithms
         that use group exchange to establish a prime / generator group.
@@ -307,7 +304,7 @@ class MockFactory(factory.SSHFactory):
         # tests.
         # See OpenSSHFactory.getPrimes.
         group14 = _kex.getDHGeneratorAndPrime(b"diffie-hellman-group14-sha1")
-        return {2048: (group14,), 4096: ((5, 7),)}
+        return {2048: [group14], 4096: [(5, 7)]}
 
 
 class MockOldFactoryPublicKeys(MockFactory):

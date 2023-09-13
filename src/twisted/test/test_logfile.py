@@ -65,7 +65,6 @@ class LogFileTests(TestCase):
         with contextlib.closing(
             logfile.LogFile(self.name, self.dir, rotateLength=10)
         ) as log:
-
             # test automatic rotation
             log.write("123")
             log.write("4567890")

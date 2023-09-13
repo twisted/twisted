@@ -15,7 +15,7 @@ class ResolverChainTests(TestCase):
     Tests for L{twisted.names.resolve.ResolverChain}
     """
 
-    def test_emptyResolversList(self):
+    def test_emptyResolversList(self) -> None:
         """
         L{ResolverChain._lookup} returns a L{DomainError} failure if
         its C{resolvers} list is empty.
@@ -25,7 +25,7 @@ class ResolverChainTests(TestCase):
         f = self.failureResultOf(d)
         self.assertIs(f.trap(DomainError), DomainError)
 
-    def test_emptyResolversListLookupAllRecords(self):
+    def test_emptyResolversListLookupAllRecords(self) -> None:
         """
         L{ResolverChain.lookupAllRecords} returns a L{DomainError}
         failure if its C{resolvers} list is empty.

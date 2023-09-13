@@ -28,7 +28,6 @@ from twisted.python.compat import ioType, networkString
 
 
 class ClientOptions(ConchOptions):
-
     synopsis = """Usage:   conch [options] host [command]
 """
     longdesc = (
@@ -373,7 +372,6 @@ class SSHConnection(connection.SSHConnection):
 
 
 class SSHSession(channel.SSHChannel):
-
     name = b"session"
 
     def channelOpen(self, foo):

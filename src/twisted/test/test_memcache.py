@@ -9,13 +9,13 @@ Test the memcache client protocol.
 from twisted.internet.defer import Deferred, DeferredList, TimeoutError, gatherResults
 from twisted.internet.error import ConnectionDone
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransportWithDisconnection
 from twisted.protocols.memcache import (
     ClientError,
     MemCacheProtocol,
     NoSuchCommand,
     ServerError,
 )
-from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.trial.unittest import TestCase
 
 

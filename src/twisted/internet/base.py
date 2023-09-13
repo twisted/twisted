@@ -45,6 +45,7 @@ from twisted.internet.interfaces import (
     IHostnameResolver,
     IProtocol,
     IReactorCore,
+    IReactorFromThreads,
     IReactorPluggableNameResolver,
     IReactorPluggableResolver,
     IReactorThreads,
@@ -58,6 +59,7 @@ from twisted.internet.protocol import ClientFactory
 from twisted.python import log, reflect
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform, seconds as runtimeSeconds
+from ._signals import SignalHandling, _WithoutSignalHandling, _WithSignalHandling
 
 if TYPE_CHECKING:
     from twisted.internet.tcp import Client
@@ -74,7 +76,6 @@ else:
 
 @implementer(IDelayedCall)
 class DelayedCall:
-
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -304,7 +305,7 @@ class ThreadedResolver:
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: str, name: str, lookupDeferred: Deferred[str]
+        self, result: Union[str, Failure], name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -335,7 +336,7 @@ class ThreadedResolver:
             timeoutDelay = 60
         userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
-            self.reactor,
+            cast(IReactorFromThreads, self.reactor),
             cast(IReactorThreads, self.reactor).getThreadPool(),
             socket.gethostbyname,
             name,
@@ -344,7 +345,9 @@ class ThreadedResolver:
             timeoutDelay, self._cleanup, name, lookupDeferred
         )
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
-        lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
+        _: Deferred[None] = lookupDeferred.addBoth(
+            self._checkTimeout, name, lookupDeferred
+        )
         return userDeferred
 
 
@@ -591,6 +594,13 @@ class ReactorBase(PluggableResolverMixin):
         register the thread it is running in as the I/O thread when it starts.
         If C{True}, registration will be done, otherwise it will not be.
     @ivar _exitSignal: See L{_ISupportsExitSignalCapturing._exitSignal}
+
+    @ivar _installSignalHandlers: A flag which indicates whether any signal
+        handlers will be installed during startup.  This includes handlers for
+        SIGCHLD to monitor child processes, and SIGINT, SIGTERM, and SIGBREAK
+
+    @ivar _signals: An object which knows how to install and uninstall the
+        reactor's signal-handling behavior.
     """
 
     _registerAsIOThread = True
@@ -599,6 +609,12 @@ class ReactorBase(PluggableResolverMixin):
     installed = False
     usingThreads = False
     _exitSignal = None
+
+    # Set to something meaningful between startRunning and shortly before run
+    # returns.  We don't know the value to be used by `run` until that method
+    # itself is called and we learn the value of installSignalHandlers.
+    # However, we can use a no-op implementation until then.
+    _signals: SignalHandling = _WithoutSignalHandling()
 
     __name__ = "twisted.internet.reactor"
 
@@ -630,34 +646,55 @@ class ReactorBase(PluggableResolverMixin):
         self.installWaker()
 
     # Signal handling pieces
-    _installSignalHandlers = False
+    _installSignalHandlers: bool = False
 
-    def _handleSignals(self) -> None:
+    def _makeSignalHandling(self, installSignalHandlers: bool) -> SignalHandling:
         """
-        Install the signal handlers for the Twisted event loop.
+        Get an appropriate signal handling object.
+
+        @param installSignalHandlers: Indicate whether to even try to do any
+            signal handling.  If C{False} then the result will be a no-op
+            implementation.
         """
-        try:
-            import signal
-        except ImportError:
-            log.msg(
-                "Warning: signal module unavailable -- "
-                "not installing signal handlers."
-            )
-            return
+        if installSignalHandlers:
+            return self._signalsFactory()
+        return _WithoutSignalHandling()
 
-        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
-            # only handle if there isn't already a handler, e.g. for Pdb.
-            signal.signal(signal.SIGINT, self.sigInt)
-        signal.signal(signal.SIGTERM, self.sigTerm)
+    def _signalsFactory(self) -> SignalHandling:
+        """
+        Get a signal handling object that implements the basic behavior of
+        stopping the reactor on SIGINT, SIGBREAK, and SIGTERM.
+        """
+        return _WithSignalHandling(
+            self.sigInt,
+            self.sigBreak,
+            self.sigTerm,
+        )
 
-        # Catch Ctrl-Break in windows
-        SIGBREAK = getattr(signal, "SIGBREAK", None)
-        if SIGBREAK is not None:
-            signal.signal(SIGBREAK, self.sigBreak)
+    def _addInternalReader(self, reader: IReadDescriptor) -> None:
+        """
+        Add a read descriptor which is part of the implementation of the
+        reactor itself.
+
+        The read descriptor will not be removed by L{IReactorFDSet.removeAll}.
+        """
+        self._internalReaders.add(reader)
+        self.addReader(reader)
+
+    def _removeInternalReader(self, reader: IReadDescriptor) -> None:
+        """
+        Remove a read descriptor which is part of the implementation of the
+        reactor itself.
+        """
+        self._internalReaders.remove(reader)
+        self.removeReader(reader)
 
     def run(self, installSignalHandlers: bool = True) -> None:
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.mainLoop()
+        try:
+            self.mainLoop()
+        finally:
+            self._signals.uninstall()
 
     def mainLoop(self) -> None:
         while self._started:
@@ -887,11 +924,15 @@ class ReactorBase(PluggableResolverMixin):
             handlers for a number of (implementation-defined) signals should be
             installed during startup.
         """
-        self._installSignalHandlers = installSignalHandlers
         if self._started:
             raise error.ReactorAlreadyRunning()
         if self._startedBefore:
             raise error.ReactorNotRestartable()
+
+        self._signals.uninstall()
+        self._installSignalHandlers = installSignalHandlers
+        self._signals = self._makeSignalHandling(installSignalHandlers)
+
         self._started = True
         self._stopped = False
         if self._registerAsIOThread:
@@ -911,7 +952,7 @@ class ReactorBase(PluggableResolverMixin):
             # (perhaps some before-startup triggers don't want there to be a
             # custom SIGCHLD handler so that they can run child processes with
             # some blocking api).
-            self._handleSignals()
+            self._signals.install()
 
     # IReactorTime
 
@@ -1017,7 +1058,7 @@ class ReactorBase(PluggableResolverMixin):
             # while we're in this loop.
             count = 0
             total = len(self.threadCallQueue)
-            for (f, a, kw) in self.threadCallQueue:
+            for f, a, kw in self.threadCallQueue:
                 try:
                     f(*a, **kw)
                 except BaseException:
@@ -1085,7 +1126,9 @@ class ReactorBase(PluggableResolverMixin):
         threadpoolShutdownID = None
 
         def _initThreads(self) -> None:
-            self.installNameResolver(_GAIResolver(self, self.getThreadPool))
+            self.installNameResolver(
+                _GAIResolver(cast(IReactorThreads, self), self.getThreadPool)
+            )
             self.usingThreads = True
 
         # `IReactorFromThreads` defines the first named argument as
@@ -1116,7 +1159,7 @@ class ReactorBase(PluggableResolverMixin):
             )
 
         def _uninstallHandler(self) -> None:
-            pass
+            self._signals.uninstall()
 
         def _stopThreadPool(self) -> None:
             """
