@@ -42,7 +42,7 @@ class AlmostService:
     the interface.
     """
 
-    def __init__(self, name: str, parent: IServiceCollection, running: bool):
+    def __init__(self, name: str, parent: IServiceCollection, running: bool) -> None:
         self.name = name
         self.parent = parent
         self.running = running

@@ -263,7 +263,7 @@ deprecatedModuleAttribute(
 
         def makeSomeFiles(pathobj, dirdict):
             pathdict = {}
-            for (key, value) in dirdict.items():
+            for key, value in dirdict.items():
                 child = pathobj.child(key)
                 if isinstance(value, bytes):
                     pathdict[key] = child
@@ -905,7 +905,6 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         )
 
     def test_deprecatedKeywordParameter(self):
-
         message = (
             "The 'foo' parameter to "
             "twisted.python.test.test_deprecate."

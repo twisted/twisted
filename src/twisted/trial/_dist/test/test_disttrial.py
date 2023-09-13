@@ -654,6 +654,7 @@ class DistTrialRunnerTests(TestCase):
         If there is an unexpected exception running the test suite then it is
         re-raised by L{DistTrialRunner.run}.
         """
+
         # Give it a broken worker pool factory.  There's no exception handling
         # for such an error in the implementation..
         class BrokenFactory(Exception):
@@ -731,7 +732,7 @@ class FunctionalTests(TestCase):
 
         assert_that(self.successResultOf(d), equal_to(42))
 
-    def test_countingCalls(self):
+    def test_countingCalls(self) -> None:
         """
         ``countingCalls`` decorates a function so that it is called with an
         increasing counter and passes the return value through.
@@ -758,7 +759,7 @@ class StartedWorkerPoolBroken:
     always raise an exception.
     """
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         raise WorkerPoolBroken()
 
     async def join(self) -> None:
@@ -820,11 +821,11 @@ class StartedLocalWorkerPool:
     A started L{LocalWorkerPool}.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[str]
     workers: List[Worker]
-    _stopped: Deferred
+    _stopped: Deferred[None]
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         """
         Run the action with each local worker.
         """

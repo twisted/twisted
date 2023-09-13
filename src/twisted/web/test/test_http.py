@@ -402,7 +402,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         self.assertFalse(transport.disconnected)
 
         # Move an absurdly long way just to prove the point.
-        clock.advance(2 ** 32)
+        clock.advance(2**32)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
 
@@ -476,7 +476,6 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
 
 
 class HTTP1_1Tests(HTTP1_0Tests):
-
     requests = (
         b"GET / HTTP/1.1\r\n"
         b"Accept: text/html\r\n"
@@ -528,7 +527,6 @@ class HTTP1_1Tests(HTTP1_0Tests):
 
 
 class HTTP1_1_close_Tests(HTTP1_0Tests):
-
     requests = (
         b"GET / HTTP/1.1\r\n"
         b"Accept: text/html\r\n"
@@ -552,7 +550,6 @@ class HTTP1_1_close_Tests(HTTP1_0Tests):
 
 
 class HTTP0_9Tests(HTTP1_0Tests):
-
     requests = b"GET /\r\n"
 
     expected_response = b"HTTP/1.1 400 Bad Request\r\n\r\n"
@@ -949,7 +946,6 @@ class GenericHTTPChannelTests(unittest.TestCase):
 
 
 class HTTPLoopbackTests(unittest.TestCase):
-
     expectedHeaders = {
         b"request": b"/foo/bar",
         b"command": b"GET",
@@ -1475,7 +1471,6 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
-
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n", b"523523\n\rfsdf", b"4234"]
 
     def testChunks(self):

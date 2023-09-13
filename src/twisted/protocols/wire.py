@@ -40,7 +40,7 @@ class Chargen(protocol.Protocol):
     Generate repeating noise (RFC 864).
     """
 
-    noise = br'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
+    noise = rb'@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&?'
 
     def connectionMade(self):
         self.transport.registerProducer(self, 0)

@@ -4,7 +4,7 @@
 """
 General helpers for L{twisted.web} unit tests.
 """
-
+from __future__ import annotations
 
 from typing import Type
 
@@ -13,10 +13,13 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.web import server
 from twisted.web._flatten import flattenString
 from twisted.web.error import FlattenerError
+from twisted.web.http import Request
+from twisted.web.resource import IResource
 from twisted.web.template import Flattenable
+from .requesthelper import DummyRequest
 
 
-def _render(resource, request):
+def _render(resource: IResource, request: Request | DummyRequest) -> Deferred[None]:
     result = resource.render(request)
     if isinstance(result, bytes):
         request.write(result)

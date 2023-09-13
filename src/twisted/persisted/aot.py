@@ -562,7 +562,6 @@ class AOTJellier:
             retval = Function(reflect.fullFuncName(obj))
 
         else:  # mutable! gotta watch for refs.
-
             # Marmalade had the nicety of being able to just stick a 'reference' attribute
             # on any Node object that was referenced, but in AOT, the referenced object
             # is *inside* of a Ref call (Ref(num, obj) instead of

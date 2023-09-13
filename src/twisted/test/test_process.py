@@ -246,7 +246,6 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
 
 class EchoProtocol(protocol.ProcessProtocol):
-
     s = b"1234567" * 1001
     n = 10
     finished = 0
@@ -676,11 +675,11 @@ class ProcessTests(unittest.TestCase):
 
     def test_commandLine(self):
         args = [
-            br"a\"b ",
-            br"a\b ",
-            br' a\\"b',
-            br" a\\b",
-            br'"foo bar" "',
+            rb"a\"b ",
+            rb"a\b ",
+            rb' a\\"b',
+            rb" a\\b",
+            rb'"foo bar" "',
             b"\tab",
             b'"\\',
             b'a"b',

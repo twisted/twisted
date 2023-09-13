@@ -47,7 +47,7 @@ class TimeTestsBuilder(ReactorBuilder):
             )
 
         # Pick a pretty big delay.
-        delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
+        delayedCall = reactor.callLater(2**128 + 1, lambda: None)
 
         def stop():
             msg("Stopping the reactor")

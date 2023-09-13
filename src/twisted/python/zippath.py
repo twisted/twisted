@@ -15,6 +15,7 @@ import time
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     AnyStr,
     Dict,
     Generic,
@@ -28,7 +29,7 @@ from zipfile import ZipFile
 
 from zope.interface import implementer
 
-from typing_extensions import Literal
+from typing_extensions import Literal, Self
 
 from twisted.python.compat import cmp, comparable
 from twisted.python.filepath import (
@@ -45,7 +46,7 @@ ZIP_PATH_SEP = "/"  # In zipfiles, "/" is universally used as the
 
 _ArchiveStr = TypeVar("_ArchiveStr", bytes, str)
 _ZipStr = TypeVar("_ZipStr", bytes, str)
-_ZipSelf = TypeVar("_ZipSelf", bound="ZipPath")
+_ZipSelf = TypeVar("_ZipSelf", bound="ZipPath[Any, Any]")
 
 
 @comparable
@@ -273,7 +274,7 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
     _zipfileFilename: AnyStr
 
     @property
-    def archive(self):
+    def archive(self) -> Self:  # type: ignore[override]
         return self
 
     def __init__(self, archivePathname: AnyStr) -> None:

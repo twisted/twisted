@@ -29,7 +29,6 @@ class PipeAddress:
     interfaces.IHalfCloseableDescriptor,
 )
 class StandardIO:
-
     _reader = None
     _writer = None
     disconnected = False

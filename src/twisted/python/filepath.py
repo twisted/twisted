@@ -43,6 +43,7 @@ from stat import (
 from typing import (
     IO,
     TYPE_CHECKING,
+    Any,
     AnyStr,
     Callable,
     Dict,
@@ -79,7 +80,7 @@ from twisted.python.win32 import (
 
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
-_Self = TypeVar("_Self", bound="AbstractFilePath")
+_Self = TypeVar("_Self", bound="AbstractFilePath[Any]")
 
 
 randomBytes = os.urandom
@@ -269,7 +270,7 @@ class UnlistableError(OSError):
         self.originalException = originalException
 
 
-def _secureEnoughString(path):
+def _secureEnoughString(path: AnyStr) -> AnyStr:
     """
     Compute a string usable as a new, temporary filename.
 
@@ -1660,7 +1661,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         sib.requireCreate()
         return sib
 
-    _chunkSize = 2 ** 2 ** 2 ** 2
+    _chunkSize = 2**2**2**2
 
     def copyTo(
         self, destination: FilePath[OtherAnyStr], followLinks: bool = True

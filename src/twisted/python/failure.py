@@ -20,11 +20,13 @@ import linecache
 import sys
 from inspect import getmro
 from io import StringIO
-from typing import NoReturn
+from typing import Callable, NoReturn, TypeVar
 
 import opcode
 
 from twisted.python import reflect
+
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 count = 0
 traceupLength = 4
@@ -210,7 +212,7 @@ class _Code:
 _inlineCallbacksExtraneous = []
 
 
-def _extraneous(f):
+def _extraneous(f: _T_Callable) -> _T_Callable:
     """
     Mark the given callable as extraneous to inlineCallbacks exception
     reporting; don't show these functions.
@@ -315,7 +317,6 @@ class Failure(BaseException):
             return
 
         if hasattr(self.value, "__failure__"):
-
             # For exceptions propagated through coroutine-awaiting (see
             # Deferred.send, AKA Deferred.__next__), which can't be raised as
             # Failure because that would mess up the ability to except: them:
