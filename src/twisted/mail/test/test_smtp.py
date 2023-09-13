@@ -87,7 +87,7 @@ class DummyMessage:
 
     def lineReceived(self, line):
         # Throw away the generated Received: header
-        if not re.match(br"Received: From yyy.com \(\[.*\]\) by localhost;", line):
+        if not re.match(rb"Received: From yyy.com \(\[.*\]\) by localhost;", line):
             self.buffer.append(line)
 
     def eomReceived(self):
@@ -167,7 +167,6 @@ class LoopbackMixin:
 
 
 class FakeSMTPServer(basic.LineReceiver):
-
     clientData = [
         b"220 hello",
         b"250 nice to meet you",
@@ -438,7 +437,7 @@ To: foo
 
         a.factory = fooFactory()
         a.makeConnection(transport)
-        for (send, expect, msg, msgexpect) in self.data:
+        for send, expect, msg, msgexpect in self.data:
             if send:
                 a.dataReceived(send)
             data = transport.value()
@@ -603,7 +602,7 @@ class SMTPHelperTests(TestCase):
             [smtp.Address(b""), b"<>"],
         ]
 
-        for (c, e) in cases:
+        for c, e in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
@@ -618,7 +617,7 @@ class SMTPHelperTests(TestCase):
             ("e=mc2@example.com", b"e+3Dmc2@example.com"),
         ]
 
-        for (case, expected) in cases:
+        for case, expected in cases:
             self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
             self.assertEqual(case.encode("xtext"), expected)
             self.assertEqual(smtp.xtext_decode(expected), (case, len(expected)))

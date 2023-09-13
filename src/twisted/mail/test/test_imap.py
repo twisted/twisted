@@ -6,6 +6,7 @@
 """
 Test case for twisted.mail.imap4
 """
+from __future__ import annotations
 
 import base64
 import codecs
@@ -16,7 +17,7 @@ import uuid
 from collections import OrderedDict
 from io import BytesIO
 from itertools import chain
-from typing import List, Optional, Tuple, Type
+from typing import Optional, Type
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -133,7 +134,7 @@ class IMAP4UTF7Tests(TestCase):
         The I{imap4-utf-7} can be used to encode a unicode string into a byte
         string according to the IMAP4 modified UTF-7 encoding rules.
         """
-        for (input, output) in self.tests:
+        for input, output in self.tests:
             self.assertEqual(input.encode("imap4-utf-7"), output)
 
     def test_decode(self):
@@ -141,7 +142,7 @@ class IMAP4UTF7Tests(TestCase):
         The I{imap4-utf-7} can be used to decode a byte string into a unicode
         string according to the IMAP4 modified UTF-7 encoding rules.
         """
-        for (input, output) in self.tests:
+        for input, output in self.tests:
             self.assertEqual(input, output.decode("imap4-utf-7"))
 
     def test_printableSingletons(self):
@@ -791,7 +792,7 @@ class IMAP4HelperTests(TestCase):
             ],
         ]
 
-        for (wildcard, fail, succeed) in cases:
+        for wildcard, fail, succeed in cases:
             wildcard = imap4.wildcardToRegexp(wildcard, "/")
             for x in fail:
                 self.assertFalse(wildcard.match(x))
@@ -817,7 +818,7 @@ class IMAP4HelperTests(TestCase):
             ],
         ]
 
-        for (wildcard, fail, succeed) in cases:
+        for wildcard, fail, succeed in cases:
             wildcard = imap4.wildcardToRegexp(wildcard, None)
             for x in fail:
                 self.assertFalse(wildcard.match(x), x)
@@ -837,7 +838,7 @@ class IMAP4HelperTests(TestCase):
             ),
         ]
 
-        for (input, expected) in cases:
+        for input, expected in cases:
             output = imap4._formatHeaders(input)
             self.assertEqual(
                 sorted(output.splitlines(True)), sorted(expected.splitlines(True))
@@ -860,8 +861,8 @@ class IMAP4HelperTests(TestCase):
             b'"oo \t oo"',
             b"oo \\t oo",
             b'"oo \\t oo"',
-            br"oo \o oo",
-            br'"oo \o oo"',
+            rb"oo \o oo",
+            rb'"oo \o oo"',
             b"oo \\o oo",
             b'"oo \\o oo"',
         ]
@@ -882,8 +883,8 @@ class IMAP4HelperTests(TestCase):
             [b"oo \t oo"],
             [b"oo", b"\\t", b"oo"],
             [b"oo \\t oo"],
-            [b"oo", br"\o", b"oo"],
-            [br"oo \o oo"],
+            [b"oo", rb"\o", b"oo"],
+            [rb"oo \o oo"],
             [b"oo", b"\\o", b"oo"],
             [b"oo \\o oo"],
         ]
@@ -898,7 +899,7 @@ class IMAP4HelperTests(TestCase):
         for s in errors:
             self.assertRaises(imap4.MismatchedQuoting, imap4.splitQuoted, s)
 
-        for (case, expected) in zip(cases, answers):
+        for case, expected in zip(cases, answers):
             self.assertEqual(imap4.splitQuoted(case), expected)
 
     def test_stringCollapser(self):
@@ -922,7 +923,7 @@ class IMAP4HelperTests(TestCase):
             [b"a", [b" bc  "], b"de"],
         ]
 
-        for (case, expected) in zip(cases, answers):
+        for case, expected in zip(cases, answers):
             self.assertEqual(imap4.collapseStrings(case), expected)
 
     def test_parenParser(self):
@@ -960,7 +961,7 @@ class IMAP4HelperTests(TestCase):
             b"BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))",
             [
                 b"FLAGS",
-                [br"\Seen"],
+                [rb"\Seen"],
                 b"INTERNALDATE",
                 b"17-Jul-1996 02:44:25 -0700",
                 b"RFC822.SIZE",
@@ -1000,8 +1001,8 @@ class IMAP4HelperTests(TestCase):
         check(b'("oo \\ oo")', [b"oo \\ oo"])
 
         check(b'("oo \\o")', [b"oo \\o"])
-        check(br'("oo \o")', [br"oo \o"])
-        check(br"(oo \o)", [b"oo", br"\o"])
+        check(rb'("oo \o")', [rb"oo \o"])
+        check(rb"(oo \o)", [b"oo", rb"\o"])
         check(b"(oo \\o)", [b"oo", b"\\o"])
 
     def test_fetchParserSimple(self):
@@ -1017,7 +1018,7 @@ class IMAP4HelperTests(TestCase):
             ["BODYSTRUCTURE", "BodyStructure", "bodystructure"],
         ]
 
-        for (inp, outp, asString) in cases:
+        for inp, outp, asString in cases:
             inp = inp.encode("ascii")
             p = imap4._FetchParser()
             p.parseString(inp)
@@ -1035,7 +1036,7 @@ class IMAP4HelperTests(TestCase):
             [b"FAST", (3, [b"flags", b"internaldate", b"rfc822.size"])],
         ]
 
-        for (inp, outp) in cases:
+        for inp, outp in cases:
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
@@ -1302,7 +1303,7 @@ class IMAP4HelperTests(TestCase):
             (b"({10}\r\n0123456789)", [[b"0123456789"]]),
         ]
 
-        for (case, expected) in cases:
+        for case, expected in cases:
             self.assertEqual(imap4.parseNestedParens(case), expected)
 
     def test_queryBuilder(self):
@@ -1337,7 +1338,7 @@ class IMAP4HelperTests(TestCase):
             "(NOT (UID 1:5)))",
         ]
 
-        for (query, expected) in zip(inputs, outputs):
+        for query, expected in zip(inputs, outputs):
             self.assertEqual(query, expected)
 
     def test_queryKeywordFlagWithQuotes(self):
@@ -1506,10 +1507,10 @@ class IMAP4HelperTests(TestCase):
 
         lengths = [None, None, None, 1, 1, 2, 3, 10, 11, 16, 7, 13, 17, 3]
 
-        for (input, expected) in zip(inputs, outputs):
+        for input, expected in zip(inputs, outputs):
             self.assertEqual(imap4.parseIdList(input), expected)
 
-        for (input, expected) in zip(inputs, lengths):
+        for input, expected in zip(inputs, lengths):
             if expected is None:
                 self.assertRaises(TypeError, len, imap4.parseIdList(input))
             else:
@@ -1560,7 +1561,7 @@ class IMAP4HelperTests(TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages: List[Tuple[bytes, list, bytes, int]] = []
+    messages: list[tuple[bytes, list[bytes], bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1648,7 +1649,7 @@ class UncloseableMailbox:
     """
 
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages: List[Tuple[bytes, list, bytes, int]] = []
+    messages: list[tuple[bytes, list[bytes], bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1861,7 +1862,6 @@ class SimpleClient(imap4.IMAP4Client):
 
 
 class IMAP4HelperMixin:
-
     serverCTX: Optional[ServerTLSContext] = None
     clientCTX: Optional[ClientTLSContext] = None
 
@@ -5956,7 +5956,7 @@ class NewFetchTests(TestCase, IMAP4HelperMixin):
 
     def _fetchWork(self, uid):
         if uid:
-            for (i, msg) in zip(range(len(self.msgObjs)), self.msgObjs):
+            for i, msg in zip(range(len(self.msgObjs)), self.msgObjs):
                 self.expected[i]["UID"] = str(msg.getUID())
 
         def result(R):
@@ -6936,7 +6936,7 @@ class FetchSearchStoreTests(TestCase, IMAP4HelperMixin):
             self.server_received_parts and self.server_received_parts.sort()
 
             if self.uid:
-                for (k, v) in self.expected.items():
+                for k, v in self.expected.items():
                     v["UID"] = str(k)
 
             self.assertEqual(self.result, self.expected)
@@ -7042,7 +7042,7 @@ class CopyWorkerTests(TestCase):
                 self.assertEqual(a[1], "flags")
                 self.assertEqual(a[2], "internaldate")
 
-            for (status, result) in results:
+            for status, result in results:
                 self.assertTrue(status)
                 self.assertEqual(result, None)
 
@@ -7076,7 +7076,7 @@ class CopyWorkerTests(TestCase):
             )
             self.assertEqual(seen, exp)
 
-            for (status, result) in results:
+            for status, result in results:
                 self.assertTrue(status)
                 self.assertEqual(result, None)
 
@@ -7094,7 +7094,7 @@ class CopyWorkerTests(TestCase):
 
         def cbCopy(results):
             self.assertEqual(results, list(zip([1] * 10, range(1, 11))))
-            for (orig, new) in zip(msgs, m.msgs):
+            for orig, new in zip(msgs, m.msgs):
                 self.assertIdentical(orig, new)
 
         return d.addCallback(cbCopy)
@@ -7105,9 +7105,9 @@ class CopyWorkerTests(TestCase):
 class TLSTests(IMAP4HelperMixin, TestCase):
     serverCTX = None
     clientCTX = None
-    if ServerTLSContext:
+    if ServerTLSContext:  # type: ignore[truthy-function]
         serverCTX = ServerTLSContext()
-    if ClientTLSContext:
+    if ClientTLSContext:  # type: ignore[truthy-function]
         clientCTX = ClientTLSContext()
 
     def loopback(self):

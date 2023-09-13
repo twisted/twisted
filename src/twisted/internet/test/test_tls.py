@@ -106,6 +106,7 @@ class StartTLSClientEndpoint:
         immediately start TLS on it.  Return a L{Deferred} which fires with the
         protocol instance.
         """
+
         # This would be cleaner when we have ITransport.switchProtocol, which
         # will be added with ticket #3204:
         class WrapperFactory(ServerFactory):
