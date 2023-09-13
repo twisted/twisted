@@ -1,5 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import annotations
+
 from zope import interface
 
 from twisted.pair import ip, raw
@@ -9,31 +11,30 @@ from twisted.trial import unittest
 
 @interface.implementer(raw.IRawDatagramProtocol)
 class MyProtocol:
-    def __init__(self, expecting):
+    def __init__(self, expecting: list[tuple[bytes, dict[str, str | int]]]) -> None:
         self.expecting = list(expecting)
 
     def datagramReceived(
         self,
-        data,
-        partial,
-        source,
-        dest,
-        protocol,
-        version,
-        ihl,
-        tos,
-        tot_len,
-        fragment_id,
-        fragment_offset,
-        dont_fragment,
-        more_fragments,
-        ttl,
-    ):
+        data: bytes,
+        partial: int,
+        source: str,
+        dest: str,
+        protocol: int,
+        version: int,
+        ihl: int,
+        tos: int,
+        tot_len: int,
+        fragment_id: int,
+        fragment_offset: int,
+        dont_fragment: int,
+        more_fragments: int,
+        ttl: int,
+    ) -> None:
         assert self.expecting, "Got a packet when not expecting anymore."
         expectData, expectKw = self.expecting.pop(0)
 
-        expectKwKeys = expectKw.keys()
-        expectKwKeys = list(sorted(expectKwKeys))
+        expectKwKeys = list(sorted(expectKw.keys()))
         localVariables = locals()
 
         for k in expectKwKeys:
@@ -42,13 +43,13 @@ class MyProtocol:
             ), f"Expected {k}={expectKw[k]!r}, got {localVariables[k]!r}"
         assert expectData == data, f"Expected {expectData!r}, got {data!r}"
 
-    def addProto(self, num, proto):
+    def addProto(self, num: object, proto: object) -> None:
         # IRawDatagramProtocol.addProto
         pass
 
 
 class IPTests(unittest.TestCase):
-    def testPacketParsing(self):
+    def testPacketParsing(self) -> None:
         proto = ip.IPProtocol()
         p1 = MyProtocol(
             [
@@ -96,7 +97,7 @@ class IPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p1.expecting
         )
 
-    def testMultiplePackets(self):
+    def testMultiplePackets(self) -> None:
         proto = ip.IPProtocol()
         p1 = MyProtocol(
             [
@@ -178,7 +179,7 @@ class IPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p1.expecting
         )
 
-    def testMultipleSameProtos(self):
+    def testMultipleSameProtos(self) -> None:
         proto = ip.IPProtocol()
         p1 = MyProtocol(
             [
@@ -254,7 +255,7 @@ class IPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p2.expecting
         )
 
-    def testWrongProtoNotSeen(self):
+    def testWrongProtoNotSeen(self) -> None:
         proto = ip.IPProtocol()
         p1 = MyProtocol([])
         proto.addProto(1, p1)
@@ -277,7 +278,7 @@ class IPTests(unittest.TestCase):
             protocol="dummy",
         )
 
-    def testDemuxing(self):
+    def testDemuxing(self) -> None:
         proto = ip.IPProtocol()
         p1 = MyProtocol(
             [
@@ -439,7 +440,7 @@ class IPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p2.expecting
         )
 
-    def testAddingBadProtos_WrongLevel(self):
+    def testAddingBadProtos_WrongLevel(self) -> None:
         """Adding a wrong level protocol raises an exception."""
         e = ip.IPProtocol()
         try:
@@ -449,7 +450,7 @@ class IPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooSmall(self):
+    def testAddingBadProtos_TooSmall(self) -> None:
         """Adding a protocol with a negative number raises an exception."""
         e = ip.IPProtocol()
         try:
@@ -462,7 +463,7 @@ class IPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooBig(self):
+    def testAddingBadProtos_TooBig(self) -> None:
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:
@@ -475,7 +476,7 @@ class IPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooBig2(self):
+    def testAddingBadProtos_TooBig2(self) -> None:
         """Adding a protocol with a number >=2**32 raises an exception."""
         e = ip.IPProtocol()
         try:

@@ -192,7 +192,7 @@ has several features:
     error.
 @type ERROR_DESCRIPTION: L{bytes}
 """
-
+from __future__ import annotations
 
 import datetime
 import decimal
@@ -202,7 +202,7 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from zope.interface import Interface, implementer
 
@@ -289,6 +289,9 @@ __all__ = [
     "parse",
     "parseString",
 ]
+
+
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 
 ASK = b"_ask"
@@ -607,7 +610,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -1081,7 +1084,7 @@ class _CommandLocatorMeta(type):
     metaclass.
     """
 
-    _currentClassCommands: "List[Tuple[Command, Callable]]" = []
+    _currentClassCommands: "list[tuple[type[Command], Callable[..., Any]]]" = []
 
     def __new__(cls, name, bases, attrs):
         commands = cls._currentClassCommands[:]
@@ -1896,7 +1899,7 @@ class Command(metaclass=_CommandMeta):
         return _stringsToObjects(box, cls.arguments, protocol)
 
     @classmethod
-    def responder(cls, methodfunc):
+    def responder(cls, methodfunc: _T_Callable) -> _T_Callable:
         """
         Declare a method to be a responder for a particular command.
 

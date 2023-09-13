@@ -11,7 +11,7 @@ For information on how to use it, see
 U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
-
+from __future__ import annotations
 
 import getopt
 
@@ -21,7 +21,7 @@ import os
 import sys
 import textwrap
 from os import path
-from typing import Optional, cast
+from typing import Any, Dict, Optional, cast
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -63,7 +63,7 @@ class CoerceParameter:
         self.options.opts[parameterName] = value
 
 
-class Options(dict):
+class Options(Dict[str, Any]):
     """
     An option list parser class
 

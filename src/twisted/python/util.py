@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import errno
 import os
@@ -30,12 +30,14 @@ else:
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
 from typing import (
+    Any,
     Callable,
     ClassVar,
     Mapping,
     MutableMapping,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -51,8 +53,10 @@ deprecatedModuleAttribute(
     "OrderedDict",
 )
 
+_T = TypeVar("_T")
 
-class InsensitiveDict(MutableMapping):
+
+class InsensitiveDict(MutableMapping[str, _T]):
     """
     Dictionary, that has case-insensitive keys.
 
@@ -609,7 +613,7 @@ class FancyStrMixin:
 
     # Override in subclasses:
     showAttributes: Sequence[
-        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+        Union[str, Tuple[str, str, str], Tuple[str, Callable[[Any], str]]]
     ] = ()
 
     def __str__(self) -> str:
@@ -621,7 +625,7 @@ class FancyStrMixin:
             if isinstance(attr, str):
                 r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
-                attr = cast(Tuple[str, Callable], attr)
+                attr = cast(Tuple[str, Callable[[Any], str]], attr)
                 r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
                 attr = cast(Tuple[str, str, str], attr)

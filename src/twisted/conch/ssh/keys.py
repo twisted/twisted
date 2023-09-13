@@ -5,7 +5,7 @@
 """
 Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
-
+from __future__ import annotations
 
 import binascii
 import struct
@@ -13,6 +13,7 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
+from typing import Any
 
 import bcrypt
 from cryptography import utils
@@ -1093,7 +1094,7 @@ class Key:
             return 256
         return self._keyObject.key_size
 
-    def data(self) -> dict:
+    def data(self) -> dict[str, Any]:
         """
         Return the values of the public key as a dictionary.
 

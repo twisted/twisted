@@ -1,5 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import annotations
 
 from twisted.internet import protocol
 from twisted.pair import rawudp
@@ -9,10 +10,10 @@ from twisted.trial import unittest
 
 
 class MyProtocol(protocol.DatagramProtocol):
-    def __init__(self, expecting):
+    def __init__(self, expecting: list[tuple[bytes, bytes, int]]) -> None:
         self.expecting = list(expecting)
 
-    def datagramReceived(self, data, peer):
+    def datagramReceived(self, data: bytes, peer: tuple[bytes, int]) -> None:
         (host, port) = peer
         assert self.expecting, "Got a packet when not expecting anymore."
         expectData, expectHost, expectPort = self.expecting.pop(0)
@@ -32,7 +33,7 @@ class MyProtocol(protocol.DatagramProtocol):
 
 
 class RawUDPTests(unittest.TestCase):
-    def testPacketParsing(self):
+    def testPacketParsing(self) -> None:
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol(
             [
@@ -66,7 +67,7 @@ class RawUDPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p1.expecting
         )
 
-    def testMultiplePackets(self):
+    def testMultiplePackets(self) -> None:
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol(
             [
@@ -120,7 +121,7 @@ class RawUDPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p1.expecting
         )
 
-    def testMultipleSameProtos(self):
+    def testMultipleSameProtos(self) -> None:
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol(
             [
@@ -165,7 +166,7 @@ class RawUDPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p2.expecting
         )
 
-    def testWrongProtoNotSeen(self):
+    def testWrongProtoNotSeen(self) -> None:
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol([])
         proto.addProto(1, p1)
@@ -191,7 +192,7 @@ class RawUDPTests(unittest.TestCase):
             ttl=b"dummy",
         )
 
-    def testDemuxing(self):
+    def testDemuxing(self) -> None:
         proto = rawudp.RawUDPProtocol()
         p1 = MyProtocol(
             [
@@ -297,7 +298,7 @@ class RawUDPTests(unittest.TestCase):
             "Should not expect any more packets, but still want %r" % p2.expecting
         )
 
-    def testAddingBadProtos_WrongLevel(self):
+    def testAddingBadProtos_WrongLevel(self) -> None:
         """Adding a wrong level protocol raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
@@ -310,7 +311,7 @@ class RawUDPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooSmall(self):
+    def testAddingBadProtos_TooSmall(self) -> None:
         """Adding a protocol with a negative number raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
@@ -323,7 +324,7 @@ class RawUDPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooBig(self):
+    def testAddingBadProtos_TooBig(self) -> None:
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:
@@ -336,7 +337,7 @@ class RawUDPTests(unittest.TestCase):
         else:
             raise AssertionError("addProto must raise an exception for bad protocols")
 
-    def testAddingBadProtos_TooBig2(self):
+    def testAddingBadProtos_TooBig2(self) -> None:
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = rawudp.RawUDPProtocol()
         try:

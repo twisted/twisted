@@ -6,6 +6,7 @@
 """
 Test case for twisted.mail.imap4
 """
+from __future__ import annotations
 
 import base64
 import codecs
@@ -16,7 +17,7 @@ import uuid
 from collections import OrderedDict
 from io import BytesIO
 from itertools import chain
-from typing import List, Optional, Tuple, Type
+from typing import Optional, Type
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -1560,7 +1561,7 @@ class IMAP4HelperTests(TestCase):
 @implementer(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 class SimpleMailbox:
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages: List[Tuple[bytes, list, bytes, int]] = []
+    messages: list[tuple[bytes, list[bytes], bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False
@@ -1648,7 +1649,7 @@ class UncloseableMailbox:
     """
 
     flags = ("\\Flag1", "Flag2", "\\AnotherSysFlag", "LastFlag")
-    messages: List[Tuple[bytes, list, bytes, int]] = []
+    messages: list[tuple[bytes, list[bytes], bytes, int]] = []
     mUID = 0
     rw = 1
     closed = False

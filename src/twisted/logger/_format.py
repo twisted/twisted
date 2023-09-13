@@ -6,7 +6,6 @@
 Tools for formatting logging events.
 """
 
-from collections.abc import Mapping as MappingABC
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
@@ -165,7 +164,7 @@ def formatEventAsClassicLogText(
     return eventText + "\n"
 
 
-class CallMapping(MappingABC):
+class CallMapping(Mapping[str, Any]):
     """
     Read-only mapping that turns a C{()}-suffix in key names into an invocation
     of the key rather than a lookup of the key.
@@ -180,7 +179,7 @@ class CallMapping(MappingABC):
         """
         self._submapping = submapping
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[Any]:
         return iter(self._submapping)
 
     def __len__(self) -> int:
