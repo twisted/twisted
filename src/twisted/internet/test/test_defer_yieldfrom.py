@@ -18,7 +18,7 @@ class YieldFromTests(TestCase):
     Tests for using Deferreds in conjunction with PEP-380.
     """
 
-    def test_ensureDeferred(self):
+    def test_ensureDeferred(self) -> None:
         """
         L{ensureDeferred} will turn a coroutine into a L{Deferred}.
         """
@@ -40,7 +40,7 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_DeferredfromCoroutine(self):
+    def test_DeferredfromCoroutine(self) -> None:
         """
         L{Deferred.fromCoroutine} will turn a coroutine into a L{Deferred}.
         """
@@ -68,7 +68,7 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_basic(self):
+    def test_basic(self) -> None:
         """
         L{Deferred.fromCoroutine} allows a function to C{yield from} a
         L{Deferred}.
@@ -83,7 +83,7 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_exception(self):
+    def test_exception(self) -> None:
         """
         An exception in a generator scheduled with L{Deferred.fromCoroutine}
         will cause the returned L{Deferred} to fire with a failure.
@@ -99,7 +99,7 @@ class YieldFromTests(TestCase):
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
 
-    def test_twoDeep(self):
+    def test_twoDeep(self) -> None:
         """
         An exception in a generator scheduled with L{Deferred.fromCoroutine}
         will cause the returned L{Deferred} to fire with a failure.
@@ -142,7 +142,7 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "Yay!")
 
-    def test_reraise(self):
+    def test_reraise(self) -> None:
         """
         Yielding from an already failed Deferred will raise the exception.
         """
@@ -158,7 +158,7 @@ class YieldFromTests(TestCase):
         res = self.successResultOf(Deferred.fromCoroutine(test()))
         self.assertEqual(res, 1)
 
-    def test_chained(self):
+    def test_chained(self) -> None:
         """
         Yielding from a paused & chained Deferred will give the result when it
         has one.

@@ -28,7 +28,7 @@ import pickle
 from twisted.python.filepath import FilePath
 
 try:
-    _open  # type: ignore[has-type]
+    _open  # type: ignore[has-type, used-before-def]
 except NameError:
     _open = open
 
@@ -158,7 +158,7 @@ class DirDBM:
         path = self._dnamePath.child(self._encode(k))
         try:
             return self._readFile(path)
-        except (OSError):
+        except OSError:
             raise KeyError(k)
 
     def __delitem__(self, k):
@@ -176,7 +176,7 @@ class DirDBM:
         k = self._encode(k)
         try:
             self._dnamePath.child(k).remove()
-        except (OSError):
+        except OSError:
             raise KeyError(self._decode(k))
 
     def keys(self):

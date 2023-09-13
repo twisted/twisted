@@ -31,7 +31,7 @@ from hypothesis.strategies import booleans, sampled_from
 
 from twisted.internet import interfaces
 from twisted.internet.base import ReactorBase
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.test.modulehelpers import AlternateReactor
@@ -125,6 +125,11 @@ class CountingReactor(MemoryReactorClock):
         See L{IReactorCore.stop}.
         """
         MemoryReactorClock.stop(self)
+        # TODO: implementing this more comprehensively in MemoryReactor would
+        # be nice, this is rather hard-coded to disttrial's current
+        # implementation.
+        if "before" in self.triggers:
+            self.triggers["before"]["shutdown"][0][0]()
         self.stopCount += 1
 
     def run(self):
@@ -139,6 +144,9 @@ class CountingReactor(MemoryReactorClock):
 
         for f, args, kwargs in self.whenRunningHooks:
             f(*args, **kwargs)
+        self.stop()
+        # do not count internal 'stop' against trial-initiated .stop() count
+        self.stopCount -= 1
 
 
 class CountingReactorTests(SynchronousTestCase):
@@ -461,6 +469,15 @@ class DistTrialRunnerTests(TestCase):
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
 
+    def test_runUnexpectedErrorCtrlC(self) -> None:
+        """
+        If the reactor is stopped by C-c (i.e. `run` returns before the test
+        case's Deferred has been fired) we should cancel the pending test run.
+        """
+        runner = self.getRunner(workerPoolFactory=LocalWorkerPool)
+        with self.assertRaises(CancelledError):
+            runner.run(self.suite)
+
     def test_runUnexpectedWorkerError(self) -> None:
         """
         If for some reason the worker process cannot run a test, the error is
@@ -637,6 +654,7 @@ class DistTrialRunnerTests(TestCase):
         If there is an unexpected exception running the test suite then it is
         re-raised by L{DistTrialRunner.run}.
         """
+
         # Give it a broken worker pool factory.  There's no exception handling
         # for such an error in the implementation..
         class BrokenFactory(Exception):
@@ -714,7 +732,7 @@ class FunctionalTests(TestCase):
 
         assert_that(self.successResultOf(d), equal_to(42))
 
-    def test_countingCalls(self):
+    def test_countingCalls(self) -> None:
         """
         ``countingCalls`` decorates a function so that it is called with an
         increasing counter and passes the return value through.
@@ -741,7 +759,7 @@ class StartedWorkerPoolBroken:
     always raise an exception.
     """
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         raise WorkerPoolBroken()
 
     async def join(self) -> None:
@@ -803,11 +821,11 @@ class StartedLocalWorkerPool:
     A started L{LocalWorkerPool}.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[str]
     workers: List[Worker]
-    _stopped: Deferred
+    _stopped: Deferred[None]
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         """
         Run the action with each local worker.
         """

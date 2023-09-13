@@ -62,7 +62,6 @@ if str is bytes:
         """
         return string
 
-
 else:
 
     def _wsgiString(string):  # Python 3.

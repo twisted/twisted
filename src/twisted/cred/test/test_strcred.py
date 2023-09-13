@@ -155,7 +155,6 @@ class AnonymousCheckerTests(TestCase):
 @skipIf(not crypt, "Required module not available: crypt")
 @skipIf(not spwd, "Required module not available: spwd")
 class UnixCheckerTests(TestCase):
-
     users = {
         "admin": "asdf",
         "alice": "foo",

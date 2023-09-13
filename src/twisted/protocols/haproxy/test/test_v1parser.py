@@ -65,7 +65,7 @@ class V1ParserTests(unittest.TestCase):
         )
         self.assertIsInstance(info.source, address.IPv4Address)
         assert isinstance(info.source, address.IPv4Address)
-        assert isinstance(info.destination, address.IPv4Address)
+        assert isinstance(info.destination, address.IPv4Address)  # type: ignore[unreachable]
         self.assertEqual(info.source.host, "127.0.0.1")
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, "127.0.0.1")
@@ -80,7 +80,7 @@ class V1ParserTests(unittest.TestCase):
         )
         self.assertIsInstance(info.source, address.IPv6Address)
         assert isinstance(info.source, address.IPv6Address)
-        assert isinstance(info.destination, address.IPv6Address)
+        assert isinstance(info.destination, address.IPv6Address)  # type: ignore[unreachable]
         self.assertEqual(info.source.host, "::1")
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, "::1")
@@ -113,7 +113,7 @@ class V1ParserTests(unittest.TestCase):
         assert info is not None
         self.assertIsInstance(info.source, address.IPv4Address)
         assert isinstance(info.source, address.IPv4Address)
-        assert isinstance(info.destination, address.IPv4Address)
+        assert isinstance(info.destination, address.IPv4Address)  # type: ignore[unreachable]
         self.assertEqual(info.source.host, "127.0.0.1")
         self.assertEqual(info.source.port, 8080)
         self.assertEqual(info.destination.host, "127.0.0.1")

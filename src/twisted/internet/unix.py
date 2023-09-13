@@ -240,7 +240,6 @@ else:
 
 @implementer(interfaces.IUNIXTransport)
 class Server(_SendmsgMixin, tcp.Server):
-
     _writeSomeDataBase = tcp.Server
 
     def __init__(self, sock, protocol, client, server, sessionno, reactor):

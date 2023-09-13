@@ -13,11 +13,14 @@ this side of Marmalade!
 import copyreg as copy_reg
 import re
 import types
-from tokenize import generate_tokens as tokenize
 
 from twisted.persisted import crefutil
 from twisted.python import log, reflect
 from twisted.python.compat import _constructMethod
+
+# tokenize from py3.11 is vendored to work around https://github.com/python/cpython/issues/105238
+# on 3.12
+from ._tokenize import generate_tokens as tokenize
 
 ###########################
 # Abstract Object Classes #
@@ -559,7 +562,6 @@ class AOTJellier:
             retval = Function(reflect.fullFuncName(obj))
 
         else:  # mutable! gotta watch for refs.
-
             # Marmalade had the nicety of being able to just stick a 'reference' attribute
             # on any Node object that was referenced, but in AOT, the referenced object
             # is *inside* of a Ref call (Ref(num, obj) instead of

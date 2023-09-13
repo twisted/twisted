@@ -622,7 +622,10 @@ class Cooperator:
         """
         if doneDeferred is None:
             doneDeferred = Deferred()
-        CooperativeTask(iterator, self).whenDone().chainDeferred(doneDeferred)
+        whenDone: Deferred[Iterator[_TaskResultT]] = CooperativeTask(
+            iterator, self
+        ).whenDone()
+        whenDone.chainDeferred(doneDeferred)
         return doneDeferred
 
     def cooperate(self, iterator: Iterator[_TaskResultT]) -> CooperativeTask:

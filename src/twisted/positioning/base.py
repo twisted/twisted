@@ -656,7 +656,7 @@ class PositionError(FancyEqMixin):
             if x is None:
                 return
 
-        delta = abs(self.pdop - (self.hdop ** 2 + self.vdop ** 2) ** 0.5)
+        delta = abs(self.pdop - (self.hdop**2 + self.vdop**2) ** 0.5)
         if delta > self._ALLOWABLE_TRESHOLD:
             raise ValueError(
                 "invalid combination of dilutions of precision: "
@@ -667,15 +667,15 @@ class PositionError(FancyEqMixin):
     _DOP_EXPRESSIONS = {
         "pdop": [
             lambda self: float(self._pdop),
-            lambda self: (self._hdop ** 2 + self._vdop ** 2) ** 0.5,
+            lambda self: (self._hdop**2 + self._vdop**2) ** 0.5,
         ],
         "hdop": [
             lambda self: float(self._hdop),
-            lambda self: (self._pdop ** 2 - self._vdop ** 2) ** 0.5,
+            lambda self: (self._pdop**2 - self._vdop**2) ** 0.5,
         ],
         "vdop": [
             lambda self: float(self._vdop),
-            lambda self: (self._pdop ** 2 - self._hdop ** 2) ** 0.5,
+            lambda self: (self._pdop**2 - self._hdop**2) ** 0.5,
         ],
     }
 

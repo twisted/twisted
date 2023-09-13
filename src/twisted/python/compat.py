@@ -26,7 +26,6 @@ import inspect
 import os
 import platform
 import socket
-import sys
 import urllib.parse as urllib_parse
 import warnings
 from collections.abc import Sequence
@@ -42,11 +41,6 @@ from urllib.parse import quote as urlquote, unquote as urlunquote
 from incremental import Version
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-
-if sys.version_info >= (3, 7, 0):
-    _PY37PLUS = True
-else:
-    _PY37PLUS = False
 
 if platform.python_implementation() == "PyPy":
     _PYPY = True

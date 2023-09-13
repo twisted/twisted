@@ -76,7 +76,6 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
 
 
 class StandardInputOutputTests(TestCase):
-
     if platform.isWindows() and requireModule("win32process") is None:
         skip = (
             "On windows, spawnProcess is not available in the "
