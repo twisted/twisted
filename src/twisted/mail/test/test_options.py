@@ -45,30 +45,41 @@ class OptionsTests(TestCase):
             ]
         )
 
-    def _endpointTest(self, service):
-        """
-        Use L{Options} to parse a single service configuration parameter and
-        verify that an endpoint of the correct type is added to the list for
-        that service.
-        """
-        options = Options()
-        options.parseOptions(["--" + service, "tcp:1234"])
-        self.assertEqual(len(options[service]), 1)
-        self.assertIsInstance(options[service][0], endpoints.TCP4ServerEndpoint)
-
     def test_endpointSMTP(self):
         """
         When I{--smtp} is given a TCP endpoint description as an argument, a
         TCPServerEndpoint is added to the list of SMTP endpoints.
         """
-        self._endpointTest("smtp")
+        options = Options()
+        options.parseOptions(["--smtp", "tcp:1234", "--no-pop3"])
+        service = makeService(options)
+        service.privilegedStartService()
+        service.startService()
+        self.addCleanup(service.stopService)
+        self.assertEqual(len(options["smtp"]), 1)
+        self.assertIsInstance(service.services[1].factory, protocols.SMTPFactory)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
+        self.assertEqual(service.services[1].endpoint._port, 1234)
 
     def test_endpointPOP3(self):
         """
         When I{--pop3} is given a TCP endpoint description as an argument, a
         TCPServerEndpoint is added to the list of POP3 endpoints.
         """
-        self._endpointTest("pop3")
+        options = Options()
+        options.parseOptions(["--pop3", "tcp:1234", "--no-smtp"])
+        service = makeService(options)
+        service.privilegedStartService()
+        service.startService()
+        self.addCleanup(service.stopService)
+        self.assertEqual(len(options["pop3"]), 1)
+        self.assertIsInstance(service.services[1].factory, protocols.POP3Factory)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
+        self.assertEqual(service.services[1].endpoint._port, 1234)
 
     def test_protoDefaults(self):
         """
@@ -76,12 +87,20 @@ class OptionsTests(TestCase):
         """
         options = Options()
         options.parseOptions([])
+        service = makeService(options)
+        service.privilegedStartService()
+        service.startService()
+        self.addCleanup(service.stopService)
 
         self.assertEqual(len(options["pop3"]), 1)
-        self.assertIsInstance(options["pop3"][0], endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
 
         self.assertEqual(len(options["smtp"]), 1)
-        self.assertIsInstance(options["smtp"][0], endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(
+            service.services[1].endpoint, endpoints.TCP4ServerEndpoint
+        )
 
     def test_protoDisable(self):
         """
@@ -90,13 +109,13 @@ class OptionsTests(TestCase):
         """
         options = Options()
         options.parseOptions(["--no-pop3"])
-        self.assertEqual(options._getEndpoints(None, "pop3"), [])
-        self.assertNotEqual(options._getEndpoints(None, "smtp"), [])
+        self.assertEqual(options["pop3"], [])
+        self.assertNotEqual(options["smtp"], [])
 
         options = Options()
         options.parseOptions(["--no-smtp"])
-        self.assertNotEqual(options._getEndpoints(None, "pop3"), [])
-        self.assertEqual(options._getEndpoints(None, "smtp"), [])
+        self.assertNotEqual(options["pop3"], [])
+        self.assertEqual(options["smtp"], [])
 
     def test_allProtosDisabledError(self):
         """
@@ -128,56 +147,3 @@ class OptionsTests(TestCase):
         registered_checkers = options.service.smtpPortal.checkers
         for iface in interfaces:
             self.assertEqual(checker, registered_checkers[iface])
-
-
-class SpyEndpoint:
-    """
-    SpyEndpoint remembers what factory it is told to listen with.
-    """
-
-    listeningWith = None
-
-    def listen(self, factory):
-        self.listeningWith = factory
-        return defer.succeed(None)
-
-
-class MakeServiceTests(TestCase):
-    """
-    Tests for L{twisted.mail.tap.makeService}
-    """
-
-    def _endpointServerTest(self, key, factoryClass):
-        """
-        Configure a service with two endpoints for the protocol associated with
-        C{key} and verify that when the service is started a factory of type
-        C{factoryClass} is used to listen on each of them.
-        """
-        cleartext = SpyEndpoint()
-        secure = SpyEndpoint()
-        config = Options()
-        config[key] = [cleartext, secure]
-        service = makeService(config)
-        service.privilegedStartService()
-        service.startService()
-        self.addCleanup(service.stopService)
-        self.assertIsInstance(cleartext.listeningWith, factoryClass)
-        self.assertIsInstance(secure.listeningWith, factoryClass)
-
-    def test_pop3(self):
-        """
-        If one or more endpoints is included in the configuration passed to
-        L{makeService} for the C{"pop3"} key, a service for starting a POP3
-        server is constructed for each of them and attached to the returned
-        service.
-        """
-        self._endpointServerTest("pop3", protocols.POP3Factory)
-
-    def test_smtp(self):
-        """
-        If one or more endpoints is included in the configuration passed to
-        L{makeService} for the C{"smtp"} key, a service for starting an SMTP
-        server is constructed for each of them and attached to the returned
-        service.
-        """
-        self._endpointServerTest("smtp", protocols.SMTPFactory)
