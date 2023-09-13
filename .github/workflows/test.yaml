@@ -160,7 +160,7 @@ jobs:
           # This needs a python version supported by Deluge GTK distribution.
           - python-version: '3.10'
             runs-on: 'windows-2022'
-            tox-env: 'alldeps-withcov-winghagi-windows'
+            tox-env: 'alldeps-withcov-gtk-windows'
             job-name: 'win-default-tests-gi'
             # Distributed trial is not yet suported on Windows.
             # TOOO; set selector to gi once GI support is available.
@@ -255,19 +255,6 @@ jobs:
           libffi-dev \
           gir1.2-gtk-3.0 \
           xvfb
-
-    # Make sure the matrix is defined in such a way that this is triggered
-    # only on Linux.
-    - name: Install GTK system deps on windows
-      if: matrix.tox-env == 'alldeps-withcov-winghagi-windows'
-      shell: pwsh
-      run: |
-        $WebClient = New-Object System.Net.WebClient
-        $WebClient.DownloadFile("https://github.com/deluge-torrent/gvsbuild-release/releases/download/latest/gvsbuild-py3.10-vs16-x64.zip","C:\GTK.zip")
-        7z x C:\GTK.zip -oc:\GTK
-        echo "C:\GTK\release\lib" | Out-File -FilePath $env:GITHUB_PATH -Append
-        echo "C:\GTK\release\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-        echo "C:\GTK\release" | Out-File -FilePath $env:GITHUB_PATH -Append
 
     - name: Test
       run: |
