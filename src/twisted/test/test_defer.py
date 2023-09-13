@@ -1729,6 +1729,14 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
         self.assertEqual("f.raiseException()", tb[0][3])
 
+    def test_fromCoroutine(self) -> None:
+        async def returnsInt() -> int:
+            return 1
+
+        d = Deferred.fromCoroutine(returnsInt())
+        assert_type(d, Deferred[int])
+        self.assertEqual(1, self.successResultOf(d))
+
     def test_fromCoroutineRequiresCoroutine(self) -> None:
         """
         L{Deferred.fromCoroutine} requires a coroutine object or a generator,
