@@ -1,1 +1,1 @@
-Fix the type annotation of DeferredLock.run and DeferredSemaphore.run
+Fix the type annotations of DeferredLock.run, DeferredSemaphore.run, maybeDeferred, ensureDeferred, inlineCallbacks and fromCoroutine that used to return Deferred[Any] to return the result of the passed Coroutine/Coroutine function
