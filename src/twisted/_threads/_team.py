@@ -6,7 +6,7 @@
 Implementation of a L{Team} of workers; a thread-pool that can allocate work to
 workers.
 """
-
+from __future__ import annotations
 
 from collections import deque
 from typing import Callable, Optional, Set
@@ -158,7 +158,7 @@ class Team:
         if self._shouldQuitCoordinator and self._busyCount == 0:
             self._coordinator.quit()
 
-    def do(self, task: Callable[..., object]) -> None:
+    def do(self, task: Callable[[], None]) -> None:
         """
         Perform some work in a worker created by C{createWorker}.
 

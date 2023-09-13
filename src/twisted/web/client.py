@@ -1737,7 +1737,7 @@ def readBody(response: IResponse) -> defer.Deferred[bytes]:
         Cancelling it will close the connection to the server immediately.
     """
 
-    def cancel(deferred: defer.Deferred) -> None:
+    def cancel(deferred: defer.Deferred[bytes]) -> None:
         """
         Cancel a L{readBody} call, close the connection to the HTTP server
         immediately, if it is still open.

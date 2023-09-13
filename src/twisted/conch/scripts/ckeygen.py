@@ -5,7 +5,7 @@
 """
 Implementation module for the `ckeygen` command.
 """
-
+from __future__ import annotations
 
 import getpass
 import os
@@ -207,7 +207,7 @@ def _defaultPrivateKeySubtype(keyType):
 
 def _getKeyOrDefault(
     options: Dict[Any, Any],
-    inputCollector: Optional[Callable] = None,
+    inputCollector: Optional[Callable[[str], str]] = None,
     keyTypeName: str = "rsa",
 ) -> str:
     """
@@ -329,7 +329,7 @@ def _inputSaveFile(prompt: str) -> str:
 def _saveKey(
     key: keys.Key,
     options: Dict[Any, Any],
-    inputCollector: Optional[Callable] = None,
+    inputCollector: Optional[Callable[[str], str]] = None,
 ) -> None:
     """
     Persist a SSH key on local filesystem.

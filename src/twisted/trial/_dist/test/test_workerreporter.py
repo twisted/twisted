@@ -4,8 +4,9 @@
 """
 Tests for L{twisted.trial._dist.workerreporter}.
 """
+from __future__ import annotations
 
-
+from typing import Sized
 from unittest import TestCase
 
 from hamcrest import assert_that, equal_to, has_length
@@ -39,7 +40,7 @@ class WorkerReporterTests(SynchronousTestCase):
     Tests for L{WorkerReporter}.
     """
 
-    def assertTestRun(self, target: TestCase, **expectations: Matcher) -> None:
+    def assertTestRun(self, target: TestCase, **expectations: Matcher[Sized]) -> None:
         """
         Run the given test and assert that the result matches the given
         expectations.
