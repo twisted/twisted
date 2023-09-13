@@ -807,7 +807,6 @@ class Deferred(Awaitable[_SelfResultT]):
             return result
 
         def cancelTimeout(result: _T) -> _T:
-
             # stop the pending call to cancel the deferred if it's been fired
             if delayedCall.active():
                 delayedCall.cancel()
@@ -1244,9 +1243,9 @@ class Deferred(Awaitable[_SelfResultT]):
         @return: A L{Deferred} which will fire when the L{Future} fires.
         """
 
-        def adapt(result: Future) -> None:
+        def adapt(result: Future[_SelfResultT]) -> None:
             try:
-                extracted = result.result()
+                extracted: _SelfResultT | Failure = result.result()
             except BaseException:
                 extracted = Failure()
             actual.callback(extracted)
@@ -1399,10 +1398,9 @@ class FirstError(Exception):
 
 _DeferredListSingleResultT = Tuple[_SelfResultT, int]
 _DeferredListResultItemT = Tuple[bool, _SelfResultT]
-_DeferredListResultListT = List[_DeferredListResultItemT]
+_DeferredListResultListT = List[_DeferredListResultItemT[_SelfResultT]]
 
 if TYPE_CHECKING:
-
     # The result type is different depending on whether fireOnOneCallback
     # is True or False.  The type system is not flexible enough to handle
     # that in a class definition, so instead we pretend that DeferredList
@@ -1414,7 +1412,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[True],
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[_DeferredListSingleResultT]:
+    ) -> Deferred[_DeferredListSingleResultT[_SelfResultT]]:
         ...
 
     @overload
@@ -1423,7 +1421,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[False] = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[_DeferredListResultListT]:
+    ) -> Deferred[_DeferredListResultListT[_SelfResultT]]:
         ...
 
     def _DeferredList(
@@ -1432,14 +1430,17 @@ if TYPE_CHECKING:
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
     ) -> Union[
-        Deferred[_DeferredListSingleResultT], Deferred[_DeferredListResultListT]
+        Deferred[_DeferredListSingleResultT[_SelfResultT]],
+        Deferred[_DeferredListResultListT[_SelfResultT]],
     ]:
         ...
 
     DeferredList = _DeferredList
 
 
-class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef]
+class DeferredList(  # type: ignore[no-redef] # noqa:F811
+    Deferred[_DeferredListResultListT[Any]]
+):
     """
     L{DeferredList} is a tool for collecting the results of several Deferreds.
 
@@ -1503,7 +1504,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
         # Note this contains optional result values as the DeferredList is
         # processing its results, even though the callback result will not,
         # which is why we aren't using _DeferredListResultListT here.
-        self.resultList: List[Optional[_DeferredListResultItemT]] = [None] * len(
+        self.resultList: List[Optional[_DeferredListResultItemT[Any]]] = [None] * len(
             self._deferredList
         )
         """
@@ -1554,7 +1555,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
                 # At this point, None values in self.resultList have been
                 # replaced by result values, so we cast it to
                 # _DeferredListResultListT to match the callback result type.
-                self.callback(cast(_DeferredListResultListT, self.resultList))
+                self.callback(cast(_DeferredListResultListT[Any], self.resultList))
 
         if succeeded == FAILURE and self.consumeErrors:
             return None
@@ -1582,7 +1583,7 @@ class DeferredList(Deferred[_DeferredListResultListT]):  # type: ignore[no-redef
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT], fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False
 ) -> List[_T]:
     if __debug__:
         for result in resultList:
@@ -1646,10 +1647,10 @@ def race(ds: Sequence[Deferred[_T]]) -> Deferred[tuple[int, _T]]:
     # shouldn't be.  Even though it "completed" it isn't really done - the
     # caller will still be using it for something.  If we cancelled it,
     # cancellation could propagate down to them.
-    winner: Optional[Deferred] = None
+    winner: Optional[Deferred[_T]] = None
 
     # The cancellation function for the Deferred this function returns.
-    def cancel(result: Deferred) -> None:
+    def cancel(result: Deferred[_T]) -> None:
         # If it is cancelled then we cancel all of the Deferreds for the
         # individual actions because there is no longer the possibility of
         # delivering any of their results anywhere.  We don't have to fire
@@ -2226,7 +2227,7 @@ def inlineCallbacks(
 
 
 _ConcurrencyPrimitiveT = TypeVar(
-    "_ConcurrencyPrimitiveT", bound="_ConcurrencyPrimitive"
+    "_ConcurrencyPrimitiveT", bound="_ConcurrencyPrimitive[Any]"
 )
 
 
@@ -2293,7 +2294,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
 _DeferredLockT = TypeVar("_DeferredLockT", bound="DeferredLock")
 
 
-class DeferredLock(_ConcurrencyPrimitive):
+class DeferredLock(_ConcurrencyPrimitive[Any]):
     """
     A lock for event driven systems.
 
@@ -2355,7 +2356,7 @@ class DeferredLock(_ConcurrencyPrimitive):
 _DeferredSemaphoreT = TypeVar("_DeferredSemaphoreT", bound="DeferredSemaphore")
 
 
-class DeferredSemaphore(_ConcurrencyPrimitive):
+class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
     """
     A semaphore for event driven systems.
 

@@ -692,7 +692,7 @@ class PositionErrorTests(TestCase):
         The VDOP is correctly determined from PDOP and HDOP.
         """
         pdop, hdop = 2.0, 1.0
-        vdop = (pdop ** 2 - hdop ** 2) ** 0.5
+        vdop = (pdop**2 - hdop**2) ** 0.5
         pe = base.PositionError(pdop=pdop, hdop=hdop)
         self._testDOP(pe, pdop, hdop, vdop)
 
@@ -701,7 +701,7 @@ class PositionErrorTests(TestCase):
         The HDOP is correctly determined from PDOP and VDOP.
         """
         pdop, vdop = 2.0, 1.0
-        hdop = (pdop ** 2 - vdop ** 2) ** 0.5
+        hdop = (pdop**2 - vdop**2) ** 0.5
         pe = base.PositionError(pdop=pdop, vdop=vdop)
         self._testDOP(pe, pdop, hdop, vdop)
 
@@ -710,7 +710,7 @@ class PositionErrorTests(TestCase):
         The PDOP is correctly determined from HDOP and VDOP.
         """
         hdop, vdop = 1.0, 1.0
-        pdop = (hdop ** 2 + vdop ** 2) ** 0.5
+        pdop = (hdop**2 + vdop**2) ** 0.5
         pe = base.PositionError(hdop=hdop, vdop=vdop)
         self._testDOP(pe, pdop, hdop, vdop)
 

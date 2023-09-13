@@ -265,7 +265,7 @@ class AbsoluteBox(ContainerWidget):
             raise ValueError("No such child", child)
 
     def render(self, width, height, terminal):
-        for (ch, x, y) in self.children:
+        for ch, x, y in self.children:
             wrap = BoundedTerminalWrapper(terminal, width - x, height - y, x, y)
             ch.draw(width, height, wrap)
 

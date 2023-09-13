@@ -7,7 +7,6 @@ from twisted.python import usage
 
 
 class Options(usage.Options):
-
     optParameters = [
         ["file", "f", "/etc/users"],
         ["templates", "t", "/usr/share/finger/templates"],

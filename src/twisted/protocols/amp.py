@@ -192,7 +192,7 @@ has several features:
     error.
 @type ERROR_DESCRIPTION: L{bytes}
 """
-
+from __future__ import annotations
 
 import datetime
 import decimal
@@ -610,7 +610,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -1084,7 +1084,7 @@ class _CommandLocatorMeta(type):
     metaclass.
     """
 
-    _currentClassCommands: "list[tuple[type[Command], Callable]]" = []
+    _currentClassCommands: "list[tuple[type[Command], Callable[..., Any]]]" = []
 
     def __new__(cls, name, bases, attrs):
         commands = cls._currentClassCommands[:]
@@ -1861,7 +1861,7 @@ class Command(metaclass=_CommandMeta):
         @return: An instance of this L{Command}'s C{commandType}.
         """
         allowedNames = set()
-        for (argName, ignored) in cls.arguments:
+        for argName, ignored in cls.arguments:
             allowedNames.add(_wireNameToPythonIdentifier(argName))
 
         for intendedArg in objects:

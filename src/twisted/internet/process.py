@@ -9,6 +9,7 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 
 Maintainer: Itamar Shtull-Trauring
 """
+from __future__ import annotations
 
 import errno
 import gc
@@ -19,7 +20,7 @@ import stat
 import sys
 import traceback
 from collections import defaultdict
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 _PS_CLOSE: int
 _PS_DUP2: int
@@ -65,10 +66,10 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers: Dict[int, Callable] = {}
+reapProcessHandlers: Dict[int, _BaseProcess] = {}
 
 
-def reapAllProcesses():
+def reapAllProcesses() -> None:
     """
     Reap all registered processes.
     """
