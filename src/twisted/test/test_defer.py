@@ -3771,6 +3771,8 @@ class CoroutineContextVarsTests(unittest.TestCase):
             yield d
             var.set(3)
 
+        assert_type(yieldingDeferred, Callable[[], Deferred[None]])
+
         # context is 1 when the function is defined
         @defer.inlineCallbacks
         def testFunction() -> Generator[Deferred[Any], Any, None]:
@@ -3809,6 +3811,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
             defer.returnValue(True)
 
+        assert_type(testFunction, Callable[[], Deferred[None]])
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
         d = testFunction()
