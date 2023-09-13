@@ -22,7 +22,7 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
 from twisted.python.monkey import MonkeyPatcher
-from ._signals import _UnixWaker
+from ._signals import _Waker
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
@@ -52,7 +52,7 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
-class GlibWaker(_UnixWaker):
+class GlibWaker(_Waker):
     """
     Run scheduled events after waking up.
     """
