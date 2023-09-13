@@ -38,14 +38,14 @@ from twisted.python.reflect import requireModule
 from twisted.test.test_process import MockOS
 from twisted.trial.unittest import TestCase
 
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     dependencySkip = None
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.ssh import keys
     from twisted.conch.test import keydata
 else:
-    dependencySkip = "can't run without cryptography and PyASN1"
+    dependencySkip = "can't run without cryptography"
 
 if getattr(os, "geteuid", None) is not None:
     euidSkip = None

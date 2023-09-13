@@ -20,9 +20,9 @@ from twisted.cred.checkers import (
 from twisted.cred.credentials import IUsernamePassword
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ConnectionDone
+from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import globalLogPublisher
 from twisted.python.failure import Failure
-from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial import unittest
 from twisted.web._auth import basic, digest
 from twisted.web._auth.basic import BasicCredentialFactory

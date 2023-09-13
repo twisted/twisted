@@ -11,6 +11,7 @@ from zope.interface import directlyProvides
 
 import twisted.mail._pop3client
 from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.internet.testing import StringTransport
 from twisted.mail.pop3 import (
     AdvancedPOP3Client as POP3Client,
     InsecureAuthenticationDisallowed,
@@ -19,7 +20,6 @@ from twisted.mail.pop3 import (
 from twisted.mail.test import pop3testserver
 from twisted.protocols import basic, loopback
 from twisted.python import log
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
 try:

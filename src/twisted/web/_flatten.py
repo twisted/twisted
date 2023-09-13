@@ -6,7 +6,7 @@
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
-
+from __future__ import annotations
 
 from inspect import iscoroutine
 from io import BytesIO
@@ -65,7 +65,7 @@ Type alias containing all types that can be flattened by L{flatten()}.
 
 # The maximum number of bytes to synchronously accumulate in the flattener
 # buffer before delivering them onwards.
-BUFFER_SIZE = 2 ** 16
+BUFFER_SIZE = 2**16
 
 
 def escapeForContent(data: Union[bytes, str]) -> bytes:
@@ -169,7 +169,10 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
 
 def escapedComment(data: Union[bytes, str]) -> bytes:
     """
-    Escape a comment for inclusion in a document.
+    Within comments the sequence C{-->} can be mistaken as the end of the comment.
+    To ensure consistent parsing and valid output the sequence is replaced with C{--&gt;}.
+    Furthermore, whitespace is added when a comment ends in a dash. This is done to break
+    the connection of the ending C{-} with the closing C{-->}.
 
     @param data: The string to escape.
 
@@ -178,7 +181,7 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    data = data.replace(b"--", b"- - ").replace(b">", b"&gt;")
+    data = data.replace(b"-->", b"--&gt;")
     if data and data[-1:] == b"-":
         data += b" "
     return data
@@ -192,7 +195,7 @@ def _getSlotValue(
     """
     Find the value of the named slot in the given stack of slot data.
     """
-    for slotFrame in slotData[::-1]:
+    for slotFrame in reversed(slotData):
         if slotFrame is not None and name in slotFrame:
             return slotFrame[name]
     else:
@@ -230,7 +233,7 @@ def _flattenElement(
     # This is annotated as Generator[T, None, None] instead of Iterator[T]
     # because mypy does not consider an Iterator to be an instance of
     # GeneratorType.
-) -> Generator[Union[Generator, Deferred[Flattenable]], None, None]:
+) -> Generator[Union[Generator[Any, Any, Any], Deferred[Flattenable]], None, None]:
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -272,7 +275,7 @@ def _flattenElement(
         dataEscaper: Callable[[Union[bytes, str]], bytes] = dataEscaper,
         renderFactory: Optional[IRenderable] = renderFactory,
         write: Callable[[bytes], object] = write,
-    ) -> Generator[Union[Generator, Deferred[Generator]], None, None]:
+    ) -> Generator[Union[Flattenable, Deferred[Flattenable]], None, None]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )
@@ -409,7 +412,7 @@ async def _flattenTree(
             del buf[:]
             bufSize = 0
 
-    stack: List[Generator] = [
+    stack: List[Generator[Any, Any, Any]] = [
         _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
 

@@ -28,11 +28,11 @@ from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import address, main, protocol, reactor
 from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.internet.error import ConnectionRefusedError
+from twisted.internet.testing import _FakeConnector
 from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
 from twisted.python.compat import iterbytes
 from twisted.spread import jelly, pb, publish, util
-from twisted.test.proto_helpers import _FakeConnector
 from twisted.trial import unittest
 
 

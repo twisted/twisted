@@ -4,11 +4,10 @@
 """
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
-
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -29,17 +28,17 @@ from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.logger import globalLogPublisher
-from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import getDeprecationWarningString
-from twisted.python.failure import Failure
-from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.proto_helpers import (
+from twisted.internet.testing import (
     AccumulatingProtocol,
     EventLoggingObserver,
     MemoryReactorClock,
     StringTransport,
 )
+from twisted.logger import globalLogPublisher
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import getDeprecationWarningString
+from twisted.python.failure import Failure
+from twisted.test.iosim import FakeTransport, IOPump
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
@@ -2748,7 +2747,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> dict:
+        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)

@@ -5,7 +5,7 @@
 Tests for L{twisted.web.template}
 """
 
-
+import sys
 from io import StringIO
 from typing import List, Optional
 
@@ -13,10 +13,10 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.internet.defer import Deferred, succeed
+from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial.unittest import TestCase
 from twisted.trial.util import suppress as SUPPRESS
 from twisted.web._element import UnexposedMethodError
@@ -175,7 +175,14 @@ class ElementTests(TestCase):
         raise a comprehensible exception.
         """
         te = self.assertRaises(TypeError, renderer)
-        self.assertEqual(str(te), "expose() takes at least 1 argument (0 given)")
+        if sys.version_info >= (3, 10):
+            self.assertEqual(
+                str(te), "Expose.__call__() missing 1 required positional argument: 'f'"
+            )
+        else:
+            self.assertEqual(
+                str(te), "__call__() missing 1 required positional argument: 'f'"
+            )
 
     def test_renderGetDirectlyError(self) -> None:
         """
@@ -217,7 +224,6 @@ class XMLFileReprTests(TestCase):
 
 
 class XMLLoaderTestsMixin:
-
     deprecatedUse: bool
     """
     C{True} if this use of L{XMLFile} is deprecated and should emit
@@ -330,7 +336,7 @@ class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
         """
         fp = FilePath(self.mktemp())
         fp.setContent(self.templateString.encode("utf8"))
-        return XMLFile(fp.path)  # type: ignore[arg-type]
+        return XMLFile(fp.path)
 
 
 class FlattenIntegrationTests(FlattenTestCase):
@@ -728,7 +734,7 @@ class TestFailureElement(Element):
         "</p>"
     )
 
-    def __init__(self, failure: Failure, loader: object = None):
+    def __init__(self, failure: Failure, loader: object = None) -> None:
         self.failure = failure
 
 
