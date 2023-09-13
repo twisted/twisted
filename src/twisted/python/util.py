@@ -182,7 +182,7 @@ class InsensitiveDict(MutableMapping[str, _T]):
             yield v[1]
 
     def iteritems(self):
-        for (k, v) in self.data.values():
+        for k, v in self.data.values():
             yield self._doPreserve(k), v
 
     _notFound = object()
@@ -556,7 +556,6 @@ class IntervalDifferential:
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
-
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
@@ -681,7 +680,6 @@ if _initgroups is None:
 
         Underlying platform support require to manipulate groups is missing.
         """
-
 
 else:
 

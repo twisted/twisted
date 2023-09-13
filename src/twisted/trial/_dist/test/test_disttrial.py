@@ -654,6 +654,7 @@ class DistTrialRunnerTests(TestCase):
         If there is an unexpected exception running the test suite then it is
         re-raised by L{DistTrialRunner.run}.
         """
+
         # Give it a broken worker pool factory.  There's no exception handling
         # for such an error in the implementation..
         class BrokenFactory(Exception):

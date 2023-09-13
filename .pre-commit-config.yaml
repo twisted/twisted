@@ -6,10 +6,9 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black
-    rev: 21.7b0
+    rev: 23.9.1
     hooks:
       - id: black
-        additional_dependencies: ['click<8.1']
 
   - repo: https://github.com/PyCQA/flake8
     rev: 6.1.0

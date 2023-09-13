@@ -269,7 +269,7 @@ class _SourceFragmentElement(Element):
         C{"snippetHighlightLine"}.  Other lines will be given a I{class} of
         C{"snippetLine"}.
         """
-        for (lineNumber, sourceLine) in self._getSourceLines():
+        for lineNumber, sourceLine in self._getSourceLines():
             newTag = tag.clone()
             if lineNumber == self.frame[2]:
                 cssClass = "snippetHighlightLine"

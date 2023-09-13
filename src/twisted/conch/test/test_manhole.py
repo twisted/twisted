@@ -323,11 +323,11 @@ class ManholeLoopbackMixin:
         but at the beginning of a line it does.
         """
         self._testwrite(b"1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_D + b" + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
         self._testwrite(b"\n")
@@ -348,11 +348,11 @@ class ManholeLoopbackMixin:
         # Start off with a newline so that when we clear the display we can
         # tell by looking for the missing first empty prompt line.
         self._testwrite(b"\n1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> ", b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_L + b" + 1")
-        yield self.recvlineClient.expect(br"1 \+ 1 \+ 1")
+        yield self.recvlineClient.expect(rb"1 \+ 1 \+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
     def test_controlA(self):
