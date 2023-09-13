@@ -2,8 +2,17 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union, overload
+import itertools
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from zope.interface import implementer
 
@@ -19,6 +28,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
+_Tc = TypeVar("_Tc", bound=Callable[..., object])
 
 
 class Expose:
@@ -31,7 +41,7 @@ class Expose:
     on the class object of which they are methods.
     """
 
-    def __call__(self, *funcObjs: Callable) -> Callable:
+    def __call__(self, f: _Tc, /, *funcObjs: Callable[..., object]) -> _Tc:
         """
         Add one or more functions to the set of exposed functions.
 
@@ -59,22 +69,22 @@ class Expose:
 
         @return: The first of C{funcObjs}.
         """
-        if not funcObjs:
-            raise TypeError("expose() takes at least 1 argument (0 given)")
-        for fObj in funcObjs:
+        for fObj in itertools.chain([f], funcObjs):
             exposedThrough: List[Expose] = getattr(fObj, "exposedThrough", [])
             exposedThrough.append(self)
             setattr(fObj, "exposedThrough", exposedThrough)
-        return funcObjs[0]
+        return f
 
     _nodefault = object()
 
     @overload
-    def get(self, instance: object, methodName: str) -> Callable:
+    def get(self, instance: object, methodName: str) -> Callable[..., Any]:
         ...
 
     @overload
-    def get(self, instance: object, methodName: str, default: T) -> Union[Callable, T]:
+    def get(
+        self, instance: object, methodName: str, default: T
+    ) -> Union[Callable[..., Any], T]:
         ...
 
     def get(
@@ -98,7 +108,7 @@ class Expose:
         return method
 
 
-def exposer(thunk: Callable) -> Expose:
+def exposer(thunk: Callable[..., object]) -> Expose:
     expose = Expose()
     expose.__doc__ = thunk.__doc__
     return expose

@@ -55,7 +55,6 @@ _NO_FILEDESC = error.ConnectionFdescWentAway("Filedescriptor went away")
     *_extraInterfaces,
 )
 class IOCPReactor(base.ReactorBase, _ThreadedWin32EventsMixin):
-
     port = None
 
     def __init__(self):

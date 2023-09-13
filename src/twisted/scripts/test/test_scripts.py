@@ -87,7 +87,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     Tests for the core scripts.
     """
 
-    def test_twistd(self):
+    def test_twistd(self) -> None:
         self.scriptTest("twistd")
 
     def test_twistdPathInsert(self):
@@ -107,7 +107,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         output = outputFromPythonScript(script, "-ny", "bar.tac")
         self.assertIn(repr(testDir.path), output)
 
-    def test_trial(self):
+    def test_trial(self) -> None:
         self.scriptTest("trial")
 
     def test_trialPathInsert(self):
@@ -127,7 +127,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         output = outputFromPythonScript(script, "foo")
         self.assertIn("PASSED", output)
 
-    def test_pyhtmlizer(self):
+    def test_pyhtmlizer(self) -> None:
         self.scriptTest("pyhtmlizer")
 
 

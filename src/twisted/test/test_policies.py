@@ -18,7 +18,6 @@ from twisted.trial import unittest
 
 
 class SimpleProtocol(protocol.Protocol):
-
     connected = disconnected = 0
     buffer = b""
 

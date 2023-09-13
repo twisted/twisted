@@ -6,8 +6,17 @@
 from zope.interface import implementer
 
 from twisted.conch.interfaces import IConchUser
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.credentials import IUsernamePassword, UsernamePassword
+from twisted.cred.checkers import (
+    AllowAnonymousAccess,
+    InMemoryUsernamePasswordDatabaseDontUse,
+)
+from twisted.cred.credentials import (
+    Anonymous,
+    IAnonymous,
+    IUsernamePassword,
+    UsernamePassword,
+)
+from twisted.cred.error import LoginDenied
 from twisted.cred.portal import Portal
 from twisted.internet.interfaces import IReactorProcess
 from twisted.python.fakepwd import UserDatabase
@@ -71,7 +80,6 @@ shouldSkip = (
 
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
-
     skip = shouldSkip
 
     def testExecCommandEnvironment(self) -> None:
@@ -123,3 +131,12 @@ class TestUnixSSHRealm(unittest.TestCase):
         self.assertIsInstance(avatar, UnixConchUser)
         assert isinstance(avatar, UnixConchUser)  # legibility for mypy
         self.assertEqual(avatar.getHomeDir(), home)
+
+    def test_unixSSHRefusesAnonymousLogins(self) -> None:
+        """
+        L{UnixSSHRealm} will refuse anonymous logins.
+        """
+        p = Portal(UnixSSHRealm(), [AllowAnonymousAccess()])
+        result = p.login(IAnonymous(Anonymous()), None, IConchUser)
+        loginDenied = self.failureResultOf(result)
+        self.assertIsInstance(loginDenied.value, LoginDenied)

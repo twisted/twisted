@@ -70,7 +70,7 @@ class ParentRedirectTests(SynchronousTestCase):
     Test L{ParentRedirect}.
     """
 
-    def doLocationTest(self, requestPath: bytes):
+    def doLocationTest(self, requestPath: bytes) -> bytes:
         """
         Render a response to a request with path *requestPath*
 
@@ -85,7 +85,9 @@ class ParentRedirectTests(SynchronousTestCase):
         resource = ParentRedirect()
         resource.render(request)
 
-        [location] = request.responseHeaders.getRawHeaders(b"Location")
+        headers = request.responseHeaders.getRawHeaders(b"Location")
+        assert headers is not None
+        [location] = headers
         return location
 
     def test_locationRoot(self):
@@ -185,7 +187,7 @@ class FailureElementTests(TestCase):
         d = flattenString(None, element)
 
         stringToCheckFor = ""
-        for (lineNumber, sourceLine) in enumerate(source):
+        for lineNumber, sourceLine in enumerate(source):
             template = '<div class="snippet{}Line"><span>{}</span><span>{}</span></div>'
             if lineNumber <= 1:
                 stringToCheckFor += template.format(
