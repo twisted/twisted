@@ -529,7 +529,7 @@ class FileBodyProducer:
     @ivar _readSize: The number of bytes to read from C{_inputFile} at a time.
     """
 
-    def __init__(self, inputFile, cooperator=task, readSize=2 ** 16):
+    def __init__(self, inputFile, cooperator=task, readSize=2**16):
         self._inputFile = inputFile
         self._cooperate = cooperator.cooperate
         self._readSize = readSize
@@ -1737,7 +1737,7 @@ def readBody(response: IResponse) -> defer.Deferred[bytes]:
         Cancelling it will close the connection to the server immediately.
     """
 
-    def cancel(deferred: defer.Deferred) -> None:
+    def cancel(deferred: defer.Deferred[bytes]) -> None:
         """
         Cancel a L{readBody} call, close the connection to the HTTP server
         immediately, if it is still open.

@@ -397,7 +397,6 @@ class Connector(TCPConnector):
 
 @implementer(interfaces.IListeningPort)
 class Port(_SocketCloser, _LogOwner):
-
     connected = False
     disconnected = False
     disconnecting = False

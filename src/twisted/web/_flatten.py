@@ -65,7 +65,7 @@ Type alias containing all types that can be flattened by L{flatten()}.
 
 # The maximum number of bytes to synchronously accumulate in the flattener
 # buffer before delivering them onwards.
-BUFFER_SIZE = 2 ** 16
+BUFFER_SIZE = 2**16
 
 
 def escapeForContent(data: Union[bytes, str]) -> bytes:
@@ -233,7 +233,7 @@ def _flattenElement(
     # This is annotated as Generator[T, None, None] instead of Iterator[T]
     # because mypy does not consider an Iterator to be an instance of
     # GeneratorType.
-) -> Generator[Union[Generator, Deferred[Flattenable]], None, None]:
+) -> Generator[Union[Generator[Any, Any, Any], Deferred[Flattenable]], None, None]:
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -412,7 +412,7 @@ async def _flattenTree(
             del buf[:]
             bufSize = 0
 
-    stack: List[Generator] = [
+    stack: List[Generator[Any, Any, Any]] = [
         _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
 
