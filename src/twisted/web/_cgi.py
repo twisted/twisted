@@ -713,7 +713,6 @@ class FieldStorage:
         last_line_lfend = True
         _read = 0
         while 1:
-
             if self.limit is not None and 0 <= self.limit <= _read:
                 break
             line = self.fp.readline(1 << 16)  # bytes
