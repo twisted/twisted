@@ -5,9 +5,11 @@
 """
 Postfix mail transport agent related protocols.
 """
+from __future__ import annotations
 
 import sys
 from collections import UserDict
+from typing import TYPE_CHECKING, Union
 from urllib.parse import quote as _quote, unquote as _unquote
 
 from twisted.internet import defer, protocol
@@ -105,7 +107,13 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
                 self.sendCode(500, b"put is not implemented yet.")
 
 
-class PostfixTCPMapDictServerFactory(UserDict, protocol.ServerFactory):
+if TYPE_CHECKING or sys.version_info >= (3, 9):
+    _PostfixTCPMapDict = UserDict[bytes, Union[str, bytes]]
+else:
+    _PostfixTCPMapDict = UserDict
+
+
+class PostfixTCPMapDictServerFactory(_PostfixTCPMapDict, protocol.ServerFactory):
     """
     An in-memory dictionary factory for PostfixTCPMapServer.
     """

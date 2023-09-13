@@ -99,7 +99,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
 
     # now, if it has sub commands, we have to test those too
     if hasattr(o, "subCommands"):
-        for (cmd, short, parser, doc) in o.subCommands:
+        for cmd, short, parser, doc in o.subCommands:
             try:
                 o.parseOptions([cmd, "", "--_shell-completion", "zsh:3"])
             except ImportError as e:

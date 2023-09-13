@@ -65,7 +65,7 @@ class FileContentsTests(SynchronousTestCase):
         )
         assert_that(str(description), equal_to(f"was <{p}>"))
 
-    def test_ioerror(self):
+    def test_ioerror(self) -> None:
         """
         L{fileContents} reports details of any I/O error encountered while
         attempting to match.

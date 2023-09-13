@@ -21,7 +21,7 @@ from twisted.trial.unittest import TestCase
 doSkip = False
 skipReason = ""
 
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.client import default
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient
@@ -29,7 +29,7 @@ if requireModule("cryptography") and requireModule("pyasn1"):
     from twisted.conch.ssh.keys import Key
 else:
     doSkip = True
-    skipReason = "cryptography and PyASN1 required for twisted.conch.client.default."
+    skipReason = "cryptography required for twisted.conch.client.default."
     skip = skipReason  # no SSL available, skip the entire module
 
 if platform.isWindows():

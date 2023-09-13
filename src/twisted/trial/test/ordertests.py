@@ -14,16 +14,16 @@ class FooTest(unittest.TestCase):
     Used to make assertions about the order its tests will be run in.
     """
 
-    def test_first(self):
+    def test_first(self) -> None:
         pass
 
-    def test_second(self):
+    def test_second(self) -> None:
         pass
 
-    def test_third(self):
+    def test_third(self) -> None:
         pass
 
-    def test_fourth(self):
+    def test_fourth(self) -> None:
         pass
 
 
@@ -33,7 +33,7 @@ class BazTest(unittest.TestCase):
     run in.
     """
 
-    def test_baz(self):
+    def test_baz(self) -> None:
         pass
 
 
@@ -43,5 +43,5 @@ class BarTest(unittest.TestCase):
     run in.
     """
 
-    def test_bar(self):
+    def test_bar(self) -> None:
         pass

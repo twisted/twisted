@@ -1,0 +1,1 @@
+Drop support for Python 3.7. Remove twisted[contextvars] extra (contextvars are always available in Python 3.7+)

@@ -11,10 +11,10 @@ from twisted.trial import unittest
 
 
 class FooTest(unittest.SynchronousTestCase):
-    def test_foo(self):
+    def test_foo(self) -> None:
         pass
 
-    def test_bar(self):
+    def test_bar(self) -> None:
         pass
 
 
@@ -42,7 +42,7 @@ def goodDecorator(fn):
 
 
 class DecorationTest(unittest.SynchronousTestCase):
-    def test_badDecorator(self):
+    def test_badDecorator(self) -> None:
         """
         This test method is decorated in a way that gives it a confusing name
         that collides with another method.
@@ -50,14 +50,14 @@ class DecorationTest(unittest.SynchronousTestCase):
 
     test_badDecorator = badDecorator(test_badDecorator)
 
-    def test_goodDecorator(self):
+    def test_goodDecorator(self) -> None:
         """
         This test method is decorated in a way that preserves its name.
         """
 
     test_goodDecorator = goodDecorator(test_goodDecorator)
 
-    def renamedDecorator(self):
+    def renamedDecorator(self) -> None:
         """
         This is secretly a test method and will be decorated and then renamed so
         test discovery can find it.
@@ -65,31 +65,31 @@ class DecorationTest(unittest.SynchronousTestCase):
 
     test_renamedDecorator = goodDecorator(renamedDecorator)
 
-    def nameCollision(self):
+    def nameCollision(self) -> None:
         """
         This isn't a test, it's just here to collide with tests.
         """
 
 
 class PyunitTest(pyunit.TestCase):
-    def test_foo(self):
+    def test_foo(self) -> None:
         pass
 
-    def test_bar(self):
+    def test_bar(self) -> None:
         pass
 
 
 class NotATest:
-    def test_foo(self):
+    def test_foo(self) -> None:
         pass
 
 
 class AlphabetTest(unittest.SynchronousTestCase):
-    def test_a(self):
+    def test_a(self) -> None:
         pass
 
-    def test_b(self):
+    def test_b(self) -> None:
         pass
 
-    def test_c(self):
+    def test_c(self) -> None:
         pass
