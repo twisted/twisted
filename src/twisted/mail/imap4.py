@@ -778,7 +778,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, "_".join((self.state, nativeString(cmd.upper()))), None)
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
-        for (i, arg) in enumerate(parseargs):
+        for i, arg in enumerate(parseargs):
             if callable(arg):
                 parseargs = parseargs[i + 1 :]
                 maybeDeferred(arg, self, line).addCallback(
@@ -1456,7 +1456,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         ).addErrback(self._ebListWork, tag)
 
     def _cbListWork(self, mailboxes, tag, sub, cmdName):
-        for (name, box) in mailboxes:
+        for name, box in mailboxes:
             if not sub or self.account.isSubscribed(name):
                 flags = [networkString(flag) for flag in box.getFlags()]
                 delim = box.getHierarchicalDelimiter().encode("imap4-utf-7")
@@ -1686,7 +1686,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         # result is a list of tuples (sequenceId, Message)
         lastSequenceId = result and result[-1][0]
         lastMessageId = result and result[-1][1].getUID()
-        for (i, (msgId, msg)) in list(zip(range(5), result)):
+        for i, (msgId, msg) in list(zip(range(5), result)):
             # searchFilter and singleSearchStep will mutate the query.  Dang.
             # Copy it here or else things will go poorly for subsequent
             # messages.
@@ -2287,7 +2287,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStore(self, result, tag, mbox, uid, silent):
         if result and not silent:
-            for (k, v) in result.items():
+            for k, v in result.items():
                 if uid:
                     uidstr = b" UID %d" % (mbox.getUID(k),)
                 else:
@@ -2326,7 +2326,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedDeferreds = []
 
         fastCopyMbox = IMessageCopier(mbox, None)
-        for (id, msg) in messages:
+        for id, msg in messages:
             if fastCopyMbox is not None:
                 d = maybeDeferred(fastCopyMbox.copy, msg)
                 addedDeferreds.append(d)
@@ -2364,7 +2364,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbCopied(self, deferredIds, tag, mbox):
         ids = []
         failures = []
-        for (status, result) in deferredIds:
+        for status, result in deferredIds:
             if status:
                 ids.append(result)
             else:
@@ -2398,7 +2398,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendUntaggedResponse(message=b"[READ-ONLY]", isAsync=True)
 
     def flagsChanged(self, newFlags):
-        for (mId, flags) in newFlags.items():
+        for mId, flags in newFlags.items():
             encodedFlags = [networkString(flag) for flag in flags]
             msg = b"%d FETCH (FLAGS (%b))" % (mId, b" ".join(encodedFlags))
             self.sendUntaggedResponse(msg, isAsync=True)
@@ -4073,7 +4073,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         results = {}
         decodedInfo = {}
-        for (messageId, values) in info.items():
+        for messageId, values in info.items():
             structuredMap, unstructuredList = self._parseFetchPairs(values[0])
             decodedInfo.setdefault(messageId, [[]])[0].extend(unstructuredList)
             results.setdefault(messageId, {}).update(structuredMap)
@@ -4963,11 +4963,11 @@ class MemoryAccountWithoutNamespaces:
         inferiors = self._inferiorNames(oldname)
         inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
 
-        for (old, new) in inferiors:
+        for old, new in inferiors:
             if new in self.mailboxes:
                 raise MailboxCollision(new)
 
-        for (old, new) in inferiors:
+        for old, new in inferiors:
             self.mailboxes[new] = self.mailboxes[old]
             del self.mailboxes[old]
 
@@ -5567,7 +5567,7 @@ def iterateInReactor(i):
 
 
 class MessageProducer:
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    CHUNK_SIZE = 2**2**2**2
     _uuid4 = staticmethod(uuid.uuid4)
 
     def __init__(self, msg, buffer=None, scheduler=None):
@@ -5862,7 +5862,7 @@ class _FetchParser:
         # "BODY [".PEEK"] [<section>] ["<" <number> "." <nz_number> ">"]
 
         l = s.lower()
-        for (name, cls) in self._simple_fetch_att:
+        for name, cls in self._simple_fetch_att:
             if l.startswith(name):
                 self.result.append(cls())
                 return len(name)
@@ -5892,7 +5892,7 @@ class _FetchParser:
         self.state.extend(("section", "part_number"))
         return 1
 
-    _partExpr = re.compile(br"(\d+(?:\.\d+)*)\.?")
+    _partExpr = re.compile(rb"(\d+(?:\.\d+)*)\.?")
 
     def state_part_number(self, s):
         m = self._partExpr.match(s)
@@ -5978,7 +5978,7 @@ class _FetchParser:
 
 
 class FileProducer:
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    CHUNK_SIZE = 2**2**2**2
 
     firstWrite = True
 

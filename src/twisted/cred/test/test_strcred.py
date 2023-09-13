@@ -161,7 +161,6 @@ class AnonymousCheckerTests(TestCase):
 @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
 @skipIf(not spwd, "Required module not available: spwd")
 class UnixCheckerTests(TestCase):
-
     users = {
         "admin": "asdf",
         "alice": "foo",
@@ -427,7 +426,6 @@ class FileDBCheckerTests(TestCase):
 
 @skipIf(not pwd, "Required module not available: pwd")
 @skipIf(not requireModule("cryptography"), "cryptography is not available")
-@skipIf(not requireModule("pyasn1"), "pyasn1 is not available")
 class SSHCheckerTests(TestCase):
     """
     Tests for the C{--auth=sshkey:...} checker.  The majority of the

@@ -178,7 +178,7 @@ class FileTransferServer(FileTransferBase):
             ext[extName] = extData
         ourExt = self.client.gotVersion(version, ext)
         ourExtData = b""
-        for (k, v) in ourExt.items():
+        for k, v in ourExt.items():
             ourExtData += NS(k) + NS(v)
         self.sendPacket(FXP_VERSION, struct.pack("!L", self.version) + ourExtData)
 
@@ -357,7 +357,7 @@ class FileTransferServer(FileTransferBase):
 
     def _cbSendDirectory(self, result, requestId):
         data = b""
-        for (filename, longname, attrs) in result:
+        for filename, longname, attrs in result:
             data += NS(filename)
             data += NS(longname)
             data += self._packAttributes(attrs)
@@ -524,7 +524,7 @@ class FileTransferServer(FileTransferBase):
         for fileObj in self.openFiles.values():
             fileObj.close()
         self.openFiles = {}
-        for (dirObj, dirIter) in self.openDirs.values():
+        for dirObj, dirIter in self.openDirs.values():
             dirObj.close()
         self.openDirs = {}
 
@@ -558,7 +558,6 @@ class FileTransferClient(FileTransferBase):
         # If there are still requests waiting for responses when the
         # connection is lost, fail them.
         if self.openRequests:
-
             # Even if our transport was lost "cleanly", our
             # requests were still not cancelled "cleanly".
             requestError = error.ConnectionLost()

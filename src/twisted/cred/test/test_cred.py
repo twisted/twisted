@@ -204,7 +204,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
     def setUp(self):
         self.dbfile = self.mktemp()
         with open(self.dbfile, "wb") as f:
-            for (u, p) in self.users:
+            for u, p in self.users:
                 f.write(u + b":" + p + b"\n")
 
     def test_getUserNonexistentDatabase(self):
@@ -218,13 +218,13 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
-        for (u, p) in self.users:
+        for u, p in self.users:
             self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
     def testCaseInSensitivity(self):
         self.db = checkers.FilePasswordDB(self.dbfile, caseSensitive=False)
-        for (u, p) in self.users:
+        for u, p in self.users:
             self.assertEqual(self.db.getUser(u.upper()), (u, p))
 
     def testRequestAvatarId(self):
@@ -261,7 +261,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         dbfile = self.mktemp()
         self.db = checkers.FilePasswordDB(dbfile, hash=self.hash)
         with open(dbfile, "wb") as f:
-            for (u, p) in self.users:
+            for u, p in self.users:
                 f.write(u + b":" + self.hash(u, p, u[:2]) + b"\n")
 
         r = TestRealm()
@@ -342,7 +342,7 @@ class CheckersMixin:
         the expected C{avatarID}s
         """
         for chk in self.getCheckers():
-            for (cred, avatarId) in self.getGoodCredentials():
+            for cred, avatarId in self.getGoodCredentials():
                 r = yield chk.requestAvatarId(cred)
                 self.assertEqual(r, avatarId)
 

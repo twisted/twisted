@@ -802,7 +802,7 @@ class Server(_TLSServerMixin, Connection):
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
-            self.repstr = "<{} #{} on {}>".format(
+            self.repstr: str = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
                 self.sessionno,
                 self.server._realPortNumber,

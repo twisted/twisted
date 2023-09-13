@@ -337,7 +337,7 @@ class ClientCursorMovementTests(ByteGroupingsMixin, unittest.TestCase):
     def verifyResults(self, transport, proto, parser):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
 
-        for (method, count) in [
+        for method, count in [
             ("Down", 2),
             ("Forward", 4),
             ("Up", 1),

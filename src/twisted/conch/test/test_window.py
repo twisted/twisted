@@ -1,6 +1,9 @@
 """
 Tests for the insults windowing module, L{twisted.conch.insults.window}.
 """
+from __future__ import annotations
+
+from typing import Callable
 
 from twisted.conch.insults.window import ScrolledArea, TextOutput, TopWindow
 from twisted.trial.unittest import TestCase
@@ -11,13 +14,13 @@ class TopWindowTests(TestCase):
     Tests for L{TopWindow}, the root window container class.
     """
 
-    def test_paintScheduling(self):
+    def test_paintScheduling(self) -> None:
         """
         Verify that L{TopWindow.repaint} schedules an actual paint to occur
         using the scheduling object passed to its initializer.
         """
-        paints = []
-        scheduled = []
+        paints: list[None] = []
+        scheduled: list[Callable[[], object]] = []
         root = TopWindow(lambda: paints.append(None), scheduled.append)
 
         # Nothing should have happened yet.
@@ -53,7 +56,7 @@ class ScrolledAreaTests(TestCase):
     another widget and can reposition that viewport using scrollbars.
     """
 
-    def test_parent(self):
+    def test_parent(self) -> None:
         """
         The parent of the widget passed to L{ScrolledArea} is set to a new
         L{Viewport} created by the L{ScrolledArea} which itself has the

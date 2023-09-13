@@ -45,7 +45,6 @@ class ProxyClient(Proxy):
 
 
 class ProxyClientFactory(protocol.ClientFactory):
-
     protocol = ProxyClient
 
     def setServer(self, server):
@@ -61,7 +60,6 @@ class ProxyClientFactory(protocol.ClientFactory):
 
 
 class ProxyServer(Proxy):
-
     clientProtocolFactory = ProxyClientFactory
     reactor = None
 

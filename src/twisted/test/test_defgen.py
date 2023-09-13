@@ -125,11 +125,9 @@ def deprecatedDeferredGenerator(f):
 
 
 class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
-
     # First provide all the generator impls necessary for BaseDefgenTests
     @deprecatedDeferredGenerator
     def _genBasics(self):
-
         x = waitForDeferred(getThing())
         yield x
         x = x.getResult()
@@ -198,6 +196,7 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         Ensure that yielding a Deferred directly is trapped as an
         error.
         """
+
         # See the comment _deferGenerator about d.callback(Deferred).
         def _genDeferred():
             yield getThing()
@@ -215,7 +214,6 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     # First provide all the generator impls necessary for BaseDefgenTests
 
     def _genBasics(self):
-
         x = yield getThing()
 
         self.assertEqual(x, "hi")
