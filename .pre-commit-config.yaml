@@ -9,7 +9,6 @@ repos:
     rev: 23.9.1
     hooks:
       - id: black
-        additional_dependencies: ['click<8.1']
 
   - repo: https://github.com/PyCQA/flake8
     rev: 6.1.0
