@@ -7,10 +7,11 @@ Tests for error handling in PB.
 
 from io import StringIO
 
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 from twisted.python import log
 from twisted.python.reflect import qual
 from twisted.spread import flavors, jelly, pb
+from twisted.test.iosim import connectedServerAndClient
 from twisted.trial import unittest
 
 # Test exceptions
@@ -137,34 +138,17 @@ class PBConnTestCase(unittest.TestCase):
     unsafeTracebacks = 0
 
     def setUp(self):
-        self._setUpServer()
-        self._setUpClient()
-
-    def _setUpServer(self):
         self.serverFactory = SaveProtocolServerFactory(SimpleRoot())
         self.serverFactory.unsafeTracebacks = self.unsafeTracebacks
-        self.serverPort = reactor.listenTCP(
-            0, self.serverFactory, interface="127.0.0.1"
-        )
-
-    def _setUpClient(self):
-        portNo = self.serverPort.getHost().port
         self.clientFactory = pb.PBClientFactory()
-        self.clientConnector = reactor.connectTCP(
-            "127.0.0.1", portNo, self.clientFactory
+        (
+            self.connectedServer,
+            self.connectedClient,
+            self.pump,
+        ) = connectedServerAndClient(
+            lambda: self.serverFactory.buildProtocol(None),
+            lambda: self.clientFactory.buildProtocol(None),
         )
-
-    def tearDown(self):
-        if self.serverFactory.protocolInstance is not None:
-            self.serverFactory.protocolInstance.transport.loseConnection()
-        return defer.gatherResults([self._tearDownServer(), self._tearDownClient()])
-
-    def _tearDownServer(self):
-        return defer.maybeDeferred(self.serverPort.stopListening)
-
-    def _tearDownClient(self):
-        self.clientConnector.disconnect()
-        return defer.succeed(None)
 
 
 class PBFailureTests(PBConnTestCase):
@@ -187,7 +171,7 @@ class PBFailureTests(PBConnTestCase):
             return d
 
         d.addCallback(gotRootObject)
-        return d
+        self.pump.flush()
 
     def test_asynchronousException(self):
         """
@@ -247,7 +231,7 @@ class PBFailureTests(PBConnTestCase):
             return failureDeferred
 
         rootDeferred.addCallback(gotRootObj)
-        return rootDeferred
+        self.pump.flush()
 
     def test_jellyFailure(self):
         """
@@ -370,8 +354,7 @@ class PBFailureTests(PBConnTestCase):
             self.assertEqual(len(errs), 2)
 
         d.addErrback(exception)
-
-        return d
+        self.pump.flush()
 
     def test_throwExceptionIntoGenerator(self):
         """

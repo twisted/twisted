@@ -17,7 +17,7 @@ class Foo:
     Helper class.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.instance_member = "test-value"
 
     def method(self):
@@ -33,7 +33,7 @@ class Bar:
     """
 
 
-def sampleFunction():
+def sampleFunction() -> None:
     """
     A sample function for pickling.
     """
@@ -53,7 +53,7 @@ class UniversalPicklingErrorTests(unittest.TestCase):
         """
         raise _UniversalPicklingError
 
-    def test_handledByPickleModule(self):
+    def test_handledByPickleModule(self) -> None:
         """
         Handling L{pickle.PicklingError} handles
         L{_UniversalPicklingError}.
@@ -66,7 +66,7 @@ class UnpickleMethodTests(unittest.TestCase):
     Tests for the unpickleMethod function.
     """
 
-    def test_instanceBuildingNamePresent(self):
+    def test_instanceBuildingNamePresent(self) -> None:
         """
         L{unpickleMethod} returns an instance method bound to the
         instance passed to it.
@@ -76,7 +76,7 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
 
-    def test_instanceCopyMethod(self):
+    def test_instanceCopyMethod(self) -> None:
         """
         Copying an instance method returns a new method with the same
         behavior.
@@ -89,7 +89,7 @@ class UnpickleMethodTests(unittest.TestCase):
         foo.instance_member = "new-value"
         self.assertEqual("new-value", m())
 
-    def test_instanceBuildingNameNotPresent(self):
+    def test_instanceBuildingNameNotPresent(self) -> None:
         """
         If the named method is not present in the class,
         L{unpickleMethod} finds a method on the class of the instance
@@ -100,7 +100,7 @@ class UnpickleMethodTests(unittest.TestCase):
         self.assertEqual(m, foo.method)
         self.assertIsNot(m, foo.method)
 
-    def test_copyFunction(self):
+    def test_copyFunction(self) -> None:
         """
         Copying a function returns the same reference, without creating
         an actual copy.
@@ -108,7 +108,7 @@ class UnpickleMethodTests(unittest.TestCase):
         f = copy.copy(sampleFunction)
         self.assertEqual(f, sampleFunction)
 
-    def test_primeDirective(self):
+    def test_primeDirective(self) -> None:
         """
         We do not contaminate normal function pickling with concerns from
         Twisted.
@@ -121,7 +121,7 @@ class UnpickleMethodTests(unittest.TestCase):
 
         self.assertEqual(pickle.dumps(sampleFunction, protocol=0), expected("0"))
 
-    def test_lambdaRaisesPicklingError(self):
+    def test_lambdaRaisesPicklingError(self) -> None:
         """
         Pickling a C{lambda} function ought to raise a L{pickle.PicklingError}.
         """

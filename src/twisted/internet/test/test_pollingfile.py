@@ -22,7 +22,7 @@ class PollableWritePipeTests(TestCase):
     Tests for L{_pollingfile._PollableWritePipe}.
     """
 
-    def test_writeUnicode(self):
+    def test_writeUnicode(self) -> None:
         """
         L{_pollingfile._PollableWritePipe.write} raises a C{TypeError} if an
         attempt is made to append unicode data to the output buffer.
@@ -30,7 +30,7 @@ class PollableWritePipeTests(TestCase):
         p = _pollingfile._PollableWritePipe(1, lambda: None)
         self.assertRaises(TypeError, p.write, "test")
 
-    def test_writeSequenceUnicode(self):
+    def test_writeSequenceUnicode(self) -> None:
         """
         L{_pollingfile._PollableWritePipe.writeSequence} raises a C{TypeError}
         if unicode data is part of the data sequence to be appended to the

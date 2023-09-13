@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 
 import twisted.trial.unittest
 from twisted.internet.interfaces import IReactorCore
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import LogLevel, jsonFileLogObserver
-from twisted.test.proto_helpers import MemoryReactor
 from twisted.test.test_twistd import SignalCapturingMemoryReactor
 from ...runner._exit import ExitStatus
 from ...runner._runner import Runner

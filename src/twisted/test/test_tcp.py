@@ -21,10 +21,10 @@ from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.internet.protocol import Protocol
+from twisted.internet.testing import AccumulatingProtocol
 from twisted.protocols import policies
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
-from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.trial.unittest import SkipTest, TestCase
 
 
@@ -601,7 +601,6 @@ class LoopbackTests(TestCase):
 
 
 class StartStopFactory(protocol.Factory):
-
     started = 0
     stopped = 0
 
@@ -617,7 +616,6 @@ class StartStopFactory(protocol.Factory):
 
 
 class ClientStartStopFactory(MyClientFactory):
-
     started = 0
     stopped = 0
 
@@ -1493,7 +1491,6 @@ class LargeBufferTests(TestCase):
 
 @implementer(IHalfCloseableProtocol)
 class MyHCProtocol(AccumulatingProtocol):
-
     readHalfClosed = False
     writeHalfClosed = False
 
@@ -1511,7 +1508,6 @@ class MyHCProtocol(AccumulatingProtocol):
 
 
 class MyHCFactory(protocol.ServerFactory):
-
     called = 0
     protocolConnectionMade = None
 

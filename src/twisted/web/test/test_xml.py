@@ -5,7 +5,7 @@
 """
 Some fairly inadequate testcases for Twisted XML support.
 """
-
+from importlib import reload
 from io import BytesIO
 
 from twisted.trial.unittest import TestCase
@@ -297,7 +297,7 @@ alert("I hate you");
         nodes = microdom.parseString(s).documentElement.childNodes
         nodes2 = microdom.parseString(s2).documentElement.childNodes
         self.assertEqual(len(nodes), 3)
-        for (n, n2) in zip(nodes, nodes2):
+        for n, n2 in zip(nodes, nodes2):
             self.assertTrue(isinstance(n, microdom.Element))
             self.assertEqual(n.nodeName, "b")
             self.assertTrue(n.isEqualToNode(n2))
@@ -787,6 +787,18 @@ alert("I hate you");
         )
         xmlOut = document.toxml()
         self.assertEqual(xmlOut, xmlOk)
+
+    def test_deprecation(self):
+        """
+        An import will raise the deprecation warning.
+        """
+        reload(microdom)
+        warnings = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            "twisted.web.microdom was deprecated at Twisted NEXT",
+            warnings[0]["message"],
+        )
 
 
 class BrokenHTMLTests(TestCase):

@@ -1,1 +1,0 @@
-The typing of twisted.internet.task.react no longer constrains the type of argv.

@@ -17,6 +17,7 @@ import os
 import re
 import socket
 import warnings
+from typing import Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -33,8 +34,11 @@ from twisted.internet.address import (
     _ProcessAddress,
 )
 from twisted.internet.interfaces import (
+    IAddress,
     IHostnameResolver,
+    IHostResolution,
     IReactorPluggableNameResolver,
+    IReactorSocket,
     IResolutionReceiver,
     IStreamClientEndpointStringParserWithReactor,
     IStreamServerEndpointStringParser,
@@ -702,12 +706,12 @@ class _SimpleHostnameResolver:
 
     def resolveHostName(
         self,
-        resolutionReceiver,
-        hostName,
-        portNumber=0,
-        addressTypes=None,
-        transportSemantics="TCP",
-    ):
+        resolutionReceiver: IResolutionReceiver,
+        hostName: str,
+        portNumber: int = 0,
+        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        transportSemantics: str = "TCP",
+    ) -> IHostResolution:
         """
         Initiate a hostname resolution.
 
@@ -726,7 +730,8 @@ class _SimpleHostnameResolver:
         @return: The resolution in progress.
         @rtype: L{IResolutionReceiver}
         """
-        resolutionReceiver.resolutionBegan(HostResolution(hostName))
+        resolution = HostResolution(hostName)
+        resolutionReceiver.resolutionBegan(resolution)
         d = self._nameResolution(hostName, portNumber)
 
         def cbDeliver(gairesult):
@@ -747,7 +752,7 @@ class _SimpleHostnameResolver:
         d.addCallback(cbDeliver)
         d.addErrback(ebLog)
         d.addBoth(lambda ignored: resolutionReceiver.resolutionComplete())
-        return resolutionReceiver
+        return resolution
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -1504,7 +1509,13 @@ class _SystemdParser:
 
     prefix = "systemd"
 
-    def _parseServer(self, reactor, domain, index):
+    def _parseServer(
+        self,
+        reactor: IReactorSocket,
+        domain: str,
+        index: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> AdoptedStreamServerEndpoint:
         """
         Internal parser function for L{_parseServer} to convert the string
         arguments for a systemd server endpoint into structured arguments for
@@ -1513,21 +1524,34 @@ class _SystemdParser:
         @param reactor: An L{IReactorSocket} provider.
 
         @param domain: The domain (or address family) of the socket inherited
-            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie the
-            name of an address family from the L{socket} module, without the
-            C{"AF_"} prefix.
-        @type domain: C{str}
+            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie
+            the name of an address family from the L{socket} module, without
+            the C{"AF_"} prefix.
 
-        @param index: An offset into the list of file descriptors inherited from
-            systemd.
-        @type index: C{str}
+        @param index: If given, the decimal representation of an integer
+            giving the offset into the list of file descriptors inherited from
+            systemd.  Since the order of descriptors received from systemd is
+            hard to predict, this option should only be used if only one
+            descriptor is being inherited.  Even in that case, C{name} is
+            probably a better idea.  Either C{index} or C{name} must be given.
 
-        @return: A two-tuple of parsed positional arguments and parsed keyword
-            arguments (a tuple and a dictionary).  These can be used to
-            construct an L{AdoptedStreamServerEndpoint}.
+        @param name: If given, the name (as defined by C{FileDescriptorName}
+            in the C{[Socket]} section of a systemd service definition) of an
+            inherited file descriptor.  Either C{index} or C{name} must be
+            given.
+
+        @return: An L{AdoptedStreamServerEndpoint} which will adopt the
+            inherited listening port when it is used to listen.
         """
-        index = int(index)
-        fileno = self._sddaemon.inheritedDescriptors()[index]
+        if (index is None) == (name is None):
+            raise ValueError("Specify exactly one of descriptor index or name")
+
+        if index is not None:
+            fileno = self._sddaemon.inheritedDescriptors()[int(index)]
+        else:
+            assert name is not None
+            fileno = self._sddaemon.inheritedNamedDescriptors()[name]
+
         addressFamily = getattr(socket, "AF_" + domain)
         return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
 
@@ -1650,7 +1674,7 @@ def _parse(description):
             kw[nativeString(sofar[0])] = sofar[1]
 
     sofar = ()
-    for (type, value) in _tokenize(description):
+    for type, value in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
         elif value == colon:

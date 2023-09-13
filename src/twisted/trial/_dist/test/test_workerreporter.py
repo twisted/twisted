@@ -4,13 +4,15 @@
 """
 Tests for L{twisted.trial._dist.workerreporter}.
 """
+from __future__ import annotations
 
-
+from typing import Sized
 from unittest import TestCase
 
 from hamcrest import assert_that, equal_to, has_length
 from hamcrest.core.matcher import Matcher
 
+from twisted.internet.defer import Deferred
 from twisted.test.iosim import connectedServerAndClient
 from twisted.trial._dist.worker import LocalWorkerAMP, WorkerProtocol
 from twisted.trial.reporter import TestResult
@@ -27,9 +29,8 @@ def run(case: SynchronousTestCase, target: TestCase) -> TestResult:
     """
     result = TestResult()
     worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
-    d = local.run(target, result)
-    pump.pump()
-    pump.pump()
+    d = Deferred.fromCoroutine(local.run(target, result))
+    pump.flush()
     assert_that(case.successResultOf(d), equal_to({"success": True}))
     return result
 
@@ -39,12 +40,24 @@ class WorkerReporterTests(SynchronousTestCase):
     Tests for L{WorkerReporter}.
     """
 
-    def assertTestRun(self, target: TestCase, **expectations: Matcher) -> None:
+    def assertTestRun(self, target: TestCase, **expectations: Matcher[Sized]) -> None:
         """
         Run the given test and assert that the result matches the given
         expectations.
         """
         assert_that(run(self, target), matches_result(**expectations))
+
+    def test_outsideReportingContext(self) -> None:
+        """
+        L{WorkerReporter}'s implementation of test result methods raise
+        L{ValueError} when called outside of the
+        L{WorkerReporter.gatherReportingResults} context manager.
+        """
+        worker, local, pump = connectedServerAndClient(LocalWorkerAMP, WorkerProtocol)
+
+        case = sample.FooTest("test_foo")
+        with self.assertRaises(ValueError):
+            worker._result.addSuccess(case)
 
     def test_addSuccess(self) -> None:
         """
@@ -60,6 +73,26 @@ class WorkerReporterTests(SynchronousTestCase):
             erroneous.TestAsynchronousFail("test_exception"), errors=has_length(1)
         )
 
+    def test_addErrorGreaterThan64k(self) -> None:
+        """
+        L{WorkerReporter} propagates errors with large string representations.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_exceptionGreaterThan64k"),
+            errors=has_length(1),
+        )
+
+    def test_addErrorGreaterThan64kEncoded(self) -> None:
+        """
+        L{WorkerReporter} propagates errors with a string representation that
+        is smaller than an implementation-specific limit but which encode to a
+        byte representation that exceeds this limit.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_exceptionGreaterThan64kEncoded"),
+            errors=has_length(1),
+        )
+
     def test_addErrorTuple(self) -> None:
         """
         L{WorkerReporter} propagates errors from pyunit's TestCases.
@@ -72,6 +105,15 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         self.assertTestRun(
             erroneous.TestRegularFail("test_fail"), failures=has_length(1)
+        )
+
+    def test_addFailureGreaterThan64k(self) -> None:
+        """
+        L{WorkerReporter} propagates test failures with large string representations.
+        """
+        self.assertTestRun(
+            erroneous.TestAsynchronousFail("test_failGreaterThan64k"),
+            failures=has_length(1),
         )
 
     def test_addFailureTuple(self) -> None:
@@ -103,6 +145,15 @@ class WorkerReporterTests(SynchronousTestCase):
         """
         self.assertTestRun(
             skipping.SynchronousStrictTodo("test_todo1"), expectedFailures=has_length(1)
+        )
+
+    def test_addExpectedFailureGreaterThan64k(self) -> None:
+        """
+        WorkerReporter propagates expected failures with large string representations.
+        """
+        self.assertTestRun(
+            skipping.ExpectedFailure("test_expectedFailureGreaterThan64k"),
+            expectedFailures=has_length(1),
         )
 
     def test_addUnexpectedSuccess(self) -> None:

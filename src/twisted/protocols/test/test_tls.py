@@ -55,12 +55,12 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol, ServerFactory
 from twisted.internet.task import TaskStopped
+from twisted.internet.testing import NonStreamingProducer, StringTransport
 from twisted.protocols.loopback import collapsingPumpPolicy, loopbackAsync
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.test.iosim import connectedServerAndClient
-from twisted.test.proto_helpers import NonStreamingProducer, StringTransport
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
@@ -522,9 +522,10 @@ class TLSMemoryBIOTests(TestCase):
             self.assertIsInstance(cert, crypto.X509)
             self.assertEqual(
                 cert.digest("sha256"),
-                # openssl x509 -noout -sha256 -fingerprint -in server.pem
-                b"C4:F5:8E:9D:A0:AC:85:24:9B:2D:AA:2C:EC:87:DB:5F:33:22:94:"
-                b"01:94:DC:D3:42:4C:E4:B9:F5:0F:45:F2:24",
+                # openssl x509 -noout -sha256 -fingerprint
+                # -in src/twisted/test/server.pem
+                b"D6:F2:2C:74:3B:E2:5E:F9:CA:DA:47:08:14:78:20:75:78:95:9E:52"
+                b":BD:D2:7C:77:DD:D4:EE:DE:33:BF:34:40",
             )
 
         handshakeDeferred.addCallback(cbHandshook)
@@ -720,7 +721,7 @@ class TLSMemoryBIOTests(TestCase):
         sent later.
         """
         data = b"some bytes"
-        factor = 2 ** 20
+        factor = 2**20
 
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):

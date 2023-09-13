@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import AnyStr, Callable, Optional, Tuple
+from typing import AnyStr, Callable, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -126,7 +126,7 @@ from twisted.internet.interfaces import IProtocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import _PY37PLUS, nativeString, networkString
+from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
@@ -753,7 +753,7 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
-_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 @implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
@@ -835,7 +835,7 @@ class Request:
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -846,7 +846,7 @@ class Request:
 
         self.requestHeaders: Headers = Headers()
         self.received_cookies = {}
-        self.responseHeaders = Headers()
+        self.responseHeaders: Headers = Headers()
         self.cookies = []  # outgoing cookies
         self.transport = self.channel.transport
 
@@ -983,41 +983,29 @@ class Request:
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    if _PY37PLUS:
-                        cgiArgs = cgi.parse_multipart(
-                            self.content,
-                            pdict,
-                            encoding="utf8",
-                            errors="surrogateescape",
-                        )
-                    else:
-                        cgiArgs = cgi.parse_multipart(self.content, pdict)
+                    cgiArgs = cgi.parse_multipart(
+                        self.content,
+                        pdict,
+                        encoding="utf8",
+                        errors="surrogateescape",
+                    )
 
-                    if _PY37PLUS:
-                        # The parse_multipart function on Python 3.7+
-                        # decodes the header bytes as iso-8859-1 and
-                        # decodes the body bytes as utf8 with
-                        # surrogateescape -- we want bytes
-                        self.args.update(
-                            {
-                                x.encode("iso-8859-1"): [
-                                    z.encode("utf8", "surrogateescape")
-                                    if isinstance(z, str)
-                                    else z
-                                    for z in y
-                                ]
-                                for x, y in cgiArgs.items()
-                                if isinstance(x, str)
-                            }
-                        )
-                    else:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update(
-                            {x.encode("iso-8859-1"): y for x, y in cgiArgs.items()}
-                        )
+                    # The parse_multipart function on Python 3.7+
+                    # decodes the header bytes as iso-8859-1 and
+                    # decodes the body bytes as utf8 with
+                    # surrogateescape -- we want bytes
+                    self.args.update(
+                        {
+                            x.encode("iso-8859-1"): [
+                                z.encode("utf8", "surrogateescape")
+                                if isinstance(z, str)
+                                else z
+                                for z in y
+                            ]
+                            for x, y in cgiArgs.items()
+                            if isinstance(x, str)
+                        }
+                    )
                 except Exception as e:
                     # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -1110,7 +1098,7 @@ class Request:
         """
         return self.received_cookies.get(key)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 
@@ -2443,14 +2431,38 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def dataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
-        Data was received from the network.  Process it.
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
+
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
         """
-        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2462,9 +2474,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
 
-    def rawDataReceived(self, data):
         self.resetTimeout()
 
         try:

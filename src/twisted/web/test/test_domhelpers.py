@@ -5,7 +5,7 @@
 """
 Specific tests for (some of) the methods in L{twisted.web.domhelpers}.
 """
-
+from importlib import reload
 from typing import Any, Optional
 from xml.dom import minidom
 
@@ -259,6 +259,18 @@ class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         self.assertEqual(actual, expected)
         actual = domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
+
+    def test_deprecation(self):
+        """
+        An import will raise the deprecation warning.
+        """
+        reload(domhelpers)
+        warnings = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            "twisted.web.domhelpers was deprecated at Twisted NEXT",
+            warnings[0]["message"],
+        )
 
 
 class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
