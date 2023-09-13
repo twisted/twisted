@@ -1730,6 +1730,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual("f.raiseException()", tb[0][3])
 
     def test_fromCoroutine(self) -> None:
+        """
+        It can discover the return type of a first level coroutine.
+        """
         async def returnsInt() -> int:
             return 1
 
