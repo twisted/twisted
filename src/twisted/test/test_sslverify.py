@@ -139,7 +139,7 @@ def makeCertificate(**kw):
     certificate.gmtime_adj_notBefore(0)
     certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
     for xname in certificate.get_issuer(), certificate.get_subject():
-        for (k, v) in kw.items():
+        for k, v in kw.items():
             setattr(xname, k, nativeString(v))
 
     certificate.set_serial_number(counter())
@@ -509,7 +509,7 @@ class FakeContext:
         """
         self._mode = mode
 
-    def set_verify(self, flags, callback):
+    def set_verify(self, flags, callback=None):
         self._verify = flags, callback
 
     def set_verify_depth(self, depth):

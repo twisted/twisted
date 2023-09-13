@@ -17,11 +17,11 @@ from twisted.trial.unittest import TestCase
 
 doSkip = False
 skipReason = ""
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 else:
     doSkip = True
-    skipReason = "Cannot run without cryptography or PyASN1"
+    skipReason = "Cannot run without cryptography"
 
 if not hasattr(os, "geteuid"):
     doSkip = True
@@ -34,7 +34,7 @@ class OpenSSHFactoryTests(TestCase):
     Tests for L{OpenSSHFactory}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.factory = OpenSSHFactory()
         self.keysDir = FilePath(self.mktemp())
         self.keysDir.makedirs()
@@ -71,7 +71,7 @@ class OpenSSHFactoryTests(TestCase):
         self.patch(os, "seteuid", self.mockos.seteuid)
         self.patch(os, "setegid", self.mockos.setegid)
 
-    def test_getPublicKeys(self):
+    def test_getPublicKeys(self) -> None:
         """
         L{OpenSSHFactory.getPublicKeys} should return the available public keys
         in the data directory
@@ -81,7 +81,7 @@ class OpenSSHFactoryTests(TestCase):
         keyTypes = keys.keys()
         self.assertEqual(list(keyTypes), [b"ssh-rsa"])
 
-    def test_getPrivateKeys(self):
+    def test_getPrivateKeys(self) -> None:
         """
         Will return the available private keys in the data directory, ignoring
         key files which failed to be loaded.
@@ -93,7 +93,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [])
         self.assertEqual(self.mockos.setegidCalls, [])
 
-    def test_getPrivateKeysAsRoot(self):
+    def test_getPrivateKeysAsRoot(self) -> None:
         """
         L{OpenSSHFactory.getPrivateKeys} should switch to root if the keys
         aren't readable by the current user.
@@ -105,7 +105,7 @@ class OpenSSHFactoryTests(TestCase):
         # And restore the right mode when seteuid is called
         savedSeteuid = os.seteuid
 
-        def seteuid(euid):
+        def seteuid(euid: int) -> None:
             keyFile.chmod(0o777)
             return savedSeteuid(euid)
 
@@ -117,7 +117,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])
 
-    def test_getPrimes(self):
+    def test_getPrimes(self) -> None:
         """
         L{OpenSSHFactory.getPrimes} should return the available primes
         in the moduli directory.

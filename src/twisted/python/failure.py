@@ -20,10 +20,13 @@ import linecache
 import sys
 from inspect import getmro
 from io import StringIO
+from typing import Callable, NoReturn, TypeVar
 
 import opcode
 
 from twisted.python import reflect
+
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 count = 0
 traceupLength = 4
@@ -130,7 +133,7 @@ def _Traceback(stackFrames, tbFrames):
 
 
 # The set of attributes for _TracebackFrame, _Frame and _Code were taken from
-# https://docs.python.org/3.10/library/inspect.html Other Pythons may have a
+# https://docs.python.org/3.11/library/inspect.html Other Pythons may have a
 # few more attributes that should be added if needed.
 class _TracebackFrame:
     """
@@ -202,11 +205,14 @@ class _Code:
         self.co_nlocals = 0
         self.co_stacksize = 0
 
+    def co_positions(self):
+        return ((None, None, None, None),)
+
 
 _inlineCallbacksExtraneous = []
 
 
-def _extraneous(f):
+def _extraneous(f: _T_Callable) -> _T_Callable:
     """
     Mark the given callable as extraneous to inlineCallbacks exception
     reporting; don't show these functions.
@@ -311,7 +317,6 @@ class Failure(BaseException):
             return
 
         if hasattr(self.value, "__failure__"):
-
             # For exceptions propagated through coroutine-awaiting (see
             # Deferred.send, AKA Deferred.__next__), which can't be raised as
             # Failure because that would mess up the ability to except: them:
@@ -492,7 +497,7 @@ class Failure(BaseException):
                 return error
         return None
 
-    def raiseException(self):
+    def raiseException(self) -> NoReturn:
         """
         raise the original exception, preserving traceback
         information if available.

@@ -24,11 +24,11 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
+from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
 from twisted.protocols import basic, loopback
 from twisted.python.util import LineLog
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
 from twisted.trial.unittest import TestCase
 
 sslSkip: Optional[str]
@@ -85,7 +85,7 @@ class DummyMessage:
 
     def lineReceived(self, line):
         # Throw away the generated Received: header
-        if not re.match(br"Received: From yyy.com \(\[.*\]\) by localhost;", line):
+        if not re.match(rb"Received: From yyy.com \(\[.*\]\) by localhost;", line):
             self.buffer.append(line)
 
     def eomReceived(self):
@@ -165,7 +165,6 @@ class LoopbackMixin:
 
 
 class FakeSMTPServer(basic.LineReceiver):
-
     clientData = [
         b"220 hello",
         b"250 nice to meet you",
@@ -436,7 +435,7 @@ To: foo
 
         a.factory = fooFactory()
         a.makeConnection(transport)
-        for (send, expect, msg, msgexpect) in self.data:
+        for send, expect, msg, msgexpect in self.data:
             if send:
                 a.dataReceived(send)
             data = transport.value()
@@ -601,7 +600,7 @@ class SMTPHelperTests(TestCase):
             [smtp.Address(b""), b"<>"],
         ]
 
-        for (c, e) in cases:
+        for c, e in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
@@ -616,7 +615,7 @@ class SMTPHelperTests(TestCase):
             ("e=mc2@example.com", b"e+3Dmc2@example.com"),
         ]
 
-        for (case, expected) in cases:
+        for case, expected in cases:
             self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
             self.assertEqual(case.encode("xtext"), expected)
             self.assertEqual(smtp.xtext_decode(expected), (case, len(expected)))
@@ -1771,7 +1770,8 @@ class SendmailTests(TestCase):
         The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
         L{twisted.internet.reactor}.
         """
-        args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
+        fullSpec = inspect.getfullargspec(smtp.sendmail)
+        defaults = fullSpec[3]
         self.assertEqual(reactor, defaults[2])
 
     def _honorsESMTPArguments(self, username, password):

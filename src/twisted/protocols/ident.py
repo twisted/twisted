@@ -13,7 +13,7 @@ from twisted.protocols import basic
 from twisted.python import failure, log
 
 _MIN_PORT = 1
-_MAX_PORT = 2 ** 16 - 1
+_MAX_PORT = 2**16 - 1
 
 
 class IdentError(Exception):
@@ -151,7 +151,7 @@ class ProcServerMixin:
     SYSTEM_NAME = "LINUX"
 
     try:
-        from pwd import getpwuid
+        from pwd import getpwuid  # type:ignore[misc]
 
         def getUsername(self, uid, getpwuid=getpwuid):
             return getpwuid(uid)[0]
@@ -196,7 +196,6 @@ class ProcServerMixin:
 
 
 class IdentClient(basic.LineOnlyReceiver):
-
     errorTypes = (IdentError, NoUser, InvalidPort, HiddenUser)
 
     def __init__(self):

@@ -2,12 +2,13 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
+from typing import Dict
 
 from zope.interface import Interface, implementer
 
@@ -159,11 +160,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError  # type: ignore[import]
-        from service_identity.pyopenssl import (  # type: ignore[import]
-            verify_hostname,
-            verify_ip_address,
-        )
+        from service_identity import VerificationError
+        from service_identity.pyopenssl import verify_hostname, verify_ip_address
 
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
@@ -257,7 +255,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(dict):
+class DistinguishedName(Dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -508,7 +506,7 @@ class Certificate(CertBase):
         """
         return PublicKey(self.original.get_pubkey())
 
-    def dump(self, format=crypto.FILETYPE_ASN1):
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         return crypto.dump_certificate(format, self.original)
 
     def serialNumber(self):
@@ -1654,13 +1652,7 @@ class OpenSSLCertificateOptions:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
-        def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-            return preverify_ok
-
-        ctx.set_verify(verifyFlags, _verifyCallback)
+        ctx.set_verify(verifyFlags)
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 

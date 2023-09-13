@@ -1,1 +1,0 @@
-`trial --jobs=N --until-failure ...` now reports the correct number of tests run after each iteration.

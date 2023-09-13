@@ -10,14 +10,14 @@ To mark a method, function, or class as being deprecated do this::
     from incremental import Version
     from twisted.python.deprecate import deprecated
 
-    @deprecated(Version("Twisted", 8, 0, 0))
+    @deprecated(Version("Twisted", 22, 10, 0))
     def badAPI(self, first, second):
         '''
         Docstring for badAPI.
         '''
         ...
 
-    @deprecated(Version("Twisted", 16, 0, 0))
+    @deprecated(Version("Twisted", 22, 10, 0))
     class BadClass:
         '''
         Docstring for BadClass.
@@ -34,7 +34,7 @@ To deprecate properties you can use::
 
     class OtherwiseUndeprecatedClass:
 
-        @deprecatedProperty(Version('Twisted', 16, 0, 0))
+        @deprecatedProperty(Version("Twisted", 22, 10, 0))
         def badProperty(self):
             '''
             Docstring for badProperty.
@@ -54,7 +54,7 @@ To mark module-level attributes as being deprecated you can use::
     ...
 
     deprecatedModuleAttribute(
-        Version("Twisted", 8, 0, 0),
+        Version("Twisted", 22, 10, 0),
         "Use goodAttribute instead.",
         "your.full.module.name",
         "badAttribute")
@@ -68,7 +68,7 @@ can be used as the C{moduleName} parameter.
 To mark an optional, keyword parameter of a function or method as deprecated
 without deprecating the function itself, you can use::
 
-    @deprecatedKeywordParameter(Version("Twisted", 19, 2, 0), 'baz')
+    @deprecatedKeywordParameter(Version("Twisted", 22, 10, 0), "baz")
     def someFunction(foo, bar=0, baz=None):
         ...
 
@@ -78,7 +78,7 @@ See also L{incremental.Version}.
 @var DEPRECATION_WARNING_FORMAT: The default deprecation warning string format
     to use when one is not provided by the user.
 """
-
+from __future__ import annotations
 
 __all__ = [
     "deprecated",
@@ -100,6 +100,10 @@ from typing import Any, Callable, Dict, Optional, TypeVar, cast
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
+from typing_extensions import ParamSpec
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 
@@ -259,7 +263,9 @@ def _appendToDocstring(thingWithDoc, textToAppend):
     thingWithDoc.__doc__ = "\n".join(docstringLines)
 
 
-def deprecated(version, replacement=None):
+def deprecated(
+    version: Version, replacement: str | Callable[..., object] | None = None
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """
     Return a decorator that marks callables as deprecated. To deprecate a
     property, see L{deprecatedProperty}.
@@ -276,7 +282,7 @@ def deprecated(version, replacement=None):
     @type replacement: C{str} or callable
     """
 
-    def deprecationDecorator(function):
+    def deprecationDecorator(function: Callable[_P, _R]) -> Callable[_P, _R]:
         """
         Decorator that marks C{function} as deprecated.
         """
@@ -285,7 +291,7 @@ def deprecated(version, replacement=None):
         )
 
         @wraps(function)
-        def deprecatedFunction(*args, **kwargs):
+        def deprecatedFunction(*args: _P.args, **kwargs: _P.kwargs) -> _R:
             warn(warningString, DeprecationWarning, stacklevel=2)
             return function(*args, **kwargs)
 
@@ -671,7 +677,7 @@ def _passedSignature(signature, positional, keyword):
     result = {}
     kwargs = None
     numPositional = 0
-    for (n, (name, param)) in enumerate(signature.parameters.items()):
+    for n, (name, param) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
             result[name] = positional[n:]

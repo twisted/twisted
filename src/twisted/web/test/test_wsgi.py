@@ -17,12 +17,12 @@ from twisted.internet import reactor
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.error import ConnectionLost
+from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import Logger, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.trial.unittest import TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
@@ -806,6 +806,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'wsgi.url_scheme'} key of the C{environ} C{dict} passed to the
         application has the request URL scheme.
         """
+
         # XXX Does this need to be different if the request is for an absolute
         # URL?
         def channelFactory():
@@ -1162,40 +1163,6 @@ class InputStreamTestMixin(WSGITestsMixin):
         d = self._renderAndReturnReaderResult(iterate, bytes)
         d.addCallback(self.assertEqual, [b"en eggs\n", b"and ham\n"])
         return d
-
-
-class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{StringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from StringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("StringIO.StringIO is not available.")
-        else:
-            return StringIO
-
-
-class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{cStringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from cStringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("cStringIO.StringIO is not available.")
-        else:
-            return StringIO
 
 
 class InputStreamBytesIOTests(InputStreamTestMixin, TestCase):

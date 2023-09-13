@@ -126,7 +126,7 @@ class MaildirMessage(mail.FileMessage):
         @type kw: L{dict}
         @param kw: Keyword arguments for L{FileMessage.__init__}.
         """
-        header = "Delivered-To: %s\n" % address
+        header = b"Delivered-To: %s\n" % address
         fp.write(header)
         self.size = len(header)
         mail.FileMessage.__init__(self, fp, *a, **kw)
@@ -606,7 +606,7 @@ class MaildirMailbox(pop3.Mailbox):
         Move each message marked for deletion from the I{.Trash/} subfolder back
         to its original position.
         """
-        for (real, trash) in self.deleted.items():
+        for real, trash in self.deleted.items():
             try:
                 os.rename(trash, real)
             except OSError as e:

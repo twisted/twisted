@@ -622,7 +622,10 @@ class Cooperator:
         """
         if doneDeferred is None:
             doneDeferred = Deferred()
-        CooperativeTask(iterator, self).whenDone().chainDeferred(doneDeferred)
+        whenDone: Deferred[Iterator[_TaskResultT]] = CooperativeTask(
+            iterator, self
+        ).whenDone()
+        whenDone.chainDeferred(doneDeferred)
         return doneDeferred
 
     def cooperate(self, iterator: Iterator[_TaskResultT]) -> CooperativeTask:
@@ -879,7 +882,7 @@ def react(
         ...,
         Union[Deferred[_T], Coroutine["Deferred[_T]", object, _T]],
     ],
-    argv: Iterable[_T] = (),
+    argv: Iterable[object] = (),
     _reactor: Optional[IReactorCore] = None,
 ) -> NoReturn:
     """
@@ -900,10 +903,11 @@ def react(
 
     The following demonstrates the signature of a C{main} function which can be
     used with L{react}::
-          async def main(reactor, username, password):
-              return "ok"
 
-          task.react(main, ("alice", "secret"))
+      async def main(reactor, username, password):
+          return "ok"
+
+      task.react(main, ("alice", "secret"))
 
     @param main: A callable which returns a L{Deferred} or
         coroutine. It should take the reactor as its first

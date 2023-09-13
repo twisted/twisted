@@ -16,16 +16,26 @@ fine for the documentation generator, which parses a fairly representative
 sample of XML.
 
 Microdom mainly focuses on working with HTML and XHTML.
+
+This module is now deprecated.
 """
 
 # System Imports
 import re
+import warnings
 from io import BytesIO, StringIO
+
+from incremental import Version, getVersionString
 
 # Twisted Imports
 from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import ParseError, XMLParser
+
+warningString = "twisted.web.microdom was deprecated at {}".format(
+    getVersionString(Version("Twisted", "NEXT", 0, 0))
+)
+warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 
 
 def getElementsByTagName(iNode, name):
@@ -526,7 +536,6 @@ class _Attr(CharacterData):
 
 
 class Element(Node):
-
     preserveCase = 0
     caseInsensitive = 1
     nsprefixes = None
@@ -853,7 +862,6 @@ def _reverseDict(d):
 
 
 class MicroDOMParser(XMLParser):
-
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
     # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
     # TD, HEAD, BASE, META, HTML all have optional closing tags

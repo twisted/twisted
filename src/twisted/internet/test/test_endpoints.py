@@ -8,7 +8,7 @@ L{twisted.internet.endpoints}.
 """
 
 from errno import EPERM
-from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, gaierror
+from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
 from unicodedata import normalize
 from unittest import skipIf
@@ -1770,9 +1770,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         globalLogPublisher.addObserver(captureLogs)
         self.addCleanup(lambda: globalLogPublisher.removeObserver(captureLogs))
 
-        receiver = self.resolver.resolveHostName(self.receiver, "example.com")
-
-        self.assertIs(receiver, self.receiver)
+        self.resolver.resolveHostName(self.receiver, "example.com")
 
         self.fakeResolverReturns.errback(Exception())
 
@@ -1798,9 +1796,7 @@ class SimpleHostnameResolverTests(unittest.SynchronousTestCase):
         ipv4Host = "1.2.3.4"
         ipv6Host = "1::2::3::4"
 
-        receiver = self.resolver.resolveHostName(self.receiver, "example.com")
-
-        self.assertIs(receiver, self.receiver)
+        self.resolver.resolveHostName(self.receiver, "example.com")
 
         self.fakeResolverReturns.callback(
             [
@@ -3786,10 +3782,12 @@ class SystemdEndpointPluginTests(unittest.TestCase):
             verifyObject(interfaces.IStreamServerEndpointStringParser, parser)
         )
 
-    def _parseStreamServerTest(self, addressFamily, addressFamilyString):
+    def _parseIndexStreamServerTest(
+        self, addressFamily: AddressFamily, addressFamilyString: str
+    ) -> None:
         """
-        Helper for unit tests for L{endpoints._SystemdParser.parseStreamServer}
-        for different address families.
+        Helper for tests for L{endpoints._SystemdParser.parseStreamServer}
+        for different address families with a descriptor identified by index.
 
         Handling of the address family given will be verify.  If there is a
         problem a test-failing exception will be raised.
@@ -3802,10 +3800,11 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         """
         reactor = object()
         descriptors = [5, 6, 7, 8, 9]
+        names = ["5.socket", "6.socket", "foo", "8.socket", "9.socket"]
         index = 3
 
         parser = self._parserClass()
-        parser._sddaemon = ListenFDs(descriptors)
+        parser._sddaemon = ListenFDs(descriptors, names)
 
         server = parser.parseStreamServer(
             reactor, domain=addressFamilyString, index=str(index)
@@ -3814,19 +3813,43 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         self.assertEqual(server.addressFamily, addressFamily)
         self.assertEqual(server.fileno, descriptors[index])
 
-    def test_parseStreamServerINET(self):
+    def _parseNameStreamServerTest(
+        self, addressFamily: AddressFamily, addressFamilyString: str
+    ) -> None:
+        """
+        Like L{_parseIndexStreamServerTest} but for descriptors identified by
+        name.
+        """
+        reactor = object()
+        descriptors = [5, 6, 7, 8, 9]
+        names = ["5.socket", "6.socket", "foo", "8.socket", "9.socket"]
+        name = "foo"
+
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs(descriptors, names)
+
+        server = parser.parseStreamServer(
+            reactor,
+            domain=addressFamilyString,
+            name=name,
+        )
+        self.assertIs(server.reactor, reactor)
+        self.assertEqual(server.addressFamily, addressFamily)
+        self.assertEqual(server.fileno, descriptors[names.index(name)])
+
+    def test_parseIndexStreamServerINET(self) -> None:
         """
         IPv4 can be specified using the string C{"INET"}.
         """
-        self._parseStreamServerTest(AF_INET, "INET")
+        self._parseIndexStreamServerTest(AF_INET, "INET")
 
-    def test_parseStreamServerINET6(self):
+    def test_parseIndexStreamServerINET6(self) -> None:
         """
         IPv6 can be specified using the string C{"INET6"}.
         """
-        self._parseStreamServerTest(AF_INET6, "INET6")
+        self._parseIndexStreamServerTest(AF_INET6, "INET6")
 
-    def test_parseStreamServerUNIX(self):
+    def test_parseIndexStreamServerUNIX(self) -> None:
         """
         A UNIX domain socket can be specified using the string C{"UNIX"}.
         """
@@ -3835,7 +3858,39 @@ class SystemdEndpointPluginTests(unittest.TestCase):
         except ImportError:
             raise unittest.SkipTest("Platform lacks AF_UNIX support")
         else:
-            self._parseStreamServerTest(AF_UNIX, "UNIX")
+            self._parseIndexStreamServerTest(AF_UNIX, "UNIX")
+
+    def test_parseNameStreamServerINET(self) -> None:
+        """
+        IPv4 can be specified using the string C{"INET"}.
+        """
+        self._parseNameStreamServerTest(AF_INET, "INET")
+
+    def test_parseNameStreamServerINET6(self) -> None:
+        """
+        IPv6 can be specified using the string C{"INET6"}.
+        """
+        self._parseNameStreamServerTest(AF_INET6, "INET6")
+
+    def test_parseNameStreamServerUNIX(self) -> None:
+        """
+        A UNIX domain socket can be specified using the string C{"UNIX"}.
+        """
+        try:
+            from socket import AF_UNIX
+        except ImportError:
+            raise unittest.SkipTest("Platform lacks AF_UNIX support")
+        else:
+            self._parseNameStreamServerTest(AF_UNIX, "UNIX")
+
+    def test_indexAndNameMutuallyExclusive(self) -> None:
+        """
+        The endpoint cannot be defined using both C{index} and C{name}.
+        """
+        parser = self._parserClass()
+        parser._sddaemon = ListenFDs([], ())
+        with self.assertRaises(ValueError):
+            parser.parseStreamServer(reactor, domain="INET", index=0, name="foo")
 
 
 class TCP6ServerEndpointPluginTests(unittest.TestCase):

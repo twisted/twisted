@@ -398,6 +398,8 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
+        if not state:
+            state = {}
         state = {
             x.decode("utf8") if isinstance(x, bytes) else x: y for x, y in state.items()
         }
@@ -618,9 +620,9 @@ class RemoteCacheObserver:
         """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet"""
 
         return (
-            (hash(self.broker) % 2 ** 10)
-            + (hash(self.perspective) % 2 ** 10)
-            + (hash(self.cached) % 2 ** 10)
+            (hash(self.broker) % 2**10)
+            + (hash(self.perspective) % 2**10)
+            + (hash(self.cached) % 2**10)
         )
 
     def __cmp__(self, other):

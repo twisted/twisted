@@ -4,6 +4,6 @@
 if __name__ == "__main__":
     import sys
 
-    from pkg_resources import load_entry_point
+    from twisted.scripts.trial import run
 
-    sys.exit(load_entry_point("Twisted", "console_scripts", "trial")())
+    sys.exit(run())
