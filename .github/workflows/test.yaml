@@ -163,7 +163,8 @@ jobs:
             tox-env: 'alldeps-withcov-winghagi-windows'
             job-name: 'win-default-tests-gi'
             # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=gi'
+            # TOOO; set selector to gi once GI support is available.
+            trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
           - python-version: '3.11'
