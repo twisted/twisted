@@ -30,7 +30,6 @@ class Win32PipeAddress:
 
 @implementer(ITransport, IConsumer, IPushProducer)
 class StandardIO(_pollingfile._PollingTimer):
-
     disconnecting = False
     disconnected = False
 

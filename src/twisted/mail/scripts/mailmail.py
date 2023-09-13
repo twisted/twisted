@@ -256,9 +256,9 @@ def loadConfig(path):
     du = c.denyUIDs
     ag = c.allowGIDs
     dg = c.denyGIDs
-    for (section, a, d) in (("useraccess", au, du), ("groupaccess", ag, dg)):
+    for section, a, d in (("useraccess", au, du), ("groupaccess", ag, dg)):
         if p.has_section(section):
-            for (mode, L) in (("allow", a), ("deny", d)):
+            for mode, L in (("allow", a), ("deny", d)):
                 if p.has_option(section, mode) and p.get(section, mode):
                     for sectionID in p.get(section, mode).split(","):
                         try:
@@ -281,7 +281,7 @@ def loadConfig(path):
                 setattr(c, section, "deny")
 
     if p.has_section("identity"):
-        for (host, up) in p.items("identity"):
+        for host, up in p.items("identity"):
             parts = up.split(":", 1)
             if len(parts) != 2:
                 _log.error("Illegal entry in [identity] section: {section}", section=up)

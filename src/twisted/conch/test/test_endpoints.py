@@ -184,7 +184,6 @@ class FixedResponseUI:
 
 
 class FakeClockSSHUserAuthServer(SSHUserAuthServer):
-
     # Delegate this setting to the factory to simplify tweaking it
     @property
     def attemptsBeforeDisconnect(self):

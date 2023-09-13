@@ -317,7 +317,6 @@ class Failure(BaseException):
             return
 
         if hasattr(self.value, "__failure__"):
-
             # For exceptions propagated through coroutine-awaiting (see
             # Deferred.send, AKA Deferred.__next__), which can't be raised as
             # Failure because that would mess up the ability to except: them:

@@ -536,7 +536,6 @@ class _Attr(CharacterData):
 
 
 class Element(Node):
-
     preserveCase = 0
     caseInsensitive = 1
     nsprefixes = None
@@ -863,7 +862,6 @@ def _reverseDict(d):
 
 
 class MicroDOMParser(XMLParser):
-
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
     # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
     # TD, HEAD, BASE, META, HTML all have optional closing tags

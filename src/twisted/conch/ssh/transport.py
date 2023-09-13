@@ -740,7 +740,6 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.buf = self.buf + data
         if not self.gotVersion:
-
             if len(self.buf) > 4096:
                 self.sendDisconnect(
                     DISCONNECT_CONNECTION_LOST,
@@ -1248,7 +1247,7 @@ class SSHTransportBase(protocol.Protocol):
         self._keyExchangeState = self._KEY_EXCHANGE_NONE
         messages = self._blockedByKeyExchange
         self._blockedByKeyExchange = None
-        for (messageType, payload) in messages:
+        for messageType, payload in messages:
             self.sendPacket(messageType, payload)
 
     def isEncrypted(self, direction="out"):

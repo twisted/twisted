@@ -3805,7 +3805,7 @@ def ctcpStringify(messages):
     @returns: String
     """
     coded_messages = []
-    for (tag, data) in messages:
+    for tag, data in messages:
         if data:
             if not isinstance(data, str):
                 try:

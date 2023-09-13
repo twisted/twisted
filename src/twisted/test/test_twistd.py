@@ -579,7 +579,6 @@ class ApplicationRunnerTests(TestCase):
 
         @implementer(service.IService, service.IProcess)
         class FakeService:
-
             parent = None
             running = None
             name = None

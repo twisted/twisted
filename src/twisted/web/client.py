@@ -529,7 +529,7 @@ class FileBodyProducer:
     @ivar _readSize: The number of bytes to read from C{_inputFile} at a time.
     """
 
-    def __init__(self, inputFile, cooperator=task, readSize=2 ** 16):
+    def __init__(self, inputFile, cooperator=task, readSize=2**16):
         self._inputFile = inputFile
         self._cooperate = cooperator.cooperate
         self._readSize = readSize

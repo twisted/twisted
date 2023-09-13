@@ -334,7 +334,6 @@ class Versioned:
         bases.append(self.__class__)  # don't forget me!!
         # first let's look for old-skool versioned's
         if "persistenceVersion" in self.__dict__:
-
             # Hacky heuristic: if more than one class subclasses Versioned,
             # we'll assume that the higher version number wins for the older
             # class, so we'll consider the attribute the version of the older

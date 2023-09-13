@@ -901,7 +901,6 @@ class SSHUserAuthClientTests(unittest.TestCase):
 
 
 class LoopbackTests(unittest.TestCase):
-
     if keys is None:
         skip = "cannot run without cryptography"
 
