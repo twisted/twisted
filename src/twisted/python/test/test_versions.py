@@ -15,7 +15,7 @@ from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 
 class VersionsTests(TestCase):
-    def test_versionComparison(self):
+    def test_versionComparison(self) -> None:
         """
         Versions can be compared for equality and order.
         """
@@ -29,7 +29,7 @@ class VersionsTests(TestCase):
         self.assertTrue(vb == Version("dummy", 0, 1, 0))
         self.assertTrue(vb == vb)
 
-    def test_versionComparisonCaseInsensitive(self):
+    def test_versionComparisonCaseInsensitive(self) -> None:
         """
         Version packages are compared case insensitively.
         """
@@ -44,7 +44,7 @@ class VersionsTests(TestCase):
         self.assertTrue(vb == Version("TWISted", 0, 1, 0))
         self.assertTrue(vb == vb)
 
-    def test_comparingPrereleasesWithReleases(self):
+    def test_comparingPrereleasesWithReleases(self) -> None:
         """
         Prereleases are always less than versions without prereleases.
         """
@@ -54,7 +54,7 @@ class VersionsTests(TestCase):
         self.assertFalse(va > vb)
         self.assertNotEqual(vb, va)
 
-    def test_comparingPrereleases(self):
+    def test_comparingPrereleases(self) -> None:
         """
         The value specified as the prerelease is used in version comparisons.
         """
@@ -68,7 +68,7 @@ class VersionsTests(TestCase):
         self.assertTrue(vb == Version("whatever", 1, 0, 0, prerelease=2))
         self.assertTrue(va == va)
 
-    def test_infComparison(self):
+    def test_infComparison(self) -> None:
         """
         L{_inf} is equal to L{_inf}.
 
@@ -76,7 +76,7 @@ class VersionsTests(TestCase):
         """
         self.assertEqual(_inf, _inf)
 
-    def test_disallowBuggyComparisons(self):
+    def test_disallowBuggyComparisons(self) -> None:
         """
         The package names of the Version objects need to be the same,
         """
@@ -87,7 +87,7 @@ class VersionsTests(TestCase):
             Version("dumym", 1, 0, 0),
         )
 
-    def test_notImplementedComparisons(self):
+    def test_notImplementedComparisons(self) -> None:
         """
         Comparing a L{Version} to some other object type results in
         C{NotImplemented}.
@@ -97,14 +97,14 @@ class VersionsTests(TestCase):
         result = va.__cmp__(vb)  # type:ignore[arg-type]
         self.assertEqual(result, NotImplemented)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         Calling C{repr} on a version returns a human-readable string
         representation of the version.
         """
         self.assertEqual(repr(Version("dummy", 1, 2, 3)), "Version('dummy', 1, 2, 3)")
 
-    def test_reprWithPrerelease(self):
+    def test_reprWithPrerelease(self) -> None:
         """
         Calling C{repr} on a version with a prerelease returns a human-readable
         string representation of the version including the prerelease.
@@ -114,14 +114,14 @@ class VersionsTests(TestCase):
             "Version('dummy', 1, 2, 3, release_candidate=4)",
         )
 
-    def test_str(self):
+    def test_str(self) -> None:
         """
         Calling C{str} on a version returns a human-readable string
         representation of the version.
         """
         self.assertEqual(str(Version("dummy", 1, 2, 3)), "[dummy, version 1.2.3]")
 
-    def test_strWithPrerelease(self):
+    def test_strWithPrerelease(self) -> None:
         """
         Calling C{str} on a version with a prerelease includes the prerelease.
         """
@@ -129,17 +129,17 @@ class VersionsTests(TestCase):
             str(Version("dummy", 1, 0, 0, prerelease=1)), "[dummy, version 1.0.0.rc1]"
         )
 
-    def testShort(self):
+    def testShort(self) -> None:
         self.assertEqual(Version("dummy", 1, 2, 3).short(), "1.2.3")
 
-    def test_getVersionString(self):
+    def test_getVersionString(self) -> None:
         """
         L{getVersionString} returns a string with the package name and the
         short version number.
         """
         self.assertEqual("Twisted 8.0.0", getVersionString(Version("Twisted", 8, 0, 0)))
 
-    def test_getVersionStringWithPrerelease(self):
+    def test_getVersionStringWithPrerelease(self) -> None:
         """
         L{getVersionString} includes the prerelease, if any.
         """
@@ -148,13 +148,13 @@ class VersionsTests(TestCase):
             "whatever 8.0.0.rc1",
         )
 
-    def test_base(self):
+    def test_base(self) -> None:
         """
         The L{base} method returns a very simple representation of the version.
         """
         self.assertEqual(Version("foo", 1, 0, 0).base(), "1.0.0")
 
-    def test_baseWithPrerelease(self):
+    def test_baseWithPrerelease(self) -> None:
         """
         The base version includes 'preX' for versions with prereleases.
         """

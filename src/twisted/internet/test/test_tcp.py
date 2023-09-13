@@ -81,11 +81,11 @@ from twisted.internet.test.reactormixins import (
     needsRunningReactor,
     stopOnError,
 )
+from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
 from twisted.test.test_tcp import (
     ClientStartStopFactory,
     ClosingFactory,

@@ -86,7 +86,7 @@ class TestURL(SynchronousTestCase):
         self.assertTrue(isinstance(u.host, str) or u.host is None, repr(u))
         for seg in u.path:
             self.assertIsInstance(seg, str, repr(u))
-        for (k, v) in u.query:
+        for k, v in u.query:
             self.assertIsInstance(k, str, repr(u))
             self.assertTrue(v is None or isinstance(v, str), repr(u))
         self.assertIsInstance(u.fragment, str, repr(u))
@@ -337,7 +337,7 @@ class TestURL(SynchronousTestCase):
         L{URL.click} should correctly resolve the examples in RFC 3986.
         """
         base = URL.fromText(relativeLinkBaseForRFC3986)
-        for (ref, expected) in relativeLinkTestsForRFC3986:
+        for ref, expected in relativeLinkTestsForRFC3986:
             self.assertEqual(base.click(ref).asText(), expected)
 
     def test_clickSchemeRelPath(self):

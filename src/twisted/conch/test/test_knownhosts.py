@@ -21,7 +21,7 @@ from twisted.python.reflect import requireModule
 from twisted.test.testutils import ComparisonTestsMixin
 from twisted.trial.unittest import TestCase
 
-if requireModule("cryptography") and requireModule("pyasn1"):
+if requireModule("cryptography"):
     from twisted.conch.client import default
     from twisted.conch.client.knownhosts import (
         ConsoleUI,
@@ -33,7 +33,7 @@ if requireModule("cryptography") and requireModule("pyasn1"):
     from twisted.conch.ssh.keys import BadKeyError, Key
     from twisted.conch.test import keydata
 else:
-    skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
+    skip = "cryptography required for twisted.conch.knownhosts."
 
 
 sampleEncodedKey = (

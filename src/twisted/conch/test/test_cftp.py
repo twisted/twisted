@@ -24,20 +24,19 @@ from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTes
 from twisted.cred import portal
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransport
 from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import TestCase
 
-pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 unix = requireModule("twisted.conch.unix")
 
-if cryptography and pyasn1:
+if cryptography:
     try:
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
@@ -50,11 +49,11 @@ if cryptography and pyasn1:
         pass
 
 skipTests = False
-if None in (unix, cryptography, pyasn1, interfaces.IReactorProcess(reactor, None)):
+if None in (unix, cryptography, interfaces.IReactorProcess(reactor, None)):
     skipTests = True
 
 
-@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 class SSHSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
@@ -388,7 +387,7 @@ class InMemoryRemoteFile(BytesIO):
         return BytesIO.getvalue(self)
 
 
-@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 class StdioClientTests(TestCase):
     """
     Tests for L{cftp.StdioClient}.
@@ -931,7 +930,7 @@ class CFTPClientTestBase(SFTPTestBase):
         return SFTPTestBase.tearDown(self)
 
 
-@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 class OurServerCmdLineClientTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over TCP on localhost and check
@@ -1330,7 +1329,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         return d
 
 
-@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 class OurServerBatchFileTests(CFTPClientTestBase):
     """
     Functional tests which launch a SFTP server over localhost and checks csftp
@@ -1434,7 +1433,7 @@ exit
         return d
 
 
-@skipIf(skipTests, "don't run w/o spawnProcess or cryptography or pyasn1")
+@skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 @skipIf(not which("ssh"), "no ssh command-line client available")
 @skipIf(not which("sftp"), "no sftp command-line client available")
 class OurServerSftpClientTests(CFTPClientTestBase):

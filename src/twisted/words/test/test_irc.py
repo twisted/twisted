@@ -10,8 +10,8 @@ import operator
 import time
 
 from twisted.internet import protocol, task
+from twisted.internet.testing import StringIOWithoutClosing, StringTransport
 from twisted.python.filepath import FilePath
-from twisted.test.proto_helpers import StringIOWithoutClosing, StringTransport
 from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient, attributes as A
@@ -1080,7 +1080,7 @@ class NoticingClient(IRCClientWithoutLogin):
                     "TypeError: %s() takes %d arguments "
                     "(%d given)" % (fname, len(args), len(a))
                 )
-            for (name, value) in zip(args, a):
+            for name, value in zip(args, a):
                 if name in kw:
                     raise TypeError(
                         "TypeError: %s() got multiple values "
