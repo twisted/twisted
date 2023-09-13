@@ -1733,6 +1733,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         It can discover the return type of a first level coroutine.
         """
+
         async def returnsInt() -> int:
             return 1
 
