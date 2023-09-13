@@ -3562,6 +3562,7 @@ class EnsureDeferredTests(unittest.TestCase):
 
         # Now it's a Deferred.
         d = ensureDeferred(r)
+        assert_type(d, Deferred[str])
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.
@@ -3583,7 +3584,8 @@ class EnsureDeferredTests(unittest.TestCase):
         self.assertIsInstance(r, types.GeneratorType)
 
         # Now it's a Deferred.
-        d: Deferred[str] = ensureDeferred(r)
+        d = ensureDeferred(r)
+        assert_type(d, Deferred[str])
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.
