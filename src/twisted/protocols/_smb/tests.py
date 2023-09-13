@@ -104,7 +104,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(d, {n: "123"})
         self.assertIs(type(n), int)
         self.assertTrue(n > 0)
-        self.assertTrue(n < 2 ** 32)
+        self.assertTrue(n < 2**32)
 
     def test_unpack(self) -> None:
         data = b"\x0B\x02\x0Etwisted"
