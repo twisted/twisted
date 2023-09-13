@@ -791,6 +791,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any FTP error raised by STOR while transferring the file is returned
         to the client.
         """
+
         # Make a failing file writer.
         class FailingFileWriter(ftp._FileWriter):
             def receive(self):
@@ -851,6 +852,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any errors during reading a file inside a RETR should be returned to
         the client.
         """
+
         # Make a failing file reading.
         class FailingFileReader(ftp._FileReader):
             def send(self, consumer):

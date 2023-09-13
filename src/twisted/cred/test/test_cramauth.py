@@ -19,7 +19,7 @@ class CramMD5CredentialsTests(TestCase):
     Tests for L{CramMD5Credentials}.
     """
 
-    def test_idempotentChallenge(self):
+    def test_idempotentChallenge(self) -> None:
         """
         The same L{CramMD5Credentials} will always provide the same challenge,
         no matter how many times it is called.
@@ -28,7 +28,7 @@ class CramMD5CredentialsTests(TestCase):
         chal = c.getChallenge()
         self.assertEqual(chal, c.getChallenge())
 
-    def test_checkPassword(self):
+    def test_checkPassword(self) -> None:
         """
         When a valid response (which is a hex digest of the challenge that has
         been encrypted by the user's shared secret) is set on the
@@ -40,7 +40,7 @@ class CramMD5CredentialsTests(TestCase):
         c.response = hexlify(HMAC(b"secret", chal, digestmod=hashlib.md5).digest())
         self.assertTrue(c.checkPassword(b"secret"))
 
-    def test_noResponse(self):
+    def test_noResponse(self) -> None:
         """
         When there is no response set, calling C{checkPassword} will return
         L{False}.
@@ -48,7 +48,7 @@ class CramMD5CredentialsTests(TestCase):
         c = CramMD5Credentials()
         self.assertFalse(c.checkPassword(b"secret"))
 
-    def test_wrongPassword(self):
+    def test_wrongPassword(self) -> None:
         """
         When an invalid response is set on the L{CramMD5Credentials} (one that
         is not the hex digest of the challenge, encrypted with the user's shared
@@ -62,7 +62,7 @@ class CramMD5CredentialsTests(TestCase):
         )
         self.assertFalse(c.checkPassword(b"secret"))
 
-    def test_setResponse(self):
+    def test_setResponse(self) -> None:
         """
         When C{setResponse} is called with a string that is the username and
         the hashed challenge separated with a space, they will be set on the
@@ -81,7 +81,7 @@ class CramMD5CredentialsTests(TestCase):
         self.assertTrue(c.checkPassword(b"supersecret"))
         self.assertEqual(c.username, b"squirrel")
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{CramMD5Credentials} implements the L{IUsernameHashedPassword}
         interface.

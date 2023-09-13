@@ -7,6 +7,7 @@ import copyreg
 import io
 import pickle
 import sys
+import textwrap
 
 # Twisted Imports
 from twisted.persisted import aot, crefutil, styles
@@ -378,6 +379,10 @@ class AOTTests(TestCase):
             def __dict__(self):
                 raise AttributeError()
 
+            @property
+            def __getstate__(self):
+                raise AttributeError()
+
         self.assertRaises(TypeError, aot.jellyToSource, UnknownType())
 
     def test_basicIdentity(self):
@@ -393,7 +398,7 @@ class AOTTests(TestCase):
             "goodbye \n\t\u1010 world!",
             1,
             1.0,
-            100 ** 100,
+            100**100,
             unittest,
             aot.AOTJellier,
             d,
@@ -441,6 +446,22 @@ class AOTTests(TestCase):
         self.assertIsInstance(oj[0], tuple)
         self.assertIs(oj[0][0], oj)
         self.assertEqual(oj[0][1], 4321)
+
+    def testIndentify(self):
+        """
+        The generated serialization is indented.
+        """
+        self.assertEqual(
+            aot.jellyToSource({"hello": {"world": []}}),
+            textwrap.dedent(
+                """\
+                app={
+                  'hello':{
+                    'world':[],
+                    },
+                  }""",
+            ),
+        )
 
 
 class CrefUtilTests(TestCase):

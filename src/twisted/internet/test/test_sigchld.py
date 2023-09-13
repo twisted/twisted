@@ -5,13 +5,12 @@
 Tests for L{twisted.internet._sigchld}, an alternate, superior SIGCHLD
 monitoring API.
 """
-
+from __future__ import annotations
 
 import errno
 import os
 import signal
 
-from twisted.python.log import msg
 from twisted.python.runtime import platformType
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -28,7 +27,7 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
     L{installHandler} and L{isDefaultHandler} APIs.
     """
 
-    def pipe(self):
+    def pipe(self) -> tuple[int, int]:
         """
         Create a non-blocking pipe which will be closed after the currently
         running test.
@@ -40,41 +39,23 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         setNonBlocking(write)
         return read, write
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Save the current SIGCHLD handler as reported by L{signal.signal} and
         the current file descriptor registered with L{installHandler}.
         """
-        handler = signal.getsignal(signal.SIGCHLD)
-        if handler != signal.SIG_DFL:
-            self.signalModuleHandler = handler
-            signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        else:
-            self.signalModuleHandler = None
-
+        self.signalModuleHandler = signal.getsignal(signal.SIGCHLD)
         self.oldFD = installHandler(-1)
 
-        if self.signalModuleHandler is not None and self.oldFD != -1:
-            msg(
-                "Previous test didn't clean up after its SIGCHLD setup: %r %r"
-                % (self.signalModuleHandler, self.oldFD)
-            )
-
-    def tearDown(self):
+    def tearDown(self) -> None:
         """
         Restore whatever signal handler was present when setUp ran.
         """
         # If tests set up any kind of handlers, clear them out.
-        installHandler(-1)
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        installHandler(self.oldFD)
+        signal.signal(signal.SIGCHLD, self.signalModuleHandler)
 
-        # Now restore whatever the setup was before the test ran.
-        if self.signalModuleHandler is not None:
-            signal.signal(signal.SIGCHLD, self.signalModuleHandler)
-        elif self.oldFD != -1:
-            installHandler(self.oldFD)
-
-    def test_isDefaultHandler(self):
+    def test_isDefaultHandler(self) -> None:
         """
         L{isDefaultHandler} returns true if the SIGCHLD handler is SIG_DFL,
         false otherwise.
@@ -87,7 +68,7 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         signal.signal(signal.SIGCHLD, lambda *args: None)
         self.assertFalse(isDefaultHandler())
 
-    def test_returnOldFD(self):
+    def test_returnOldFD(self) -> None:
         """
         L{installHandler} returns the previously registered file descriptor.
         """
@@ -95,7 +76,7 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         oldFD = installHandler(write)
         self.assertEqual(installHandler(oldFD), write)
 
-    def test_uninstallHandler(self):
+    def test_uninstallHandler(self) -> None:
         """
         C{installHandler(-1)} removes the SIGCHLD handler completely.
         """
@@ -106,7 +87,7 @@ class SetWakeupSIGCHLDTests(SynchronousTestCase):
         installHandler(-1)
         self.assertTrue(isDefaultHandler())
 
-    def test_installHandler(self):
+    def test_installHandler(self) -> None:
         """
         The file descriptor passed to L{installHandler} has a byte written to
         it when SIGCHLD is delivered to the process.

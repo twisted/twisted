@@ -12,8 +12,20 @@ responsible for coordinating all of trial's behavior at the highest level.
 import os
 import sys
 from functools import partial
-from typing import Awaitable, Callable, Iterable, List, Sequence, TextIO, Union, cast
-from unittest import TestResult, TestSuite
+from os.path import isabs
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TextIO,
+    Union,
+    cast,
+)
+from unittest import TestCase, TestSuite
 
 from attrs import define, field, frozen
 from attrs.converters import default_if_none
@@ -79,7 +91,7 @@ class WorkerPoolConfig:
     """
 
     numWorkers: int
-    workingDirectory: FilePath
+    workingDirectory: FilePath[Any]
     workerArguments: Sequence[str]
     logFile: str
 
@@ -104,7 +116,7 @@ class StartedWorkerPool:
         processes.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[Any]
     testDirLock: FilesystemLock
     testLog: TextIO
     workers: List[LocalWorker]
@@ -112,7 +124,7 @@ class StartedWorkerPool:
 
     _logger = Logger()
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[Any]) -> None:
         """
         Run an action on all of the workers in the pool.
         """
@@ -154,7 +166,7 @@ class WorkerPool:
     def _createLocalWorkers(
         self,
         protocols: Iterable[LocalWorkerAMP],
-        workingDirectory: FilePath,
+        workingDirectory: FilePath[Any],
         logFile: TextIO,
     ) -> List[LocalWorker]:
         """
@@ -212,9 +224,15 @@ class WorkerPool:
             self._config.workingDirectory,
         )
 
-        # Open a log file in the chosen working directory (not necessarily the
-        # same as our configured working directory, if that path was in use).
-        testLog = openTestLog(testDir.child(self._config.logFile))
+        if isabs(self._config.logFile):
+            # Open a log file wherever the user asked.
+            testLogPath = FilePath(self._config.logFile)
+        else:
+            # Open a log file in the chosen working directory (not necessarily
+            # the same as our configured working directory, if that path was
+            # in use).
+            testLogPath = testDir.preauthChild(self._config.logFile)
+        testLog = openTestLog(testLogPath)
 
         ampWorkers = [LocalWorkerAMP() for x in range(self._config.numWorkers)]
         workers = self._createLocalWorkers(
@@ -280,7 +298,7 @@ class DistTrialRunner:
         ``False`` to run through the whole suite and report all of the results
         at the end.
 
-    @ivar _stream: stream which the reporter will use.
+    @ivar stream: stream which the reporter will use.
 
     @ivar _reporterFactory: the reporter class to be used.
     """
@@ -300,7 +318,8 @@ class DistTrialRunner:
         converter=default_if_none(factory=_defaultReactor),  # type: ignore [misc]
     )
     # mypy doesn't understand the converter
-    _stream: TextIO = field(default=None, converter=default_if_none(sys.stdout))  # type: ignore [misc]
+    stream: TextIO = field(default=None, converter=default_if_none(sys.stdout))  # type: ignore [misc]
+
     _tracebackFormat: str = "default"
     _realTimeErrors: bool = False
     _uncleanWarnings: bool = False
@@ -313,7 +332,7 @@ class DistTrialRunner:
         Make reporter factory, and wrap it with a L{DistReporter}.
         """
         reporter = self._reporterFactory(
-            self._stream, self._tracebackFormat, realtime=self._realTimeErrors
+            self.stream, self._tracebackFormat, realtime=self._realTimeErrors
         )
         if self._uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
@@ -358,13 +377,13 @@ class DistTrialRunner:
 
     async def runAsync(
         self,
-        suite: TestSuite,
+        suite: Union[TestCase, TestSuite],
         untilFailure: bool = False,
     ) -> DistReporter:
         """
         Spawn local worker processes and load tests. After that, run them.
 
-        @param suite: A tests suite to be run.
+        @param suite: A test or suite to be run.
 
         @param untilFailure: If C{True}, continue to run the tests until they
             fail.
@@ -389,7 +408,7 @@ class DistTrialRunner:
         # Announce that we're beginning.  countTestCases result is preferred
         # (over len(testCases)) because testCases may contain synthetic cases
         # for error reporting purposes.
-        self._stream.write(f"Running {suite.countTestCases()} tests.\n")
+        self.stream.write(f"Running {suite.countTestCases()} tests.\n")
 
         # Start the worker pool.
         startedPool = await poolStarter.start(self._reactor)
@@ -403,7 +422,7 @@ class DistTrialRunner:
             if untilFailure:
                 # If and only if we're running the suite more than once,
                 # provide a report about which run this is.
-                self._stream.write(f"Test Pass {n + 1}\n")
+                self.stream.write(f"Test Pass {n + 1}\n")
 
             result = self._makeResult()
 
@@ -432,21 +451,36 @@ class DistTrialRunner:
             # Shut down the worker pool.
             await startedPool.join()
 
-    def run(self, suite: TestSuite, untilFailure: bool = False) -> TestResult:
-        """
-        Run a reactor and a test suite.
+    def _run(self, test: Union[TestCase, TestSuite], untilFailure: bool) -> IReporter:
+        result: Union[Failure, DistReporter, None] = None
+        reactorStopping: bool = False
+        testsInProgress: Deferred[object]
 
-        @param suite: The test suite to run.
-        """
-        result: Union[Failure, DistReporter]
-
-        def capture(r):
+        def capture(r: Union[Failure, DistReporter]) -> None:
             nonlocal result
             result = r
 
-        d = Deferred.fromCoroutine(self.runAsync(suite, untilFailure))
-        d.addBoth(capture)
-        d.addBoth(lambda ignored: self._reactor.stop())
+        def maybeStopTests() -> Optional[Deferred[object]]:
+            nonlocal reactorStopping
+            reactorStopping = True
+            if result is None:
+                testsInProgress.cancel()
+                return testsInProgress
+            return None
+
+        def maybeStopReactor(result: object) -> object:
+            if not reactorStopping:
+                self._reactor.stop()
+            return result
+
+        self._reactor.addSystemEventTrigger("before", "shutdown", maybeStopTests)
+
+        testsInProgress = (
+            Deferred.fromCoroutine(self.runAsync(test, untilFailure))
+            .addBoth(capture)
+            .addBoth(maybeStopReactor)
+        )
+
         self._reactor.run()
 
         if isinstance(result, Failure):
@@ -455,16 +489,24 @@ class DistTrialRunner:
         # mypy can't see that raiseException raises an exception so we can
         # only get here if result is not a Failure, so tell mypy result is
         # certainly a DistReporter at this point.
-        assert isinstance(result, DistReporter)
+        assert isinstance(result, DistReporter), f"{result} is not DistReporter"
 
-        # Unwrap the DistReporter to give the caller some regular TestResult
+        # Unwrap the DistReporter to give the caller some regular IReporter
         # object.  DistReporter isn't type annotated correctly so fix it here.
-        return cast(TestResult, result.original)
+        return cast(IReporter, result.original)
 
-    def runUntilFailure(self, suite):
+    def run(self, test: Union[TestCase, TestSuite]) -> IReporter:
+        """
+        Run a reactor and a test suite.
+
+        @param test: The test or suite to run.
+        """
+        return self._run(test, untilFailure=False)
+
+    def runUntilFailure(self, test: Union[TestCase, TestSuite]) -> IReporter:
         """
         Run the tests with local worker processes until they fail.
 
-        @param suite: A tests suite to be run.
+        @param test: The test or suite to run.
         """
-        return self.run(suite, untilFailure=True)
+        return self._run(test, untilFailure=True)

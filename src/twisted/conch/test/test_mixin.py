@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 from twisted.conch import mixin
-from twisted.test.proto_helpers import StringTransport
+from twisted.internet.testing import StringTransport
 from twisted.trial import unittest
 
 

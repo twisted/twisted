@@ -9,8 +9,8 @@ import errno
 import sys
 from io import BytesIO
 
+from twisted.internet.testing import StringTransport
 from twisted.protocols.amp import AMP
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial._dist import (
     _WORKER_AMP_STDIN,
     _WORKER_AMP_STDOUT,
@@ -101,7 +101,9 @@ class MainTests(TestCase):
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
-        self.assertIn(b"No module named 'doesntexist'", self.writeStream.getvalue())
+        # Just brazenly encode irrelevant implementation details here, why
+        # not.
+        self.assertIn(b"StreamOpen", self.writeStream.getvalue())
 
     def test_readInterrupted(self):
         """

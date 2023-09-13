@@ -1041,7 +1041,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         def gotListing(results):
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-            for (name, attrs) in results:
+            for name, attrs in results:
                 name = self._encodeName(name)
                 self.dtpInstance.sendListResponse(name, attrs)
             self.dtpInstance.transport.loseConnection()
@@ -1110,7 +1110,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             @rtype: C{tuple}
             """
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-            for (name, ignored) in results:
+            for name, ignored in results:
                 if not glob or (glob and fnmatch.fnmatch(name, glob)):
                     name = self._encodeName(name)
                     self.dtpInstance.sendLine(name)

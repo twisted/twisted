@@ -238,7 +238,7 @@ class Resolver(common.ResolverBase):
         Called by associated L{dns.DNSProtocol} instances when they connect.
         """
         self.connections.append(protocol)
-        for (d, q, t) in self.pending:
+        for d, q, t in self.pending:
             self.queryTCP(q, t).chainDeferred(d)
         del self.pending[:]
 

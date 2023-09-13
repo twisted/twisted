@@ -9,23 +9,36 @@ import os
 import sys
 from functools import partial
 from io import StringIO
+from os.path import sep
 from typing import Callable, List, Set
+from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify
 
-from attrs import Factory, define, field
-from hamcrest import assert_that, contains, equal_to, has_length, none
+from attrs import Factory, assoc, define, field
+from hamcrest import (
+    assert_that,
+    contains,
+    ends_with,
+    equal_to,
+    has_length,
+    none,
+    starts_with,
+)
+from hamcrest.core.core.allof import AllOf
+from hypothesis import given
+from hypothesis.strategies import booleans, sampled_from
 
 from twisted.internet import interfaces
 from twisted.internet.base import ReactorBase
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.error import ProcessDone
 from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
-from twisted.test.proto_helpers import MemoryReactorClock
 from twisted.trial._dist import _WORKER_AMP_STDIN
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial._dist.disttrial import DistTrialRunner, WorkerPool, WorkerPoolConfig
@@ -36,7 +49,7 @@ from twisted.trial._dist.functional import (
     iterateWhile,
     sequence,
 )
-from twisted.trial._dist.worker import LocalWorker, Worker, WorkerAction
+from twisted.trial._dist.worker import LocalWorker, RunResult, Worker, WorkerAction
 from twisted.trial.reporter import (
     Reporter,
     TestResult,
@@ -112,6 +125,11 @@ class CountingReactor(MemoryReactorClock):
         See L{IReactorCore.stop}.
         """
         MemoryReactorClock.stop(self)
+        # TODO: implementing this more comprehensively in MemoryReactor would
+        # be nice, this is rather hard-coded to disttrial's current
+        # implementation.
+        if "before" in self.triggers:
+            self.triggers["before"]["shutdown"][0][0]()
         self.stopCount += 1
 
     def run(self):
@@ -126,6 +144,9 @@ class CountingReactor(MemoryReactorClock):
 
         for f, args, kwargs in self.whenRunningHooks:
             f(*args, **kwargs)
+        self.stop()
+        # do not count internal 'stop' against trial-initiated .stop() count
+        self.stopCount -= 1
 
 
 class CountingReactorTests(SynchronousTestCase):
@@ -304,6 +325,40 @@ class WorkerPoolTests(TestCase):
         assert_that(started.testLog.closed, equal_to(True))
         assert_that(started.testDirLock.locked, equal_to(False))
 
+    @given(
+        booleans(),
+        sampled_from(
+            [
+                "out.log",
+                f"subdir{sep}out.log",
+            ]
+        ),
+    )
+    def test_logFile(self, absolute: bool, logFile: str) -> None:
+        """
+        L{WorkerPool.start} creates a L{StartedWorkerPool} configured with a
+        log file based on the L{WorkerPoolConfig.logFile}.
+        """
+        if absolute:
+            logFile = self.parent.path + sep + logFile
+
+        config = assoc(self.config, logFile=logFile)
+
+        if absolute:
+            matches = equal_to(logFile)
+        else:
+            matches = AllOf(
+                # This might have a suffix if the configured workingDirectory
+                # was found to be in-use already so we don't add a sep suffix.
+                starts_with(config.workingDirectory.path),
+                # This should be exactly the suffix so we add a sep prefix.
+                ends_with(sep + logFile),
+            )
+
+        pool = WorkerPool(config)
+        started = self.successResultOf(pool.start(CountingReactor([])))
+        assert_that(started.testLog.name, matches)
+
 
 class DistTrialRunnerTests(TestCase):
     """
@@ -413,6 +468,15 @@ class DistTrialRunnerTests(TestCase):
         errors = result.original.errors
         assert_that(errors, has_length(1))
         assert_that(errors[0][1].type, equal_to(WorkerPoolBroken))
+
+    def test_runUnexpectedErrorCtrlC(self) -> None:
+        """
+        If the reactor is stopped by C-c (i.e. `run` returns before the test
+        case's Deferred has been fired) we should cancel the pending test run.
+        """
+        runner = self.getRunner(workerPoolFactory=LocalWorkerPool)
+        with self.assertRaises(CancelledError):
+            runner.run(self.suite)
 
     def test_runUnexpectedWorkerError(self) -> None:
         """
@@ -558,12 +622,12 @@ class DistTrialRunnerTests(TestCase):
                 processProtocol,
                 executable,
                 args,
-                env,
-                path,
-                uid,
-                gid,
-                usePTY,
-                childFDs,
+                env=None,
+                path=None,
+                uid=None,
+                gid=None,
+                usePTY=False,
+                childFDs=None,
             ):
                 pass
 
@@ -590,6 +654,7 @@ class DistTrialRunnerTests(TestCase):
         If there is an unexpected exception running the test suite then it is
         re-raised by L{DistTrialRunner.run}.
         """
+
         # Give it a broken worker pool factory.  There's no exception handling
         # for such an error in the implementation..
         class BrokenFactory(Exception):
@@ -667,7 +732,7 @@ class FunctionalTests(TestCase):
 
         assert_that(self.successResultOf(d), equal_to(42))
 
-    def test_countingCalls(self):
+    def test_countingCalls(self) -> None:
         """
         ``countingCalls`` decorates a function so that it is called with an
         increasing counter and passes the return value through.
@@ -694,7 +759,7 @@ class StartedWorkerPoolBroken:
     always raise an exception.
     """
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         raise WorkerPoolBroken()
 
     async def join(self) -> None:
@@ -724,11 +789,12 @@ class _LocalWorker:
     somewhere else..
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> RunResult:
         """
         Directly run C{case} in the usual way.
         """
         TrialSuite([case]).run(result)
+        return {"success": True}
 
 
 class WorkerBroken(Exception):
@@ -742,7 +808,7 @@ class _BrokenLocalWorker:
     A L{Worker} that always fails to run test cases.
     """
 
-    async def run(self, case: TestCase, result: TestResult) -> None:
+    async def run(self, case: PyUnitTestCase, result: TestResult) -> None:
         """
         Raise an exception instead of running C{case}.
         """
@@ -755,11 +821,11 @@ class StartedLocalWorkerPool:
     A started L{LocalWorkerPool}.
     """
 
-    workingDirectory: FilePath
+    workingDirectory: FilePath[str]
     workers: List[Worker]
-    _stopped: Deferred
+    _stopped: Deferred[None]
 
-    async def run(self, workerAction: WorkerAction) -> None:
+    async def run(self, workerAction: WorkerAction[None]) -> None:
         """
         Run the action with each local worker.
         """

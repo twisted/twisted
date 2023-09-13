@@ -269,7 +269,7 @@ class _SourceFragmentElement(Element):
         C{"snippetHighlightLine"}.  Other lines will be given a I{class} of
         C{"snippetLine"}.
         """
-        for (lineNumber, sourceLine) in self._getSourceLines():
+        for lineNumber, sourceLine in self._getSourceLines():
             newTag = tag.clone()
             if lineNumber == self.frame[2]:
                 cssClass = "snippetHighlightLine"
@@ -856,7 +856,7 @@ class XMLFile:
     An L{ITemplateLoader} that loads and parses XML from a file.
     """
 
-    def __init__(self, path: FilePath):
+    def __init__(self, path: FilePath[Any]):
         """
         Run the parser on a file.
 
@@ -873,7 +873,7 @@ class XMLFile:
         self._loadedTemplate: Optional[List["Flattenable"]] = None
         """The loaded document, or L{None}, if not loaded."""
 
-        self._path: FilePath = path
+        self._path: FilePath[Any] = path
         """The file that is being loaded from."""
 
     def _loadDoc(self) -> List["Flattenable"]:
@@ -1034,9 +1034,9 @@ class _TagFactory:
     """
     A factory for L{Tag} objects; the implementation of the L{tags} object.
 
-    This allows for the syntactic convenience of C{from twisted.web.html import
-    tags; tags.a(href="linked-page.html")}, where 'a' can be basically any HTML
-    tag.
+    This allows for the syntactic convenience of C{from twisted.web.template
+    import tags; tags.a(href="linked-page.html")}, where 'a' can be basically
+    any HTML tag.
 
     The class is not exposed publicly because you only ever need one of these,
     and we already made it for you.
