@@ -9,20 +9,22 @@ RFC 4253.
 
 Maintainer: Paul Swartz
 """
-
+from __future__ import annotations
 
 import binascii
 import hmac
 import struct
+import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Dict
+from typing import Any, Callable, Dict, Tuple, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from typing_extensions import Literal
 
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
@@ -50,7 +52,12 @@ def _mpFromBytes(data):
     return MP(int.from_bytes(data, "big"))
 
 
-class _MACParams(tuple):
+# from https://github.com/python/typeshed/blob/703ed36d5a5c9505c903ea2182e6eed679d9bddb/stdlib/hmac.pyi#L9-L10
+_Hash = Any
+_DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
+
+
+class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).
@@ -68,6 +75,8 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
+
+    key: bytes
 
 
 class SSHCiphers:
@@ -169,7 +178,9 @@ class SSHCiphers:
             backend=default_backend(),
         )
 
-    def _getMAC(self, mac, key):
+    def _getMAC(
+        self, mac: bytes, key: bytes
+    ) -> tuple[None, Literal[b""], Literal[b""], Literal[0]] | _MACParams:
         """
         Gets a 4-tuple representing the message authentication code.
         (<hash module>, <inner hash value>, <outer hash value>,
@@ -333,7 +344,8 @@ class SSHTransportBase(protocol.Protocol):
         key exchanges supported, in order from most-preferred to least.
 
     @ivar supportedPublicKeys:  A list of strings representing the
-        public key types supported, in order from most-preferred to least.
+        public key algorithms supported, in order from most-preferred to
+        least.
 
     @ivar supportedCompressions: A list of strings representing compression
         types supported, from most-preferred to least.
@@ -458,7 +470,7 @@ class SSHTransportBase(protocol.Protocol):
         if eckey.find(b"ecdh") != -1:
             supportedPublicKeys += [eckey.replace(b"ecdh", b"ecdsa")]
 
-    supportedPublicKeys += [b"ssh-rsa", b"ssh-dss"]
+    supportedPublicKeys += [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa", b"ssh-dss"]
     if default_backend().ed25519_supported():
         supportedPublicKeys.append(b"ssh-ed25519")
 
@@ -728,6 +740,14 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.buf = self.buf + data
         if not self.gotVersion:
+            if len(self.buf) > 4096:
+                self.sendDisconnect(
+                    DISCONNECT_CONNECTION_LOST,
+                    b"Peer version string longer than 4KB. "
+                    b"Preventing a denial of service attack.",
+                )
+                return
+
             if self.buf.find(b"\n", self.buf.find(b"SSH-")) == -1:
                 return
 
@@ -1227,7 +1247,7 @@ class SSHTransportBase(protocol.Protocol):
         self._keyExchangeState = self._KEY_EXCHANGE_NONE
         messages = self._blockedByKeyExchange
         self._blockedByKeyExchange = None
-        for (messageType, payload) in messages:
+        for messageType, payload in messages:
             self.sendPacket(messageType, payload)
 
     def isEncrypted(self, direction="out"):
@@ -1430,6 +1450,31 @@ class SSHServerTransport(SSHTransportBase):
     isClient = False
     ignoreNextPacket = 0
 
+    def _getHostKeys(self, keyAlg):
+        """
+        Get the public and private host keys corresponding to the given
+        public key signature algorithm.
+
+        The factory stores public and private host keys by their key format,
+        which is not quite the same as the key signature algorithm: for
+        example, an ssh-rsa key can sign using any of the ssh-rsa,
+        rsa-sha2-256, or rsa-sha2-512 algorithms.
+
+        @type keyAlg: L{bytes}
+        @param keyAlg: A public key signature algorithm name.
+
+        @rtype: 2-L{tuple} of L{keys.Key}
+        @return: The public and private host keys.
+
+        @raises KeyError: if the factory does not have both a public and a
+        private host key for this signature algorithm.
+        """
+        if keyAlg in {b"rsa-sha2-256", b"rsa-sha2-512"}:
+            keyFormat = b"ssh-rsa"
+        else:
+            keyFormat = keyAlg
+        return self.factory.publicKeys[keyFormat], self.factory.privateKeys[keyFormat]
+
     def ssh_KEXINIT(self, packet):
         """
         Called when we receive a MSG_KEXINIT message.  For a description
@@ -1478,8 +1523,7 @@ class SSHServerTransport(SSHTransportBase):
         pktPub, packet = getNS(packet)
 
         # Get the host's public and private keys
-        pubHostKey = self.factory.publicKeys[self.keyAlg]
-        privHostKey = self.factory.privateKeys[self.keyAlg]
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
 
         # Generate the private key
         ecPriv = self._generateECPrivateKey()
@@ -1505,7 +1549,9 @@ class SSHServerTransport(SSHTransportBase):
 
         self.sendPacket(
             MSG_KEXDH_REPLY,
-            NS(pubHostKey.blob()) + NS(encPub) + NS(privHostKey.sign(exchangeHash)),
+            NS(pubHostKey.blob())
+            + NS(encPub)
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1528,6 +1574,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
@@ -1536,16 +1583,16 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(MP(clientDHpublicKey))
         h.update(self.dhSecretKeyPublicMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEXDH_REPLY,
-            NS(self.factory.publicKeys[self.keyAlg].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1624,6 +1671,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         # TODO: we should also look at the value they send to us and reject
         # insecure values of f (if g==2 and f has a single '1' bit while the
         # rest are '0's, then they must have used a small y also).
@@ -1637,7 +1685,7 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(self.dhGexRequest)
         h.update(MP(self.p))
         h.update(MP(self.g))
@@ -1647,9 +1695,9 @@ class SSHServerTransport(SSHTransportBase):
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEX_DH_GEX_REPLY,
-            NS(self.factory.publicKeys[self.keyAlg].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 

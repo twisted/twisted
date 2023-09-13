@@ -5,7 +5,7 @@
 Test for L{twisted.web.proxy}.
 """
 
-from twisted.test.proto_helpers import MemoryReactor, StringTransportWithDisconnection
+from twisted.internet.testing import MemoryReactor, StringTransportWithDisconnection
 from twisted.trial.unittest import TestCase
 from twisted.web.proxy import (
     ProxyClient,

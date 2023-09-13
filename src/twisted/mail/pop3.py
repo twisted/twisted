@@ -32,7 +32,7 @@ from twisted.python import log
 
 
 # Authentication
-@implementer(cred.credentials.IUsernamePassword)
+@implementer(cred.credentials.IUsernameHashedPassword)
 class APOPCredentials:
     """
     Credentials for use in APOP authentication.
@@ -196,7 +196,7 @@ class _IteratorBuffer:
         self.write = write
         self.iterator = iter(iterable)
         if memoryBufferSize is None:
-            memoryBufferSize = 2 ** 16
+            memoryBufferSize = 2**16
         self.memoryBufferSize = memoryBufferSize
 
     def __iter__(self):

@@ -37,23 +37,9 @@ transports, such as UNIX sockets and stdio.
 """
 
 
-from OpenSSL.SSL import (
-    Connection,
-    Context,
-    Error,
-    TLSv1_METHOD,
-    WantReadError,
-    ZeroReturnError,
-)
-
-try:
-    Connection(Context(TLSv1_METHOD), None)
-except TypeError as e:
-    if str(e) != "argument must be an int, or have a fileno() method.":
-        raise
-    raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
-
 from zope.interface import directlyProvides, implementer, providedBy
+
+from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroReturnError
 
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
@@ -115,6 +101,19 @@ class _ProducerMembrane:
         on.
         """
         self._producer.stopProducing()
+
+
+def _representsEOF(exceptionObject: Error) -> bool:
+    """
+    Does the given OpenSSL.SSL.Error represent an end-of-file?
+    """
+    reasonString: str
+    if isinstance(exceptionObject, SysCallError):
+        _, reasonString = exceptionObject.args
+    else:
+        errorQueue = exceptionObject.args[0]
+        _, _, reasonString = errorQueue[-1]
+    return reasonString.casefold().startswith("unexpected eof")
 
 
 @implementer(ISystemHandle, INegotiated)
@@ -251,7 +250,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         transport.
         """
         try:
-            bytes = self._tlsConnection.bio_read(2 ** 15)
+            bytes = self._tlsConnection.bio_read(2**15)
         except WantReadError:
             # There may be nothing in the send BIO right now.
             pass
@@ -272,7 +271,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # there is no guarantee that a single recv call will do it all.
         while not self._lostTLSConnection:
             try:
-                bytes = self._tlsConnection.recv(2 ** 15)
+                bytes = self._tlsConnection.recv(2**15)
             except WantReadError:
                 # The newly received bytes might not have been enough to produce
                 # any application data.
@@ -365,7 +364,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             # Squash an EOF in violation of the TLS protocol into
             # ConnectionLost, so that applications which might run over
             # multiple protocols can recognize its type.
-            if tuple(reason.value.args[:2]) == (-1, "Unexpected EOF"):
+            if _representsEOF(reason.value):
                 reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason
@@ -508,7 +507,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return
 
         # A TLS payload is 16kB max
-        bufferSize = 2 ** 14
+        bufferSize = 2**14
 
         # How far into the input we've gotten so far
         alreadySent = 0

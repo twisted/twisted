@@ -19,7 +19,6 @@ from unittest import skipIf
 
 import hamcrest
 
-import twisted
 from twisted.internet import utils
 from twisted.internet.defer import Deferred, inlineCallbacks, succeed
 from twisted.internet.error import ProcessDone, ProcessTerminated
@@ -30,32 +29,45 @@ from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
-twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = False
 _uidgidSkipReason = ""
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
-    import resource as _resource
-
     from twisted.internet import process as _process
 
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
 except ImportError:
-    resource = None
     process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
 else:
-    resource = _resource
     process = _process
+    from twisted.internet.process import _getFileActions
+
+
+def _getRealMaxOpenFiles() -> int:
+    from resource import RLIMIT_NOFILE, getrlimit
+
+    potentialLimits = [getrlimit(RLIMIT_NOFILE)[0], os.sysconf("SC_OPEN_MAX")]
+    if platform.isMacOSX():
+        # The OPEN_MAX macro is still used on macOS.  Sometimes, you can open
+        # file descriptors that go all the way up to SC_OPEN_MAX or
+        # RLIMIT_NOFILE (which *should* be the same) but OPEN_MAX still trumps
+        # in some circumstances.  In particular, when using the posix_spawn
+        # family of functions, file_actions on files greater than OPEN_MAX
+        # return a EBADF errno.  Since this macro is deprecated on every other
+        # UNIX, it's not exposed by Python, since you're really supposed to get
+        # these values somewhere else...
+        potentialLimits.append(0x2800)
+    return min(potentialLimits)
 
 
 def onlyOnPOSIX(testMethod):
@@ -66,7 +78,7 @@ def onlyOnPOSIX(testMethod):
 
     @return: the C{testMethod} argument.
     """
-    if resource is None:
+    if os.name != "posix":
         testMethod.skip = "Test only applies to POSIX platforms."
     return testMethod
 
@@ -101,6 +113,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     """
 
     requiredInterfaces = [IReactorProcess]
+    usePTY: bool
 
     def test_processTransportInterface(self):
         """
@@ -382,7 +395,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.runReactor(reactor)
         self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
-    @onlyOnPOSIX
+    @skipIf(platform.isWindows(), "Test only applies to POSIX platforms.")
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
@@ -396,12 +409,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         source = networkString(
             """
 import sys
-sys.path.insert(0, '{}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
-sys.stdout.flush()""".format(
-                twistedRoot.path
-            )
+sys.stdout.flush()"""
         )
 
         r, w = os.pipe()
@@ -428,7 +438,8 @@ sys.stdout.flush()""".format(
         # might at least hypothetically select.)
 
         fudgeFactor = 17
-        unlikelyFD = resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor
+        hardResourceLimit = _getRealMaxOpenFiles()
+        unlikelyFD = hardResourceLimit - fudgeFactor
 
         os.dup2(w, unlikelyFD)
         self.addCleanup(os.close, unlikelyFD)
@@ -448,6 +459,7 @@ sys.stdout.flush()""".format(
             GatheringProtocol(),
             pyExe,
             [pyExe, b"-Wignore", b"-c", source],
+            env=properEnv,
             usePTY=self.usePTY,
         )
 
@@ -483,17 +495,28 @@ sys.stdout.flush()""".format(
         self.patch(sys, "getfilesystemencoding", lambda: "ascii")
 
         reactor = self.buildReactor()
+
+        # execvpe() is not called unless posix_spawn is unavailable
+        reactor._neverUseSpawn = True
         output = io.BytesIO()
+
+        # if we're using a PTY, we want stdout (since they're the same in that
+        # specific case); normally it's stderr.
+        expectedFD = 1 if self.usePTY else 2
 
         @reactor.callWhenRunning
         def whenRunning():
             class TracebackCatcher(ProcessProtocol):
-                errReceived = output.write
+                def childDataReceived(self, child, data):
+                    if child == expectedFD:
+                        output.write(data)
 
                 def processEnded(self, reason):
                     reactor.stop()
 
-            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
+            reactor.spawnProcess(
+                TracebackCatcher(), pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
 
         self.runReactor(reactor, timeout=30)
         self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
@@ -871,7 +894,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b"hello", b'"', b" \t|<>^&", br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b"hello", b'"', b" \t|<>^&", rb'"\\"hello\\"', rb'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
         if isinstance(allChars, str):
@@ -1086,4 +1109,98 @@ class ReapingNonePidsLogsProperly(TestCase):
             str(error.value),
             self.expected_message,
             "Wrong error message logged",
+        )
+
+
+CLOSE = 9999
+DUP2 = 10101
+
+
+@onlyOnPOSIX
+class GetFileActionsTests(SynchronousTestCase):
+    """
+    Tests to make sure that the file actions computed for posix_spawn are
+    correct.
+    """
+
+    def test_nothing(self) -> None:
+        """
+        If there are no open FDs and no requested child FDs, there's nothing to
+        do.
+        """
+        self.assertEqual(_getFileActions([], {}, CLOSE, DUP2), [])
+
+    def test_closeNoCloexec(self) -> None:
+        """
+        If a file descriptor is not requested but it is not close-on-exec, it
+        should be closed.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {}, CLOSE, DUP2), [(CLOSE, 0)])
+
+    def test_closeWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is not requested, no
+        action should be taken.
+        """
+        self.assertEqual(_getFileActions([(0, True)], {}, CLOSE, DUP2), [])
+
+    def test_moveWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is moved, then there should be a dup2 but no close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {3: 0}, CLOSE, DUP2), [(DUP2, 0, 3)]
+        )
+
+    def test_moveNoCloexec(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it is moved, then there
+        should be a dup2 followed by a close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, False)], {3: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 3), (CLOSE, 0)],
+        )
+
+    def test_stayPut(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it's left in the same
+        place, then there should be no actions taken.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {0: 0}, CLOSE, DUP2), [])
+
+    def test_cloexecStayPut(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it's left in the same place,
+        then we need to DUP2 it elsewhere, close the original, then DUP2 it
+        back so it doesn't get closed by the implicit exec at the end of
+        posix_spawn's file actions.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {0: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 1), (DUP2, 1, 0), (CLOSE, 1)],
+        )
+
+    def test_inheritableConflict(self) -> None:
+        """
+        If our file descriptor mapping requests that file descriptors change
+        places, we must DUP2 them to a new location before DUP2ing them back.
+        """
+        self.assertEqual(
+            _getFileActions(
+                [(0, False), (1, False)],
+                {
+                    0: 1,
+                    1: 0,
+                },
+                CLOSE,
+                DUP2,
+            ),
+            [
+                (DUP2, 0, 2),  # we're working on the desired fd 0 for the
+                # child, so we are about to overwrite 0.
+                (DUP2, 1, 0),  # move 1 to 0, also closing 0
+                (DUP2, 2, 1),  # move 2 to 1, closing previous 1
+                (CLOSE, 2),  # done with 2
+            ],
         )

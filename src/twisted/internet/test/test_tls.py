@@ -30,7 +30,6 @@ from twisted.internet.test.connectionmixins import (
     EndpointCreator,
 )
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.internet.test.test_tcp import (
     AbortConnectionMixin,
     ConnectToTCPListenerMixin,
@@ -107,6 +106,7 @@ class StartTLSClientEndpoint:
         immediately start TLS on it.  Return a L{Deferred} which fires with the
         protocol instance.
         """
+
         # This would be cleaner when we have ITransport.switchProtocol, which
         # will be added with ticket #3204:
         class WrapperFactory(ServerFactory):
@@ -310,7 +310,6 @@ class SSLClientTestsMixin(
 class TLSPortTestsBuilder(
     TLSMixin,
     ContextGeneratingMixin,
-    ObjectModelIntegrationMixin,
     BadContextTestsMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,

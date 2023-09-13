@@ -13,16 +13,20 @@ See L{Failure}.
 
 
 # System Imports
+import builtins
 import copy
 import inspect
 import linecache
 import sys
 from inspect import getmro
 from io import StringIO
+from typing import Callable, NoReturn, TypeVar
 
 import opcode
 
 from twisted.python import reflect
+
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 count = 0
 traceupLength = 4
@@ -92,10 +96,10 @@ class NoCurrentExceptionError(Exception):
 
 def _Traceback(stackFrames, tbFrames):
     """
-    Construct a fake traceback object using a list of frames. Note that
-    although frames generally include locals and globals, this information
-    is not kept by this method, since locals and globals are not used in
-    standard tracebacks.
+    Construct a fake traceback object using a list of frames.
+
+    It should have the same API as stdlib to allow interaction with
+    other tools.
 
     @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
     @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
@@ -128,6 +132,9 @@ def _Traceback(stackFrames, tbFrames):
     return firstTb
 
 
+# The set of attributes for _TracebackFrame, _Frame and _Code were taken from
+# https://docs.python.org/3.11/library/inspect.html Other Pythons may have a
+# few more attributes that should be added if needed.
 class _TracebackFrame:
     """
     Fake traceback object which can be passed to functions in the standard
@@ -140,6 +147,7 @@ class _TracebackFrame:
         """
         self.tb_frame = frame
         self.tb_lineno = frame.f_lineno
+        self.tb_lasti = frame.f_lasti
         self.tb_next = None
 
 
@@ -163,25 +171,48 @@ class _Frame:
         name, filename, lineno, localz, globalz = frameinfo
         self.f_code = _Code(name, filename)
         self.f_lineno = lineno
-        self.f_globals = {}
-        self.f_locals = {}
+        self.f_globals = dict(globalz or {})
+        self.f_locals = dict(localz or {})
         self.f_back = back
+        self.f_lasti = 0
+        self.f_builtins = vars(builtins).copy()
+        self.f_trace = None
 
 
 class _Code:
     """
     A fake code object, used by L{_Traceback} via L{_Frame}.
+
+    It is intended to have the same API as the stdlib code type to allow
+    interoperation with other tools based on that interface.
     """
 
     def __init__(self, name, filename):
         self.co_name = name
         self.co_filename = filename
+        self.co_lnotab = b""
+        self.co_firstlineno = 0
+        self.co_argcount = 0
+        self.co_varnames = []
+        self.co_code = b""
+        self.co_cellvars = ()
+        self.co_consts = ()
+        self.co_flags = 0
+        self.co_freevars = ()
+        self.co_posonlyargcount = 0
+        self.co_kwonlyargcount = 0
+        self.co_names = ()
+        self.co_nlocals = 0
+        self.co_stacksize = 0
+
+    def co_positions(self):
+        return ((None, None, None, None),)
 
 
 _inlineCallbacksExtraneous = []
 
 
-def _extraneous(f):
+def _extraneous(f: _T_Callable) -> _T_Callable:
     """
     Mark the given callable as extraneous to inlineCallbacks exception
     reporting; don't show these functions.
@@ -286,7 +317,6 @@ class Failure(BaseException):
             return
 
         if hasattr(self.value, "__failure__"):
-
             # For exceptions propagated through coroutine-awaiting (see
             # Deferred.send, AKA Deferred.__next__), which can't be raised as
             # Failure because that would mess up the ability to except: them:
@@ -467,7 +497,7 @@ class Failure(BaseException):
                 return error
         return None
 
-    def raiseException(self):
+    def raiseException(self) -> NoReturn:
         """
         raise the original exception, preserving traceback
         information if available.

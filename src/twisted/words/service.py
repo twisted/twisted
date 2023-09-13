@@ -55,7 +55,7 @@ class Group:
         return failure.Failure(Exception(p, err))
 
     def _cbUserCall(self, results):
-        for (success, result) in results:
+        for success, result in results:
             if not success:
                 user, err = result.value  # XXX
                 self.remove(user, err.getErrorMessage())
@@ -705,7 +705,7 @@ class IRCUser(irc.IRC):
         @param channels: Information about the channels being sent:
             their name, the number of participants, and their topic.
         """
-        for (name, size, topic) in channels:
+        for name, size, topic in channels:
             self.sendMessage(irc.RPL_LIST, name, str(size), ":" + topic)
         self.sendMessage(irc.RPL_LISTEND, ":End of /LIST")
 
@@ -915,7 +915,6 @@ class PBMind(pb.Referenceable):
 
 @implementer(iwords.IChatClient)
 class PBMindReference(pb.RemoteReference):
-
     name = ""
 
     def receive(self, sender, recipient, message):

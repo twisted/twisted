@@ -147,9 +147,8 @@ class UNIXAddress:
 
     def __repr__(self) -> str:
         name = self.name
-        if name:
-            name = _coerceToFilesystemEncoding("", self.name)
-        return f"UNIXAddress({name!r})"
+        show = _coerceToFilesystemEncoding("", name) if name is not None else None
+        return f"UNIXAddress({show!r})"
 
     def __hash__(self):
         if self.name is None:

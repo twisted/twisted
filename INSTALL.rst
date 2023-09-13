@@ -6,7 +6,7 @@ Installation Requirements
 
 To install Twisted, you need:
 
-- Python 3.6/3.7/3.8/3.9
+- Python 3.8/3.9/3.10/3.11/3.12
 
 - `setuptools <https://pypi.python.org/pypi/setuptools>`_
   (installed automatically if you use pip).

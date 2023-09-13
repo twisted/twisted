@@ -52,7 +52,7 @@ def failureFromJSON(failureDict: JSONDict) -> Failure:
 
     @return: L{Failure}
     """
-    f = cast(Failure, Failure.__new__(Failure))
+    f = Failure.__new__(Failure)
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
     f.__dict__ = failureDict
@@ -110,7 +110,7 @@ def objectSaveHook(pythonObject: object) -> JSONDict:
         supports, a specially-formatted dictionary; otherwise, a marker
         dictionary indicating that it could not be serialized.
     """
-    for (predicate, uuid, saver, loader) in classInfo:
+    for predicate, uuid, saver, loader in classInfo:
         if predicate(pythonObject):
             result = saver(pythonObject)
             result["__class_uuid__"] = str(uuid)

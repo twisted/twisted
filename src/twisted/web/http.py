@@ -108,7 +108,7 @@ import tempfile
 import time
 import warnings
 from io import BytesIO
-from typing import Callable
+from typing import AnyStr, Callable, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -126,7 +126,7 @@ from twisted.internet.interfaces import IProtocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import _PY37PLUS, nativeString, networkString
+from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
@@ -410,9 +410,38 @@ def toChunk(data):
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
-def fromChunk(data):
+def _ishexdigits(b: bytes) -> bool:
+    """
+    Is the string case-insensitively hexidecimal?
+
+    It must be composed of one or more characters in the ranges a-f, A-F
+    and 0-9.
+    """
+    for c in b:
+        if c not in b"0123456789abcdefABCDEF":
+            return False
+    return b != b""
+
+
+def _hexint(b: bytes) -> int:
+    """
+    Decode a hexadecimal integer.
+
+    Unlike L{int(b, 16)}, this raises L{ValueError} when the integer has
+    a prefix like C{b'0x'}, C{b'+'}, or C{b'-'}, which is desirable when
+    parsing network protocols.
+    """
+    if not _ishexdigits(b):
+        raise ValueError(b)
+    return int(b, 16)
+
+
+def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
     """
     Convert chunk to string.
+
+    Note that this function is not specification compliant: it doesn't handle
+    chunk extensions.
 
     @type data: C{bytes}
 
@@ -422,7 +451,7 @@ def fromChunk(data):
         byte string.
     """
     prefix, rest = data.split(b"\r\n", 1)
-    length = int(prefix, 16)
+    length = _hexint(prefix)
     if length < 0:
         raise ValueError("Chunk length must be >= 0, not %d" % (length,))
     if rest[length : length + 2] != b"\r\n":
@@ -724,7 +753,7 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
-_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 @implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
@@ -806,7 +835,7 @@ class Request:
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -815,9 +844,9 @@ class Request:
         self.client = self.channel.getPeer()
         self.host = self.channel.getHost()
 
-        self.requestHeaders = Headers()
+        self.requestHeaders: Headers = Headers()
         self.received_cookies = {}
-        self.responseHeaders = Headers()
+        self.responseHeaders: Headers = Headers()
         self.cookies = []  # outgoing cookies
         self.transport = self.channel.transport
 
@@ -954,41 +983,29 @@ class Request:
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    if _PY37PLUS:
-                        cgiArgs = cgi.parse_multipart(
-                            self.content,
-                            pdict,
-                            encoding="utf8",
-                            errors="surrogateescape",
-                        )
-                    else:
-                        cgiArgs = cgi.parse_multipart(self.content, pdict)
+                    cgiArgs = cgi.parse_multipart(
+                        self.content,
+                        pdict,
+                        encoding="utf8",
+                        errors="surrogateescape",
+                    )
 
-                    if _PY37PLUS:
-                        # The parse_multipart function on Python 3.7+
-                        # decodes the header bytes as iso-8859-1 and
-                        # decodes the body bytes as utf8 with
-                        # surrogateescape -- we want bytes
-                        self.args.update(
-                            {
-                                x.encode("iso-8859-1"): [
-                                    z.encode("utf8", "surrogateescape")
-                                    if isinstance(z, str)
-                                    else z
-                                    for z in y
-                                ]
-                                for x, y in cgiArgs.items()
-                                if isinstance(x, str)
-                            }
-                        )
-                    else:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update(
-                            {x.encode("iso-8859-1"): y for x, y in cgiArgs.items()}
-                        )
+                    # The parse_multipart function on Python 3.7+
+                    # decodes the header bytes as iso-8859-1 and
+                    # decodes the body bytes as utf8 with
+                    # surrogateescape -- we want bytes
+                    self.args.update(
+                        {
+                            x.encode("iso-8859-1"): [
+                                z.encode("utf8", "surrogateescape")
+                                if isinstance(z, str)
+                                else z
+                                for z in y
+                            ]
+                            for x, y in cgiArgs.items()
+                            if isinstance(x, str)
+                        }
+                    )
                 except Exception as e:
                     # It was a bad request, or we got a signal.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -1051,7 +1068,7 @@ class Request:
 
     # The following is the public interface that people should be
     # writing to.
-    def getHeader(self, key):
+    def getHeader(self, key: AnyStr) -> Optional[AnyStr]:
         """
         Get an HTTP request header.
 
@@ -1066,6 +1083,7 @@ class Request:
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:
             return value[-1]
+        return None
 
     def getCookie(self, key):
         """
@@ -1080,7 +1098,7 @@ class Request:
         """
         return self.received_cookies.get(key)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 
@@ -1789,6 +1807,47 @@ class _IdentityTransferDecoder:
 maxChunkSizeLineLength = 1024
 
 
+_chunkExtChars = (
+    b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
+    b"abcdefghijklmnopqrstuvwxyz{|}~"
+    b"\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
+    b"\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
+    b"\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
+    b"\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
+    b"\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
+    b"\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
+    b"\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
+    b"\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
+)
+"""
+Characters that are valid in a chunk extension.
+
+See RFC 7230 section 4.1.1::
+
+     chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+
+     chunk-ext-name = token
+     chunk-ext-val  = token / quoted-string
+
+And section 3.2.6::
+
+     token          = 1*tchar
+
+     tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                    / DIGIT / ALPHA
+                    ; any VCHAR, except delimiters
+
+     quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+     qdtext         = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+     obs-text       = %x80-FF
+
+We don't check if chunk extensions are well-formed beyond validating that they
+don't contain characters outside this range.
+"""
+
+
 class _ChunkedTransferDecoder:
     """
     Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
@@ -1882,14 +1941,19 @@ class _ChunkedTransferDecoder:
         endOfLengthIndex = self._buffer.find(b";", 0, eolIndex)
         if endOfLengthIndex == -1:
             endOfLengthIndex = eolIndex
+        rawLength = self._buffer[0:endOfLengthIndex]
         try:
-            length = int(self._buffer[0:endOfLengthIndex], 16)
+            length = _hexint(rawLength)
         except ValueError:
             raise _MalformedChunkedDataError("Chunk-size must be an integer.")
 
-        if length < 0:
-            raise _MalformedChunkedDataError("Chunk-size must not be negative.")
-        elif length == 0:
+        ext = self._buffer[endOfLengthIndex + 1 : eolIndex]
+        if ext and ext.translate(None, _chunkExtChars) != b"":
+            raise _MalformedChunkedDataError(
+                f"Invalid characters in chunk extensions: {ext!r}."
+            )
+
+        if length == 0:
             self.state = "TRAILER"
         else:
             self.state = "BODY"
@@ -2245,7 +2309,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setRawMode()
         elif line[0] in b" \t":
             # Continuation of a multi line header.
-            self.__header = self.__header + b"\n" + line
+            self.__header += b" " + line.lstrip(b" \t")
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
@@ -2273,6 +2337,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # Can this header determine the length?
         if header == b"content-length":
+            if not data.isdigit():
+                return fail()
             try:
                 length = int(data)
             except ValueError:
@@ -2326,7 +2392,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         header = header.lower()
-        data = data.strip()
+        data = data.strip(b" \t")
 
         if not self._maybeChooseTransferDecoder(header, data):
             return False
@@ -2365,14 +2431,38 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def dataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
-        Data was received from the network.  Process it.
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
+
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
         """
-        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2384,9 +2474,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
 
-    def rawDataReceived(self, data):
         self.resetTimeout()
 
         try:

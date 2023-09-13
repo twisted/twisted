@@ -16,7 +16,7 @@ from warnings import catch_warnings, simplefilter
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None  # type: ignore[assignment,misc]
+    invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
 
@@ -263,7 +263,7 @@ deprecatedModuleAttribute(
 
         def makeSomeFiles(pathobj, dirdict):
             pathdict = {}
-            for (key, value) in dirdict.items():
+            for key, value in dirdict.items():
                 child = pathobj.child(key)
                 if isinstance(value, bytes):
                     pathdict[key] = child
@@ -500,7 +500,7 @@ def callTestFunction():
         self.package.moveTo(self.package.sibling(b"twisted_renamed_helper"))
 
         # Make sure importlib notices we've changed importable packages:
-        if invalidate_caches:
+        if invalidate_caches:  # type: ignore[truthy-function]
             invalidate_caches()
 
         # Import the newly renamed version
@@ -905,7 +905,6 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         )
 
     def test_deprecatedKeywordParameter(self):
-
         message = (
             "The 'foo' parameter to "
             "twisted.python.test.test_deprecate."

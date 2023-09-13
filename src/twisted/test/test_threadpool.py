@@ -404,11 +404,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
             event.set()
 
         def func():
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)
@@ -506,6 +506,13 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # Make sure state changed correctly
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
+
+    def test_q(self) -> None:
+        """
+        There is a property '_queue' for legacy purposes
+        """
+        pool = threadpool.ThreadPool(0, 1)
+        self.assertEqual(pool._queue.qsize(), 0)
 
 
 class RaceConditionTests(unittest.SynchronousTestCase):

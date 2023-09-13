@@ -45,7 +45,7 @@ class TwistedModulesMixin:
         sys.modules.clear()
         sys.modules.update(sysModules)
 
-    def pathEntryWithOnePackage(self, pkgname: str = "test_package") -> FilePath:
+    def pathEntryWithOnePackage(self, pkgname: str = "test_package") -> FilePath[str]:
         """
         Generate a L{FilePath} with one package, named C{pkgname}, on it, and
         return the L{FilePath} of the path entry.
