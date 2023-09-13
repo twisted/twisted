@@ -1278,8 +1278,8 @@ class Deferred(Awaitable[_SelfResultT]):
     def fromCoroutine(
         cls,
         coro: Union[
-            Coroutine["Deferred[_T]", Any, _T],
-            Generator["Deferred[_T]", Any, _T],
+            Coroutine[Deferred[Any], Any, _T],
+            Generator[Deferred[Any], Any, _T],
         ],
     ) -> "Deferred[_T]":
         """
@@ -2089,8 +2089,8 @@ def _inlineCallbacks(
 
 def _cancellableInlineCallbacks(
     gen: Union[
-        Generator["Deferred[object]", object, _T],
-        Coroutine["Deferred[object]", object, _T],
+        Generator[Deferred[Any], object, _T],
+        Coroutine[Deferred[Any], object, _T],
     ]
 ) -> Deferred[_T]:
     """
