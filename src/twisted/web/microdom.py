@@ -326,7 +326,7 @@ class Document(Node):
         d.appendChild(newEl)
         return d
 
-    doctype = None
+    doctype: None | str = None
 
     def isEqualToDocument(self, n):
         return (self.doctype == n.doctype) and Node.isEqualToNode(self, n)

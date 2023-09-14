@@ -715,7 +715,6 @@ module = [
     'twisted.web.test.test_web',
     'twisted.web.test.test_webclient',
     'twisted.web.test.test_wsgi',
-    'twisted.web.test.test_xml',
     'twisted.web.test.test_xmlrpc',
     'twisted.web.twcgi',
     'twisted.web.wsgi',
