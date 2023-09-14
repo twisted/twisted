@@ -671,7 +671,6 @@ module = [
     'twisted.trial.test.test_suppression',
     'twisted.trial.test.test_testcase',
     'twisted.trial.test.test_tests',
-    'twisted.trial.test.test_util',
     'twisted.trial.test.weird',
     'twisted.trial.util',
     'twisted.web._auth.basic',
