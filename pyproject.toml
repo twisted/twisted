@@ -667,7 +667,6 @@ module = [
     'twisted.trial.test.test_pyunitcompat',
     'twisted.trial.test.test_reporter',
     'twisted.trial.test.test_runner',
-    'twisted.trial.test.test_script',
     'twisted.trial.test.test_suppression',
     'twisted.trial.test.test_testcase',
     'twisted.trial.test.test_tests',
