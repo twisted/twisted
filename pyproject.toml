@@ -661,7 +661,6 @@ module = [
     'twisted.trial.test.test_asyncassertions',
     'twisted.trial.test.test_deferred',
     'twisted.trial.test.test_keyboard',
-    'twisted.trial.test.test_loader',
     'twisted.trial.test.test_log',
     'twisted.trial.test.test_plugins',
     'twisted.trial.test.test_reporter',
