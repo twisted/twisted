@@ -48,6 +48,7 @@ from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
     IConsumer,
+    IDelayedCall,
     IHandshakeListener,
     ILoggingContext,
     INegotiated,
@@ -706,19 +707,32 @@ class AggregateSmallWrites:
         self._write = write
         self._clock = clock
         self._buffer = []
+        self._bufferLen = 0
+        self._scheduled : Optional[IDelayedCall] = None
 
     def write(self, data: bytes) -> None:
-        """Buffer the data or write it immediately."""
-        was_empty = len(self._buffer) == 0
-        # TODO might want logic that flushes large writes immediately to reduce
-        # memory usage...
+        """
+        Buffer the data, or write it immediately if we've accumulated enough to
+        make it worth it.
+
+        Accumulating too much data can result in higher memory usage.
+        """
         self._buffer.append(data)
-        if was_empty:
-            self._clock.callLater(0, self.flush)
+        self._bufferLen += len(data)
+        if self._bufferLen > 64_000:
+            self.flush()
+        if self._scheduled is None:
+            self._scheduled = self._clock.callLater(0, self._scheduledFlush)
+
+    def _scheduledFlush(self) -> None:
+        """Called in next reactor iteration."""
+        self._scheduled = None
+        self.flush()
 
     def flush(self) -> None:
         """Flush any buffered writes."""
         if self._buffer:
+            self._bufferLen = 0
             self._write(b"".join(self._buffer))
             del self._buffer[:]
 

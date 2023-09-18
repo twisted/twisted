@@ -1862,6 +1862,9 @@ class AggregateSmallWritesTests(SynchronousTestCase):
             else:
                 length_so_far += len(value)
                 aggregate.write(value)
+            if length_so_far > 64_000:
+                lengths.append(length_so_far)
+                length_so_far = 0
         aggregate.flush()
         if length_so_far != 0:
             lengths.append(length_so_far)
