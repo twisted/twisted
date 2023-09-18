@@ -694,7 +694,7 @@ class _ContextFactoryToConnectionFactory:
         return self._connectionForTLS(protocol)
 
 
-class AggregateSmallWrites:
+class AggregateSmallWrites:  # TODO make this private for now?
     """
     Aggregate small writes so they get written in large batches.
 
@@ -737,8 +737,7 @@ class AggregateSmallWrites:
             del self._buffer[:]
 
 
-@implementer(ITransport, INegotiated, ISSLTransport, IProtocol, ISystemHandle, IConsumer, ILoggingContext)
-class BufferingTLSTransport:
+class BufferingTLSTransport(TLSMemoryBIOProtocol):
     """
     A TLS transport implemented by wrapping buffering around a
     ``TLSMemoryBIOProtocol``.
@@ -749,6 +748,12 @@ class BufferingTLSTransport:
     get aggregated and written as a single write at the next reactor iteration.
     """
 
+    # Note: An implementation based on composition would be nicer, but there's
+    # close integration between ``ProtocolWrapper`` subclasses like
+    # ``TLSMemoryBIOProtocol`` and the corresponding factory. Composition broke
+    # things like ``TLSMemoryBIOFactory.protocols`` having the correct
+    # instances, whereas subclassing makes that work.
+
     def __init__(
         self,
         factory: TLSMemoryBIOFactory,
@@ -756,21 +761,13 @@ class BufferingTLSTransport:
         _connectWrapped: bool = True,
         clock: Optional[IReactorTime] = None
     ):
-        self._protocol = TLSMemoryBIOProtocol(factory, wrappedProtocol, _connectWrapped)
-
-        # Attributes we will forward to the wrapped protocol; "wrappedProtocol"
-        # is used in twisted/internet/endpoints.py, which is an abstraction
-        # violation...
-        self._forwarding_names : set[str] = {"wrappedProtocol"}
-        # TODO fix twisted.protocols.test.test_tls so we don't need these?
-        # {"transport", "_producer", "_tlsConnection", "_shutdownTLS"}
-        for interface in providedBy(self):
-            self._forwarding_names |= interface.names()
+        super().__init__(factory, wrappedProtocol, _connectWrapped)
 
         if clock is None:
             from twisted.internet import reactor
             clock = cast(IReactorTime, reactor)
-        self._aggregator = AggregateSmallWrites(self._protocol.write, clock)
+        actual_write = super().write
+        self._aggregator = AggregateSmallWrites(actual_write, clock)
 
     def write(self, data):
         self._aggregator.write(data)
@@ -780,13 +777,7 @@ class BufferingTLSTransport:
 
     def loseConnection(self):
         self._aggregator.flush()
-        self._protocol.loseConnection()
-
-    def __getattr__(self, attr):
-        if attr in self._forwarding_names:
-            return getattr(self._protocol, attr)
-        else:
-            raise AttributeError("Unknown attribute", attr)
+        super().loseConnection()
 
 
 class TLSMemoryBIOFactory(WrappingFactory):
@@ -803,9 +794,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
     """
 
-    # BufferingTLSTransport wraps TLSMemoryBIOProtocol, which is a
-    # ProtocolWrapper.
-    protocol = cast(Type[ProtocolWrapper], BufferingTLSTransport)
+    protocol = BufferingTLSTransport
 
     noisy = False  # disable unnecessary logging.
 
