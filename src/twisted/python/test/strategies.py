@@ -26,7 +26,7 @@ def systemdDescriptorNames() -> SearchStrategy[str]:
             min_codepoint=0,
             max_codepoint=127,
             # This one excludes control characters.
-            blacklist_categories=("Cc",),
+            blacklist_categories=["Cc"],
             # And this excludes the separator.
             blacklist_characters=(":",),
         ),
