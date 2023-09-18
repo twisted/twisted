@@ -36,6 +36,9 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
+from __future__ import annotations
+
+from typing import cast, Callable, Optional, Type
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -44,14 +47,19 @@ from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroRetu
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
+    IConsumer,
     IHandshakeListener,
     ILoggingContext,
     INegotiated,
     IOpenSSLClientConnectionCreator,
     IOpenSSLServerConnectionCreator,
+    IProtocol,
     IProtocolNegotiationFactory,
     IPushProducer,
+    IReactorTime,
     ISystemHandle,
+    ISSLTransport,
+    ITransport,
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -116,7 +124,7 @@ def _representsEOF(exceptionObject: Error) -> bool:
     return reasonString.casefold().startswith("unexpected eof")
 
 
-@implementer(ISystemHandle, INegotiated)
+@implementer(ISystemHandle, INegotiated, ITransport)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -129,6 +137,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     may also want to pause a producer.  Pause/resume events are therefore
     merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
     producers are supported by wrapping them with L{_PullToPush}.
+
+    Because TLS may need to wait for reads before writing, some writes may be
+    buffered until a read occurs.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
@@ -682,6 +693,61 @@ class _ContextFactoryToConnectionFactory:
         return self._connectionForTLS(protocol)
 
 
+class AggregateSmallWrites:
+    """
+    Aggregate small writes so that we don't do expensive small writes into a
+    ``OpenSSL.SSL.Connection`` instance.
+    """
+
+    def __init__(self, write: Callable[[bytes],object], clock: IReactorTime):
+        self._clock = clock
+
+    # TODO implement buffering logic!
+
+
+@implementer(ITransport, INegotiated, ISSLTransport, IProtocol, ISystemHandle, IConsumer, ILoggingContext)
+class BufferingTLSTransport(AggregateSmallWrites):
+    """
+    A TLS transport implemented by wrapping buffering around a
+    ``TLSMemoryBIOProtocol``.
+
+    Doing many small writes directly to a ``OpenSSL.SSL.Connection``, as
+    implemented in ``TLSMemoryBIOProtocol``, can add significant CPU and
+    bandwidth overhead.  Thus, even when writing is possible, small writes will
+    get aggregated and written as a single write at the next reactor iteration.
+    """
+
+    def __init__(
+        self,
+        factory: TLSMemoryBIOFactory,
+        wrappedProtocol: IProtocol,
+        _connectWrapped: bool = True,
+        clock: Optional[IReactorTime] = None
+    ):
+        if clock is None:
+            from twisted.internet import reactor
+            clock = cast(IReactorTime, reactor)
+        self._clock = clock
+        self._protocol = TLSMemoryBIOProtocol(factory, wrappedProtocol, _connectWrapped)
+
+        # Attributes we will forward to the wrapped protocol; "wrappedProtocol"
+        # is used in twisted/internet/endpoints.py, which is an abstraction
+        # violation...
+        self._forwarding_names : set[str] = {"wrappedProtocol"}
+        for interface in providedBy(self):
+            self._forwarding_names |= interface.names()
+
+        AggregateSmallWrites.__init__(self, self._protocol.write, clock)
+
+    # TODO hook up AggregateSmallWrites to def write()/writeSequence()
+
+    def __getattr__(self, attr):
+        if attr in self._forwarding_names:
+            return getattr(self._protocol, attr)
+        else:
+            raise AttributeError("Unknown attribute", attr)
+
+
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
@@ -696,7 +762,9 @@ class TLSMemoryBIOFactory(WrappingFactory):
         L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
     """
 
-    protocol = TLSMemoryBIOProtocol
+    # BufferingTLSTransport wraps TLSMemoryBIOProtocol, which is a
+    # ProtocolWrapper.
+    protocol = cast(Type[ProtocolWrapper], BufferingTLSTransport)
 
     noisy = False  # disable unnecessary logging.
 

@@ -91,17 +91,17 @@ class ProducerProtocol(ConnectableProtocol):
         self.result = result
 
     def handshakeCompleted(self):
-        if not isinstance(self.transport.protocol, tls.TLSMemoryBIOProtocol):
+        if not isinstance(self.transport.protocol, tls.BufferingTLSTransport):
             # Either the test or the code have a bug...
             raise RuntimeError("TLSMemoryBIOProtocol not hooked up.")
 
         self.transport.registerProducer(self.producer, True)
         # The producer was registered with the TLSMemoryBIOProtocol:
-        self.result.append(self.transport.protocol._producer._producer)
+        self.result.append(self.transport.protocol._protocol._producer._producer)
 
         self.transport.unregisterProducer()
         # The producer was unregistered from the TLSMemoryBIOProtocol:
-        self.result.append(self.transport.protocol._producer)
+        self.result.append(self.transport.protocol._protocol._producer)
         self.transport.loseConnection()
 
 
@@ -165,11 +165,11 @@ class ProducerTestsMixin(ReactorBuilder, TLSMixin, ContextGeneratingMixin):
                 # status:
                 if streaming:
                     # _ProducerMembrane -> producer:
-                    result.append(self.transport.protocol._producer._producer)
+                    result.append(self.transport.protocol._protocol._producer._producer)
                     result.append(self.transport.producer._producer)
                 else:
                     # _ProducerMembrane -> _PullToPush -> producer:
-                    result.append(self.transport.protocol._producer._producer._producer)
+                    result.append(self.transport.protocol._protocol._producer._producer._producer)
                     result.append(self.transport.producer._producer._producer)
                 self.transport.unregisterProducer()
                 self.transport.loseConnection()
