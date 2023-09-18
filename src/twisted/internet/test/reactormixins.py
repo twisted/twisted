@@ -216,7 +216,7 @@ class ReactorBuilder:
                         % (process.reapProcessHandlers,)
                     )
 
-    def unbuildReactor(self, reactor):
+    def unbuildReactor(self, reactor, global_reactor_was_munged=True):
         """
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
@@ -247,6 +247,13 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
+        if global_reactor_was_munged:
+            # Restore the original reactor state:
+            from twisted.internet import reactor as globalReactor
+
+            globalReactor.__dict__ = reactor._originalReactorDict
+            globalReactor.__class__ = reactor._originalReactorClass
+
     def buildReactor(self):
         """
         Create and return a reactor using C{self.reactorFactory}.
@@ -268,6 +275,12 @@ class ReactorBuilder:
                 )
         try:
             reactor = self.reactorFactory()
+            reactor._originalReactorDict = globalReactor.__dict__
+            reactor._originalReactorClass = globalReactor.__class__
+            # Make twisted.internet.reactor point to the new reactor,
+            # temporarily; this is undone in unbuildReactor().
+            globalReactor.__dict__ = reactor.__dict__
+            globalReactor.__class__ = reactor.__class__
         except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
