@@ -5,12 +5,17 @@
 Tests for L{twisted.protocols.tls}.
 """
 
+from __future__ import annotations
 
 import gc
+from typing import Union
+
+from hypothesis import given, strategies as st
 
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
 
+from twisted.internet.task import Clock
 from twisted.python.compat import iterbytes
 
 try:
@@ -28,6 +33,7 @@ try:
     )
 
     from twisted.protocols.tls import (
+        AggregateSmallWrites,
         TLSMemoryBIOFactory,
         TLSMemoryBIOProtocol,
         _ProducerMembrane,
@@ -1819,3 +1825,50 @@ class ServerNegotiationFactory(ServerFactory):
         @rtype: L{list} of L{bytes}
         """
         return self._acceptableProtocols
+
+
+class AggregateSmallWritesTests(SynchronousTestCase):
+    """Tests for ``AggregateSmallWrites``."""
+
+    @given(
+        st.lists(
+            st.one_of(
+                st.none(),
+                st.integers(min_value=1, max_value=100_000).map(
+                    lambda length: (b"0123456789ABCDEFGHIJ" * ((length // 20) + 1))[
+                        :length
+                    ]
+                ),
+            ),
+            max_size=1_000,
+        )
+    )
+    def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]):
+        """
+        If multiple writes happen in between reactor iterations, they get
+        written in a batch at the start of the next reactor iteration.
+        """
+        result = []
+        lengths = []
+        clock = Clock()
+        aggregate = AggregateSmallWrites(result.append, clock)
+        length_so_far = 0
+        for value in writes:
+            if value is None:
+                if length_so_far != 0:
+                    lengths.append(length_so_far)
+                    length_so_far = 0
+                clock.advance(0.0001)
+            else:
+                length_so_far += len(value)
+                aggregate.write(value)
+        aggregate.flush()
+        if length_so_far != 0:
+            lengths.append(length_so_far)
+
+        self.assertEqual(len(result), len(lengths))
+        self.assertEqual(
+            b"".join(result), b"".join(value for value in writes if value is not None)
+        )
+        for (combined, expected_length) in zip(result, lengths):
+            self.assertEqual(len(combined), expected_length)
