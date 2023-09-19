@@ -701,12 +701,12 @@ class AggregateSmallWrites:  # TODO make this private for now?
     buffered writes will never get written.
     """
 
-    def __init__(self, write: Callable[[bytes],object], clock: IReactorTime):
+    def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
         self._write = write
         self._clock = clock
         self._buffer = []
         self._bufferLen = 0
-        self._scheduled : Optional[IDelayedCall] = None
+        self._scheduled: Optional[IDelayedCall] = None
 
     def write(self, data: bytes) -> None:
         """
@@ -742,6 +742,7 @@ def _get_default_clock() -> IReactorTime:
     This is a function so it can be monkey-patched in tests; see #5206.
     """
     from twisted.internet import reactor
+
     return cast(IReactorTime, reactor)
 
 
@@ -767,14 +768,10 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         factory: TLSMemoryBIOFactory,
         wrappedProtocol: IProtocol,
         _connectWrapped: bool = True,
-        clock: Optional[IReactorTime] = None
     ):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
-
-        if clock is None:
-            clock = _get_default_clock()
         actual_write = super().write
-        self._aggregator = AggregateSmallWrites(actual_write, clock)
+        self._aggregator = AggregateSmallWrites(actual_write, factory._clock)
 
     def write(self, data: bytes):
         if isinstance(data, str):
@@ -807,7 +804,13 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
     noisy = False  # disable unnecessary logging.
 
-    def __init__(self, contextFactory, isClient, wrappedFactory):
+    def __init__(
+        self,
+        contextFactory,
+        isClient,
+        wrappedFactory,
+        clock: Optional[IReactorTime] = None,
+    ):
         """
         Create a L{TLSMemoryBIOFactory}.
 
@@ -859,6 +862,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
         if not creatorInterface.providedBy(contextFactory):
             contextFactory = _ContextFactoryToConnectionFactory(contextFactory)
         self._connectionCreator = contextFactory
+
+        if clock is None:
+            clock = _get_default_clock()
+        self._clock = clock
 
     def logPrefix(self):
         """

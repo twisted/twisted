@@ -170,7 +170,11 @@ def buildTLSProtocol(
             contextFactory = ServerTLSContext(method=serverMethod)
         else:
             contextFactory = ClientTLSContext()
-    wrapperFactory = TLSMemoryBIOFactory(contextFactory, not server, clientFactory)
+
+    clock = Clock()
+    wrapperFactory = TLSMemoryBIOFactory(
+        contextFactory, not server, clientFactory, clock
+    )
     sslProtocol = wrapperFactory.buildProtocol(None)
 
     if transport is None:
@@ -1218,6 +1222,7 @@ class TLSProducerTests(TestCase):
         # cannot be written. Thus writing bytes before the handshake should
         # cause the producer to be paused:
         clientProtocol.transport.write(b"hello")
+        tlsProtocol.factory._clock.advance(0.001)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
         self.assertTrue(tlsProtocol._producer._producerPaused)
@@ -1308,6 +1313,7 @@ class TLSProducerTests(TestCase):
         # haven't unregistered producer yet:
         clientProtocol.transport.write(b"hello")
         clientProtocol.transport.writeSequence([b" ", b"world"])
+        tlsProtocol.factory._clock.advance(0.001)
 
         # Unregister producer; this should trigger TLS shutdown:
         clientProtocol.transport.unregisterProducer()
@@ -1317,6 +1323,7 @@ class TLSProducerTests(TestCase):
         # Additional writes should not go through:
         clientProtocol.transport.write(b"won't")
         clientProtocol.transport.writeSequence([b"won't!"])
+        tlsProtocol.factory._clock.advance(0.001)
 
         # Finish TLS close handshake:
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
@@ -1400,6 +1407,7 @@ class TLSProducerTests(TestCase):
         # WantReadError will be thrown, triggering the TLS transport's
         # producer code path.
         clientProtocol.transport.write(b"hello")
+        tlsProtocol.factory._clock.advance(0.001)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
 
