@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_xml -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 """
 Micro Document Object Model: a partial DOM implementation with SUX.
 
@@ -19,6 +18,7 @@ Microdom mainly focuses on working with HTML and XHTML.
 
 This module is now deprecated.
 """
+from __future__ import annotations
 
 # System Imports
 import re
