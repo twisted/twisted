@@ -611,7 +611,6 @@ module = [
     'twisted.test.test_paths',
     'twisted.test.test_pcp',
     'twisted.test.test_persisted',
-    'twisted.test.test_plugin',
     'twisted.test.test_policies',
     'twisted.test.test_postfix',
     'twisted.test.test_process',
