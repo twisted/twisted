@@ -461,8 +461,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if isinstance(bytes, str):
-            raise TypeError("Must write bytes to a TLS transport, not str.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
@@ -778,7 +776,9 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         actual_write = super().write
         self._aggregator = AggregateSmallWrites(actual_write, clock)
 
-    def write(self, data):
+    def write(self, data: bytes):
+        if isinstance(data, str):
+            raise TypeError("Must write bytes to a TLS transport, not str.")
         self._aggregator.write(data)
 
     def writeSequence(self, sequence):
