@@ -868,9 +868,10 @@ class IntegrationTestingMixin:
         @type scheme: L{bytes}
         """
         reactor = self.createReactor()
-        # We have no way to tell the client to use our test reactor so we have
-        # to patch it.
-        self.patch(tls, "_get_default_clock", lambda: reactor)
+        if sslPresent:
+            # We have no way to tell the client to use our test reactor so we
+            # have to patch it.
+            self.patch(tls, "_get_default_clock", lambda: reactor)
         agent = createAgent(reactor)
         deferred = agent.request(b"GET", scheme + b"://" + hostName + b"/")
         host, port, factory, timeout, bind = reactor.tcpClients[0]

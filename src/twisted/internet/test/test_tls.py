@@ -35,7 +35,6 @@ from twisted.internet.test.test_tcp import (
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
 )
-from twisted.protocols import tls
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -47,6 +46,7 @@ except ImportError:
     FILETYPE_PEM = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import ClientContextFactory, KeyPair, PrivateCertificate
+    from twisted.protocols import tls
 
 
 class TLSReactorBuilder(ReactorBuilder):
