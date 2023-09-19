@@ -737,6 +737,16 @@ class AggregateSmallWrites:  # TODO make this private for now?
             del self._buffer[:]
 
 
+def _get_default_clock() -> IReactorTime:
+    """
+    Return the default reactor.
+
+    This is a function so it can be monkey-patched in tests; see #5206.
+    """
+    from twisted.internet import reactor
+    return cast(IReactorTime, reactor)
+
+
 class BufferingTLSTransport(TLSMemoryBIOProtocol):
     """
     A TLS transport implemented by wrapping buffering around a
@@ -764,8 +774,7 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
 
         if clock is None:
-            from twisted.internet import reactor
-            clock = cast(IReactorTime, reactor)
+            clock = _get_default_clock()
         actual_write = super().write
         self._aggregator = AggregateSmallWrites(actual_write, clock)
 

@@ -35,6 +35,7 @@ from twisted.internet.test.test_tcp import (
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
 )
+from twisted.protocols import tls
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -46,6 +47,24 @@ except ImportError:
     FILETYPE_PEM = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import ClientContextFactory, KeyPair, PrivateCertificate
+
+
+class TLSReactorBuilder(ReactorBuilder):
+    """
+    Replacement for ``ReactorBuilder`` that also patches
+    ``twisted.protocols.tls`` to use the temporary reactor.  See #5206 for a
+    potential different solution.
+    """
+    def buildReactor(self):
+        reactor = ReactorBuilder.buildReactor(self)
+        from twisted.internet import _producer_helpers
+
+        # Patch twisted.protocols.tls to use this reactor, until we get
+        # around to fixing #5206, or the TLS code uses an explicit reactor:
+        cooperator = Cooperator(scheduler=lambda x: reactor.callLater(0.00001, x))
+        self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
+        self.patch(tls, "_get_default_clock", lambda: reactor)
+        return reactor
 
 
 class TLSMixin:
@@ -169,7 +188,7 @@ class BadContextTestsMixin:
         self.assertEqual(BrokenContextFactory.message, str(exc))
 
 
-class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
+class StartTLSClientTestsMixin(TLSMixin, TLSReactorBuilder, ConnectionTestsMixin):
     """
     Tests for TLS connections established using L{ITLSTransport.startTLS} (as
     opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
@@ -203,7 +222,7 @@ class SSLCreator(EndpointCreator, ContextGeneratingMixin):
 
 class SSLClientTestsMixin(
     TLSMixin,
-    ReactorBuilder,
+    TLSReactorBuilder,
     ContextGeneratingMixin,
     ConnectionTestsMixin,
     BadContextTestsMixin,
@@ -313,7 +332,7 @@ class TLSPortTestsBuilder(
     BadContextTestsMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
-    ReactorBuilder,
+    TLSReactorBuilder,
 ):
     """
     Tests for L{IReactorSSL.listenSSL}
@@ -381,7 +400,7 @@ globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
 
 
 class AbortSSLConnectionTests(
-    ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin
+    TLSReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin
 ):
     """
     C{abortConnection} tests using SSL.
@@ -389,16 +408,6 @@ class AbortSSLConnectionTests(
 
     requiredInterfaces = (IReactorSSL,)
     endpoints = SSLCreator()
-
-    def buildReactor(self):
-        reactor = ReactorBuilder.buildReactor(self)
-        from twisted.internet import _producer_helpers
-
-        # Patch twisted.protocols.tls to use this reactor, until we get
-        # around to fixing #5206, or the TLS code uses an explicit reactor:
-        cooperator = Cooperator(scheduler=lambda x: reactor.callLater(0.00001, x))
-        self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
-        return reactor
 
     def setUp(self):
         if FILETYPE_PEM is None:
