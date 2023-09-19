@@ -96,6 +96,7 @@ else:
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.protocols import tls
 
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot:
@@ -833,7 +834,7 @@ class IntegrationTestingMixin:
         hostName,
         expectedAddress,
         addressType,
-        serverWrapper=lambda server: server,
+        serverWrapper=lambda server, _: server,
         createAgent=client.Agent,
         scheme=b"http",
     ):
@@ -851,9 +852,9 @@ class IntegrationTestingMixin:
         @param addressType: The class to construct an address out of.
         @type addressType: L{type}
 
-        @param serverWrapper: A callable that takes a protocol factory and
-            returns a protocol factory; used to wrap the server / responder
-            side in a TLS server.
+        @param serverWrapper: A callable that takes a protocol factory and a
+            ``Clock`` and returns a protocol factory; used to wrap the server /
+            responder side in a TLS server.
         @type serverWrapper:
             serverWrapper(L{twisted.internet.interfaces.IProtocolFactory}) ->
             L{twisted.internet.interfaces.IProtocolFactory}
@@ -867,6 +868,9 @@ class IntegrationTestingMixin:
         @type scheme: L{bytes}
         """
         reactor = self.createReactor()
+        # We have no way to tell the client to use our test reactor so we have
+        # to patch it.
+        self.patch(tls, "_get_default_clock", lambda: reactor)
         agent = createAgent(reactor)
         deferred = agent.request(b"GET", scheme + b"://" + hostName + b"/")
         host, port, factory, timeout, bind = reactor.tcpClients[0]
@@ -884,10 +888,11 @@ class IntegrationTestingMixin:
 
         accumulator.currentProtocol = None
         accumulator.protocolConnectionMade = None
-        wrapper = serverWrapper(accumulator).buildProtocol(None)
+        wrapper = serverWrapper(accumulator, reactor).buildProtocol(None)
         serverTransport = FakeTransport(wrapper, True)
         wrapper.makeConnection(serverTransport)
         pump = IOPump(clientProtocol, wrapper, clientTransport, serverTransport, False)
+        reactor.advance(0.001)
         pump.flush()
         self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
@@ -901,6 +906,7 @@ class IntegrationTestingMixin:
             b"\r\nContent-length: 12\r\n\r\n"
             b"hello world!"
         )
+        reactor.advance(0.001)
         pump.flush()
         response = self.successResultOf(deferred)
         self.assertEquals(
@@ -1570,8 +1576,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             certHostName.decode("ascii")
         )
 
-        def tlsify(serverFactory):
-            return TLSMemoryBIOFactory(server.options(), False, serverFactory)
+        def tlsify(serverFactory, reactor):
+            return TLSMemoryBIOFactory(server.options(), False, serverFactory, reactor)
 
         def tlsagent(reactor):
             from zope.interface import implementer
