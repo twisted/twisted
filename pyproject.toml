@@ -608,7 +608,6 @@ module = [
     'twisted.test.test_main',
     'twisted.test.test_memcache',
     'twisted.test.test_modules',
-    'twisted.test.test_paths',
     'twisted.test.test_pcp',
     'twisted.test.test_policies',
     'twisted.test.test_postfix',
