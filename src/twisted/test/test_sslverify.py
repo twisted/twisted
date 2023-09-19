@@ -307,7 +307,7 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
         clock.advance(0.001)
         pump_flush()
 
-    pump.flush = flush  # type: ignore
+    pump.flush = flush
     pump.flush()
 
     return sProto, cProto, serverWrappedProto, clientWrappedProto, pump
@@ -2094,7 +2094,7 @@ class ServiceIdentityTests(SynchronousTestCase):
             clock.advance(0.001)
             pump_flush()
 
-        pump.flush = flush  # type: ignore
+        pump.flush = flush
         pump.flush()
 
         return cProto, sProto, clientWrappedProto, serverWrappedProto, pump

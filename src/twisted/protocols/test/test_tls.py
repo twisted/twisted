@@ -1851,12 +1851,12 @@ class AggregateSmallWritesTests(SynchronousTestCase):
             max_size=1_000,
         )
     )
-    def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]):
+    def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]) -> None:
         """
         If multiple writes happen in between reactor iterations, they get
         written in a batch at the start of the next reactor iteration.
         """
-        result = []
+        result: list[bytes] = []
         lengths = []
         clock = Clock()
         aggregate = AggregateSmallWrites(result.append, clock)

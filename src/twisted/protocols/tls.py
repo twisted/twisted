@@ -38,7 +38,7 @@ transports, such as UNIX sockets and stdio.
 
 from __future__ import annotations
 
-from typing import Callable, Optional, cast
+from typing import Callable, Iterable, Optional, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -702,7 +702,7 @@ class AggregateSmallWrites:  # TODO make this private for now?
     def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
         self._write = write
         self._clock = clock
-        self._buffer = []
+        self._buffer: list[bytes] = []
         self._bufferLen = 0
         self._scheduled: Optional[IDelayedCall] = None
 
@@ -771,15 +771,15 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         actual_write = super().write
         self._aggregator = AggregateSmallWrites(actual_write, factory._clock)
 
-    def write(self, data: bytes):
-        if isinstance(data, str):
+    def write(self, data: bytes) -> None:
+        if isinstance(data, str):  # type: ignore[unreachable]
             raise TypeError("Must write bytes to a TLS transport, not str.")
         self._aggregator.write(data)
 
-    def writeSequence(self, sequence):
+    def writeSequence(self, sequence: Iterable[bytes]) -> None:
         self._aggregator.write(b"".join(sequence))
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         self._aggregator.flush()
         super().loseConnection()
 
@@ -807,7 +807,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         contextFactory,
         isClient,
         wrappedFactory,
-        clock: Optional[IReactorTime] = None,
+        clock=None,
     ):
         """
         Create a L{TLSMemoryBIOFactory}.
