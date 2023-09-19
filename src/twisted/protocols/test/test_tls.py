@@ -10,10 +10,10 @@ from __future__ import annotations
 import gc
 from typing import Union
 
-from hypothesis import given, strategies as st
-
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
+
+from hypothesis import given, strategies as st
 
 from twisted.internet.task import Clock
 from twisted.python.compat import iterbytes
@@ -1881,5 +1881,5 @@ class AggregateSmallWritesTests(SynchronousTestCase):
         self.assertEqual(
             b"".join(result), b"".join(value for value in writes if value is not None)
         )
-        for (combined, expected_length) in zip(result, lengths):
+        for combined, expected_length in zip(result, lengths):
             self.assertEqual(len(combined), expected_length)

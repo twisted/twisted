@@ -95,8 +95,8 @@ else:
     sslPresent = True
     from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
-    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
     from twisted.protocols import tls
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot:

@@ -38,7 +38,7 @@ transports, such as UNIX sockets and stdio.
 
 from __future__ import annotations
 
-from typing import cast, Callable, Optional, Type
+from typing import Callable, Optional, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -47,7 +47,6 @@ from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroRetu
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
-    IConsumer,
     IDelayedCall,
     IHandshakeListener,
     ILoggingContext,
@@ -59,7 +58,6 @@ from twisted.internet.interfaces import (
     IPushProducer,
     IReactorTime,
     ISystemHandle,
-    ISSLTransport,
     ITransport,
 )
 from twisted.internet.main import CONNECTION_LOST

@@ -2088,6 +2088,7 @@ class ServiceIdentityTests(SynchronousTestCase):
             lambda: serverTLSFactory.buildProtocol(None),
             lambda: clientTLSFactory.buildProtocol(None),
         )
+
         # Need time to pass for flushing to work:
         def flush(pump_flush=pump.flush):
             clock.advance(0.001)

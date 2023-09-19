@@ -55,6 +55,7 @@ class TLSReactorBuilder(ReactorBuilder):
     ``twisted.protocols.tls`` to use the temporary reactor.  See #5206 for a
     potential different solution.
     """
+
     def buildReactor(self):
         reactor = ReactorBuilder.buildReactor(self)
         from twisted.internet import _producer_helpers
