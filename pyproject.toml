@@ -616,7 +616,6 @@ module = [
     'twisted.test.test_postfix',
     'twisted.test.test_process',
     'twisted.test.test_protocols',
-    'twisted.test.test_randbytes',
     'twisted.test.test_reflect',
     'twisted.test.test_sip',
     'twisted.test.test_sob',
