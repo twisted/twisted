@@ -1469,6 +1469,21 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(successes, [True])
 
+    def test_tailerServerTiming(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
+        and correctly handle trailer Server-Timing data.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        p.dataReceived(b"3\r\nabc\r\n5\r\n12345\r\n")
+        p.dataReceived(
+            b"a\r\n0123456789\r\n0\r\nServer-Timing: total;dur=123.4\r\n\r\n"
+        )
+        self.assertEqual(L, [b"abc", b"12345", b"0123456789"])
+        self.assertEqual(finished, [b"Server-Timing: total;dur=123.4\r\n\r\n"])
+
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n", b"523523\n\rfsdf", b"4234"]
