@@ -1806,7 +1806,7 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
-_startsWithServerTiming = re.compile(b'server-timing:', re.I)
+_startsWithServerTiming = re.compile(b"server-timing:", re.I)
 
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
