@@ -92,9 +92,8 @@ class PluginTests(unittest.TestCase):
         for ext in ["c", "o"] + (deleteSource and [""] or []):
             try:
                 os.remove(module.__file__ + ext)
-            except OSError as ose:
-                if ose.errno != errno.ENOENT:
-                    raise
+            except FileNotFoundError:
+                pass
 
     def _clearCache(self) -> None:
         """
