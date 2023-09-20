@@ -1806,6 +1806,7 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
+_startsWithServerTiming = re.compile(b'server-timing:', re.I)
 
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
@@ -1998,10 +1999,14 @@ class _ChunkedTransferDecoder:
         if len(self._buffer) < 2:
             return False
 
-        if not self._buffer.startswith(b"\r\n"):
+        if self._buffer.startswith(b"\r\n"):
+            data = memoryview(self._buffer)[2:].tobytes()
+        # starts with case-insensitive trailer header prefix "Server-Timing:"
+        elif _startsWithServerTiming.match(self._buffer):
+            data = memoryview(self._buffer)[:].tobytes()
+        else:
             raise _MalformedChunkedDataError("Chunk did not end with CRLF")
 
-        data = memoryview(self._buffer)[2:].tobytes()
         del self._buffer[:]
         self.state = "FINISHED"
         self.finishCallback(data)
