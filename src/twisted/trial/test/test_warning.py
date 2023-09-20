@@ -486,7 +486,6 @@ class CollectWarningsTests(SynchronousTestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].message, "foo")
         self.assertEqual(len(self.flushWarnings()), 1)
-        breakpoint()
 
     def test_immutableObject(self) -> None:
         """
