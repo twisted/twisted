@@ -505,7 +505,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
         when = calendar.timegm((2001, 2, 3, 4, 5, 6, 7, 8, 0))
 
         # Pretend to be in US/Eastern for a moment
-        self.flo.getTimezoneOffset = lambda when: 1800  # type: ignore[method-assign]
+        self.flo.getTimezoneOffset = lambda when: 18000  # type: ignore[method-assign]
         self.assertEqual(self.flo.formatTime(when), "2001-02-02 23:05:06-0500")
 
         # Okay now we're in Eastern Europe somewhere
