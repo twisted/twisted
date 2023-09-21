@@ -603,7 +603,6 @@ module = [
     'twisted.test.test_internet',
     'twisted.test.test_iutils',
     'twisted.test.test_log',
-    'twisted.test.test_logfile',
     'twisted.test.test_loopback',
     'twisted.test.test_main',
     'twisted.test.test_memcache',
