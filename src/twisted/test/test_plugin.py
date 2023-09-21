@@ -347,7 +347,7 @@ class PluginTests(unittest.TestCase):
             assert maybeText is not None
             if expected in maybeText:
                 break
-        else:
+        else:  # pragma: no cover
             self.fail(
                 "Did not observe unwriteable cache warning in log "
                 "events: %r" % (events,)
@@ -587,7 +587,7 @@ class DeveloperSetupTests(unittest.TestCase):
             assert maybeText is not None
             if expected in maybeText:
                 break
-        else:
+        else:  # pragma: no cover
             self.fail(
                 "Did not observe unwriteable cache warning in log "
                 "events: %r" % (events,)
