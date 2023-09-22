@@ -584,7 +584,6 @@ module = [
     'twisted.test.stdio_test_producer',
     'twisted.test.stdio_test_write',
     'twisted.test.stdio_test_writeseq',
-    'twisted.test.test_abstract',
     'twisted.test.test_adbapi',
     'twisted.test.test_amp',
     'twisted.test.test_application',
