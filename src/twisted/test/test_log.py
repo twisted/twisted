@@ -717,7 +717,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
         class PreStartObserver:
             def __call__(self, eventDict: log.EventDict) -> None:
                 if "pre-start" in eventDict.keys():
-                    received.append(eventDict)
+                    received.append(eventDict)  # pragma: no cover
 
         newPublisher(evt)
         newPublisher.addObserver(PreStartObserver())
