@@ -595,7 +595,6 @@ module = [
     'twisted.test.test_dirdbm',
     'twisted.test.test_error',
     'twisted.test.test_factories',
-    'twisted.test.test_failure',
     'twisted.test.test_fdesc',
     'twisted.test.test_ftp',
     'twisted.test.test_ftp_options',
