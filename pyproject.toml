@@ -592,7 +592,6 @@ module = [
     'twisted.test.test_context',
     'twisted.test.test_cooperator',
     'twisted.test.test_defgen',
-    'twisted.test.test_dirdbm',
     'twisted.test.test_factories',
     'twisted.test.test_fdesc',
     'twisted.test.test_ftp',
