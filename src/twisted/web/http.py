@@ -1889,12 +1889,14 @@ class _ChunkedTransferDecoder:
         state transition this is truncated at the front so that index 0 is
         where the next state shall begin.
 
-    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
-        the buffer at which search for CRLF should resume. Resuming the search
-        at this position avoids doing quadratic work if the chunk length line
-        arrives over many calls to C{dataReceived}.
+    @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
+        tracks the index into the buffer at which search for CRLF should resume.
+        Resuming the search at this position avoids doing quadratic work if the
+        chunk length line arrives over many calls to C{dataReceived}. Not used
+        in any other state.
 
-        Not used in any other state.
+    @ivar _trailerHeaders: Accumulates trailer headers. Not passed outside the
+        decoder class for a while.
     """
 
     state = "CHUNK_LENGTH"
@@ -1908,7 +1910,6 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
-        # collected but not used outside the class
         self._trailerHeaders = []
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
