@@ -585,7 +585,7 @@ class DeveloperSetupTests(unittest.TestCase):
         for event in events:
             maybeText = textFromEventDict(event)
             assert maybeText is not None
-            if expected in maybeText:
+            if expected in maybeText:  # pragma: no branch
                 break
         else:  # pragma: no cover
             self.fail(
