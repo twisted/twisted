@@ -1806,8 +1806,6 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
-_startsWithServerTiming = re.compile(b"server-timing:", re.I)
-
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
@@ -1910,6 +1908,8 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
+        # collected but not used outside the class
+        self._trailerHeaders = []
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """
@@ -1986,26 +1986,30 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_TRAILER(self) -> bool:
         """
-        Await the carriage return and line feed characters that follow the
-        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
-        state C{'FINISHED'}.
+        Collect trailer headers if received and finish at the terminal zero-length
+        chunk. Then invoke C{finishCallback} and switch to state C{'FINISHED'}.
 
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
-
-        @raises _MalformedChunkedDataError: when anything other than CRLF is
-            received.
         """
-        if len(self._buffer) < 2:
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex == -1:
+            # Restart the search upon receipt of more data at the start of the
+            # new data, minus one in case the last character of the buffer is
+            # CR.
+            self._start = len(self._buffer) - 1
             return False
 
-        if self._buffer.startswith(b"\r\n"):
-            data = memoryview(self._buffer)[2:].tobytes()
-        # starts with case-insensitive trailer header prefix "Server-Timing:"
-        elif _startsWithServerTiming.match(self._buffer):
-            data = memoryview(self._buffer)[:].tobytes()
-        else:
-            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+        if eolIndex > 0:
+            self._trailerHeaders.append(self._buffer[0:eolIndex])
+            del self._buffer[0 : eolIndex + 2]
+            self._start = 0
+            return True
+
+        # eolIndex == 0
+
+        data = memoryview(self._buffer)[2:].tobytes()
 
         del self._buffer[:]
         self.state = "FINISHED"

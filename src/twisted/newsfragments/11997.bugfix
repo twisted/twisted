@@ -1,1 +1,1 @@
-fix for Twisted web client support of trailer Server-Timing
+add web client support for trailer headers. Previous behaviour with throwing exception is replaced with collecting of trailer headers

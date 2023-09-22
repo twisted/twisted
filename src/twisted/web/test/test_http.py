@@ -1381,20 +1381,6 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
         )
 
-    def test_malformedChunkEndFinal(self):
-        r"""
-        L{_ChunkedTransferDecoder.dataReceived} raises
-        L{_MalformedChunkedDataError} when the terminal zero-length chunk is
-        followed by characters other than C{\r\n}.
-        """
-        p = http._ChunkedTransferDecoder(
-            lambda b: None,
-            lambda b: None,  # pragma: nocov
-        )
-        self.assertRaises(
-            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
-        )
-
     def test_finish(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length
@@ -1469,20 +1455,36 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(successes, [True])
 
-    def test_tailerServerTiming(self):
+    def test_tailerHeaders(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
-        and correctly handle trailer Server-Timing data.
+        and ignores trailer headers which come after the terminating zero-length
+        chunk.
         """
         L = []
         finished = []
         p = http._ChunkedTransferDecoder(L.append, finished.append)
         p.dataReceived(b"3\r\nabc\r\n5\r\n12345\r\n")
         p.dataReceived(
-            b"a\r\n0123456789\r\n0\r\nServer-Timing: total;dur=123.4\r\n\r\n"
+            b"a\r\n0123456789\r\n0\r\nServer-Timing: total;dur=123.4\r\nExpires: Wed, 21 Oct 2015 07:28:00 GMT\r\n\r\n"
         )
         self.assertEqual(L, [b"abc", b"12345", b"0123456789"])
-        self.assertEqual(finished, [b"Server-Timing: total;dur=123.4\r\n\r\n"])
+        self.assertEqual(finished, [b""])
+
+    def test_shortTrailerHeader(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunks of input with
+        tailer header broken up and delivered in multiple calls.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        for s in iterbytes(
+            b"3\r\nabc\r\n5\r\n12345\r\n0\r\nServer-Timing: total;dur=123.4\r\n\r\n"
+        ):
+            p.dataReceived(s)
+        self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
+        self.assertEqual(finished, [b""])
 
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
