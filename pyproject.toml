@@ -545,7 +545,6 @@ module = [
     'twisted.python.test.test_sendmsg',
     'twisted.python.test.test_shellcomp',
     'twisted.python.test.test_syslog',
-    'twisted.python.test.test_url',
     'twisted.python.test.test_urlpath',
     'twisted.python.test.test_util',
     'twisted.python.test.test_zipstream',
