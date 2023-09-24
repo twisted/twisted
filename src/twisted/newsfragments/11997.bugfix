@@ -1,1 +1,1 @@
-add web client support for trailer headers. Previous behaviour with throwing exception is replaced with collecting of trailer headers
+twisted.web now ignores trailer headers rather than raising an exception.
