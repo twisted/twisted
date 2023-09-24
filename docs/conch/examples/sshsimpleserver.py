@@ -26,9 +26,9 @@ server works. You should not use this code in production.
 
 Re-using a private key is dangerous, generate one.
 
-For this example you can use:
+For this example you can use this command to generate a private key for
+the user:
 
-$ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
 $ ckeygen -t rsa -f ssh-keys/client_rsa
 
 Re-using DH primes and having such a short primes list is dangerous, generate
@@ -38,20 +38,23 @@ In this example the implemented SSH server identifies itself using an RSA host
 key and authenticates clients using username "user" and password "password" or
 using a SSH RSA key.
 
+# Each time the server starts, it will have a different host key.
 # Clean the previous server key as we should now have a new one
 $ ssh-keygen -f ~/.ssh/known_hosts -R [localhost]:5022
+
 # Connect with password
-$ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
+$ ssh -p 5022  user@localhost
+
 # Connect with the SSH client key.
 $ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
 """
 
-# Path to RSA SSH keys used by the server.
-SERVER_RSA_PRIVATE = "ssh-keys/ssh_host_rsa_key"
-SERVER_RSA_PUBLIC = "ssh-keys/ssh_host_rsa_key.pub"
-
-# Path to RSA SSH keys accepted by the server.
-CLIENT_RSA_PUBLIC = "ssh-keys/client_rsa.pub"
+# List to public SSH keys accepted by the server.
+# One public key per line
+# You should add here the content of ssh-keys/client_rsa.pub
+CLIENT_PUBLIC = """
+sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIKULA+QMG6KFFXeooTZ9dHXfV9wsUzvjBcCHvWJgEYKcAAAAE3NzaDplZDI1NTE5LXl1YmktNWM= user@test
+""".strip()
 
 
 # Pre-computed big prime numbers used in Diffie-Hellman Group Exchange as
@@ -178,9 +181,10 @@ class EchoProtocol(protocol.Protocol):
         if data == b"\r":
             data = b"\r\n"
         elif data == b"\x03":  # ^C
+            self.transport.write(b"Bye!\r\n")
             self.transport.loseConnection()
             return
-        self.transport.write(data)
+        self.transport.write(b"Recv from you: " + data + b"\r\n")
 
 
 @implementer(session.ISession, session.ISessionSetEnv)
@@ -234,6 +238,8 @@ components.registerAdapter(
     ExampleSession, ExampleAvatar, session.ISession, session.ISessionSetEnv
 )
 
+hostKey = keys.generate(keyType="rsa", keySize=2048)
+
 
 class ExampleFactory(factory.SSHFactory):
     """
@@ -260,7 +266,13 @@ class ExampleFactory(factory.SSHFactory):
     def __init__(self):
         passwdDB = InMemoryUsernamePasswordDatabaseDontUse(user="password")
         sshDB = SSHPublicKeyChecker(
-            InMemorySSHKeyDB({b"user": [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]})
+            InMemorySSHKeyDB(
+                {
+                    b"user": [
+                        keys.Key.fromString(pub) for pub in CLIENT_PUBLIC.splitlines()
+                    ]
+                }
+            )
         )
         self.portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
 
@@ -272,13 +284,13 @@ class ExampleFactory(factory.SSHFactory):
         """
         See: L{factory.SSHFactory}
         """
-        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PUBLIC)}
+        return {b"ssh-rsa": hostKey.public()}
 
     def getPrivateKeys(self):
         """
         See: L{factory.SSHFactory}
         """
-        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PRIVATE)}
+        return {b"ssh-rsa": hostKey}
 
     def getPrimes(self):
         """
