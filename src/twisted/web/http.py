@@ -1910,7 +1910,7 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
-        self._trailerHeaders = []
+        self._trailerHeaders: List[bytearray] = []
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """

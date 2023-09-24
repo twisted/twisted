@@ -1224,6 +1224,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             p.dataReceived(s)
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [])
 
     def test_long(self):
         """
@@ -1455,7 +1456,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(successes, [True])
 
-    def test_tailerHeaders(self):
+    def test_trailerHeaders(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
         and ignores trailer headers which come after the terminating zero-length
@@ -1470,6 +1471,13 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         )
         self.assertEqual(L, [b"abc", b"12345", b"0123456789"])
         self.assertEqual(finished, [b""])
+        self.assertEqual(
+            p._trailerHeaders,
+            [
+                b"Server-Timing: total;dur=123.4",
+                b"Expires: Wed, 21 Oct 2015 07:28:00 GMT",
+            ],
+        )
 
     def test_shortTrailerHeader(self):
         """
@@ -1485,6 +1493,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             p.dataReceived(s)
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [b"Server-Timing: total;dur=123.4"])
 
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
