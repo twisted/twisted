@@ -462,7 +462,7 @@ This is why it's recommended to just use `warnings.warn()` at the top level of t
     """
     The normal docstring of the top-level package.
 
-    This package is now deprecated.
+    This package was deprecated in Twisted NEXT
     """
     import warnings
 
