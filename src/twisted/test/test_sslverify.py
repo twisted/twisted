@@ -304,7 +304,7 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
 
     # Need time to pass for flushing to work:
     def flush(pump_flush=pump.flush):
-        clock.advance(0.001)
+        clock.advance(0)
         pump_flush()
 
     pump.flush = flush
@@ -2091,7 +2091,7 @@ class ServiceIdentityTests(SynchronousTestCase):
 
         # Need time to pass for flushing to work:
         def flush(pump_flush=pump.flush):
-            clock.advance(0.001)
+            clock.advance(0)
             pump_flush()
 
         pump.flush = flush

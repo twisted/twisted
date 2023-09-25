@@ -1222,7 +1222,7 @@ class TLSProducerTests(TestCase):
         # cannot be written. Thus writing bytes before the handshake should
         # cause the producer to be paused:
         clientProtocol.transport.write(b"hello")
-        tlsProtocol.factory._clock.advance(0.001)
+        tlsProtocol.factory._clock.advance(0)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
         self.assertTrue(tlsProtocol._producer._producerPaused)
@@ -1313,7 +1313,7 @@ class TLSProducerTests(TestCase):
         # haven't unregistered producer yet:
         clientProtocol.transport.write(b"hello")
         clientProtocol.transport.writeSequence([b" ", b"world"])
-        tlsProtocol.factory._clock.advance(0.001)
+        tlsProtocol.factory._clock.advance(0)
 
         # Unregister producer; this should trigger TLS shutdown:
         clientProtocol.transport.unregisterProducer()
@@ -1323,7 +1323,7 @@ class TLSProducerTests(TestCase):
         # Additional writes should not go through:
         clientProtocol.transport.write(b"won't")
         clientProtocol.transport.writeSequence([b"won't!"])
-        tlsProtocol.factory._clock.advance(0.001)
+        tlsProtocol.factory._clock.advance(0)
 
         # Finish TLS close handshake:
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
@@ -1407,7 +1407,7 @@ class TLSProducerTests(TestCase):
         # WantReadError will be thrown, triggering the TLS transport's
         # producer code path.
         clientProtocol.transport.write(b"hello")
-        tlsProtocol.factory._clock.advance(0.001)
+        tlsProtocol.factory._clock.advance(0)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
 
@@ -1866,7 +1866,7 @@ class AggregateSmallWritesTests(SynchronousTestCase):
                 if length_so_far != 0:
                     lengths.append(length_so_far)
                     length_so_far = 0
-                clock.advance(0.0001)
+                clock.advance(0)
             else:
                 length_so_far += len(value)
                 aggregate.write(value)
