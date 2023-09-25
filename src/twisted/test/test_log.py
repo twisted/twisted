@@ -717,7 +717,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
         class PreStartObserver:
             def __call__(self, eventDict: log.EventDict) -> None:
                 if "pre-start" in eventDict.keys():
-                    # later we assert that received is empty so this is not covered 
+                    # later we assert that received is empty so this is not covered
                     received.append(eventDict)  # pragma: no cover
 
         newPublisher(evt)
