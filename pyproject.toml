@@ -508,7 +508,6 @@ module = [
     'twisted.plugins.cred_unix',
     'twisted.positioning._sentence',
     'twisted.positioning.nmea',
-    'twisted.positioning.test.test_nmea',
     'twisted.positioning.test.test_sentence',
     'twisted.protocols.amp',
     'twisted.protocols.basic',
