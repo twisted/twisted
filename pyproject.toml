@@ -492,7 +492,6 @@ module = [
     'twisted.names.test.test_common',
     'twisted.names.test.test_dns',
     'twisted.names.test.test_examples',
-    'twisted.names.test.test_hosts',
     'twisted.names.test.test_names',
     'twisted.names.test.test_rootresolve',
     'twisted.names.test.test_server',
