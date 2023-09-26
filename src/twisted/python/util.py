@@ -7,6 +7,7 @@ import errno
 import os
 import sys
 import warnings
+from typing import AnyStr
 
 try:
     import grp as _grp
@@ -287,7 +288,9 @@ def addPluginDir():
     sys.path.extend(getPluginDirs())
 
 
-def sibpath(path, sibling):
+def sibpath(
+    path: os.PathLike[AnyStr] | AnyStr, sibling: os.PathLike[AnyStr] | AnyStr
+) -> AnyStr:
     """
     Return the path to a sibling of a file in the filesystem.
 
