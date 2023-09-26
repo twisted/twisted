@@ -79,7 +79,7 @@ _percentenc = lambda s: "".join("%%%02X" % ord(c) for c in s)
 class _HasException(Protocol):
     @property
     def exception(self) -> BaseException:
-        pass
+        ...
 
 
 class TestURL(SynchronousTestCase):
