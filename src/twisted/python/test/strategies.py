@@ -6,6 +6,7 @@ Hypothesis strategies for values related to L{twisted.python}.
 """
 
 from hypothesis.strategies import SearchStrategy, characters, text
+from typing_extensions import Literal
 
 
 def systemdDescriptorNames() -> SearchStrategy[str]:
@@ -17,6 +18,7 @@ def systemdDescriptorNames() -> SearchStrategy[str]:
     #
     # > Names may contain any ASCII character, but must exclude control
     # > characters and ":", and must be at most 255 characters in length.
+    control_characters: Literal["Cc"] = "Cc"
     return text(
         # The docs don't say there is a min size so I'm guessing...
         min_size=1,
@@ -26,7 +28,7 @@ def systemdDescriptorNames() -> SearchStrategy[str]:
             min_codepoint=0,
             max_codepoint=127,
             # This one excludes control characters.
-            blacklist_categories=("Cc",),
+            blacklist_categories=(control_characters,),
             # And this excludes the separator.
             blacklist_characters=(":",),
         ),
