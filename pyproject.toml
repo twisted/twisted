@@ -372,7 +372,6 @@ module = [
     'twisted.conch.test.test_keys',
     'twisted.conch.test.test_knownhosts',
     'twisted.conch.test.test_manhole',
-    'twisted.conch.test.test_mixin',
     'twisted.conch.test.test_recvline',
     'twisted.conch.test.test_session',
     'twisted.conch.test.test_ssh',
