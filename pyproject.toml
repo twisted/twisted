@@ -441,7 +441,6 @@ module = [
     'twisted.internet.test.test_time',
     'twisted.internet.test.test_tls',
     'twisted.internet.test.test_udp',
-    'twisted.internet.test.test_udp_internals',
     'twisted.internet.test.test_unix',
     'twisted.internet.test.test_win32events',
     'twisted.internet.testing',
