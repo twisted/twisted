@@ -367,7 +367,6 @@ module = [
     'twisted.conch.test.test_endpoints',
     'twisted.conch.test.test_filetransfer',
     'twisted.conch.test.test_forwarding',
-    'twisted.conch.test.test_helper',
     'twisted.conch.test.test_insults',
     'twisted.conch.test.test_keys',
     'twisted.conch.test.test_knownhosts',
