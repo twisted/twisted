@@ -358,7 +358,6 @@ module = [
     'twisted.conch.test.loopback',
     'twisted.conch.test.test_agent',
     'twisted.conch.test.test_cftp',
-    'twisted.conch.test.test_channel',
     'twisted.conch.test.test_checkers',
     'twisted.conch.test.test_conch',
     'twisted.conch.test.test_connection',
