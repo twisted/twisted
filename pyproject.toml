@@ -674,7 +674,6 @@ module = [
     'twisted.web.test.test_http2',
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
-    'twisted.web.test.test_pages',
     'twisted.web.test.test_proxy',
     'twisted.web.test.test_resource',
     'twisted.web.test.test_soap',
