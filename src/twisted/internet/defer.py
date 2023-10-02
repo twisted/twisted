@@ -1923,10 +1923,10 @@ def _gotResultInlineCallbacks(
     r: object,
     waiting: List[Any],
     gen: Union[
-        Generator[Deferred[_T], object, None],
-        Coroutine[Deferred[_T], object, None],
+        Generator[Deferred[object], object, _T],
+        Coroutine[Deferred[object], object, _T],
     ],
-    status: _CancellationStatus,
+    status: _CancellationStatus[_T],
     context: _Context,
 ) -> None:
     """
@@ -2107,8 +2107,8 @@ def _inlineCallbacks(
 
 def _handleCancelInlineCallbacks(
     result: Failure,
-    status: _CancellationStatus,
-) -> Deferred[object]:
+    status: _CancellationStatus[_T],
+) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
     L{Deferred} it is waiting on.
@@ -2131,7 +2131,9 @@ def _handleCancelInlineCallbacks(
     return status.deferred
 
 
-def _addCancelCallbackToDeferred(it: Deferred[_T], status: _CancellationStatus) -> None:
+def _addCancelCallbackToDeferred(
+    it: Deferred[_T], status: _CancellationStatus[_T]
+) -> None:
     """
     Helper for L{_cancellableInlineCallbacks} to add
     L{_handleCancelInlineCallbacks} as the first errback.
