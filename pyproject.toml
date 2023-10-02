@@ -15,7 +15,7 @@ dynamic = [
     "optional-dependencies",
 ]
 description = "An asynchronous networking framework written in Python"
-license = "MIT"
+license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.8.0"
 authors = [
