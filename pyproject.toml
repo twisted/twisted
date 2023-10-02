@@ -677,7 +677,6 @@ module = [
     'twisted.web.test.test_proxy',
     'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
-    'twisted.web.test.test_tap',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
     'twisted.web.test.test_web',
