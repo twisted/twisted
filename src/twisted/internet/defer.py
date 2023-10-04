@@ -2105,6 +2105,22 @@ def _inlineCallbacks(
             waiting[1] = None
 
 
+def _addCancelCallbackToDeferred(
+    it: Deferred[_T], status: _CancellationStatus[_T]
+) -> None:
+    """
+    Helper for L{_cancellableInlineCallbacks} to add
+    L{_handleCancelInlineCallbacks} as the first errback.
+
+    @param it: The L{Deferred} to add the errback to.
+    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    """
+    it.callbacks, tmp = [], it.callbacks
+    it.addErrback(_handleCancelInlineCallbacks, status)
+    it.callbacks.extend(tmp)
+    it.errback(_InternalInlineCallbacksCancelledError())
+
+
 def _handleCancelInlineCallbacks(
     result: Failure,
     status: _CancellationStatus[_T],
@@ -2129,22 +2145,6 @@ def _handleCancelInlineCallbacks(
     awaited.cancel()
 
     return status.deferred
-
-
-def _addCancelCallbackToDeferred(
-    it: Deferred[_T], status: _CancellationStatus[_T]
-) -> None:
-    """
-    Helper for L{_cancellableInlineCallbacks} to add
-    L{_handleCancelInlineCallbacks} as the first errback.
-
-    @param it: The L{Deferred} to add the errback to.
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
-    """
-    it.callbacks, tmp = [], it.callbacks
-    it.addErrback(_handleCancelInlineCallbacks, status)
-    it.callbacks.extend(tmp)
-    it.errback(_InternalInlineCallbacksCancelledError())
 
 
 def _cancellableInlineCallbacks(
