@@ -1750,13 +1750,13 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             3. Cancelling the deferred again cancels any deferred the function
                is waiting on, and the exception is raised.
         """
-        canceller1Calls: List[Deferred[Any]] = []
-        canceller2Calls: List[Deferred[Any]] = []
-        d1: Deferred[Any] = Deferred(canceller1Calls.append)
-        d2: Deferred[Any] = Deferred(canceller2Calls.append)
+        canceller1Calls: List[Deferred[object]] = []
+        canceller2Calls: List[Deferred[object]] = []
+        d1: Deferred[object] = Deferred(canceller1Calls.append)
+        d2: Deferred[object] = Deferred(canceller2Calls.append)
 
         @defer.inlineCallbacks
-        def testFunc() -> Any:
+        def testFunc() -> Generator[Deferred[object], object, None]:
             try:
                 yield d1
             except Exception:
