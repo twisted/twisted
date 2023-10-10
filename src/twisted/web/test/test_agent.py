@@ -892,8 +892,14 @@ class IntegrationTestingMixin:
         wrapper = serverWrapper(accumulator, reactor).buildProtocol(None)
         serverTransport = FakeTransport(wrapper, True)
         wrapper.makeConnection(serverTransport)
-        pump = IOPump(clientProtocol, wrapper, clientTransport, serverTransport, False)
-        reactor.advance(0)
+        pump = IOPump(
+            clientProtocol,
+            wrapper,
+            clientTransport,
+            serverTransport,
+            False,
+            clock=reactor,
+        )
         pump.flush()
         self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
@@ -907,7 +913,6 @@ class IntegrationTestingMixin:
             b"\r\nContent-length: 12\r\n\r\n"
             b"hello world!"
         )
-        reactor.advance(0)
         pump.flush()
         response = self.successResultOf(deferred)
         self.assertEquals(
