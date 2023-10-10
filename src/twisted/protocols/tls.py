@@ -690,7 +690,7 @@ class _ContextFactoryToConnectionFactory:
         return self._connectionForTLS(protocol)
 
 
-class AggregateSmallWrites:  # TODO make this private for now?
+class _AggregateSmallWrites:
     """
     Aggregate small writes so they get written in large batches.
 
@@ -769,7 +769,7 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
     ):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
         actual_write = super().write
-        self._aggregator = AggregateSmallWrites(actual_write, factory._clock)
+        self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
 
     def write(self, data: bytes) -> None:
         if isinstance(data, str):  # type: ignore[unreachable]
