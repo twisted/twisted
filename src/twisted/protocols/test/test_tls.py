@@ -1869,31 +1869,41 @@ class _AggregateSmallWritesTests(SynchronousTestCase):
         # list:
         result: list[bytes] = []
 
-        # The sequence of lengths of expected writes:
-        lengths = []
-
         clock = Clock()
         aggregate = _AggregateSmallWrites(result.append, clock)
-        length_so_far = 0
         for value in writes:
             if value is None:
-                if length_so_far != 0:
-                    lengths.append(length_so_far)
-                    length_so_far = 0
                 clock.advance(0)
             else:
-                length_so_far += len(value)
                 aggregate.write(value)
-            if length_so_far > _AggregateSmallWrites.MAX_BUFFER_SIZE:
-                lengths.append(length_so_far)
-                length_so_far = 0
-        aggregate.flush()
-        if length_so_far != 0:
-            lengths.append(length_so_far)
 
-        self.assertEqual(len(result), len(lengths))
+        # Flush any remaining bytes:
+        aggregate.flush()
+
+        # Now, check the invariants:
+
+        # 1. All bytes passed to aggregate.write() should have been written
+        # out, in the correct order:
         self.assertEqual(
             b"".join(result), b"".join(value for value in writes if value is not None)
         )
-        for combined, expected_length in zip(result, lengths):
-            self.assertEqual(len(combined), expected_length)
+
+        # 2. All writes happened either when the max buffer size was reached,
+        # or when the clock advanced:
+        small_writes = writes[:]
+        for chunk in result:
+            combined_length = len(chunk)
+            # Initial flushes have no side-effects:
+            while small_writes and small_writes[0] is None:
+                small_writes.pop(0)
+            small_writes_length = 0
+            while small_writes:
+                next_original_maybe_write = small_writes.pop(0)
+                if next_original_maybe_write is None:
+                    self.assertEqual(combined_length, small_writes_length)
+                    break
+                else:
+                    small_writes_length += len(next_original_maybe_write)
+                    if small_writes_length > aggregate.MAX_BUFFER_SIZE:
+                        self.assertEqual(combined_length, small_writes_length)
+                        break
