@@ -720,12 +720,21 @@ class _AggregateSmallWrites:
         """
         self._buffer.append(data)
         self._bufferLen += len(data)
+
         if self._bufferLen > self.MAX_BUFFER_SIZE:
+            # We've accumulated enough we should just write it out. No need to
+            # schedule a flush, since we just flushed everything.
             self.flush()
-            # No need to schedule a flush, since we just flushed everything.
             return
-        if self._scheduled is None:
-            self._scheduled = self._clock.callLater(0, self._scheduledFlush)
+
+        if self._scheduled:
+            # We already have a scheduled send, so with the data in the buffer,
+            # there is nothing more to do here.
+            return
+
+        # Schedule the write of the accumulated buffer for the next reactor
+        # iteration.
+        self._scheduled = self._clock.callLater(0, self._scheduledFlush)
 
     def _scheduledFlush(self) -> None:
         """Called in next reactor iteration."""
