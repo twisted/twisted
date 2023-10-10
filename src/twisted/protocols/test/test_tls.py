@@ -33,7 +33,7 @@ try:
     )
 
     from twisted.protocols.tls import (
-        AggregateSmallWrites,
+        _AggregateSmallWrites,
         TLSMemoryBIOFactory,
         TLSMemoryBIOProtocol,
         _ProducerMembrane,
@@ -1835,8 +1835,8 @@ class ServerNegotiationFactory(ServerFactory):
         return self._acceptableProtocols
 
 
-class AggregateSmallWritesTests(SynchronousTestCase):
-    """Tests for ``AggregateSmallWrites``."""
+class _AggregateSmallWritesTests(SynchronousTestCase):
+    """Tests for ``_AggregateSmallWrites``."""
 
     @given(
         st.lists(
@@ -1859,7 +1859,7 @@ class AggregateSmallWritesTests(SynchronousTestCase):
         result: list[bytes] = []
         lengths = []
         clock = Clock()
-        aggregate = AggregateSmallWrites(result.append, clock)
+        aggregate = _AggregateSmallWrites(result.append, clock)
         length_so_far = 0
         for value in writes:
             if value is None:
