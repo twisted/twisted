@@ -1853,11 +1853,25 @@ class _AggregateSmallWritesTests(SynchronousTestCase):
     )
     def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]) -> None:
         """
-        If multiple writes happen in between reactor iterations, they get
-        written in a batch at the start of the next reactor iteration.
+        A L{_AggregateSmallWrites} correctly aggregates data for the given
+        sequence of writes and increments in the clock.
+
+        Hypothesis will generate a list of a combination of instances of
+        ``bytes`` and ``None``, and pass that as the ``writes`` parameter.  The
+        ``bytes`` should be passed to L{_AggregateSmallWrites.write}, a
+        ``None`` indicates that some time has passed, which should cause the
+        aggregator to write data out.
+
+        If multiple writes happen in between reactor iterations, they should
+        get written in a batch at the start of the next reactor iteration.
         """
+        # Whenever the aggregate is flushed, it will write the bytes to this
+        # list:
         result: list[bytes] = []
+
+        # The sequence of lengths of expected writes:
         lengths = []
+
         clock = Clock()
         aggregate = _AggregateSmallWrites(result.append, clock)
         length_so_far = 0
@@ -1870,7 +1884,7 @@ class _AggregateSmallWritesTests(SynchronousTestCase):
             else:
                 length_so_far += len(value)
                 aggregate.write(value)
-            if length_so_far > 64_000:
+            if length_so_far > _AggregateSmallWrites.MAX_BUFFER_SIZE:
                 lengths.append(length_so_far)
                 length_so_far = 0
         aggregate.flush()
