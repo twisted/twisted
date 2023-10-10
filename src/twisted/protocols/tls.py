@@ -722,6 +722,8 @@ class _AggregateSmallWrites:
         self._bufferLen += len(data)
         if self._bufferLen > self.MAX_BUFFER_SIZE:
             self.flush()
+            # No need to schedule a flush, since we just flushed everything.
+            return
         if self._scheduled is None:
             self._scheduled = self._clock.callLater(0, self._scheduledFlush)
 
