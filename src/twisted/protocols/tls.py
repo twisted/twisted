@@ -697,7 +697,12 @@ class _AggregateSmallWrites:
     If this is used as part of a transport, the transport needs to call
     ``flush()`` immediately when ``loseConnection()`` is called, otherwise any
     buffered writes will never get written.
+
+    @cvar MAX_BUFFER_SIZE: The maximum amount of bytes to buffer before writing
+        them out.
     """
+
+    MAX_BUFFER_SIZE = 64_000
 
     def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
         self._write = write
@@ -715,7 +720,7 @@ class _AggregateSmallWrites:
         """
         self._buffer.append(data)
         self._bufferLen += len(data)
-        if self._bufferLen > 64_000:
+        if self._bufferLen > self.MAX_BUFFER_SIZE:
             self.flush()
         if self._scheduled is None:
             self._scheduled = self._clock.callLater(0, self._scheduledFlush)
