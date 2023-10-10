@@ -33,9 +33,9 @@ try:
     )
 
     from twisted.protocols.tls import (
-        _AggregateSmallWrites,
         TLSMemoryBIOFactory,
         TLSMemoryBIOProtocol,
+        _AggregateSmallWrites,
         _ProducerMembrane,
         _PullToPush,
     )

@@ -6,8 +6,8 @@
 Utilities and helpers for simulating a network
 """
 
-from typing import Optional
 import itertools
+from typing import Optional
 
 try:
     from OpenSSL.SSL import Error as NativeOpenSSLError

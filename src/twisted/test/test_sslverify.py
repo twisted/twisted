@@ -300,7 +300,7 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     sProto, cProto, pump = connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None),
-        clock=clock
+        clock=clock,
     )
     pump.flush()
 
@@ -2081,7 +2081,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         cProto, sProto, pump = connectedServerAndClient(
             lambda: serverTLSFactory.buildProtocol(None),
             lambda: clientTLSFactory.buildProtocol(None),
-            clock=clock
+            clock=clock,
         )
         pump.flush()
 
