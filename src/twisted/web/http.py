@@ -100,6 +100,7 @@ __all__ = [
 import base64
 import binascii
 import calendar
+import cgi
 import math
 import os
 import re
@@ -129,7 +130,6 @@ from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
-from twisted.web import _cgi
 
 # twisted imports
 from twisted.web._responses import (
@@ -225,10 +225,10 @@ monthname_lower = [name and name.lower() for name in monthname]
 
 
 def _parseHeader(line):
-    # _cgi.parse_header requires a str
-    key, pdict = _cgi.parse_header(line.decode("charmap"))
+    # cgi.parse_header requires a str
+    key, pdict = cgi.parse_header(line.decode("charmap"))
 
-    # We want the key as bytes, and _cgi.parse_multipart (which consumes
+    # We want the key as bytes, and cgi.parse_multipart (which consumes
     # pdict) expects a dict of str keys but bytes values
     key = key.encode("charmap")
     pdict = {x: y.encode("charmap") for x, y in pdict.items()}
@@ -974,17 +974,26 @@ class Request:
         if self.method == b"POST" and ctype and clength:
             mfd = b"multipart/form-data"
             key, pdict = _parseHeader(ctype)
+            # This weird CONTENT-LENGTH param is required by
+            # cgi.parse_multipart() in some versions of Python 3.7+, see
+            # bpo-29979. It looks like this will be relaxed and backported, see
+            # https://github.com/python/cpython/pull/8530.
+            pdict["CONTENT-LENGTH"] = clength
             if key == b"application/x-www-form-urlencoded":
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    cgiArgs = _cgi.parse_multipart(
+                    cgiArgs = cgi.parse_multipart(
                         self.content,
                         pdict,
                         encoding="utf8",
                         errors="surrogateescape",
                     )
 
+                    # The parse_multipart function on Python 3.7+
+                    # decodes the header bytes as iso-8859-1 and
+                    # decodes the body bytes as utf8 with
+                    # surrogateescape -- we want bytes
                     self.args.update(
                         {
                             x.encode("iso-8859-1"): [

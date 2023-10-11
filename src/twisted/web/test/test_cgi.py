@@ -87,8 +87,8 @@ print(json.dumps(vals))
 """
 
 URL_PARAMETER_CGI = """\
-from twisted.web import _cgi
-fs = _cgi.FieldStorage()
+import cgi
+fs = cgi.FieldStorage()
 param = fs.getvalue("param")
 print("Header: OK")
 print("")
