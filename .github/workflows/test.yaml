@@ -287,8 +287,6 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     needs:
       # We are waiting only for test jobs.
       - testing
@@ -317,25 +315,25 @@ jobs:
     - name: Report coverage
       run: |
           # Report for the job log.
-          coverage report --no-skip-covered --show-missing
+          coverage report --no-skip-covered --show-missing >> $GITHUB_STEP_SUMMARY
           diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
-
-    # Use the generic JS script to call our custom script
-    # for sending a comment to a PR.
-    - name: Send coverage comment to PR
-      uses: actions/github-script@v3
-      env:
-        COMMENT_MARKER: "<!--- automatic-coverage-report -->"
-        COMMENT_BODY: coverage-report.md
-      with:
-        script: |
-          const script = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/pr_comment.js`)
-          // Only pass top level objects as GHA does dependency injection.
-          await script({github, context, process})
 
     - name: Enforce diff coverage
       run: |
           diff-cover --fail-under=100 --compare-branch origin/trunk coverage.xml
+
+
+    - name: Generate HTML report on failure
+      if: ${{ failure() }}
+      run: |
+          coverage html --skip-covered --skip-empty
+
+    - name: Upload HTML report if check failed.
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: html-report
+        path: htmlcov
 
 
   static-checks:
