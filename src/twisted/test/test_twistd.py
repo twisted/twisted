@@ -1741,7 +1741,8 @@ class UnixAppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
-        logger._getLogObserver()
+        observer = logger._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath("twistd.log"))
