@@ -884,7 +884,9 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         self.patch(os, "setgid", setgid)
 
         options = twistd.ServerOptions()
-        options.parseOptions(["--nodaemon", "--uid", str(wantedUid)])
+        options.parseOptions(
+            ["--nodaemon", "--uid", str(wantedUid), "--pidfile=setuid.pid"]
+        )
         application = service.Application("test_setupEnvironment")
         self.runner = UnixApplicationRunner(options)
         runner = UnixApplicationRunner(options)
