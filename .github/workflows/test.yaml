@@ -269,16 +269,18 @@ jobs:
         # It is important to keep the unique names for the coverage files
         # so that when uploaded to the same artifact, they don't overlap.
         # We don't combine the files yet.
-        # The files will be combined later
-        mv .coverage .coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
-        ls -al
+        # The files from all jobs will be combined later.
+        # We still do a initial combine for each job as otherwise
+        # we wil end up with many files and it will take a long time
+        # to upload/download/combine them.
+        mv .coverage .coverage-job-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
 
     - name: Store coverage file
       if: ${{ !cancelled() && !matrix.skip-coverage }}
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: .coverage*
+        path: .coverage-job-*
 
     - name: Publish to codecov.io
       uses: codecov/codecov-action@v3
@@ -313,7 +315,7 @@ jobs:
 
     - name: Prepare coverage
       run: |
-          coverage combine
+          coverage combine .coverage-job-*
           # XML is needed for the diff-cover.
           coverage xml
 
