@@ -7,7 +7,6 @@ Utilities and helpers for simulating a network
 """
 
 import itertools
-from typing import Optional
 
 try:
     from OpenSSL.SSL import Error as NativeOpenSSLError
@@ -20,7 +19,6 @@ from twisted.internet import error, interfaces
 from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.task import Clock
 from twisted.internet.testing import MemoryReactorClock
 from twisted.python.failure import Failure
 
