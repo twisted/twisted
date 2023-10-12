@@ -216,7 +216,7 @@ class ReactorBuilder:
                         % (process.reapProcessHandlers,)
                     )
 
-    def unbuildReactor(self, reactor, global_reactor_was_munged=True):
+    def unbuildReactor(self, reactor, globalReactorWasMunged=True):
         """
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
@@ -247,7 +247,7 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
-        if global_reactor_was_munged:
+        if globalReactorWasMunged:
             # Restore the original reactor state:
             from twisted.internet import reactor as globalReactor
 
