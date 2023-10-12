@@ -1,1 +1,1 @@
-Drop dependency on the deprecated ``cgi`` module by vendoring used parts.
+Remove usage of cgi.escape and cgi.parse_header.
