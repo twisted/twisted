@@ -995,10 +995,6 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
             ],
         )
 
-    @skipIf(
-        not getattr(os, "setuid", None),
-        "Platform does not support --uid/--gid twistd options.",
-    )
     def test_applicationStartsWithConfiguredNameIDs(self):
         """
         L{postApplication} should change the UID and GID to the values
@@ -1015,10 +1011,6 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
             ["--uid", user, "--gid", group], uid, gid
         )
 
-    @skipIf(
-        not getattr(os, "setuid", None),
-        "Platform does not support --uid/--gid twistd options.",
-    )
     def test_applicationStartsWithConfiguredNumericIDs(self):
         """
         L{postApplication} should change the UID and GID to the values
