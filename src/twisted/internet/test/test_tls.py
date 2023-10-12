@@ -23,7 +23,6 @@ from twisted.internet.interfaces import (
     ITLSTransport,
 )
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
-from twisted.internet.task import Cooperator
 from twisted.internet.test.connectionmixins import (
     BrokenContextFactory,
     ConnectionTestsMixin,
