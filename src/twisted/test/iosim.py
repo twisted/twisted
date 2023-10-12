@@ -313,11 +313,12 @@ class IOPump:
 
     def pump(self, debug=False):
         """
-        Move data back and forth, and increase clock slightly.
+        Move data back and forth, while also triggering any currently pending
+        scheduled calls (i.e. C{callLater(0, f)}).
 
         Returns whether any data was moved.
         """
-        self.clock.advance(0.000001)
+        self.clock.advance(0)
         if self.debug or debug:
             print("-- GLUG --")
         sData = self.serverIO.getOutBuffer()
