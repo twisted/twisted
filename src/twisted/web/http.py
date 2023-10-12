@@ -225,7 +225,7 @@ weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
-def _parseContentType(line: bytes):
+def _parseContentType(line: bytes) -> tuple[bytes, dict[str, bytes]]:
     msg = EmailMessage()
     msg["content-type"] = line.decode("charmap")
 
@@ -234,9 +234,9 @@ def _parseContentType(line: bytes):
 
     # We want the key as bytes, and cgi.parse_multipart (which consumes
     # pdict) expects a dict of str keys but bytes values
-    key = key.encode("charmap")
+    encodedKey = key.encode("charmap")
     pdict = {x: y.encode("charmap") for x, y in pdict.items()}
-    return (key, pdict)
+    return (encodedKey, pdict)
 
 
 def urlparse(url):
