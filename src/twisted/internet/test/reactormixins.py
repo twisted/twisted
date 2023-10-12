@@ -18,7 +18,7 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union, cast
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
@@ -174,7 +174,8 @@ class ReactorBuilder:
                     ]
                 )
 
-    reactorFactory = None
+    reactorFactory: Optional[Callable[[], object]] = None
+
     originalHandler = None
     requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
     skippedReactors: Dict[str, str] = {}
@@ -273,6 +274,7 @@ class ReactorBuilder:
                     "under itself"
                 )
         try:
+            assert self.reactorFactory is not None
             reactor = self.reactorFactory()
             reactor._originalReactorDict = globalReactor.__dict__
             reactor._originalReactorClass = globalReactor.__class__
