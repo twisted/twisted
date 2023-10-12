@@ -551,116 +551,6 @@ class ApplicationRunnerTests(TestCase):
         self.assertTrue(s.hadApplicationLogObserver)
         self.assertEqual(s.order, ["pre", "log", "post"])
 
-    def _applicationStartsWithConfiguredID(self, argv, uid, gid):
-        """
-        Assert that given a particular command line, an application is started
-        as a particular UID/GID.
-
-        @param argv: A list of strings giving the options to parse.
-        @param uid: An integer giving the expected UID.
-        @param gid: An integer giving the expected GID.
-        """
-        self.config.parseOptions(argv)
-
-        events = []
-
-        class FakeUnixApplicationRunner(twistd._SomeApplicationRunner):
-            def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
-                events.append("environment")
-
-            def shedPrivileges(self, euid, uid, gid):
-                events.append(("privileges", euid, uid, gid))
-
-            def startReactor(self, reactor, oldstdout, oldstderr):
-                events.append("reactor")
-
-            def removePID(self, pidfile):
-                pass
-
-        @implementer(service.IService, service.IProcess)
-        class FakeService:
-            parent = None
-            running = None
-            name = None
-            processName = None
-            uid = None
-            gid = None
-
-            def setName(self, name):
-                pass
-
-            def setServiceParent(self, parent):
-                pass
-
-            def disownServiceParent(self):
-                pass
-
-            def privilegedStartService(self):
-                events.append("privilegedStartService")
-
-            def startService(self):
-                events.append("startService")
-
-            def stopService(self):
-                pass
-
-        application = FakeService()
-        verifyObject(service.IService, application)
-        verifyObject(service.IProcess, application)
-
-        runner = FakeUnixApplicationRunner(self.config)
-        runner.preApplication()
-        runner.application = application
-        runner.postApplication()
-
-        self.assertEqual(
-            events,
-            [
-                "environment",
-                "privilegedStartService",
-                ("privileges", False, uid, gid),
-                "startService",
-                "reactor",
-            ],
-        )
-
-    @skipIf(
-        not getattr(os, "setuid", None),
-        "Platform does not support --uid/--gid twistd options.",
-    )
-    def test_applicationStartsWithConfiguredNumericIDs(self):
-        """
-        L{postApplication} should change the UID and GID to the values
-        specified as numeric strings by the configuration after running
-        L{service.IService.privilegedStartService} and before running
-        L{service.IService.startService}.
-        """
-        uid = 1234
-        gid = 4321
-        self._applicationStartsWithConfiguredID(
-            ["--uid", str(uid), "--gid", str(gid)], uid, gid
-        )
-
-    @skipIf(
-        not getattr(os, "setuid", None),
-        "Platform does not support --uid/--gid twistd options.",
-    )
-    def test_applicationStartsWithConfiguredNameIDs(self):
-        """
-        L{postApplication} should change the UID and GID to the values
-        specified as user and group names by the configuration after running
-        L{service.IService.privilegedStartService} and before running
-        L{service.IService.startService}.
-        """
-        user = "foo"
-        uid = 1234
-        group = "bar"
-        gid = 4321
-        patchUserDatabase(self.patch, user, uid, group, gid)
-        self._applicationStartsWithConfiguredID(
-            ["--uid", user, "--gid", group], uid, gid
-        )
-
     def test_startReactorRunsTheReactor(self):
         """
         L{startReactor} calls L{reactor.run}.
@@ -1029,6 +919,123 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
             "should we be root? Continuing.".format(currentUid, currentUid)
         )
         self.assertEqual(expectedWarning, warningsShown[0]["message"])
+        self.assertEqual(1, len(warningsShown))
+
+    def _applicationStartsWithConfiguredID(self, argv, uid, gid):
+        """
+        Assert that given a particular command line, an application is started
+        as a particular UID/GID.
+
+        @param argv: A list of strings giving the options to parse.
+        @param uid: An integer giving the expected UID.
+        @param gid: An integer giving the expected GID.
+        """
+        config = twistd.ServerOptions()
+        self.serviceMaker = MockServiceMaker()
+        # Set up a config object like it's been parsed with a subcommand
+        config.loadedPlugins = {"test_command": self.serviceMaker}
+        config.subOptions = object()
+        config.subCommand = "test_command"
+        config.parseOptions(argv)
+
+        events = []
+
+        class FakeUnixApplicationRunner(twistd._SomeApplicationRunner):
+            def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
+                events.append("environment")
+
+            def shedPrivileges(self, euid, uid, gid):
+                events.append(("privileges", euid, uid, gid))
+
+            def startReactor(self, reactor, oldstdout, oldstderr):
+                events.append("reactor")
+
+            def removePID(self, pidfile):
+                pass
+
+        @implementer(service.IService, service.IProcess)
+        class FakeService:
+            parent = None
+            running = None
+            name = None
+            processName = None
+            uid = None
+            gid = None
+
+            def setName(self, name):
+                pass
+
+            def setServiceParent(self, parent):
+                pass
+
+            def disownServiceParent(self):
+                pass
+
+            def privilegedStartService(self):
+                events.append("privilegedStartService")
+
+            def startService(self):
+                events.append("startService")
+
+            def stopService(self):
+                pass
+
+        application = FakeService()
+        verifyObject(service.IService, application)
+        verifyObject(service.IProcess, application)
+
+        runner = FakeUnixApplicationRunner(config)
+        runner.preApplication()
+        runner.application = application
+        runner.postApplication()
+
+        self.assertEqual(
+            events,
+            [
+                "environment",
+                "privilegedStartService",
+                ("privileges", False, uid, gid),
+                "startService",
+                "reactor",
+            ],
+        )
+
+    @skipIf(
+        not getattr(os, "setuid", None),
+        "Platform does not support --uid/--gid twistd options.",
+    )
+    def test_applicationStartsWithConfiguredNameIDs(self):
+        """
+        L{postApplication} should change the UID and GID to the values
+        specified as user and group names by the configuration after running
+        L{service.IService.privilegedStartService} and before running
+        L{service.IService.startService}.
+        """
+        user = "foo"
+        uid = 1234
+        group = "bar"
+        gid = 4321
+        patchUserDatabase(self.patch, user, uid, group, gid)
+        self._applicationStartsWithConfiguredID(
+            ["--uid", user, "--gid", group], uid, gid
+        )
+
+    @skipIf(
+        not getattr(os, "setuid", None),
+        "Platform does not support --uid/--gid twistd options.",
+    )
+    def test_applicationStartsWithConfiguredNumericIDs(self):
+        """
+        L{postApplication} should change the UID and GID to the values
+        specified as numeric strings by the configuration after running
+        L{service.IService.privilegedStartService} and before running
+        L{service.IService.startService}.
+        """
+        uid = 1234
+        gid = 4321
+        self._applicationStartsWithConfiguredID(
+            ["--uid", str(uid), "--gid", str(gid)], uid, gid
+        )
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
