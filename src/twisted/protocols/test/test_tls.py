@@ -245,6 +245,7 @@ def handshakingClientAndServer(
     @return: 3-tuple of client, server, L{twisted.test.iosim.IOPump}
     """
     authCert, serverCert = certificatesForAuthorityAndServer()
+    clock = Clock()
 
     @implementer(IHandshakeListener)
     class Client(AccumulatingProtocol):
@@ -279,16 +280,19 @@ def handshakingClientAndServer(
         optionsForClientTLS("example.com", trustRoot=authCert),
         isClient=True,
         wrappedFactory=ClientFactory.forProtocol(lambda: Client(999999)),
+        clock=clock,
     )
     serverF = TLSMemoryBIOFactory(
         serverCert.options(),
         isClient=False,
         wrappedFactory=ServerFactory.forProtocol(lambda: Server(999999)),
+        clock=clock,
     )
     client, server, pump = connectedServerAndClient(
         lambda: serverF.buildProtocol(None),
         lambda: clientF.buildProtocol(None),
         greet=False,
+        clock=clock,
     )
     return client, server, pump
 
@@ -328,6 +332,24 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         wrappedServerProtocol = server.wrappedProtocol
         pump.flush()
         self.assertEqual(wrappedServerProtocol.received, [])
+
+    def test_smalWriteBuffering(self):
+        """
+        If a small amount data is written to the TLS transport, it is only
+        delivered if time passes, indicating small-write buffering is in
+        effect.
+        """
+        client, server, pump = handshakingClientAndServer()
+        wrappedServerProtocol = server.wrappedProtocol
+        pump.flush()
+        self.assertEqual(wrappedServerProtocol.received, [])
+        client.write(b"hel")
+        client.write(b"lo")
+        self.assertEqual(wrappedServerProtocol.received, [])
+        pump.flush(advanceClock=False)
+        self.assertEqual(wrappedServerProtocol.received, [])
+        pump.flush(advanceClock=True)
+        self.assertEqual(b"".join(wrappedServerProtocol.received), b"hello")
 
 
 class TLSMemoryBIOTests(TestCase):

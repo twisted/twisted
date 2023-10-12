@@ -295,7 +295,7 @@ class IOPump:
             clock = MemoryReactorClock()
         self.clock = clock
 
-    def flush(self, debug=False):
+    def flush(self, debug=False, advanceClock=True):
         """
         Pump until there is no more input or output.
 
@@ -303,7 +303,7 @@ class IOPump:
         """
         result = False
         for _ in range(1000):
-            if self.pump(debug):
+            if self.pump(debug, advanceClock):
                 result = True
             else:
                 break
@@ -311,14 +311,15 @@ class IOPump:
             assert 0, "Too long"
         return result
 
-    def pump(self, debug=False):
+    def pump(self, debug=False, advanceClock=True):
         """
         Move data back and forth, while also triggering any currently pending
         scheduled calls (i.e. C{callLater(0, f)}).
 
         Returns whether any data was moved.
         """
-        self.clock.advance(0)
+        if advanceClock:
+            self.clock.advance(0)
         if self.debug or debug:
             print("-- GLUG --")
         sData = self.serverIO.getOutBuffer()
