@@ -258,15 +258,22 @@ jobs:
       with:
         limit-access-to-actor: true
 
+    - name: Combile coverage file
+      if: ${{ !cancelled() && !matrix.skip-coverage }}
+      run: |
+        coverage combine
+        # It is important to keep the unique names for the coverage files
+        # so that when uploaded to the same artifact, they don't overlap.
+        # We don't combine the files yet.
+        # The files will be combined later
+        mv .coverage .coverate${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
+        ls -al
+
     - name: Store coverage file
       if: ${{ !cancelled() && !matrix.skip-coverage }}
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        # It is important to keep the unique names for the coverage files
-        # so that when uploaded to the same artifact, they don't overlap.
-        # We don't combine the files yet.
-        # The files will be combined later
         path: .coverage*
 
     - name: Prepare coverage for codecov.io
@@ -315,20 +322,19 @@ jobs:
     - name: Report coverage
       run: |
           # Report for the job log.
-          coverage report --no-skip-covered --show-missing >> $GITHUB_STEP_SUMMARY
+          coverage report --skip-covered --skip-empty >> $GITHUB_STEP_SUMMARY
           diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
 
     - name: Enforce diff coverage
       run: |
           diff-cover --fail-under=100 --compare-branch origin/trunk coverage.xml
 
-
     - name: Generate HTML report on failure
       if: ${{ failure() }}
       run: |
           coverage html --skip-covered --skip-empty
 
-    - name: Upload HTML report if check failed.
+    - name: Upload HTML report on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v3
       with:
