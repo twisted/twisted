@@ -1923,8 +1923,8 @@ def _gotResultInlineCallbacks(
     r: object,
     waiting: List[Any],
     gen: Union[
-        Generator[Deferred[object], object, _T],
-        Coroutine[Deferred[object], object, _T],
+        Generator[Deferred[Any], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
     ],
     status: _CancellationStatus[_T],
     context: _Context,
