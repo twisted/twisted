@@ -117,7 +117,7 @@ from urllib.parse import (
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-from incremental import Version
+from incremental import Version, getVersionString
 
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
@@ -1230,16 +1230,12 @@ class Request:
                     if name == b"Content-Length" and isOkay and isCONNECT:
                         # From RFC
                         # A server MUST NOT send any Transfer-Encoding or Content-Length header fields in a 2xx (Successful) response to CONNECT.
-                        self.channel._respondToBadRequestAndDisconnect()
-                        raise ValueError(
-                            "Sending the Content-Length header for a successful CONNECT response is not allowed by RFC section 4.3.6."
+                        warningString = "Setting Content-Length for a successful CONNECT response was deprecated at {}".format(
+                            getVersionString(Version("Twisted", "NEXT", 0, 0))
                         )
-                    if name == b"Transfer-Encoding":
-                        # The Transfer-Encoding should not be explicitly set.
-                        self.channel._respondToBadRequestAndDisconnect()
-                        raise ValueError(
-                            "Sending the Transfer-Encoding header is not allowed. The header is automatically set if needed."
-                        )
+                        warnings.warn(warningString, DeprecationWarning)
+                        continue
+
                     headers.append((name, value))
 
             for cookie in self.cookies:
