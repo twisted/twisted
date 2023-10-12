@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+from __future__ import annotations
 
 __all__ = [
     "SWITCHING",
