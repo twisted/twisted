@@ -107,6 +107,7 @@ import re
 import tempfile
 import time
 import warnings
+from email.message import EmailMessage
 from io import BytesIO
 from typing import AnyStr, Callable, List, Optional, Tuple
 from urllib.parse import (
@@ -224,9 +225,12 @@ weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
-def _parseHeader(line):
-    # cgi.parse_header requires a str
-    key, pdict = cgi.parse_header(line.decode("charmap"))
+def _parseContentType(line: bytes):
+    msg = EmailMessage()
+    msg["content-type"] = line.decode("charmap")
+
+    key = msg.get_content_type()
+    pdict = msg["content-type"].params
 
     # We want the key as bytes, and cgi.parse_multipart (which consumes
     # pdict) expects a dict of str keys but bytes values
@@ -973,7 +977,7 @@ class Request:
 
         if self.method == b"POST" and ctype and clength:
             mfd = b"multipart/form-data"
-            key, pdict = _parseHeader(ctype)
+            key, pdict = _parseContentType(ctype)
             # This weird CONTENT-LENGTH param is required by
             # cgi.parse_multipart() in some versions of Python 3.7+, see
             # bpo-29979. It looks like this will be relaxed and backported, see
