@@ -48,25 +48,6 @@ else:
     from twisted.protocols import tls
 
 
-class TLSReactorBuilder(ReactorBuilder):
-    """
-    Replacement for ``ReactorBuilder`` that also patches
-    ``twisted.protocols.tls`` to use the temporary reactor.  See #5206 for a
-    potential different solution.
-    """
-
-    def buildReactor(self):
-        reactor = ReactorBuilder.buildReactor(self)
-        from twisted.internet import _producer_helpers
-
-        # Patch twisted.protocols.tls to use this reactor, until we get
-        # around to fixing #5206, or the TLS code uses an explicit reactor:
-        cooperator = Cooperator(scheduler=lambda x: reactor.callLater(0.00001, x))
-        self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
-        self.patch(tls, "_get_default_clock", lambda: reactor)
-        return reactor
-
-
 class TLSMixin:
     requiredInterfaces: Optional[Sequence[Type[Interface]]] = [IReactorSSL]
 
@@ -188,7 +169,7 @@ class BadContextTestsMixin:
         self.assertEqual(BrokenContextFactory.message, str(exc))
 
 
-class StartTLSClientTestsMixin(TLSMixin, TLSReactorBuilder, ConnectionTestsMixin):
+class StartTLSClientTestsMixin(TLSMixin, ReactorBuilder, ConnectionTestsMixin):
     """
     Tests for TLS connections established using L{ITLSTransport.startTLS} (as
     opposed to L{IReactorSSL.connectSSL} or L{IReactorSSL.listenSSL}).
@@ -222,7 +203,7 @@ class SSLCreator(EndpointCreator, ContextGeneratingMixin):
 
 class SSLClientTestsMixin(
     TLSMixin,
-    TLSReactorBuilder,
+    ReactorBuilder,
     ContextGeneratingMixin,
     ConnectionTestsMixin,
     BadContextTestsMixin,
@@ -332,7 +313,7 @@ class TLSPortTestsBuilder(
     BadContextTestsMixin,
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
-    TLSReactorBuilder,
+    ReactorBuilder,
 ):
     """
     Tests for L{IReactorSSL.listenSSL}
@@ -400,7 +381,7 @@ globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
 
 
 class AbortSSLConnectionTests(
-    TLSReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin
+    ReactorBuilder, AbortConnectionMixin, ContextGeneratingMixin
 ):
     """
     C{abortConnection} tests using SSL.

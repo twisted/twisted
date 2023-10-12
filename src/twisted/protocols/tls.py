@@ -753,7 +753,8 @@ def _get_default_clock() -> IReactorTime:
     """
     Return the default reactor.
 
-    This is a function so it can be monkey-patched in tests; see #5206.
+    This is a function so it can be monkey-patched in tests, specifically
+    L{twisted.web.test.test_agent}.
     """
     from twisted.internet import reactor
 
