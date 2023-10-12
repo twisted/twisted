@@ -1013,6 +1013,12 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         If the specified UID is the same as the current UID of the process,
         then a warning is displayed.
         """
+
+        # FIXME:https://github.com/twisted/twisted/issues/10332
+        # Assert that there were no existing warnings.
+        existing_warnings = self.flushWarnings()
+        self.assertEqual([], existing_warnings)
+
         currentUid = os.getuid()
         self._setUID("morefoo", currentUid, "morebar", 4343)
 
