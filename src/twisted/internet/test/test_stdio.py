@@ -99,8 +99,7 @@ class StdioFilesTests(ReactorBuilder):
         no longer polled.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-
+        
         path = self.mktemp()
         open(path, "wb").close()
 
@@ -122,8 +121,7 @@ class StdioFilesTests(ReactorBuilder):
         no longer polled.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-
+        
         # Cleanup might fail if file is GCed too soon:
         self.f = f = open(self.mktemp(), "wb")
 
@@ -143,8 +141,7 @@ class StdioFilesTests(ReactorBuilder):
         filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-
+        
         path = self.mktemp()
         open(path, "wb").close()
 
@@ -168,8 +165,7 @@ class StdioFilesTests(ReactorBuilder):
         C{reactor.getReaders} includes descriptors that are filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-
+        
         path = self.mktemp()
         open(path, "wb").close()
 
@@ -189,8 +185,7 @@ class StdioFilesTests(ReactorBuilder):
         C{reactor.getWriters} includes descriptors that are filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-
+        
         # Cleanup might fail if file is GCed too soon:
         self.f = f = open(self.mktemp(), "wb")
 

@@ -216,7 +216,7 @@ class ReactorBuilder:
                         % (process.reapProcessHandlers,)
                     )
 
-    def unbuildReactor(self, reactor, globalReactorWasMunged=True):
+    def _unbuildReactor(self, reactor):
         """
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
@@ -247,12 +247,11 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
-        if globalReactorWasMunged:
-            # Restore the original reactor state:
-            from twisted.internet import reactor as globalReactor
+        # Restore the original reactor state:
+        from twisted.internet import reactor as globalReactor
 
-            globalReactor.__dict__ = reactor._originalReactorDict
-            globalReactor.__class__ = reactor._originalReactorClass
+        globalReactor.__dict__ = reactor._originalReactorDict
+        globalReactor.__class__ = reactor._originalReactorClass
 
     def buildReactor(self):
         """
@@ -299,7 +298,7 @@ class ReactorBuilder:
                     if not required.providedBy(reactor)
                 ]
                 if missing:
-                    self.unbuildReactor(reactor)
+                    self._unbuildReactor(reactor)
                     raise SkipTest(
                         "%s does not provide %s"
                         % (
@@ -307,7 +306,7 @@ class ReactorBuilder:
                             ",".join([fullyQualifiedName(x) for x in missing]),
                         )
                     )
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.addCleanup(self._unbuildReactor, reactor)
         return reactor
 
     def getTimeout(self):
