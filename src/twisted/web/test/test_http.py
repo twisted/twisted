@@ -3916,13 +3916,63 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
         )
 
 
+class HeaderEchoHTTPHandler(http.Request):
+    """
+    Will return information about the request headers and body
+    as part of response headers.
+    """
+
+    def process(self):
+        self.content.seek(0, 0)
+        requestBody = self.content.read()
+        requestContentLength = self.getHeader(b"content-length")
+        if requestContentLength is None:
+            requestContentLength = b"missing-content-length"
+        if requestBody == b"":
+            requestBody = b"no-request-body"
+
+        self.setResponseCode(200)
+        self.setHeader(b"Request", self.uri)
+        self.setHeader(b"Command", self.method)
+        self.setHeader(b"Version", self.clientproto)
+        self.setHeader(b"Request-Content-Length", requestContentLength)
+        self.setHeader(b"Request-Body", requestBody)
+        self.finish()
+
+
+class ContentLengthSetter(http.Request):
+    """
+    Respond by setting the Content-Length header.
+    """
+
+    def process(self):
+        self.content.seek(0, 0)
+        self.setResponseCode(234)
+        self.setHeader(b"Good", b"Value")
+        self.setHeader(b"Content-Length", b"42")
+        self.finish()
+
+
+class TransferEncodingSetter(http.Request):
+    """
+    Respond by setting the Transfer-Encoding header.
+    """
+
+    def process(self):
+        self.content.seek(0, 0)
+        self.setResponseCode(412)
+        self.setHeader(b"Good", b"Value")
+        self.setHeader(b"Transfer-Encoding", b"custom")
+        self.finish()
+
+
 class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
     """
     Test RFC 7231 handling for CONNECT requests. Responses to these
     tests must not contain Transfer-Encoding or Content-Length headers
     """
 
-    def test_headers(self):
+    def test_noTransferEncodingHeadersForConnect(self):
         """
         An HTTP connection is opened and a CONNECT request is received, which
         should return a 200 response with the HTTP version header, the host and
@@ -3931,7 +3981,7 @@ class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
         """
         transport = StringTransport()
         channel = http.HTTPChannel()
-        channel.requestFactory = DummyHTTPHandlerProxy
+        channel.requestFactory = _makeRequestProxyFactory(HeaderEchoHTTPHandler)
         channel.makeConnection(transport)
         channel.dataReceived(b"CONNECT example.org:443 HTTP/1.1\r\n")
         channel.dataReceived(b"Host: example.org:443\r\n")
@@ -3947,10 +3997,59 @@ class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
                     b"Version: HTTP/1.1",
                     b"Request: example.org:443",
                     b"Command: CONNECT",
-                    b"'''\nNone\n'''",
+                    b"Request-Content-Length: missing-content-length",
+                    b"Request-Body: no-request-body",
+                    # There is no response body.
+                    b"",
                 )
             ],
         )
+
+    def test_raiseExceptionOnContentLength(self):
+        """
+        Raise an exception if a successful CONNECT response contains the
+        Content-Length header.
+        The HTTP client will receive a bad request response.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = _makeRequestProxyFactory(ContentLengthSetter)
+        channel.makeConnection(transport)
+        channel.dataReceived(b"CONNECT example.org:443 HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: example.org:443\r\n")
+
+        self.assertEqual(transport.value(), b"")
+
+        # Response processing is triggered by the end of the request.
+        error = self.assertRaises(ValueError, channel.dataReceived, b"\r\n")
+        self.assertEqual(
+            "Sending the Content-Length header for a successful CONNECT response is not allowed by RFC section 4.3.6.",
+            error.args[0],
+        )
+        self.assertEqual(b"HTTP/1.1 400 Bad Request\r\n\r\n", transport.value())
+
+    def test_raiseExceptionOnTransferEncoding(self):
+        """
+        Raise an exception if a successful CONNECT response contains the
+        Transfer-Encoding header.
+        The HTTP client will receive a bad request response.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = _makeRequestProxyFactory(TransferEncodingSetter)
+        channel.makeConnection(transport)
+        channel.dataReceived(b"GET /some-page HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: example.org:443\r\n")
+
+        self.assertEqual(transport.value(), b"")
+
+        # Response processing is triggered by the end of the request.
+        error = self.assertRaises(ValueError, channel.dataReceived, b"\r\n")
+        self.assertEqual(
+            "Sending the Transfer-Encoding header is not allowed. The header is automatically set if needed.",
+            error.args[0],
+        )
+        self.assertEqual(b"HTTP/1.1 400 Bad Request\r\n\r\n", transport.value())
 
 
 def sub(keys, d):

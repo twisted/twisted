@@ -1228,12 +1228,18 @@ class Request:
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
                     if name == b"Content-Length" and isOkay and isCONNECT:
-                        self._log.info(
-                            "Warning: Content-Length header was"
-                            " sent in response to CONNECT request."
-                            " Dropping it."
+                        # From RFC
+                        # A server MUST NOT send any Transfer-Encoding or Content-Length header fields in a 2xx (Successful) response to CONNECT.
+                        self.channel._respondToBadRequestAndDisconnect()
+                        raise ValueError(
+                            "Sending the Content-Length header for a successful CONNECT response is not allowed by RFC section 4.3.6."
                         )
-                        continue
+                    if name == b"Transfer-Encoding":
+                        # The Transfer-Encoding should not be explicitly set.
+                        self.channel._respondToBadRequestAndDisconnect()
+                        raise ValueError(
+                            "Sending the Transfer-Encoding header is not allowed. The header is automatically set if needed."
+                        )
                     headers.append((name, value))
 
             for cookie in self.cookies:
