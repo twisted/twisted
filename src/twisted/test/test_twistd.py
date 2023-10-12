@@ -903,23 +903,16 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         If the specified UID is the same as the current UID of the process,
         then a warning is displayed.
         """
-
-        # FIXME:https://github.com/twisted/twisted/issues/10332
-        # Assert that there were no existing warnings.
-        existing_warnings = self.flushWarnings()
-        self.assertEqual([], existing_warnings)
-
         currentUid = os.getuid()
         self._setUID("morefoo", currentUid, "morebar", 4343)
 
         warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
         expectedWarning = (
             "tried to drop privileges and setuid {} but uid is already {}; "
             "should we be root? Continuing.".format(currentUid, currentUid)
         )
         self.assertEqual(expectedWarning, warningsShown[0]["message"])
-        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(1, len(warningsShown), warningsShown)
 
     def _applicationStartsWithConfiguredID(self, argv, uid, gid):
         """
@@ -1625,7 +1618,6 @@ class AppLoggerTests(TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings([self.test_unmarkedObserversDeprecated])
-        self.assertEqual(len(warnings), 1, warnings)
         self.assertEqual(
             warnings[0]["message"],
             (
@@ -1639,6 +1631,7 @@ class AppLoggerTests(TestCase):
                 "implementing objects instead."
             ),
         )
+        self.assertEqual(len(warnings), 1, warnings)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
