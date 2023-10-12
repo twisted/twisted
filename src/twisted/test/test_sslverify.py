@@ -19,6 +19,7 @@ from incremental import Version
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
+from twisted.internet.task import Clock
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
@@ -288,17 +289,21 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     plainServerFactory = protocol.Factory()
     plainServerFactory.protocol = lambda: serverWrappedProto
 
+    clock = Clock()
     clientFactory = TLSMemoryBIOFactory(
-        clientOpts, isClient=True, wrappedFactory=plainServerFactory
+        clientOpts, isClient=True, wrappedFactory=plainServerFactory, clock=clock
     )
     serverFactory = TLSMemoryBIOFactory(
-        serverOpts, isClient=False, wrappedFactory=plainClientFactory
+        serverOpts, isClient=False, wrappedFactory=plainClientFactory, clock=clock
     )
 
     sProto, cProto, pump = connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None),
+        clock=clock,
     )
+    pump.flush()
+
     return sProto, cProto, serverWrappedProto, clientWrappedProto, pump
 
 
@@ -2065,17 +2070,21 @@ class ServiceIdentityTests(SynchronousTestCase):
         self.serverOpts = serverOpts
         self.clientOpts = clientOpts
 
+        clock = Clock()
         clientTLSFactory = TLSMemoryBIOFactory(
-            clientOpts, isClient=True, wrappedFactory=clientFactory
+            clientOpts, isClient=True, wrappedFactory=clientFactory, clock=clock
         )
         serverTLSFactory = TLSMemoryBIOFactory(
-            serverOpts, isClient=False, wrappedFactory=serverFactory
+            serverOpts, isClient=False, wrappedFactory=serverFactory, clock=clock
         )
 
         cProto, sProto, pump = connectedServerAndClient(
             lambda: serverTLSFactory.buildProtocol(None),
             lambda: clientTLSFactory.buildProtocol(None),
+            clock=clock,
         )
+        pump.flush()
+
         return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
 
     def test_invalidHostname(self):
