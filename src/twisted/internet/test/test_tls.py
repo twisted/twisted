@@ -45,7 +45,6 @@ except ImportError:
     FILETYPE_PEM = None  # type: ignore[assignment]
 else:
     from twisted.internet.ssl import ClientContextFactory, KeyPair, PrivateCertificate
-    from twisted.protocols import tls
 
 
 class TLSMixin:
