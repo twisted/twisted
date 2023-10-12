@@ -421,7 +421,7 @@ def connectedServerAndClient(
     serverTransportFactory=makeFakeServer,
     debug=False,
     greet=True,
-    clock: Optional[Clock] = None,
+    clock=None,
 ):
     """
     Connect a given server and client class to each other.
