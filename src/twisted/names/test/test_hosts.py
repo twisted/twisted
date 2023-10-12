@@ -4,7 +4,9 @@
 """
 Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
+from __future__ import annotations
 
+from typing_extensions import Protocol
 
 from twisted.internet.defer import gatherResults
 from twisted.names.dns import (
@@ -22,8 +24,13 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import SynchronousTestCase
 
 
+class _SupportsMktemp(Protocol):
+    def mktemp(self) -> str:
+        ...
+
+
 class GoodTempPathMixin:
-    def path(self):
+    def path(self: _SupportsMktemp) -> FilePath[bytes]:
         return FilePath(self.mktemp().encode("utf-8"))
 
 
