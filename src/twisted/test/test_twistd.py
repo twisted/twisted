@@ -1023,12 +1023,14 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         self._setUID("morefoo", currentUid, "morebar", 4343)
 
         warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
         expectedWarning = (
             "tried to drop privileges and setuid {} but uid is already {}; "
             "should we be root? Continuing.".format(currentUid, currentUid)
         )
         self.assertEqual(expectedWarning, warningsShown[0]["message"])
+        # Make sure no other warnings are generated.
+        # If they are, show all warnings as part of the assertion error.
+        self.assertEqual(1, len(warningsShown), warningsShown)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")

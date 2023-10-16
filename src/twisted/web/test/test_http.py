@@ -3916,6 +3916,116 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
         )
 
 
+class HeaderEchoHTTPHandler(http.Request):
+    """
+    Will return information about the request headers and body
+    as part of response headers.
+    """
+
+    def process(self):
+        self.content.seek(0, 0)
+        requestBody = self.content.read()
+        requestContentLength = self.getHeader(b"content-length")
+        if requestContentLength is None:
+            requestContentLength = b"missing-content-length"
+        if requestBody == b"":
+            requestBody = b"no-request-body"
+
+        self.setResponseCode(200)
+        self.setHeader(b"Request", self.uri)
+        self.setHeader(b"Command", self.method)
+        self.setHeader(b"Version", self.clientproto)
+        self.setHeader(b"Request-Content-Length", requestContentLength)
+        self.setHeader(b"Request-Body", requestBody)
+        self.finish()
+
+
+class ContentLengthSetter(http.Request):
+    """
+    Respond by setting the Content-Length header.
+    """
+
+    def process(self):
+        self.content.seek(0, 0)
+        self.setResponseCode(234)
+        self.setHeader(b"Good", b"Value")
+        self.setHeader(b"Content-Length", b"42")
+        self.finish()
+
+
+class ConnectRequestTests(unittest.TestCase, ResponseTestMixin):
+    """
+    Test RFC 7231 handling for CONNECT requests. Responses to these
+    tests must not contain Transfer-Encoding or Content-Length headers
+    """
+
+    def test_noTransferEncodingHeadersForConnect(self):
+        """
+        An HTTP connection is opened and a CONNECT request is received, which
+        should return a 200 response with the HTTP version header, the host and
+        port as well as the CONNECT command but not a Transfer-Encoding or
+        Content-Length header, neither of which is allowed in a 200 response.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = _makeRequestProxyFactory(HeaderEchoHTTPHandler)
+        channel.makeConnection(transport)
+        channel.dataReceived(b"CONNECT example.org:443 HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: example.org:443\r\n")
+
+        self.assertEqual(transport.value(), b"")
+        channel.dataReceived(b"\r\n")
+
+        self.assertResponseEquals(
+            transport.value(),
+            [
+                (
+                    b"HTTP/1.1 200 OK",
+                    b"Version: HTTP/1.1",
+                    b"Request: example.org:443",
+                    b"Command: CONNECT",
+                    b"Request-Content-Length: missing-content-length",
+                    b"Request-Body: no-request-body",
+                    # There is no response body.
+                    b"",
+                )
+            ],
+        )
+
+    def test_ignoreContentLengthInResponse(self):
+        """
+        It ignores the Content-Length set while processing a request.
+        """
+        transport = StringTransport()
+        channel = http.HTTPChannel()
+        channel.requestFactory = _makeRequestProxyFactory(ContentLengthSetter)
+        channel.makeConnection(transport)
+        channel.dataReceived(b"CONNECT example.org:443 HTTP/1.1\r\n")
+        channel.dataReceived(b"Host: example.org:443\r\n")
+
+        self.assertEqual(transport.value(), b"")
+        channel.dataReceived(b"\r\n")
+
+        self.assertResponseEquals(
+            transport.value(),
+            [
+                (
+                    b"HTTP/1.1 234 Unknown Status",
+                    b"Good: Value",
+                    # There is no response body.
+                    b"",
+                )
+            ],
+        )
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
+        self.assertEqual(
+            "Setting Content-Length for a successful CONNECT response was deprecated at Twisted NEXT",
+            warnings[0]["message"],
+        )
+
+
 def sub(keys, d):
     """
     Create a new dict containing only a subset of the items of an existing

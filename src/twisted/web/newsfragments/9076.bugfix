@@ -1,0 +1,1 @@
+twisted.web.http now handles CONNECT requests according to RFC 7231 and will not send Content-Length or Transfer-Encoding headers anymore.

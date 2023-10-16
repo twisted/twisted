@@ -117,7 +117,7 @@ from urllib.parse import (
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-from incremental import Version
+from incremental import Version, getVersionString
 
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
@@ -1193,6 +1193,8 @@ class Request:
             self.startedWriting = 1
             version = self.clientproto
             code = b"%d" % (self.code,)
+            isOkay = 200 <= self.code <= 299
+            isCONNECT = self.method == b"CONNECT"
             reason = self.code_message
             headers = []
 
@@ -1204,6 +1206,7 @@ class Request:
                 and (self.responseHeaders.getRawHeaders(b"content-length") is None)
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
+                and (not isCONNECT and isOkay)
             ):
                 headers.append((b"Transfer-Encoding", b"chunked"))
                 self.chunked = 1
@@ -1224,6 +1227,15 @@ class Request:
 
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
+                    if name == b"Content-Length" and isOkay and isCONNECT:
+                        # From RFC
+                        # A server MUST NOT send any Transfer-Encoding or Content-Length header fields in a 2xx (Successful) response to CONNECT.
+                        warningString = "Setting Content-Length for a successful CONNECT response was deprecated at {}".format(
+                            getVersionString(Version("Twisted", "NEXT", 0, 0))
+                        )
+                        warnings.warn(warningString, DeprecationWarning)
+                        continue
+
                     headers.append((name, value))
 
             for cookie in self.cookies:

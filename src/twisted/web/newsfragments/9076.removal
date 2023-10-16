@@ -1,0 +1,3 @@
+Setting the Content-Lenght for an OK CONNECT response is no longer supported,
+as this is a violation of RFC 7231.
+
