@@ -1714,7 +1714,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         except BaseException:
             d.errback()
 
-        def ic(d: object) -> Generator[Any, Any, None]:
+        def ic(d: object) -> Generator[Any, Any, None]:  # pragma: no cover
+            """
+            This is never called.
+            It is only used as the decorated function.
+            The resulting function is never called in this test.
+            This is used to make sure that if we wrap
+            an already failed deferred, inlineCallbacks
+            will not add any extra traceback frames. 
+            """
             yield d
 
         defer.inlineCallbacks(ic)
