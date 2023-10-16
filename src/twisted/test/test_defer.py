@@ -1721,7 +1721,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             The resulting function is never called in this test.
             This is used to make sure that if we wrap
             an already failed deferred, inlineCallbacks
-            will not add any extra traceback frames. 
+            will not add any extra traceback frames.
             """
             yield d
 
