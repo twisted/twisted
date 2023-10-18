@@ -1898,9 +1898,9 @@ class _ChunkedTransferDecoder:
     @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
         See https://github.com/twisted/twisted/issues/12014
 
-    @ivar _totalTrailerHeadersSize: Maximum bytes for trailer header from the
+    @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
         response.
-    @type _totalTrailerHeadersSize: C{int}
+    @type _maxTrailerHeadersSize: C{int}
 
     @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
     @type _receivedTrailerHeadersSize: C{int}
@@ -1918,7 +1918,7 @@ class _ChunkedTransferDecoder:
         self._buffer = bytearray()
         self._start = 0
         self._trailerHeaders: List[bytearray] = []
-        self._totalTrailerHeadersSize = 16384
+        self._maxTrailerHeadersSize = 16384
         self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
@@ -2004,7 +2004,7 @@ class _ChunkedTransferDecoder:
         """
         if (
             self._receivedTrailerHeadersSize + len(self._buffer)
-            > self._totalTrailerHeadersSize
+            > self._maxTrailerHeadersSize
         ):
             raise _MalformedChunkedDataError("Trailer headers data is too long")
 
