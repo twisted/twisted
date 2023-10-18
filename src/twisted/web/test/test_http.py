@@ -1495,6 +1495,22 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         self.assertEqual(finished, [b""])
         self.assertEqual(p._trailerHeaders, [b"Server-Timing: total;dur=123.4"])
 
+    def test_tooLongTrailerHeader(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the trailing headers data is too long.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        p._totalTrailerHeadersSize = 10
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3\r\nabc\r\n0\r\nTotal-Trailer: header;greater-then=10\r\n\r\n",
+        )
+
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n", b"523523\n\rfsdf", b"4234"]

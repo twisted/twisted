@@ -1897,6 +1897,13 @@ class _ChunkedTransferDecoder:
 
     @ivar _trailerHeaders: Accumulates trailer headers. Not passed outside the
         decoder class for a while.
+
+    @ivar _totalTrailerHeadersSize: Maximum bytes for trailer header from the
+        response.
+    @type _totalTrailerHeadersSize: C{int}
+
+    @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
+    @type _receivedTrailerHeadersSize: C{int}
     """
 
     state = "CHUNK_LENGTH"
@@ -1911,6 +1918,8 @@ class _ChunkedTransferDecoder:
         self._buffer = bytearray()
         self._start = 0
         self._trailerHeaders: List[bytearray] = []
+        self._totalTrailerHeadersSize = 16384
+        self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """
@@ -1993,6 +2002,12 @@ class _ChunkedTransferDecoder:
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
         """
+        if (
+            self._receivedTrailerHeadersSize + len(self._buffer)
+            > self._totalTrailerHeadersSize
+        ):
+            raise _MalformedChunkedDataError("Trailer headers data is too long")
+
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
@@ -2006,6 +2021,7 @@ class _ChunkedTransferDecoder:
             self._trailerHeaders.append(self._buffer[0:eolIndex])
             del self._buffer[0 : eolIndex + 2]
             self._start = 0
+            self._receivedTrailerHeadersSize += eolIndex + 2
             return True
 
         # eolIndex == 0
