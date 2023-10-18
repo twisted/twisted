@@ -1,0 +1,3 @@
+The search and version navigation for the documentation hosted on
+Read The Docs was fixed.
+This was a regression introduced with 23.8.0.

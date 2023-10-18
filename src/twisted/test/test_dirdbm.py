@@ -15,23 +15,27 @@ from twisted.trial import unittest
 
 
 class DirDbmTests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.path = FilePath(self.mktemp())
         self.dbm = dirdbm.open(self.path.path)
-        self.items = ((b"abc", b"foo"), (b"/lalal", b"\000\001"), (b"\000\012", b"baz"))
+        self.items: tuple[tuple[bytes, bytes | int | float | tuple[None, int]], ...] = (
+            (b"abc", b"foo"),
+            (b"/lalal", b"\000\001"),
+            (b"\000\012", b"baz"),
+        )
 
-    def test_all(self):
+    def test_all(self) -> None:
         k = b64decode("//==")
         self.dbm[k] = b"a"
         self.dbm[k] = b"a"
         self.assertEqual(self.dbm[k], b"a")
 
-    def test_rebuildInteraction(self):
+    def test_rebuildInteraction(self) -> None:
         s = dirdbm.Shelf("dirdbm.rebuild.test")
         s[b"key"] = b"value"
         rebuild.rebuild(dirdbm)
 
-    def test_dbm(self):
+    def test_dbm(self) -> None:
         d = self.dbm
 
         # Insert keys
@@ -127,7 +131,7 @@ class DirDbmTests(unittest.TestCase):
         self.assertEqual(len(d.items()), 0, "database has items")
         self.assertEqual(len(d), 0, "database has items")
 
-    def test_modificationTime(self):
+    def test_modificationTime(self) -> None:
         import time
 
         # The mtime value for files comes from a different place than the
@@ -143,21 +147,21 @@ class DirDbmTests(unittest.TestCase):
         self.assertTrue(abs(time.time() - self.dbm.getModificationTime(b"k")) <= 3)
         self.assertRaises(KeyError, self.dbm.getModificationTime, b"nokey")
 
-    def test_recovery(self):
+    def test_recovery(self) -> None:
         """
         DirDBM: test recovery from directory after a faked crash
         """
         k = self.dbm._encode(b"key1")
-        with self.path.child(k + b".rpl").open(mode="wb") as f:
+        with self.path.child(k + b".rpl").open(mode="w") as f:
             f.write(b"value")
 
         k2 = self.dbm._encode(b"key2")
-        with self.path.child(k2).open(mode="wb") as f:
+        with self.path.child(k2).open(mode="w") as f:
             f.write(b"correct")
-        with self.path.child(k2 + b".rpl").open(mode="wb") as f:
+        with self.path.child(k2 + b".rpl").open(mode="w") as f:
             f.write(b"wrong")
 
-        with self.path.child("aa.new").open(mode="wb") as f:
+        with self.path.child("aa.new").open(mode="w") as f:
             f.write(b"deleted")
 
         dbm = dirdbm.DirDBM(self.path.path)
@@ -166,7 +170,7 @@ class DirDbmTests(unittest.TestCase):
         self.assertFalse(self.path.globChildren("*.new"))
         self.assertFalse(self.path.globChildren("*.rpl"))
 
-    def test_nonStringKeys(self):
+    def test_nonStringKeys(self) -> None:
         """
         L{dirdbm.DirDBM} operations only support string keys: other types
         should raise a L{TypeError}.
@@ -183,12 +187,12 @@ class DirDbmTests(unittest.TestCase):
         self.assertRaises(TypeError, self.dbm.__contains__, 2)
         self.assertRaises(TypeError, self.dbm.getModificationTime, 2)
 
-    def test_failSet(self):
+    def test_failSet(self) -> None:
         """
         Failure path when setting an item.
         """
 
-        def _writeFail(path, data):
+        def _writeFail(path: FilePath[str], data: bytes) -> None:
             path.setContent(data)
             raise OSError("fail to write")
 
@@ -198,7 +202,7 @@ class DirDbmTests(unittest.TestCase):
 
 
 class ShelfTests(DirDbmTests):
-    def setUp(self):
+    def setUp(self) -> None:
         self.path = FilePath(self.mktemp())
         self.dbm = dirdbm.Shelf(self.path.path)
         self.items = (
