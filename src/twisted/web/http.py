@@ -1895,8 +1895,8 @@ class _ChunkedTransferDecoder:
         chunk length line arrives over many calls to C{dataReceived}. Not used
         in any other state.
 
-    @ivar _trailerHeaders: Accumulates trailer headers. Not passed outside the
-        decoder class for a while.
+    @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
+        See https://github.com/twisted/twisted/issues/12014
 
     @ivar _totalTrailerHeadersSize: Maximum bytes for trailer header from the
         response.
