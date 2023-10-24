@@ -1,1 +1,0 @@
-Fixed significant performance overhead (CPU and bandwidth) when doing small writes to a TLS transport. Specifically, small writes to a TLS transport are now buffered until the next reactor iteration.

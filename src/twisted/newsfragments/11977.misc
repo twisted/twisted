@@ -1,1 +1,0 @@
-configure mypy disallow_any_generic = true
