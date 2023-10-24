@@ -802,7 +802,7 @@ alert("I hate you");
         warnings = self.flushWarnings([self.test_deprecation])
         self.assertEqual(1, len(warnings))
         self.assertEqual(
-            "twisted.web.microdom was deprecated at Twisted NEXT",
+            "twisted.web.microdom was deprecated at Twisted 23.10.0.rc1",
             warnings[0]["message"],
         )
 
