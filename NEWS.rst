@@ -65,7 +65,7 @@ Bugfixes
   TCP segment to trigger asynchronous processing of later requests, which could
   lead to out-of-order responses.  This has now been corrected and twisted.web
   should never process a pipelined request over HTTP/1.1 until the previous
-  request has fully completed. (#11976)
+  request has fully completed. (CVE-2023-46137, GHSA-cq7q-gv5w-rwx2) (#11976)
 
 
 Deprecations and Removals
