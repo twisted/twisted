@@ -2,8 +2,8 @@ Report a security issue
 =======================
 
 ..
-  ATTENTION: For GitHub UI we also have /SECURITY.md file, which is a Markdown conversion of this file.
-  When making changes to this make, make sure to also update /SECURITY.md.
+  ATTENTION: This is the reStructuredText version of /SECURITY.md.
+  Any changes should also be made in the Markdown version.
 
 We take security very seriously.
 Your input and feedback on our security is always appreciated.
