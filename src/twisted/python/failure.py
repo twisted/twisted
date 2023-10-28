@@ -18,6 +18,7 @@ import copy
 import inspect
 import linecache
 import sys
+import warnings
 from inspect import getmro
 from io import StringIO
 from typing import Callable, NoReturn, TypeVar
@@ -516,7 +517,12 @@ class Failure(BaseException):
         """
         # Note that the actual magic to find the traceback information
         # is done in _findFailure.
-        return g.throw(self.type, self.value, self.tb)
+        with warnings.catch_warnings():
+            # three-arg form is deprecated in Python 3.12, but one-arg
+            # form was only introduced in 3.9, so filter the warning
+            # until 3.9 is EOL
+            warnings.simplefilter("ignore")
+            return g.throw(self.type, self.value, self.tb)
 
     @classmethod
     def _findFailure(cls):
