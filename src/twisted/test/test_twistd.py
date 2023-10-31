@@ -1008,7 +1008,9 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         with a UID and no GUID will result in the GUID being
         set to the default GUID for that UID.
         """
-        self._setUID("foo", 5151, "bar", 4242, self.mktemp() + "_test_setUidWithoutGid.pid")
+        self._setUID(
+            "foo", 5151, "bar", 4242, self.mktemp() + "_test_setUidWithoutGid.pid"
+        )
 
     def test_setUidSameAsCurrentUid(self):
         """
