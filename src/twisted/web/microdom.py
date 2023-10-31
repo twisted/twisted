@@ -33,7 +33,7 @@ from twisted.python.util import InsensitiveDict
 from twisted.web.sux import ParseError, XMLParser
 
 warningString = "twisted.web.microdom was deprecated at {}".format(
-    getVersionString(Version("Twisted", 23, 10, 0, release_candidate=1))
+    getVersionString(Version("Twisted", 23, 10, 0))
 )
 warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 

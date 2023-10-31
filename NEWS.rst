@@ -8,8 +8,11 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 23.10.0.rc1 (2023-10-24)
-================================
+Twisted 23.10.0 (2023-10-31)
+============================
+
+No changes since 23.10.0.rc1.
+
 
 Features
 --------

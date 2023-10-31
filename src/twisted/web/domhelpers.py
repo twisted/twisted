@@ -16,7 +16,7 @@ from twisted.web import microdom
 from twisted.web.microdom import escape, getElementsByTagName, unescape
 
 warningString = "twisted.web.domhelpers was deprecated at {}".format(
-    getVersionString(Version("Twisted", 23, 10, 0, release_candidate=1))
+    getVersionString(Version("Twisted", 23, 10, 0))
 )
 warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 
