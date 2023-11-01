@@ -8,6 +8,101 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 23.10.0 (2023-10-31)
+============================
+
+No changes since 23.10.0.rc1.
+
+
+Features
+--------
+
+- twisted.python.filepath.FilePath and related classes (twisted.python.filepath.IFilepath, twisted.python.filepath.AbstractFilePath, twisted.python.zippath.ZipPath, and twisted.python.zippath.ZipArchive) now have type annotations.  Additionally, FilePath is now generic, describing its mode, so you can annotate variables as FilePath[str] or FilePath[bytes] depending on the types that you wish to get back from the 'path' attribute and related methods like 'basename'. (#11822)
+- When using `CPython`, functions wrapped by `twisted.internet.defer.inlineCallbacks` can have their arguments and return values freed immediately after completion (due to there no longer being circular references). (#11885)
+
+
+Bugfixes
+--------
+
+- Fix TypeError on t.i.cfreactor due to 3.10 type annotation syntax (#11965)
+- Fix the type annotations of DeferredLock.run, DeferredSemaphore.run, maybeDeferred, ensureDeferred, inlineCallbacks and fromCoroutine that used to return Deferred[Any] to return the result of the passed Coroutine/Coroutine function (#11985)
+- Fixed significant performance overhead (CPU and bandwidth) when doing small writes to a TLS transport. Specifically, small writes to a TLS transport are now buffered until the next reactor iteration. (#11989)
+- fix mypy due to hypothesis 6.85 (#11995)
+
+
+Improved Documentation
+----------------------
+
+- The search and version navigation for the documentation hosted on
+  Read The Docs was fixed.
+  This was a regression introduced with 23.8.0. (#12012)
+
+
+Deprecations and Removals
+-------------------------
+
+- Drop support for Python 3.7. Remove twisted[contextvars] extra (contextvars are always available in Python 3.7+) (#11913)
+
+
+Misc
+----
+
+- #5206, #11583, #11787, #11871, #11912, #11921, #11922, #11926, #11932, #11934, #11936, #11938, #11940, #11942, #11945, #11948, #11952, #11953, #11955, #11957, #11959, #11961, #11964, #11973, #11977, #11980, #11982, #11993, #11999, #12004, #12005, #12009
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- In Twisted 16.3.0, we changed twisted.web to stop dispatching HTTP/1.1
+  pipelined requests to application code.  There was a bug in this change which
+  still allowed clients which could send multiple full HTTP requests in a single
+  TCP segment to trigger asynchronous processing of later requests, which could
+  lead to out-of-order responses.  This has now been corrected and twisted.web
+  should never process a pipelined request over HTTP/1.1 until the previous
+  request has fully completed. (CVE-2023-46137, GHSA-cq7q-gv5w-rwx2) (#11976)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.dom.microdom and twisted.web.domhelpers are now deprecated. (#3651)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Misc
+~~~~
+
+- #10115
+
 
 Twisted 23.8.0. (2023-08-28)
 ============================
