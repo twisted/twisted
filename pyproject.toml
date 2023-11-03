@@ -37,7 +37,7 @@ dependencies = [
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
-    "typing_extensions >= 4.0.0",
+    "typing_extensions >= 4.2.0",
     "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
@@ -673,12 +673,9 @@ module = [
     'twisted.web.test.test_http2',
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
-    'twisted.web.test.test_pages',
     'twisted.web.test.test_proxy',
-    'twisted.web.test.test_resource',
     'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
-    'twisted.web.test.test_tap',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
     'twisted.web.test.test_web',

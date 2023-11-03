@@ -15,7 +15,7 @@ from zope.interface import directlyProvides
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import ISSLTransport
-from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+from twisted.protocols.tls import TLSMemoryBIOFactory
 
 
 class _BypassTLS:
@@ -128,7 +128,8 @@ def startTLS(transport, contextFactory, normal, bypass):
         transport.unregisterProducer()
 
     tlsFactory = TLSMemoryBIOFactory(contextFactory, client, None)
-    tlsProtocol = TLSMemoryBIOProtocol(tlsFactory, transport.protocol, False)
+    tlsProtocol = tlsFactory.protocol(tlsFactory, transport.protocol, False)
+    # Hook up the new TLS protocol to the transport:
     transport.protocol = tlsProtocol
 
     transport.getHandle = tlsProtocol.getHandle
