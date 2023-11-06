@@ -1,5 +1,5 @@
 # Read from file, announce on the web!
-import cgi
+import html
 
 from twisted.application import service, strports
 from twisted.internet import defer, protocol, reactor
@@ -39,9 +39,9 @@ class FingerResource(resource.Resource):
             messagevalue = messagevalue.decode("ascii")
         if username:
             username = username.decode("ascii")
-        username = cgi.escape(username)
+        username = html.escape(username)
         if messagevalue is not None:
-            messagevalue = cgi.escape(messagevalue)
+            messagevalue = html.escape(messagevalue)
             text = f"<h1>{username}</h1><p>{messagevalue}</p>"
         else:
             text = f"<h1>{username}</h1><p>No such user</p>"
