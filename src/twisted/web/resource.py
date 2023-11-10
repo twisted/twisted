@@ -7,7 +7,7 @@ Implementation of the lowest-level Resource class.
 
 See L{twisted.web.pages} for some utility implementations.
 """
-
+from __future__ import annotations
 
 __all__ = [
     "IResource",
@@ -20,6 +20,7 @@ __all__ = [
 ]
 
 import warnings
+from typing import Sequence
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -116,6 +117,7 @@ class Resource:
     """
 
     entityType = IResource
+    allowedMethods: Sequence[bytes]
 
     server = None
 
