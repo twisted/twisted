@@ -131,8 +131,12 @@ class TestCase(SynchronousTestCase):
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
 
+    async def asyncSetUp(self) -> None:
+        return None
+
     def deferSetUp(self, ignored, result):
         d = self._run("setUp", result)
+        d.addCallback(lambda _: self._run("asyncSetUp", result))
         d.addCallbacks(
             self.deferTestMethod,
             self._ebDeferSetUp,
@@ -185,8 +189,12 @@ class TestCase(SynchronousTestCase):
         else:
             result.addError(self, f)
 
+    async def asyncTearDown(self) -> None:
+        return None
+
     def deferTearDown(self, ignored, result):
-        d = self._run("tearDown", result)
+        d = self._run("asyncTearDown", result)
+        d.addCallback(lambda _: self._run("tearDown", result))
         d.addErrback(self._ebDeferTearDown, result)
         return d
 
