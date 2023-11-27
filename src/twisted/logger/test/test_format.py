@@ -36,6 +36,12 @@ class FormattingTests(unittest.TestCase):
     Tests for basic event formatting functions.
     """
 
+    def format(self, logFormat: AnyStr, **event: object) -> str:
+        event["log_format"] = logFormat
+        result = formatEvent(event)
+        self.assertIs(type(result), str)
+        return result
+
     def test_formatEvent(self) -> None:
         """
         L{formatEvent} will format an event according to several rules:
@@ -53,27 +59,36 @@ class FormattingTests(unittest.TestCase):
         L{formatEvent} will always return L{str}, and if given bytes, will
         always treat its format string as UTF-8 encoded.
         """
-
-        def format(logFormat: AnyStr, **event: object) -> str:
-            event["log_format"] = logFormat
-            result = formatEvent(event)
-            self.assertIs(type(result), str)
-            return result
-
-        self.assertEqual("", format(b""))
-        self.assertEqual("", format(""))
-        self.assertEqual("abc", format("{x}", x="abc"))
+        self.assertEqual("", self.format(b""))
+        self.assertEqual("", self.format(""))
+        self.assertEqual("abc", self.format("{x}", x="abc"))
         self.assertEqual(
             "no, yes.",
-            format("{not_called}, {called()}.", not_called="no", called=lambda: "yes"),
+            self.format(
+                "{not_called}, {called()}.", not_called="no", called=lambda: "yes"
+            ),
         )
-        self.assertEqual("S\xe1nchez", format(b"S\xc3\xa1nchez"))
-        self.assertIn("Unable to format event", format(b"S\xe1nchez"))
-        maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
+        self.assertEqual("S\xe1nchez", self.format(b"S\xc3\xa1nchez"))
+        self.assertIn("Unable to format event", self.format(b"S\xe1nchez"))
+        maybeResult = self.format(b"S{a!s}nchez", a=b"\xe1")
         self.assertIn("Sb'\\xe1'nchez", maybeResult)
 
         xe1 = str(repr(b"\xe1"))
-        self.assertIn("S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
+        self.assertIn("S" + xe1 + "nchez", self.format(b"S{a!r}nchez", a=b"\xe1"))
+
+    def test_formatMethod(self) -> None:
+        """
+        L{formatEvent} will format PEP 3101 keys containing C{.}s ending with
+        C{()} as methods.
+        """
+
+        class World:
+            def where(self) -> str:
+                return "world"
+
+        self.assertEqual(
+            "hello world", self.format("hello {what.where()}", what=World())
+        )
 
     def test_formatEventNoFormat(self) -> None:
         """
