@@ -1940,7 +1940,7 @@ class CookieTestsMixin:
         """
         Add a cookie to a cookie jar.
         """
-        response = client._FakeUrllib2Response(
+        response = client._FakeStdlibResponse(
             client.Response(
                 (b"HTTP", 1, 1),
                 200,
@@ -1949,16 +1949,16 @@ class CookieTestsMixin:
                 None,
             )
         )
-        request = client._FakeUrllib2Request(uri)
+        request = client._FakeStdlibRequest(uri)
         cookieJar.extract_cookies(response, request)
         return request, response
 
 
 class CookieJarTests(TestCase, CookieTestsMixin):
     """
-    Tests for L{twisted.web.client._FakeUrllib2Response} and
-    L{twisted.web.client._FakeUrllib2Request}'s interactions with
-    L{CookieJar} instances.
+    Tests for L{twisted.web.client._FakeStdlibResponse} and
+    L{twisted.web.client._FakeStdlibRequest}'s interactions with L{CookieJar}
+    instances.
     """
 
     def makeCookieJar(self):
