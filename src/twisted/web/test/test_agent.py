@@ -4,6 +4,9 @@
 """
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
+
+from __future__ import annotations
+
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
