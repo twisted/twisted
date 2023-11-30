@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from twisted.conch.insults.window import ScrolledArea, TextOutput, TopWindow
+from twisted.conch.insults.insults import FUNCTION_KEYS
+from twisted.conch.insults.window import ScrolledArea, Selection, TextOutput, TopWindow
 from twisted.trial.unittest import TestCase
 
 
@@ -66,3 +67,49 @@ class ScrolledAreaTests(TestCase):
         scrolled = ScrolledArea(widget)
         self.assertIs(widget.parent, scrolled._viewport)
         self.assertIs(scrolled._viewport.parent, scrolled)
+
+
+class SelectionTests(TestCase):
+    """
+    Tests for L{Selection}, a widget which allows to select item from
+    list of items.
+    """
+
+    seq = [f"{x}".encode("ascii") for x in range(10)]
+    keys = {
+        "up": b"[UP_ARROW]",
+        "down": b"[DOWN_ARROW]",
+        "pgup": b"[PGUP]",
+        "pgdn": b"[PGDN]",
+    }
+
+    def test_defined_keynames(self) -> None:
+        """
+        Test if expected key names are still defined in t.c.i.i.FUNCTION_KEYS
+        """
+        self.assertTrue(set(self.keys.values()).issubset(set(FUNCTION_KEYS)))
+
+    def test_selection(self) -> None:
+        """
+        Test if sending function key codes actually changes focus
+        """
+
+        widget = Selection(self.seq, None)
+        widget.height = 10
+        self.assertIs(widget.focusedIndex, 0)
+
+        # Move down by one, second element should be selected
+        widget.keystrokeReceived(self.keys["down"], None)
+        self.assertIs(widget.focusedIndex, 1)
+
+        # Move down by page, last element should be selected
+        widget.keystrokeReceived(self.keys["pgdn"], None)
+        self.assertIs(widget.focusedIndex, 9)
+
+        # Move up by one, second to last element should be selected
+        widget.keystrokeReceived(self.keys["up"], None)
+        self.assertIs(widget.focusedIndex, 8)
+
+        # Move up by page, first element should be selected
+        widget.keystrokeReceived(self.keys["pgup"], None)
+        self.assertIs(widget.focusedIndex, 0)

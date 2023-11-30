@@ -109,7 +109,7 @@ class Widget:
         name = keyID
         if not isinstance(keyID, str):
             name = name.decode("utf-8")
-        func = getattr(self, "func_" + name, None)
+        func = getattr(self, "func_" + name[1:-1], None)
         if func is not None:
             func(modifier)
 
