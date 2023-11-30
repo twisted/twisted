@@ -1317,9 +1317,9 @@ class _FakeStdlibResponse(_ResponseBase):
 @implementer(IAgent)
 class CookieAgent:
     """
-    L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
-    handling of HTTP cookies.  Cookies are written to and extracted
-    from a C{cookielib.CookieJar} instance.
+    L{CookieAgent} extends the basic L{Agent} to add RFC-compliant handling of
+    HTTP cookies.  Cookies are written to and extracted from a L{CookieJar}
+    instance.
 
     The same cookie jar instance will be used for any requests through this
     agent, mutating it whenever a I{Set-Cookie} header appears in a response.

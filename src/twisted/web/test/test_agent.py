@@ -1281,7 +1281,7 @@ class AgentTests(
         self.assertIsInstance(req, Request)
 
         resp = client.Response._construct(
-            (b"HTTP", 1, 1), 200, b"OK", client.Headers({}), None, req
+            (b"HTTP", 1, 1), 200, b"OK", Headers({}), None, req
         )
         res.callback(resp)
 
@@ -1313,7 +1313,7 @@ class AgentTests(
         """
         L{Request.absoluteURI} is L{None} if L{Request._parsedURI} is L{None}.
         """
-        request = client.Request(b"FOO", b"/", client.Headers(), None)
+        request = client.Request(b"FOO", b"/", Headers(), None)
         self.assertIdentical(request.absoluteURI, None)
 
     def test_endpointFactory(self):
@@ -1368,7 +1368,7 @@ class AgentMethodInjectionTests(
         """
         agent = client.Agent(self.createReactor())
         uri = b"http://twisted.invalid"
-        agent.request(method, uri, client.Headers(), None)
+        agent.request(method, uri, Headers(), None)
 
 
 class AgentURIInjectionTests(
@@ -1388,7 +1388,7 @@ class AgentURIInjectionTests(
         """
         agent = client.Agent(self.createReactor())
         method = b"GET"
-        agent.request(method, uri, client.Headers(), None)
+        agent.request(method, uri, Headers(), None)
 
 
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
@@ -1795,9 +1795,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
             return defer.succeed(protocol)
 
         bodyProducer = object()
-        request = client.Request(
-            b"FOO", b"/", client.Headers(), bodyProducer, persistent=True
-        )
+        request = client.Request(b"FOO", b"/", Headers(), bodyProducer, persistent=True)
         newProtocol()
         protocol = protocols[0]
         retrier = client._RetryingHTTP11ClientProtocol(protocol, newProtocol)
@@ -1936,7 +1934,9 @@ class CookieTestsMixin:
     Mixin for unit tests dealing with cookies.
     """
 
-    def addCookies(self, cookieJar, uri, cookies):
+    def addCookies(
+        self, cookieJar: CookieJar, uri: bytes, cookies: list[bytes]
+    ) -> tuple[client._FakeStdlibRequest, client._FakeStdlibResponse]:
         """
         Add a cookie to a cookie jar.
         """
@@ -1945,7 +1945,7 @@ class CookieTestsMixin:
                 (b"HTTP", 1, 1),
                 200,
                 b"OK",
-                client.Headers({b"Set-Cookie": cookies}),
+                Headers({b"Set-Cookie": cookies}),
                 None,
             )
         )
@@ -1961,7 +1961,9 @@ class CookieJarTests(TestCase, CookieTestsMixin):
     instances.
     """
 
-    def makeCookieJar(self):
+    def makeCookieJar(
+        self,
+    ) -> tuple[CookieJar, tuple[client._FakeStdlibRequest, client._FakeStdlibResponse]]:
         """
         @return: a L{CookieJar} with some sample cookies
         """
@@ -1973,10 +1975,11 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         )
         return cookieJar, reqres
 
-    def test_extractCookies(self):
+    def test_extractCookies(self) -> None:
         """
-        L{CookieJar.extract_cookies} extracts cookie information from
-        fake urllib2 response instances.
+        L{CookieJar.extract_cookies} extracts cookie information from our
+        stdlib-compatibility wrappers, L{client._FakeStdlibRequest} and
+        L{client._FakeStdlibResponse}.
         """
         jar = self.makeCookieJar()[0]
         cookies = {c.name: c for c in jar}
@@ -1997,17 +2000,20 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         self.assertEqual(cookie.comment, "goodbye")
         self.assertIdentical(cookie.get_nonstandard_attr("cow"), None)
 
-    def test_sendCookie(self):
+    def test_sendCookie(self) -> None:
         """
-        L{CookieJar.add_cookie_header} adds a cookie header to a fake
-        urllib2 request instance.
+        L{CookieJar.add_cookie_header} adds a cookie header to a Twisted
+        request via our .
         """
         jar, (request, response) = self.makeCookieJar()
 
         self.assertIdentical(request.get_header("Cookie", None), None)
 
         jar.add_cookie_header(request)
-        self.assertEqual(request.get_header("Cookie", None), "foo=1; bar=2")
+        self.assertEqual(
+            list(request._twistedHeaders.getAllRawHeaders()),
+            [(b"Cookie", [b"foo=1; bar=2"])],
+        )
 
 
 class CookieAgentTests(
@@ -2057,7 +2063,7 @@ class CookieAgentTests(
             (b"HTTP", 1, 1),
             200,
             b"OK",
-            client.Headers(
+            Headers(
                 {
                     b"Set-Cookie": [
                         b"foo=1",
