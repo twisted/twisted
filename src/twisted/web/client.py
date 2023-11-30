@@ -6,6 +6,7 @@
 HTTP client.
 """
 
+from __future__ import annotations
 
 import collections
 import os
