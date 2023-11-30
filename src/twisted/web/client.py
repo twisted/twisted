@@ -1343,7 +1343,7 @@ class CookieAgent:
         self,
         method: bytes,
         uri: bytes,
-        headers: Headers | None = None,
+        headers: Optional[Headers] = None,
         bodyProducer: Optional[IBodyProducer] = None,
     ) -> Deferred[IResponse]:
         """
