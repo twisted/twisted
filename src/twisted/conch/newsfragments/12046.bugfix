@@ -1,1 +1,1 @@
-twisted.conch.insults.window.Widget objects now correctly respond to function keys
+twisted.conch.insults.window.Widget.functionKeyReceived fix a regression introduced with #8214 in Twisted 16.5.0
