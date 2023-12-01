@@ -182,4 +182,3 @@ class WidgetFunctionKeyTests(TestCase):
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["PGUP"])
-
