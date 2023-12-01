@@ -86,17 +86,17 @@ class SelectionTests(TestCase):
         self.assertIs(widget.focusedIndex, 0)
 
         # Move down by one, second element is selected
-        widget.keystrokeReceived(ServerProtocol.DOWN_ARROW, None)
+        widget.keystrokeReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
         self.assertIs(widget.focusedIndex, 1)
 
         # Move down by page, last element is selected
-        widget.keystrokeReceived(ServerProtocol.PGDN, None)
+        widget.keystrokeReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
         self.assertIs(widget.focusedIndex, 9)
 
         # Move up by one, second to last element is selected
-        widget.keystrokeReceived(ServerProtocol.UP_ARROW, None)
+        widget.keystrokeReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
         self.assertIs(widget.focusedIndex, 8)
 
         # Move up by page, first element is selected
-        widget.keystrokeReceived(ServerProtocol.PGUP, None)
+        widget.keystrokeReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
         self.assertIs(widget.focusedIndex, 0)
