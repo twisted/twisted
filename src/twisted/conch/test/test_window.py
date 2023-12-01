@@ -95,7 +95,7 @@ class SelectionTests(TestCase):
         """
 
         widget = Selection(self.seq, None)
-        widget.height = 10
+        widget.height = 10  # type: ignore[assignment]
         self.assertIs(widget.focusedIndex, 0)
 
         # Move down by one, second element should be selected
