@@ -111,22 +111,22 @@ class SelectionTests(TestCase):
 class TestWidget(Widget):
     triggered: dict[str, bool] = dict()
 
-    def func_F1(self, modifier):
+    def func_F1(self, modifier) -> None:
         self.triggered["F1"] = True
 
-    def func_HOME(self, modifier):
+    def func_HOME(self, modifier) -> None:
         self.triggered["HOME"] = True
 
-    def func_DOWN_ARROW(self, modifier):
+    def func_DOWN_ARROW(self, modifier) -> None:
         self.triggered["DOWN_ARROW"] = True
 
-    def func_UP_ARROW(self, modifier):
+    def func_UP_ARROW(self, modifier) -> None:
         self.triggered["UP_ARROW"] = True
 
-    def func_PGDN(self, modifier):
+    def func_PGDN(self, modifier) -> None:
         self.triggered["PGDN"] = True
 
-    def func_PGUP(self, modifier):
+    def func_PGUP(self, modifier) -> None:
         self.triggered["PGUP"] = True
 
 
