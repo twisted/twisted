@@ -6,7 +6,13 @@ from __future__ import annotations
 from typing import Callable
 
 from twisted.conch.insults.insults import ServerProtocol
-from twisted.conch.insults.window import ScrolledArea, Selection, TextOutput, TopWindow
+from twisted.conch.insults.window import (
+    ScrolledArea,
+    Selection,
+    TextOutput,
+    TopWindow,
+    Widget,
+)
 from twisted.trial.unittest import TestCase
 
 
@@ -100,3 +106,58 @@ class SelectionTests(TestCase):
         # Move up by page, first element is selected
         widget.keystrokeReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
         self.assertIs(widget.focusedIndex, 0)
+
+
+class TestWidget(Widget):
+    triggered: dict[str, bool] = dict()
+
+    def func_F1(self, modifier):
+        self.triggered["F1"] = True
+
+    def func_HOME(self, modifier):
+        self.triggered["HOME"] = True
+
+    def func_DOWN_ARROW(self, modifier):
+        self.triggered["DOWN_ARROW"] = True
+
+    def func_UP_ARROW(self, modifier):
+        self.triggered["UP_ARROW"] = True
+
+    def func_PGDN(self, modifier):
+        self.triggered["PGDN"] = True
+
+    def func_PGUP(self, modifier):
+        self.triggered["PGUP"] = True
+
+
+class WidgetTests(TestCase):
+    def test_widget_function_key_f1(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.F1, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["F1"])
+
+    def test_widget_function_key_home(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.HOME, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["HOME"])
+
+    def test_widget_function_key_down_arrow(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["DOWN_ARROW"])
+
+    def test_widget_function_key_up_arrow(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["UP_ARROW"])
+
+    def test_widget_function_key_pgdn(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["PGDN"])
+
+    def test_widget_function_key_pgup(self) -> None:
+        widget = TestWidget()
+        widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
+        self.assertTrue(widget.triggered["PGUP"])
+
