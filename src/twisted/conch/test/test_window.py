@@ -130,33 +130,55 @@ class TestWidget(Widget):
         self.triggered["PGUP"] = True
 
 
-class WidgetTests(TestCase):
+class WidgetFunctionKeyTests(TestCase):
+    """
+    Call functionKeyReceived with key values from insults.ServerProtocol
+    """
+
     def test_widget_function_key_f1(self) -> None:
+        """
+        Widget receive F1 key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.F1, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["F1"])
 
     def test_widget_function_key_home(self) -> None:
+        """
+        Widget receive HOME key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.HOME, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["HOME"])
 
     def test_widget_function_key_down_arrow(self) -> None:
+        """
+        Widget receive DOWN_ARROW key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["DOWN_ARROW"])
 
     def test_widget_function_key_up_arrow(self) -> None:
+        """
+        Widget receive UP_ARROW key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["UP_ARROW"])
 
     def test_widget_function_key_pgdn(self) -> None:
+        """
+        Widget receive PGDN key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["PGDN"])
 
     def test_widget_function_key_pgup(self) -> None:
+        """
+        Widget receive PGUP key
+        """
         widget = TestWidget()
         widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
         self.assertTrue(widget.triggered["PGUP"])
