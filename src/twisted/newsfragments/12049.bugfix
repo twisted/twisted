@@ -1,0 +1,1 @@
+Fixed IOCPReactor when using with TLS and Keep-Alive option.

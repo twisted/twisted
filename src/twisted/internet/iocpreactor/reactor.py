@@ -168,7 +168,7 @@ class IOCPReactor(base.ReactorBase, _ThreadedWin32EventsMixin):
             """
             port = self.listenTCP(
                 port,
-                TLSMemoryBIOFactory(contextFactory, False, factory),
+                TLSMemoryBIOFactory(contextFactory, False, factory, clock=self),
                 backlog,
                 interface,
             )
@@ -184,7 +184,7 @@ class IOCPReactor(base.ReactorBase, _ThreadedWin32EventsMixin):
             return self.connectTCP(
                 host,
                 port,
-                TLSMemoryBIOFactory(contextFactory, True, factory),
+                TLSMemoryBIOFactory(contextFactory, True, factory, clock=self),
                 timeout,
                 bindAddress,
             )
