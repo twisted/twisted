@@ -1239,6 +1239,7 @@ class _FakeStdlibRequest(_RequestBase):
     uri: str
     type: str
     host: str
+    # The received headers managed using Twisted API.
     _twistedHeaders: Headers
 
     def __init__(self, uri: bytes) -> None:
