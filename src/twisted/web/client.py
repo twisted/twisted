@@ -47,7 +47,10 @@ from twisted.web.iweb import (
     IResponse,
 )
 
-# Allow for type-checking of our faked-out types.
+# For the purpose of type-checking we want our faked-out types to be identical to the types they are replacing.
+# For the purpose of the impementation, we want to start
+# with a blank slate so that we don't accidentally use
+# any of the real implementation.
 
 if TYPE_CHECKING:
     from email.message import EmailMessage as _InfoType
