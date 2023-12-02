@@ -37,6 +37,11 @@ class FormattingTests(unittest.TestCase):
     """
 
     def format(self, logFormat: AnyStr, **event: object) -> str:
+        """
+        Create a Twisted log event dictionary from C{event} with the given
+        C{logFormat} format string, format it with L{formatEvent}, ensure that
+        its type is L{str}, and return its result.
+        """
         event["log_format"] = logFormat
         result = formatEvent(event)
         self.assertIs(type(result), str)
