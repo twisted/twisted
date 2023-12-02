@@ -166,7 +166,7 @@ def formatEventAsClassicLogText(
     return eventText + "\n"
 
 
-def keycall(key: str, get: Callable[[str], Any]) -> PotentialCallWrapper:
+def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     """
     Check to see if C{key} ends with parentheses ("C{()}"); if not, wrap up the
     result of C{get} in a L{PotentialCallWrapper}.  Otherwise, call the result
@@ -175,15 +175,15 @@ def keycall(key: str, get: Callable[[str], Any]) -> PotentialCallWrapper:
     @param key: The last dotted segment of a formatting key, as parsed by
         L{Formatter.vformat}, which may end in C{()}.
 
-    @param get: A function which takes a string and returns some other object,
-        to be formatted and stringified for a log.
+    @param getter: A function which takes a string and returns some other
+        object, to be formatted and stringified for a log.
 
     @return: A L{PotentialCallWrapper} that will wrap up the result to allow
         for subsequent usages of parens to defer execution to log-format time.
     """
     callit = key.endswith("()")
     realKey = key[:-2] if callit else key
-    value = get(realKey)
+    value = getter(realKey)
     if callit:
         value = value()
     return PotentialCallWrapper(value)
