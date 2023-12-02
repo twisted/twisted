@@ -2006,7 +2006,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
     def test_sendCookie(self) -> None:
         """
         L{CookieJar.add_cookie_header} adds a cookie header to a Twisted
-        request via our .
+        request via our L{client._FakeStdlibRequest} wrapper.
         """
         jar, (request, response) = self.makeCookieJar()
 
@@ -2078,6 +2078,26 @@ class CookieAgentTests(
         res.callback(resp)
 
         return d
+
+    def test_leaveExistingCookieHeader(self) -> None:
+        """
+        L{CookieAgent.request} will not insert a C{'Cookie'} header into the
+        L{Request} object when there is already a C{'Cookie'} header in the
+        request headers parameter.
+        """
+        uri = b"http://example.com:1234/foo?bar"
+        cookie = b"foo=1"
+
+        cookieJar = CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request(b"GET", uri, Headers({"cookie": ["already-set"]}))
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders(b"cookie"), [b"already-set"])
 
     def test_requestWithCookie(self):
         """
