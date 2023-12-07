@@ -80,53 +80,64 @@ class SelectionTests(TestCase):
     Change focused entry in L{Selection} using function keys
     """
 
-    def test_selection_change(self) -> None:
+    def setUp(self) -> None:
         """
-        Send function key codes to change focused entry
+        Create L{ScrolledArea} widget with 10 elements and position selection to 5th element
         """
 
         seq: list[bytes] = [f"{_num}".encode("ascii") for _num in range(10)]
+        self.widget = Selection(seq, None)
+        self.widget.height = 10  # type: ignore[assignment]
+        self.widget.focusedIndex = 5
 
-        widget = Selection(seq, None)
-        widget.height = 10  # type: ignore[assignment]
-        self.assertIs(widget.focusedIndex, 0)
+    def test_selection_down_arrow(self) -> None:
+        """
+        Send DOWN_ARROW to select element just below the current one
+        """
+        self.widget.keystrokeReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
+        self.assertIs(self.widget.focusedIndex, 6)
 
-        # Move down by one, second element is selected
-        widget.keystrokeReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
-        self.assertIs(widget.focusedIndex, 1)
+    def test_selection_up_arrow(self) -> None:
+        """
+        Send UP_ARROW to select element just above the current one
+        """
+        self.widget.keystrokeReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
+        self.assertIs(self.widget.focusedIndex, 4)
 
-        # Move down by page, last element is selected
-        widget.keystrokeReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
-        self.assertIs(widget.focusedIndex, 9)
+    def test_selection_pgdn(self) -> None:
+        """
+        Send PGDN to select element one page down (here: last element)
+        """
+        self.widget.keystrokeReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
+        self.assertIs(self.widget.focusedIndex, 9)
 
-        # Move up by one, second to last element is selected
-        widget.keystrokeReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
-        self.assertIs(widget.focusedIndex, 8)
-
-        # Move up by page, first element is selected
-        widget.keystrokeReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
-        self.assertIs(widget.focusedIndex, 0)
+    def test_selection_pgup(self) -> None:
+        """
+        Send PGUP to select element one page up (here: first element)
+        """
+        self.widget.keystrokeReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
+        self.assertIs(self.widget.focusedIndex, 0)
 
 
 class TestWidget(Widget):
     triggered: dict[str, bool] = dict()
 
-    def func_F1(self, modifier) -> None:
+    def func_F1(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["F1"] = True
 
-    def func_HOME(self, modifier) -> None:
+    def func_HOME(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["HOME"] = True
 
-    def func_DOWN_ARROW(self, modifier) -> None:
+    def func_DOWN_ARROW(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["DOWN_ARROW"] = True
 
-    def func_UP_ARROW(self, modifier) -> None:
+    def func_UP_ARROW(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["UP_ARROW"] = True
 
-    def func_PGDN(self, modifier) -> None:
+    def func_PGDN(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["PGDN"] = True
 
-    def func_PGUP(self, modifier) -> None:
+    def func_PGUP(self, modifier) -> None:  # type: ignore[no-untyped-def]
         self.triggered["PGUP"] = True
 
 
@@ -135,50 +146,50 @@ class WidgetFunctionKeyTests(TestCase):
     Call functionKeyReceived with key values from insults.ServerProtocol
     """
 
+    def setUp(self) -> None:
+        """
+        Make dummy widget to receive function keys
+        """
+        self.widget = TestWidget()
+
     def test_widget_function_key_f1(self) -> None:
         """
-        Widget receive F1 key
+        Widget receives F1 key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.F1, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["F1"])
+        self.widget.functionKeyReceived(ServerProtocol.F1, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["F1"])
 
     def test_widget_function_key_home(self) -> None:
         """
-        Widget receive HOME key
+        Widget receives HOME key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.HOME, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["HOME"])
+        self.widget.functionKeyReceived(ServerProtocol.HOME, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["HOME"])
 
     def test_widget_function_key_down_arrow(self) -> None:
         """
-        Widget receive DOWN_ARROW key
+        Widget receives DOWN_ARROW key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["DOWN_ARROW"])
+        self.widget.functionKeyReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["DOWN_ARROW"])
 
     def test_widget_function_key_up_arrow(self) -> None:
         """
-        Widget receive UP_ARROW key
+        Widget receives UP_ARROW key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["UP_ARROW"])
+        self.widget.functionKeyReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["UP_ARROW"])
 
     def test_widget_function_key_pgdn(self) -> None:
         """
-        Widget receive PGDN key
+        Widget receives PGDN key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["PGDN"])
+        self.widget.functionKeyReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["PGDN"])
 
     def test_widget_function_key_pgup(self) -> None:
         """
-        Widget receive PGUP key
+        Widget receives PGUP key
         """
-        widget = TestWidget()
-        widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
-        self.assertTrue(widget.triggered["PGUP"])
+        self.widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
+        self.assertTrue(self.widget.triggered["PGUP"])
