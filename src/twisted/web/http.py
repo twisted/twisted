@@ -1897,8 +1897,7 @@ class _ChunkedTransferDecoder:
     @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
         tracks the index into the buffer at which search for CRLF should resume.
         Resuming the search at this position avoids doing quadratic work if the
-        chunk length line arrives over many calls to C{dataReceived}. Not used
-        in any other state.
+        chunk length line arrives over many calls to C{dataReceived}.
 
     @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
         See https://github.com/twisted/twisted/issues/12014
