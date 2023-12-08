@@ -2016,10 +2016,6 @@ class _ChunkedTransferDecoder:
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
-            # Restart the search upon receipt of more data at the start of the
-            # new data, minus one in case the last character of the buffer is
-            # CR.
-            self._start = len(self._buffer) - 1
             return False
 
         if eolIndex > 0:
@@ -2029,7 +2025,7 @@ class _ChunkedTransferDecoder:
             self._receivedTrailerHeadersSize += eolIndex + 2
             return True
 
-        # eolIndex == 0
+        # eolIndex in this part of code is equal to 0
 
         data = memoryview(self._buffer)[2:].tobytes()
 
