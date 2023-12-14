@@ -71,7 +71,7 @@ jobs:
         # The Python version on which the job is executed.
         # We need at least one value here, so we go with latest Python version
         # that we support..
-        python-version: ['3.11']
+        python-version: ['3.12']
         # Just use the default OS.
         runs-on: ['']
         # Human readable short description for this job.
@@ -131,8 +131,8 @@ jobs:
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
 
-          # Just Python 3.12 with default settings.
-          - python-version: '3.12'
+          # Just Python 3.11 with default settings.
+          - python-version: '3.11'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
@@ -141,7 +141,7 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Newest macOS and newest Python supported versions.
-          - python-version: '3.11'
+          - python-version: '3.12'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
             tox-env: 'macos-withcov-alldeps'
@@ -157,7 +157,7 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.11'
+          - python-version: '3.12'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
