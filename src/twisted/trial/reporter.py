@@ -102,7 +102,7 @@ class TestResult(pyunit.TestResult):
     unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
     successes: int
     _testStarted: Optional[int]
-    # The duration of the test. It can be zero if tests was skipped.
+    # The duration of the test. It is None until the test completes.
     _lastTime: Optional[int]
 
     def __init__(self):
