@@ -7,7 +7,7 @@
 """
 Defines classes that handle the results of tests.
 """
-
+from __future__ import annotations
 
 import os
 import sys
@@ -16,7 +16,7 @@ import unittest as pyunit
 import warnings
 from collections import OrderedDict
 from types import TracebackType
-from typing import TYPE_CHECKING, List, Tuple, Type, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Type, Union
 
 from zope.interface import implementer
 
@@ -87,6 +87,11 @@ class TestResult(pyunit.TestResult):
 
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
+
+    @ivar _startTime: The time when the current test was started. It defaults to
+    L{None}, which means that the test was skipped.
+    @ivar _lastTime: The duration of the current test run. It defaults to
+    L{None}, which means that the test was skipped.
     """
 
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
@@ -96,11 +101,9 @@ class TestResult(pyunit.TestResult):
     expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
     unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
     successes: int
-    # The time when the test was started.
-    # It might be 0 if the tests was skipped, so never started.
-    _testStarted: int
+    _testStarted: Optional[int]
     # The duration of the test. It can be zero if tests was skipped.
-    _lastTime: int
+    _lastTime: Optional[int]
 
     def __init__(self):
         super().__init__()
@@ -109,8 +112,8 @@ class TestResult(pyunit.TestResult):
         self.unexpectedSuccesses = []
         self.successes = 0
         self._timings = []
-        self._testStarted = 0
-        self._lastTime = 0
+        self._testStarted = None
+        self._lastTime = None
 
     def __repr__(self) -> str:
         return "<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>" % (
@@ -153,7 +156,7 @@ class TestResult(pyunit.TestResult):
         @type test: L{pyunit.TestCase}
         """
         super().stopTest(test)
-        if self._testStarted:
+        if self._testStarted is not None:
             self._lastTime = self._getTime() - self._testStarted
 
     def addFailure(self, test, fail):
