@@ -294,6 +294,9 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """
     Like C{cgi.parse_qs}, but with support for parsing byte strings on Python 3.
 
+    This was created to help with Python 2 to Python 3 migration.
+    Consider using L{urllib.parse.parse_qs}.
+
     @type qs: C{bytes}
     """
     d = {}
