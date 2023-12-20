@@ -134,6 +134,9 @@ jobs:
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
 
+          # Just Python 3.13 alpha with default settings.
+          - python-version: '3.13.0-alpha.2'
+
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
             runs-on: 'macos-12'
@@ -194,7 +197,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
