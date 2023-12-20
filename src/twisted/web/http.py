@@ -101,13 +101,13 @@ __all__ = [
 import base64
 import binascii
 import calendar
-import cgi
 import math
 import os
 import re
 import tempfile
 import time
 import warnings
+from email import message_from_bytes
 from email.message import EmailMessage
 from io import BytesIO
 from typing import AnyStr, Callable, List, Optional, Tuple
@@ -227,17 +227,39 @@ monthname_lower = [name and name.lower() for name in monthname]
 
 
 def _parseContentType(line: bytes) -> tuple[bytes, dict[str, bytes]]:
+    """
+    Parse the Content-Type header.
+    """
     msg = EmailMessage()
     msg["content-type"] = line.decode("charmap")
-
     key = msg.get_content_type()
-    pdict = msg["content-type"].params
-
-    # We want the key as bytes, and cgi.parse_multipart (which consumes
-    # pdict) expects a dict of str keys but bytes values
     encodedKey = key.encode("charmap")
-    pdict = {x: y.encode("charmap") for x, y in pdict.items()}
-    return (encodedKey, pdict)
+    return encodedKey
+
+
+class _MultiPartParseException(Exception):
+    """
+    Failed to parse the multipart/form-data payload.
+    """
+
+
+def _getMultiPartArgs(content, ctype):
+    """
+    Parse the content of a multipart/form-data request.
+    """
+    result = {}
+    multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
+    msg = message_from_bytes(multiPartHeaders + content)
+    if not msg.is_multipart():
+        raise _MultiPartParseException("Not a multipart.")
+
+    for part in msg.get_payload():
+        name = part.get_param("name", header="content-disposition")
+        if not name:
+            continue
+        payload = part.get_payload(decode=True)
+        result[name.encode("utf8")] = [payload]
+    return result
 
 
 def urlparse(url):
@@ -978,47 +1000,18 @@ class Request:
 
         if self.method == b"POST" and ctype and clength:
             mfd = b"multipart/form-data"
-            key, pdict = _parseContentType(ctype)
-            # This weird CONTENT-LENGTH param is required by
-            # cgi.parse_multipart() in some versions of Python 3.7+, see
-            # bpo-29979. It looks like this will be relaxed and backported, see
-            # https://github.com/python/cpython/pull/8530.
-            pdict["CONTENT-LENGTH"] = clength
+            key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    cgiArgs = cgi.parse_multipart(
-                        self.content,
-                        pdict,
-                        encoding="utf8",
-                        errors="surrogateescape",
-                    )
-
-                    # The parse_multipart function on Python 3.7+
-                    # decodes the header bytes as iso-8859-1 and
-                    # decodes the body bytes as utf8 with
-                    # surrogateescape -- we want bytes
-                    self.args.update(
-                        {
-                            x.encode("iso-8859-1"): [
-                                z.encode("utf8", "surrogateescape")
-                                if isinstance(z, str)
-                                else z
-                                for z in y
-                            ]
-                            for x, y in cgiArgs.items()
-                            if isinstance(x, str)
-                        }
-                    )
-                except Exception as e:
-                    # It was a bad request, or we got a signal.
+                    self.content.seek(0)
+                    content = self.content.read()
+                    self.args.update(_getMultiPartArgs(content, ctype))
+                except _MultiPartParseException:
+                    # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
-                    if isinstance(e, (TypeError, ValueError, KeyError)):
-                        return
-                    else:
-                        # If it's not a userspace error from CGI, reraise
-                        raise
+                    return
 
             self.content.seek(0, 0)
 
