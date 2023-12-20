@@ -135,7 +135,10 @@ jobs:
           - python-version: '3.11'
 
           # Just Python 3.13 alpha with default settings.
+          # For now, minimum dependencies as cffi doesn't work on 3.13
           - python-version: '3.13.0-alpha.2'
+            tox-env: 'mindeps-withcov-posix'
+            job-name: 'minimum-deps-3.13'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
