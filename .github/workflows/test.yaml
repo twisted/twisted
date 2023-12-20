@@ -139,7 +139,7 @@ jobs:
           # No coverage also.
           - python-version: '3.13.0-alpha.2'
             tox-env: 'mindeps-nocov-posix'
-            job-name: 'minimum-deps-3.13'
+            job-name: 'mindeps-nocov-deps-3.13'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
