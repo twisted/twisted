@@ -226,7 +226,7 @@ weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
-def _parseContentType(line: bytes) -> tuple[bytes, dict[str, bytes]]:
+def _parseContentType(line: bytes) -> bytes:
     """
     Parse the Content-Type header.
     """
@@ -243,7 +243,7 @@ class _MultiPartParseException(Exception):
     """
 
 
-def _getMultiPartArgs(content, ctype):
+def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     """
     Parse the content of a multipart/form-data request.
     """
