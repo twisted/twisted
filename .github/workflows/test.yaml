@@ -139,7 +139,15 @@ jobs:
           # No coverage also.
           - python-version: '3.13.0-alpha.2'
             tox-env: 'mindeps-nocov-posix'
-            job-name: 'mindeps-nocov-deps-3.13'
+            job-name: 'mindeps-nocov-3.13'
+            skip-coverage: yes
+            # FIXME:https://github.com/twisted/twisted/issues/12060
+            # Also add twisted.python
+            # FIXME:https://github.com/twisted/twisted/issues/12061
+            # Add full twisted.internet
+            # FIXME:https://github.com/twisted/twisted/issues/12062
+            # Add full twisted.test
+            trial-args: '-j 4 twisted.conch twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.words'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
