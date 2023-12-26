@@ -15,10 +15,10 @@ from twisted.conch import recvline
 from twisted.conch.insults import insults
 from twisted.cred import portal
 from twisted.internet import defer, error
+from twisted.internet.testing import StringTransport
 from twisted.python import components, filepath, reflect
 from twisted.python.compat import iterbytes
 from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import SkipTest, TestCase
 
 stdio = requireModule("twisted.conch.stdio")

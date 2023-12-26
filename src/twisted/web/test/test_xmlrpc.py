@@ -13,6 +13,7 @@ from unittest import skipIf
 
 from twisted.internet import defer, reactor
 from twisted.internet.error import ConnectionDone
+from twisted.internet.testing import EventLoggingObserver, MemoryReactor
 from twisted.logger import (
     FilteringLogObserver,
     LogLevel,
@@ -22,7 +23,6 @@ from twisted.logger import (
 from twisted.python import failure
 from twisted.python.compat import nativeString, networkString
 from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactor
 from twisted.trial import unittest
 from twisted.web import client, http, server, static, xmlrpc
 from twisted.web.test.test_web import DummyRequest
@@ -100,7 +100,6 @@ class TestValueError(ValueError):
 
 
 class Test(XMLRPC):
-
     # If you add xmlrpc_ methods to this class, go change test_listMethods
     # below.
 
@@ -465,7 +464,6 @@ class XMLRPCTests(unittest.TestCase):
         return d
 
     def test_datetimeRoundtrip(self):
-
         """
         If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
         call and then returned by the server unmodified, the result should

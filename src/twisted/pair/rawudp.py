@@ -16,7 +16,6 @@ from twisted.pair import raw
 
 class UDPHeader:
     def __init__(self, data):
-
         (self.source, self.dest, self.len, self.check) = struct.unpack(
             "!HHHH", data[:8]
         )
@@ -32,7 +31,7 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
             raise TypeError("Added protocol must be an instance of DatagramProtocol")
         if num < 0:
             raise TypeError("Added protocol must be positive or zero")
-        if num >= 2 ** 16:
+        if num >= 2**16:
             raise TypeError("Added protocol must fit in 16 bits")
         if num not in self.udpProtos:
             self.udpProtos[num] = []

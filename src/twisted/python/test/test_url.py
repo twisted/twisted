@@ -5,6 +5,11 @@
 """
 Tests for L{twisted.python.url}.
 """
+from __future__ import annotations
+
+from typing import Iterable
+
+from typing_extensions import Protocol
 
 from twisted.trial.unittest import SynchronousTestCase
 from ..url import URL
@@ -71,27 +76,43 @@ relativeLinkTestsForRFC3986 = [
 _percentenc = lambda s: "".join("%%%02X" % ord(c) for c in s)
 
 
+class _HasException(Protocol):
+    @property
+    def exception(self) -> BaseException:
+        ...
+
+
 class TestURL(SynchronousTestCase):
     """
     Tests for L{URL}.
     """
 
-    def assertUnicoded(self, u):
+    def assertUnicoded(self, u: URL) -> None:
         """
         The given L{URL}'s components should be L{unicode}.
 
         @param u: The L{URL} to test.
         """
-        self.assertTrue(isinstance(u.scheme, str) or u.scheme is None, repr(u))
-        self.assertTrue(isinstance(u.host, str) or u.host is None, repr(u))
+        self.assertIsInstance(u.scheme, str, repr(u))
+        self.assertIsInstance(u.host, str, repr(u))
         for seg in u.path:
             self.assertIsInstance(seg, str, repr(u))
-        for (k, v) in u.query:
+        for k, v in u.query:
             self.assertIsInstance(k, str, repr(u))
             self.assertTrue(v is None or isinstance(v, str), repr(u))
         self.assertIsInstance(u.fragment, str, repr(u))
 
-    def assertURL(self, u, scheme, host, path, query, fragment, port, userinfo=""):
+    def assertURL(
+        self,
+        u: URL,
+        scheme: str,
+        host: str,
+        path: Iterable[str],
+        query: Iterable[tuple[str, str | None]],
+        fragment: str,
+        port: int | None,
+        userinfo: str = "",
+    ) -> None:
         """
         The given L{URL} should have the given components.
 
@@ -115,12 +136,12 @@ class TestURL(SynchronousTestCase):
         expected = (scheme, host, tuple(path), tuple(query), fragment, port, u.userinfo)
         self.assertEqual(actual, expected)
 
-    def test_initDefaults(self):
+    def test_initDefaults(self) -> None:
         """
         L{URL} should have appropriate default values.
         """
 
-        def check(u):
+        def check(u: URL) -> None:
             self.assertUnicoded(u)
             self.assertURL(u, "http", "", [], [], "", 80, "")
 
@@ -128,7 +149,7 @@ class TestURL(SynchronousTestCase):
         check(URL("http", "", [], []))
         check(URL("http", "", [], [], ""))
 
-    def test_init(self):
+    def test_init(self) -> None:
         """
         L{URL} should accept L{unicode} parameters.
         """
@@ -146,7 +167,7 @@ class TestURL(SynchronousTestCase):
             80,
         )
 
-    def test_initPercent(self):
+    def test_initPercent(self) -> None:
         """
         L{URL} should accept (and not interpret) percent characters.
         """
@@ -156,7 +177,7 @@ class TestURL(SynchronousTestCase):
             u, "s", "%68", ["%70"], [("%6B", "%76"), ("%6B", None)], "%66", None
         )
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         L{URL.__repr__} will display the canonical form of the URL, wrapped in
         a L{URL.fromText} invocation, so that it is C{eval}-able but still easy
@@ -175,7 +196,7 @@ class TestURL(SynchronousTestCase):
             "URL.from_text({})".format(repr("http://foo/bar?baz&k=v#frob")),
         )
 
-    def test_fromText(self):
+    def test_fromText(self) -> None:
         """
         Round-tripping L{URL.fromText} with C{str} results in an equivalent
         URL.
@@ -183,7 +204,7 @@ class TestURL(SynchronousTestCase):
         urlpath = URL.fromText(theurl)
         self.assertEqual(theurl, urlpath.asText())
 
-    def test_roundtrip(self):
+    def test_roundtrip(self) -> None:
         """
         L{URL.asText} should invert L{URL.fromText}.
         """
@@ -207,7 +228,7 @@ class TestURL(SynchronousTestCase):
             result = URL.fromText(test).asText()
             self.assertEqual(test, result)
 
-    def test_equality(self):
+    def test_equality(self) -> None:
         """
         Two URLs decoded using L{URL.fromText} will be equal (C{==}) if they
         decoded same URL string, and unequal (C{!=}) if they decoded different
@@ -222,7 +243,7 @@ class TestURL(SynchronousTestCase):
             ),
         )
 
-    def test_fragmentEquality(self):
+    def test_fragmentEquality(self) -> None:
         """
         An URL created with the empty string for a fragment compares equal
         to an URL created with an unspecified fragment.
@@ -232,7 +253,7 @@ class TestURL(SynchronousTestCase):
             URL.fromText("http://localhost/#"), URL.fromText("http://localhost/")
         )
 
-    def test_child(self):
+    def test_child(self) -> None:
         """
         L{URL.child} appends a new path segment, but does not affect the query
         or fragment.
@@ -255,7 +276,7 @@ class TestURL(SynchronousTestCase):
             urlpath.child("gong/double/").asText(),
         )
 
-    def test_multiChild(self):
+    def test_multiChild(self) -> None:
         """
         L{URL.child} receives multiple segments as C{*args} and appends each in
         turn.
@@ -265,7 +286,7 @@ class TestURL(SynchronousTestCase):
             "http://example.com/a/b/c/d/e",
         )
 
-    def test_childInitRoot(self):
+    def test_childInitRoot(self) -> None:
         """
         L{URL.child} of a L{URL} without a path produces a L{URL} with a single
         path segment.
@@ -274,7 +295,7 @@ class TestURL(SynchronousTestCase):
         self.assertTrue(childURL.rooted)
         self.assertEqual("http://www.foo.com/c", childURL.asText())
 
-    def test_sibling(self):
+    def test_sibling(self) -> None:
         """
         L{URL.sibling} of a L{URL} replaces the last path segment, but does not
         affect the query or fragment.
@@ -292,7 +313,7 @@ class TestURL(SynchronousTestCase):
             urlpath.sibling("sister").asText(),
         )
 
-    def test_click(self):
+    def test_click(self) -> None:
         """
         L{URL.click} interprets the given string as a relative URI-reference
         and returns a new L{URL} interpreting C{self} as the base absolute URI.
@@ -332,15 +353,15 @@ class TestURL(SynchronousTestCase):
             u.click("http://www.python.org").asText(), "http://www.python.org"
         )
 
-    def test_clickRFC3986(self):
+    def test_clickRFC3986(self) -> None:
         """
         L{URL.click} should correctly resolve the examples in RFC 3986.
         """
         base = URL.fromText(relativeLinkBaseForRFC3986)
-        for (ref, expected) in relativeLinkTestsForRFC3986:
+        for ref, expected in relativeLinkTestsForRFC3986:
             self.assertEqual(base.click(ref).asText(), expected)
 
-    def test_clickSchemeRelPath(self):
+    def test_clickSchemeRelPath(self) -> None:
         """
         L{URL.click} should not accept schemes with relative paths.
         """
@@ -348,7 +369,7 @@ class TestURL(SynchronousTestCase):
         self.assertRaises(NotImplementedError, base.click, "g:h")
         self.assertRaises(NotImplementedError, base.click, "http:h")
 
-    def test_cloneUnchanged(self):
+    def test_cloneUnchanged(self) -> None:
         """
         Verify that L{URL.replace} doesn't change any of the arguments it
         is passed.
@@ -367,7 +388,7 @@ class TestURL(SynchronousTestCase):
         )
         self.assertEqual(urlpath.replace(), urlpath)
 
-    def test_clickCollapse(self):
+    def test_clickCollapse(self) -> None:
         """
         L{URL.click} collapses C{.} and C{..} according to RFC 3986 section
         5.2.4.
@@ -400,7 +421,7 @@ class TestURL(SynchronousTestCase):
                 ),
             )
 
-    def test_queryAdd(self):
+    def test_queryAdd(self) -> None:
         """
         L{URL.add} adds query parameters.
         """
@@ -436,7 +457,7 @@ class TestURL(SynchronousTestCase):
             urlpath.add("burp", "xxx").add("zot", "32").asText(),
         )
 
-    def test_querySet(self):
+    def test_querySet(self) -> None:
         """
         L{URL.set} replaces query parameters by name.
         """
@@ -457,7 +478,7 @@ class TestURL(SynchronousTestCase):
             urlpath.add("zot", "xxx").set("zot", "32").asText(),
         )
 
-    def test_queryRemove(self):
+    def test_queryRemove(self) -> None:
         """
         L{URL.remove} removes all instances of a query parameter.
         """
@@ -466,27 +487,27 @@ class TestURL(SynchronousTestCase):
             url.remove("foo"), URL.fromText("https://example.com/a/b/?bar=2")
         )
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         """
         An empty L{URL} should serialize as the empty string.
         """
         self.assertEqual(URL().asText(), "")
 
-    def test_justQueryText(self):
+    def test_justQueryText(self) -> None:
         """
         An L{URL} with query text should serialize as just query text.
         """
         u = URL(query=[("hello", "world")])
         self.assertEqual(u.asText(), "?hello=world")
 
-    def test_identicalEqual(self):
+    def test_identicalEqual(self) -> None:
         """
         L{URL} compares equal to itself.
         """
         u = URL.fromText("http://localhost/")
         self.assertEqual(u, u)
 
-    def test_similarEqual(self):
+    def test_similarEqual(self) -> None:
         """
         URLs with equivalent components should compare equal.
         """
@@ -494,7 +515,7 @@ class TestURL(SynchronousTestCase):
         u2 = URL.fromText("http://localhost/")
         self.assertEqual(u1, u2)
 
-    def test_differentNotEqual(self):
+    def test_differentNotEqual(self) -> None:
         """
         L{URL}s that refer to different resources are both unequal (C{!=}) and
         also not equal (not C{==}).
@@ -504,7 +525,7 @@ class TestURL(SynchronousTestCase):
         self.assertFalse(u1 == u2, f"{u1!r} != {u2!r}")
         self.assertNotEqual(u1, u2)
 
-    def test_otherTypesNotEqual(self):
+    def test_otherTypesNotEqual(self) -> None:
         """
         L{URL} is not equal (C{==}) to other types.
         """
@@ -514,14 +535,14 @@ class TestURL(SynchronousTestCase):
         self.assertNotEqual(u, 42)
         self.assertNotEqual(u, object())
 
-    def test_identicalNotUnequal(self):
+    def test_identicalNotUnequal(self) -> None:
         """
         Identical L{URL}s are not unequal (C{!=}) to each other.
         """
         u = URL.fromText("http://localhost/")
         self.assertFalse(u != u, "%r == itself" % u)
 
-    def test_similarNotUnequal(self):
+    def test_similarNotUnequal(self) -> None:
         """
         Structurally similar L{URL}s are not unequal (C{!=}) to each other.
         """
@@ -529,7 +550,7 @@ class TestURL(SynchronousTestCase):
         u2 = URL.fromText("http://localhost/")
         self.assertFalse(u1 != u2, f"{u1!r} == {u2!r}")
 
-    def test_differentUnequal(self):
+    def test_differentUnequal(self) -> None:
         """
         Structurally different L{URL}s are unequal (C{!=}) to each other.
         """
@@ -537,7 +558,7 @@ class TestURL(SynchronousTestCase):
         u2 = URL.fromText("http://localhost/b")
         self.assertTrue(u1 != u2, f"{u1!r} == {u2!r}")
 
-    def test_otherTypesUnequal(self):
+    def test_otherTypesUnequal(self) -> None:
         """
         L{URL} is unequal (C{!=}) to other types.
         """
@@ -545,7 +566,7 @@ class TestURL(SynchronousTestCase):
         self.assertTrue(u != 42, "URL must differ from a number.")
         self.assertTrue(u != object(), "URL must be differ from an object.")
 
-    def test_asURI(self):
+    def test_asURI(self) -> None:
         """
         L{URL.asURI} produces an URI which converts any URI unicode encoding
         into pure US-ASCII and returns a new L{URL}.
@@ -568,7 +589,7 @@ class TestURL(SynchronousTestCase):
         actualURI = uri.asText()
         self.assertEqual(actualURI, expectedURI, f"{actualURI!r} != {expectedURI!r}")
 
-    def test_asIRI(self):
+    def test_asIRI(self) -> None:
         """
         L{URL.asIRI} decodes any percent-encoded text in the URI, making it
         more suitable for reading by humans, and returns a new L{URL}.
@@ -589,7 +610,7 @@ class TestURL(SynchronousTestCase):
         actualIRI = iri.asText()
         self.assertEqual(actualIRI, expectedIRI, f"{actualIRI!r} != {expectedIRI!r}")
 
-    def test_badUTF8AsIRI(self):
+    def test_badUTF8AsIRI(self) -> None:
         """
         Bad UTF-8 in a path segment, query parameter, or fragment results in
         that portion of the URI remaining percent-encoded in the IRI.
@@ -605,7 +626,7 @@ class TestURL(SynchronousTestCase):
         actualIRI = iri.asText()
         self.assertEqual(actualIRI, expectedIRI, f"{actualIRI!r} != {expectedIRI!r}")
 
-    def test_alreadyIRIAsIRI(self):
+    def test_alreadyIRIAsIRI(self) -> None:
         """
         A L{URL} composed of non-ASCII text will result in non-ASCII text.
         """
@@ -620,7 +641,7 @@ class TestURL(SynchronousTestCase):
         alsoIRI = iri.asIRI()
         self.assertEqual(alsoIRI.asText(), unicodey)
 
-    def test_alreadyURIAsURI(self):
+    def test_alreadyURIAsURI(self) -> None:
         """
         A L{URL} composed of encoded text will remain encoded.
         """
@@ -629,7 +650,7 @@ class TestURL(SynchronousTestCase):
         actualURI = uri.asURI().asText()
         self.assertEqual(actualURI, expectedURI)
 
-    def test_userinfo(self):
+    def test_userinfo(self) -> None:
         """
         L{URL.fromText} will parse the C{userinfo} portion of the URI
         separately from the host and port.
@@ -649,7 +670,7 @@ class TestURL(SynchronousTestCase):
             "http://someuser@example.com/some-segment@ignore",
         )
 
-    def test_portText(self):
+    def test_portText(self) -> None:
         """
         L{URL.fromText} parses custom port numbers as integers.
         """
@@ -657,7 +678,7 @@ class TestURL(SynchronousTestCase):
         self.assertEqual(portURL.port, 8080)
         self.assertEqual(portURL.asText(), "http://www.example.com:8080/")
 
-    def test_mailto(self):
+    def test_mailto(self) -> None:
         """
         Although L{URL} instances are mainly for dealing with HTTP, other
         schemes (such as C{mailto:}) should work as well.  For example,
@@ -668,15 +689,16 @@ class TestURL(SynchronousTestCase):
             URL.fromText("mailto:user@example.com").asText(), "mailto:user@example.com"
         )
 
-    def test_queryIterable(self):
+    def test_queryIterable(self) -> None:
         """
         When a L{URL} is created with a C{query} argument, the C{query}
         argument is converted into an N-tuple of 2-tuples.
         """
-        url = URL(query=[["alpha", "beta"]])
+        # note the type here is invalid as only 2-tuples are accepted
+        url = URL(query=[["alpha", "beta"]])  # type: ignore[list-item]
         self.assertEqual(url.query, (("alpha", "beta"),))
 
-    def test_pathIterable(self):
+    def test_pathIterable(self) -> None:
         """
         When a L{URL} is created with a C{path} argument, the C{path} is
         converted into a tuple.
@@ -684,7 +706,7 @@ class TestURL(SynchronousTestCase):
         url = URL(path=["hello", "world"])
         self.assertEqual(url.path, ("hello", "world"))
 
-    def test_invalidArguments(self):
+    def test_invalidArguments(self) -> None:
         """
         Passing an argument of the wrong type to any of the constructor
         arguments of L{URL} will raise a descriptive L{TypeError}.
@@ -704,15 +726,15 @@ class TestURL(SynchronousTestCase):
 
         defaultExpectation = "unicode" if bytes is str else "str"
 
-        def assertRaised(raised, expectation, name):
+        def assertRaised(raised: _HasException, expectation: str, name: str) -> None:
             self.assertEqual(
                 str(raised.exception),
                 "expected {} for {}, got {}".format(expectation, name, "<unexpected>"),
             )
 
-        def check(param, expectation=defaultExpectation):
+        def check(param: str, expectation: str = defaultExpectation) -> None:
             with self.assertRaises(TypeError) as raised:
-                URL(**{param: Unexpected()})
+                URL(**{param: Unexpected()})  # type: ignore[arg-type]
             assertRaised(raised, expectation, param)
 
         check("scheme")
@@ -725,14 +747,14 @@ class TestURL(SynchronousTestCase):
         with self.assertRaises(TypeError) as raised:
             URL(
                 path=[
-                    Unexpected(),
+                    Unexpected(),  # type: ignore[list-item]
                 ]
             )
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
             URL(
                 query=[
-                    ("name", Unexpected()),
+                    ("name", Unexpected()),  # type: ignore[list-item]
                 ]
             )
         assertRaised(
@@ -741,31 +763,31 @@ class TestURL(SynchronousTestCase):
         with self.assertRaises(TypeError) as raised:
             URL(
                 query=[
-                    (Unexpected(), "value"),
+                    (Unexpected(), "value"),  # type: ignore[list-item]
                 ]
             )
         assertRaised(raised, defaultExpectation, "query parameter name")
         # No custom error message for this one, just want to make sure
         # non-2-tuples don't get through.
         with self.assertRaises(TypeError):
-            URL(query=[Unexpected()])
+            URL(query=[Unexpected()])  # type: ignore[list-item]
         with self.assertRaises(ValueError):
-            URL(query=[("k", "v", "vv")])
+            URL(query=[("k", "v", "vv")])  # type: ignore[list-item]
         with self.assertRaises(ValueError):
-            URL(query=[("k",)])
+            URL(query=[("k",)])  # type: ignore[list-item]
 
         url = URL.fromText("https://valid.example.com/")
         with self.assertRaises(TypeError) as raised:
-            url.child(Unexpected())
+            url.child(Unexpected())  # type: ignore[arg-type]
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
-            url.sibling(Unexpected())
+            url.sibling(Unexpected())  # type: ignore[arg-type]
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
-            url.click(Unexpected())
+            url.click(Unexpected())  # type: ignore[arg-type]
         assertRaised(raised, defaultExpectation, "relative URL")
 
-    def test_technicallyTextIsIterableBut(self):
+    def test_technicallyTextIsIterableBut(self) -> None:
         """
         Technically, L{str} (or L{unicode}, as appropriate) is iterable, but
         C{URL(path="foo")} resulting in C{URL.fromText("f/o/o")} is never what
@@ -784,7 +806,7 @@ class URLDeprecationTests(SynchronousTestCase):
     L{twisted.python.url} is deprecated.
     """
 
-    def test_urlDeprecation(self):
+    def test_urlDeprecation(self) -> None:
         """
         L{twisted.python.url} is deprecated since Twisted 17.5.0.
         """

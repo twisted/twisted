@@ -91,7 +91,7 @@ class ProducerProtocol(ConnectableProtocol):
         self.result = result
 
     def handshakeCompleted(self):
-        if not isinstance(self.transport.protocol, tls.TLSMemoryBIOProtocol):
+        if not isinstance(self.transport.protocol, tls.BufferingTLSTransport):
             # Either the test or the code have a bug...
             raise RuntimeError("TLSMemoryBIOProtocol not hooked up.")
 

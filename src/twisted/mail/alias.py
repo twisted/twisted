@@ -115,7 +115,7 @@ def loadAliasFile(domains, filename=None, fp=None):
             fp.close()
     if prev:
         handle(result, prev, filename, i)
-    for (u, a) in result.items():
+    for u, a in result.items():
         result[u] = AliasGroup(a, domains, u)
     return result
 

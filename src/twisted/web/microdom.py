@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_xml -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 """
 Micro Document Object Model: a partial DOM implementation with SUX.
 
@@ -16,16 +15,27 @@ fine for the documentation generator, which parses a fairly representative
 sample of XML.
 
 Microdom mainly focuses on working with HTML and XHTML.
+
+This module is now deprecated.
 """
+from __future__ import annotations
 
 # System Imports
 import re
+import warnings
 from io import BytesIO, StringIO
+
+from incremental import Version, getVersionString
 
 # Twisted Imports
 from twisted.python.compat import ioType
 from twisted.python.util import InsensitiveDict
 from twisted.web.sux import ParseError, XMLParser
+
+warningString = "twisted.web.microdom was deprecated at {}".format(
+    getVersionString(Version("Twisted", 23, 10, 0))
+)
+warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 
 
 def getElementsByTagName(iNode, name):
@@ -316,7 +326,7 @@ class Document(Node):
         d.appendChild(newEl)
         return d
 
-    doctype = None
+    doctype: None | str = None
 
     def isEqualToDocument(self, n):
         return (self.doctype == n.doctype) and Node.isEqualToNode(self, n)
@@ -526,7 +536,6 @@ class _Attr(CharacterData):
 
 
 class Element(Node):
-
     preserveCase = 0
     caseInsensitive = 1
     nsprefixes = None
@@ -853,7 +862,6 @@ def _reverseDict(d):
 
 
 class MicroDOMParser(XMLParser):
-
     # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
     # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
     # TD, HEAD, BASE, META, HTML all have optional closing tags

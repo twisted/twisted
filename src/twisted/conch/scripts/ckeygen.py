@@ -5,7 +5,7 @@
 """
 Implementation module for the `ckeygen` command.
 """
-
+from __future__ import annotations
 
 import getpass
 import os
@@ -14,7 +14,7 @@ import socket
 import sys
 from collections.abc import Callable
 from functools import wraps
-from imp import reload
+from importlib import reload
 from typing import Any, Dict, Optional
 
 from twisted.conch.ssh import keys
@@ -207,7 +207,7 @@ def _defaultPrivateKeySubtype(keyType):
 
 def _getKeyOrDefault(
     options: Dict[Any, Any],
-    inputCollector: Optional[Callable] = None,
+    inputCollector: Optional[Callable[[str], str]] = None,
     keyTypeName: str = "rsa",
 ) -> str:
     """
@@ -223,7 +223,7 @@ def _getKeyOrDefault(
     if not filename:
         filename = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
         if platform.system() == "Windows":
-            filename = os.path.expanduser(fR"%HOMEPATH %\.ssh\id_{keyTypeName}")
+            filename = os.path.expanduser(Rf"%HOMEPATH %\.ssh\id_{keyTypeName}")
         filename = (
             inputCollector("Enter file in which the key is (%s): " % filename)
             or filename
@@ -329,7 +329,7 @@ def _inputSaveFile(prompt: str) -> str:
 def _saveKey(
     key: keys.Key,
     options: Dict[Any, Any],
-    inputCollector: Optional[Callable] = None,
+    inputCollector: Optional[Callable[[str], str]] = None,
 ) -> None:
     """
     Persist a SSH key on local filesystem.

@@ -240,7 +240,7 @@ class WorkerReporter(TestResult):
         super().addSuccess(test)
         testName = test.id()
         self._call(
-            lambda: self.ampProtocol.callRemote(  # type: ignore[no-any-return]
+            lambda: self.ampProtocol.callRemote(
                 managercommands.AddSuccess, testName=testName
             )
         )
