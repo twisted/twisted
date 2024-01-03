@@ -1090,6 +1090,16 @@ class IReactorProcess(Interface):
         arguments will be decoded up to L{unicode} using the encoding given by
         L{sys.getfilesystemencoding} (C{utf8}) and given to Windows's native "wide" APIs.
 
+        On POSIX, C{spawnProcess} may use deprecated C{os.fork} under the following
+        conditions:
+
+         - C{path} being not C{None} or a path that resolves to something different
+            than the current directory.
+         - C{uid} being not C{None}.
+         - C{gid} being not C{None}.
+
+        If none of the above conditions hold, deprecated C{os.fork} will not be used.
+
         @param processProtocol: An object which will be notified of all events
             related to the created process.
 

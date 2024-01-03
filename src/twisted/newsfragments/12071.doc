@@ -1,0 +1,1 @@
+twisted.internet.interfaces.IReactorProcess now documents certain details of the POSIX-based implementation included with Twisted.
