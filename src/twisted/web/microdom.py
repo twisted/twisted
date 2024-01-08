@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_xml -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 """
 Micro Document Object Model: a partial DOM implementation with SUX.
 
@@ -19,6 +18,7 @@ Microdom mainly focuses on working with HTML and XHTML.
 
 This module is now deprecated.
 """
+from __future__ import annotations
 
 # System Imports
 import re
@@ -33,7 +33,7 @@ from twisted.python.util import InsensitiveDict
 from twisted.web.sux import ParseError, XMLParser
 
 warningString = "twisted.web.microdom was deprecated at {}".format(
-    getVersionString(Version("Twisted", "NEXT", 0, 0))
+    getVersionString(Version("Twisted", 23, 10, 0))
 )
 warnings.warn(warningString, DeprecationWarning, stacklevel=3)
 
@@ -326,7 +326,7 @@ class Document(Node):
         d.appendChild(newEl)
         return d
 
-    doctype = None
+    doctype: None | str = None
 
     def isEqualToDocument(self, n):
         return (self.doctype == n.doctype) and Node.isEqualToNode(self, n)

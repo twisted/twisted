@@ -32,6 +32,7 @@ from typing import (
     Mapping,
     NoReturn,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -42,6 +43,7 @@ from typing import (
 from hamcrest import assert_that, empty, equal_to
 from hypothesis import given
 from hypothesis.strategies import integers
+from typing_extensions import assert_type
 
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -66,7 +68,7 @@ from twisted.trial import unittest
 
 
 def ensuringDeferred(
-    f: Callable[..., Coroutine[Deferred[_T], Any, _T]]
+    f: Callable[..., Coroutine[Deferred[Any], Any, _T]]
 ) -> Callable[..., Deferred[_T]]:
     @functools.wraps(f)
     def wrapper(*args: object, **kwargs: object) -> Deferred[_T]:
@@ -846,6 +848,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         results: List[int] = []
         errors: List[Failure] = []
         d = defer.maybeDeferred(plusFive, 10)
+        assert_type(d, Deferred[int])
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(errors, [])
         self.assertEqual(results, [15])
@@ -918,6 +921,20 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         async def f() -> int:
             return 7
 
+        coroutineDeferred = defer.maybeDeferred(f)
+        assert_type(coroutineDeferred, Deferred[int])
+        self.assertEqual(self.successResultOf(coroutineDeferred), 7)
+
+    def test_maybeDeferredCoroutineSuccessIndirect(self) -> None:
+        """
+        When called with a coroutine function L{defer.maybeDeferred} returns a
+        L{defer.Deferred} which has the same result as the coroutine returned
+        by the function.
+        """
+
+        async def f() -> int:
+            return 7
+
         # Demonstrate that the function itself does not need to be a coroutine
         # function to trigger the coroutine-handling behavior.
         def g() -> Coroutine[Deferred[int], Any, Any]:
@@ -929,6 +946,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return result + 1
 
         coroutineDeferred = defer.maybeDeferred(g)
+        assert_type(coroutineDeferred, Deferred[Any])
         modifiedDeferred = coroutineDeferred.addCallback(typedCallback)
         self.assertEqual(self.successResultOf(modifiedDeferred), 8)
 
@@ -1696,7 +1714,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         except BaseException:
             d.errback()
 
-        def ic(d: object) -> Generator[Any, Any, None]:
+        def ic(d: object) -> Generator[Any, Any, None]:  # pragma: no cover
+            """
+            This is never called.
+            It is only used as the decorated function.
+            The resulting function is never called in this test.
+            This is used to make sure that if we wrap
+            an already failed deferred, inlineCallbacks
+            will not add any extra traceback frames.
+            """
             yield d
 
         defer.inlineCallbacks(ic)
@@ -1711,6 +1737,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertIn("test_defer", tb[0][0])
         self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
         self.assertEqual("f.raiseException()", tb[0][3])
+
+    def test_fromCoroutine(self) -> None:
+        """
+        It can discover the return type of a first level coroutine.
+        """
+
+        async def returnsInt() -> int:
+            return 1
+
+        d = Deferred.fromCoroutine(returnsInt())
+        assert_type(d, Deferred[int])
+        self.assertEqual(1, self.successResultOf(d))
 
     def test_fromCoroutineRequiresCoroutine(self) -> None:
         """
@@ -2701,6 +2739,15 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         lock.release()
         self.assertFalse(lock.locked)
 
+        def returnsInt() -> Deferred[int]:
+            return defer.succeed(2)
+
+        async def returnsCoroInt() -> int:
+            return 1
+
+        assert_type(lock.run(returnsInt), Deferred[int])
+        assert_type(lock.run(returnsCoroInt), Deferred[int])
+
     def test_cancelLockAfterAcquired(self) -> None:
         """
         When canceling a L{Deferred} from a L{DeferredLock} that already
@@ -3528,6 +3575,7 @@ class EnsureDeferredTests(unittest.TestCase):
 
         # Now it's a Deferred.
         d = ensureDeferred(r)
+        assert_type(d, Deferred[str])
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.
@@ -3549,7 +3597,8 @@ class EnsureDeferredTests(unittest.TestCase):
         self.assertIsInstance(r, types.GeneratorType)
 
         # Now it's a Deferred.
-        d: Deferred[str] = ensureDeferred(r)
+        d = ensureDeferred(r)
+        assert_type(d, Deferred[str])
         self.assertIsInstance(d, Deferred)
 
         # The Deferred has the result we want.
@@ -3735,6 +3784,8 @@ class CoroutineContextVarsTests(unittest.TestCase):
             yield d
             var.set(3)
 
+        assert_type(yieldingDeferred, Callable[[], Deferred[None]])
+
         # context is 1 when the function is defined
         @defer.inlineCallbacks
         def testFunction() -> Generator[Deferred[Any], Any, None]:
@@ -3773,6 +3824,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
             defer.returnValue(True)
 
+        assert_type(testFunction, Callable[[], Deferred[None]])
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
         d = testFunction()
@@ -3950,3 +4002,176 @@ class CoroutineContextVarsTests(unittest.TestCase):
         clock.advance(1)
 
         self.assertEqual(self.successResultOf(d), True)
+
+
+class InlineCallbackTests(unittest.SynchronousTestCase):
+    def test_inlineCallbacksTracebacks(self) -> None:
+        """
+        L{defer.inlineCallbacks} that re-raise tracebacks into their deferred
+        should not lose their tracebacks.
+        """
+        f = getDivisionFailure()
+        d: Deferred[None] = Deferred()
+        try:
+            f.raiseException()
+        except BaseException:
+            d.errback()
+
+        def ic(d: object) -> Generator[Any, Any, None]:
+            yield d
+
+        defer.inlineCallbacks(ic)
+        newFailure = self.failureResultOf(d)
+        tb = traceback.extract_tb(newFailure.getTracebackObject())
+
+        self.assertEqual(len(tb), 3)
+        self.assertIn("test_defer", tb[2][0])
+        self.assertEqual("getDivisionFailure", tb[2][2])
+        self.assertEqual("1 / 0", tb[2][3])
+
+        self.assertIn("test_defer", tb[0][0])
+        self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
+        self.assertEqual("f.raiseException()", tb[0][3])
+
+    def test_fromCoroutineRequiresCoroutine(self) -> None:
+        """
+        L{Deferred.fromCoroutine} requires a coroutine object or a generator,
+        and will reject things that are not that.
+        """
+        thingsThatAreNotCoroutines = [
+            # Lambda
+            lambda x: x,
+            # Int
+            1,
+            # Boolean
+            True,
+            # Function
+            self.test_fromCoroutineRequiresCoroutine,
+            # None
+            None,
+            # Module
+            defer,
+        ]
+
+        for thing in thingsThatAreNotCoroutines:
+            self.assertRaises(defer.NotACoroutineError, Deferred.fromCoroutine, thing)
+
+    def test_inlineCallbacksCancelCaptured(self) -> None:
+        """
+        Cancelling an L{defer.inlineCallbacks} correctly handles the function
+        catching the L{defer.CancelledError}.
+
+        The desired behavior is:
+            1. If the function is waiting on an inner deferred, that inner
+               deferred is cancelled, and a L{defer.CancelledError} is raised
+               within the function.
+            2. If the function catches that exception, execution continues, and
+               the deferred returned by the function is not resolved.
+            3. Cancelling the deferred again cancels any deferred the function
+               is waiting on, and the exception is raised.
+        """
+        canceller1Calls: List[Deferred[object]] = []
+        canceller2Calls: List[Deferred[object]] = []
+        d1: Deferred[object] = Deferred(canceller1Calls.append)
+        d2: Deferred[object] = Deferred(canceller2Calls.append)
+
+        @defer.inlineCallbacks
+        def testFunc() -> Generator[Deferred[object], object, None]:
+            try:
+                yield d1
+            except Exception:
+                pass
+
+            yield d2
+
+        # Call the function, and ensure that none of the deferreds have
+        # completed or been cancelled yet.
+        funcD = testFunc()
+
+        self.assertNoResult(d1)
+        self.assertNoResult(d2)
+        self.assertNoResult(funcD)
+        self.assertEqual(canceller1Calls, [])
+        self.assertEqual(canceller1Calls, [])
+
+        # Cancel the deferred returned by the function, and check that the first
+        # inner deferred has been cancelled, but the returned deferred has not
+        # completed (as the function catches the raised exception).
+        funcD.cancel()
+
+        self.assertEqual(canceller1Calls, [d1])
+        self.assertEqual(canceller2Calls, [])
+        self.assertNoResult(funcD)
+
+        # Cancel the returned deferred again, this time the returned deferred
+        # should have a failure result, as the function did not catch the cancel
+        # exception raised by `d2`.
+        funcD.cancel()
+        failure = self.failureResultOf(funcD)
+        self.assertEqual(failure.type, defer.CancelledError)
+        self.assertEqual(canceller2Calls, [d2])
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_inlineCallbacksNoCircularReference(self) -> None:
+        """
+        When using L{defer.inlineCallbacks}, after the function exits, it will
+        not keep references to the function itself or the arguments.
+
+        This ensures that the machinery gets deallocated immediately rather than
+        waiting for a GC, on CPython.
+
+        The GC on PyPy works differently (del doesn't immediately deallocate the
+        object), so we skip the test.
+        """
+
+        # Create an object and weak reference to track if its gotten freed.
+        obj: Set[Any] = set()
+        objWeakRef = weakref.ref(obj)
+
+        @defer.inlineCallbacks
+        def func(a: Any) -> Any:
+            yield a
+            return a
+
+        # Run the function
+        funcD = func(obj)
+        self.assertEqual(obj, self.successResultOf(funcD))
+
+        funcDWeakRef = weakref.ref(funcD)
+
+        # Delete the local references to obj and funcD.
+        del obj
+        del funcD
+
+        # The object has been freed if the weak reference returns None.
+        self.assertIsNone(objWeakRef())
+        self.assertIsNone(funcDWeakRef())
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_coroutineNoCircularReference(self) -> None:
+        """
+        Tests that there is no circular dependency when using
+        L{Deferred.fromCoroutine}, so that the machinery gets cleaned up
+        immediately rather than waiting for a GC.
+        """
+
+        # Create an object and weak reference to track if its gotten freed.
+        obj: Set[Any] = set()
+        objWeakRef = weakref.ref(obj)
+
+        async def func(a: Any) -> Any:
+            return a
+
+        # Run the function
+        funcD = Deferred.fromCoroutine(func(obj))
+        self.assertEqual(obj, self.successResultOf(funcD))
+
+        funcDWeakRef = weakref.ref(funcD)
+
+        # Delete the local references to obj and funcD.
+        del obj
+        del funcD
+
+        # The object has been freed if the weak reference returns None.
+        self.assertIsNone(objWeakRef())
+        self.assertIsNone(funcDWeakRef())

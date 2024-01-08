@@ -5,7 +5,7 @@
 Tests for L{twisted.internet.abstract}, a collection of APIs for implementing
 reactors.
 """
-
+from __future__ import annotations
 
 from twisted.internet.abstract import isIPv6Address
 from twisted.trial.unittest import SynchronousTestCase
@@ -17,25 +17,25 @@ class IPv6AddressTests(SynchronousTestCase):
     string is an IPv6 address literal.
     """
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         """
         The empty string is not an IPv6 address literal.
         """
         self.assertFalse(isIPv6Address(""))
 
-    def test_colon(self):
+    def test_colon(self) -> None:
         """
         A single C{":"} is not an IPv6 address literal.
         """
         self.assertFalse(isIPv6Address(":"))
 
-    def test_loopback(self):
+    def test_loopback(self) -> None:
         """
         C{"::1"} is the IPv6 loopback address literal.
         """
         self.assertTrue(isIPv6Address("::1"))
 
-    def test_scopeID(self):
+    def test_scopeID(self) -> None:
         """
         An otherwise valid IPv6 address literal may also include a C{"%"}
         followed by an arbitrary scope identifier.
@@ -44,7 +44,7 @@ class IPv6AddressTests(SynchronousTestCase):
         self.assertTrue(isIPv6Address("fe80::2%1"))
         self.assertTrue(isIPv6Address("fe80::3%en2"))
 
-    def test_invalidWithScopeID(self):
+    def test_invalidWithScopeID(self) -> None:
         """
         An otherwise invalid IPv6 address literal is still invalid with a
         trailing scope identifier.
@@ -53,12 +53,14 @@ class IPv6AddressTests(SynchronousTestCase):
         self.assertFalse(isIPv6Address(":%eth0"))
         self.assertFalse(isIPv6Address("hello%eth0"))
 
-    def test_unicodeAndBytes(self):
+    def test_unicodeAndBytes(self) -> None:
         """
         L{isIPv6Address} evaluates ASCII-encoded bytes as well as text.
         """
-        self.assertTrue(isIPv6Address(b"fe80::2%1"))
+        # the type annotation only supports str, but bytes is supported at
+        # runtime
+        self.assertTrue(isIPv6Address(b"fe80::2%1"))  # type: ignore[arg-type]
         self.assertTrue(isIPv6Address("fe80::2%1"))
         self.assertFalse(isIPv6Address("\u4321"))
         self.assertFalse(isIPv6Address("hello%eth0"))
-        self.assertFalse(isIPv6Address(b"hello%eth0"))
+        self.assertFalse(isIPv6Address(b"hello%eth0"))  # type: ignore[arg-type]
