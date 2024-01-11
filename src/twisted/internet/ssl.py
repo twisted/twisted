@@ -53,6 +53,7 @@ APIs listed above.
     throughout the documentation.
 """
 
+from __future__ import annotations
 
 from zope.interface import implementedBy, implementer, implementer_only
 
@@ -179,6 +180,8 @@ class Server(tcp.Server):
     """
     I am an SSL server.
     """
+
+    server: Port
 
     def __init__(self, *args, **kwargs):
         tcp.Server.__init__(self, *args, **kwargs)
