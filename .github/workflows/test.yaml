@@ -168,14 +168,14 @@ jobs:
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: 'pypy-3.9'
+          - python-version: 'pypy-3.10'
             tox-env: 'alldeps-nocov-posix'
             job-name: 'no-coverage'
             skip-coverage: yes
 
           # We still run some tests with coverage,
           # as there are test with specific code branches for pypy.
-          - python-version: 'pypy-3.9'
+          - python-version: 'pypy-3.10'
             trial-target: 'twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
             job-name: 'with-coverage'
 
