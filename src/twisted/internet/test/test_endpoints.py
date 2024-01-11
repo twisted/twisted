@@ -3132,6 +3132,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
     @skipIf(skipSSL, skipSSLReason)
+    def test_tls(self) -> None:
+        from OpenSSL.SSL import Context
+
+        from twisted.protocols._sni import SNIConnectionCreator
+
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "tls:./cert-path:1234:backlog=12:interface=10.0.0.1",
+        )
+        self.assertIsInstance(server, endpoints.TLSServerEndpoint)
+        subendpoint = server.endpoint
+        self.assertIs(subendpoint._reactor, reactor)
+        self.assertEqual(subendpoint._port, 1234)
+        self.assertEqual(subendpoint._backlog, 12)
+        self.assertEqual(subendpoint._interface, "10.0.0.1")
+        ctx = server.contextFactory
+        self.assertIsInstance(ctx, endpoints.ServerNameIndictionConfiguration)
+        sc: SNIConnectionCreator = ctx.createServerCreator(
+            lambda con: None,
+            lambda ctx: None,
+        )
+        self.assertIsInstance(sc, SNIConnectionCreator)
+        factory = TLSMemoryBIOFactory(ctx, False, Factory.forProtocol(Protocol))
+        proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
+        st = StringTransport()
+        proto.makeConnection(st)
+        builtCtx = proto._tlsConnection.get_context()
+        self.assertIsInstance(builtCtx, Context)
+
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
         """
         An SSL string endpoint description with minimal arguments returns

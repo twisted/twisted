@@ -2363,7 +2363,8 @@ class _TLSServerEndpointParser:
         interface: str = "::",
     ) -> IStreamServerEndpoint:
         """
-        Actual parsing method, with detailed signature breaking out all parameters.
+        Actual parsing method, with detailed signature breaking out all
+        parameters.
         """
         subEndpoint = TCP6ServerEndpoint(reactor, int(port), int(backlog), interface)
         certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
