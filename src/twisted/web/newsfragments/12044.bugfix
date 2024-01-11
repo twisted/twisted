@@ -1,0 +1,2 @@
+The documentation for twisted.web.client.CookieAgent no longer references
+long-deprecated ``cookielib`` and ``urllib2`` standard library modules.

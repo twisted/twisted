@@ -53,7 +53,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-20.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-22.04' }}"
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -71,7 +71,7 @@ jobs:
         # The Python version on which the job is executed.
         # We need at least one value here, so we go with latest Python version
         # that we support..
-        python-version: ['3.11']
+        python-version: ['3.12']
         # Just use the default OS.
         runs-on: ['']
         # Human readable short description for this job.
@@ -108,6 +108,8 @@ jobs:
           - python-version: '3.8.0'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
+            # Older pyhon is only on 20.04.
+            runs-on: 'ubuntu-20.04'
 
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
@@ -129,11 +131,17 @@ jobs:
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
 
-          # Just Python 3.12 with default settings.
-          - python-version: '3.12'
+          # Just Python 3.11 with default settings.
+          - python-version: '3.11'
+
+          # Newest macOS and oldest Python (major) supported versions.
+          - python-version: '3.8'
+            runs-on: 'macos-12'
+            job-name: 'macos-12-default-tests'
+            tox-env: 'macos-withcov-alldeps'
 
           # Newest macOS and newest Python supported versions.
-          - python-version: '3.11'
+          - python-version: '3.12'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
             tox-env: 'macos-withcov-alldeps'
@@ -149,7 +157,7 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.11'
+          - python-version: '3.12'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
@@ -219,6 +227,7 @@ jobs:
     - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
+        openssl version
         python -m pip install --upgrade pip tox~=3.0 coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
@@ -269,7 +278,7 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -300,7 +309,7 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -317,7 +326,7 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -340,7 +349,7 @@ jobs:
   # The files are published only when a tag is created.
   release-publish:
     name: Check release and publish on twisted-* tag
-    runs-on: 'ubuntu-20.04'
+    runs-on: 'ubuntu-22.04'
     steps:
     - uses: actions/checkout@v3
 

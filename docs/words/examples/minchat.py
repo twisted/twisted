@@ -39,7 +39,6 @@ class AccountManager(baseaccount.AccountManager):
     """
 
     def __init__(self):
-
         self.chatui = MinChat()
 
         if len(accounts) == 0:
@@ -123,11 +122,9 @@ class MinChat(basechat.ChatUI):
     """
 
     def getGroupConversation(self, group, Class=MinGroupConversation, stayHidden=0):
-
         return basechat.ChatUI.getGroupConversation(self, group, Class, stayHidden)
 
     def getConversation(self, person, Class=MinConversation, stayHidden=0):
-
         return basechat.ChatUI.getConversation(self, person, Class, stayHidden)
 
 

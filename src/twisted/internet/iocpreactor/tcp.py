@@ -359,7 +359,7 @@ class Server(Connection):
         self.sessionno = sessionno
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = f"{logPrefix},{sessionno},{self.clientAddr.host}"
-        self.repstr = "<{} #{} on {}>".format(
+        self.repstr: str = "<{} #{} on {}>".format(
             self.protocol.__class__.__name__,
             self.sessionno,
             self.serverAddr.port,
@@ -397,7 +397,6 @@ class Connector(TCPConnector):
 
 @implementer(interfaces.IListeningPort)
 class Port(_SocketCloser, _LogOwner):
-
     connected = False
     disconnected = False
     disconnecting = False

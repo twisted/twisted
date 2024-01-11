@@ -5,24 +5,24 @@ repos:
     hooks:
       - id: isort
 
-  - repo: https://github.com/psf/black
-    rev: 21.7b0
+  # See https://black.readthedocs.io/en/stable/integrations/source_version_control.html
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 23.9.1
     hooks:
       - id: black
-        additional_dependencies: ['click<8.1']
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 3.9.2
+    rev: 6.1.0
     hooks:
       - id: flake8
 
   - repo: https://github.com/asottile/yesqa
-    rev: v1.2.3
+    rev: v1.5.0
     hooks:
       - id: yesqa
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.4.0
     hooks:
       - id: check-merge-conflict
       - id: check-toml

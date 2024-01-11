@@ -341,7 +341,6 @@ class DigestCredentialFactory:
             int(self._getTime()) - when
             > DigestCredentialFactory.CHALLENGE_LIFETIME_SECS
         ):
-
             raise error.LoginFailed(
                 "Invalid response, incompatible opaque/nonce too old"
             )
@@ -376,7 +375,7 @@ class DigestCredentialFactory:
         response = b" ".join(response.splitlines())
         parts = self._parseparts.findall(response)
         auth = {}
-        for (key, bare, quoted) in parts:
+        for key, bare, quoted in parts:
             value = (quoted or bare).strip()
             auth[nativeString(key.strip())] = value
 
@@ -446,7 +445,6 @@ class CramMD5Credentials:
 
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
-
     deprecatedModuleAttribute(
         Version("Twisted", 21, 2, 0),
         "Use twisted.cred.credentials.UsernamePassword instead.",

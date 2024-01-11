@@ -232,7 +232,7 @@ class EthernetTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = ethernet.EthernetProtocol()
         try:
-            e.addProto(2 ** 16, MyProtocol([]))
+            e.addProto(2**16, MyProtocol([]))
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass
@@ -245,7 +245,7 @@ class EthernetTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = ethernet.EthernetProtocol()
         try:
-            e.addProto(2 ** 16 + 1, MyProtocol([]))
+            e.addProto(2**16 + 1, MyProtocol([]))
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass

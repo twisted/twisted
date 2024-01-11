@@ -5,10 +5,12 @@
 Tests for L{twisted.web.client.Agent} and related new client APIs.
 """
 
+from __future__ import annotations
+
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -96,6 +98,7 @@ else:
     sslPresent = True
     from twisted.internet._sslverify import IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
+    from twisted.protocols import tls
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
     @implementer(IOpenSSLTrustRoot)
@@ -834,7 +837,7 @@ class IntegrationTestingMixin:
         hostName,
         expectedAddress,
         addressType,
-        serverWrapper=lambda server: server,
+        serverWrapper=lambda server, _: server,
         createAgent=client.Agent,
         scheme=b"http",
     ):
@@ -852,9 +855,9 @@ class IntegrationTestingMixin:
         @param addressType: The class to construct an address out of.
         @type addressType: L{type}
 
-        @param serverWrapper: A callable that takes a protocol factory and
-            returns a protocol factory; used to wrap the server / responder
-            side in a TLS server.
+        @param serverWrapper: A callable that takes a protocol factory and a
+            ``Clock`` and returns a protocol factory; used to wrap the server /
+            responder side in a TLS server.
         @type serverWrapper:
             serverWrapper(L{twisted.internet.interfaces.IProtocolFactory}) ->
             L{twisted.internet.interfaces.IProtocolFactory}
@@ -868,6 +871,10 @@ class IntegrationTestingMixin:
         @type scheme: L{bytes}
         """
         reactor = self.createReactor()
+        if sslPresent:
+            # We have no way to tell the client to use our test reactor so we
+            # have to patch it.
+            self.patch(tls, "_get_default_clock", lambda: reactor)
         agent = createAgent(reactor)
         deferred = agent.request(b"GET", scheme + b"://" + hostName + b"/")
         host, port, factory, timeout, bind = reactor.tcpClients[0]
@@ -885,10 +892,17 @@ class IntegrationTestingMixin:
 
         accumulator.currentProtocol = None
         accumulator.protocolConnectionMade = None
-        wrapper = serverWrapper(accumulator).buildProtocol(None)
+        wrapper = serverWrapper(accumulator, reactor).buildProtocol(None)
         serverTransport = FakeTransport(wrapper, True)
         wrapper.makeConnection(serverTransport)
-        pump = IOPump(clientProtocol, wrapper, clientTransport, serverTransport, False)
+        pump = IOPump(
+            clientProtocol,
+            wrapper,
+            clientTransport,
+            serverTransport,
+            False,
+            clock=reactor,
+        )
         pump.flush()
         self.assertNoResult(deferred)
         lines = accumulator.currentProtocol.data.split(b"\r\n")
@@ -1270,7 +1284,7 @@ class AgentTests(
         self.assertIsInstance(req, Request)
 
         resp = client.Response._construct(
-            (b"HTTP", 1, 1), 200, b"OK", client.Headers({}), None, req
+            (b"HTTP", 1, 1), 200, b"OK", Headers({}), None, req
         )
         res.callback(resp)
 
@@ -1302,7 +1316,7 @@ class AgentTests(
         """
         L{Request.absoluteURI} is L{None} if L{Request._parsedURI} is L{None}.
         """
-        request = client.Request(b"FOO", b"/", client.Headers(), None)
+        request = client.Request(b"FOO", b"/", Headers(), None)
         self.assertIdentical(request.absoluteURI, None)
 
     def test_endpointFactory(self):
@@ -1357,7 +1371,7 @@ class AgentMethodInjectionTests(
         """
         agent = client.Agent(self.createReactor())
         uri = b"http://twisted.invalid"
-        agent.request(method, uri, client.Headers(), None)
+        agent.request(method, uri, Headers(), None)
 
 
 class AgentURIInjectionTests(
@@ -1377,7 +1391,7 @@ class AgentURIInjectionTests(
         """
         agent = client.Agent(self.createReactor())
         method = b"GET"
-        agent.request(method, uri, client.Headers(), None)
+        agent.request(method, uri, Headers(), None)
 
 
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
@@ -1567,8 +1581,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             certHostName.decode("ascii")
         )
 
-        def tlsify(serverFactory):
-            return TLSMemoryBIOFactory(server.options(), False, serverFactory)
+        def tlsify(serverFactory, reactor):
+            return TLSMemoryBIOFactory(server.options(), False, serverFactory, reactor)
 
         def tlsagent(reactor):
             from zope.interface import implementer
@@ -1780,9 +1794,7 @@ class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
             return defer.succeed(protocol)
 
         bodyProducer = object()
-        request = client.Request(
-            b"FOO", b"/", client.Headers(), bodyProducer, persistent=True
-        )
+        request = client.Request(b"FOO", b"/", Headers(), bodyProducer, persistent=True)
         newProtocol()
         protocol = protocols[0]
         retrier = client._RetryingHTTP11ClientProtocol(protocol, newProtocol)
@@ -1921,32 +1933,36 @@ class CookieTestsMixin:
     Mixin for unit tests dealing with cookies.
     """
 
-    def addCookies(self, cookieJar, uri, cookies):
+    def addCookies(
+        self, cookieJar: CookieJar, uri: bytes, cookies: list[bytes]
+    ) -> tuple[client._FakeStdlibRequest, client._FakeStdlibResponse]:
         """
         Add a cookie to a cookie jar.
         """
-        response = client._FakeUrllib2Response(
+        response = client._FakeStdlibResponse(
             client.Response(
                 (b"HTTP", 1, 1),
                 200,
                 b"OK",
-                client.Headers({b"Set-Cookie": cookies}),
+                Headers({b"Set-Cookie": cookies}),
                 None,
             )
         )
-        request = client._FakeUrllib2Request(uri)
+        request = client._FakeStdlibRequest(uri)
         cookieJar.extract_cookies(response, request)
         return request, response
 
 
 class CookieJarTests(TestCase, CookieTestsMixin):
     """
-    Tests for L{twisted.web.client._FakeUrllib2Response} and
-    L{twisted.web.client._FakeUrllib2Request}'s interactions with
-    L{CookieJar} instances.
+    Tests for L{twisted.web.client._FakeStdlibResponse} and
+    L{twisted.web.client._FakeStdlibRequest}'s interactions with L{CookieJar}
+    instances.
     """
 
-    def makeCookieJar(self):
+    def makeCookieJar(
+        self,
+    ) -> tuple[CookieJar, tuple[client._FakeStdlibRequest, client._FakeStdlibResponse]]:
         """
         @return: a L{CookieJar} with some sample cookies
         """
@@ -1958,10 +1974,11 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         )
         return cookieJar, reqres
 
-    def test_extractCookies(self):
+    def test_extractCookies(self) -> None:
         """
-        L{CookieJar.extract_cookies} extracts cookie information from
-        fake urllib2 response instances.
+        L{CookieJar.extract_cookies} extracts cookie information from our
+        stdlib-compatibility wrappers, L{client._FakeStdlibRequest} and
+        L{client._FakeStdlibResponse}.
         """
         jar = self.makeCookieJar()[0]
         cookies = {c.name: c for c in jar}
@@ -1982,17 +1999,20 @@ class CookieJarTests(TestCase, CookieTestsMixin):
         self.assertEqual(cookie.comment, "goodbye")
         self.assertIdentical(cookie.get_nonstandard_attr("cow"), None)
 
-    def test_sendCookie(self):
+    def test_sendCookie(self) -> None:
         """
-        L{CookieJar.add_cookie_header} adds a cookie header to a fake
-        urllib2 request instance.
+        L{CookieJar.add_cookie_header} adds a cookie header to a Twisted
+        request via our L{client._FakeStdlibRequest} wrapper.
         """
         jar, (request, response) = self.makeCookieJar()
 
         self.assertIdentical(request.get_header("Cookie", None), None)
 
         jar.add_cookie_header(request)
-        self.assertEqual(request.get_header("Cookie", None), "foo=1; bar=2")
+        self.assertEqual(
+            list(request._twistedHeaders.getAllRawHeaders()),
+            [(b"Cookie", [b"foo=1; bar=2"])],
+        )
 
 
 class CookieAgentTests(
@@ -2042,7 +2062,7 @@ class CookieAgentTests(
             (b"HTTP", 1, 1),
             200,
             b"OK",
-            client.Headers(
+            Headers(
                 {
                     b"Set-Cookie": [
                         b"foo=1",
@@ -2054,6 +2074,26 @@ class CookieAgentTests(
         res.callback(resp)
 
         return d
+
+    def test_leaveExistingCookieHeader(self) -> None:
+        """
+        L{CookieAgent.request} will not insert a C{'Cookie'} header into the
+        L{Request} object when there is already a C{'Cookie'} header in the
+        request headers parameter.
+        """
+        uri = b"http://example.com:1234/foo?bar"
+        cookie = b"foo=1"
+
+        cookieJar = CookieJar()
+        self.addCookies(cookieJar, uri, [cookie])
+        self.assertEqual(len(list(cookieJar)), 1)
+
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        cookieAgent = client.CookieAgent(agent, cookieJar)
+        cookieAgent.request(b"GET", uri, Headers({"cookie": ["already-set"]}))
+
+        req, res = self.protocol.requests.pop()
+        self.assertEqual(req.headers.getRawHeaders(b"cookie"), [b"already-set"])
 
     def test_requestWithCookie(self):
         """
@@ -2744,7 +2784,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> dict:
+        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)

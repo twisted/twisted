@@ -19,6 +19,7 @@ import warnings
 from dis import findlinestarts as _findlinestarts
 from typing import (
     Any,
+    Callable,
     Coroutine,
     Generator,
     Iterable,
@@ -35,6 +36,7 @@ from typing import (
 from unittest import SkipTest
 
 from attrs import frozen
+from typing_extensions import ParamSpec
 
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python import failure, log, monkey
@@ -48,6 +50,7 @@ from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
 
+_P = ParamSpec("_P")
 T = TypeVar("T")
 
 
@@ -1071,7 +1074,11 @@ class SynchronousTestCase(_Assertions):
 
         result.stopTest(self)
 
-    def addCleanup(self, f, *args, **kwargs):
+    # f should be a positional only argument but that is a breaking change
+    # see https://github.com/twisted/twisted/issues/11967
+    def addCleanup(  # type: ignore[override]
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         """
         Add the given function to a list of functions to be called after the
         test has run, but before C{tearDown}.

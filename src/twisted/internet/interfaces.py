@@ -6,6 +6,7 @@ Interface documentation.
 
 Maintainer: Itamar Shtull-Trauring
 """
+from __future__ import annotations
 
 from typing import (
     TYPE_CHECKING,
@@ -1595,7 +1596,7 @@ class IListeningPort(Interface):
                                   port number).
         """
 
-    def stopListening() -> Optional["Deferred"]:
+    def stopListening() -> Optional["Deferred[None]"]:
         """
         Stop listening on this port.
 
@@ -2565,7 +2566,7 @@ class IUDPTransport(Interface):
         @return: an address describing the listening port.
         """
 
-    def stopListening() -> Optional["Deferred"]:
+    def stopListening() -> Optional["Deferred[None]"]:
         """
         Stop listening on this port.
 

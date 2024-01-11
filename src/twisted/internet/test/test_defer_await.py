@@ -8,6 +8,8 @@ Tests for C{await} support in Deferreds.
 
 import types
 
+from typing_extensions import NoReturn
+
 from twisted.internet.defer import (
     Deferred,
     ensureDeferred,
@@ -31,26 +33,26 @@ class AwaitTests(TestCase):
     Tests for using Deferreds in conjunction with PEP-492.
     """
 
-    def test_awaitReturnsIterable(self):
+    def test_awaitReturnsIterable(self) -> None:
         """
         C{Deferred.__await__} returns an iterable.
         """
-        d = Deferred()
+        d: Deferred[None] = Deferred()
         awaitedDeferred = d.__await__()
         self.assertEqual(awaitedDeferred, iter(awaitedDeferred))
 
-    def test_deferredFromCoroutine(self):
+    def test_deferredFromCoroutine(self) -> None:
         """
         L{Deferred.fromCoroutine} will turn a coroutine into a L{Deferred}.
         """
 
-        async def run():
+        async def run() -> str:
             d = succeed("bar")
             await d
             res = await run2()
             return res
 
-        async def run2():
+        async def run2() -> str:
             d = succeed("foo")
             res = await d
             return res
@@ -67,13 +69,13 @@ class AwaitTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_basic(self):
+    def test_basic(self) -> None:
         """
         L{Deferred.fromCoroutine} allows a function to C{await} on a
         L{Deferred}.
         """
 
-        async def run():
+        async def run() -> str:
             d = succeed("foo")
             res = await d
             return res
@@ -82,12 +84,12 @@ class AwaitTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_basicEnsureDeferred(self):
+    def test_basicEnsureDeferred(self) -> None:
         """
         L{ensureDeferred} allows a function to C{await} on a L{Deferred}.
         """
 
-        async def run():
+        async def run() -> str:
             d = succeed("foo")
             res = await d
             return res
@@ -96,13 +98,13 @@ class AwaitTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "foo")
 
-    def test_exception(self):
+    def test_exception(self) -> None:
         """
         An exception in a coroutine scheduled with L{Deferred.fromCoroutine}
         will cause the returned L{Deferred} to fire with a failure.
         """
 
-        async def run():
+        async def run() -> NoReturn:
             d = succeed("foo")
             await d
             raise ValueError("Oh no!")
@@ -112,19 +114,19 @@ class AwaitTests(TestCase):
         self.assertEqual(type(res.value), ValueError)
         self.assertEqual(res.value.args, ("Oh no!",))
 
-    def test_synchronousDeferredFailureTraceback(self):
+    def test_synchronousDeferredFailureTraceback(self) -> None:
         """
         When a Deferred is awaited upon that has already failed with a Failure
         that has a traceback, both the place that the synchronous traceback
         comes from and the awaiting line are shown in the traceback.
         """
 
-        def raises():
+        def raises() -> None:
             raise SampleException()
 
         it = maybeDeferred(raises)
 
-        async def doomed():
+        async def doomed() -> None:
             return await it
 
         failure = self.failureResultOf(Deferred.fromCoroutine(doomed()))
@@ -132,22 +134,22 @@ class AwaitTests(TestCase):
         self.assertIn(", in doomed\n", failure.getTraceback())
         self.assertIn(", in raises\n", failure.getTraceback())
 
-    def test_asyncDeferredFailureTraceback(self):
+    def test_asyncDeferredFailureTraceback(self) -> None:
         """
         When a Deferred is awaited upon that later fails with a Failure that
         has a traceback, both the place that the synchronous traceback comes
         from and the awaiting line are shown in the traceback.
         """
 
-        def returnsFailure():
+        def returnsFailure() -> Failure:
             try:
                 raise SampleException()
             except SampleException:
                 return Failure()
 
-        it = Deferred()
+        it: Deferred[None] = Deferred()
 
-        async def doomed():
+        async def doomed() -> None:
             return await it
 
         started = Deferred.fromCoroutine(doomed())
@@ -157,7 +159,7 @@ class AwaitTests(TestCase):
         self.assertIn(", in doomed\n", failure.getTraceback())
         self.assertIn(", in returnsFailure\n", failure.getTraceback())
 
-    def test_twoDeep(self):
+    def test_twoDeep(self) -> None:
         """
         A coroutine scheduled with L{Deferred.fromCoroutine} that awaits a
         L{Deferred} suspends its execution until the inner L{Deferred} fires.
@@ -165,19 +167,19 @@ class AwaitTests(TestCase):
         reactor = Clock()
         sections = []
 
-        async def runone():
+        async def runone() -> str:
             sections.append(2)
-            d = Deferred()
+            d: Deferred[int] = Deferred()
             reactor.callLater(1, d.callback, 2)
             await d
             sections.append(3)
             return "Yay!"
 
-        async def run():
+        async def run() -> str:
             sections.append(1)
             result = await runone()
             sections.append(4)
-            d = Deferred()
+            d: Deferred[int] = Deferred()
             reactor.callLater(1, d.callback, 1)
             await d
             sections.append(5)
@@ -200,12 +202,12 @@ class AwaitTests(TestCase):
         res = self.successResultOf(d)
         self.assertEqual(res, "Yay!")
 
-    def test_reraise(self):
+    def test_reraise(self) -> None:
         """
         Awaiting an already failed Deferred will raise the exception.
         """
 
-        async def test():
+        async def test() -> int:
             try:
                 await fail(ValueError("Boom"))
             except ValueError as e:
@@ -216,16 +218,16 @@ class AwaitTests(TestCase):
         res = self.successResultOf(Deferred.fromCoroutine(test()))
         self.assertEqual(res, 1)
 
-    def test_chained(self):
+    def test_chained(self) -> None:
         """
         Awaiting a paused & chained Deferred will give the result when it has
         one.
         """
         reactor = Clock()
 
-        async def test():
-            d = Deferred()
-            d2 = Deferred()
+        async def test() -> None:
+            d: Deferred[None] = Deferred()
+            d2: Deferred[None] = Deferred()
             d.addCallback(lambda ignored: d2)
 
             d.callback(None)

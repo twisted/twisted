@@ -1,0 +1,4 @@
+twisted.logger.formatEvent now honors dotted method names, not just flat
+function names, in format strings, as it has long been explicitly documented to
+do.  So, you will now get the expected result from `formatEvent("here's the
+result of calling a method at log-format time: {obj.method()}", obj=...)`

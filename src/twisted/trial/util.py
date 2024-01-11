@@ -17,8 +17,10 @@ Maintainer: Jonathan Lange
 @var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
+from __future__ import annotations
+
 from random import randrange
-from typing import Callable, TextIO, TypeVar
+from typing import Any, Callable, TextIO, TypeVar
 
 from typing_extensions import ParamSpec
 
@@ -395,7 +397,7 @@ def _listToPhrase(things, finalDelimiter, delimiter=", "):
         )
 
 
-def openTestLog(path: FilePath) -> TextIO:
+def openTestLog(path: FilePath[Any]) -> TextIO:
     """
     Open the given path such that test log messages can be written to it.
     """

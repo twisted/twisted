@@ -36,6 +36,9 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
+from __future__ import annotations
+
+from typing import Callable, Iterable, Optional, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -51,13 +54,17 @@ from OpenSSL.SSL import (
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
+    IDelayedCall,
     IHandshakeListener,
     ILoggingContext,
     INegotiated,
+    IProtocol,
     IProtocolFactory,
     IProtocolNegotiationFactory,
     IPushProducer,
+    IReactorTime,
     ISystemHandle,
+    ITransport,
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -123,7 +130,7 @@ def _representsEOF(exceptionObject: Error) -> bool:
     return reasonString.casefold().startswith("unexpected eof")
 
 
-@implementer(ISystemHandle, INegotiated)
+@implementer(ISystemHandle, INegotiated, ITransport)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -136,6 +143,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     may also want to pause a producer.  Pause/resume events are therefore
     merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
     producers are supported by wrapping them with L{_PullToPush}.
+
+    Because TLS may need to wait for reads before writing, some writes may be
+    buffered until a read occurs.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
@@ -257,7 +267,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         transport.
         """
         try:
-            bytes = self._tlsConnection.bio_read(2 ** 15)
+            bytes = self._tlsConnection.bio_read(2**15)
         except WantReadError:
             # There may be nothing in the send BIO right now.
             pass
@@ -278,7 +288,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # there is no guarantee that a single recv call will do it all.
         while not self._lostTLSConnection:
             try:
-                bytes = self._tlsConnection.recv(2 ** 15)
+                bytes = self._tlsConnection.recv(2**15)
             except WantReadError:
                 # The newly received bytes might not have been enough to produce
                 # any application data.
@@ -456,8 +466,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if isinstance(bytes, str):
-            raise TypeError("Must write bytes to a TLS transport, not str.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
@@ -514,7 +522,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             return
 
         # A TLS payload is 16kB max
-        bufferSize = 2 ** 14
+        bufferSize = 2**14
 
         # How far into the input we've gotten so far
         alreadySent = 0
@@ -622,6 +630,117 @@ def _clientConnectionHook(connection: Connection) -> None:
     connection.set_connect_state()
 
 
+class _AggregateSmallWrites:
+    """
+    Aggregate small writes so they get written in large batches.
+
+    If this is used as part of a transport, the transport needs to call
+    ``flush()`` immediately when ``loseConnection()`` is called, otherwise any
+    buffered writes will never get written.
+
+    @cvar MAX_BUFFER_SIZE: The maximum amount of bytes to buffer before writing
+        them out.
+    """
+
+    MAX_BUFFER_SIZE = 64_000
+
+    def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
+        self._write = write
+        self._clock = clock
+        self._buffer: list[bytes] = []
+        self._bufferLen = 0
+        self._scheduled: Optional[IDelayedCall] = None
+
+    def write(self, data: bytes) -> None:
+        """
+        Buffer the data, or write it immediately if we've accumulated enough to
+        make it worth it.
+
+        Accumulating too much data can result in higher memory usage.
+        """
+        self._buffer.append(data)
+        self._bufferLen += len(data)
+
+        if self._bufferLen > self.MAX_BUFFER_SIZE:
+            # We've accumulated enough we should just write it out. No need to
+            # schedule a flush, since we just flushed everything.
+            self.flush()
+            return
+
+        if self._scheduled:
+            # We already have a scheduled send, so with the data in the buffer,
+            # there is nothing more to do here.
+            return
+
+        # Schedule the write of the accumulated buffer for the next reactor
+        # iteration.
+        self._scheduled = self._clock.callLater(0, self._scheduledFlush)
+
+    def _scheduledFlush(self) -> None:
+        """Called in next reactor iteration."""
+        self._scheduled = None
+        self.flush()
+
+    def flush(self) -> None:
+        """Flush any buffered writes."""
+        if self._buffer:
+            self._bufferLen = 0
+            self._write(b"".join(self._buffer))
+            del self._buffer[:]
+
+
+def _get_default_clock() -> IReactorTime:
+    """
+    Return the default reactor.
+
+    This is a function so it can be monkey-patched in tests, specifically
+    L{twisted.web.test.test_agent}.
+    """
+    from twisted.internet import reactor
+
+    return cast(IReactorTime, reactor)
+
+
+class BufferingTLSTransport(TLSMemoryBIOProtocol):
+    """
+    A TLS transport implemented by wrapping buffering around a
+    ``TLSMemoryBIOProtocol``.
+
+    Doing many small writes directly to a ``OpenSSL.SSL.Connection``, as
+    implemented in ``TLSMemoryBIOProtocol``, can add significant CPU and
+    bandwidth overhead.  Thus, even when writing is possible, small writes will
+    get aggregated and written as a single write at the next reactor iteration.
+    """
+
+    # Note: An implementation based on composition would be nicer, but there's
+    # close integration between ``ProtocolWrapper`` subclasses like
+    # ``TLSMemoryBIOProtocol`` and the corresponding factory. Composition broke
+    # things like ``TLSMemoryBIOFactory.protocols`` having the correct
+    # instances, whereas subclassing makes that work.
+
+    def __init__(
+        self,
+        factory: TLSMemoryBIOFactory,
+        wrappedProtocol: IProtocol,
+        _connectWrapped: bool = True,
+    ):
+        super().__init__(factory, wrappedProtocol, _connectWrapped)
+        actual_write = super().write
+        self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
+
+    def write(self, data: bytes) -> None:
+        if isinstance(data, str):  # type: ignore[unreachable]
+            raise TypeError("Must write bytes to a TLS transport, not str.")
+        self._aggregator.write(data)
+
+    def writeSequence(self, sequence: Iterable[bytes]) -> None:
+        self._aggregator.write(b"".join(sequence))
+
+    def loseConnection(self) -> None:
+        self._aggregator.flush()
+        super().loseConnection()
+
+
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
@@ -630,7 +749,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         L{TLSMemoryBIOProtocol}.
     """
 
-    protocol = TLSMemoryBIOProtocol
+    protocol = BufferingTLSTransport
 
     noisy = False  # disable unnecessary logging.
 
@@ -639,6 +758,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         contextFactory: SomeConnectionCreator,
         isClient: bool,
         wrappedFactory: IProtocolFactory,
+        clock: Optional[IReactorTime] = None,
     ) -> None:
         """
         Create a L{TLSMemoryBIOFactory}.
@@ -701,6 +821,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
             _clientConnectionHook if isClient else _serverConnectionHook,
             contextHook,
         )
+
+        if clock is None:
+            clock = _get_default_clock()
+        self._clock = clock
 
     def logPrefix(self):
         """

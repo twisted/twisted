@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from zope.interface import Interface, implementer
 
@@ -256,7 +256,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(dict):
+class DistinguishedName(Dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -507,7 +507,7 @@ class Certificate(CertBase):
         """
         return PublicKey(self.original.get_pubkey())
 
-    def dump(self, format=crypto.FILETYPE_ASN1):
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         return crypto.dump_certificate(format, self.original)
 
     def serialNumber(self):

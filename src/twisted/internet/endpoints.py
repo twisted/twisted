@@ -1681,7 +1681,7 @@ def _parse(description):
             kw[nativeString(sofar[0])] = sofar[1]
 
     sofar = ()
-    for (type, value) in _tokenize(description):
+    for type, value in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
         elif value == colon:
