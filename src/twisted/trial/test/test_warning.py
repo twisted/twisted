@@ -310,8 +310,8 @@ def foo():
         # since import is a synthetic thing that we made up just for this test,
         # it's a local type ignore rather than being present in the mypy config
         # file like everything else
-        from twisted_private_helper import (
-            missingsourcefile,  # type: ignore[import-not-found]
+        from twisted_private_helper import (  # type: ignore[import-not-found]
+            missingsourcefile,
         )
 
         self.addCleanup(sys.modules.pop, "twisted_private_helper")

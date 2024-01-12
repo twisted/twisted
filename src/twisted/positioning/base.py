@@ -14,7 +14,7 @@ from typing import ClassVar, Sequence
 
 from zope.interface import implementer
 
-from constantly import NamedConstant, Names  # type: ignore[import-untyped]
+from constantly import NamedConstant, Names
 
 from twisted.positioning import ipositioning
 from twisted.python.util import FancyEqMixin

@@ -10,7 +10,7 @@ from json import dumps, loads
 from typing import IO, Any, AnyStr, Dict, Iterable, Optional, Union, cast
 from uuid import UUID
 
-from constantly import NamedConstant  # type: ignore[import-untyped]
+from constantly import NamedConstant
 
 from twisted.python.failure import Failure
 from ._file import FileLogObserver

@@ -78,8 +78,8 @@ class RebuildTests(TestCase):
             sibpath(__file__, "myrebuilder1.py"),
             os.path.join(self.fakelibPath, "myrebuilder.py"),
         )
-        from twisted_rebuild_fakelib import (
-            myrebuilder,  # type: ignore[import-not-found]
+        from twisted_rebuild_fakelib import (  # type: ignore[import-not-found]
+            myrebuilder,
         )
 
         a = myrebuilder.A()
