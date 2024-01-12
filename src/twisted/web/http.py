@@ -1918,7 +1918,7 @@ class _ChunkedTransferDecoder:
         self._buffer = bytearray()
         self._start = 0
         self._trailerHeaders: List[bytearray] = []
-        self._maxTrailerHeadersSize = 2 ** 16
+        self._maxTrailerHeadersSize = 2**16
         self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
