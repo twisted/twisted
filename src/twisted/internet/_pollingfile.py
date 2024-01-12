@@ -95,10 +95,10 @@ class _PollingTimer:
 # If we ever (let's hope not) need the above functionality on UNIX, this could
 # be factored into a different module.
 
-import pywintypes  # type: ignore[import]
-import win32api  # type: ignore[import]
-import win32file  # type: ignore[import]
-import win32pipe  # type: ignore[import]
+import pywintypes
+import win32api
+import win32file
+import win32pipe
 
 
 @implementer(IPushProducer)
