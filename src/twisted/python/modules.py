@@ -56,6 +56,7 @@ the modules outside the standard library's python-files directory::
 @type theSystemPath: L{PythonPath}
 """
 
+from __future__ import annotations
 
 import inspect
 import sys
@@ -251,7 +252,9 @@ class PythonAttribute:
     this class.
     """
 
-    def __init__(self, name, onObject, loaded, pythonValue):
+    def __init__(
+        self, name: str, onObject: PythonAttribute, loaded: bool, pythonValue: object
+    ) -> None:
         """
         Create a PythonAttribute.  This is a private constructor.  Do not construct
         me directly, use PythonModule.iterAttributes.
@@ -306,7 +309,9 @@ class PythonModule(_ModuleIteratorHelper):
     from.
     """
 
-    def __init__(self, name, filePath, pathEntry):
+    def __init__(
+        self, name: str, filePath: FilePath[str], pathEntry: PathEntry
+    ) -> None:
         """
         Create a PythonModule.  Do not construct this directly, instead inspect a
         PythonPath or other PythonModule instances.
