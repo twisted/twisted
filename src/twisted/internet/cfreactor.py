@@ -35,8 +35,8 @@ from CoreFoundation import (  # type: ignore[import]
     CFRunLoopAddSource,
     CFRunLoopAddTimer,
     CFRunLoopGetCurrent,
-    CFRunLoopRemoveSource,
     CFRunLoopRun,
+    CFRunLoopSourceInvalidate,
     CFRunLoopStop,
     CFRunLoopTimerCreate,
     CFRunLoopTimerInvalidate,
@@ -172,7 +172,9 @@ class CFReactor(PosixReactorBase):
             # Spurious notifications seem to be generated sometimes if you
             # CFSocketDisableCallBacks in the middle of an event.  I don't know
             # about this FD, any more, so let's get rid of it.
-            CFRunLoopRemoveSource(self._cfrunloop, smugglesrc, kCFRunLoopCommonModes)
+            CFRunLoopSourceInvalidate(
+                self._cfrunloop, smugglesrc, kCFRunLoopCommonModes
+            )
             return
 
         src, skt, readWriteDescriptor, rw = self._fdmap[fd]
@@ -308,7 +310,7 @@ class CFReactor(PosixReactorBase):
         if not rw[_READ] and not rw[_WRITE]:
             del self._idmap[id(descr)]
             del self._fdmap[realfd]
-            CFRunLoopRemoveSource(self._cfrunloop, src, kCFRunLoopCommonModes)
+            CFRunLoopSourceInvalidate(src)
             CFSocketInvalidate(cfs)
 
     def addReader(self, reader):
