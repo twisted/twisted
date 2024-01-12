@@ -9,7 +9,7 @@ numeric, and bit flag values.
 
 
 # Import and re-export Constantly
-from constantly import (  # type: ignore[import]
+from constantly import (  # type: ignore[import-untyped]
     FlagConstant,
     Flags,
     NamedConstant,

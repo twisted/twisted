@@ -18,7 +18,7 @@ for name in gireactor._PYGTK_MODULES:
         sys.exit(0)
 
 try:
-    import gobject  # type: ignore[import]
+    import gobject  # type: ignore[import-not-found]
 except ImportError:
     sys.stdout.write("success")
 else:

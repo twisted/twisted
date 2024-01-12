@@ -9,8 +9,7 @@ Serial Port Protocol
 
 # dependent on pyserial ( http://pyserial.sf.net/ )
 # only tested w/ 1.18 (5 Dec 2002)
-from serial import PARITY_NONE  # type: ignore[import]
-from serial import EIGHTBITS, STOPBITS_ONE
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 
 from twisted.internet import abstract, fdesc
 from twisted.internet.serialport import BaseSerialPort

@@ -573,7 +573,7 @@ class RemoteCacheMethod:
         """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
-            from pb import ProtocolError  # type: ignore[import]
+            from .pb import ProtocolError
 
             raise ProtocolError(
                 "You can't call a cached method when the object hasn't been given to the peer yet."
@@ -636,7 +636,7 @@ class RemoteCacheObserver:
         if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
-            from pb import ProtocolError
+            from .pb import ProtocolError
 
             raise ProtocolError(
                 "You can't call a cached method when the "

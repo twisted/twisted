@@ -6,7 +6,7 @@
 Log levels.
 """
 
-from constantly import NamedConstant, Names  # type: ignore[import]
+from constantly import NamedConstant, Names  # type: ignore[import-untyped]
 
 
 class InvalidLogLevelError(Exception):

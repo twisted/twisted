@@ -11,7 +11,7 @@ from typing import Mapping, Tuple
 
 from zope.interface import implementer
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant  # type: ignore[import-untyped]
 
 from twisted.python.compat import currentframe
 from ._format import formatEvent

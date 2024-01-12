@@ -1583,7 +1583,7 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False, /
 ) -> List[_T]:
     if __debug__:
         for result in resultList:
@@ -1617,9 +1617,9 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
-    d = DeferredList(deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors)
-    d.addCallback(_parseDeferredListResult)
-    return cast(Deferred[List[_T]], d)
+    return DeferredList(
+        deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors
+    ).addCallback(_parseDeferredListResult)
 
 
 class FailureGroup(Exception):
@@ -2116,14 +2116,13 @@ def _addCancelCallbackToDeferred(
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
     """
     it.callbacks, tmp = [], it.callbacks
-    it.addErrback(_handleCancelInlineCallbacks, status)
+    it = it.addErrback(_handleCancelInlineCallbacks, status)
     it.callbacks.extend(tmp)
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
 def _handleCancelInlineCallbacks(
-    result: Failure,
-    status: _CancellationStatus[_T],
+    result: Failure, status: _CancellationStatus[_T], /
 ) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the

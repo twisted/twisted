@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest import skipIf
 
 try:
-    from gi.repository import Gio  # type: ignore[import]
+    from gi.repository import Gio
 except ImportError:
     giImported = False
     gtkVersion = None
@@ -19,7 +19,7 @@ else:
     # If we can import Gio, we ought to be able to import our reactor.
     from os import environ
 
-    from gi import get_required_version, require_version  # type: ignore[import]
+    from gi import get_required_version, require_version
 
     from twisted.internet import gireactor
 

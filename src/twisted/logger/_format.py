@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant  # type: ignore[import-untyped]
 
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
