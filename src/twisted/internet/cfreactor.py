@@ -42,6 +42,7 @@ from CoreFoundation import (  # type: ignore[import]
     CFRunLoopTimerInvalidate,
     kCFAllocatorDefault,
     kCFRunLoopCommonModes,
+    kCFSocketLeaveErrors,
 )
 
 from twisted.internet.interfaces import IReactorFDSet
@@ -55,7 +56,6 @@ from ._signals import _UnixWaker
 
 _READ = 0
 _WRITE = 1
-_preserveSOError = 1 << 6
 
 
 class _WakerPlus(_UnixWaker):
@@ -252,7 +252,7 @@ class CFReactor(PosixReactorBase):
                 # SO_ERROR and thereby break twisted.internet.tcp.BaseClient,
                 # which needs SO_ERROR to tell it whether or not it needs to
                 # call connect_ex a second time.
-                _preserveSOError,
+                kCFSocketLeaveErrors,
             )
             src = CFSocketCreateRunLoopSource(kCFAllocatorDefault, cfs, 0)
             ctx.append(src)
