@@ -636,7 +636,7 @@ class RemoteCacheObserver:
         if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
-            from .pb import ProtocolError
+            from twisted.spread.pb import ProtocolError
 
             raise ProtocolError(
                 "You can't call a cached method when the "
