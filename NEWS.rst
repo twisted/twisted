@@ -8,6 +8,209 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 23.10.0 (2023-10-31)
+============================
+
+No changes since 23.10.0.rc1.
+
+
+Features
+--------
+
+- twisted.python.filepath.FilePath and related classes (twisted.python.filepath.IFilepath, twisted.python.filepath.AbstractFilePath, twisted.python.zippath.ZipPath, and twisted.python.zippath.ZipArchive) now have type annotations.  Additionally, FilePath is now generic, describing its mode, so you can annotate variables as FilePath[str] or FilePath[bytes] depending on the types that you wish to get back from the 'path' attribute and related methods like 'basename'. (#11822)
+- When using `CPython`, functions wrapped by `twisted.internet.defer.inlineCallbacks` can have their arguments and return values freed immediately after completion (due to there no longer being circular references). (#11885)
+
+
+Bugfixes
+--------
+
+- Fix TypeError on t.i.cfreactor due to 3.10 type annotation syntax (#11965)
+- Fix the type annotations of DeferredLock.run, DeferredSemaphore.run, maybeDeferred, ensureDeferred, inlineCallbacks and fromCoroutine that used to return Deferred[Any] to return the result of the passed Coroutine/Coroutine function (#11985)
+- Fixed significant performance overhead (CPU and bandwidth) when doing small writes to a TLS transport. Specifically, small writes to a TLS transport are now buffered until the next reactor iteration. (#11989)
+- fix mypy due to hypothesis 6.85 (#11995)
+
+
+Improved Documentation
+----------------------
+
+- The search and version navigation for the documentation hosted on
+  Read The Docs was fixed.
+  This was a regression introduced with 23.8.0. (#12012)
+
+
+Deprecations and Removals
+-------------------------
+
+- Drop support for Python 3.7. Remove twisted[contextvars] extra (contextvars are always available in Python 3.7+) (#11913)
+
+
+Misc
+----
+
+- #5206, #11583, #11787, #11871, #11912, #11921, #11922, #11926, #11932, #11934, #11936, #11938, #11940, #11942, #11945, #11948, #11952, #11953, #11955, #11957, #11959, #11961, #11964, #11973, #11977, #11980, #11982, #11993, #11999, #12004, #12005, #12009
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- In Twisted 16.3.0, we changed twisted.web to stop dispatching HTTP/1.1
+  pipelined requests to application code.  There was a bug in this change which
+  still allowed clients which could send multiple full HTTP requests in a single
+  TCP segment to trigger asynchronous processing of later requests, which could
+  lead to out-of-order responses.  This has now been corrected and twisted.web
+  should never process a pipelined request over HTTP/1.1 until the previous
+  request has fully completed. (CVE-2023-46137, GHSA-cq7q-gv5w-rwx2) (#11976)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.dom.microdom and twisted.web.domhelpers are now deprecated. (#3651)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Misc
+~~~~
+
+- #10115
+
+
+Twisted 23.8.0. (2023-08-28)
+============================
+
+This is the last release with support for Python 3.7.
+
+No changes since 23.8.0.rc1.
+
+
+Features
+--------
+
+- reactor.spawnProcess() now uses posix_spawnp when possible, making it much more efficient (#5710)
+- Twisted now officially supports Python 3.11. (#10343)
+- twisted.internet.defer.Deferred.fromFuture now has a more precise type annotation. (#11753)
+- twisted.internet.defer._ConcurrencyPrimitive.__aexit__ now has a more precise type annotation. (#11795)
+- `twisted.internet.defer.race` has been added as a way to get the first available result from a list of Deferreds. (#11817)
+- The CI suite was updated to execute the tests using a Python 3.12 pre-release (#11857)
+
+
+Bugfixes
+--------
+
+- twisted.conch.scripts.ckeygen now substitutes a default of "~/.ssh/id_rsa" if no keyfile is specified. (#6607)
+- Correct type hints for `IHostnameResolver.resolveHostName` and `IResolverSimple.getHostByName`. (#10276)
+- `twist conch --auth=sshkey` can now authenticate users without a traceback again, thanks to twisted.conch.unix.UnixConchUser no longer being incorrectly instantiated with `bytes`.  In the course of this fix, some type hinting has also been applied to `twisted.cred.portal`. (#11626)
+- twisted.internet.gireactor now works with Gtk4, and is tested and supported in CI again. (#11705)
+- When interrupted with control-C, `trial -j` no longer obscures tracebacks for
+  any errors caused by that interruption with an `UnboundLocalError` due to a bug
+  in its own implementation.  Note that there are still several internal
+  tracebacks that will be emitted upon exiting, because tearing down the test
+  runner mid-suite is still not an entirely clean operation, but it should at
+  least be possible to see errors reported from, for example, a test that is
+  hanging more clearly. (#11707)
+- PortableGIReactor and PortableGtkReactor are no longer necessary and are now aliases of GIReactor and Gtk2Reactor respectively, improving the performance of any applications using them. (#11738)
+- The Twisted package dependencies were updated to minimum versions that
+  will work with latest Twisted codebase. (#11740)
+- Deferred's type annotations have been made more comprehensive, precise, correct, and strict.  You may notice new type errors in your applications; be sure to check on those because they may represent real type errors! (#11772)
+- To prevent parsing errors and ensure validity when serializing HTML comments, twisted.web.template.flattenString has been updated to escape the --> sequence within comments. (#11804)
+- BadZipfile (with a small f) has been deprecated since Python 3.2,
+  use BadZipFile (big F) instead, added in 3.2. (#11821)
+- `twisted.web.template` now avoids unnecessary copying and is faster, particularly for templates with deep nesting. (#11834)
+- `twisted.web.template` now avoids some unecessary evaluation of type annotations and is faster. (#11835)
+- utcfromtimestamp has been deprecated since Python 3.12,
+  use fromtimestamp(x, timezone.utc).replace(tzinfo=None) instead. (#11908)
+
+
+Deprecations and Removals
+-------------------------
+
+- Optional dependency "extras" names like `conch_nacl` now use hyphens rather than underscores to comply with PEP 685. The old names will be supported until the end of 2023. (#11655)
+- twisted.internet.gtk2reactor, twisted.internet.gtk3reactor, and twisted.internet.glib2reactor are now deprecated in favor of twisted.internet.gireactor. (#11705)
+- The minimum supported version of PyPy has been updated to 3.9. (#11836)
+
+
+Misc
+----
+
+- #10149, #10310, #10345, #11708, #11723, #11742, #11746, #11748, #11751, #11764, #11766, #11768, #11776, #11788, #11799, #11806, #11824, #11828, #11830, #11856, #11859, #11877, #11894
+
+
+Conch
+-----
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- PyAsn1 has been removed as a conch dependency.
+
+  twisted.conch.ssh.keys.Key no longer supports loading "alternate" OpenSSH private keys.
+  These are some private keys that at some point were handled by OpenSSH but for which no specification exists.
+  For more info about these OpenSSH keys see https://github.com/twisted/twisted/issues/3008. (#11843)
+- Due to changes in the way raw private key byte serialization are handled in Cryptography, and widespread support for Ed25519 in current versions of OpenSSL, we no longer support PyNaCl as a fallback for Ed25519 keys in Conch. (#11871)
+
+
+Web
+---
+
+Misc
+~~~~
+
+- #11815, #11879
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 22.10.0 (2022-10-30)
 ============================
 

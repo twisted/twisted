@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from typing import AnyStr, Optional, cast
+from typing import AnyStr, Dict, Optional, cast
 
 try:
     from time import tzset
@@ -36,6 +36,17 @@ class FormattingTests(unittest.TestCase):
     Tests for basic event formatting functions.
     """
 
+    def format(self, logFormat: AnyStr, **event: object) -> str:
+        """
+        Create a Twisted log event dictionary from C{event} with the given
+        C{logFormat} format string, format it with L{formatEvent}, ensure that
+        its type is L{str}, and return its result.
+        """
+        event["log_format"] = logFormat
+        result = formatEvent(event)
+        self.assertIs(type(result), str)
+        return result
+
     def test_formatEvent(self) -> None:
         """
         L{formatEvent} will format an event according to several rules:
@@ -53,27 +64,52 @@ class FormattingTests(unittest.TestCase):
         L{formatEvent} will always return L{str}, and if given bytes, will
         always treat its format string as UTF-8 encoded.
         """
-
-        def format(logFormat: AnyStr, **event: object) -> str:
-            event["log_format"] = logFormat
-            result = formatEvent(event)
-            self.assertIs(type(result), str)
-            return result
-
-        self.assertEqual("", format(b""))
-        self.assertEqual("", format(""))
-        self.assertEqual("abc", format("{x}", x="abc"))
+        self.assertEqual("", self.format(b""))
+        self.assertEqual("", self.format(""))
+        self.assertEqual("abc", self.format("{x}", x="abc"))
         self.assertEqual(
             "no, yes.",
-            format("{not_called}, {called()}.", not_called="no", called=lambda: "yes"),
+            self.format(
+                "{not_called}, {called()}.", not_called="no", called=lambda: "yes"
+            ),
         )
-        self.assertEqual("S\xe1nchez", format(b"S\xc3\xa1nchez"))
-        self.assertIn("Unable to format event", format(b"S\xe1nchez"))
-        maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
+        self.assertEqual("S\xe1nchez", self.format(b"S\xc3\xa1nchez"))
+        self.assertIn("Unable to format event", self.format(b"S\xe1nchez"))
+        maybeResult = self.format(b"S{a!s}nchez", a=b"\xe1")
         self.assertIn("Sb'\\xe1'nchez", maybeResult)
 
         xe1 = str(repr(b"\xe1"))
-        self.assertIn("S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
+        self.assertIn("S" + xe1 + "nchez", self.format(b"S{a!r}nchez", a=b"\xe1"))
+
+    def test_formatMethod(self) -> None:
+        """
+        L{formatEvent} will format PEP 3101 keys containing C{.}s ending with
+        C{()} as methods.
+        """
+
+        class World:
+            def where(self) -> str:
+                return "world"
+
+        self.assertEqual(
+            "hello world", self.format("hello {what.where()}", what=World())
+        )
+
+    def test_formatAttributeSubscript(self) -> None:
+        """
+        L{formatEvent} will format subscripts of attributes per PEP 3101.
+        """
+
+        class Example(object):
+            config: Dict[str, str] = dict(foo="bar", baz="qux")
+
+        self.assertEqual(
+            "bar qux",
+            self.format(
+                "{example.config[foo]} {example.config[baz]}",
+                example=Example(),
+            ),
+        )
 
     def test_formatEventNoFormat(self) -> None:
         """
@@ -163,19 +199,22 @@ class TimeFormattingTests(unittest.TestCase):
         if tzset is None:
             raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
-        def testForTimeZone(name: str, expectedDST: str, expectedSTD: str) -> None:
+        def testForTimeZone(
+            name: str, expectedDST: Optional[str], expectedSTD: str
+        ) -> None:
             setTZ(name)
 
-            localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
             localSTD = mktime((2007, 1, 31, 0, 0, 0, 2, 31, 0))
-
-            self.assertEqual(formatTime(localDST), expectedDST)
             self.assertEqual(formatTime(localSTD), expectedSTD)
+
+            if expectedDST:
+                localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
+                self.assertEqual(formatTime(localDST), expectedDST)
 
         # UTC
         testForTimeZone(
             "UTC+00",
-            "2006-06-30T00:00:00+0000",
+            None,
             "2007-01-31T00:00:00+0000",
         )
 
@@ -196,7 +235,7 @@ class TimeFormattingTests(unittest.TestCase):
         # No DST
         testForTimeZone(
             "CST+06",
-            "2006-06-30T00:00:00-0600",
+            None,
             "2007-01-31T00:00:00-0600",
         )
 
@@ -211,7 +250,7 @@ class TimeFormattingTests(unittest.TestCase):
         """
         If C{timeFormat} argument is L{None}, we get the default output.
         """
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         self.assertEqual(formatTime(t, timeFormat=None), "-")
         self.assertEqual(formatTime(t, timeFormat=None, default="!"), "!")
 
@@ -219,7 +258,7 @@ class TimeFormattingTests(unittest.TestCase):
         """
         Alternate time format in output.
         """
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         self.assertEqual(formatTime(t, timeFormat="%Y/%W"), "2013/38")
 
     def test_formatTimePercentF(self) -> None:
@@ -246,7 +285,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         addTZCleanup(self)
         setTZ("UTC+00")
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event = dict(log_format="XYZZY", log_time=t)
         self.assertEqual(
             formatEventAsClassicLogText(event),
@@ -539,7 +578,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
@@ -573,7 +612,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event: LogEvent = {
             "log_format": "ABCD",
             "log_system": "fake_system",
@@ -601,7 +640,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
@@ -628,7 +667,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,
@@ -657,7 +696,7 @@ class EventAsTextTests(unittest.TestCase):
         except CapturedError:
             f = Failure()
 
-        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, -1))
         event: LogEvent = {
             "log_format": "ABCD",
             "log_time": t,

@@ -273,6 +273,7 @@ Any step blocking the release should be done by the PR contributors.
 The role of the release manager is just to make sure this process is followed.
 
 #. Make sure there is a `GitHub Security advisory <https://github.com/twisted/twisted/security/advisories>`_ opened for this ticket.
+#. Make sure a CVE was requested and the CVE ID and GitHub Actions security advisory ID are included in the newsfragment.
 #. Make sure the PR was approved.
 #. Make sure all the details all provided in the GitHub security advisory.
 #. The security fix will be available in the first release candidate for the new release. So the `Patched versions` will look like YEAR.MONTH.0rc1.

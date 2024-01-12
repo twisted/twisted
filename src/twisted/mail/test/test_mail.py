@@ -42,6 +42,11 @@ from twisted.internet.error import (
     ProcessDone,
     ProcessTerminated,
 )
+from twisted.internet.testing import (
+    LineSendingProtocol,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.mail import pop3, smtp
 from twisted.mail.relaymanager import _AttemptManager
 from twisted.names import dns
@@ -50,11 +55,6 @@ from twisted.names.error import DNSNameError
 from twisted.python import failure, log
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platformType
-from twisted.test.proto_helpers import (
-    LineSendingProtocol,
-    MemoryReactorClock,
-    StringTransport,
-)
 from twisted.trial.unittest import TestCase
 
 
@@ -732,10 +732,10 @@ class MaildirDirdbmDomainTests(TestCase):
         attribute and creates a directory for each user.
         """
         toAdd = (("user1", "pwd1"), ("user2", "pwd2"), ("user3", "pwd3"))
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.D.addUser(u, p)
 
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.assertTrue(u in self.D.dbm)
             self.assertEqual(self.D.dbm[u], p)
             self.assertTrue(os.path.exists(os.path.join(self.P, u)))

@@ -30,7 +30,7 @@ class _MatchAfter(BaseMatcher[_A]):
         L{describe_mismatch}.
     """
 
-    def __init__(self, f: Callable[[_A], _B], m: Matcher[_B]):
+    def __init__(self, f: Callable[[_A], _B], m: Matcher[_B]) -> None:
         self.f = f
         self.m = m
         self._e: Optional[Exception] = None

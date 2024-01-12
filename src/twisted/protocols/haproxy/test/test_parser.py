@@ -14,7 +14,7 @@ from twisted.internet.endpoints import (
     _WrapperServerEndpoint,
     serverFromString,
 )
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.internet.testing import MemoryReactor
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 from .._parser import unparseEndpoint
 from .._wrapper import HAProxyWrappingFactory

@@ -6,7 +6,8 @@
 Tools for formatting logging events.
 """
 
-from collections.abc import Mapping as MappingABC
+from __future__ import annotations
+
 from datetime import datetime as DateTime
 from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
 
@@ -165,7 +166,58 @@ def formatEventAsClassicLogText(
     return eventText + "\n"
 
 
-class CallMapping(MappingABC):
+def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
+    """
+    Check to see if C{key} ends with parentheses ("C{()}"); if not, wrap up the
+    result of C{get} in a L{PotentialCallWrapper}.  Otherwise, call the result
+    of C{get} first, before wrapping it up.
+
+    @param key: The last dotted segment of a formatting key, as parsed by
+        L{Formatter.vformat}, which may end in C{()}.
+
+    @param getter: A function which takes a string and returns some other
+        object, to be formatted and stringified for a log.
+
+    @return: A L{PotentialCallWrapper} that will wrap up the result to allow
+        for subsequent usages of parens to defer execution to log-format time.
+    """
+    callit = key.endswith("()")
+    realKey = key[:-2] if callit else key
+    value = getter(realKey)
+    if callit:
+        value = value()
+    return PotentialCallWrapper(value)
+
+
+class PotentialCallWrapper(object):
+    """
+    Object wrapper that wraps C{getattr()} so as to process call-parentheses
+    C{"()"} after a dotted attribute access.
+    """
+
+    def __init__(self, wrapped: object) -> None:
+        self._wrapped = wrapped
+
+    def __getattr__(self, name: str) -> object:
+        return keycall(name, self._wrapped.__getattribute__)
+
+    def __getitem__(self, name: str) -> object:
+        # The sub-object may not be indexable, but if it isn't, that's the
+        # caller's problem.
+        value = self._wrapped[name]  # type:ignore[index]
+        return PotentialCallWrapper(value)
+
+    def __format__(self, format_spec: str) -> str:
+        return self._wrapped.__format__(format_spec)
+
+    def __repr__(self) -> str:
+        return self._wrapped.__repr__()
+
+    def __str__(self) -> str:
+        return self._wrapped.__str__()
+
+
+class CallMapping(Mapping[str, Any]):
     """
     Read-only mapping that turns a C{()}-suffix in key names into an invocation
     of the key rather than a lookup of the key.
@@ -180,7 +232,7 @@ class CallMapping(MappingABC):
         """
         self._submapping = submapping
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[Any]:
         return iter(self._submapping)
 
     def __len__(self) -> int:
@@ -191,12 +243,7 @@ class CallMapping(MappingABC):
         Look up an item in the submapping for this L{CallMapping}, calling it
         if C{key} ends with C{"()"}.
         """
-        callit = key.endswith("()")
-        realKey = key[:-2] if callit else key
-        value = self._submapping[realKey]
-        if callit:
-            value = value()
-        return value
+        return keycall(key, self._submapping.__getitem__)
 
 
 def formatWithCall(formatString: str, mapping: Mapping[str, Any]) -> str:

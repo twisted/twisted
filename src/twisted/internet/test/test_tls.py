@@ -23,7 +23,6 @@ from twisted.internet.interfaces import (
     ITLSTransport,
 )
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
-from twisted.internet.task import Cooperator
 from twisted.internet.test.connectionmixins import (
     BrokenContextFactory,
     ConnectionTestsMixin,
@@ -106,6 +105,7 @@ class StartTLSClientEndpoint:
         immediately start TLS on it.  Return a L{Deferred} which fires with the
         protocol instance.
         """
+
         # This would be cleaner when we have ITransport.switchProtocol, which
         # will be added with ticket #3204:
         class WrapperFactory(ServerFactory):
@@ -388,16 +388,6 @@ class AbortSSLConnectionTests(
 
     requiredInterfaces = (IReactorSSL,)
     endpoints = SSLCreator()
-
-    def buildReactor(self):
-        reactor = ReactorBuilder.buildReactor(self)
-        from twisted.internet import _producer_helpers
-
-        # Patch twisted.protocols.tls to use this reactor, until we get
-        # around to fixing #5206, or the TLS code uses an explicit reactor:
-        cooperator = Cooperator(scheduler=lambda x: reactor.callLater(0.00001, x))
-        self.patch(_producer_helpers, "cooperate", cooperator.cooperate)
-        return reactor
 
     def setUp(self):
         if FILETYPE_PEM is None:

@@ -9,14 +9,32 @@ In most cases you can just use C{reactor.callInThread} and friends
 instead of creating a thread pool directly.
 """
 
+from __future__ import annotations
+
 from threading import Thread, current_thread
-from typing import List
+from typing import Any, Callable, List, Optional, TypeVar
+
+from typing_extensions import ParamSpec, Protocol, TypedDict
 
 from twisted._threads import pool as _pool
 from twisted.python import context, log
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
 from twisted.python.versions import Version
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+class _SupportsQsize(Protocol):
+    def qsize(self) -> int:
+        ...
+
+
+class _State(TypedDict):
+    min: int
+    max: int
+
 
 WorkerStop = object()
 
@@ -53,7 +71,9 @@ class ThreadPool:
     )
     _pool = staticmethod(_pool)
 
-    def __init__(self, minthreads=5, maxthreads=20, name=None):
+    def __init__(
+        self, minthreads: int = 5, maxthreads: int = 20, name: Optional[str] = None
+    ):
         """
         Create a new threadpool.
 
@@ -73,14 +93,14 @@ class ThreadPool:
         self.name = name
         self.threads: List[Thread] = []
 
-        def trackingThreadFactory(*a, **kw):
+        def trackingThreadFactory(*a: Any, **kw: Any) -> Thread:
             thread = self.threadFactory(  # type: ignore[misc]
                 *a, name=self._generateName(), **kw
             )
             self.threads.append(thread)
             return thread
 
-        def currentLimit():
+        def currentLimit() -> int:
             if not self.started:
                 return 0
             return self.max
@@ -88,7 +108,7 @@ class ThreadPool:
         self._team = self._pool(currentLimit, trackingThreadFactory)
 
     @property
-    def workers(self):
+    def workers(self) -> int:
         """
         For legacy compatibility purposes, return a total number of workers.
 
@@ -100,7 +120,7 @@ class ThreadPool:
         return stats.idleWorkerCount + stats.busyWorkerCount
 
     @property
-    def working(self):
+    def working(self) -> list[None]:
         """
         For legacy compatibility purposes, return the number of busy workers as
         expressed by a list the length of that number.
@@ -111,7 +131,7 @@ class ThreadPool:
         return [None] * self._team.statistics().busyWorkerCount
 
     @property
-    def waiters(self):
+    def waiters(self) -> list[None]:
         """
         For legacy compatibility purposes, return the number of idle workers as
         expressed by a list the length of that number.
@@ -123,7 +143,7 @@ class ThreadPool:
         return [None] * self._team.statistics().idleWorkerCount
 
     @property
-    def _queue(self):
+    def _queue(self) -> _SupportsQsize:
         """
         For legacy compatibility purposes, return an object with a C{qsize}
         method that indicates the amount of work not yet allocated to a worker.
@@ -132,7 +152,7 @@ class ThreadPool:
         """
 
         class NotAQueue:
-            def qsize(q):
+            def qsize(q) -> int:
                 """
                 Pretend to be a Python threading Queue and return the
                 number of as-yet-unconsumed tasks.
@@ -148,7 +168,7 @@ class ThreadPool:
     q = _queue  # Yes, twistedchecker, I want a single-letter
     # attribute name.
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the threadpool.
         """
@@ -160,14 +180,14 @@ class ThreadPool:
         if backlog:
             self._team.grow(backlog)
 
-    def startAWorker(self):
+    def startAWorker(self) -> None:
         """
         Increase the number of available workers for the thread pool by 1, up
         to the maximum allowed by L{ThreadPool.max}.
         """
         self._team.grow(1)
 
-    def _generateName(self):
+    def _generateName(self) -> str:
         """
         Generate a name for a new pool thread.
 
@@ -176,24 +196,23 @@ class ThreadPool:
         """
         return f"PoolThread-{self.name or id(self)}-{self.workers}"
 
-    def stopAWorker(self):
+    def stopAWorker(self) -> None:
         """
         Decrease the number of available workers by 1, by quitting one as soon
         as it's idle.
         """
         self._team.shrink(1)
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: _State) -> None:
         setattr(self, "__dict__", state)
         ThreadPool.__init__(self, self.min, self.max)
 
-    def __getstate__(self):
-        state = {}
-        state["min"] = self.min
-        state["max"] = self.max
-        return state
+    def __getstate__(self) -> _State:
+        return _State(min=self.min, max=self.max)
 
-    def callInThread(self, func, *args, **kw):
+    def callInThread(
+        self, func: Callable[_P, object], *args: _P.args, **kw: _P.kwargs
+    ) -> None:
         """
         Call a callable object in a separate thread.
 
@@ -205,7 +224,13 @@ class ThreadPool:
         """
         self.callInThreadWithCallback(None, func, *args, **kw)
 
-    def callInThreadWithCallback(self, onResult, func, *args, **kw):
+    def callInThreadWithCallback(
+        self,
+        onResult: Optional[Callable[[bool, _R], object]],
+        func: Callable[_P, _R],
+        *args: _P.args,
+        **kw: _P.kwargs,
+    ) -> None:
         """
         Call a callable object in a separate thread and call C{onResult} with
         the return value, or a L{twisted.python.failure.Failure} if the
@@ -239,7 +264,7 @@ class ThreadPool:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
 
-        def inContext():
+        def inContext() -> None:
             try:
                 result = inContext.theWork()  # type: ignore[attr-defined]
                 ok = True
@@ -264,7 +289,7 @@ class ThreadPool:
 
         self._team.do(inContext)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Shutdown the threads in the threadpool.
         """
@@ -274,7 +299,9 @@ class ThreadPool:
         for thread in self.threads:
             thread.join()
 
-    def adjustPoolsize(self, minthreads=None, maxthreads=None):
+    def adjustPoolsize(
+        self, minthreads: Optional[int] = None, maxthreads: Optional[int] = None
+    ) -> None:
         """
         Adjust the number of available threads by setting C{min} and C{max} to
         new values.
@@ -303,7 +330,7 @@ class ThreadPool:
         if self.workers < self.min:
             self._team.grow(self.min - self.workers)
 
-    def dumpStats(self):
+    def dumpStats(self) -> None:
         """
         Dump some plain-text informational messages to the log about the state
         of this L{ThreadPool}.

@@ -45,6 +45,7 @@ from twisted.internet.interfaces import (
     IHostnameResolver,
     IProtocol,
     IReactorCore,
+    IReactorFromThreads,
     IReactorPluggableNameResolver,
     IReactorPluggableResolver,
     IReactorThreads,
@@ -75,7 +76,6 @@ else:
 
 @implementer(IDelayedCall)
 class DelayedCall:
-
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -305,7 +305,7 @@ class ThreadedResolver:
         userDeferred.errback(self._fail(name, "timeout error"))
 
     def _checkTimeout(
-        self, result: str, name: str, lookupDeferred: Deferred[str]
+        self, result: Union[str, Failure], name: str, lookupDeferred: Deferred[str]
     ) -> None:
         try:
             userDeferred, cancelCall = self._runningQueries[lookupDeferred]
@@ -336,7 +336,7 @@ class ThreadedResolver:
             timeoutDelay = 60
         userDeferred: Deferred[str] = Deferred()
         lookupDeferred = threads.deferToThreadPool(
-            self.reactor,
+            cast(IReactorFromThreads, self.reactor),
             cast(IReactorThreads, self.reactor).getThreadPool(),
             socket.gethostbyname,
             name,
@@ -345,7 +345,9 @@ class ThreadedResolver:
             timeoutDelay, self._cleanup, name, lookupDeferred
         )
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
-        lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
+        _: Deferred[None] = lookupDeferred.addBoth(
+            self._checkTimeout, name, lookupDeferred
+        )
         return userDeferred
 
 
@@ -1060,7 +1062,7 @@ class ReactorBase(PluggableResolverMixin):
             # while we're in this loop.
             count = 0
             total = len(self.threadCallQueue)
-            for (f, a, kw) in self.threadCallQueue:
+            for f, a, kw in self.threadCallQueue:
                 try:
                     f(*a, **kw)
                 except BaseException:

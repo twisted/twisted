@@ -52,7 +52,7 @@ class ErrorPageTests(SynchronousTestCase):
             body.decode("latin-1"),
         )
 
-    def test_escapesHTML(self):
+    def test_escapesHTML(self) -> None:
         """
         The I{brief} and I{detail} parameters are HTML-escaped on render.
         """
@@ -67,18 +67,18 @@ class ErrorPageTests(SynchronousTestCase):
             ),
         )
 
-    def test_getChild(self):
+    def test_getChild(self) -> None:
         """
         The C{getChild} method of the resource returned by L{errorPage} returns
         the L{_ErrorPage} it is called on.
         """
         page = errorPage(404, "foo", "bar")
         self.assertIs(
-            page.getChild(b"name", DummyRequest([b""])),
+            page.getChild(b"name", cast(IRequest, DummyRequest([b""]))),
             page,
         )
 
-    def test_notFoundDefaults(self):
+    def test_notFoundDefaults(self) -> None:
         """
         The default arguments to L{twisted.web.pages.notFound} produce
         a reasonable error page.
@@ -95,7 +95,7 @@ class ErrorPageTests(SynchronousTestCase):
             ),
         )
 
-    def test_forbiddenDefaults(self):
+    def test_forbiddenDefaults(self) -> None:
         """
         The default arguments to L{twisted.web.pages.forbidden} produce
         a reasonable error page.

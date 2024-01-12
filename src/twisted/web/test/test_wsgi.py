@@ -17,11 +17,11 @@ from twisted.internet import reactor
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.error import ConnectionLost
+from twisted.internet.testing import EventLoggingObserver
 from twisted.logger import Logger, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.test.proto_helpers import EventLoggingObserver
 from twisted.trial.unittest import TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
@@ -806,6 +806,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'wsgi.url_scheme'} key of the C{environ} C{dict} passed to the
         application has the request URL scheme.
         """
+
         # XXX Does this need to be different if the request is for an absolute
         # URL?
         def channelFactory():
