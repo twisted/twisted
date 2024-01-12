@@ -201,6 +201,12 @@ class PotentialCallWrapper(object):
     def __getattr__(self, name: str) -> object:
         return keycall(name, self._wrapped.__getattribute__)
 
+    def __getitem__(self, name: str) -> object:
+        # The sub-object may not be indexable, but if it isn't, that's the
+        # caller's problem.
+        value = self._wrapped[name]  # type:ignore[index]
+        return PotentialCallWrapper(value)
+
     def __format__(self, format_spec: str) -> str:
         return self._wrapped.__format__(format_spec)
 
