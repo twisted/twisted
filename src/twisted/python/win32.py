@@ -125,7 +125,7 @@ class _ErrorFormatter:
         except ImportError:
             WinError = None
         try:
-            from win32api import FormatMessage  # type: ignore[import-untyped]
+            from win32api import FormatMessage
         except ImportError:
             FormatMessage = None
         try:

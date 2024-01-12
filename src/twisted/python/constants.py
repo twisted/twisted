@@ -9,13 +9,6 @@ numeric, and bit flag values.
 
 
 # Import and re-export Constantly
-from constantly import (  # type: ignore[import-untyped]
-    FlagConstant,
-    Flags,
-    NamedConstant,
-    Names,
-    ValueConstant,
-    Values,
-)
+from constantly import FlagConstant, Flags, NamedConstant, Names, ValueConstant, Values
 
 __all__ = ["NamedConstant", "ValueConstant", "FlagConstant", "Names", "Values", "Flags"]
