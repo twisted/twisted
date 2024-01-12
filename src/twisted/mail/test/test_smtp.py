@@ -670,10 +670,9 @@ class TLSTests(TestCase, LoopbackMixin):
 
         return self.loopback(server, client).addCallback(check)
 
-    def test_ESMTPSenderFactory_TLSError(self):
+    def test_ESMTPSenderFactory_TLSError(self) -> None:
         """
-        Attempting to connect to an ESMTP server which presents an invalid certificate
-        should produce a meaningful error.
+        Attempting to connect to an ESMTP server which presents an invalid certificate will trigger a failure that contains information that the failure was caused by the vertificate validation.
         """
         # set up a dummy ESMTP server which will present a self-signed cert after
         # STARTTLS

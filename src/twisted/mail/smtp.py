@@ -952,7 +952,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.log = util.LineLog(logsize)
 
         # the reason we were unable to successfully send the message, if any.
-        self.failureReason: Optional[Failure] = None
+        self._failureReason: Optional[Failure] = None
 
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance
@@ -972,7 +972,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         """
         We are no longer connected
         """
-        self.failureReason = reason
+        self._failureReason = reason
         self.setTimeout(None)
         self.mailFile = None
 
@@ -1932,9 +1932,9 @@ class SMTPSenderFactory(protocol.ClientFactory):
         # "Connection was closed cleanly" or whatever.
         if (
             self.currentProtocol is not None
-            and self.currentProtocol.failureReason is not None
+            and self.currentProtocol._failureReason is not None
         ):
-            err = self.currentProtocol.failureReason
+            err = self.currentProtocol._failureReason
 
         self.currentProtocol = None
         if self.sendFinished:
