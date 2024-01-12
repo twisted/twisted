@@ -5,6 +5,8 @@
 TCP support for IOCP reactor
 """
 
+from __future__ import annotations
+
 import errno
 import socket
 import struct
