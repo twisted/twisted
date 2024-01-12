@@ -1918,7 +1918,7 @@ class _ChunkedTransferDecoder:
         self._buffer = bytearray()
         self._start = 0
         self._trailerHeaders: List[bytearray] = []
-        self._maxTrailerHeadersSize = 16384
+        self._maxTrailerHeadersSize = 2 ** 16
         self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
@@ -2006,14 +2006,17 @@ class _ChunkedTransferDecoder:
             self._receivedTrailerHeadersSize + len(self._buffer)
             > self._maxTrailerHeadersSize
         ):
-            raise _MalformedChunkedDataError("Trailer headers data is too long")
+            raise _MalformedChunkedDataError("Trailer headers data is too long.")
 
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
+            # Still no end of network line marker found.
+            # Continue processing more data.
             return False
 
         if eolIndex > 0:
+            # A trailer header was detected.
             self._trailerHeaders.append(self._buffer[0:eolIndex])
             del self._buffer[0 : eolIndex + 2]
             self._start = 0
