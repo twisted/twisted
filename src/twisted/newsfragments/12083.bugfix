@@ -1,1 +1,0 @@
-twisted.internet.defer inline deferred stack introspection was adjusted for latest PyPy 7.3.14 release.
