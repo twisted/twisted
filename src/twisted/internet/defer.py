@@ -54,7 +54,6 @@ from twisted.python.failure import Failure, _extraneous
 
 log = Logger()
 
-_STACK_LEVEL_INCOMPATIBLE = _PYPY and implementation.version < (7, 3, 14)
 
 
 _T = TypeVar("_T")
@@ -2024,8 +2023,10 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if _STACK_LEVEL_INCOMPATIBLE:
-                # PyPy as of 3.7 and before 7.3.14 adds an extra frame.
+            _old_pypy_stack_compatibility = _PYPY and implementation.version < (7, 3, 14)
+            if _old_pypy_stack_compatibility:
+                # PyPy before 7.3.14 adds an extra frame.
+                # This code can be removed once we no longer need to support PyPy 7.3.13 or older.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 
