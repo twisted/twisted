@@ -15,6 +15,7 @@ available reactor implementations.
 
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
+import gc
 import os
 import signal
 import time
@@ -266,6 +267,7 @@ class ReactorBuilder:
         # state corruption.  Let's make that more visible.
         reactor.__class__ = InvalidatedReactor
         reactor.__dict__ = {}
+        gc.collect()
 
     def buildReactor(self):
         """
