@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info
+from sys import exc_info, implementation
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -53,6 +53,8 @@ from twisted.python.deprecate import deprecated, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
 log = Logger()
+
+_STACK_LEVEL_INCOMPATIBLE = _PYPY and implementation.version < (7, 3, 14)
 
 
 _T = TypeVar("_T")
@@ -2022,8 +2024,8 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if _PYPY:
-                # PyPy as of 3.7 adds an extra frame.
+            if _STACK_LEVEL_INCOMPATIBLE:
+                # PyPy as of 3.7 and before 7.3.14 adds an extra frame.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 
