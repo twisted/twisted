@@ -58,6 +58,9 @@ log = Logger()
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
+# See use in _inlineCallbacks for explanation and removal timeline.
+_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
+
 
 class AlreadyCalledError(Exception):
     """
@@ -2022,14 +2025,10 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            _oldPypyStackCompatibility = _PYPY and implementation.version < (
-                7,
-                3,
-                14,
-            )
-            if _oldPypyStackCompatibility:
-                # PyPy before 7.3.14 adds an extra frame.
-                # This code can be removed once we no longer need to support PyPy 7.3.13 or older.
+            if _oldPypyStack:
+                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
+                # this discrepancy with CPython.  This code can be removed once
+                # we no longer need to support PyPy 7.3.13 or older.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 
