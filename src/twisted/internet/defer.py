@@ -55,7 +55,6 @@ from twisted.python.failure import Failure, _extraneous
 log = Logger()
 
 
-
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
@@ -2023,7 +2022,11 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            _old_pypy_stack_compatibility = _PYPY and implementation.version < (7, 3, 14)
+            _old_pypy_stack_compatibility = _PYPY and implementation.version < (
+                7,
+                3,
+                14,
+            )
             if _old_pypy_stack_compatibility:
                 # PyPy before 7.3.14 adds an extra frame.
                 # This code can be removed once we no longer need to support PyPy 7.3.13 or older.
