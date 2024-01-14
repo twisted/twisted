@@ -197,11 +197,11 @@ class CFReactor(PosixReactorBase):
                     # reading/writing state flags to determine whether we
                     # should actually attempt a doRead/doWrite first.  -glyph
                     if isRead:
-                        if rw[_READ]:
-                            why = readWriteDescriptor.doRead()
+                        assert rw[_READ], "read callback when twisted not reading"
+                        why = readWriteDescriptor.doRead()
                     else:
-                        if rw[_WRITE]:
-                            why = readWriteDescriptor.doWrite()
+                        assert rw[_WRITE], "write callback when twisted not writing"
+                        why = readWriteDescriptor.doWrite()
             except BaseException:
                 why = sys.exc_info()[1]
                 log.err()
@@ -225,10 +225,12 @@ class CFReactor(PosixReactorBase):
         @param flag: the flag to register for callbacks on, either
             C{kCFSocketReadCallBack} or C{kCFSocketWriteCallBack}
         """
+        assert isinstance(fd, int), f"only ints allowed, not {fd!r}"
         if fd == -1:
             raise RuntimeError("Invalid file descriptor.")
         if fd in self._fdmap:
             src, cfs, gotdescr, rw = self._fdmap[fd]
+            assert gotdescr is descr, f"mismatch between {descr} and {gotdescr}"
             # do I need to verify that it's the same descr?
         else:
             ctx = []
@@ -295,18 +297,21 @@ class CFReactor(PosixReactorBase):
 
         @param flag: C{kCFSocketWriteCallBack} C{kCFSocketReadCallBack}
         """
-        if id(descr) not in self._idmap:
+        descrid = id(descr)
+        if descrid not in self._idmap:
             return
-        if fd == -1:
-            # need to deal with it in this case, I think.
-            realfd = self._idmap[id(descr)]
-        else:
-            realfd = fd
-        src, cfs, descr, rw = self._fdmap[realfd]
+        realfd = self._idmap[descrid]
+        src, cfs, gotdescr, rw = self._fdmap[realfd]
+        assert (
+            gotdescr is descr
+        ), f"unwatching file descriptor mismatch {descr!r} {gotdescr!r}"
         CFSocketDisableCallBacks(cfs, flag)
         rw[self._flag2idx(flag)] = False
-        if not rw[_READ] and not rw[_WRITE]:
-            del self._idmap[id(descr)]
+        assert (
+            fd == realfd
+        ), f"file descriptor invalidated while running {fd!r} {realfd!r}"
+        if fd != realfd or (not rw[_READ] and not rw[_WRITE]):
+            del self._idmap[descrid]
             del self._fdmap[realfd]
             CFRunLoopRemoveSource(self._cfrunloop, src, kCFRunLoopCommonModes)
             CFSocketInvalidate(cfs)
