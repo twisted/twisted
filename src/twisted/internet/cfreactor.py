@@ -307,9 +307,6 @@ class CFReactor(PosixReactorBase):
         ), f"unwatching file descriptor mismatch {descr!r} {gotdescr!r}"
         CFSocketDisableCallBacks(cfs, flag)
         rw[self._flag2idx(flag)] = False
-        assert (
-            fd == realfd
-        ), f"file descriptor invalidated while running {fd!r} {realfd!r}"
         if fd != realfd or (not rw[_READ] and not rw[_WRITE]):
             del self._idmap[descrid]
             del self._fdmap[realfd]
