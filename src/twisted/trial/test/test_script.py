@@ -905,7 +905,9 @@ class OrderTests(unittest.TestCase):
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_toptobottom_temp import test_missing  # type: ignore[import]
+        from twisted_toptobottom_temp import (  # type: ignore[import-not-found]
+            test_missing,
+        )
 
         self.addCleanup(sys.modules.pop, "twisted_toptobottom_temp")
         self.addCleanup(sys.modules.pop, test_missing.__name__)

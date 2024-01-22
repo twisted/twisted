@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info
+from sys import exc_info, implementation
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -43,7 +43,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Concatenate, Literal, ParamSpec
+from typing_extensions import Concatenate, Literal, ParamSpec, Self
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -57,6 +57,9 @@ log = Logger()
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+# See use in _inlineCallbacks for explanation and removal timeline.
+_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
 
 
 class AlreadyCalledError(Exception):
@@ -161,7 +164,7 @@ def maybeDeferred(
 
 @overload
 def maybeDeferred(
-    f: Callable[_P, Coroutine[Deferred[_T], object, _T]],
+    f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> "Deferred[_T]":
@@ -176,7 +179,7 @@ def maybeDeferred(
 
 
 def maybeDeferred(
-    f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[_T], object, _T], _T]],
+    f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[Any], Any, _T], _T]],
     *args: _P.args,
     **kwargs: _P.kwargs,
 ) -> "Deferred[_T]":
@@ -1277,8 +1280,8 @@ class Deferred(Awaitable[_SelfResultT]):
     def fromCoroutine(
         cls,
         coro: Union[
-            Coroutine["Deferred[_T]", Any, _T],
-            Generator["Deferred[_T]", Any, _T],
+            Coroutine[Deferred[Any], Any, _T],
+            Generator[Deferred[Any], Any, _T],
         ],
     ) -> "Deferred[_T]":
         """
@@ -1326,8 +1329,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
 def ensureDeferred(
     coro: Union[
-        Coroutine[Deferred[_T], Any, _T],
-        Generator[Deferred[_T], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
+        Generator[Deferred[Any], Any, _T],
         Deferred[_T],
     ]
 ) -> Deferred[_T]:
@@ -1583,7 +1586,7 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False, /
 ) -> List[_T]:
     if __debug__:
         for result in resultList:
@@ -1617,9 +1620,9 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
-    d = DeferredList(deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors)
-    d.addCallback(_parseDeferredListResult)
-    return cast(Deferred[List[_T]], d)
+    return DeferredList(
+        deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors
+    ).addCallback(_parseDeferredListResult)
 
 
 class FailureGroup(Exception):
@@ -1923,8 +1926,8 @@ def _gotResultInlineCallbacks(
     r: object,
     waiting: List[Any],
     gen: Union[
-        Generator[Deferred[object], object, _T],
-        Coroutine[Deferred[object], object, _T],
+        Generator[Deferred[Any], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
     ],
     status: _CancellationStatus[_T],
     context: _Context,
@@ -1950,8 +1953,8 @@ def _gotResultInlineCallbacks(
 def _inlineCallbacks(
     result: object,
     gen: Union[
-        Generator[Deferred[object], object, _T],
-        Coroutine[Deferred[object], object, _T],
+        Generator[Deferred[Any], Any, _T],
+        Coroutine[Deferred[Any], Any, _T],
     ],
     status: _CancellationStatus[_T],
     context: _Context,
@@ -2022,8 +2025,10 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if _PYPY:
-                # PyPy as of 3.7 adds an extra frame.
+            if _oldPypyStack:
+                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
+                # this discrepancy with CPython.  This code can be removed once
+                # we no longer need to support PyPy 7.3.13 or older.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 
@@ -2116,14 +2121,13 @@ def _addCancelCallbackToDeferred(
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
     """
     it.callbacks, tmp = [], it.callbacks
-    it.addErrback(_handleCancelInlineCallbacks, status)
+    it = it.addErrback(_handleCancelInlineCallbacks, status)
     it.callbacks.extend(tmp)
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
 def _handleCancelInlineCallbacks(
-    result: Failure,
-    status: _CancellationStatus[_T],
+    result: Failure, status: _CancellationStatus[_T], /
 ) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -2149,8 +2153,8 @@ def _handleCancelInlineCallbacks(
 
 def _cancellableInlineCallbacks(
     gen: Union[
-        Generator["Deferred[object]", object, _T],
-        Coroutine["Deferred[object]", object, _T],
+        Generator[Deferred[Any], object, _T],
+        Coroutine[Deferred[Any], object, _T],
     ]
 ) -> Deferred[_T]:
     """
@@ -2178,7 +2182,7 @@ class _InternalInlineCallbacksCancelledError(Exception):
 
 
 def inlineCallbacks(
-    f: Callable[_P, Generator[Deferred[object], object, _T]]
+    f: Callable[_P, Generator[Deferred[Any], Any, _T]]
 ) -> Callable[_P, Deferred[_T]]:
     """
     L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
@@ -2261,26 +2265,47 @@ def inlineCallbacks(
 ## DeferredLock/DeferredQueue
 
 
-_ConcurrencyPrimitiveT = TypeVar(
-    "_ConcurrencyPrimitiveT", bound="_ConcurrencyPrimitive[Any]"
-)
-
-
-class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
-    def __init__(self: _ConcurrencyPrimitiveT) -> None:
-        self.waiting: List[Deferred[_ConcurrencyPrimitiveT]] = []
+class _ConcurrencyPrimitive(ABC):
+    def __init__(self: Self) -> None:
+        self.waiting: List[Deferred[Self]] = []
 
     def _releaseAndReturn(self, r: _T) -> _T:
         self.release()
         return r
 
+    @overload
     def run(
-        self: _ConcurrencyPrimitiveT,
+        self: Self,
         /,
-        f: Callable[..., _SelfResultT],
-        *args: object,
-        **kwargs: object,
-    ) -> Deferred[_SelfResultT]:
+        f: Callable[_P, Deferred[_T]],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_T]:
+        ...
+
+    @overload
+    def run(
+        self: Self,
+        /,
+        f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_T]:
+        ...
+
+    @overload
+    def run(
+        self: Self, /, f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
+    ) -> Deferred[_T]:
+        ...
+
+    def run(
+        self: Self,
+        /,
+        f: Callable[_P, Union[Deferred[_T], Coroutine[Deferred[Any], Any, _T], _T]],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> Deferred[_T]:
         """
         Acquire, run, release.
 
@@ -2295,12 +2320,16 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         @return: L{Deferred} of function result.
         """
 
-        def execute(ignoredResult: object) -> Deferred[_SelfResultT]:
-            return maybeDeferred(f, *args, **kwargs).addBoth(self._releaseAndReturn)
+        def execute(ignoredResult: object) -> Deferred[_T]:
+            # maybeDeferred arg type requires one of the possible union members
+            # and won't accept all possible union members
+            return maybeDeferred(f, *args, **kwargs).addBoth(
+                self._releaseAndReturn
+            )  # type: ignore[return-value]
 
         return self.acquire().addCallback(execute)
 
-    def __aenter__(self: _ConcurrencyPrimitiveT) -> Deferred[_ConcurrencyPrimitiveT]:
+    def __aenter__(self: Self) -> Deferred[Self]:
         """
         We can be used as an asynchronous context manager.
         """
@@ -2318,7 +2347,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         return succeed(False)
 
     @abstractmethod
-    def acquire(self: _ConcurrencyPrimitiveT) -> Deferred[_ConcurrencyPrimitiveT]:
+    def acquire(self: Self) -> Deferred[Self]:
         pass
 
     @abstractmethod
@@ -2326,10 +2355,7 @@ class _ConcurrencyPrimitive(ABC, Generic[_SelfResultT]):
         pass
 
 
-_DeferredLockT = TypeVar("_DeferredLockT", bound="DeferredLock")
-
-
-class DeferredLock(_ConcurrencyPrimitive[Any]):
+class DeferredLock(_ConcurrencyPrimitive):
     """
     A lock for event driven systems.
 
@@ -2340,7 +2366,7 @@ class DeferredLock(_ConcurrencyPrimitive[Any]):
 
     locked = False
 
-    def _cancelAcquire(self: _DeferredLockT, d: Deferred[_DeferredLockT]) -> None:
+    def _cancelAcquire(self: Self, d: Deferred[Self]) -> None:
         """
         Remove a deferred d from our waiting list, as the deferred has been
         canceled.
@@ -2354,7 +2380,7 @@ class DeferredLock(_ConcurrencyPrimitive[Any]):
         """
         self.waiting.remove(d)
 
-    def acquire(self: _DeferredLockT) -> Deferred[_DeferredLockT]:
+    def acquire(self: Self) -> Deferred[Self]:
         """
         Attempt to acquire the lock.  Returns a L{Deferred} that fires on
         lock acquisition with the L{DeferredLock} as the value.  If the lock
@@ -2363,7 +2389,7 @@ class DeferredLock(_ConcurrencyPrimitive[Any]):
         @return: a L{Deferred} which fires on lock acquisition.
         @rtype: a L{Deferred}
         """
-        d: Deferred[_DeferredLockT] = Deferred(canceller=self._cancelAcquire)
+        d: Deferred[Self] = Deferred(canceller=self._cancelAcquire)
         if self.locked:
             self.waiting.append(d)
         else:
@@ -2371,7 +2397,7 @@ class DeferredLock(_ConcurrencyPrimitive[Any]):
             d.callback(self)
         return d
 
-    def release(self: _DeferredLockT) -> None:
+    def release(self: Self) -> None:
         """
         Release the lock.  If there is a waiting list, then the first
         L{Deferred} in that waiting list will be called back.
@@ -2388,10 +2414,7 @@ class DeferredLock(_ConcurrencyPrimitive[Any]):
             d.callback(self)
 
 
-_DeferredSemaphoreT = TypeVar("_DeferredSemaphoreT", bound="DeferredSemaphore")
-
-
-class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
+class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
 
@@ -2415,9 +2438,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
         self.tokens = tokens
         self.limit = tokens
 
-    def _cancelAcquire(
-        self: _DeferredSemaphoreT, d: Deferred[_DeferredSemaphoreT]
-    ) -> None:
+    def _cancelAcquire(self: Self, d: Deferred[Self]) -> None:
         """
         Remove a deferred d from our waiting list, as the deferred has been
         canceled.
@@ -2431,7 +2452,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
         """
         self.waiting.remove(d)
 
-    def acquire(self: _DeferredSemaphoreT) -> Deferred[_DeferredSemaphoreT]:
+    def acquire(self: Self) -> Deferred[Self]:
         """
         Attempt to acquire the token.
 
@@ -2440,7 +2461,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
         assert (
             self.tokens >= 0
         ), "Internal inconsistency??  tokens should never be negative"
-        d: Deferred[_DeferredSemaphoreT] = Deferred(canceller=self._cancelAcquire)
+        d: Deferred[Self] = Deferred(canceller=self._cancelAcquire)
         if not self.tokens:
             self.waiting.append(d)
         else:
@@ -2448,7 +2469,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive[Any]):
             d.callback(self)
         return d
 
-    def release(self: _DeferredSemaphoreT) -> None:
+    def release(self: Self) -> None:
         """
         Release the token.
 
