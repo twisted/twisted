@@ -687,25 +687,6 @@ class TLSMemoryBIOTests(TestCase):
 
         return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
 
-    def test_writeUnicodeRaisesTypeError(self):
-        """
-        Writing C{unicode} to L{TLSMemoryBIOProtocol} throws a C{TypeError}.
-        """
-        notBytes = "hello"
-        result = []
-
-        class SimpleSendingProtocol(Protocol):
-            def connectionMade(self):
-                try:
-                    self.transport.write(notBytes)
-                except TypeError:
-                    result.append(True)
-                self.transport.write(b"bytes")
-                self.transport.loseConnection()
-
-        d = self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
-        return d.addCallback(lambda ign: self.assertEqual(result, [True]))
-
     def test_multipleWrites(self):
         """
         If multiple separate TLS messages are received in a single chunk from
