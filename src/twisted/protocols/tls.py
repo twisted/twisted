@@ -708,7 +708,7 @@ class _AggregateSmallWrites:
         self._write = write
         self._clock = clock
         self._buffer: list[bytes] = []
-        self._bufferLen = 0
+        self._bufferLeft = self.MAX_BUFFER_SIZE
         self._scheduled: Optional[IDelayedCall] = None
 
     def write(self, data: bytes) -> None:
@@ -719,9 +719,9 @@ class _AggregateSmallWrites:
         Accumulating too much data can result in higher memory usage.
         """
         self._buffer.append(data)
-        self._bufferLen += len(data)
+        self._bufferLeft -= len(data)
 
-        if self._bufferLen > self.MAX_BUFFER_SIZE:
+        if self._bufferLeft < 0:
             # We've accumulated enough we should just write it out. No need to
             # schedule a flush, since we just flushed everything.
             self.flush()
@@ -744,7 +744,7 @@ class _AggregateSmallWrites:
     def flush(self) -> None:
         """Flush any buffered writes."""
         if self._buffer:
-            self._bufferLen = 0
+            self._bufferLeft = self.MAX_BUFFER_SIZE
             self._write(b"".join(self._buffer))
             del self._buffer[:]
 
