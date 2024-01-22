@@ -788,11 +788,7 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
         actual_write = super().write
         self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
-
-    def write(self, data: bytes) -> None:
-        if isinstance(data, str):  # type: ignore[unreachable]
-            raise TypeError("Must write bytes to a TLS transport, not str.")
-        self._aggregator.write(data)
+        self.write = self._aggregator.write
 
     def writeSequence(self, sequence: Iterable[bytes]) -> None:
         self._aggregator.write(b"".join(sequence))
