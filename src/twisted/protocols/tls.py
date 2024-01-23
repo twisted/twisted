@@ -788,7 +788,10 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
         actual_write = super().write
         self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
-        self.write = self._aggregator.write
+        # This is kinda ugly, but speeds things up a lot in a hot path with
+        # lots of small TLS writes. May become unnecessary in Python 3.13 or
+        # later if JIT and/or inlining becomes a thing.
+        self.write = self._aggregator.write  # type: ignore[method-assign]
 
     def writeSequence(self, sequence: Iterable[bytes]) -> None:
         self._aggregator.write(b"".join(sequence))
