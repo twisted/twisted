@@ -168,16 +168,16 @@ class ConnectionMixin:
         """
         startTLS(self, ctx, normal, FileDescriptor)
 
-    def write(self, data: bytes):
+    def write(self, bytes):
         """
         Write some bytes to this connection, passing them through a TLS layer if
         necessary, or discarding them if the connection has already been lost.
         """
         if self.TLS:
             if self.connected:
-                self.protocol.write(data)
+                self.protocol.write(bytes)
         else:
-            FileDescriptor.write(self, data)
+            FileDescriptor.write(self, bytes)
 
     def writeSequence(self, iovec):
         """
