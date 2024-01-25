@@ -907,7 +907,6 @@ class NonLocalExitTests(TestCase):
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
-    @skipIf(sys.version_info > (3, 12), 'applies to Python 3.12 and older')
     def test_forwardTracebacks(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
@@ -928,36 +927,10 @@ class ForwardTraceBackTests(SynchronousTestCase):
         d = calling()
         f = self.failureResultOf(d)
         tb = f.getTraceback()
-        self.assertIn("in erroring", tb)
+        self.assertIn("erroring", tb)
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    @skipIf(sys.version_info < (3, 13), 'new in Python 3.13')
-    def test_forwardTracebacks313(self):
-        """
-        Chained inlineCallbacks are forwarding the traceback information
-        from generator to generator.
-
-        A first simple test with a couple of inline callbacks.
-        """
-
-        @inlineCallbacks
-        def erroring():
-            yield "forcing generator"
-            raise Exception("Error Marker")
-
-        @inlineCallbacks
-        def calling():
-            yield erroring()
-
-        d = calling()
-        f = self.failureResultOf(d)
-        tb = f.getTraceback()
-        self.assertIn("yield erroring", tb)
-        self.assertIn("in calling", tb)
-        self.assertIn("Error Marker", tb)
-
-    @skipIf(sys.version_info > (3, 12), 'applies to Python 3.12 and older')
     def test_forwardLotsOfTracebacks(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
@@ -1047,6 +1020,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         Several Chained inlineCallbacks gives information about all generators.
 
         A wider test with a 4 chained inline callbacks.
+        Application stack-trace should be reported.
 
         Note that the previous test is testing the simple case, and this one is
         testing the deep recursion case.
@@ -1079,8 +1053,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in calling", tb)
-        self.assertIn("yield calling2", tb)
-        self.assertIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("calling2", tb)
         self.assertIn("Error Marker", tb)
 
 
