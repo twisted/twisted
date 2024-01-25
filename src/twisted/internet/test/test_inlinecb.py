@@ -935,7 +935,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         """
         Several Chained inlineCallbacks gives information about all generators.
 
-        A wider test with a 4 chained inline callbacks.
+        A wider test with 4 chained inline callbacks.
 
         Application stack-trace should be reported, and implementation details
         like "throwExceptionIntoGenerator" symbols are omitted from the stack.
