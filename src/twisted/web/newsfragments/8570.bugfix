@@ -1,0 +1,2 @@
+Multiplied the totalHeadersSize of twisted.web.http.HTTPChannel by 4, from
+16384 bytes to 65536 bytes, to support scenarios seen in the wild.

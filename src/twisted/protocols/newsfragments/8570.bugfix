@@ -1,0 +1,3 @@
+Doubled the MAX_LENGTH of twisted.protocols.basic.LineOnlyReceiver and
+twisted.protocols.basic.LineReceiver, from 16384 bytes to 32768 bytes, to
+support scenarios seen in the wild.

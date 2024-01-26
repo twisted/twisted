@@ -2208,7 +2208,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
 
     maxHeaders = 500
-    totalHeadersSize = 16384
+    totalHeadersSize = 65536
     abortTimeout = 15
 
     length = 0
