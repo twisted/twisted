@@ -715,7 +715,10 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to the
         application contains the address of the client making the request.
         """
-        d = self.render("GET", "1.1", [], [""])
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "192.168.1.1"))
 
         return d
@@ -732,6 +735,19 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "::1"))
+
+        return d
+
+    def test_remotePort(self):
+        """
+        The C{'REMOTE_PORT'} key of the C{environ} C{dict} passed to the
+        application contains the port of the client making the request.
+        """
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
+        d.addCallback(self.environKeyEqual("REMOTE_PORT", "12344"))
 
         return d
 
