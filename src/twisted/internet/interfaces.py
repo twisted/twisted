@@ -2226,6 +2226,34 @@ class IOpenSSLServerConnectionCreator(Interface):
         """
 
 
+class IOpenSSLServerConnectionCreatorFactory(Interface):
+    """
+    Create a L{IOpenSSLServerConnectionCreator}.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def createServerCreator(
+        connectionSetupHook: Callable[["OpenSSLConnection"], None],
+        contextSetupHook: Callable[["OpenSSLContext"], None],
+    ) -> "IOpenSSLServerConnectionCreator":
+        """
+        @note: The returned L{IOpenSSLServerConnectionCreator} must call
+            C{connectionSetupHook} at the appropriate time, and
+            C{contextSetupHook} whenever a new L{OpenSSLContext} is created, or
+            the connections and contexts will not be configured according to
+            the parameters specified by the protocol factory.
+
+        @param connectionSetupHook: A hook to be called when the connection is
+            ready to be set up.  This must be called once when the connection
+            is constructed, before it is returned.
+
+        @param contextSetupHook: A hook to be called when the connection is
+            ready to be set up.  This must be called any time the context on
+            the connection is changed, including when it is first set.
+        """
+
+
 class IOpenSSLClientConnectionCreator(Interface):
     """
     A provider of L{IOpenSSLClientConnectionCreator} can create
@@ -2249,6 +2277,35 @@ class IOpenSSLClientConnectionCreator(Interface):
 
         @return: an OpenSSL connection object configured appropriately for the
             given Twisted protocol.
+        """
+
+
+class IOpenSSLClientConnectionCreatorFactory(Interface):
+    """
+    A provider of L{IOpenSSLClientConnectionCreatorFactory} can create
+    L{IOpenSSLClientConnectionCreator} objects for TLS clients.
+
+    @see: L{twisted.internet.ssl}
+    """
+
+    def createClientCreator(
+        connectionSetupHook: Callable[["OpenSSLConnection"], None],
+        contextSetupHook: Callable[["OpenSSLContext"], None],
+    ) -> "IOpenSSLClientConnectionCreator":
+        """
+        @note: The returned L{IOpenSSLClientConnectionCreator} must call
+            C{connectionSetupHook} at the appropriate time, and
+            C{contextSetupHook} whenever a new L{OpenSSLContext} is created, or
+            the connections and contexts will not be configured according to
+            the parameters specified by the protocol factory.
+
+        @param connectionSetupHook: A hook to be called when a connection is
+            ready to be set up.  This must be called once when the connection
+            is constructed, before it is returned.
+
+        @param contextSetupHook: A hook to be called when the connection is
+            ready to be set up.  This must be called any time the context on
+            the connection is changed, including when it is first set.
         """
 
 

@@ -36,13 +36,14 @@ from twisted.internet.address import (
     UNIXAddress,
     _ProcessAddress,
 )
-from twisted.internet.endpoints import StandardErrorBehavior
+from twisted.internet.endpoints import StandardErrorBehavior, _WrapperEndpoint
 from twisted.internet.error import ConnectingCancelledError
 from twisted.internet.interfaces import (
     IConsumer,
     IHostnameResolver,
     IPushProducer,
     IReactorPluggableNameResolver,
+    IReactorTCP,
     ITransport,
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol
@@ -95,6 +96,7 @@ try:
         TLSv1_2_METHOD,
     )
 
+    from twisted.internet._sslverify import ClientTLSOptions
     from twisted.internet.ssl import (
         Certificate,
         CertificateOptions,
@@ -3130,6 +3132,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
     @skipIf(skipSSL, skipSSLReason)
+    def test_tls(self) -> None:
+        from OpenSSL.SSL import Context
+
+        from twisted.protocols._sni import SNIConnectionCreator
+
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "tls:./cert-path:1234:backlog=12:interface=10.0.0.1",
+        )
+        self.assertIsInstance(server, endpoints.TLSServerEndpoint)
+        subendpoint = server.endpoint
+        self.assertIs(subendpoint._reactor, reactor)
+        self.assertEqual(subendpoint._port, 1234)
+        self.assertEqual(subendpoint._backlog, 12)
+        self.assertEqual(subendpoint._interface, "10.0.0.1")
+        ctx = server.contextFactory
+        self.assertIsInstance(ctx, endpoints.ServerNameIndictionConfiguration)
+        sc: SNIConnectionCreator = ctx.createServerCreator(
+            lambda con: None,
+            lambda ctx: None,
+        )
+        self.assertIsInstance(sc, SNIConnectionCreator)
+        factory = TLSMemoryBIOFactory(ctx, False, Factory.forProtocol(Protocol))
+        proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
+        st = StringTransport()
+        proto.makeConnection(st)
+        builtCtx = proto._tlsConnection.get_context()
+        self.assertIsInstance(builtCtx, Context)
+
+    @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
         """
         An SSL string endpoint description with minimal arguments returns
@@ -4152,10 +4185,12 @@ class WrapperClientEndpointTests(unittest.TestCase):
         self.assertIs(proto.transport.transport, pump.clientIO)
 
 
-def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
+def tlsHostnameFromEndpoint(
+    memoryReactor: IReactorTCP, tlsEndpoint: _WrapperEndpoint
+) -> str:
     """
     Given a L{MemoryReactor} and the result of calling L{wrapClientTLS},
-    extract the L{IOpenSSLClientConnectionCreator} associated with it.
+    extract the hostname that TLS will be verified against.
 
     Implementation presently uses private attributes but could (and should) be
     refactored to just call C{.connect()} on the endpoint, when
@@ -4168,11 +4203,20 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
     @param tlsEndpoint: The result of calling L{wrapClientTLS}.
 
-    @return: the client connection creator associated with the endpoint
-        wrapper.
-    @rtype: L{IOpenSSLClientConnectionCreator}
+    @return: the ASCII encoded str hostname.
     """
-    return tlsEndpoint._wrapperFactory(None)._connectionCreator
+    tlsMemoryBIOFactory: TLSMemoryBIOFactory = tlsEndpoint._wrapperFactory(
+        Factory.forProtocol(Protocol)
+    )
+    protocol = tlsMemoryBIOFactory.buildProtocol(None)
+    connection = tlsMemoryBIOFactory._creatorCallable(protocol)
+    context = connection.get_context()
+
+    options: ClientTLSOptions = context._clientOptions
+    # See twisted.internet._sslverify.ClientTLSOptions.clientConnectionForTLS
+    # for the place where this attribute is set.
+
+    return options._hostname
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -4211,8 +4255,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(
             endpoint._wrappedEndpoint._hostBytes, b"xn--xample-9ua.example.com"
         )
-        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(connectionCreator._hostname, "\xe9xample.example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "\xe9xample.example.com")
 
     def test_tls(self):
         """
@@ -4287,8 +4331,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(reactor, b"tls:example.com:443")
-        creator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(creator._hostname, "example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "example.com")
         self.assertEqual(endpoint._wrappedEndpoint._hostBytes, b"example.com")
 
 

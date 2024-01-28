@@ -9,9 +9,12 @@ pyOpenSSL is unavailable.
 """
 from __future__ import annotations
 
+from zope.interface import implementer
+
 from OpenSSL import SSL
 
 from twisted.internet import ssl
+from twisted.internet.interfaces import IOpenSSLContextFactory
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
@@ -36,6 +39,7 @@ class ClientTLSContext(ssl.ClientContextFactory):
         return SSL.Context(SSL.SSLv23_METHOD)
 
 
+@implementer(IOpenSSLContextFactory)
 class ServerTLSContext:
     """
     SSL Context Factory for server-side connections.

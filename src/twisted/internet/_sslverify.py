@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Dict
+from typing import Any, Callable, Dict, List, Optional
 
 from zope.interface import Interface, implementer
 
@@ -26,6 +26,7 @@ from twisted.internet.interfaces import (
     IAcceptableCiphers,
     ICipher,
     IOpenSSLClientConnectionCreator,
+    IOpenSSLClientConnectionCreatorFactory,
     IOpenSSLContextFactory,
 )
 from twisted.python import log, util
@@ -462,7 +463,7 @@ class Certificate(CertBase):
         return self.dump(crypto.FILETYPE_PEM)
 
     @classmethod
-    def loadPEM(Class, data):
+    def loadPEM(Class, data: bytes) -> Certificate:
         """
         Load a certificate from a PEM-format data string.
 
@@ -1068,7 +1069,10 @@ def _tolerateErrors(wrapped):
     return infoCallback
 
 
-@implementer(IOpenSSLClientConnectionCreator)
+@implementer(
+    IOpenSSLClientConnectionCreatorFactory,
+    IOpenSSLClientConnectionCreator,
+)
 class ClientTLSOptions:
     """
     Client creator for TLS.
@@ -1077,16 +1081,13 @@ class ClientTLSOptions:
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
-    @type _hostname: L{unicode}
 
     @ivar _hostnameBytes: The hostname to verify, decoded into IDNA-encoded
         bytes.  This is passed to APIs which think that hostnames are bytes,
         such as OpenSSL's SNI implementation.
-    @type _hostnameBytes: L{bytes}
 
     @ivar _hostnameASCII: The hostname, as transcoded into IDNA ASCII-range
         unicode code points.  This is pre-transcoded because the
@@ -1094,25 +1095,35 @@ class ClientTLSOptions:
         C{idna} package from PyPI for internationalized domain names, rather
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
-    @type _hostnameASCII: L{unicode}
 
     @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
         Will be L{False} if C{_hostname} is an IP address or L{True} if
         C{_hostname} is a DNSName
-    @type _hostnameIsDnsName: L{bool}
     """
 
-    def __init__(self, hostname, ctx):
+    _ctx: Optional[SSL.Context]
+    _hostname: str
+    _hostnameASCII: str
+    _hostnameIsDnsName: bool
+    _hostnameBytes: bytes
+
+    def __init__(
+        self,
+        hostname: str,
+        context: Optional[SSL.Context],
+        createContext: Callable[[], SSL.Context],
+        configureContext: Callable[[SSL.Context], None],
+        configureConnection: Callable[[SSL.Connection], None],
+    ) -> None:
         """
         Initialize L{ClientTLSOptions}.
 
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
-        @type ctx: L{OpenSSL.SSL.Context}.
+        @param createContext: A function that will create an SSL context.
         """
-        self._ctx = ctx
+        self._createContext = createContext
         self._hostname = hostname
 
         if isIPAddress(hostname) or isIPv6Address(hostname):
@@ -1123,7 +1134,26 @@ class ClientTLSOptions:
             self._hostnameIsDnsName = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
-        ctx.set_info_callback(_tolerateErrors(self._identityVerifyingInfoCallback))
+        self._ctx = context
+        self._createContext = createContext
+        self._configureContext = configureContext
+        self._configureConnection = configureConnection
+
+    def createClientCreator(
+        self,
+        connectionSetupHook: Callable[[SSL.Connection], None],
+        contextSetupHook: Callable[[SSL.Context], None],
+    ) -> IOpenSSLClientConnectionCreator:
+        """
+        Create a client creator.
+        """
+        return ClientTLSOptions(
+            self._hostname,
+            None,
+            self._createContext,
+            contextSetupHook,
+            connectionSetupHook,
+        )
 
     def clientConnectionForTLS(self, tlsProtocol):
         """
@@ -1141,9 +1171,19 @@ class ClientTLSOptions:
         @return: the configured client connection.
         @rtype: L{OpenSSL.SSL.Connection}
         """
+        if self._ctx is None:
+            self._ctx = self._createContext()
+            # Note: remember client options for testing.  See
+            # twisted.internet.test.test_endpoints.tlsHostnameFromEndpoint
+            self._ctx._clientOptions = self
+            self._ctx.set_info_callback(
+                _tolerateErrors(self._identityVerifyingInfoCallback)
+            )
+            self._configureContext(self._ctx)
         context = self._ctx
         connection = SSL.Connection(context, None)
         connection.set_app_data(tlsProtocol)
+        self._configureConnection(connection)
         return connection
 
     def _identityVerifyingInfoCallback(self, connection, where, ret):
@@ -1179,13 +1219,13 @@ class ClientTLSOptions:
 
 
 def optionsForClientTLS(
-    hostname,
-    trustRoot=None,
-    clientCertificate=None,
-    acceptableProtocols=None,
+    hostname: str,
+    trustRoot: Optional[IOpenSSLTrustRoot] = None,
+    clientCertificate: Optional[PrivateCertificate] = None,
+    acceptableProtocols: Optional[List[bytes]] = None,
     *,
-    extraCertificateOptions=None,
-):
+    extraCertificateOptions: Optional[dict[str, Any]] = None,
+) -> ClientTLSOptions:
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1253,7 +1293,13 @@ def optionsForClientTLS(
         acceptableProtocols=acceptableProtocols,
         **extraCertificateOptions,
     )
-    return ClientTLSOptions(hostname, certificateOptions.getContext())
+    return ClientTLSOptions(
+        hostname,
+        None,
+        certificateOptions.getContext,
+        lambda _: None,
+        lambda _: None,
+    )
 
 
 @implementer(IOpenSSLContextFactory)
@@ -1622,7 +1668,7 @@ class OpenSSLCertificateOptions:
     def __setstate__(self, state):
         self.__dict__ = state
 
-    def getContext(self):
+    def getContext(self) -> SSL.Context:
         """
         Return an L{OpenSSL.SSL.Context} object.
         """
