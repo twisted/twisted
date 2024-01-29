@@ -6,7 +6,7 @@ Tests for implementations of L{IReactorWin32Events}.
 """
 
 try:
-    import win32event  # type: ignore[import]
+    import win32event
 except ImportError:
     win32event = None
 

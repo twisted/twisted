@@ -1,0 +1,1 @@
+twisted.internet.process.Process, used by ``reactor.spawnProcess``, now copies the parent environment when the `env=None` argument is passed on Posix systems and ``os.posix_spawnp`` is used internally.

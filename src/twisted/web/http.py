@@ -110,7 +110,7 @@ import warnings
 from email import message_from_bytes
 from email.message import EmailMessage
 from io import BytesIO
-from typing import AnyStr, Callable, List, Optional, Tuple
+from typing import AnyStr, Callable, Dict, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -132,8 +132,6 @@ from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
-
-# twisted imports
 from twisted.web._responses import (
     ACCEPTED,
     BAD_GATEWAY,
@@ -859,7 +857,7 @@ class Request:
     _disconnected = False
     _log = Logger()
 
-    def __init__(self, channel, queued=_QUEUED_SENTINEL):
+    def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
@@ -875,9 +873,9 @@ class Request:
         self.host = self.channel.getHost()
 
         self.requestHeaders: Headers = Headers()
-        self.received_cookies = {}
+        self.received_cookies: Dict[bytes, bytes] = {}
         self.responseHeaders: Headers = Headers()
-        self.cookies = []  # outgoing cookies
+        self.cookies: List[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport
 
         if queued is _QUEUED_SENTINEL:

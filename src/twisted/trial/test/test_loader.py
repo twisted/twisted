@@ -139,7 +139,7 @@ class FileTests(packages.SysPathManglingTest):
 
         self.cleanUpModules()
         self.mangleSysPath(self.newPath)
-        from goodpackage import test_sample as sample2  # type: ignore[import]
+        from goodpackage import test_sample as sample2  # type: ignore[import-not-found]
 
         self.assertIsNot(sample1, sample2)
         assert_that(sample1, looselyResembles(sample2))
@@ -402,7 +402,7 @@ class LoaderTests(packages.SysPathManglingTest):
         self.assertRaises(TypeError, self.loader.loadAnything, "goodpackage")
 
     def test_importErrors(self) -> None:
-        import package  # type: ignore[import]
+        import package  # type: ignore[import-not-found]
 
         suite = self.loader.loadPackage(package, recurse=True)
         result = reporter.Reporter()
@@ -614,7 +614,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
         """
         Verify that packages are loaded in the correct order.
         """
-        import uberpackage  # type: ignore[import]
+        import uberpackage  # type: ignore[import-not-found]
 
         self.loader.sorter = sorter
         suite = self.loader.loadPackage(uberpackage, recurse=True)

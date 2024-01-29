@@ -764,19 +764,20 @@ def _get_default_clock() -> IReactorTime:
 class BufferingTLSTransport(TLSMemoryBIOProtocol):
     """
     A TLS transport implemented by wrapping buffering around a
-    ``TLSMemoryBIOProtocol``.
+    L{TLSMemoryBIOProtocol}.
 
-    Doing many small writes directly to a ``OpenSSL.SSL.Connection``, as
-    implemented in ``TLSMemoryBIOProtocol``, can add significant CPU and
+    Doing many small writes directly to a L{OpenSSL.SSL.Connection}, as
+    implemented in L{TLSMemoryBIOProtocol}, can add significant CPU and
     bandwidth overhead.  Thus, even when writing is possible, small writes will
     get aggregated and written as a single write at the next reactor iteration.
     """
 
-    # Note: An implementation based on composition would be nicer, but there's
-    # close integration between ``ProtocolWrapper`` subclasses like
-    # ``TLSMemoryBIOProtocol`` and the corresponding factory. Composition broke
-    # things like ``TLSMemoryBIOFactory.protocols`` having the correct
-    # instances, whereas subclassing makes that work.
+    # Implementation Note: An implementation based on composition would be
+    # nicer, but there's close integration between L{ProtocolWrapper}
+    # subclasses like L{TLSMemoryBIOProtocol} and the corresponding factory. An
+    # attempt to implement this with broke things like
+    # L{TLSMemoryBIOFactory.protocols} having the correct instances, whereas
+    # subclassing makes that work.
 
     def __init__(
         self,
