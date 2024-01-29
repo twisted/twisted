@@ -1,1 +1,1 @@
-twisted.protocols.tls.BufferingTLSTransport, used by default by twisted.protocols.tls.TLSMemoryBIOFactory, was refactored for improved performance when doing a high number of small writed.
+twisted.protocols.tls.BufferingTLSTransport, used by default by twisted.protocols.tls.TLSMemoryBIOFactory, was refactored for improved performance when doing a high number of small writes.
