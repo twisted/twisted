@@ -15,8 +15,8 @@ from zope.interface.verify import verifyObject
 
 from hypothesis import given, strategies as st
 
-from twisted.internet.task import Clock, deferLater
 from twisted.internet import reactor
+from twisted.internet.task import Clock, deferLater
 from twisted.python.compat import iterbytes
 
 try:
