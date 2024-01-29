@@ -15,7 +15,8 @@ from zope.interface.verify import verifyObject
 
 from hypothesis import given, strategies as st
 
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, deferLater
+from twisted.internet import reactor
 from twisted.python.compat import iterbytes
 
 try:
@@ -686,6 +687,31 @@ class TLSMemoryBIOTests(TestCase):
                 self.transport.writeSequence([b"world"])
 
         return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
+
+    def test_writeUnicodeRaisesTypeError(self):
+        """
+        Writing C{unicode} to L{TLSMemoryBIOProtocol} throws a C{TypeError}.
+        """
+        notBytes = "hello"
+        result = []
+
+        class SimpleSendingProtocol(Protocol):
+            def connectionMade(self):
+                try:
+                    self.transport.write(notBytes)
+                    self.transport.write(b"bytes")
+                    self.transport.loseConnection()
+                except TypeError:
+                    result.append(True)
+                    self.transport.abortConnection()
+
+        def flush_logged_errors():
+            self.assertEqual(len(self.flushLoggedErrors(ConnectionLost, TypeError)), 2)
+
+        d = self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
+        d.addBoth(lambda ign: self.assertEqual(result, [True]))
+        d.addBoth(lambda ign: deferLater(reactor, 0, flush_logged_errors))
+        return d
 
     def test_multipleWrites(self):
         """
