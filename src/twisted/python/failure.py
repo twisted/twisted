@@ -516,7 +516,7 @@ class Failure(BaseException):
         """
         # Note that the actual magic to find the traceback information
         # is done in _findFailure.
-        return g.throw(self.type, self.value, self.tb)
+        return g.throw(self.value.with_traceback(self.tb))
 
     @classmethod
     def _findFailure(cls):

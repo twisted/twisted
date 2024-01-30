@@ -1,0 +1,1 @@
+twisted.internet.defer.inlineCallbacks.returnValue's stack introspection was adjusted for the latest PyPy 7.3.14 release, allowing legacy @inlineCallbacks to run on new PyPY versions.

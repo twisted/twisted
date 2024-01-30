@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-from typing import Dict, Type, TypeVar
+from typing import ClassVar, Dict, Type, TypeVar
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -136,9 +136,9 @@ class Hello(amp.Command):
 
     response = [(b"hello", amp.String()), (b"print", amp.Unicode(optional=True))]
 
-    errors: Dict[Type[Exception], bytes] = {UnfriendlyGreeting: b"UNFRIENDLY"}
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {UnfriendlyGreeting: b"UNFRIENDLY"}
 
-    fatalErrors: Dict[Type[Exception], bytes] = {DeathThreat: b"DEAD"}
+    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {DeathThreat: b"DEAD"}
 
 
 class NoAnswerHello(Hello):
@@ -2136,7 +2136,9 @@ class BaseCommand(amp.Command):
     This provides a command that will be subclassed.
     """
 
-    errors: Dict[Type[Exception], bytes] = {InheritedError: b"INHERITED_ERROR"}
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {
+        InheritedError: b"INHERITED_ERROR"
+    }
 
 
 class InheritedCommand(BaseCommand):
@@ -2153,7 +2155,7 @@ class AddErrorsCommand(BaseCommand):
     """
 
     arguments = [(b"other", amp.Boolean())]
-    errors: Dict[Type[Exception], bytes] = {
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {
         OtherInheritedError: b"OTHER_INHERITED_ERROR"
     }
 
