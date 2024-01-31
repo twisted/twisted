@@ -1,2 +1,2 @@
-twisted.web._newclient.HTTPClientParser.MAX_LENGTH now has the value of 65536
+twisted.web._newclient.HTTPClientParser.MAX_LENGTH now has the value of 65537
 bytes. In previous releases it was 16384 bytes.
