@@ -21,7 +21,6 @@ from twisted.internet.testing import (
     StringTransportWithDisconnection,
 )
 from twisted.logger import globalLogPublisher
-from twisted.protocols.basic import LineReceiver
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 from twisted.web._newclient import (
@@ -962,6 +961,32 @@ class HTTPClientParserTests(TestCase):
         self.assertEquals(event["log_format"], "Ignoring unexpected {code} response")
         self.assertEquals(event["code"], 103)
 
+    def test_headerShortEnough(self):
+        """Test that HTTP responses with header lines up to 65536 bytes long
+        are allowed."""
+        prefix = b"a: "
+        line = prefix + b"a" * (65536 - len(prefix)) + b"\r\n"
+        response = b"HTTP/1.1 200 OK\r\n" + line + b"\r\n"
+        protocol = HTTPClientParser(
+            Request(b"GET", b"/", _boringHeaders, None), lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(response)
+        self.assertEqual(protocol.transport.disconnecting, False)
+
+    def test_headerTooLong(self):
+        """Test that HTTP responses with header lines up to 65536 bytes long
+        are allowed."""
+        prefix = b"a: "
+        line = prefix + b"a" * (65536 - len(prefix) + 1) + b"\r\n"
+        response = b"HTTP/1.1 200 OK\r\n" + line + b"\r\n"
+        protocol = HTTPClientParser(
+            Request(b"GET", b"/", _boringHeaders, None), lambda ign: None
+        )
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(response)
+        self.assertEqual(protocol.transport.disconnecting, True)
+
 
 class SlowRequest:
     """
@@ -1269,7 +1294,7 @@ class HTTP11ClientProtocolTests(TestCase):
         transport.protocol = protocol
         protocol.makeConnection(transport)
 
-        longLine = b"a" * LineReceiver.MAX_LENGTH
+        longLine = b"a" * HTTPClientParser.MAX_LENGTH
         d = protocol.request(Request(b"GET", b"/", _boringHeaders, None))
 
         protocol.dataReceived(

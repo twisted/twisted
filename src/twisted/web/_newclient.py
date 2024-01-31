@@ -362,8 +362,9 @@ class HTTPClientParser(HTTPParser):
     """
 
     # We match the value of the CPython client.
-    # https://github.com/python/cpython/blob/3.12/Lib/http/client.py#L111
-    MAX_LENGTH = 65536
+    # (https://github.com/python/cpython/blob/3.12/Lib/http/client.py#L111)
+    # and add 1 to account for HTTPParser.delimiter being \n instead of \r\n.
+    MAX_LENGTH = 65536 + 1
 
     NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
