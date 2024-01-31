@@ -403,9 +403,6 @@ class NetstringReceiver(protocol.Protocol):
         self.brokenPeer = 1
 
 
-_MAX_LINE_LENGTH = 32768
-
-
 class LineOnlyReceiver(protocol.Protocol):
     """
     A protocol that receives only lines.
@@ -422,7 +419,7 @@ class LineOnlyReceiver(protocol.Protocol):
 
     _buffer = b""
     delimiter = b"\r\n"
-    MAX_LENGTH = _MAX_LINE_LENGTH
+    MAX_LENGTH = 16384
 
     def dataReceived(self, data):
         """
@@ -509,7 +506,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     _buffer = b""
     _busyReceiving = False
     delimiter = b"\r\n"
-    MAX_LENGTH = _MAX_LINE_LENGTH
+    MAX_LENGTH = 16384
 
     def clearLineBuffer(self):
         """

@@ -361,6 +361,10 @@ class HTTPClientParser(HTTPParser):
     @ivar _everReceivedData: C{True} if any bytes have been received.
     """
 
+    # We match the value of the CPython client.
+    # https://github.com/python/cpython/blob/3.12/Lib/http/client.py#L111
+    MAX_LENGTH = 65536
+
     NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
     _transferDecoders = {
