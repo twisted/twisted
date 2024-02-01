@@ -1,2 +1,3 @@
 twisted.web._newclient.HTTPClientParser.MAX_LENGTH now has the value of 65537
-bytes. In previous releases it was 16384 bytes.
+bytes. In previous releases it was 16384 bytes. It now matches the value from
+the CPython HTTP client.
