@@ -10,7 +10,7 @@ class Chat(LineReceiver):
         self.state = "GETNAME"
 
     def connectionMade(self):
-        self.sendLine("What's your name?")
+        self.sendLine(b"What's your name?")
 
     def connectionLost(self, reason):
         if self.name in self.users:
@@ -24,16 +24,18 @@ class Chat(LineReceiver):
 
     def handle_GETNAME(self, name):
         if name in self.users:
-            self.sendLine("Name taken, please choose another.")
+            self.sendLine(b"Name taken, please choose another.")
             return
-        self.sendLine(f"Welcome, {name}!")
+        self.sendLine(f"Welcome, {name.decode('utf-8')}!".encode("utf-8"))
         self.name = name
         self.users[name] = self
         self.state = "CHAT"
 
     def handle_CHAT(self, message):
-        message = f"<{self.name}> {message}"
-        for name, protocol in self.users.iteritems():
+        message = f"<{self.name.decode('utf-8')}> {message.decode('utf-8')}".encode(
+            "utf-8"
+        )
+        for name, protocol in self.users.items():
             if protocol != self:
                 protocol.sendLine(message)
 
