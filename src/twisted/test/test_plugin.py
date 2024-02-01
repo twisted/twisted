@@ -67,7 +67,7 @@ class PluginTests(unittest.TestCase):
         self.originalPlugin = "testplugin"
 
         sys.path.insert(0, self.root.path)
-        import mypackage  # type: ignore[import]
+        import mypackage  # type: ignore[import-not-found]
 
         self.module = mypackage
 
@@ -154,7 +154,7 @@ class PluginTests(unittest.TestCase):
         )
 
         # And it should also match if we import it classicly
-        import mypackage.testplugin as tp  # type: ignore[import]
+        import mypackage.testplugin as tp  # type: ignore[import-not-found]
 
         self.assertIs(realPlugin, tp.TestPlugin)
 
@@ -471,7 +471,7 @@ class DeveloperSetupTests(unittest.TestCase):
         """
         # Import the module we just added to our path.  (Local scope because
         # this package doesn't exist outside of this test.)
-        import plugindummy.plugins  # type: ignore[import]
+        import plugindummy.plugins  # type: ignore[import-not-found]
 
         x = list(plugin.getPlugins(ITestPlugin, plugindummy.plugins))
         return [plug.__name__ for plug in x]  # type: ignore[attr-defined]
@@ -663,7 +663,7 @@ class AdjacentPackageTests(unittest.TestCase):
         sys.path.append(firstDirectory.path)
         sys.path.append(secondDirectory.path)
 
-        import dummy.plugins  # type: ignore[import]
+        import dummy.plugins  # type: ignore[import-not-found]
 
         plugins = list(plugin.getPlugins(ITestPlugin, dummy.plugins))
         self.assertEqual(["first"], [p.__name__ for p in plugins])  # type: ignore[attr-defined]

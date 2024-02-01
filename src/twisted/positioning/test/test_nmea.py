@@ -11,7 +11,7 @@ from typing import Callable, Iterable, TypedDict
 
 from zope.interface import implementer
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 from typing_extensions import Literal, Protocol
 
 from twisted.positioning import base, ipositioning, nmea

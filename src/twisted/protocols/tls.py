@@ -708,7 +708,7 @@ class _AggregateSmallWrites:
         self._write = write
         self._clock = clock
         self._buffer: list[bytes] = []
-        self._bufferLen = 0
+        self._bufferLeft = self.MAX_BUFFER_SIZE
         self._scheduled: Optional[IDelayedCall] = None
 
     def write(self, data: bytes) -> None:
@@ -719,9 +719,9 @@ class _AggregateSmallWrites:
         Accumulating too much data can result in higher memory usage.
         """
         self._buffer.append(data)
-        self._bufferLen += len(data)
+        self._bufferLeft -= len(data)
 
-        if self._bufferLen > self.MAX_BUFFER_SIZE:
+        if self._bufferLeft < 0:
             # We've accumulated enough we should just write it out. No need to
             # schedule a flush, since we just flushed everything.
             self.flush()
@@ -744,7 +744,7 @@ class _AggregateSmallWrites:
     def flush(self) -> None:
         """Flush any buffered writes."""
         if self._buffer:
-            self._bufferLen = 0
+            self._bufferLeft = self.MAX_BUFFER_SIZE
             self._write(b"".join(self._buffer))
             del self._buffer[:]
 
@@ -764,19 +764,20 @@ def _get_default_clock() -> IReactorTime:
 class BufferingTLSTransport(TLSMemoryBIOProtocol):
     """
     A TLS transport implemented by wrapping buffering around a
-    ``TLSMemoryBIOProtocol``.
+    L{TLSMemoryBIOProtocol}.
 
-    Doing many small writes directly to a ``OpenSSL.SSL.Connection``, as
-    implemented in ``TLSMemoryBIOProtocol``, can add significant CPU and
+    Doing many small writes directly to a L{OpenSSL.SSL.Connection}, as
+    implemented in L{TLSMemoryBIOProtocol}, can add significant CPU and
     bandwidth overhead.  Thus, even when writing is possible, small writes will
     get aggregated and written as a single write at the next reactor iteration.
     """
 
-    # Note: An implementation based on composition would be nicer, but there's
-    # close integration between ``ProtocolWrapper`` subclasses like
-    # ``TLSMemoryBIOProtocol`` and the corresponding factory. Composition broke
-    # things like ``TLSMemoryBIOFactory.protocols`` having the correct
-    # instances, whereas subclassing makes that work.
+    # Implementation Note: An implementation based on composition would be
+    # nicer, but there's close integration between L{ProtocolWrapper}
+    # subclasses like L{TLSMemoryBIOProtocol} and the corresponding factory. An
+    # attempt to implement this with broke things like
+    # L{TLSMemoryBIOFactory.protocols} having the correct instances, whereas
+    # subclassing makes that work.
 
     def __init__(
         self,
@@ -787,11 +788,10 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
         actual_write = super().write
         self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
-
-    def write(self, data: bytes) -> None:
-        if isinstance(data, str):  # type: ignore[unreachable]
-            raise TypeError("Must write bytes to a TLS transport, not str.")
-        self._aggregator.write(data)
+        # This is kinda ugly, but speeds things up a lot in a hot path with
+        # lots of small TLS writes. May become unnecessary in Python 3.13 or
+        # later if JIT and/or inlining becomes a thing.
+        self.write = self._aggregator.write  # type: ignore[method-assign]
 
     def writeSequence(self, sequence: Iterable[bytes]) -> None:
         self._aggregator.write(b"".join(sequence))
