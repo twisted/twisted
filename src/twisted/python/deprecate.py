@@ -601,12 +601,19 @@ def warnAboutFunction(offender, warningString):
     """
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
+    # In Python 3.13 line numbers returned by findlinestarts
+    # can be None for bytecode that does not map to source
+    # lines.
     offenderModule = sys.modules[offender.__module__]
     warn_explicit(
         warningString,
         category=DeprecationWarning,
         filename=inspect.getabsfile(offenderModule),
-        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
+        lineno=max(
+            lineNumber
+            for _, lineNumber in findlinestarts(offender.__code__)
+            if lineNumber is not None
+        ),
         module=offenderModule.__name__,
         registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,
