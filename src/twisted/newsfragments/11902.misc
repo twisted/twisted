@@ -1,0 +1,1 @@
+Change typing for twisted.web.server.Request.defaultContentType to allow None.
