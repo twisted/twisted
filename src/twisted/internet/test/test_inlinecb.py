@@ -1020,7 +1020,8 @@ class ForwardTraceBackTests(SynchronousTestCase):
         Several Chained inlineCallbacks gives information about all generators.
 
         A wider test with a 4 chained inline callbacks.
-        Application stack-trace should be reported.
+        Application stack-trace should be reported for Python 3.13, but not
+        earlier versions.
 
         Note that the previous test is testing the simple case, and this one is
         testing the deep recursion case.
