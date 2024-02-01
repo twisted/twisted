@@ -966,7 +966,7 @@ class HTTPClientParserTests(TestCase):
         It allows receiving HTTP header lines up to 65536 bytes long.
         """
         key = b"a"
-        prefix = b"a: "
+        prefix = key + b": "
         value = b"a" * (65536 - len(prefix))
         line = prefix + value + b"\r\n"
         response = b"HTTP/1.1 200 OK\r\n" + line + b"\r\n"
