@@ -79,10 +79,7 @@ def compose(fx: Callable[[_B], _C], fy: Callable[[_A], _B]) -> Callable[[_A], _C
 
 
 # Discard the result of an awaitable and substitute None in its place.
-#
-# Ignore the `Cannot infer type argument 1 of "compose"`
-# https://github.com/python/mypy/issues/6220
-discardResult: Callable[[Awaitable[_A]], Deferred[None]] = compose(  # type: ignore[misc]
+discardResult: Callable[[Awaitable[_A]], Deferred[None]] = compose(
     Deferred.fromCoroutine,
     partial(flip(sequence), succeed(None)),
 )
@@ -114,7 +111,7 @@ def countingCalls(f: Callable[[int], _A]) -> Callable[[], _A]:
     """
     counter = 0
 
-    def g():
+    def g() -> _A:
         nonlocal counter
         try:
             result = f(counter)

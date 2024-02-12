@@ -893,7 +893,6 @@ for name, const in zip(_KEY_NAMES, FUNCTION_KEYS):
 
 
 class ClientProtocol(protocol.Protocol):
-
     terminalFactory = None
     terminal = None
 
@@ -1057,7 +1056,7 @@ class ClientProtocol(protocol.Protocol):
 
             return simple
 
-        for (ch, fName) in (
+        for ch, fName in (
             ("A", "Up"),
             ("B", "Down"),
             ("C", "Forward"),

@@ -192,7 +192,7 @@ has several features:
     error.
 @type ERROR_DESCRIPTION: L{bytes}
 """
-
+from __future__ import annotations
 
 import datetime
 import decimal
@@ -202,7 +202,18 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from zope.interface import Interface, implementer
 
@@ -289,6 +300,9 @@ __all__ = [
     "parse",
     "parseString",
 ]
+
+
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 
 ASK = b"_ask"
@@ -607,7 +621,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -1081,7 +1095,7 @@ class _CommandLocatorMeta(type):
     metaclass.
     """
 
-    _currentClassCommands: "List[Tuple[Command, Callable]]" = []
+    _currentClassCommands: "list[tuple[type[Command], Callable[..., Any]]]" = []
 
     def __new__(cls, name, bases, attrs):
         commands = cls._currentClassCommands[:]
@@ -1683,18 +1697,23 @@ class Descriptor(Integer):
         return outString
 
 
+_Self = TypeVar("_Self")
+
+
 class _CommandMeta(type):
     """
     Metaclass hack to establish reverse-mappings for 'errors' and
     'fatalErrors' as class vars.
     """
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(
+        cls: type[_Self], name: str, bases: tuple[type], attrs: dict[str, object]
+    ) -> Type[Command]:
         reverseErrors = attrs["reverseErrors"] = {}
         er = attrs["allErrors"] = {}
         if "commandName" not in attrs:
             attrs["commandName"] = name.encode("ascii")
-        newtype = type.__new__(cls, name, bases, attrs)
+        newtype: Type[Command] = type.__new__(cls, name, bases, attrs)  # type:ignore
 
         if not isinstance(newtype.commandName, bytes):
             raise TypeError(
@@ -1702,12 +1721,12 @@ class _CommandMeta(type):
                     newtype.commandName
                 )
             )
-        for name, _ in newtype.arguments:
-            if not isinstance(name, bytes):
-                raise TypeError(f"Argument names must be byte strings, got: {name!r}")
-        for name, _ in newtype.response:
-            if not isinstance(name, bytes):
-                raise TypeError(f"Response names must be byte strings, got: {name!r}")
+        for bname, _ in newtype.arguments:
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Argument names must be byte strings, got: {bname!r}")
+        for bname, _ in newtype.response:
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Response names must be byte strings, got: {bname!r}")
 
         errors: Dict[Type[Exception], bytes] = {}
         fatalErrors: Dict[Type[Exception], bytes] = {}
@@ -1715,9 +1734,9 @@ class _CommandMeta(type):
         accumulateClassDict(newtype, "fatalErrors", fatalErrors)
 
         if not isinstance(newtype.errors, dict):
-            newtype.errors = dict(newtype.errors)
+            newtype.errors = dict(newtype.errors)  # type:ignore[unreachable]
         if not isinstance(newtype.fatalErrors, dict):
-            newtype.fatalErrors = dict(newtype.fatalErrors)
+            newtype.fatalErrors = dict(newtype.fatalErrors)  # type:ignore[unreachable]
 
         for v, k in errors.items():
             reverseErrors[k] = v
@@ -1726,13 +1745,13 @@ class _CommandMeta(type):
             reverseErrors[k] = v
             er[v] = k
 
-        for _, name in newtype.errors.items():
-            if not isinstance(name, bytes):
-                raise TypeError(f"Error names must be byte strings, got: {name!r}")
-        for _, name in newtype.fatalErrors.items():
-            if not isinstance(name, bytes):
+        for _, bname in newtype.errors.items():
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Error names must be byte strings, got: {bname!r}")
+        for _, bname in newtype.fatalErrors.items():
+            if not isinstance(bname, bytes):
                 raise TypeError(
-                    f"Fatal error names must be byte strings, got: {name!r}"
+                    f"Fatal error names must be byte strings, got: {bname!r}"
                 )
 
         return newtype
@@ -1781,14 +1800,15 @@ class Command(metaclass=_CommandMeta):
     want one.
     """
 
-    arguments: List[Tuple[bytes, Argument]] = []
-    response: List[Tuple[bytes, Argument]] = []
-    extra: List[Any] = []
-    errors: Dict[Type[Exception], bytes] = {}
-    fatalErrors: Dict[Type[Exception], bytes] = {}
+    commandName: ClassVar[bytes]
+    arguments: ClassVar[List[Tuple[bytes, Argument]]] = []
+    response: ClassVar[List[Tuple[bytes, Argument]]] = []
+    extra: ClassVar[List[Any]] = []
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {}
+    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}
 
-    commandType: "Union[Type[Command], Type[Box]]" = Box
-    responseType: Type[AmpBox] = Box
+    commandType: "ClassVar[Union[Type[Command], Type[Box]]]" = Box
+    responseType: ClassVar[Type[AmpBox]] = Box
 
     requiresAnswer = True
 
@@ -1858,7 +1878,7 @@ class Command(metaclass=_CommandMeta):
         @return: An instance of this L{Command}'s C{commandType}.
         """
         allowedNames = set()
-        for (argName, ignored) in cls.arguments:
+        for argName, ignored in cls.arguments:
             allowedNames.add(_wireNameToPythonIdentifier(argName))
 
         for intendedArg in objects:
@@ -1896,7 +1916,7 @@ class Command(metaclass=_CommandMeta):
         return _stringsToObjects(box, cls.arguments, protocol)
 
     @classmethod
-    def responder(cls, methodfunc):
+    def responder(cls, methodfunc: _T_Callable) -> _T_Callable:
         """
         Declare a method to be a responder for a particular command.
 

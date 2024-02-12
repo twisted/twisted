@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+from __future__ import annotations
 
 __all__ = [
     "SWITCHING",
@@ -100,15 +101,16 @@ __all__ = [
 import base64
 import binascii
 import calendar
-import cgi
 import math
 import os
 import re
 import tempfile
 import time
 import warnings
+from email import message_from_bytes
+from email.message import EmailMessage
 from io import BytesIO
-from typing import AnyStr, Callable, Optional, Tuple
+from typing import AnyStr, Callable, Dict, List, Optional, Tuple
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -126,12 +128,10 @@ from twisted.internet.interfaces import IProtocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import _PY37PLUS, nativeString, networkString
+from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
-
-# twisted imports
 from twisted.web._responses import (
     ACCEPTED,
     BAD_GATEWAY,
@@ -224,15 +224,40 @@ weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
-def _parseHeader(line):
-    # cgi.parse_header requires a str
-    key, pdict = cgi.parse_header(line.decode("charmap"))
+def _parseContentType(line: bytes) -> bytes:
+    """
+    Parse the Content-Type header.
+    """
+    msg = EmailMessage()
+    msg["content-type"] = line.decode("charmap")
+    key = msg.get_content_type()
+    encodedKey = key.encode("charmap")
+    return encodedKey
 
-    # We want the key as bytes, and cgi.parse_multipart (which consumes
-    # pdict) expects a dict of str keys but bytes values
-    key = key.encode("charmap")
-    pdict = {x: y.encode("charmap") for x, y in pdict.items()}
-    return (key, pdict)
+
+class _MultiPartParseException(Exception):
+    """
+    Failed to parse the multipart/form-data payload.
+    """
+
+
+def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
+    """
+    Parse the content of a multipart/form-data request.
+    """
+    result = {}
+    multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
+    msg = message_from_bytes(multiPartHeaders + content)
+    if not msg.is_multipart():
+        raise _MultiPartParseException("Not a multipart.")
+
+    for part in msg.get_payload():
+        name = part.get_param("name", header="content-disposition")
+        if not name:
+            continue
+        payload = part.get_payload(decode=True)
+        result[name.encode("utf8")] = [payload]
+    return result
 
 
 def urlparse(url):
@@ -266,6 +291,9 @@ def urlparse(url):
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """
     Like C{cgi.parse_qs}, but with support for parsing byte strings on Python 3.
+
+    This was created to help with Python 2 to Python 3 migration.
+    Consider using L{urllib.parse.parse_qs}.
 
     @type qs: C{bytes}
     """
@@ -753,7 +781,7 @@ def _getContentFile(length):
     return tempfile.TemporaryFile()
 
 
-_hostHeaderExpression = re.compile(br"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
 @implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
@@ -829,13 +857,13 @@ class Request:
     _disconnected = False
     _log = Logger()
 
-    def __init__(self, channel, queued=_QUEUED_SENTINEL):
+    def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -845,9 +873,9 @@ class Request:
         self.host = self.channel.getHost()
 
         self.requestHeaders: Headers = Headers()
-        self.received_cookies = {}
-        self.responseHeaders = Headers()
-        self.cookies = []  # outgoing cookies
+        self.received_cookies: Dict[bytes, bytes] = {}
+        self.responseHeaders: Headers = Headers()
+        self.cookies: List[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport
 
         if queued is _QUEUED_SENTINEL:
@@ -973,59 +1001,18 @@ class Request:
 
         if self.method == b"POST" and ctype and clength:
             mfd = b"multipart/form-data"
-            key, pdict = _parseHeader(ctype)
-            # This weird CONTENT-LENGTH param is required by
-            # cgi.parse_multipart() in some versions of Python 3.7+, see
-            # bpo-29979. It looks like this will be relaxed and backported, see
-            # https://github.com/python/cpython/pull/8530.
-            pdict["CONTENT-LENGTH"] = clength
+            key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    if _PY37PLUS:
-                        cgiArgs = cgi.parse_multipart(
-                            self.content,
-                            pdict,
-                            encoding="utf8",
-                            errors="surrogateescape",
-                        )
-                    else:
-                        cgiArgs = cgi.parse_multipart(self.content, pdict)
-
-                    if _PY37PLUS:
-                        # The parse_multipart function on Python 3.7+
-                        # decodes the header bytes as iso-8859-1 and
-                        # decodes the body bytes as utf8 with
-                        # surrogateescape -- we want bytes
-                        self.args.update(
-                            {
-                                x.encode("iso-8859-1"): [
-                                    z.encode("utf8", "surrogateescape")
-                                    if isinstance(z, str)
-                                    else z
-                                    for z in y
-                                ]
-                                for x, y in cgiArgs.items()
-                                if isinstance(x, str)
-                            }
-                        )
-                    else:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update(
-                            {x.encode("iso-8859-1"): y for x, y in cgiArgs.items()}
-                        )
-                except Exception as e:
-                    # It was a bad request, or we got a signal.
+                    self.content.seek(0)
+                    content = self.content.read()
+                    self.args.update(_getMultiPartArgs(content, ctype))
+                except _MultiPartParseException:
+                    # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
-                    if isinstance(e, (TypeError, ValueError, KeyError)):
-                        return
-                    else:
-                        # If it's not a userspace error from CGI, reraise
-                        raise
+                    return
 
             self.content.seek(0, 0)
 
@@ -1110,7 +1097,7 @@ class Request:
         """
         return self.received_cookies.get(key)
 
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 
@@ -1818,7 +1805,6 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
-
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
@@ -1902,12 +1888,20 @@ class _ChunkedTransferDecoder:
         state transition this is truncated at the front so that index 0 is
         where the next state shall begin.
 
-    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
-        the buffer at which search for CRLF should resume. Resuming the search
-        at this position avoids doing quadratic work if the chunk length line
-        arrives over many calls to C{dataReceived}.
+    @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
+        tracks the index into the buffer at which search for CRLF should resume.
+        Resuming the search at this position avoids doing quadratic work if the
+        chunk length line arrives over many calls to C{dataReceived}.
 
-        Not used in any other state.
+    @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
+        See https://github.com/twisted/twisted/issues/12014
+
+    @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
+        response.
+    @type _maxTrailerHeadersSize: C{int}
+
+    @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
+    @type _receivedTrailerHeadersSize: C{int}
     """
 
     state = "CHUNK_LENGTH"
@@ -1921,6 +1915,9 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
+        self._trailerHeaders: List[bytearray] = []
+        self._maxTrailerHeadersSize = 2**16
+        self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """
@@ -1997,23 +1994,37 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_TRAILER(self) -> bool:
         """
-        Await the carriage return and line feed characters that follow the
-        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
-        state C{'FINISHED'}.
+        Collect trailer headers if received and finish at the terminal zero-length
+        chunk. Then invoke C{finishCallback} and switch to state C{'FINISHED'}.
 
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
-
-        @raises _MalformedChunkedDataError: when anything other than CRLF is
-            received.
         """
-        if len(self._buffer) < 2:
+        if (
+            self._receivedTrailerHeadersSize + len(self._buffer)
+            > self._maxTrailerHeadersSize
+        ):
+            raise _MalformedChunkedDataError("Trailer headers data is too long.")
+
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex == -1:
+            # Still no end of network line marker found.
+            # Continue processing more data.
             return False
 
-        if not self._buffer.startswith(b"\r\n"):
-            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+        if eolIndex > 0:
+            # A trailer header was detected.
+            self._trailerHeaders.append(self._buffer[0:eolIndex])
+            del self._buffer[0 : eolIndex + 2]
+            self._start = 0
+            self._receivedTrailerHeadersSize += eolIndex + 2
+            return True
+
+        # eolIndex in this part of code is equal to 0
 
         data = memoryview(self._buffer)[2:].tobytes()
+
         del self._buffer[:]
         self.state = "FINISHED"
         self.finishCallback(data)
@@ -2443,14 +2454,38 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
-    def dataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
-        Data was received from the network.  Process it.
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
+
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
         """
-        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
@@ -2462,9 +2497,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
 
-    def rawDataReceived(self, data):
         self.resetTimeout()
 
         try:

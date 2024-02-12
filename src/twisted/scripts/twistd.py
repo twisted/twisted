@@ -18,7 +18,7 @@ if platformType == "win32":
         WindowsApplicationRunner as _SomeApplicationRunner,
     )
 else:
-    from twisted.scripts._twistd_unix import (  # type: ignore[misc]
+    from twisted.scripts._twistd_unix import (  # type: ignore[assignment]
         ServerOptions,
         UnixApplicationRunner as _SomeApplicationRunner,
     )

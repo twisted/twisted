@@ -2,20 +2,21 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
+from typing import Dict
 
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -254,7 +255,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(dict):
+class DistinguishedName(Dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -505,7 +506,7 @@ class Certificate(CertBase):
         """
         return PublicKey(self.original.get_pubkey())
 
-    def dump(self, format=crypto.FILETYPE_ASN1):
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         return crypto.dump_certificate(format, self.original)
 
     def serialNumber(self):

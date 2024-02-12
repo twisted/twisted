@@ -10,7 +10,7 @@ import os
 
 from zope.interface import implementer
 
-import win32api  # type: ignore[import]
+import win32api
 
 from twisted.internet import _pollingfile, main
 from twisted.internet.interfaces import (
@@ -30,7 +30,6 @@ class Win32PipeAddress:
 
 @implementer(ITransport, IConsumer, IPushProducer)
 class StandardIO(_pollingfile._PollingTimer):
-
     disconnecting = False
     disconnected = False
 

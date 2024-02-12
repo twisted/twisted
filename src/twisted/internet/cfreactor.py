@@ -9,6 +9,7 @@ CoreFoundation main loop used by macOS.
 This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
 """
+from __future__ import annotations
 
 __all__ = ["install", "CFReactor"]
 
@@ -16,7 +17,7 @@ import sys
 
 from zope.interface import implementer
 
-from CFNetwork import (  # type: ignore[import]
+from CFNetwork import (
     CFSocketCreateRunLoopSource,
     CFSocketCreateWithNative,
     CFSocketDisableCallBacks,
@@ -29,7 +30,7 @@ from CFNetwork import (  # type: ignore[import]
     kCFSocketReadCallBack,
     kCFSocketWriteCallBack,
 )
-from CoreFoundation import (  # type: ignore[import]
+from CoreFoundation import (
     CFAbsoluteTimeGetCurrent,
     CFRunLoopAddSource,
     CFRunLoopAddTimer,

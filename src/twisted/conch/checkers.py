@@ -11,7 +11,7 @@ import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import IO, Callable, Iterable, Iterator, Mapping, Optional, Tuple, cast
+from typing import IO, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, cast
 
 from zope.interface import Interface, implementer, providedBy
 
@@ -43,7 +43,7 @@ class UserRecord(Tuple[str, str, int, int, str, str, str]):
     """
 
     @property
-    def pw_dir(self) -> str:
+    def pw_dir(self) -> str:  # type: ignore[empty-body]
         ...
 
 
@@ -436,7 +436,7 @@ def readAuthorizedKeyFile(
 
 
 def _keysFromFilepaths(
-    filepaths: Iterable[FilePath], parseKey: Callable[[bytes], keys.Key]
+    filepaths: Iterable[FilePath[Any]], parseKey: Callable[[bytes], keys.Key]
 ) -> Iterable[keys.Key]:
     """
     Helper function that turns an iterable of filepaths into a generator of

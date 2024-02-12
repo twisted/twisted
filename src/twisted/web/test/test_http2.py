@@ -33,12 +33,12 @@ skipH2 = None
 try:
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
-    import h2  # type: ignore[import]
-    import h2.errors  # type: ignore[import]
-    import h2.exceptions  # type: ignore[import]
+    import h2
+    import h2.errors
+    import h2.exceptions
     import hyperframe
-    import priority  # type: ignore[import]
-    from hpack.hpack import Decoder, Encoder  # type: ignore[import]
+    import priority
+    from hpack.hpack import Decoder, Encoder
 
     from twisted.web._http2 import H2Connection
 except ImportError:
@@ -2288,7 +2288,7 @@ class H2FlowControlTests(unittest.TestCase, HTTP2TestHelpers):
         # Send the request, but instead of the last frame send a RST_STREAM
         # frame instead. This needs to be very long to actually force the
         # WINDOW_UPDATE frames out.
-        frameData = [b"\x00" * (2 ** 14)] * 4
+        frameData = [b"\x00" * (2**14)] * 4
         bodyLength = f"{sum(len(data) for data in frameData)}"
         headers = self.postRequestHeaders[:-1] + [("content-length", bodyLength)]
         frames = buildRequestFrames(
@@ -2871,7 +2871,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Advance the clock an arbitrarily long way, and confirm it never
         # aborts.
-        reactor.advance(2 ** 32)
+        reactor.advance(2**32)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
 

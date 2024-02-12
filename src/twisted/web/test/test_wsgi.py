@@ -806,6 +806,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'wsgi.url_scheme'} key of the C{environ} C{dict} passed to the
         application has the request URL scheme.
         """
+
         # XXX Does this need to be different if the request is for an absolute
         # URL?
         def channelFactory():

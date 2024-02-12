@@ -30,7 +30,10 @@ except ImportError:
 else:
     try:
         tkinter.Tk().destroy()
-    except tkinter.TclError as e:
+    except (tkinter.TclError, RuntimeError) as e:
+        # On GitHub Action the macOS Python might not support the version of TK
+        # provided by the OS and it will raise a RuntimeError
+        # See: https://github.com/actions/setup-python/issues/649
         doSkip = True
         skipReason = "Can't test Tkinter: " + str(e)
 
@@ -41,16 +44,16 @@ class ScriptTests(TestCase, ScriptTestsMixin):
     Tests for the Conch scripts.
     """
 
-    def test_conch(self):
+    def test_conch(self) -> None:
         self.scriptTest("conch/conch")
 
-    def test_cftp(self):
+    def test_cftp(self) -> None:
         self.scriptTest("conch/cftp")
 
-    def test_ckeygen(self):
+    def test_ckeygen(self) -> None:
         self.scriptTest("conch/ckeygen")
 
-    def test_tkconch(self):
+    def test_tkconch(self) -> None:
         self.scriptTest("conch/tkconch")
 
 
