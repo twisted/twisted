@@ -907,12 +907,13 @@ class NonLocalExitTests(TestCase):
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
-    def test_forwardTracebacks(self):
+    @skipIf(sys.version_info > (3, 12), 'applies to Python 3.12 and older')
+    def test_forwardTracebacks_312(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
         from generator to generator.
 
-        A first simple test with a couple of inline callbacks.
+        A first simple test with a couple of inline callbacks for Python 3.12 and older.
         """
 
         @inlineCallbacks
@@ -931,7 +932,80 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    def test_forwardLotsOfTracebacks(self):
+    @skipIf(sys.version_info < (3, 13), 'new in Python 3.13')
+    def test_forwardTracebacks_313(self):
+        """
+        Chained inlineCallbacks are forwarding the traceback information
+        from generator to generator.
+
+        A first simple test with a couple of inline callbacks for Python 3.13 and later.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception("Error Marker")
+
+        @inlineCallbacks
+        def calling():
+            yield erroring()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("yield erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertIn("Error Marker", tb)
+
+    @skipIf(sys.version_info > (3, 12), 'applies to Python 3.12 and older')
+    def test_forwardLotsOfTracebacks_312(self):
+        """
+        Several Chained inlineCallbacks gives information about all generators.
+
+        A wider test with 4 chained inline callbacks.
+
+        Application stack-trace should not be reported.
+
+        Note that the previous test is testing the simple case, and this one is
+        testing the deep recursion case.
+
+        That case needs specific code in failure.py to accomodate to stack
+        breakage introduced by throwExceptionIntoGenerator.
+
+        Hence we keep the two tests in order to sort out which code we
+        might have regression in.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception("Error Marker")
+
+        @inlineCallbacks
+        def calling3():
+            yield erroring()
+
+        @inlineCallbacks
+        def calling2():
+            yield calling3()
+
+        @inlineCallbacks
+        def calling():
+            yield calling2()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("in erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertIn("in calling2", tb)
+        self.assertIn("in calling3", tb)
+        self.assertNotIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("Error Marker", tb)
+        self.assertIn("in erroring", f.getTraceback())
+
+    @skipIf(sys.version_info < (3, 13), 'new in Python 3.13')
+    def test_forwardLotsOfTracebacks_313(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
 
@@ -1054,7 +1128,8 @@ class ForwardTraceBackTests(SynchronousTestCase):
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in calling", tb)
-        self.assertIn("calling2", tb)
+        self.assertIn("yield calling2", tb)
+        self.assertIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
 
 
