@@ -230,9 +230,9 @@ class ForwardTraceBackTests(SynchronousTestCase):
         """
         Several Chained inlineCallbacks gives information about all generators.
 
-        A wider test with 4 chained inline callbacks. Only the start of the
-        callback chain (calling) and its callback (calling2) are reported in
-        the traceback text.
+        A wider test with 4 chained inline callbacks. Only the first callback
+        in the chain (calling) and its callback (calling2) are reported in the
+        traceback text.
 
         Application stack-trace should be reported for Python 3.13, but not
         earlier versions.
@@ -268,8 +268,8 @@ class ForwardTraceBackTests(SynchronousTestCase):
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in calling", tb)
-        self.assertNotIn("in calling3", tb)
         self.assertIn("yield calling2", tb)
+        self.assertNotIn("in calling3", tb)
         self.assertIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
 
