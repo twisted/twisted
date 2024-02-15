@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from ._synctest import Todo
 
 try:
-    from subunit import TestProtocolClient  # type: ignore[import]
+    from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
 
@@ -919,7 +919,7 @@ class _Win32Colorizer:
     """
 
     def __init__(self, stream):
-        from win32console import (  # type: ignore[import]
+        from win32console import (
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
@@ -955,7 +955,7 @@ class _Win32Colorizer:
             screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes  # type: ignore[import]
+        import pywintypes
 
         try:
             screenBuffer.SetConsoleTextAttribute(
