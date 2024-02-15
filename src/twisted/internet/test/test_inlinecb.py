@@ -932,7 +932,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    @skipIf(sys.version_info < (3, 13), "new in Python 3.13")
+    @skipIf(sys.version_info < (3, 13), "Needs Python 3.13 or newer")
     def test_forwardTracebacks_313(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
