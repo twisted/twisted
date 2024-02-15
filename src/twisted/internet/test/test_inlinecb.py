@@ -1004,7 +1004,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
 
-    @skipIf(sys.version_info < (3, 13), "new in Python 3.13")
+    @skipIf(sys.version_info < (3, 13), "Needs Python 3.13 or newer")
     def test_forwardLotsOfTracebacks_313(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
