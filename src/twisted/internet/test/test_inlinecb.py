@@ -928,7 +928,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         d = calling()
         f = self.failureResultOf(d)
         tb = f.getTraceback()
-        self.assertIn("erroring", tb)
+        self.assertIn("in erroring", tb)
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
