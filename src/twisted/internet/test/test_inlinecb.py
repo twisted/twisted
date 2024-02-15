@@ -907,7 +907,7 @@ class NonLocalExitTests(TestCase):
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
-    @skipIf(sys.version_info > (3, 12), "applies to Python 3.12 and older")
+    @skipIf(sys.version_info > (3, 12), "Needs Python 3.12 or older")
     def test_forwardTracebacks_312(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
