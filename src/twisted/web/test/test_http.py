@@ -2890,6 +2890,22 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
 
+    def test_setResponseCode418(self):
+        """
+        L{http.Request.setResponseCode} supports RFC 2324 section 2.3.2
+        418 response code and will automatically set the associated message.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+
+        req.setResponseCode(http.IM_A_TEAPOT)
+        req.write(b"")
+
+        self.assertEqual(
+            channel.transport.written.getvalue().splitlines()[0],
+            b"(no clientproto yet) 418 I'm a teapot",
+        )
+
     def test_setLastModifiedNeverSet(self):
         """
         When no previous value was set and no 'if-modified-since' value was
