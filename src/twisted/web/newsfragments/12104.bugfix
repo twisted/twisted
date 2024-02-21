@@ -1,0 +1,2 @@
+The dictionary twisted.web.http.RESPONSES correctly returns `I'm a teapot`
+as default message for the status code 418.
