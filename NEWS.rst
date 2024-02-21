@@ -8,6 +8,94 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 24.2.0.rc1 (2024-02-21)
+===============================
+
+Bugfixes
+--------
+
+- twisted.logger.formatEvent now honors dotted method names, not just flat
+  function names, in format strings, as it has long been explicitly documented to
+  do.  So, you will now get the expected result from `formatEvent("here's the
+  result of calling a method at log-format time: {obj.method()}", obj=...)` (#9347)
+- twisted.web.http.HTTPChannel now ignores the trailer headers provided in the last chunk of a chunked encoded response, rather than raising an exception. (#11997)
+- twisted.protocols.tls.BufferingTLSTransport, used by default by twisted.protocols.tls.TLSMemoryBIOFactory, was refactored for improved performance when doing a high number of small writes. (#12011)
+- twisted.python.failure.Failure now throws exception for generators without triggering a deprecation warnings on Python 3.12. (#12026)
+- twisted.internet.process.Process, used by ``reactor.spawnProcess``, now copies the parent environment when the `env=None` argument is passed on Posix systems and ``os.posix_spawnp`` is used internally. (#12068)
+- twisted.internet.defer.inlineCallbacks.returnValue's stack introspection was adjusted for the latest PyPy 7.3.14 release, allowing legacy @inlineCallbacks to run on new PyPY versions. (#12084)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.reporter.TestRun.startTest() is no longer called for tests
+  with skip annotation or skip attribute for Python 3.12.1 or newer.
+  This is the result of upstream Python gh-106584 change.
+  The behavior is not change in 3.12.0 or older. (#12052)
+
+
+Misc
+----
+
+- #11902, #12018, #12023, #12031, #12032, #12052, #12056, #12067, #12076, #12078, #12087, #12095
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- The documentation for twisted.web.client.CookieAgent no longer references
+  long-deprecated ``cookielib`` and ``urllib2`` standard library modules. (#12044)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.http.Request now parses the `multipart/form-data` using `email.message_from_bytes`.
+  The usage of `cgi.parse_multipart` was removed as the `cgi` module will be removed in Python 3.13. (#11848)
+
+
+Misc
+~~~~
+
+- #12015
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- The documented IRC example was updated for Python3 usage. (#12070)
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 23.10.0 (2023-10-31)
 ============================
 
