@@ -127,7 +127,9 @@ class NonLocalExitTests(TestCase):
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
-    @skipIf(sys.version_info > (3, 12), "Needs Python 3.12 or older")
+    HAVE_PY3_12_OR_OLDER = sys.version_info < (3, 13)
+
+    @skipIf(not HAVE_PY3_12_OR_OLDER, "Needs Python 3.12 or older")
     def test_forwardTracebacks_312(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
@@ -152,7 +154,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    @skipIf(sys.version_info < (3, 13), "Needs Python 3.13 or newer")
+    @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
     def test_forwardTracebacks_313(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
@@ -177,7 +179,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    @skipIf(sys.version_info > (3, 12), "Needs Python 3.12 or older")
+    @skipIf(not HAVE_PY3_12_OR_OLDER, "Needs Python 3.12 or older")
     def test_forwardLotsOfTracebacks_312(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
@@ -225,7 +227,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
 
-    @skipIf(sys.version_info < (3, 13), "Needs Python 3.13 or newer")
+    @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
     def test_forwardLotsOfTracebacks_313(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
