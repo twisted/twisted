@@ -8,8 +8,11 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 24.2.0.rc1 (2024-02-21)
-===============================
+Twisted 24.2.0 (2024-02-28)
+===========================
+
+This release supports PyPy v7.3.14.
+
 
 Bugfixes
 --------
