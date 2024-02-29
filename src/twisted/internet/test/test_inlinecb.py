@@ -993,14 +993,14 @@ class ForwardTraceBackTests(SynchronousTestCase):
             yield calling3()
 
         @inlineCallbacks
-        def calling():
+        def calling1():
             yield calling2()
 
-        d = calling()
+        d = calling1()
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in erroring", tb)
-        self.assertIn("in calling", tb)
+        self.assertIn("in calling1", tb)
         self.assertIn("in calling2", tb)
         self.assertIn("in calling3", tb)
         self.assertNotIn("throwExceptionIntoGenerator", tb)
@@ -1010,7 +1010,8 @@ class ForwardTraceBackTests(SynchronousTestCase):
     @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
     def test_forwardLotsOfTracebacks_313(self):
         """
-        Several Chained inlineCallbacks gives information about all generators.
+        Several Chained inlineCallbacks gives information about all generators
+        in prior versions, but tracebacks are more sparse in Python 3.13.
 
         A wider test with 4 chained inline callbacks. Only the first callback
         in the chain (calling) and its callback (calling2) are reported in the
@@ -1099,8 +1100,9 @@ class ForwardTraceBackTests(SynchronousTestCase):
         Several Chained inlineCallbacks gives information about all generators.
 
         A wider test with a 4 chained inline callbacks.
-        Application stack-trace should be reported for Python 3.13, but not
-        earlier versions.
+        Application stack-trace will be reported at the point where the callback
+        chain yields the exception, the rest of the callback chain will not be
+        included in the traceback.
 
         Note that the previous test is testing the simple case, and this one is
         testing the deep recursion case.
@@ -1126,13 +1128,13 @@ class ForwardTraceBackTests(SynchronousTestCase):
             yield calling3()
 
         @inlineCallbacks
-        def calling():
+        def calling1():
             yield calling2()
 
-        d = calling()
+        d = calling1()
         f = self.failureResultOf(d)
         tb = f.getTraceback()
-        self.assertIn("in calling", tb)
+        self.assertIn("in calling1", tb)
         self.assertIn("yield calling2", tb)
         self.assertNotIn("in calling3", tb)
         self.assertIn("throwExceptionIntoGenerator", tb)
