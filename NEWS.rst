@@ -11,6 +11,8 @@ https://twisted.org/trac/ticket/<number>
 Twisted 24.3.0 (2024-03-01)
 ===========================
 
+This release supports PyPy v7.3.14.
+
 Bugfixes
 --------
 
