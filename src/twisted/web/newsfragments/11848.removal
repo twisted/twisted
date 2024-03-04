@@ -1,2 +1,0 @@
-twisted.web.http.Request now parses the `multipart/form-data` using `email.message_from_bytes`.
-The usage of `cgi.parse_multipart` was removed as the `cgi` module will be removed in Python 3.13.

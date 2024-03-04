@@ -1,1 +1,0 @@
-twisted.python.failure.Failure now throws exception for generators without triggering a deprecation warnings on Python 3.12.

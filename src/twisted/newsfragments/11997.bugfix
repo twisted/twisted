@@ -1,1 +1,0 @@
-twisted.web.http.HTTPChannel now ignores the trailer headers provided in the last chunk of a chunked encoded response, rather than raising an exception.
