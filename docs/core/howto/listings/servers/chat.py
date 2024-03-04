@@ -32,9 +32,7 @@ class Chat(LineReceiver):
         self.state = "CHAT"
 
     def handle_CHAT(self, message):
-        message = f"<{self.name.decode('utf-8')}> {message.decode('utf-8')}".encode(
-            "utf-8"
-        )
+        message = b"<" + self.name + b"> " + message
         for name, protocol in self.users.items():
             if protocol != self:
                 protocol.sendLine(message)
