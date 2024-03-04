@@ -137,7 +137,7 @@ jobs:
           # Just Python 3.13 alpha with default settings.
           # For now, no dependencies as cffi doesn't work on 3.13.
           # No coverage also.
-          - python-version: '3.13.0-alpha.3'
+          - python-version: '3.13.0-alpha.4'
             tox-env: 'nodeps-nocov-posix'
             job-name: 'nodeps-nocov-3.13'
             skip-coverage: yes
