@@ -54,13 +54,7 @@ from weakref import WeakKeyDictionary
 from zope.interface import implementer
 
 # Win32 imports
-from win32file import (  # type: ignore[import]
-    FD_ACCEPT,
-    FD_CLOSE,
-    FD_CONNECT,
-    FD_READ,
-    WSAEventSelect,
-)
+from win32file import FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_READ, WSAEventSelect
 
 try:
     # WSAEnumNetworkEvents was added in pywin32 215
@@ -77,8 +71,8 @@ except ImportError:
         return {FD_READ}
 
 
-import win32gui  # type: ignore[import]
-from win32event import (  # type: ignore[import]
+import win32gui  # type: ignore[import-untyped]
+from win32event import (
     QS_ALLINPUT,
     WAIT_OBJECT_0,
     WAIT_TIMEOUT,

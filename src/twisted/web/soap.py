@@ -16,7 +16,7 @@ Pluggable method lookup policies.
 """
 
 # SOAPpy
-import SOAPpy  # type: ignore[import]
+import SOAPpy
 
 from twisted.internet import defer
 

@@ -303,7 +303,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module  # type: ignore[import]
+        from package import module  # type: ignore[import-not-found]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -433,7 +433,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module  # type: ignore[import]
+        from twisted_private_helper import module  # type: ignore[import-not-found]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -504,7 +504,7 @@ def callTestFunction():
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module  # type: ignore[import]
+        from twisted_renamed_helper import module  # type: ignore[import-not-found]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
