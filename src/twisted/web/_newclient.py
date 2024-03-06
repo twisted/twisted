@@ -30,12 +30,7 @@ import re
 
 from zope.interface import implementer
 
-from twisted.internet.defer import (
-    CancelledError,
-    Deferred,
-    fail,
-    succeed,
-)
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
