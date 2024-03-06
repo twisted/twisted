@@ -34,7 +34,6 @@ from twisted.internet.defer import (
     CancelledError,
     Deferred,
     fail,
-    maybeDeferred,
     succeed,
 )
 from twisted.internet.error import ConnectionDone
@@ -929,6 +928,7 @@ class Request:
                 self._writeToEmptyBodyContentLength(transport)
             else:
                 self._writeHeaders(transport, None)
+            return succeed(None)
         elif self.bodyProducer.length is UNKNOWN_LENGTH:
             return self._writeToBodyProducerChunked(transport)
         else:
@@ -1511,7 +1511,10 @@ class HTTP11ClientProtocol(Protocol):
             return fail(RequestNotSent())
 
         self._state = "TRANSMITTING"
-        _requestDeferred = maybeDeferred(request.writeTo, self.transport)
+        try:
+            _requestDeferred = request.writeTo(self.transport)
+        except BaseException:
+            _requestDeferred = fail()
 
         def cancelRequest(ign):
             # Explicitly cancel the request's deferred if it's still trying to
