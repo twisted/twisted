@@ -1405,6 +1405,11 @@ class TransportProxyProducer:
             self._producer.loseConnection()
 
 
+# Pre-created error and failure, since they are used for every request:
+_DONE = ConnectionDone("synthetic!")
+_DONE_FAILURE = Failure(_DONE)
+
+
 class HTTP11ClientProtocol(Protocol):
     """
     L{HTTP11ClientProtocol} is an implementation of the HTTP 1.1 client
@@ -1583,14 +1588,13 @@ class HTTP11ClientProtocol(Protocol):
         if self._parser is None:
             return
 
-        reason = ConnectionDone("synthetic!")
         connHeaders = self._parser.connHeaders.getRawHeaders(b"connection", ())
         if (
             (b"close" in connHeaders)
             or self._state != "QUIESCENT"
             or not self._currentRequest.persistent
         ):
-            self._giveUp(Failure(reason))
+            self._giveUp(_DONE_FAILURE)
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
@@ -1605,7 +1609,7 @@ class HTTP11ClientProtocol(Protocol):
                 # keeping persistent connections around is an optimisation:
                 self._log.failure("")
                 self.transport.loseConnection()
-            self._disconnectParser(reason)
+            self._disconnectParser(_DONE)
 
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
 
