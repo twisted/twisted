@@ -1,0 +1,1 @@
+The HTTP client now runs faster by using a little less CPU.
