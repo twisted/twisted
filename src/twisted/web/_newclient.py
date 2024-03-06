@@ -388,6 +388,11 @@ class HTTPClientParser(HTTPParser):
         b'HTTP/1.1'.  Returns (protocol, major, minor).  Will raise ValueError
         on bad syntax.
         """
+        # Vast majority of the time this will be the response, so just
+        # immediately return the result:
+        if strversion == b"HTTP/1.1":
+            return (b"HTTP", 1, 1)
+
         try:
             proto, strnumber = strversion.split(b"/")
             major, minor = strnumber.split(b".")
