@@ -2557,7 +2557,11 @@ class LogTests(unittest.SynchronousTestCase):
 
         def _subErrorLogWithInnerFrameCycle() -> None:
             d: Deferred[int] = Deferred()
-            d.addCallback(lambda x, d=d: 1 // 0)
+
+            def unusedCycle(x: int, d: Deferred[int] = d) -> int:
+                return 1 // 0
+
+            d.addCallback(unusedCycle)
             # Set a self deference on to create a cycle
             d._d = d  # type: ignore[attr-defined]
             d.callback(1)
