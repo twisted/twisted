@@ -754,6 +754,35 @@ class Failure(BaseException):
         """
         self.printTraceback(file, elideFrameworkCode, detail="verbose")
 
+    def _freeze(self) -> "_FrozenFailure":
+        """
+        Create a frozen instance, consuming this one.
+        """
+        result = _FrozenFailure.__new__(_FrozenFailure)
+        result.__dict__ = self.__dict__
+        # Destroy this failure, just to be sure:
+        self.__dict__ = {}
+        return result
+
+
+class _FrozenFailure(Failure):
+    """
+    A L{Failure} that shouldn't be mutated.
+    """
+
+    def __setattr__(self, key, value):
+        if key == "__dict__":
+            object.__setattr__(self, key, value)
+            return
+        raise RuntimeError(
+            f"Tried to set {key} to {value}, but this object should not be mutated"
+        )
+
+    def __delattr__(self, key):
+        raise RuntimeError(
+            f"Tried to delete attribute {key}, but this object should not be mutated"
+        )
+
 
 def _safeReprVars(varsDictItems):
     """

@@ -1052,7 +1052,7 @@ def makeStatefulDispatcher(name, template):
 _ClientRequestProxy = proxyForInterface(IClientRequest)
 
 # Pre-create this since it gets created for every response.
-_RESPONSE_DONE_FAILURE = Failure(ResponseDone("Response body fully received"))
+_RESPONSE_DONE_FAILURE = Failure(ResponseDone("Response body fully received"))._freeze()
 
 
 @implementer(IResponse)
@@ -1410,7 +1410,7 @@ class TransportProxyProducer:
 
 # Pre-created error and failure, since they are used for every request:
 _DONE = ConnectionDone("synthetic!")
-_DONE_FAILURE = Failure(_DONE)
+_DONE_FAILURE = Failure(_DONE)._freeze()
 
 
 class HTTP11ClientProtocol(Protocol):
