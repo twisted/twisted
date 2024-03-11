@@ -6,6 +6,8 @@ Simple insults-based widget library
 @author: Jp Calderone
 """
 
+from __future__ import annotations
+
 import array
 
 from twisted.conch.insults import helper, insults
