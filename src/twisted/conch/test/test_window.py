@@ -86,31 +86,31 @@ class SelectionTests(TestCase):
         """
         seq: list[bytes] = [f"{_num}".encode("ascii") for _num in range(10)]
         self.widget = Selection(seq, None)
-        self.widget.height = 10  # type: ignore[assignment]
+        self.widget.height = 10
         self.widget.focusedIndex = 5
 
-    def test_selection_down_arrow(self) -> None:
+    def test_selectionDownArrow(self) -> None:
         """
         Send DOWN_ARROW to select element just below the current one.
         """
         self.widget.keystrokeReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
         self.assertIs(self.widget.focusedIndex, 6)
 
-    def test_selection_up_arrow(self) -> None:
+    def test_selectionUpArrow(self) -> None:
         """
         Send UP_ARROW to select element just above the current one.
         """
         self.widget.keystrokeReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
         self.assertIs(self.widget.focusedIndex, 4)
 
-    def test_selection_pgdn(self) -> None:
+    def test_selectionPGDN(self) -> None:
         """
         Send PGDN to select element one page down (here: last element).
         """
         self.widget.keystrokeReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
         self.assertIs(self.widget.focusedIndex, 9)
 
-    def test_selection_pgup(self) -> None:
+    def test_selectionPGUP(self) -> None:
         """
         Send PGUP to select element one page up (here: first element).
         """
@@ -128,22 +128,22 @@ class RecordingWidget(Widget):
         Widget.__init__(self)
         self.triggered: list[str] = []
 
-    def func_F1(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_F1(self, modifier: str) -> None:
         self.triggered.append("F1")
 
-    def func_HOME(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_HOME(self, modifier: str) -> None:
         self.triggered.append("HOME")
 
-    def func_DOWN_ARROW(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_DOWN_ARROW(self, modifier: str) -> None:
         self.triggered.append("DOWN_ARROW")
 
-    def func_UP_ARROW(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_UP_ARROW(self, modifier: str) -> None:
         self.triggered.append("UP_ARROW")
 
-    def func_PGDN(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_PGDN(self, modifier: str) -> None:
         self.triggered.append("PGDN")
 
-    def func_PGUP(self, modifier) -> None:  # type: ignore[no-untyped-def]
+    def func_PGUP(self, modifier: str) -> None:
         self.triggered.append("PGUP")
 
 
@@ -152,50 +152,21 @@ class WidgetFunctionKeyTests(TestCase):
     Call functionKeyReceived with key values from insults.ServerProtocol
     """
 
-    def test_widget_function_key_f1(self) -> None:
+    def test_functionKeyReceivedDispatch(self) -> None:
         """
-        Widget receives F1 key.
+        L{Widget.functionKeyReceived} dispatches its input, a constant on
+        ServerProtocol, to a matched C{func_KEY} method.
         """
         widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.F1, None)  # type: ignore[attr-defined]
-        self.assertEqual(["F1"], widget.triggered)
 
-    def test_widget_function_key_home(self) -> None:
-        """
-        Widget receives HOME key.
-        """
-        widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.HOME, None)  # type: ignore[attr-defined]
-        self.assertEqual(["HOME"], widget.triggered)
+        def checkOneKey(key: str) -> None:
+            widget.functionKeyReceived(getattr(ServerProtocol, key), None)
+            self.assertEqual([key], widget.triggered)
+            widget.triggered.clear()
 
-    def test_widget_function_key_down_arrow(self) -> None:
-        """
-        Widget receives DOWN_ARROW key.
-        """
-        widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.DOWN_ARROW, None)  # type: ignore[attr-defined]
-        self.assertEqual(["DOWN_ARROW"], widget.triggered)
-
-    def test_widget_function_key_up_arrow(self) -> None:
-        """
-        Widget receives UP_ARROW key.
-        """
-        widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.UP_ARROW, None)  # type: ignore[attr-defined]
-        self.assertEqual(["UP_ARROW"], widget.triggered)
-
-    def test_widget_function_key_pgdn(self) -> None:
-        """
-        Widget receives PGDN key.
-        """
-        widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.PGDN, None)  # type: ignore[attr-defined]
-        self.assertEqual(["PGDN"], widget.triggered)
-
-    def test_widget_function_key_pgup(self) -> None:
-        """
-        Widget receives PGUP key.
-        """
-        widget = RecordingWidget()
-        widget.functionKeyReceived(ServerProtocol.PGUP, None)  # type: ignore[attr-defined]
-        self.assertEqual(["PGUP"], widget.triggered)
+        checkOneKey("F1")
+        checkOneKey("HOME")
+        checkOneKey("DOWN_ARROW")
+        checkOneKey("UP_ARROW")
+        checkOneKey("PGDN")
+        checkOneKey("PGUP")

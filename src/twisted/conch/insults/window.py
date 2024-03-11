@@ -47,7 +47,8 @@ class Widget:
     focused = False
     parent = None
     dirty = False
-    width = height = None
+    width: int | None = None
+    height: int | None = None
 
     def repaint(self):
         if not self.dirty:
@@ -109,7 +110,12 @@ class Widget:
         name = keyID
         if not isinstance(keyID, str):
             name = name.decode("utf-8")
-        func = getattr(self, "func_" + name[1:-1], None)
+
+        # Peel off the square brackets added by the computed definition of
+        # twisted.conch.insults.insults.FUNCTION_KEYS.
+        methodName = "func_" + name[1:-1]
+
+        func = getattr(self, methodName, None)
         if func is not None:
             func(modifier)
 
