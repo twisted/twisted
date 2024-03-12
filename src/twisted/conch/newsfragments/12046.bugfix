@@ -1,0 +1,1 @@
+twisted.conch.insults.window.Widget.functionKeyReceived now dispatches functional key events to corresponding `func_KEYNAME` methods, where `KEYNAME` can be `F1`, `F2`, `HOME`, `UP_ARROW` etc. This is a regression introduced with #8214 in Twisted 16.5.0, where events changed from `const` objects to bytestrings in square brackets like `[F1]`.
