@@ -1,1 +1,1 @@
-The HTTP client now runs faster by using a little less CPU.
+twisted.web.client.HTTPConnectionPool used by HTTP clients now runs faster by using a little less CPU.
