@@ -1032,3 +1032,20 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             self._throwIntoGenerator(f, g)
         except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)
+
+    def test_failure_without_traceback(self):
+        """
+        C{Failure.without_traceback(exc)} gives the same result as
+        C{Failure(exc)}.
+        """
+        exc = ZeroDivisionError("hello")
+        dict1 = failure.Failure(exc).__dict__.copy()
+        failure2 = failure.Failure.without_traceback(exc)
+        self.assertIsInstance(failure2, failure.Failure)
+        dict2 = failure2.__dict__.copy()
+
+        # count increments with each new Failure constructed:
+        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
+
+        # The rest of the attributes should be identical:
+        self.assertEqual(dict1, dict2)

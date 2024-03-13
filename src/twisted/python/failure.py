@@ -11,6 +11,7 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
+from __future__ import annotations
 
 # System Imports
 import builtins
@@ -456,6 +457,26 @@ class Failure(BaseException):
         # Merging current stack with stack stored in the Failure.
         frames.extend(self.frames)
         self.frames = frames
+
+    @staticmethod
+    def without_traceback(value: Exception) -> Failure:
+        """
+        Create a L{Failure} for an exception without a traceback.
+
+        By restricting the inputs significantly, this constructor runs much
+        faster.
+        """
+        result = Failure.__new__(Failure)
+        global count
+        count += 1
+        result.captureVars = False
+        result.count = count
+        result.frames = []
+        result.stack = []
+        result.value = value
+        result.type = value.__class__
+        result.tb = None
+        return result
 
     def trap(self, *errorTypes):
         """
