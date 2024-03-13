@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import linecache
 import pdb
+import pickle
 import re
 import sys
 import traceback
@@ -22,6 +23,16 @@ from cython_test_exception_raiser import raiser
 
 from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
+
+
+class ComparableException(Exception):
+    """An exception that can be compared by value."""
+
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__) and (self.args == other.args)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
@@ -508,6 +519,55 @@ class FailureTests(SynchronousTestCase):
             repr(f),
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
+
+    def test_failure_without_traceback(self) -> None:
+        """
+        C{Failure._without_traceback(exc)} gives the same result as
+        C{Failure(exc)}.
+        """
+        exc = ZeroDivisionError("hello")
+        dict1 = failure.Failure(exc).__dict__.copy()
+        failure2 = failure.Failure._without_traceback(exc)
+        self.assertIsInstance(failure2, failure.Failure)
+        dict2 = failure2.__dict__.copy()
+
+        # count increments with each new Failure constructed:
+        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
+
+        # The rest of the attributes should be identical:
+        self.assertEqual(dict1, dict2)
+
+    def test_failure_pickling(self) -> None:
+        """
+        C{Failure(exc)} and C{Failure._without_traceback(exc)} can be pickled
+        and unpickled.
+        """
+        exc = ComparableException("hello")
+        failure1 = failure.Failure(exc)
+        self.assertPicklingRoundtrips(failure1)
+
+        # You would think this test is unnecessary, since it's just a
+        # C{Failure}, but actually the behavior of pickling can sometimes be
+        # different because of the way the constructor works!
+        failure2 = failure.Failure._without_traceback(exc)
+        self.assertPicklingRoundtrips(failure2)
+
+    def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
+        """
+        The failure can be pickled and unpickled, and the C{parents} attribute
+        is included in the pickle.
+        """
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        expected = original_failure.__dict__.copy()
+        expected["pickled"] = 1
+        self.assertEqual(expected, failure2.__dict__)
+
+    def test_failure_pickling_includes_parents(self):
+        """
+        C{Failure.parents} is included in the pickle.
+        """
+        f = failure.Failure(ComparableException("hello"))
+        self.assertEqual(f.__getstate__()["parents"], f.parents)
 
 
 class BrokenStr(Exception):
@@ -1032,20 +1092,3 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             self._throwIntoGenerator(f, g)
         except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)
-
-    def test_failure_without_traceback(self) -> None:
-        """
-        C{Failure.without_traceback(exc)} gives the same result as
-        C{Failure(exc)}.
-        """
-        exc = ZeroDivisionError("hello")
-        dict1 = failure.Failure(exc).__dict__.copy()
-        failure2 = failure.Failure._without_traceback(exc)
-        self.assertIsInstance(failure2, failure.Failure)
-        dict2 = failure2.__dict__.copy()
-
-        # count increments with each new Failure constructed:
-        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
-
-        # The rest of the attributes should be identical:
-        self.assertEqual(dict1, dict2)
