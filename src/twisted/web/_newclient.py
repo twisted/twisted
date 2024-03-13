@@ -1270,7 +1270,9 @@ class Response:
         """
         self._state = "DEFERRED_CLOSE"
         if reason is None:
-            reason = Failure.without_traceback(ResponseDone("Response body fully received"))
+            reason = Failure.without_traceback(
+                ResponseDone("Response body fully received")
+            )
         self._reason = reason
 
     def _bodyDataFinished_CONNECTED(self, reason=None):
@@ -1278,7 +1280,9 @@ class Response:
         Disconnect the protocol and move to the C{'FINISHED'} state.
         """
         if reason is None:
-            reason = Failure.without_traceback(ResponseDone("Response body fully received"))
+            reason = Failure.without_traceback(
+                ResponseDone("Response body fully received")
+            )
         self._bodyProtocol.connectionLost(reason)
         self._bodyProtocol = None
         self._state = "FINISHED"
