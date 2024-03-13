@@ -289,9 +289,6 @@ class Failure(BaseException):
         self.type = self.value = tb = None
         self.captureVars = captureVars
 
-        if isinstance(exc_value, str) and exc_type is None:
-            raise TypeError("Strings are not supported by Failure")
-
         stackOffset = 0
 
         if exc_value is None:

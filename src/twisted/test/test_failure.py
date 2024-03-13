@@ -398,14 +398,6 @@ class FailureTests(SynchronousTestCase):
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, "1 / 0")
 
-    def test_stringExceptionConstruction(self) -> None:
-        """
-        Constructing a C{Failure} with a string as its exception value raises
-        a C{TypeError}, as this is no longer supported as of Python 2.6.
-        """
-        exc = self.assertRaises(TypeError, failure.Failure, "ono!")
-        self.assertIn("Strings are not supported by Failure", str(exc))
-
     def test_ConstructionFails(self) -> None:
         """
         Creating a Failure with no arguments causes it to try to discover the
