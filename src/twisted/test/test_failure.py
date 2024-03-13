@@ -1040,28 +1040,3 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             self._throwIntoGenerator(f, g)
         except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)
-
-
-class FrozenFailureTests(SynchronousTestCase):
-    """
-    Tests for C{_FrozenFailure}.
-    """
-
-    def test_immutable(self) -> None:
-        """
-        L{failure.Failure._freeze} returns a C{_FrozenFailure} that can't be trivially
-        mutated.
-        """
-        frozen = getDivisionFailure()._freeze()
-        self.assertIsInstance(frozen, failure.Failure)
-        self.assertIsInstance(frozen.value, ZeroDivisionError)
-
-        # Can't set:
-        with self.assertRaises(RuntimeError):
-            frozen.value = 3
-        self.assertIsInstance(frozen.value, ZeroDivisionError)
-
-        # Can't delete:
-        with self.assertRaises(RuntimeError):
-            del frozen.value
-        self.assertIsInstance(frozen.value, ZeroDivisionError)

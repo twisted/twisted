@@ -1051,9 +1051,6 @@ def makeStatefulDispatcher(name, template):
 # IClientRequest.
 _ClientRequestProxy = proxyForInterface(IClientRequest)
 
-# Pre-create this since it gets created for every response.
-_RESPONSE_DONE_FAILURE = Failure(ResponseDone("Response body fully received"))._freeze()
-
 
 @implementer(IResponse)
 class Response:
@@ -1273,7 +1270,7 @@ class Response:
         """
         self._state = "DEFERRED_CLOSE"
         if reason is None:
-            reason = _RESPONSE_DONE_FAILURE
+            reason = Failure(ResponseDone("Response body fully received"))
         self._reason = reason
 
     def _bodyDataFinished_CONNECTED(self, reason=None):
@@ -1281,7 +1278,7 @@ class Response:
         Disconnect the protocol and move to the C{'FINISHED'} state.
         """
         if reason is None:
-            reason = _RESPONSE_DONE_FAILURE
+            reason = Failure(ResponseDone("Response body fully received"))
         self._bodyProtocol.connectionLost(reason)
         self._bodyProtocol = None
         self._state = "FINISHED"
@@ -1406,11 +1403,6 @@ class TransportProxyProducer:
         """
         if self._producer is not None:
             self._producer.loseConnection()
-
-
-# Pre-created error and failure, since they are used for every request:
-_DONE = ConnectionDone("synthetic!")
-_DONE_FAILURE = Failure(_DONE)._freeze()
 
 
 class HTTP11ClientProtocol(Protocol):
@@ -1594,13 +1586,14 @@ class HTTP11ClientProtocol(Protocol):
         if self._parser is None:
             return
 
+        reason = ConnectionDone("synthetic!")
         connHeaders = self._parser.connHeaders.getRawHeaders(b"connection", ())
         if (
             (b"close" in connHeaders)
             or self._state != "QUIESCENT"
             or not self._currentRequest.persistent
         ):
-            self._giveUp(_DONE_FAILURE)
+            self._giveUp(Failure(reason))
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
@@ -1615,7 +1608,7 @@ class HTTP11ClientProtocol(Protocol):
                 # keeping persistent connections around is an optimisation:
                 self._log.failure("")
                 self.transport.loseConnection()
-            self._disconnectParser(_DONE)
+            self._disconnectParser(reason)
 
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
 
