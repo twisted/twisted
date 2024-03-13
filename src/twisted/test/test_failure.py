@@ -1040,7 +1040,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         exc = ZeroDivisionError("hello")
         dict1 = failure.Failure(exc).__dict__.copy()
-        failure2 = failure.Failure.without_traceback(exc)
+        failure2 = failure.Failure._without_traceback(exc)
         self.assertIsInstance(failure2, failure.Failure)
         dict2 = failure2.__dict__.copy()
 
