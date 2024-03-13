@@ -249,6 +249,7 @@ class Failure(BaseException):
 
     pickled = 0
     stack = None
+    __parents = None
 
     # The opcode of "yield" in Python bytecode. We need this in
     # _findFailure in order to identify whether an exception was
@@ -417,11 +418,18 @@ class Failure(BaseException):
                 )
             )
             tb = tb.tb_next
+
+    @property
+    def parents(self):
+        if self.__parents is not None:
+            return self.__parents
+
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
-            self.parents = list(map(reflect.qual, parentCs))
+            self.__parents = list(map(reflect.qual, parentCs))
         else:
-            self.parents = [self.type]
+            self.__parents = [self.type]
+        return self.__parents
 
     def _extrapolate(self, otherFailure):
         """
