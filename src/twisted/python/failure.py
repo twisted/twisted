@@ -472,7 +472,7 @@ class Failure(BaseException):
         result.captureVars = False
         result.count = count
         result.frames = []
-        result.stack = []
+        result.stack = []  # type: ignore
         result.value = value
         result.type = value.__class__
         result.tb = None

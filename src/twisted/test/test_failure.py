@@ -1033,7 +1033,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         except BaseException:
             self.assertIsInstance(failure.Failure().value, IndexError)
 
-    def test_failure_without_traceback(self):
+    def test_failure_without_traceback(self) -> None:
         """
         C{Failure.without_traceback(exc)} gives the same result as
         C{Failure(exc)}.
