@@ -16,7 +16,7 @@ from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from types import TracebackType
-from typing import Any, Generator
+from typing import Any, Generator, cast
 from unittest import skipIf
 
 from cython_test_exception_raiser import raiser
@@ -28,10 +28,12 @@ from twisted.trial.unittest import SynchronousTestCase
 class ComparableException(Exception):
     """An exception that can be compared by value."""
 
-    def __eq__(self, other):
-        return (self.__class__ == other.__class__) and (self.args == other.args)
+    def __eq__(self, other: object) -> bool:
+        return (self.__class__ == other.__class__) and (
+            self.args == cast(ComparableException, other).args
+        )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
 
@@ -562,7 +564,7 @@ class FailureTests(SynchronousTestCase):
         expected["pickled"] = 1
         self.assertEqual(expected, failure2.__dict__)
 
-    def test_failure_pickling_includes_parents(self):
+    def test_failure_pickling_includes_parents(self) -> None:
         """
         C{Failure.parents} is included in the pickle.
         """

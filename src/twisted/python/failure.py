@@ -667,6 +667,7 @@ class Failure(BaseException):
     def __reduce__(self):
         # BaseException implements a __reduce__ (in C, technically), so TODO
         from functools import partial
+
         return (partial(Failure.__new__, Failure), (), self.__getstate__())
 
     def cleanFailure(self):
