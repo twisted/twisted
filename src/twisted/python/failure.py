@@ -16,6 +16,7 @@ from __future__ import annotations
 # System Imports
 import builtins
 import copy
+from functools import partial
 import inspect
 import linecache
 import sys
@@ -665,9 +666,8 @@ class Failure(BaseException):
         return c
 
     def __reduce__(self):
-        # BaseException implements a __reduce__ (in C, technically), so TODO
-        from functools import partial
-
+        # BaseException implements a __reduce__ (in C, technically), so we need
+        # to override this to get pickling working.
         return (partial(Failure.__new__, Failure), (), self.__getstate__())
 
     def cleanFailure(self):
