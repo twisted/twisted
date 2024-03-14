@@ -16,10 +16,10 @@ from __future__ import annotations
 # System Imports
 import builtins
 import copy
-from functools import partial
 import inspect
 import linecache
 import sys
+from functools import partial
 from inspect import getmro
 from io import StringIO
 from typing import Callable, NoReturn, TypeVar
