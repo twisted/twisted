@@ -33,9 +33,6 @@ class ComparableException(Exception):
             self.args == cast(ComparableException, other).args
         )
 
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
 
 def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
     """
