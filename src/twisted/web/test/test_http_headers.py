@@ -176,21 +176,23 @@ class BytesHeadersTests(TestCase):
         h.removeHeader(b"test")
         self.assertEqual(list(h.getAllRawHeaders()), [])
 
-    def test_canonicalNameCaps(self) -> None:
+    def test_encodeName(self) -> None:
         """
-        L{Headers._canonicalNameCaps} returns the canonical capitalization for
+        L{Headers._encodeName} returns the canonical capitalization for
         the given header.
         """
         h = Headers()
-        self.assertEqual(h._canonicalNameCaps(b"test"), b"Test")
-        self.assertEqual(h._canonicalNameCaps(b"test-stuff"), b"Test-Stuff")
-        self.assertEqual(h._canonicalNameCaps(b"content-md5"), b"Content-MD5")
-        self.assertEqual(h._canonicalNameCaps(b"dnt"), b"DNT")
-        self.assertEqual(h._canonicalNameCaps(b"etag"), b"ETag")
-        self.assertEqual(h._canonicalNameCaps(b"p3p"), b"P3P")
-        self.assertEqual(h._canonicalNameCaps(b"te"), b"TE")
-        self.assertEqual(h._canonicalNameCaps(b"www-authenticate"), b"WWW-Authenticate")
-        self.assertEqual(h._canonicalNameCaps(b"x-xss-protection"), b"X-XSS-Protection")
+        self.assertEqual(h._encodeName(b"test"), b"Test")
+        self.assertEqual(h._encodeName(b"test-stuff"), b"Test-Stuff")
+        self.assertEqual(h._encodeName(b"content-md5"), b"Content-MD5")
+        self.assertEqual(h._encodeName(b"dnt"), b"DNT")
+        self.assertEqual(h._encodeName(b"etag"), b"ETag")
+        self.assertEqual(h._encodeName(b"p3p"), b"P3P")
+        self.assertEqual(h._encodeName(b"te"), b"TE")
+        self.assertEqual(h._encodeName(b"www-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"WWW-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"Www-Authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"x-xss-protection"), b"X-XSS-Protection")
 
     def test_getAllRawHeaders(self) -> None:
         """
@@ -244,7 +246,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"Headers({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_reprWithRawBytes(self) -> None:
@@ -261,7 +263,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz\xe1"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"Headers({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_subclassRepr(self) -> None:
@@ -278,7 +280,7 @@ class BytesHeadersTests(TestCase):
 
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            f"FunnyHeaders({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"FunnyHeaders({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_copy(self) -> None:
@@ -551,7 +553,7 @@ class UnicodeHeadersTests(TestCase):
         foo = "foo\u00E1"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "'foo\\xe1'"
+        fooEncoded = "'Foo\\xe1'"
         barEncoded = "'bar\\xe2\\x98\\x83'"
         fooEncoded = "b" + fooEncoded
         barEncoded = "b" + barEncoded
@@ -570,7 +572,7 @@ class UnicodeHeadersTests(TestCase):
         foo = "foo\u00E1"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "b'foo\\xe1'"
+        fooEncoded = "b'Foo\\xe1'"
         barEncoded = "b'bar\\xe2\\x98\\x83'"
 
         class FunnyHeaders(Headers):
