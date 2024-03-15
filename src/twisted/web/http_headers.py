@@ -179,28 +179,6 @@ class Headers:
 
         @return: L{None}
         """
-        if not isinstance(values, _Sequence):
-            raise TypeError(
-                "Header entry %r should be sequence but found "
-                "instance of %r instead" % (name, type(values))
-            )
-
-        if not isinstance(name, (bytes, str)):
-            raise TypeError(
-                f"Header name is an instance of {type(name)!r}, not bytes or str"
-            )
-
-        for count, value in enumerate(values):
-            if not isinstance(value, (bytes, str)):
-                raise TypeError(
-                    "Header value at position %s is an instance of %r, not "
-                    "bytes or str"
-                    % (
-                        count,
-                        type(value),
-                    )
-                )
-
         _name = _sanitizeLinearWhitespace(self._encodeName(name))
         encodedValues: List[bytes] = []
         for v in values:
@@ -220,17 +198,6 @@ class Headers:
 
         @param value: The value to set for the named header.
         """
-        if not isinstance(name, (bytes, str)):
-            raise TypeError(
-                f"Header name is an instance of {type(name)!r}, not bytes or str"
-            )
-
-        if not isinstance(value, (bytes, str)):
-            raise TypeError(
-                "Header value is an instance of %r, not "
-                "bytes or str" % (type(value),)
-            )
-
         self._rawHeaders.setdefault(
             _sanitizeLinearWhitespace(self._encodeName(name)), []
         ).append(
