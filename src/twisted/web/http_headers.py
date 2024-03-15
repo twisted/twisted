@@ -26,17 +26,6 @@ from twisted.python.compat import cmp, comparable
 _T = TypeVar("_T")
 
 
-def _dashCapitalize(name: bytes) -> bytes:
-    """
-    Return a byte string which is capitalized using '-' as a word separator.
-
-    @param name: The name of the header to capitalize.
-
-    @return: The given header capitalized using '-' as a word separator.
-    """
-    return b"-".join([word.capitalize() for word in name.split(b"-")])
-
-
 def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
     r"""
     Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
@@ -65,7 +54,8 @@ class Headers:
     and values as opaque byte strings.
 
     @cvar _caseMappings: A L{dict} that maps lowercase header names
-        to their canonicalized representation.
+        to their canonicalized representation. Additional entries may be added,
+        as it is used as a cache.
 
     @ivar _rawHeaders: A L{dict} mapping header names as L{bytes} to L{list}s of
         header values as L{bytes}.
@@ -256,7 +246,20 @@ class Headers:
 
         @return: The canonical name of the header.
         """
-        return self._caseMappings.get(name, _dashCapitalize(name))
+        if canonicalName := self._caseMappings.get(name, None):
+            return canonicalName
+
+        result = b"-".join([word.capitalize() for word in name.split(b"-")])
+
+        # In general, we should only see a very small number of header
+        # variations in the real world, so caching them is fine. However, an
+        # attacker could generate infinite header variations to fill up RAM, so
+        # we cap how many we cache. The performance degradation from lack of
+        # caching won't be that bad, and legit traffic won't hit it.
+        if len(self._caseMappings) < 10_000:
+            self._caseMappings[name] = result
+
+        return result
 
 
 __all__ = ["Headers"]
