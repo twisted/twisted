@@ -71,6 +71,8 @@ class Headers:
         b"x-xss-protection": b"X-XSS-Protection",
     }
 
+    __slots__ = ["_rawHeaders"]
+
     def __init__(
         self,
         rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
