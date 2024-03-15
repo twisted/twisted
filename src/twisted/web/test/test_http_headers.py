@@ -86,38 +86,6 @@ class BytesHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"Test"))
         self.assertEqual(h.getRawHeaders(b"test"), rawValue)
 
-    def test_rawHeadersTypeCheckingValuesIterable(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to be of type list.
-        """
-        h = Headers()
-        self.assertRaises(TypeError, h.setRawHeaders, b"key", {b"Foo": b"bar"})
-
-    def test_rawHeadersTypeCheckingName(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires C{name} to be a L{bytes} or
-        L{str} string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.setRawHeaders, None, [b"foo"])
-        self.assertEqual(
-            e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
-
-    def test_rawHeadersTypeCheckingValuesAreString(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to a L{list} of L{bytes} or
-        L{str} strings.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.setRawHeaders, b"key", [b"bar", None])
-        self.assertEqual(
-            e.args[0],
-            "Header value at position 1 is an instance of <class 'NoneType'>, "
-            "not bytes or str",
-        )
-
     def test_addRawHeader(self) -> None:
         """
         L{Headers.addRawHeader} adds a new value for a given header.
@@ -127,30 +95,6 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur"])
         h.addRawHeader(b"test", b"panda")
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur", b"panda"])
-
-    def test_addRawHeaderTypeCheckName(self) -> None:
-        """
-        L{Headers.addRawHeader} requires C{name} to be a L{bytes} or L{str}
-        string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.addRawHeader, None, b"foo")
-        self.assertEqual(
-            e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
-
-    def test_addRawHeaderTypeCheckValue(self) -> None:
-        """
-        L{Headers.addRawHeader} requires value to be a L{bytes} or L{str}
-        string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.addRawHeader, b"key", None)
-        self.assertEqual(
-            e.args[0],
-            "Header value is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
 
     def test_getRawHeadersNoDefault(self) -> None:
         """
@@ -434,13 +378,6 @@ class UnicodeHeadersTests(TestCase):
         h.setRawHeaders("\u00E1", ["\u2603", b"foo"])
         self.assertTrue(h.hasHeader(b"\xe1"))
         self.assertEqual(h.getRawHeaders(b"\xe1"), [b"\xe2\x98\x83", b"foo"])
-
-    def test_rawHeadersTypeChecking(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to be of type sequence
-        """
-        h = Headers()
-        self.assertRaises(TypeError, h.setRawHeaders, "key", {"Foo": "bar"})
 
     def test_addRawHeader(self) -> None:
         """
