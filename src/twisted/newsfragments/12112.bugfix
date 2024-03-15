@@ -1,1 +1,1 @@
-Fix bug where ``twisted.python.failure.Failure``'s custom pickling code wasn't being used.
+twisted.python.failure.Failure once again utilizes the custom pickling logic it used to in the past.
