@@ -6,7 +6,6 @@
 An API for storing HTTP header names and values.
 """
 
-from collections.abc import Sequence as _Sequence
 from typing import (
     AnyStr,
     Dict,
