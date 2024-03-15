@@ -171,21 +171,9 @@ class Headers:
         """
         self._rawHeaders.pop(self._encodeName(name), None)
 
-    @overload
-    def setRawHeaders(self, name: Union[str, bytes], values: Sequence[bytes]) -> None:
-        ...
-
-    @overload
-    def setRawHeaders(self, name: Union[str, bytes], values: Sequence[str]) -> None:
-        ...
-
-    @overload
     def setRawHeaders(
         self, name: Union[str, bytes], values: Sequence[Union[str, bytes]]
     ) -> None:
-        ...
-
-    def setRawHeaders(self, name: Union[str, bytes], values: object) -> None:
         """
         Sets the raw representation of the given header.
 
