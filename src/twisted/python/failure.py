@@ -460,7 +460,7 @@ class Failure(BaseException):
         self.frames = frames
 
     @staticmethod
-    def _without_traceback(value: BaseException) -> Failure:
+    def _withoutTraceback(value: BaseException) -> Failure:
         """
         Create a L{Failure} for an exception without a traceback.
 

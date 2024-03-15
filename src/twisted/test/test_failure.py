@@ -522,14 +522,14 @@ class FailureTests(SynchronousTestCase):
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
 
-    def test_failure_without_traceback(self) -> None:
+    def test_failureWithoutTraceback(self) -> None:
         """
-        C{Failure._without_traceback(exc)} gives the same result as
+        C{Failure._withoutTraceback(exc)} gives the same result as
         C{Failure(exc)}.
         """
         exc = ZeroDivisionError("hello")
         dict1 = failure.Failure(exc).__dict__.copy()
-        failure2 = failure.Failure._without_traceback(exc)
+        failure2 = failure.Failure._withoutTraceback(exc)
         self.assertIsInstance(failure2, failure.Failure)
         dict2 = failure2.__dict__.copy()
 
@@ -539,9 +539,9 @@ class FailureTests(SynchronousTestCase):
         # The rest of the attributes should be identical:
         self.assertEqual(dict1, dict2)
 
-    def test_failure_pickling(self) -> None:
+    def test_failurePickling(self) -> None:
         """
-        C{Failure(exc)} and C{Failure._without_traceback(exc)} can be pickled
+        C{Failure(exc)} and C{Failure._withoutTraceback(exc)} can be pickled
         and unpickled.
         """
         exc = ComparableException("hello")
@@ -551,7 +551,7 @@ class FailureTests(SynchronousTestCase):
         # You would think this test is unnecessary, since it's just a
         # C{Failure}, but actually the behavior of pickling can sometimes be
         # different because of the way the constructor works!
-        failure2 = failure.Failure._without_traceback(exc)
+        failure2 = failure.Failure._withoutTraceback(exc)
         self.assertPicklingRoundtrips(failure2)
 
     def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
@@ -564,7 +564,7 @@ class FailureTests(SynchronousTestCase):
         expected["pickled"] = 1
         self.assertEqual(expected, failure2.__dict__)
 
-    def test_failure_pickling_includes_parents(self) -> None:
+    def test_failurePicklingIncludesParents(self) -> None:
         """
         C{Failure.parents} is included in the pickle.
         """

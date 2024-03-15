@@ -1270,7 +1270,7 @@ class Response:
         """
         self._state = "DEFERRED_CLOSE"
         if reason is None:
-            reason = Failure._without_traceback(
+            reason = Failure._withoutTraceback(
                 ResponseDone("Response body fully received")
             )
         self._reason = reason
@@ -1280,7 +1280,7 @@ class Response:
         Disconnect the protocol and move to the C{'FINISHED'} state.
         """
         if reason is None:
-            reason = Failure._without_traceback(
+            reason = Failure._withoutTraceback(
                 ResponseDone("Response body fully received")
             )
         self._bodyProtocol.connectionLost(reason)
@@ -1597,7 +1597,7 @@ class HTTP11ClientProtocol(Protocol):
             or self._state != "QUIESCENT"
             or not self._currentRequest.persistent
         ):
-            self._giveUp(Failure._without_traceback(reason))
+            self._giveUp(Failure._withoutTraceback(reason))
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
