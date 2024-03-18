@@ -298,7 +298,7 @@ class BytesHeadersTests(TestCase):
         i.addRawHeader(b"test", b"baz")
         self.assertEqual(h.getRawHeaders(b"test"), [b"foo", b"bar"])
 
-    def test_max_cached_headers(self):
+    def test_max_cached_headers(self) -> None:
         """
         Only a limited number of HTTP header names get cached.
         """
