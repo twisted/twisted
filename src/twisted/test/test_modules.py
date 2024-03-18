@@ -30,8 +30,7 @@ from twisted.trial.unittest import TestCase
 class _SupportsWalkModules(Protocol):
     def walkModules(
         self, importPackages: bool
-    ) -> Generator[modules.PythonModule, None, None]:
-        ...
+    ) -> Generator[modules.PythonModule, None, None]: ...
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):

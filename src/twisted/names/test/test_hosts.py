@@ -25,8 +25,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 
 class _SupportsMktemp(Protocol):
-    def mktemp(self) -> str:
-        ...
+    def mktemp(self) -> str: ...
 
 
 class GoodTempPathMixin:

@@ -1,6 +1,7 @@
 """
 Tests for L{twisted.trial.test.matchers}.
 """
+
 from hamcrest import anything, assert_that, contains_string, equal_to, not_
 from hamcrest.core.core.allof import AllOf
 from hamcrest.core.string_description import StringDescription

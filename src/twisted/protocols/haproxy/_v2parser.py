@@ -198,9 +198,9 @@ class V2Parser:
         addrType: Union[Literal["TCP"], Literal["UDP"]] = "TCP"
         if netproto is NetProtocol.DGRAM:
             addrType = "UDP"
-        addrCls: Union[
-            Type[address.IPv4Address], Type[address.IPv6Address]
-        ] = address.IPv4Address
+        addrCls: Union[Type[address.IPv4Address], Type[address.IPv6Address]] = (
+            address.IPv4Address
+        )
         addrParser: Callable[[bytes], bytes] = cls._bytesToIPv4
         if family is NetFamily.INET6:
             addrCls = address.IPv6Address

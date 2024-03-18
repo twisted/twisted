@@ -928,12 +928,10 @@ class EventLoggingObserver(Sequence[LogEvent]):
         return len(self._events)
 
     @overload
-    def __getitem__(self, index: int) -> LogEvent:
-        ...
+    def __getitem__(self, index: int) -> LogEvent: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Sequence[LogEvent]:
-        ...
+    def __getitem__(self, index: slice) -> Sequence[LogEvent]: ...
 
     def __getitem__(self, index: int | slice) -> LogEvent | Sequence[LogEvent]:
         return self._events[index]

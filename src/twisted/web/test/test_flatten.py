@@ -682,8 +682,7 @@ class FlattenerErrorTests(SynchronousTestCase):
 
             def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
-            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
-                ...
+            ) -> Callable[[Optional[IRequest], Tag], Flattenable]: ...
 
             def render(self, request: Optional[IRequest]) -> Flattenable:
                 return failing

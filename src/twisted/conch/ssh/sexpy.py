@@ -33,8 +33,10 @@ def parse(s):
 
 def pack(sexp):
     return b"".join(
-        b"(%b)" % (pack(o),)
-        if type(o) in (type(()), type([]))
-        else b"%d:%b" % (len(o), o)
+        (
+            b"(%b)" % (pack(o),)
+            if type(o) in (type(()), type([]))
+            else b"%d:%b" % (len(o), o)
+        )
         for o in sexp
     )

@@ -328,8 +328,7 @@ class _LogPublisherTestCaseMixinBase(Protocol):
 
     def assertIsInstance(
         self, instance: object, classOrTuple: type, message: str
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class LogPublisherTestCaseMixin:
