@@ -122,10 +122,7 @@ class Headers:
         if canonicalName := self._canonicalHeaderCache.get(name, None):
             return canonicalName
 
-        if isinstance(name, str):
-            bytes_name = name.encode("iso-8859-1")
-        else:
-            bytes_name = name
+        bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
 
         if bytes_name.lower() in self._caseMappings:
             # Some headers have special capitalization:
