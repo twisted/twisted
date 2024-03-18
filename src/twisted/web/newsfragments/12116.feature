@@ -1,1 +1,1 @@
-twisted.web.http_headers now uses less CPU.
+twisted.web.http_headers now uses less CPU, making a small HTTP client request 10% faster or so.
