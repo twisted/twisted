@@ -607,7 +607,7 @@ class ProcessTests(unittest.TestCase):
             try:
                 import glob
 
-                import process_tester  # type: ignore[import]
+                import process_tester  # type: ignore[import-not-found]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -2266,7 +2266,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api  # type: ignore[import]
+        import win32api
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

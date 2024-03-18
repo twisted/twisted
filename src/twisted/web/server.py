@@ -101,8 +101,7 @@ class Request(Copyable, http.Request, components.Componentized):
         will be transmitted only over HTTPS.
     """
 
-    defaultContentType = b"text/html"
-
+    defaultContentType: Optional[bytes] = b"text/html"
     site = None
     appRootURL = None
     prepath: Optional[List[bytes]] = None

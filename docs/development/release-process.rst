@@ -86,7 +86,7 @@ To release Twisted, we
 Prepare for a release
 ---------------------
 
-#. Check for any regressions using `Trac regression report <https://twistedmatrix.com/trac/report/26>`_
+#. Check for any regressions using `release blockers GitHub issues search <https://github.com/twisted/twisted/issues?q=is%3Aopen+is%3Aissue+label%3Arelease-blocker>`_
 
 #. Any regression should be fixed and merged into trunk before making the release branch
 
@@ -97,7 +97,7 @@ Prepare for a release
 #. File a ticket in Trac called "Release $RELEASE" and assign it to yourself.
 
 #. Make a branch for the release.
-   It's very important to use `release-$RELEASE-$TRAC_ID` as the branch name (4290 is Trac ticket ID, 21.7.0 is the release number) as this is used as a hint for CI:
+   It's very important to use ``release-$RELEASE-$GITHUB_ID`` as the branch name (4290 is GitHub issue ID, 21.7.0 is the release number) as this is used as a hint for CI:
 
    - ``git fetch origin``
    - ``git checkout origin/trunk``
@@ -133,8 +133,8 @@ Prepare the branch
    fixed in a separate ticket/PR.
    Avoid making non-release changes (even minor one) as part of the release branch.
 #. Use the `GitHub Create Release UI <https://github.com/twisted/twisted/releases/new>`_ the make a new release.
-#. Create a tag using the format `twisted-VERSION` based on the latest commit on the release branch.
-#. Use `Twisted VERSION` as the name of the release.
+#. Create a tag using the format ``twisted-VERSION`` based on the latest commit on the release branch, making sure the version includes a ``rc`` suffix, for example ``twisted-24.2.0rc1``.
+#. Use ``Twisted VERSION`` as the name of the release, for example ``Twisted 24.2.0rc1``.
 #. Add the release NEWS to GitHub Release page.
 #. Make sure 'This is a pre-release` is checked.
 #. Github Actions will upload the dist to PyPI when a new tag is pushed to the repo.
@@ -273,6 +273,7 @@ Any step blocking the release should be done by the PR contributors.
 The role of the release manager is just to make sure this process is followed.
 
 #. Make sure there is a `GitHub Security advisory <https://github.com/twisted/twisted/security/advisories>`_ opened for this ticket.
+#. Make sure a CVE was requested and the CVE ID and GitHub Actions security advisory ID are included in the newsfragment.
 #. Make sure the PR was approved.
 #. Make sure all the details all provided in the GitHub security advisory.
 #. The security fix will be available in the first release candidate for the new release. So the `Patched versions` will look like YEAR.MONTH.0rc1.

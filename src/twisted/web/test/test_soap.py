@@ -13,7 +13,7 @@ from twisted.trial.unittest import TestCase
 from twisted.web import error, server
 
 try:
-    import SOAPpy  # type: ignore[import]
+    import SOAPpy
 
     from twisted.web import soap
     from twisted.web.soap import SOAPPublisher
