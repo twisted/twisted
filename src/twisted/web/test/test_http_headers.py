@@ -298,6 +298,17 @@ class BytesHeadersTests(TestCase):
         i.addRawHeader(b"test", b"baz")
         self.assertEqual(h.getRawHeaders(b"test"), [b"foo", b"bar"])
 
+    def test_max_cached_headers(self):
+        """
+        Only a limited number of HTTP header names get cached.
+        """
+        headers = Headers()
+        for i in range(Headers._MAX_CACHED_HEADERS + 200):
+            headers.addRawHeader(f"hello-{i}", "value")
+        self.assertEqual(
+            len(Headers._canonicalHeaderCache), Headers._MAX_CACHED_HEADERS
+        )
+
 
 class UnicodeHeadersTests(TestCase):
     """

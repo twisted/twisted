@@ -8,6 +8,7 @@ An API for storing HTTP header names and values.
 
 from typing import (
     AnyStr,
+    ClassVar,
     Dict,
     Iterator,
     List,
@@ -75,6 +76,8 @@ class Headers:
 
     _canonicalHeaderCache: Dict[Union[bytes, str], bytes] = {}
 
+    _MAX_CACHED_HEADERS: ClassVar[int] = 10_000
+
     __slots__ = ["_rawHeaders"]
 
     def __init__(
@@ -137,7 +140,7 @@ class Headers:
         # attacker could generate infinite header variations to fill up RAM, so
         # we cap how many we cache. The performance degradation from lack of
         # caching won't be that bad, and legit traffic won't hit it.
-        if len(self._canonicalHeaderCache) < 10_000:
+        if len(self._canonicalHeaderCache) < self._MAX_CACHED_HEADERS:
             self._canonicalHeaderCache[name] = result
 
         return result
