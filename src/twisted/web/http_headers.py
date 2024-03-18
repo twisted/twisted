@@ -64,7 +64,7 @@ class Headers:
         header values as L{bytes}.
     """
 
-    _caseMappings = {
+    _caseMappings: ClassVar[Dict[bytes, bytes]] = {
         b"content-md5": b"Content-MD5",
         b"dnt": b"DNT",
         b"etag": b"ETag",
@@ -74,7 +74,7 @@ class Headers:
         b"x-xss-protection": b"X-XSS-Protection",
     }
 
-    _canonicalHeaderCache: Dict[Union[bytes, str], bytes] = {}
+    _canonicalHeaderCache: ClassVar[Dict[Union[bytes, str], bytes]] = {}
 
     _MAX_CACHED_HEADERS: ClassVar[int] = 10_000
 
