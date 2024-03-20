@@ -69,6 +69,7 @@ __all__ = [
     "UNSUPPORTED_MEDIA_TYPE",
     "REQUESTED_RANGE_NOT_SATISFIABLE",
     "EXPECTATION_FAILED",
+    "IM_A_TEAPOT",
     "INTERNAL_SERVER_ERROR",
     "NOT_IMPLEMENTED",
     "BAD_GATEWAY",
@@ -108,7 +109,7 @@ import tempfile
 import time
 import warnings
 from email import message_from_bytes
-from email.message import EmailMessage
+from email.message import EmailMessage, Message
 from io import BytesIO
 from typing import AnyStr, Callable, Dict, List, Optional, Tuple
 from urllib.parse import (
@@ -144,6 +145,7 @@ from twisted.web._responses import (
     GATEWAY_TIMEOUT,
     GONE,
     HTTP_VERSION_NOT_SUPPORTED,
+    IM_A_TEAPOT,
     INSUFFICIENT_STORAGE_SPACE,
     INTERNAL_SERVER_ERROR,
     LENGTH_REQUIRED,
@@ -251,11 +253,16 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     if not msg.is_multipart():
         raise _MultiPartParseException("Not a multipart.")
 
-    for part in msg.get_payload():
-        name = part.get_param("name", header="content-disposition")
+    part: Message
+    # "per Python docs, a list of Message objects when is_multipart() is True,
+    # or a string when is_multipart() is False"
+    for part in msg.get_payload():  # type:ignore[assignment]
+        name: str | None = part.get_param(
+            "name", header="content-disposition"
+        )  # type:ignore[assignment]
         if not name:
             continue
-        payload = part.get_payload(decode=True)
+        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
         result[name.encode("utf8")] = [payload]
     return result
 
@@ -1805,7 +1812,6 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
-
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
@@ -1889,12 +1895,20 @@ class _ChunkedTransferDecoder:
         state transition this is truncated at the front so that index 0 is
         where the next state shall begin.
 
-    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
-        the buffer at which search for CRLF should resume. Resuming the search
-        at this position avoids doing quadratic work if the chunk length line
-        arrives over many calls to C{dataReceived}.
+    @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
+        tracks the index into the buffer at which search for CRLF should resume.
+        Resuming the search at this position avoids doing quadratic work if the
+        chunk length line arrives over many calls to C{dataReceived}.
 
-        Not used in any other state.
+    @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
+        See https://github.com/twisted/twisted/issues/12014
+
+    @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
+        response.
+    @type _maxTrailerHeadersSize: C{int}
+
+    @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
+    @type _receivedTrailerHeadersSize: C{int}
     """
 
     state = "CHUNK_LENGTH"
@@ -1908,6 +1922,9 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
+        self._trailerHeaders: List[bytearray] = []
+        self._maxTrailerHeadersSize = 2**16
+        self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """
@@ -1984,23 +2001,37 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_TRAILER(self) -> bool:
         """
-        Await the carriage return and line feed characters that follow the
-        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
-        state C{'FINISHED'}.
+        Collect trailer headers if received and finish at the terminal zero-length
+        chunk. Then invoke C{finishCallback} and switch to state C{'FINISHED'}.
 
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
-
-        @raises _MalformedChunkedDataError: when anything other than CRLF is
-            received.
         """
-        if len(self._buffer) < 2:
+        if (
+            self._receivedTrailerHeadersSize + len(self._buffer)
+            > self._maxTrailerHeadersSize
+        ):
+            raise _MalformedChunkedDataError("Trailer headers data is too long.")
+
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex == -1:
+            # Still no end of network line marker found.
+            # Continue processing more data.
             return False
 
-        if not self._buffer.startswith(b"\r\n"):
-            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+        if eolIndex > 0:
+            # A trailer header was detected.
+            self._trailerHeaders.append(self._buffer[0:eolIndex])
+            del self._buffer[0 : eolIndex + 2]
+            self._start = 0
+            self._receivedTrailerHeadersSize += eolIndex + 2
+            return True
+
+        # eolIndex in this part of code is equal to 0
 
         data = memoryview(self._buffer)[2:].tobytes()
+
         del self._buffer[:]
         self.state = "FINISHED"
         self.finishCallback(data)

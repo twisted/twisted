@@ -708,7 +708,7 @@ class _AggregateSmallWrites:
         self._write = write
         self._clock = clock
         self._buffer: list[bytes] = []
-        self._bufferLen = 0
+        self._bufferLeft = self.MAX_BUFFER_SIZE
         self._scheduled: Optional[IDelayedCall] = None
 
     def write(self, data: bytes) -> None:
@@ -719,9 +719,9 @@ class _AggregateSmallWrites:
         Accumulating too much data can result in higher memory usage.
         """
         self._buffer.append(data)
-        self._bufferLen += len(data)
+        self._bufferLeft -= len(data)
 
-        if self._bufferLen > self.MAX_BUFFER_SIZE:
+        if self._bufferLeft < 0:
             # We've accumulated enough we should just write it out. No need to
             # schedule a flush, since we just flushed everything.
             self.flush()
@@ -744,7 +744,7 @@ class _AggregateSmallWrites:
     def flush(self) -> None:
         """Flush any buffered writes."""
         if self._buffer:
-            self._bufferLen = 0
+            self._bufferLeft = self.MAX_BUFFER_SIZE
             self._write(b"".join(self._buffer))
             del self._buffer[:]
 
@@ -788,11 +788,10 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().__init__(factory, wrappedProtocol, _connectWrapped)
         actual_write = super().write
         self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
-
-    def write(self, data: bytes) -> None:
-        if isinstance(data, str):  # type: ignore[unreachable]
-            raise TypeError("Must write bytes to a TLS transport, not str.")
-        self._aggregator.write(data)
+        # This is kinda ugly, but speeds things up a lot in a hot path with
+        # lots of small TLS writes. May become unnecessary in Python 3.13 or
+        # later if JIT and/or inlining becomes a thing.
+        self.write = self._aggregator.write  # type: ignore[method-assign]
 
     def writeSequence(self, sequence: Iterable[bytes]) -> None:
         self._aggregator.write(b"".join(sequence))
