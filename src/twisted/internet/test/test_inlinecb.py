@@ -8,7 +8,8 @@ Tests for L{twisted.internet.defer.inlineCallbacks}.
 Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
 well.
 """
-
+import sys
+from unittest import skipIf
 
 from twisted.internet.defer import (
     CancelledError,
@@ -126,12 +127,15 @@ class NonLocalExitTests(TestCase):
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
-    def test_forwardTracebacks(self):
+    HAVE_PY3_12_OR_OLDER = sys.version_info < (3, 13)
+
+    @skipIf(not HAVE_PY3_12_OR_OLDER, "Needs Python 3.12 or older")
+    def test_forwardTracebacks_312(self):
         """
         Chained inlineCallbacks are forwarding the traceback information
         from generator to generator.
 
-        A first simple test with a couple of inline callbacks.
+        A first simple test with a couple of inline callbacks for Python 3.12 and older.
         """
 
         @inlineCallbacks
@@ -150,7 +154,33 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
-    def test_forwardLotsOfTracebacks(self):
+    @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
+    def test_forwardTracebacks_313(self):
+        """
+        Chained inlineCallbacks are forwarding the traceback information
+        from generator to generator.
+
+        A first simple test with a couple of inline callbacks for Python 3.13 and later.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception("Error Marker")
+
+        @inlineCallbacks
+        def calling():
+            yield erroring()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("yield erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertIn("Error Marker", tb)
+
+    @skipIf(not HAVE_PY3_12_OR_OLDER, "Needs Python 3.12 or older")
+    def test_forwardLotsOfTracebacks_312(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
 
@@ -183,19 +213,69 @@ class ForwardTraceBackTests(SynchronousTestCase):
             yield calling3()
 
         @inlineCallbacks
-        def calling():
+        def calling1():
             yield calling2()
 
-        d = calling()
+        d = calling1()
         f = self.failureResultOf(d)
         tb = f.getTraceback()
         self.assertIn("in erroring", tb)
-        self.assertIn("in calling", tb)
+        self.assertIn("in calling1", tb)
         self.assertIn("in calling2", tb)
         self.assertIn("in calling3", tb)
         self.assertNotIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
+
+    @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
+    def test_forwardLotsOfTracebacks_313(self):
+        """
+        Several Chained inlineCallbacks gives information about all generators
+        in prior versions, but tracebacks are more sparse in Python 3.13.
+
+        A wider test with 4 chained inline callbacks. Only the first callback
+        in the chain (calling) and its callback (calling2) are reported in the
+        traceback text.
+
+        Application stack-trace will be reported at the point where the callback
+        chain yields the exception, the rest of the callback chain will not be
+        included in the traceback.
+
+        Note that the previous test is testing the simple case, and this one is
+        testing the deep recursion case.
+
+        That case needs specific code in failure.py to accomodate to stack
+        breakage introduced by throwExceptionIntoGenerator.
+
+        Hence we keep the two tests in order to sort out which code we
+        might have regression in.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception("Error Marker")
+
+        @inlineCallbacks
+        def calling3():
+            yield erroring()
+
+        @inlineCallbacks
+        def calling2():
+            yield calling3()
+
+        @inlineCallbacks
+        def calling1():
+            yield calling2()
+
+        d = calling1()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("in calling1", tb)
+        self.assertIn("yield calling2", tb)
+        self.assertNotIn("in calling3", tb)
+        self.assertIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("Error Marker", tb)
 
 
 class UntranslatedError(Exception):
