@@ -55,7 +55,7 @@ def failureFromJSON(failureDict: JSONDict) -> Failure:
     f = Failure.__new__(Failure)
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
-    f.__dict__ = failureDict
+    f.__setstate__(failureDict)
     return f
 
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import linecache
 import pdb
+import pickle
 import re
 import sys
 import traceback
@@ -15,13 +16,22 @@ from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from types import TracebackType
-from typing import Any, Generator
+from typing import Any, Generator, cast
 from unittest import skipIf
 
 from cython_test_exception_raiser import raiser
 
 from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
+
+
+class ComparableException(Exception):
+    """An exception that can be compared by value."""
+
+    def __eq__(self, other: object) -> bool:
+        return (self.__class__ == other.__class__) and (
+            self.args == cast(ComparableException, other).args
+        )
 
 
 def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
@@ -398,14 +408,6 @@ class FailureTests(SynchronousTestCase):
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, "1 / 0")
 
-    def test_stringExceptionConstruction(self) -> None:
-        """
-        Constructing a C{Failure} with a string as its exception value raises
-        a C{TypeError}, as this is no longer supported as of Python 2.6.
-        """
-        exc = self.assertRaises(TypeError, failure.Failure, "ono!")
-        self.assertIn("Strings are not supported by Failure", str(exc))
-
     def test_ConstructionFails(self) -> None:
         """
         Creating a Failure with no arguments causes it to try to discover the
@@ -516,6 +518,55 @@ class FailureTests(SynchronousTestCase):
             repr(f),
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
+
+    def test_failureWithoutTraceback(self) -> None:
+        """
+        C{Failure._withoutTraceback(exc)} gives the same result as
+        C{Failure(exc)}.
+        """
+        exc = ZeroDivisionError("hello")
+        dict1 = failure.Failure(exc).__dict__.copy()
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertIsInstance(failure2, failure.Failure)
+        dict2 = failure2.__dict__.copy()
+
+        # count increments with each new Failure constructed:
+        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
+
+        # The rest of the attributes should be identical:
+        self.assertEqual(dict1, dict2)
+
+    def test_failurePickling(self) -> None:
+        """
+        C{Failure(exc)} and C{Failure._withoutTraceback(exc)} can be pickled
+        and unpickled.
+        """
+        exc = ComparableException("hello")
+        failure1 = failure.Failure(exc)
+        self.assertPicklingRoundtrips(failure1)
+
+        # You would think this test is unnecessary, since it's just a
+        # C{Failure}, but actually the behavior of pickling can sometimes be
+        # different because of the way the constructor works!
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertPicklingRoundtrips(failure2)
+
+    def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
+        """
+        The failure can be pickled and unpickled, and the C{parents} attribute
+        is included in the pickle.
+        """
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        expected = original_failure.__dict__.copy()
+        expected["pickled"] = 1
+        self.assertEqual(expected, failure2.__dict__)
+
+    def test_failurePicklingIncludesParents(self) -> None:
+        """
+        C{Failure.parents} is included in the pickle.
+        """
+        f = failure.Failure(ComparableException("hello"))
+        self.assertEqual(f.__getstate__()["parents"], f.parents)
 
 
 class BrokenStr(Exception):

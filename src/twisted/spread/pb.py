@@ -449,7 +449,11 @@ class CopyableFailure(failure.Failure, Copyable):
         Collect state related to the exception which occurred, discarding
         state which cannot reasonably be serialized.
         """
+        # Make sure self._parents is populated:
+        _ = self.parents
+
         state = self.__dict__.copy()
+        state["parents"] = state.pop("_parents")
         state["tb"] = None
         state["frames"] = []
         state["stack"] = []
@@ -480,6 +484,10 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     @ivar traceback: The remote traceback.
     @type traceback: C{str}
     """
+
+    def setCopyableState(self, state):
+        state["_parents"] = state.pop("parents")
+        return super().setCopyableState(state)
 
     def printTraceback(self, file=None, elideFrameworkCode=0, detail="default"):
         if file is None:

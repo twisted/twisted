@@ -11,6 +11,7 @@ Asynchronous-friendly error mechanism.
 See L{Failure}.
 """
 
+from __future__ import annotations
 
 # System Imports
 import builtins
@@ -18,6 +19,7 @@ import copy
 import inspect
 import linecache
 import sys
+from functools import partial
 from inspect import getmro
 from io import StringIO
 from typing import Callable, NoReturn, TypeVar
@@ -249,6 +251,7 @@ class Failure(BaseException):
 
     pickled = 0
     stack = None
+    _parents = None
 
     # The opcode of "yield" in Python bytecode. We need this in
     # _findFailure in order to identify whether an exception was
@@ -287,9 +290,6 @@ class Failure(BaseException):
         self.count = count
         self.type = self.value = tb = None
         self.captureVars = captureVars
-
-        if isinstance(exc_value, str) and exc_type is None:
-            raise TypeError("Strings are not supported by Failure")
 
         stackOffset = 0
 
@@ -417,11 +417,18 @@ class Failure(BaseException):
                 )
             )
             tb = tb.tb_next
+
+    @property
+    def parents(self):
+        if self._parents is not None:
+            return self._parents
+
         if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = getmro(self.type)
-            self.parents = list(map(reflect.qual, parentCs))
+            self._parents = list(map(reflect.qual, parentCs))
         else:
-            self.parents = [self.type]
+            self._parents = [self.type]
+        return self._parents
 
     def _extrapolate(self, otherFailure):
         """
@@ -451,6 +458,26 @@ class Failure(BaseException):
         # Merging current stack with stack stored in the Failure.
         frames.extend(self.frames)
         self.frames = frames
+
+    @staticmethod
+    def _withoutTraceback(value: BaseException) -> Failure:
+        """
+        Create a L{Failure} for an exception without a traceback.
+
+        By restricting the inputs significantly, this constructor runs much
+        faster.
+        """
+        result = Failure.__new__(Failure)
+        global count
+        count += 1
+        result.captureVars = False
+        result.count = count
+        result.frames = []
+        result.stack = []  # type: ignore
+        result.value = value
+        result.type = value.__class__
+        result.tb = None
+        return result
 
     def trap(self, *errorTypes):
         """
@@ -587,11 +614,25 @@ class Failure(BaseException):
     def __str__(self) -> str:
         return "[Failure instance: %s]" % self.getBriefTraceback()
 
+    def __setstate__(self, state):
+        state["_parents"] = state.pop("parents")
+        self.__dict__.update(state)
+
     def __getstate__(self):
-        """Avoid pickling objects in the traceback."""
-        if self.pickled:
-            return self.__dict__
+        """
+        Avoid pickling objects in the traceback.
+
+        This is not called direclty by pickle, since C{BaseException}
+        implements reduce; instead, pickle calls C{Failure.__reduce__} which
+        then calls this API.
+        """
+        # Make sure _parents field is populated:
+        _ = self.parents
+
         c = self.__dict__.copy()
+
+        # Backwards compatibility with old code, e.g. for Perspective Broker:
+        c["parents"] = c.pop("_parents")
 
         c["frames"] = [
             [
@@ -623,6 +664,11 @@ class Failure(BaseException):
 
         c["pickled"] = 1
         return c
+
+    def __reduce__(self):
+        # BaseException implements a __reduce__ (in C, technically), so we need
+        # to override this to get pickling working.
+        return (partial(Failure.__new__, Failure), (), self.__getstate__())
 
     def cleanFailure(self):
         """

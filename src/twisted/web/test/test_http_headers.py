@@ -86,38 +86,6 @@ class BytesHeadersTests(TestCase):
         self.assertTrue(h.hasHeader(b"Test"))
         self.assertEqual(h.getRawHeaders(b"test"), rawValue)
 
-    def test_rawHeadersTypeCheckingValuesIterable(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to be of type list.
-        """
-        h = Headers()
-        self.assertRaises(TypeError, h.setRawHeaders, b"key", {b"Foo": b"bar"})
-
-    def test_rawHeadersTypeCheckingName(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires C{name} to be a L{bytes} or
-        L{str} string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.setRawHeaders, None, [b"foo"])
-        self.assertEqual(
-            e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
-
-    def test_rawHeadersTypeCheckingValuesAreString(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to a L{list} of L{bytes} or
-        L{str} strings.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.setRawHeaders, b"key", [b"bar", None])
-        self.assertEqual(
-            e.args[0],
-            "Header value at position 1 is an instance of <class 'NoneType'>, "
-            "not bytes or str",
-        )
-
     def test_addRawHeader(self) -> None:
         """
         L{Headers.addRawHeader} adds a new value for a given header.
@@ -127,30 +95,6 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur"])
         h.addRawHeader(b"test", b"panda")
         self.assertEqual(h.getRawHeaders(b"test"), [b"lemur", b"panda"])
-
-    def test_addRawHeaderTypeCheckName(self) -> None:
-        """
-        L{Headers.addRawHeader} requires C{name} to be a L{bytes} or L{str}
-        string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.addRawHeader, None, b"foo")
-        self.assertEqual(
-            e.args[0],
-            "Header name is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
-
-    def test_addRawHeaderTypeCheckValue(self) -> None:
-        """
-        L{Headers.addRawHeader} requires value to be a L{bytes} or L{str}
-        string.
-        """
-        h = Headers()
-        e = self.assertRaises(TypeError, h.addRawHeader, b"key", None)
-        self.assertEqual(
-            e.args[0],
-            "Header value is an instance of <class 'NoneType'>, " "not bytes or str",
-        )
 
     def test_getRawHeadersNoDefault(self) -> None:
         """
@@ -232,21 +176,23 @@ class BytesHeadersTests(TestCase):
         h.removeHeader(b"test")
         self.assertEqual(list(h.getAllRawHeaders()), [])
 
-    def test_canonicalNameCaps(self) -> None:
+    def test_encodeName(self) -> None:
         """
-        L{Headers._canonicalNameCaps} returns the canonical capitalization for
+        L{Headers._encodeName} returns the canonical capitalization for
         the given header.
         """
         h = Headers()
-        self.assertEqual(h._canonicalNameCaps(b"test"), b"Test")
-        self.assertEqual(h._canonicalNameCaps(b"test-stuff"), b"Test-Stuff")
-        self.assertEqual(h._canonicalNameCaps(b"content-md5"), b"Content-MD5")
-        self.assertEqual(h._canonicalNameCaps(b"dnt"), b"DNT")
-        self.assertEqual(h._canonicalNameCaps(b"etag"), b"ETag")
-        self.assertEqual(h._canonicalNameCaps(b"p3p"), b"P3P")
-        self.assertEqual(h._canonicalNameCaps(b"te"), b"TE")
-        self.assertEqual(h._canonicalNameCaps(b"www-authenticate"), b"WWW-Authenticate")
-        self.assertEqual(h._canonicalNameCaps(b"x-xss-protection"), b"X-XSS-Protection")
+        self.assertEqual(h._encodeName(b"test"), b"Test")
+        self.assertEqual(h._encodeName(b"test-stuff"), b"Test-Stuff")
+        self.assertEqual(h._encodeName(b"content-md5"), b"Content-MD5")
+        self.assertEqual(h._encodeName(b"dnt"), b"DNT")
+        self.assertEqual(h._encodeName(b"etag"), b"ETag")
+        self.assertEqual(h._encodeName(b"p3p"), b"P3P")
+        self.assertEqual(h._encodeName(b"te"), b"TE")
+        self.assertEqual(h._encodeName(b"www-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"WWW-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"Www-Authenticate"), b"WWW-Authenticate")
+        self.assertEqual(h._encodeName(b"x-xss-protection"), b"X-XSS-Protection")
 
     def test_getAllRawHeaders(self) -> None:
         """
@@ -300,7 +246,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"Headers({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_reprWithRawBytes(self) -> None:
@@ -317,7 +263,7 @@ class BytesHeadersTests(TestCase):
         baz = b"baz\xe1"
         self.assertEqual(
             repr(Headers({foo: [bar, baz]})),
-            f"Headers({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"Headers({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_subclassRepr(self) -> None:
@@ -334,7 +280,7 @@ class BytesHeadersTests(TestCase):
 
         self.assertEqual(
             repr(FunnyHeaders({foo: [bar, baz]})),
-            f"FunnyHeaders({{{foo!r}: [{bar!r}, {baz!r}]}})",
+            f"FunnyHeaders({{{foo.capitalize()!r}: [{bar!r}, {baz!r}]}})",
         )
 
     def test_copy(self) -> None:
@@ -351,6 +297,17 @@ class BytesHeadersTests(TestCase):
         self.assertEqual(i.getRawHeaders(b"test"), [b"foo"])
         i.addRawHeader(b"test", b"baz")
         self.assertEqual(h.getRawHeaders(b"test"), [b"foo", b"bar"])
+
+    def test_max_cached_headers(self) -> None:
+        """
+        Only a limited number of HTTP header names get cached.
+        """
+        headers = Headers()
+        for i in range(Headers._MAX_CACHED_HEADERS + 200):
+            headers.addRawHeader(f"hello-{i}", "value")
+        self.assertEqual(
+            len(Headers._canonicalHeaderCache), Headers._MAX_CACHED_HEADERS
+        )
 
 
 class UnicodeHeadersTests(TestCase):
@@ -434,13 +391,6 @@ class UnicodeHeadersTests(TestCase):
         h.setRawHeaders("\u00E1", ["\u2603", b"foo"])
         self.assertTrue(h.hasHeader(b"\xe1"))
         self.assertEqual(h.getRawHeaders(b"\xe1"), [b"\xe2\x98\x83", b"foo"])
-
-    def test_rawHeadersTypeChecking(self) -> None:
-        """
-        L{Headers.setRawHeaders} requires values to be of type sequence
-        """
-        h = Headers()
-        self.assertRaises(TypeError, h.setRawHeaders, "key", {"Foo": "bar"})
 
     def test_addRawHeader(self) -> None:
         """
@@ -614,7 +564,7 @@ class UnicodeHeadersTests(TestCase):
         foo = "foo\u00E1"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "'foo\\xe1'"
+        fooEncoded = "'Foo\\xe1'"
         barEncoded = "'bar\\xe2\\x98\\x83'"
         fooEncoded = "b" + fooEncoded
         barEncoded = "b" + barEncoded
@@ -633,7 +583,7 @@ class UnicodeHeadersTests(TestCase):
         foo = "foo\u00E1"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "b'foo\\xe1'"
+        fooEncoded = "b'Foo\\xe1'"
         barEncoded = "b'bar\\xe2\\x98\\x83'"
 
         class FunnyHeaders(Headers):

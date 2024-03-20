@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import email.message
 import email.parser
+from email.message import Message
 from io import BytesIO, StringIO
 from typing import IO, AnyStr, Callable
 
@@ -89,8 +90,11 @@ Subject: test
         self.assertEqual(mess["From"], "postmaster@example.org")
         self.assertEqual(mess["subject"], "Returned Mail: see transcript for details")
         self.assertTrue(mess.is_multipart())
-        parts = mess.get_payload()
-        self.assertEqual(parts[0].get_payload(), "Custom transcript\n")
+        parts: list[Message] = mess.get_payload()  # type:ignore[assignment]
+        self.assertEqual(
+            parts[0].get_payload(),
+            "Custom transcript\n",
+        )
 
     def _bounceBigMessage(
         self, header: AnyStr, message: AnyStr, ioType: Callable[[AnyStr], IO[AnyStr]]
@@ -107,13 +111,14 @@ Subject: test
         self.assertEqual(mess["From"], "postmaster@example.org")
         self.assertEqual(mess["subject"], "Returned Mail: see transcript for details")
         self.assertTrue(mess.is_multipart())
-        parts = mess.get_payload()
-        innerMessage = parts[1].get_payload()
+        parts: list[Message] = mess.get_payload()  # type:ignore[assignment]
+        innerMessage: list[Message] = parts[1].get_payload()  # type:ignore[assignment]
         if isinstance(message, bytes):
             messageText = message.decode("utf-8")
         else:
             messageText = message
-        self.assertEqual(innerMessage[0].get_payload() + "\n", messageText)
+        pl: str = innerMessage[0].get_payload()  # type:ignore[assignment]
+        self.assertEqual(pl + "\n", messageText)
 
     def test_bounceBigMessage(self) -> None:
         """
