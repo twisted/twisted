@@ -718,6 +718,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         def channelFactory():
             return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
         d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "192.168.1.1"))
 
@@ -746,6 +747,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         def channelFactory():
             return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
         d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_PORT", "12344"))
 
