@@ -876,12 +876,11 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
             "something.foobar"
-            " instead.\n"
-            "    ",
+            " instead.\n",
         )
 
     def test_deprecatedReplacementWithCallable(self):
@@ -897,11 +896,10 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "%s.dummyReplacementMethod instead.\n"
-            "    " % (__name__,),
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
+            "{}.dummyReplacementMethod instead.\n".format(__name__),
         )
 
     def test_deprecatedKeywordParameter(self):
@@ -993,15 +991,11 @@ class AppendToDocstringTests(SynchronousTestCase):
             This is a multi-line docstring.
             """
 
-        def expectedDocstring():
-            """
-            This is a multi-line docstring.
-
-            Appended text.
-            """
-
         _appendToDocstring(multiLineDocstring, "Appended text.")
-        self.assertEqual(expectedDocstring.__doc__, multiLineDocstring.__doc__)
+        self.assertEqual(
+            "\n" "This is a multi-line docstring.\n" "\n" "Appended text.\n",
+            multiLineDocstring.__doc__,
+        )
 
 
 class MutualArgumentExclusionTests(SynchronousTestCase):

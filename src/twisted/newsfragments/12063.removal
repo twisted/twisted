@@ -1,0 +1,2 @@
+twisted.python.deprecate helper function will now always strip whitespaces from the docstrings.
+This is done to have the same behaviour as with Python 3.13.
