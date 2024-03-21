@@ -231,3 +231,73 @@ class TestClassTimeoutAttribute(unittest.TestCase):
     def testMethod(self):
         self.methodCalled = True
         return self.d
+
+
+class AsyncSetUpOK(unittest.TestCase):
+    async def asyncSetUp(self) -> None:
+        self._cb_setUpCalled(await defer.succeed("value"))
+
+    def _cb_setUpCalled(self, ignored: object) -> None:
+        self._setUpCalled = True
+
+    def test_ok(self) -> None:
+        self.assertTrue(self._setUpCalled)
+
+
+class AsyncSetUpFail(unittest.TestCase):
+    testCalled = False
+
+    async def asyncSetUp(self) -> None:
+        await defer.succeed("value")
+        raise unittest.FailTest("i fail")
+
+    def test_ok(self) -> None:
+        AsyncSetUpFail.testCalled = True
+        self.fail("I should not get called")
+
+
+class AsyncSetUpCallbackFail(unittest.TestCase):
+    testCalled = False
+
+    async def asyncSetUp(self) -> None:
+        self._cb_setUpCalled(await defer.succeed("value"))
+
+    def _cb_setUpCalled(self, ignored: object) -> None:
+        self.fail("deliberate failure")
+
+    def test_ok(self) -> None:
+        AsyncSetUpCallbackFail.testCalled = True
+
+
+class AsyncSetUpError(unittest.TestCase):
+    testCalled = False
+
+    async def asyncSetUp(self) -> None:
+        await defer.succeed("value")
+        raise RuntimeError("deliberate error")
+
+    def test_ok(self) -> None:
+        AsyncSetUpError.testCalled = True
+
+
+class AsyncSetUpNeverFire(unittest.TestCase):
+    testCalled = False
+
+    async def asyncSetUp(self) -> None:
+        await defer.Deferred()
+
+    def test_ok(self) -> None:
+        AsyncSetUpNeverFire.testCalled = True
+
+
+class AsyncSetUpSkip(unittest.TestCase):
+    testCalled = False
+
+    async def setUp(self) -> None:
+        self._cb1(await defer.succeed("value"))
+
+    def _cb1(self, ignored: object) -> None:
+        raise unittest.SkipTest("skip me")
+
+    def test_ok(self) -> None:
+        AsyncSetUpSkip.testCalled = True
