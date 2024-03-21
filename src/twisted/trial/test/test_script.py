@@ -528,7 +528,7 @@ class CoverageTests(unittest.SynchronousTestCase):
         self.assertEqual(
             sys.gettrace(),
             # the globaltrace attribute of trace.Trace is undocumented
-            options.tracer.globaltrace,  # type: ignore[attr-defined]
+            options.tracer.globaltrace,
         )
 
     def test_coverdirDefault(self) -> None:

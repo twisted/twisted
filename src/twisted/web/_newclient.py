@@ -30,13 +30,7 @@ import re
 
 from zope.interface import implementer
 
-from twisted.internet.defer import (
-    CancelledError,
-    Deferred,
-    fail,
-    maybeDeferred,
-    succeed,
-)
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
@@ -389,6 +383,11 @@ class HTTPClientParser(HTTPParser):
         b'HTTP/1.1'.  Returns (protocol, major, minor).  Will raise ValueError
         on bad syntax.
         """
+        # Vast majority of the time this will be the response, so just
+        # immediately return the result:
+        if strversion == b"HTTP/1.1":
+            return (b"HTTP", 1, 1)
+
         try:
             proto, strnumber = strversion.split(b"/")
             major, minor = strnumber.split(b".")
@@ -929,6 +928,7 @@ class Request:
                 self._writeToEmptyBodyContentLength(transport)
             else:
                 self._writeHeaders(transport, None)
+            return succeed(None)
         elif self.bodyProducer.length is UNKNOWN_LENGTH:
             return self._writeToBodyProducerChunked(transport)
         else:
@@ -1270,7 +1270,9 @@ class Response:
         """
         self._state = "DEFERRED_CLOSE"
         if reason is None:
-            reason = Failure(ResponseDone("Response body fully received"))
+            reason = Failure._withoutTraceback(
+                ResponseDone("Response body fully received")
+            )
         self._reason = reason
 
     def _bodyDataFinished_CONNECTED(self, reason=None):
@@ -1278,7 +1280,9 @@ class Response:
         Disconnect the protocol and move to the C{'FINISHED'} state.
         """
         if reason is None:
-            reason = Failure(ResponseDone("Response body fully received"))
+            reason = Failure._withoutTraceback(
+                ResponseDone("Response body fully received")
+            )
         self._bodyProtocol.connectionLost(reason)
         self._bodyProtocol = None
         self._state = "FINISHED"
@@ -1506,7 +1510,10 @@ class HTTP11ClientProtocol(Protocol):
             return fail(RequestNotSent())
 
         self._state = "TRANSMITTING"
-        _requestDeferred = maybeDeferred(request.writeTo, self.transport)
+        try:
+            _requestDeferred = request.writeTo(self.transport)
+        except BaseException:
+            _requestDeferred = fail()
 
         def cancelRequest(ign):
             # Explicitly cancel the request's deferred if it's still trying to
@@ -1590,7 +1597,7 @@ class HTTP11ClientProtocol(Protocol):
             or self._state != "QUIESCENT"
             or not self._currentRequest.persistent
         ):
-            self._giveUp(Failure(reason))
+            self._giveUp(Failure._withoutTraceback(reason))
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
