@@ -1,0 +1,3 @@
+`twisted.internet.cfreactor` now invalidates, rather than simply removes, its
+runloop sources, which improves reliability of the `CoreFoundation` reactor,
+particularly when managing your own file descriptor integrations with it.
