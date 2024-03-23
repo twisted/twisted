@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
+Tests for L{twisted.internet.defer.inlineCallbacks} and related APIs.
 """
 
 import traceback
@@ -411,6 +411,113 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         )
         # Our targeted exception is in the traceback
         self.assertIn("test_defgen.TerminalException: boom normal return", tb)
+
+
+class InlineCallbacksCoroutineTests(BaseDefgenTests, unittest.TestCase):
+    """
+    Test L{twisted.internet.defer.inlineCallbacks} with coroutine functions.
+    """
+
+    # First provide all the generator impls necessary for BaseDefgenTests
+    # TODO: Skip this syntax on Python 3.5 and 3.6
+
+    @inlineCallbacks
+    async def _genBasics(self):
+
+        x = await getThing()
+
+        self.assertEqual(x, "hi")
+
+        try:
+            await getOwie()
+        except ZeroDivisionError as e:
+            self.assertEqual(str(e), "OMG")
+        return "WOOSH"
+
+    @inlineCallbacks
+    async def _genBuggy(self):
+        await getThing()
+        1 / 0
+
+    @inlineCallbacks
+    async def _genNothing(self):
+        pass
+
+    @inlineCallbacks
+    async def _genHandledTerminalFailure(self):
+        try:
+            await defer.fail(TerminalException("Handled Terminal Failure"))
+        except TerminalException:
+            pass
+
+    @inlineCallbacks
+    async def _genHandledTerminalAsyncFailure(self, d):
+        try:
+            await d
+        except TerminalException:
+            pass
+
+    @inlineCallbacks
+    async def _genStackUsage(self):
+        for x in range(5000):
+            # Test with yielding a deferred
+            await defer.succeed(1)
+        return 0
+
+    @inlineCallbacks
+    async def _genStackUsage2(self):
+        async def succeedWithOne():
+            return 1
+
+        for x in range(5000):
+            # Test with yielding a random value
+            await succeedWithOne()
+        return 0
+
+    # Tests unique to inlineCallbacks with async def
+    # TODO update for async def
+
+    def testAwaitNotAwaitable(self):
+        """
+        Ensure that yielding a non-deferred passes it back as the
+        result of the yield expression.
+
+        @return: A L{twisted.internet.defer.Deferred}
+        @rtype: L{twisted.internet.defer.Deferred}
+        """
+
+        async def _test():
+            await 5  # FIXME
+            return 5
+
+        _test = inlineCallbacks(_test)
+
+        self.assertEqual(self.successResultOf(_test()), 5)
+
+    def testReturnNoValue(self):
+        """Ensure a standard python return results in a None result."""
+
+        async def _noReturn():
+            await 5  # FIXME
+            return
+
+        _noReturn = inlineCallbacks(_noReturn)
+
+        self.assertIs(self.successResultOf(_noReturn()), None)
+
+    def testReturnValue(self):
+        """
+        returnValue works in a coroutine function
+
+        (Or maybe it shouldn't?)
+        """
+
+        async def _return():
+            returnValue(6)
+
+        _return = inlineCallbacks(_return)
+
+        self.assertEqual(self.successResultOf(_return()), 6)
 
 
 class DeprecateDeferredGeneratorTests(unittest.SynchronousTestCase):
