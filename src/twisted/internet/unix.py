@@ -521,7 +521,17 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.fileno = self.socket.fileno
 
     def write(self, datagram, address):
-        """Write a datagram."""
+        """
+        Write a datagram.
+
+        @param datagram: the data to be sent
+        @type datagram: L{bytes}
+
+        @param address: the address to send the datagram to
+        @type address: L{bytes}
+
+        @raise socket.error: when socket is full with arg[0] == EAGAIN
+        """
         try:
             return self.socket.sendto(datagram, address)
         except OSError as se:
@@ -530,11 +540,6 @@ class DatagramPort(_UNIXPort, udp.Port):
                 return self.write(datagram, address)
             elif no == EMSGSIZE:
                 raise error.MessageLengthError("message too long")
-            elif no == EAGAIN:
-                # oh, well, drop the data. The only difference from UDP
-                # is that UDP won't ever notice.
-                # TODO: add TCP-like buffering
-                pass
             else:
                 raise
 
