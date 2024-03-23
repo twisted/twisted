@@ -101,7 +101,9 @@ class IRCProtoTests(IRCTestCase):
         and reflect their information in its C{supported} attribute.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n")
+        self.proto.dataReceived(
+            b":irc.example.com 005 alice MODES=4 CHANLIMIT=#:20\r\n"
+        )
         self.assertEqual(4, self.proto.supported.getFeature("MODES"))
 
     def test_nick(self) -> None:
@@ -109,10 +111,10 @@ class IRCProtoTests(IRCTestCase):
         IRC NICK command changes the nickname of a user.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice JOIN #group1\r\n")
-        self.proto.dataReceived(":alice1 JOIN #group1\r\n")
-        self.proto.dataReceived(":alice1 NICK newnick\r\n")
-        self.proto.dataReceived(":alice3 NICK newnick3\r\n")
+        self.proto.dataReceived(b":alice JOIN #group1\r\n")
+        self.proto.dataReceived(b":alice1 JOIN #group1\r\n")
+        self.proto.dataReceived(b":alice1 NICK newnick\r\n")
+        self.proto.dataReceived(b":alice3 NICK newnick3\r\n")
         self.assertIn("newnick", self.proto._ingroups)
         self.assertNotIn("alice1", self.proto._ingroups)
 
@@ -121,12 +123,12 @@ class IRCProtoTests(IRCTestCase):
         IRC PART command removes a user from an IRC channel.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice1 JOIN #group1\r\n")
+        self.proto.dataReceived(b":alice1 JOIN #group1\r\n")
         self.assertIn("group1", self.proto._ingroups["alice1"])
         self.assertNotIn("group2", self.proto._ingroups["alice1"])
-        self.proto.dataReceived(":alice PART #group1\r\n")
-        self.proto.dataReceived(":alice1 PART #group1\r\n")
-        self.proto.dataReceived(":alice1 PART #group2\r\n")
+        self.proto.dataReceived(b":alice PART #group1\r\n")
+        self.proto.dataReceived(b":alice1 PART #group1\r\n")
+        self.proto.dataReceived(b":alice1 PART #group2\r\n")
         self.assertNotIn("group1", self.proto._ingroups["alice1"])
         self.assertNotIn("group2", self.proto._ingroups["alice1"])
 
@@ -135,22 +137,22 @@ class IRCProtoTests(IRCTestCase):
         IRC QUIT command removes a user from all IRC channels.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice1 JOIN #group1\r\n")
+        self.proto.dataReceived(b":alice1 JOIN #group1\r\n")
         self.assertIn("group1", self.proto._ingroups["alice1"])
         self.assertNotIn("group2", self.proto._ingroups["alice1"])
-        self.proto.dataReceived(":alice1 JOIN #group3\r\n")
+        self.proto.dataReceived(b":alice1 JOIN #group3\r\n")
         self.assertIn("group3", self.proto._ingroups["alice1"])
-        self.proto.dataReceived(":alice1 QUIT\r\n")
+        self.proto.dataReceived(b":alice1 QUIT\r\n")
         self.assertTrue(len(self.proto._ingroups["alice1"]) == 0)
-        self.proto.dataReceived(":alice3 QUIT\r\n")
+        self.proto.dataReceived(b":alice3 QUIT\r\n")
 
     def test_topic(self) -> None:
         """
         IRC TOPIC command changes the topic of an IRC channel.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice1 JOIN #group1\r\n")
-        self.proto.dataReceived(":alice1 TOPIC #group1 newtopic\r\n")
+        self.proto.dataReceived(b":alice1 JOIN #group1\r\n")
+        self.proto.dataReceived(b":alice1 TOPIC #group1 newtopic\r\n")
         groupConversation = self.proto.getGroupConversation("group1")
         self.assertEqual(groupConversation.topic, "newtopic")
         self.assertEqual(groupConversation.topicSetBy, "alice1")
@@ -160,16 +162,16 @@ class IRCProtoTests(IRCTestCase):
         PRIVMSG sends a private message to a user or channel.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice1 PRIVMSG t2 test_message_1\r\n")
+        self.proto.dataReceived(b":alice1 PRIVMSG t2 test_message_1\r\n")
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice1"))
         self.assertEqual(conversation.message, "test_message_1")
 
-        self.proto.dataReceived(":alice1 PRIVMSG #group1 test_message_2\r\n")
+        self.proto.dataReceived(b":alice1 PRIVMSG #group1 test_message_2\r\n")
         groupConversation = self.proto.getGroupConversation("group1")
         self.assertEqual(groupConversation.text, "test_message_2")
 
         self.proto.setNick("alice")
-        self.proto.dataReceived(":alice PRIVMSG #foo test_message_3\r\n")
+        self.proto.dataReceived(b":alice PRIVMSG #foo test_message_3\r\n")
         groupConversation = self.proto.getGroupConversation("foo")
         self.assertFalse(hasattr(groupConversation, "text"))
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice"))
@@ -180,16 +182,16 @@ class IRCProtoTests(IRCTestCase):
         CTCP ACTION to a user or channel.
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":alice1 PRIVMSG alice1 :\01ACTION smiles\01\r\n")
+        self.proto.dataReceived(b":alice1 PRIVMSG alice1 :\01ACTION smiles\01\r\n")
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice1"))
         self.assertEqual(conversation.message, "smiles")
 
-        self.proto.dataReceived(":alice1 PRIVMSG #group1 :\01ACTION laughs\01\r\n")
+        self.proto.dataReceived(b":alice1 PRIVMSG #group1 :\01ACTION laughs\01\r\n")
         groupConversation = self.proto.getGroupConversation("group1")
         self.assertEqual(groupConversation.text, "laughs")
 
         self.proto.setNick("alice")
-        self.proto.dataReceived(":alice PRIVMSG #group1 :\01ACTION cries\01\r\n")
+        self.proto.dataReceived(b":alice PRIVMSG #group1 :\01ACTION cries\01\r\n")
         groupConversation = self.proto.getGroupConversation("foo")
         self.assertFalse(hasattr(groupConversation, "text"))
         conversation = self.proto.chat.getConversation(self.proto.getPerson("alice"))
@@ -203,7 +205,7 @@ class IRCProtoTests(IRCTestCase):
         """
         self.proto.makeConnection(self.transport)
         self.proto.dataReceived(
-            ":example.com 353 z3p = #bnl :pSwede Dan- SkOyg @MrOp +MrPlus\r\n"
+            b":example.com 353 z3p = #bnl :pSwede Dan- SkOyg @MrOp +MrPlus\r\n"
         )
         expectedInGroups = {
             "Dan-": ["bnl"],
@@ -216,7 +218,7 @@ class IRCProtoTests(IRCTestCase):
         self.assertEqual(expectedInGroups, self.proto._ingroups)
         self.assertEqual(expectedNamReplies, self.proto._namreplies)
 
-        self.proto.dataReceived(":example.com 366 alice #bnl :End of /NAMES list\r\n")
+        self.proto.dataReceived(b":example.com 366 alice #bnl :End of /NAMES list\r\n")
         self.assertEqual({}, self.proto._namreplies)
         groupConversation = self.proto.getGroupConversation("bnl")
         self.assertEqual(expectedNamReplies["bnl"], groupConversation.members)
@@ -226,7 +228,7 @@ class IRCProtoTests(IRCTestCase):
         RPL_TOPIC server response (332) is sent when a channel's topic is changed
         """
         self.proto.makeConnection(self.transport)
-        self.proto.dataReceived(":example.com 332 alice, #foo :Some random topic\r\n")
+        self.proto.dataReceived(b":example.com 332 alice, #foo :Some random topic\r\n")
         self.assertEqual("Some random topic", self.proto._topics["foo"])
 
     def test_sendMessage(self) -> None:
