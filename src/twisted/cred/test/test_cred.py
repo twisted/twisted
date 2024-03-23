@@ -7,6 +7,7 @@ Tests for L{twisted.cred}, now with 30% more starch.
 
 
 from binascii import hexlify, unhexlify
+from unittest import skipIf
 
 from zope.interface import Interface, implementer
 
@@ -17,11 +18,13 @@ from twisted.python.versions import Version
 from twisted.trial import unittest
 
 try:
-    from crypt import crypt as _crypt
+    import crypt as _crypt
 except ImportError:
     crypt = None
+    has_method_crypt = False
 else:
-    crypt = _crypt
+    crypt = _crypt.crypt
+    has_method_crypt = getattr(_crypt, "METHOD_CRYPT", None) in _crypt.methods
 
 
 # The Twisted version in which UsernameHashedPassword is first deprecated.
@@ -246,6 +249,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
         return d
 
 
+@skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
 class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
     users = [
         (b"user1", b"pass1"),
