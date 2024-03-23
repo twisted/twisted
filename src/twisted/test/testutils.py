@@ -12,6 +12,7 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
+import socket
 from io import BytesIO
 from xml.dom import minidom as dom
 
@@ -159,3 +160,29 @@ class ComparisonTestsMixin:
         self.assertFalse(firstValueOne != _Equal())
         self.assertFalse(firstValueOne == _NotEqual())
         self.assertTrue(firstValueOne != _NotEqual())
+
+
+def _has_ipv6():
+    """Returns True if the system can bind an IPv6 address."""
+    sock = None
+    has_ipv6 = False
+
+    try:
+        sock = socket.socket(socket.AF_INET6)
+        sock.bind(("::1", 0))
+        has_ipv6 = True
+    except OSError:
+        pass
+
+    if sock:
+        sock.close()
+    return has_ipv6
+
+
+HAS_IPV6 = _has_ipv6()
+
+
+def skipWithoutIPv6(f):
+    if not HAS_IPV6:
+        f.skip = "Does not work on systems without IPv6 support."
+    return f
