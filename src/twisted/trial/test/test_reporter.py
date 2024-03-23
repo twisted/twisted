@@ -32,6 +32,28 @@ from .._dist.test.matchers import isFailure, matches_result, similarFrame
 from .matchers import after
 
 
+class ENOSPCFileTests(unittest.SynchronousTestCase):
+    def test_enospc(self):
+        expected = 0
+        written = 0
+        for i in range(1024):
+            for i in range(1024):
+                written += os.write(1, b"x" * 4)
+                expected += 4
+            written += os.write(1, b"\n")
+            expected += 1
+        written += os.write(1, b"y" * 2 ** 16)
+        expected += 2 ** 16
+        self.assertEqual(expected, written)
+
+    def test_enospc2(self):
+        import sys
+        for i in range(2 ** 17):
+            print(i)
+            sys.stdout.write("z" * i)
+            sys.stdout.flush()
+
+
 class BrokenStream:
     """
     Stream-ish object that raises a signal interrupt error. We use this to make
