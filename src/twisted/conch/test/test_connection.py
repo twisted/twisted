@@ -4,11 +4,18 @@
 """
 This module tests twisted.conch.ssh.connection.
 """
+from __future__ import annotations
 
 import struct
 
+from zope.interface import implementer
+
+from typing_extensions import NoReturn
+
+from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh import channel
 from twisted.conch.test import test_userauth
+from twisted.internet import defer
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
@@ -55,29 +62,29 @@ class TestChannel(channel.SSHChannel):
     gotOpen = False
     gotClosed = False
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         return "TestChannel %i" % self.id
 
-    def channelOpen(self, specificData):
+    def channelOpen(self, specificData: bytes) -> None:
         """
         The channel is open.  Set up the instance variables.
         """
         self.gotOpen = True
         self.specificData = specificData
-        self.inBuffer = []
-        self.extBuffer = []
+        self.inBuffer: list[bytes] = []
+        self.extBuffer: list[tuple[int, bytes]] = []
         self.numberRequests = 0
         self.gotEOF = False
         self.gotOneClose = False
         self.gotClosed = False
 
-    def openFailed(self, reason):
+    def openFailed(self, reason: error.ConchError) -> None:
         """
         Opening the channel failed.  Store the reason why.
         """
         self.openFailureReason = reason
 
-    def request_test(self, data):
+    def request_test(self, data: bytes) -> bool:
         """
         A test request.  Return True if data is 'data'.
 
@@ -86,45 +93,49 @@ class TestChannel(channel.SSHChannel):
         self.numberRequests += 1
         return data == b"data"
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Data was received.  Store it in the buffer.
         """
         self.inBuffer.append(data)
 
-    def extReceived(self, code, data):
+    def extReceived(self, code: int, data: bytes) -> None:
         """
         Extended data was received.  Store it in the buffer.
         """
         self.extBuffer.append((code, data))
 
-    def eofReceived(self):
+    def eofReceived(self) -> None:
         """
         EOF was received.  Remember it.
         """
         self.gotEOF = True
 
-    def closeReceived(self):
+    def closeReceived(self) -> None:
         """
         Close was received.  Remember it.
         """
         self.gotOneClose = True
 
-    def closed(self):
+    def closed(self) -> None:
         """
         The channel is closed.  Rembember it.
         """
         self.gotClosed = True
 
 
+@implementer(IConchUser)
 class TestAvatar:
     """
     A mocked-up version of twisted.conch.avatar.ConchUser
     """
 
     _ARGS_ERROR_CODE = 123
+    conn: connection.SSHConnection
 
-    def lookupChannel(self, channelType, windowSize, maxPacket, data):
+    def lookupChannel(
+        self, channelType: bytes, windowSize: int, maxPacket: int, data: bytes
+    ) -> TestChannel | None:
         """
         The server wants us to return a channel.  If the requested channel is
         our TestChannel, return it, otherwise return None.
@@ -136,14 +147,17 @@ class TestAvatar:
                 data=data,
                 avatar=self,
             )
-        elif channelType == b"conch-error-args":
+        if channelType == b"conch-error-args":
             # Raise a ConchError with backwards arguments to make sure the
             # connection fixes it for us.  This case should be deprecated and
             # deleted eventually, but only after all of Conch gets the argument
             # order right.
             raise error.ConchError(self._ARGS_ERROR_CODE, "error args in wrong order")
+        return None
 
-    def gotGlobalRequest(self, requestType, data):
+    def gotGlobalRequest(
+        self, requestType: bytes, data: bytes
+    ) -> tuple[bool, bytes] | bool:
         """
         The client has made a global request.  If the global request is
         'TestGlobal', return True.  If the global request is 'TestData',
@@ -157,6 +171,9 @@ class TestAvatar:
         else:
             return False
 
+    def lookupSubsystem(self, subsystem: bytes, data: bytes) -> NoReturn:
+        raise NotImplementedError
+
 
 class TestConnection(connection.SSHConnection):
     """
@@ -169,23 +186,25 @@ class TestConnection(connection.SSHConnection):
     if not cryptography:
         skip = "Cannot run without cryptography"
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         return "TestConnection"
 
-    def global_TestGlobal(self, data):
+    def global_TestGlobal(self, data: bytes) -> bool:
         """
         The other side made the 'TestGlobal' global request.  Return True.
         """
         return True
 
-    def global_Test_Data(self, data):
+    def global_Test_Data(self, data: bytes) -> tuple[bool, bytes]:
         """
         The other side made the 'Test-Data' global request.  Return True and
         the data we received.
         """
         return True, data
 
-    def channel_TestChannel(self, windowSize, maxPacket, data):
+    def channel_TestChannel(
+        self, windowSize: int, maxPacket: int, data: bytes
+    ) -> TestChannel:
         """
         The other side is requesting the TestChannel.  Create a C{TestChannel}
         instance, store it, and return it.
@@ -195,7 +214,9 @@ class TestConnection(connection.SSHConnection):
         )
         return self.channel
 
-    def channel_ErrorChannel(self, windowSize, maxPacket, data):
+    def channel_ErrorChannel(
+        self, windowSize: int, maxPacket: int, data: bytes
+    ) -> NoReturn:
         """
         The other side is requesting the ErrorChannel.  Raise an exception.
         """
@@ -206,14 +227,14 @@ class ConnectionTests(unittest.TestCase):
     if not cryptography:
         skip = "Cannot run without cryptography"
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.transport = test_userauth.FakeTransport(None)
         self.transport.avatar = TestAvatar()
         self.conn = TestConnection()
         self.conn.transport = self.transport
         self.conn.serviceStarted()
 
-    def _openChannel(self, channel):
+    def _openChannel(self, channel: channel.SSHChannel) -> None:
         """
         Open the channel with the default connection.
         """
@@ -223,17 +244,17 @@ class ConnectionTests(unittest.TestCase):
             struct.pack(">2L", channel.id, 255) + b"\x00\x02\x00\x00\x00\x00\x80\x00"
         )
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.conn.serviceStopped()
 
-    def test_linkAvatar(self):
+    def test_linkAvatar(self) -> None:
         """
         Test that the connection links itself to the avatar in the
         transport.
         """
         self.assertIs(self.transport.avatar.conn, self.conn)
 
-    def test_serviceStopped(self):
+    def test_serviceStopped(self) -> None:
         """
         Test that serviceStopped() closes any open channels.
         """
@@ -254,7 +275,7 @@ class ConnectionTests(unittest.TestCase):
 
         self.assertIsInstance(channel2.openFailureReason, ConnectionLost)
 
-    def test_GLOBAL_REQUEST(self):
+    def test_GLOBAL_REQUEST(self) -> None:
         """
         Test that global request packets are dispatched to the global_*
         methods and the return values are translated into success or failure
@@ -278,37 +299,37 @@ class ConnectionTests(unittest.TestCase):
         self.conn.ssh_GLOBAL_REQUEST(common.NS(b"TestGlobal") + b"\x00")
         self.assertEqual(self.transport.packets, [])
 
-    def test_REQUEST_SUCCESS(self):
+    def test_REQUEST_SUCCESS(self) -> defer.Deferred[None]:
         """
         Test that global request success packets cause the Deferred to be
         called back.
         """
-        d = self.conn.sendGlobalRequest(b"request", b"data", True)
+        d: defer.Deferred[bytes] = self.conn.sendGlobalRequest(
+            b"request", b"data", True
+        )
         self.conn.ssh_REQUEST_SUCCESS(b"data")
 
-        def check(data):
+        def check(data: bytes) -> None:
             self.assertEqual(data, b"data")
 
-        d.addCallback(check)
-        d.addErrback(self.fail)
-        return d
+        return d.addCallback(check).addErrback(self.fail)
 
-    def test_REQUEST_FAILURE(self):
+    def test_REQUEST_FAILURE(self) -> defer.Deferred[None]:
         """
         Test that global request failure packets cause the Deferred to be
         erred back.
         """
-        d = self.conn.sendGlobalRequest(b"request", b"data", True)
+        d: defer.Deferred[bytes] = self.conn.sendGlobalRequest(
+            b"request", b"data", True
+        )
         self.conn.ssh_REQUEST_FAILURE(b"data")
 
-        def check(f):
-            self.assertEqual(f.value.data, b"data")
+        def check(result: error.ConchError) -> None:
+            self.assertEqual(result.data, b"data")
 
-        d.addCallback(self.fail)
-        d.addErrback(check)
-        return d
+        return self.assertFailure(d, error.ConchError).addCallback(check)
 
-    def test_CHANNEL_OPEN(self):
+    def test_CHANNEL_OPEN(self) -> None:
         """
         Test that open channel packets cause a channel to be created and
         opened or a failure message to be returned.
@@ -360,13 +381,15 @@ class ConnectionTests(unittest.TestCase):
             ],
         )
 
-    def _lookupChannelErrorTest(self, code):
+    def _lookupChannelErrorTest(self, code: int) -> None:
         """
         Deliver a request for a channel open which will result in an exception
         being raised during channel lookup.  Assert that an error response is
         delivered as a result.
         """
-        self.transport.avatar._ARGS_ERROR_CODE = code
+        avatar = self.transport.avatar
+        assert isinstance(avatar, TestAvatar)
+        avatar._ARGS_ERROR_CODE = code
         self.conn.ssh_CHANNEL_OPEN(
             common.NS(b"conch-error-args") + b"\x00\x00\x00\x01" * 4
         )
@@ -388,7 +411,7 @@ class ConnectionTests(unittest.TestCase):
             ],
         )
 
-    def test_lookupChannelError(self):
+    def test_lookupChannelError(self) -> None:
         """
         If a C{lookupChannel} implementation raises L{error.ConchError} with the
         arguments in the wrong order, a C{MSG_CHANNEL_OPEN} failure is still
@@ -401,7 +424,7 @@ class ConnectionTests(unittest.TestCase):
         """
         self._lookupChannelErrorTest(123)
 
-    def test_CHANNEL_OPEN_CONFIRMATION(self):
+    def test_CHANNEL_OPEN_CONFIRMATION(self) -> None:
         """
         Test that channel open confirmation packets cause the channel to be
         notified that it's open.
@@ -415,7 +438,7 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(self.conn.channelsToRemoteChannel[channel], 0)
         self.assertEqual(self.conn.localToRemoteChannel[0], 0)
 
-    def test_CHANNEL_OPEN_FAILURE(self):
+    def test_CHANNEL_OPEN_FAILURE(self) -> None:
         """
         Test that channel open failure packets cause the channel to be
         notified that its opening failed.
@@ -428,7 +451,7 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(channel.openFailureReason.args, (b"failure!", 1))
         self.assertIsNone(self.conn.channels.get(channel))
 
-    def test_CHANNEL_WINDOW_ADJUST(self):
+    def test_CHANNEL_WINDOW_ADJUST(self) -> None:
         """
         Test that channel window adjust messages add bytes to the channel
         window.
@@ -439,7 +462,7 @@ class ConnectionTests(unittest.TestCase):
         self.conn.ssh_CHANNEL_WINDOW_ADJUST(b"\x00\x00\x00\x00\x00\x00\x00" b"\x01")
         self.assertEqual(channel.remoteWindowLeft, oldWindowSize + 1)
 
-    def test_CHANNEL_DATA(self):
+    def test_CHANNEL_DATA(self) -> None:
         """
         Test that channel data messages are passed up to the channel, or
         cause the channel to be closed if the data is too large.
@@ -476,7 +499,7 @@ class ConnectionTests(unittest.TestCase):
             [(connection.MSG_CHANNEL_CLOSE, b"\x00\x00\x00\xff")],
         )
 
-    def test_CHANNEL_EXTENDED_DATA(self):
+    def test_CHANNEL_EXTENDED_DATA(self) -> None:
         """
         Test that channel extended data messages are passed up to the channel,
         or cause the channel to be closed if they're too big.
@@ -519,7 +542,7 @@ class ConnectionTests(unittest.TestCase):
             [(connection.MSG_CHANNEL_CLOSE, b"\x00\x00\x00\xff")],
         )
 
-    def test_CHANNEL_EOF(self):
+    def test_CHANNEL_EOF(self) -> None:
         """
         Test that channel eof messages are passed up to the channel.
         """
@@ -528,7 +551,7 @@ class ConnectionTests(unittest.TestCase):
         self.conn.ssh_CHANNEL_EOF(b"\x00\x00\x00\x00")
         self.assertTrue(channel.gotEOF)
 
-    def test_CHANNEL_CLOSE(self):
+    def test_CHANNEL_CLOSE(self) -> None:
         """
         Test that channel close messages are passed up to the channel.  Also,
         test that channel.close() is called if both sides are closed when this
@@ -544,7 +567,7 @@ class ConnectionTests(unittest.TestCase):
         self.assertTrue(channel.gotOneClose)
         self.assertTrue(channel.gotClosed)
 
-    def test_CHANNEL_REQUEST_success(self):
+    def test_CHANNEL_REQUEST_success(self) -> defer.Deferred[None]:
         """
         Test that channel requests that succeed send MSG_CHANNEL_SUCCESS.
         """
@@ -554,72 +577,67 @@ class ConnectionTests(unittest.TestCase):
             b"\x00\x00\x00\x00" + common.NS(b"test") + b"\x00"
         )
         self.assertEqual(channel.numberRequests, 1)
-        d = self.conn.ssh_CHANNEL_REQUEST(
+        d: defer.Deferred[None] = self.conn.ssh_CHANNEL_REQUEST(
             b"\x00\x00\x00\x00" + common.NS(b"test") + b"\xff" + b"data"
         )
 
-        def check(result):
+        def check(result: object) -> None:
             self.assertEqual(
                 self.transport.packets,
                 [(connection.MSG_CHANNEL_SUCCESS, b"\x00\x00\x00\xff")],
             )
 
-        d.addCallback(check)
-        return d
+        return d.addCallback(check)
 
-    def test_CHANNEL_REQUEST_failure(self):
+    def test_CHANNEL_REQUEST_failure(self) -> defer.Deferred[None]:
         """
         Test that channel requests that fail send MSG_CHANNEL_FAILURE.
         """
         channel = TestChannel()
         self._openChannel(channel)
-        d = self.conn.ssh_CHANNEL_REQUEST(
+        d: defer.Deferred[None] = self.conn.ssh_CHANNEL_REQUEST(
             b"\x00\x00\x00\x00" + common.NS(b"test") + b"\xff"
         )
 
-        def check(result):
+        def check(result: object) -> None:
             self.assertEqual(
                 self.transport.packets,
                 [(connection.MSG_CHANNEL_FAILURE, b"\x00\x00\x00\xff")],
             )
 
-        d.addCallback(self.fail)
-        d.addErrback(check)
-        return d
+        return d.addCallback(self.fail).addErrback(check)
 
-    def test_CHANNEL_REQUEST_SUCCESS(self):
+    def test_CHANNEL_REQUEST_SUCCESS(self) -> defer.Deferred[None]:
         """
         Test that channel request success messages cause the Deferred to be
         called back.
         """
         channel = TestChannel()
         self._openChannel(channel)
-        d = self.conn.sendRequest(channel, b"test", b"data", True)
+        d: defer.Deferred[str] = self.conn.sendRequest(channel, b"test", b"data", True)
         self.conn.ssh_CHANNEL_SUCCESS(b"\x00\x00\x00\x00")
 
-        def check(result):
-            self.assertTrue(result)
+        def check(result: str) -> None:
+            self.assertEqual(result, "")
 
-        return d
+        return d.addCallback(check)
 
-    def test_CHANNEL_REQUEST_FAILURE(self):
+    def test_CHANNEL_REQUEST_FAILURE(self) -> defer.Deferred[None]:
         """
         Test that channel request failure messages cause the Deferred to be
         erred back.
         """
         channel = TestChannel()
         self._openChannel(channel)
-        d = self.conn.sendRequest(channel, b"test", b"", True)
+        d: defer.Deferred[str] = self.conn.sendRequest(channel, b"test", b"", True)
         self.conn.ssh_CHANNEL_FAILURE(b"\x00\x00\x00\x00")
 
-        def check(result):
-            self.assertEqual(result.value.value, "channel request failed")
+        def check(result: error.ConchError) -> None:
+            self.assertEqual(result.value, "channel request failed")
 
-        d.addCallback(self.fail)
-        d.addErrback(check)
-        return d
+        return self.assertFailure(d, error.ConchError).addCallback(check)
 
-    def test_sendGlobalRequest(self):
+    def test_sendGlobalRequest(self) -> None:
         """
         Test that global request messages are sent in the right format.
         """
@@ -636,7 +654,7 @@ class ConnectionTests(unittest.TestCase):
         )
         self.assertEqual(self.conn.deferreds, {"global": [d]})
 
-    def test_openChannel(self):
+    def test_openChannel(self) -> None:
         """
         Test that open channel messages are sent in the right format.
         """
@@ -655,7 +673,7 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(channel.id, 0)
         self.assertEqual(self.conn.localChannelID, 1)
 
-    def test_sendRequest(self):
+    def test_sendRequest(self) -> None:
         """
         Test that channel request messages are sent in the right format.
         """
@@ -682,7 +700,7 @@ class ConnectionTests(unittest.TestCase):
         )
         self.assertEqual(self.conn.deferreds[0], [d])
 
-    def test_adjustWindow(self):
+    def test_adjustWindow(self) -> None:
         """
         Test that channel window adjust messages cause bytes to be added
         to the window.
@@ -705,7 +723,7 @@ class ConnectionTests(unittest.TestCase):
             ],
         )
 
-    def test_sendData(self):
+    def test_sendData(self) -> None:
         """
         Test that channel data messages are sent in the right format.
         """
@@ -719,7 +737,7 @@ class ConnectionTests(unittest.TestCase):
             [(connection.MSG_CHANNEL_DATA, b"\x00\x00\x00\xff" + common.NS(b"a"))],
         )
 
-    def test_sendExtendedData(self):
+    def test_sendExtendedData(self) -> None:
         """
         Test that channel extended data messages are sent in the right format.
         """
@@ -738,7 +756,7 @@ class ConnectionTests(unittest.TestCase):
             ],
         )
 
-    def test_sendEOF(self):
+    def test_sendEOF(self) -> None:
         """
         Test that channel EOF messages are sent in the right format.
         """
@@ -754,7 +772,7 @@ class ConnectionTests(unittest.TestCase):
             self.transport.packets, [(connection.MSG_CHANNEL_EOF, b"\x00\x00\x00\xff")]
         )
 
-    def test_sendClose(self):
+    def test_sendClose(self) -> None:
         """
         Test that channel close messages are sent in the right format.
         """
@@ -780,7 +798,7 @@ class ConnectionTests(unittest.TestCase):
         self.conn.sendClose(channel2)
         self.assertTrue(channel2.gotClosed)
 
-    def test_getChannelWithAvatar(self):
+    def test_getChannelWithAvatar(self) -> None:
         """
         Test that getChannel dispatches to the avatar when an avatar is
         present. Correct functioning without the avatar is verified in
@@ -794,7 +812,7 @@ class ConnectionTests(unittest.TestCase):
             error.ConchError, self.conn.getChannel, b"BadChannel", 50, 30, b"data"
         )
 
-    def test_gotGlobalRequestWithoutAvatar(self):
+    def test_gotGlobalRequestWithoutAvatar(self) -> None:
         """
         Test that gotGlobalRequests dispatches to global_* without an avatar.
         """
@@ -805,7 +823,9 @@ class ConnectionTests(unittest.TestCase):
         )
         self.assertFalse(self.conn.gotGlobalRequest(b"BadGlobal", b"data"))
 
-    def test_channelClosedCausesLeftoverChannelDeferredsToErrback(self):
+    def test_channelClosedCausesLeftoverChannelDeferredsToErrback(
+        self,
+    ) -> defer.Deferred[error.ConchError]:
         """
         Whenever an SSH channel gets closed any Deferred that was returned by a
         sendRequest() on its parent connection must be errbacked.
@@ -813,8 +833,10 @@ class ConnectionTests(unittest.TestCase):
         channel = TestChannel()
         self._openChannel(channel)
 
-        d = self.conn.sendRequest(channel, b"dummyrequest", b"dummydata", wantReply=1)
-        d = self.assertFailure(d, error.ConchError)
+        d: defer.Deferred[error.ConchError] = self.assertFailure(
+            self.conn.sendRequest(channel, b"dummyrequest", b"dummydata", wantReply=1),
+            error.ConchError,
+        )
         self.conn.channelClosed(channel)
         return d
 
@@ -827,20 +849,24 @@ class CleanConnectionShutdownTests(unittest.TestCase):
     if not cryptography:
         skip = "Cannot run without cryptography"
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.transport = test_userauth.FakeTransport(None)
         self.transport.avatar = TestAvatar()
         self.conn = TestConnection()
         self.conn.transport = self.transport
 
-    def test_serviceStoppedCausesLeftoverGlobalDeferredsToErrback(self):
+    def test_serviceStoppedCausesLeftoverGlobalDeferredsToErrback(
+        self,
+    ) -> defer.Deferred[error.ConchError]:
         """
         Once the service is stopped any leftover global deferred returned by
         a sendGlobalRequest() call must be errbacked.
         """
         self.conn.serviceStarted()
 
-        d = self.conn.sendGlobalRequest(b"dummyrequest", b"dummydata", wantReply=1)
-        d = self.assertFailure(d, error.ConchError)
+        d: defer.Deferred[error.ConchError] = self.assertFailure(
+            self.conn.sendGlobalRequest(b"dummyrequest", b"dummydata", wantReply=1),
+            error.ConchError,
+        )
         self.conn.serviceStopped()
         return d

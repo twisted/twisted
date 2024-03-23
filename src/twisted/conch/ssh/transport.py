@@ -27,6 +27,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from typing_extensions import Literal
 
 from twisted import __version__ as twisted_version
+from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh import _kex, address, keys
 from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
 from twisted.internet import defer, protocol
@@ -514,6 +515,7 @@ class SSHTransportBase(protocol.Protocol):
 
     _peerSupportsExtensions = False
     peerExtensions: Dict[bytes, bytes] = {}
+    avatar: IConchUser
 
     def connectionLost(self, reason):
         """

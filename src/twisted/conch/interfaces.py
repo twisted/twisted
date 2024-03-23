@@ -7,6 +7,9 @@ This module contains interfaces defined for the L{twisted.conch} package.
 
 from zope.interface import Attribute, Interface
 
+from twisted.conch.ssh import channel
+from twisted.internet import protocol
+
 
 class IConchUser(Interface):
     """
@@ -16,7 +19,9 @@ class IConchUser(Interface):
 
     conn = Attribute("The SSHConnection object for this user.")
 
-    def lookupChannel(channelType, windowSize, maxPacket, data):
+    def lookupChannel(
+        channelType: bytes, windowSize: int, maxPacket: int, data: bytes
+    ) -> channel.SSHChannel | None:
         """
         The other side requested a channel of some sort.
 
@@ -42,7 +47,7 @@ class IConchUser(Interface):
         @rtype:             a subclass of L{SSHChannel} or L{None}
         """
 
-    def lookupSubsystem(subsystem, data):
+    def lookupSubsystem(subsystem: bytes, data: bytes) -> protocol.Protocol | None:
         """
         The other side requested a subsystem.
 
@@ -56,7 +61,7 @@ class IConchUser(Interface):
         @rtype:          L{Protocol} or L{None}
         """
 
-    def gotGlobalRequest(requestType, data):
+    def gotGlobalRequest(requestType: bytes, data: bytes) -> tuple[bool, bytes] | bool:
         """
         A global request was sent from the other side.
 
