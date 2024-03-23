@@ -61,7 +61,7 @@ class Maildir(pb.Referenceable):
         if name[0] == ".":
             raise OSError("subfolder name cannot begin with a '.'")
         name = name.replace("/", ":")
-        if self.virtualDirectoy == ".":
+        if self.virtualDirectory == ".":
             name = "." + name
         else:
             name = self.virtualDirectory + ":" + name
