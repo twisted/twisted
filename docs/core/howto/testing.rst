@@ -246,3 +246,7 @@ then deletes that schema in the tearDown function, your tests will behave in an
 unpredictable fashion as they tromp upon each other if they have their own
 schema.  And this won't actually indicate a real error in your code, merely a
 testing-specific race-condition.
+
+Trial provides `TWISTED_TRIAL_PARALLEL_INDEX` environment variable to the tests when run in parallel.
+This allows to coordinate access to shared resources such as external databases.
+Creating as many databases as there are parallel runners will allow to run the tests in parallel.
