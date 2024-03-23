@@ -918,7 +918,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             reply = GUEST_LOGGED_IN_PROCEED
         else:
             # user login
-            creds = credentials.UsernamePassword(self._user, password)
+            encodedUser = self._user.encode(self._encoding)
+            encodedPass = password.encode(self._encoding)
+
+            creds = credentials.UsernamePassword(encodedUser, encodedPass)
             reply = USR_LOGGED_IN_PROCEED
         del self._user
 
