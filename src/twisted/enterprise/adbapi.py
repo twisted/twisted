@@ -116,7 +116,9 @@ class Transaction:
         self._cursor = self._connection.cursor()
 
     def reconnect(self):
-        self._connection.reconnect()
+        if self._connection is not None:
+            self._pool.disconnect(self._connection)
+        self._connection = self._pool.connect()
         self._cursor = None
 
     def __getattr__(self, name):
