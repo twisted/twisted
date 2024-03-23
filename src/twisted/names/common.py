@@ -67,6 +67,12 @@ class ResolverBase:
         return self._errormap.get(responseCode, DNSUnknownError)
 
     def query(self, query, timeout=None):
+        """
+        Umbrella query handler function.
+        
+        @param query
+        @type query
+        """
         try:
             method = self.typeToMethod[query.type]
         except KeyError:
@@ -81,79 +87,160 @@ class ResolverBase:
             return defer.maybeDeferred(method, query.name.name, timeout)
 
     def _lookup(self, name, cls, type, timeout):
+        """
+        Umbrella defer-as-failed logic.
+        """
         return defer.fail(NotImplementedError("ResolverBase._lookup"))
 
     def lookupAddress(self, name, timeout=None):
+        """
+        Lookup up IPV4 address (A record request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.A, timeout)
 
     def lookupIPV6Address(self, name, timeout=None):
+        """
+        Look up IPV6 address (AAAA record request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.AAAA, timeout)
 
     def lookupAddress6(self, name, timeout=None):
+        """
+        Look up IPV6 address (A6 record request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.A6, timeout)
 
     def lookupMailExchange(self, name, timeout=None):
+        """
+        Look up email exchanger (MX) address (MX record request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.MX, timeout)
 
     def lookupNameservers(self, name, timeout=None):
+        """
+        Look up DNS resolver (NS) address (NS record request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.NS, timeout)
 
     def lookupCanonicalName(self, name, timeout=None):
+        """
+        Look up canonical name (CNAME request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.CNAME, timeout)
 
     def lookupMailBox(self, name, timeout=None):
+        """
+        Look up mailbox record (MB request).
+        This is largely obsolete. The intent was to return a reference to a mail list address.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.MB, timeout)
 
     def lookupMailGroup(self, name, timeout=None):
+        """
+        Look up mailgroup record (MG request).
+        This is largely obsolete. The intent was to return a reference to a mail list address.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.MG, timeout)
 
     def lookupMailRename(self, name, timeout=None):
+        """
+        Look up mailbox rename record (MR request).
+        This is largely obsolete. The intent was to return a reference to a mail list address.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.MR, timeout)
 
     def lookupPointer(self, name, timeout=None):
+        """
+        Look up canonical name pointer request (PTR request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.PTR, timeout)
 
     def lookupAuthority(self, name, timeout=None):
+        """
+        Look up DNS authority zone (SOA request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.SOA, timeout)
 
     def lookupNull(self, name, timeout=None):
+        """
+        Look up up null record (NULL request).
+        Obsolete at this point.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.NULL, timeout)
 
     def lookupWellKnownServices(self, name, timeout=None):
+        """
+        Look up well known services list (WKS request).
+        Largely usused.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.WKS, timeout)
 
     def lookupService(self, name, timeout=None):
+        """
+        Look up services locator (SRV request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.SRV, timeout)
 
     def lookupHostInfo(self, name, timeout=None):
+        """
+        Look up host into (HINFO request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.HINFO, timeout)
 
     def lookupMailboxInfo(self, name, timeout=None):
+        """
+        Look up mailbox info (MINFO request).
+        Largely unused.
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.MINFO, timeout)
 
     def lookupText(self, name, timeout=None):
+        """
+        Look up text record (TXT request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.TXT, timeout)
 
     def lookupSenderPolicy(self, name, timeout=None):
+        """
+        Look up sender policy framework record (SPF request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.SPF, timeout)
 
     def lookupResponsibility(self, name, timeout=None):
+        """
+        Look up responsible person record (RP request)
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.RP, timeout)
 
     def lookupAFSDatabase(self, name, timeout=None):
+        """
+        Look up Andrew File Server records (AFSDB request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.AFSDB, timeout)
 
     def lookupZone(self, name, timeout=None):
+        """
+        Authoritative zone file transfer request (AXFR request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.AXFR, timeout)
 
     def lookupNamingAuthorityPointer(self, name, timeout=None):
+        """
+        Look u[ naming authority pointer (NAPTR request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.NAPTR, timeout)
 
     def lookupAllRecords(self, name, timeout=None):
+        """
+        Look up all records (ALL_RECORDS request).
+        """
         return self._lookup(dns.domainString(name), dns.IN, dns.ALL_RECORDS, timeout)
 
     # IResolverSimple
     def getHostByName(self, name, timeout=None, effort=10):
+        """
+        Returns DNS lookup deferred record.
+        """
         name = dns.domainString(name)
         # XXX - respect timeout
         # XXX - this should do A and AAAA lookups, not ANY (see RFC 8482).
@@ -234,7 +321,6 @@ def extractRecord(resolver, name, answers, level=10):
             return extractRecord(nsResolver, name, ans + auth + add, level - 1)
 
         return nsResolver.lookupAddress(name.name).addCallback(queryAgain)
-
 
 typeToMethod = {
     dns.A: "lookupAddress",
