@@ -31,7 +31,16 @@ coverage:
         # swinging coverage that is not triggered by changes in a PR.
         # See: https://twistedmatrix.com/trac/ticket/10170
         threshold: 0.02%
-
+      tests:
+        # We want a separate report just for the test code itself.
+        # If a test code is not executed it means we always skip a test
+        # or a test is accidentally always skipped.
+        # And we see that the report is green, but some bugs might be hidden
+        # due to test not being executed.
+        target: 100%
+        paths:
+          - "src/twisted/*/test/**"
+          - "src/twisted/test/**"
 
 # We don't want to receive general PR comments about coverage.
 # We have the commit status checks and that should be enough.
