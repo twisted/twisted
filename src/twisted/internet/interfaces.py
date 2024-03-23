@@ -8,6 +8,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 from __future__ import annotations
 
+import enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -57,6 +58,8 @@ if TYPE_CHECKING:
         from twisted.python.threadpool import ThreadPool
     else:
         ThreadPool = object  # type: ignore[misc, assignment]
+
+    from twisted.python.filepath import FilePath
 
 
 class IAddress(Interface):
@@ -2754,3 +2757,130 @@ class _ISupportsExitSignalCapturing(Interface):
         application, or None if no signal was delivered.
         """
     )
+
+
+DEFAULT_CHUNK_SIZE = 4096
+DEFAULT_BUFFER_MAX = 2**22  # 4 megabytes
+
+
+class IAsyncReader(Interface):
+    """
+    a file or file-like object opened for reading asynchronously
+    """
+
+    def close() -> "Deferred":
+        """
+        Close the file.
+
+        @return: a Deferred that is called back when the close succeeds.
+        """
+
+    def fileno() -> int:
+        """
+        @return: the underlying file handle
+        """
+
+    def read(offset: int, length: int) -> "Deferred":
+        """
+        Read from the file.
+
+        This method returns a Deferred with the data as L{bytes}
+
+        @param offset: an integer that is the index to start from in the file.
+        @param length: the maximum length of data to return.  The actual amount
+        returned may less than this.  For normal disk files, however,
+        this should read the requested number (up to the end of the file).
+        """
+        # adapted from twisted.conch.interfaces.ISFTPFile
+
+    def send(
+        consumer: IConsumer, start: int = 0, chunkSize: int = DEFAULT_CHUNK_SIZE
+    ) -> "Deferred":
+        """
+        Produce the contents of the file to the given consumer.
+
+        @param start: offset to begin reading from
+        @param chunkSize: size, in bytes, of each read
+        @return: A Deferred which fires when the file has been
+        consumed completely.
+        """
+        # adapted from L{twisted.protocols.ftp.IReadFile}
+
+    def producer() -> IPushProducer:
+        """
+        returns a IPushProducer available during send()
+        """
+
+
+class IAsyncWriter(Interface):
+    """
+    a file or file-like object opened for writing asynchronously
+    """
+
+    def close() -> "Deferred":
+        """
+        Close the file.
+
+        @return: a Deferred that is called back when the close succeeds.
+        """
+
+    def fileno() -> int:
+        """
+        @return: the underlying file handle
+        """
+
+    def write(offset: int, data: bytes) -> "Deferred":
+        """
+        Write to the file.
+
+        @param offset: an integer that is the index to start from in the file.
+        @param data: a L{bytes} that is the data to write.
+
+        @return: a Deferred returning the number of bytes written
+        """
+
+    def flush() -> "Deferred":
+        """
+        Flush to disc
+
+        @return: a Deferred that is called back when the flush succeeds.
+        """
+
+    def receive(
+        append: bool = False, buffer_max: int = DEFAULT_BUFFER_MAX
+    ) -> IConsumer:
+        """
+        Write to the file using a C{IConsumer}
+
+        @param append: True if append to end of file
+        @return: A C{IConsumer} which is used to write data
+        """
+        # adapted from L{twisted.protocols.ftp.IWriteFile}
+
+
+class FileAsyncFlags(enum.Flag):
+    READ = 1
+    OVERWRITE = 2
+    TRUNCATE = 4
+    CREATE = 8
+    EXCLUSIVE = 16
+
+
+class IReactorFileAsync(Interface):
+    """
+    interface for reactors where the OS offers an async file I/O API
+    """
+
+    def openAsync(path: "FilePath", flags: FileAsyncFlags) -> "Deferred":
+        """
+        Open a file for asynchronous access
+
+        @param flags: controls opening mode
+        - B{READ} open the file for reading (all other flags imply writing)
+        - B{OVERWRITE} the file is overwritten
+        - B{TRUNCATE} the file is truncated
+        - B{CREATE} create the file if it doesn't exist
+        - B{EXCLUSIVE} create the file (if it exists already, error)
+
+        @return: a Deferred returning L{IAsyncWriter} or L{IAsyncReader}
+        """
