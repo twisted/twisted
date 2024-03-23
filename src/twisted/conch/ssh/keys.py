@@ -256,24 +256,38 @@ class Key:
         if keyType == b"ssh-rsa":
             e, n, rest = common.getMP(rest, 2)
             return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
-        elif keyType == b"ssh-dss":
+
+        if keyType == b"ssh-dss":
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(
                 dsa.DSAPublicNumbers(
                     y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g)
                 ).public_key(default_backend())
             )
-        elif keyType in _curveTable:
+
+        if keyType in _curveTable:
             return cls(
                 ec.EllipticCurvePublicKey.from_encoded_point(
                     _curveTable[keyType], common.getNS(rest, 2)[1]
                 )
             )
-        elif keyType == b"ssh-ed25519":
+
+        if keyType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            keyObject = cls._fromECEncodedPoint(
+                encodedPoint=common.getNS(rest, 2)[1],
+                curve=b"ecdsa-sha2-nistp256",
+            )
+            keyObject._sk = True
+            return keyObject
+
+        if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:
             a, rest = common.getNS(rest)
-            return cls._fromEd25519Components(a)
-        else:
-            raise BadKeyError(f"unknown blob type: {keyType}")
+            keyObject = cls._fromEd25519Components(a)
+            if keyType.startswith(b"sk-ssh-"):
+                keyObject._sk = True
+            return keyObject
+
+        raise BadKeyError(f"unknown blob type: {keyType}")
 
     @classmethod
     def _fromString_PRIVATE_BLOB(cls, blob):
@@ -676,16 +690,30 @@ class Key:
         """
         if data.startswith(b"ssh-") or data.startswith(b"ecdsa-sha2-"):
             return "public_openssh"
-        elif data.startswith(b"-----BEGIN"):
+
+        if data.startswith(b"sk-ecdsa-sha2-nistp256") or data.startswith(
+            b"sk-ssh-ed25519"
+        ):
+            # OpenSSH FIDO2 security keys have similar public format.
+            # They have the extra "application" string,
+            # which for now is ignored.
+            return "public_openssh"
+
+        if data.startswith(b"-----BEGIN"):
             return "private_openssh"
-        elif data.startswith(b"{"):
+
+        if data.startswith(b"{"):
             return "public_lsh"
-        elif data.startswith(b"("):
+
+        if data.startswith(b"("):
             return "private_lsh"
-        elif (
+
+        if (
             data.startswith(b"\x00\x00\x00\x07ssh-")
             or data.startswith(b"\x00\x00\x00\x13ecdsa-")
             or data.startswith(b"\x00\x00\x00\x0bssh-ed25519")
+            or data.startswith(b'\x00\x00\x00"sk-ecdsa-sha2-nistp256@openssh.com')
+            or data.startswith(b"\x00\x00\x00\x1ask-ssh-ed25519@openssh.com")
         ):
             ignored, rest = common.getNS(data)
             count = 0
@@ -869,6 +897,7 @@ class Key:
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        self._sk = False
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1029,16 +1058,22 @@ class Key:
         @return: The key type format.
         @rtype: L{bytes}
         """
+        if self._sk:
+            if self.type() == "EC":
+                return b"sk-ecdsa-sha2-nistp256@openssh.com"
+            if self.type() == "Ed25519":
+                return b"sk-ssh-ed25519@openssh.com"
+
         if self.type() == "EC":
             return (
                 b"ecdsa-sha2-" + _secToNist[self._keyObject.curve.name.encode("ascii")]
             )
-        else:
-            return {
-                "RSA": b"ssh-rsa",
-                "DSA": b"ssh-dss",
-                "Ed25519": b"ssh-ed25519",
-            }[self.type()]
+
+        return {
+            "RSA": b"ssh-rsa",
+            "DSA": b"ssh-dss",
+            "Ed25519": b"ssh-ed25519",
+        }[self.type()]
 
     def supportedSignatureAlgorithms(self):
         """
@@ -1070,14 +1105,16 @@ class Key:
                     return hashes.SHA512()
             else:
                 return None
-        else:
-            return {
-                ("RSA", b"ssh-rsa"): hashes.SHA1(),
-                ("RSA", b"rsa-sha2-256"): hashes.SHA256(),
-                ("RSA", b"rsa-sha2-512"): hashes.SHA512(),
-                ("DSA", b"ssh-dss"): hashes.SHA1(),
-                ("Ed25519", b"ssh-ed25519"): hashes.SHA512(),
-            }.get((self.type(), signatureType))
+
+        if self.type() == "Ed25519":
+            return hashes.SHA512()
+
+        return {
+            ("RSA", b"ssh-rsa"): hashes.SHA1(),
+            ("RSA", b"rsa-sha2-256"): hashes.SHA256(),
+            ("RSA", b"rsa-sha2-512"): hashes.SHA512(),
+            ("DSA", b"ssh-dss"): hashes.SHA1(),
+        }.get((self.type(), signatureType))
 
     def size(self):
         """
@@ -1816,3 +1853,59 @@ def _getPersistentRSAKey(location, keySize=4096):
             keyFile.read(), password=None, backend=default_backend()
         )
         return Key(privateKey)
+
+
+_DEFAULT_KEY_SIZE = 2048
+_ecSizeTable = {
+    256: ec.SECP256R1(),
+    384: ec.SECP384R1(),
+    521: ec.SECP521R1(),
+}
+
+
+def generate(keyType="rsa", keySize=None):
+    """
+    Return a new private key.
+
+    When `keySize` is None, the default value is used.
+
+    `keySize` is ignored for ed25519.
+    """
+    if not keyType:
+        keyType = "not-specified"
+    keyType = keyType.lower()
+
+    if not keySize:
+        if keyType == "ecdsa":
+            keySize = 384
+        else:
+            keySize = _DEFAULT_KEY_SIZE
+
+    key = None
+    try:
+        if keyType == "rsa":
+            key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=keySize,
+            )
+        elif keyType == "dsa":
+            key = dsa.generate_private_key(key_size=keySize)
+        elif keyType == "ecdsa":
+            try:
+                curve = _ecSizeTable[keySize]
+            except KeyError:
+                raise BadKeyError(
+                    'Wrong key size "{}". Supported: {}.'.format(
+                        keySize, ", ".join([str(s) for s in _ecSizeTable.keys()])
+                    )
+                )
+            key = ec.generate_private_key(curve)
+        elif keyType == "ed25519":
+            key = ed25519.Ed25519PrivateKey.generate()
+        else:
+            raise BadKeyError('Unknown key type "{}".'.format(keyType))
+
+    except ValueError as error:
+        raise BadKeyError('Wrong key size "{}". {}'.format(keySize, error))
+
+    return Key(key)
