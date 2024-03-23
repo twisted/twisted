@@ -15,7 +15,6 @@ from twisted.web import client
 
 @implementer(interfaces.IStreamClientEndpoint)
 class DummyEndPoint:
-
     """An endpoint that does not connect anywhere"""
 
     def __init__(self, someString: str) -> None:

@@ -2297,9 +2297,11 @@ def _parseClientTLS(
             trustRoot=_parseTrustRootPath(trustRoots),
             clientCertificate=_privateCertFromPaths(certificate, privateKey),
         ),
-        clientFromString(reactor, endpoint)
-        if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
+        (
+            clientFromString(reactor, endpoint)
+            if endpoint is not None
+            else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress)
+        ),
     )
 
 

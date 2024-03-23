@@ -360,9 +360,9 @@ class ReactorBuilder:
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes: Dict[
-            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
-        ] = {}
+        classes: Dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]] = (
+            {}
+        )
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")

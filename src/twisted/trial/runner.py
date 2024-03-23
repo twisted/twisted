@@ -62,8 +62,7 @@ _P = ParamSpec("_P")
 class _Debugger(Protocol):
     def runcall(
         self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
-    ) -> object:
-        ...
+    ) -> object: ...
 
 
 def isPackage(module):
@@ -834,13 +833,13 @@ def _logFile(logfile: str) -> Generator[None, None, None]:
 class _Runner(Protocol):
     stream: TextIO
 
-    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
-        ...
+    def run(
+        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+    ) -> itrial.IReporter: ...
 
     def runUntilFailure(
         self, test: Union[pyunit.TestCase, pyunit.TestSuite]
-    ) -> itrial.IReporter:
-        ...
+    ) -> itrial.IReporter: ...
 
 
 @define

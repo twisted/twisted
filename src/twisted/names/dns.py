@@ -402,13 +402,11 @@ def _str2time(s: str) -> int:
 
 
 @overload
-def str2time(s: Union[str, bytes, int]) -> int:
-    ...
+def str2time(s: Union[str, bytes, int]) -> int: ...
 
 
 @overload
-def str2time(s: None) -> None:
-    ...
+def str2time(s: None) -> None: ...
 
 
 def str2time(s: Union[str, bytes, int, None]) -> Union[int, None]:

@@ -15,11 +15,9 @@ from twisted.trial import unittest
 
 
 class _SupportsAssertions(Protocol):
-    def assertEqual(self, a: object, b: object) -> object:
-        ...
+    def assertEqual(self, a: object, b: object) -> object: ...
 
-    def assertNotEqual(self, a: object, b: object) -> object:
-        ...
+    def assertNotEqual(self, a: object, b: object) -> object: ...
 
 
 class SecureRandomTestCaseBase:
