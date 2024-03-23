@@ -15,6 +15,7 @@ available reactor implementations.
 
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
+import gc
 import os
 import signal
 import time
@@ -104,6 +105,13 @@ def stopOnError(case, reactor, publisher=None):
 
     publisher.addObserver(stopIfError)
     case.addCleanup(publisher.removeObserver, stopIfError)
+
+
+class InvalidatedReactor:
+    """
+    This object has no methods and no state, and will hopefully explode if any
+    code attempts to interact with a reactor from a previous test.
+    """
 
 
 class ReactorBuilder:
@@ -253,6 +261,13 @@ class ReactorBuilder:
 
         globalReactor.__dict__ = reactor._originalReactorDict
         globalReactor.__class__ = reactor._originalReactorClass
+
+        # Some reactors (notably, CFReactor) manipulate global state if you
+        # interact with them; doing so across tests is inherently a potential
+        # state corruption.  Let's make that more visible.
+        reactor.__class__ = InvalidatedReactor
+        reactor.__dict__ = {}
+        gc.collect()
 
     def buildReactor(self):
         """
