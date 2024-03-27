@@ -1,0 +1,1 @@
+``twisted.internet.defer.Deferred`` operations use less CPU.
