@@ -1548,6 +1548,7 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
             if succeeded == SUCCESS and self.fireOnOneCallback:
                 self.callback((result, index))  # type: ignore[arg-type]
             elif succeeded == FAILURE and self.fireOnOneErrback:
+                assert isinstance(result, Failure)
                 self.errback(Failure(FirstError(result, index)))
             elif self.finishedCount == len(self.resultList):
                 # At this point, None values in self.resultList have been
