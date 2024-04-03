@@ -142,7 +142,7 @@ class PEMObjects:
     keyPairs: List[KeyPair]
 
     @classmethod
-    def fromDirectory(cls, directory: FilePath) -> PEMObjects:
+    def fromDirectory(cls, directory: FilePath[str]) -> PEMObjects:
         """
         Load a single PEMObjects from all the PEMs in a big directory.
         """
@@ -208,7 +208,7 @@ class PEMObjects:
             )
         ]
 
-        def hashDN(dn: DN) -> Tuple[Tuple[str, str], ...]:
+        def hashDN(dn: DN) -> Tuple[Tuple[str, bytes], ...]:
             return tuple(sorted(dn.items()))
 
         bySubject = {
