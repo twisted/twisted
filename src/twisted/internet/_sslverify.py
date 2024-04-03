@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -332,13 +332,13 @@ class DistinguishedName(Dict[str, bytes]):
             value = value.encode("ascii")
         self[realAttr] = value
 
-    def inspect(self):
+    def inspect(self) -> str:
         """
         Return a multi-line, human-readable representation of this DN.
 
         @rtype: L{str}
         """
-        l = []
+        lines = []
         lablen = 0
 
         def uniqueValues(mapping):
@@ -349,11 +349,9 @@ class DistinguishedName(Dict[str, bytes]):
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
-                l.append((label, nativeString(v)))
+                lines.append((label, nativeString(v)))
         lablen += 2
-        for n, (label, attrib) in enumerate(l):
-            l[n] = label.rjust(lablen) + ": " + attrib
-        return "\n".join(l)
+        return "\n".join(label.rjust(lablen) + ": " + attrib for label, attrib in lines)
 
 
 DN = DistinguishedName
@@ -424,6 +422,9 @@ def _handleattrhelper(Class, transport, methodName):
     return Class(cert)
 
 
+_Self = TypeVar("_Self", bound="Certificate")
+
+
 class Certificate(CertBase):
     """
     An x509 certificate.
@@ -442,7 +443,12 @@ class Certificate(CertBase):
         return NotImplemented
 
     @classmethod
-    def load(Class, requestData, format=crypto.FILETYPE_ASN1, args=()):
+    def load(
+        Class: type[_Self],
+        requestData: bytes,
+        format: int = crypto.FILETYPE_ASN1,
+        args: tuple[Any, ...] = (),
+    ) -> _Self:
         """
         Load a certificate from an ASN.1- or PEM-format string.
 
@@ -1676,7 +1682,7 @@ class OpenSSLCertificateOptions:
             self._context = self._makeContext()
         return self._context
 
-    def _makeContext(self):
+    def _makeContext(self) -> SSL.Context:
         ctx = self._contextFactory(self.method)
         ctx.set_options(self._options)
         ctx.set_mode(self._mode)
