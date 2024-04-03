@@ -13,10 +13,10 @@ from typing import Any, Callable, Dict, List, Optional
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address

@@ -431,23 +431,7 @@ _KEY_NAMES = (
     "CONTROL",
 )
 
-
-class _const:
-    """
-    @ivar name: A string naming this constant
-    """
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __repr__(self) -> str:
-        return "[" + self.name + "]"
-
-    def __bytes__(self) -> bytes:
-        return ("[" + self.name + "]").encode("ascii")
-
-
-FUNCTION_KEYS = [_const(_name).__bytes__() for _name in _KEY_NAMES]
+FUNCTION_KEYS = [f"[{_name}]".encode("ascii") for _name in _KEY_NAMES]
 
 
 @implementer(ITerminalTransport)

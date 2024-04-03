@@ -15,8 +15,9 @@ from zope.interface.verify import verifyObject
 
 from hypothesis import given, strategies as st
 
+from twisted.internet import reactor
 from twisted.internet.interfaces import IOpenSSLContextFactory
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, deferLater
 from twisted.python.compat import iterbytes
 
 try:
@@ -702,13 +703,19 @@ class TLSMemoryBIOTests(TestCase):
             def connectionMade(self):
                 try:
                     self.transport.write(notBytes)
+                    self.transport.write(b"bytes")
+                    self.transport.loseConnection()
                 except TypeError:
                     result.append(True)
-                self.transport.write(b"bytes")
-                self.transport.loseConnection()
+                    self.transport.abortConnection()
+
+        def flush_logged_errors():
+            self.assertEqual(len(self.flushLoggedErrors(ConnectionLost, TypeError)), 2)
 
         d = self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
-        return d.addCallback(lambda ign: self.assertEqual(result, [True]))
+        d.addBoth(lambda ign: self.assertEqual(result, [True]))
+        d.addBoth(lambda ign: deferLater(reactor, 0, flush_logged_errors))
+        return d
 
     def test_multipleWrites(self):
         """

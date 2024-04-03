@@ -126,8 +126,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy~=1.5.1",
-    "mypy-zope~=1.0.1",
+    "mypy~=1.8",
+    "mypy-zope~=1.0.3",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -312,6 +312,80 @@ disallow_untyped_calls = false
 strict_equality = false
 no_implicit_reexport = false
 # Disable some checks until the effected modules fully adopt mypy
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+follow_imports = "silent"
+follow_imports_for_stubs = true
+module = [
+
+  # pyobjc is not installed on linux
+  "CFNetwork",
+  "CoreFoundation",
+
+  # neither is pywin32
+  "pywintypes",
+  "win32api",
+  "win32con",
+  "win32com.*",
+  "win32event",
+  "win32file",
+  "win32pipe",
+  "win32process",
+  "win32security",
+  "win32console",
+
+  # pyserial is very optional
+  "serial",
+  "serial.*",
+
+  # GObject Introspection too
+  "gi",
+  "gi.repository.*",
+
+  # we need to clean this up, because it's ancient and probably unsupported,
+  # but as long as it's still imported, we don't want to type-check it
+  "gobject",
+  "pygtk",
+  "gtk",
+
+  # and wxPython
+  "wxPython.wx",
+  "wx",
+
+  # constantly doesn't have type stubs yet
+  "constantly",
+
+  # h2 doesn't have types yet and is optional besides
+  "h2.*",
+  "hpack.*",
+  "priority",
+
+  # subunit is untyped
+  "subunit",
+
+  # oh this is fun, not even totally sure what library this is, since it's not
+  # documented as an extra.
+  "utmp",
+
+  # automat is not typed, or typeable, at least until
+  # https://github.com/glyph/automat/pull/137 is landed
+  "automat",
+
+  # I think only used by `twisted.web.script.ResourceTemplate`
+  "quixote",
+
+  "cython_test_exception_raiser",
+
+  # various obscure database modules you shouldn't need installed in order to
+  # type-check
+  "pyPgSQL",
+  "psycopg",
+  "MySQLdb",
+  "kinterbasdb",
+
+  "SOAPpy",
+]
 
 [[tool.mypy.overrides]]
 allow_untyped_defs = true

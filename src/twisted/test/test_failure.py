@@ -18,7 +18,7 @@ from types import TracebackType
 from typing import Any, Generator
 from unittest import skipIf
 
-from cython_test_exception_raiser import raiser  # type: ignore[import]
+from cython_test_exception_raiser import raiser
 
 from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
