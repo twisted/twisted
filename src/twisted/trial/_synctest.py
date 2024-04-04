@@ -1189,9 +1189,14 @@ class SynchronousTestCase(_Assertions):
 
                     if filename != os.path.normcase(aWarning.filename):
                         continue
+
+                    # In Python 3.13 line numbers returned by findlinestarts
+                    # can be None for bytecode that does not map to source
+                    # lines.
                     lineNumbers = [
                         lineNumber
                         for _, lineNumber in _findlinestarts(aFunction.__code__)
+                        if lineNumber is not None
                     ]
                     if not (min(lineNumbers) <= aWarning.lineno <= max(lineNumbers)):
                         continue

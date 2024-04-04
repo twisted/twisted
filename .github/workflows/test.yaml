@@ -134,6 +134,21 @@ jobs:
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
 
+          # Just Python 3.13 alpha with default settings.
+          # For now, no dependencies as cffi doesn't work on 3.13.
+          # No coverage also.
+          - python-version: '3.13.0-alpha.3'
+            tox-env: 'nodeps-nocov-posix'
+            job-name: 'nodeps-nocov-3.13'
+            skip-coverage: yes
+            # FIXME:https://github.com/twisted/twisted/issues/12060
+            # Also add twisted.python
+            # FIXME:https://github.com/twisted/twisted/issues/12061
+            # Add full twisted.internet
+            # FIXME:https://github.com/twisted/twisted/issues/12062
+            # Add full twisted.test
+            trial-target: 'twisted.conch twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.words'
+
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
             runs-on: 'macos-12'
@@ -168,7 +183,7 @@ jobs:
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: 'pypy3.10-v7.3.13'
+          - python-version: 'pypy3.10-v7.3.14'
             tox-env: 'alldeps-nocov-posix'
             job-name: 'no-coverage'
             skip-coverage: yes
@@ -194,7 +209,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true

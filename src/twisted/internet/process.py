@@ -879,7 +879,7 @@ class Process(_BaseProcess):
             else:
                 fdState.append((eachFD, isCloseOnExec))
         if environment is None:
-            environment = {}
+            environment = os.environ
 
         setSigDef = [
             everySignal

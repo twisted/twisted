@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info
+from sys import exc_info, implementation
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -57,6 +57,9 @@ log = Logger()
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+# See use in _inlineCallbacks for explanation and removal timeline.
+_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
 
 
 class AlreadyCalledError(Exception):
@@ -519,9 +522,6 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
-        assert callable(callback)
-        assert callable(errback)
-
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -870,7 +870,6 @@ class Deferred(Awaitable[_SelfResultT]):
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
         """
-        assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
     def errback(self, fail: Optional[Union[Failure, BaseException]] = None) -> None:
@@ -1583,7 +1582,7 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False
+    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False, /
 ) -> List[_T]:
     if __debug__:
         for result in resultList:
@@ -1617,9 +1616,9 @@ def gatherResults(
         is useful to prevent spurious 'Unhandled error in Deferred' messages
         from being logged.  This parameter is available since 11.1.0.
     """
-    d = DeferredList(deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors)
-    d.addCallback(_parseDeferredListResult)
-    return cast(Deferred[List[_T]], d)
+    return DeferredList(
+        deferredList, fireOnOneErrback=True, consumeErrors=consumeErrors
+    ).addCallback(_parseDeferredListResult)
 
 
 class FailureGroup(Exception):
@@ -2022,8 +2021,10 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if _PYPY:
-                # PyPy as of 3.7 adds an extra frame.
+            if _oldPypyStack:
+                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
+                # this discrepancy with CPython.  This code can be removed once
+                # we no longer need to support PyPy 7.3.13 or older.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 
@@ -2116,14 +2117,13 @@ def _addCancelCallbackToDeferred(
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
     """
     it.callbacks, tmp = [], it.callbacks
-    it.addErrback(_handleCancelInlineCallbacks, status)
+    it = it.addErrback(_handleCancelInlineCallbacks, status)
     it.callbacks.extend(tmp)
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
 def _handleCancelInlineCallbacks(
-    result: Failure,
-    status: _CancellationStatus[_T],
+    result: Failure, status: _CancellationStatus[_T], /
 ) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
