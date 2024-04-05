@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest import skipIf
 
 try:
-    from gi.repository import Gio  # type: ignore[import]
+    from gi.repository import Gio
 except ImportError:
     giImported = False
     gtkVersion = None
@@ -19,7 +19,7 @@ else:
     # If we can import Gio, we ought to be able to import our reactor.
     from os import environ
 
-    from gi import get_required_version, require_version  # type: ignore[import]
+    from gi import get_required_version, require_version
 
     from twisted.internet import gireactor
 
@@ -103,8 +103,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         """
         L{Gio.Application} instances can be registered with a gireactor.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
             application_id="com.twistedmatrix.trial.gireactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
@@ -138,8 +138,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
         """
-        reactor = gireactor.GIReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = gireactor.GIReactor
+        reactor = self.buildReactor()
         app = Gtk.Application(
             application_id="com.twistedmatrix.trial.gtk3reactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
@@ -151,8 +151,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         L{gireactor.PortableGIReactor} doesn't support application
         registration at this time.
         """
-        reactor = gireactor.PortableGIReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = gireactor.PortableGIReactor
+        reactor = self.buildReactor()
         app = Gio.Application(
             application_id="com.twistedmatrix.trial.gireactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
@@ -164,8 +164,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         Older versions of PyGObject lack C{Application.quit}, and so won't
         allow registration.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         # An app with no "quit" method:
         app = object()
         exc = self.assertRaises(RuntimeError, reactor.registerGApplication, app)
@@ -176,8 +176,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         It is not possible to register a C{Application} after the reactor has
         already started.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
             application_id="com.twistedmatrix.trial.gireactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
@@ -199,8 +199,8 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         """
         It is not possible to register more than one C{Application}.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
             application_id="com.twistedmatrix.trial.gireactor",
             flags=Gio.ApplicationFlags.FLAGS_NONE,

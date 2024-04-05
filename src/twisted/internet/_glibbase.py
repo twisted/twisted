@@ -22,7 +22,7 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
 from twisted.python.monkey import MonkeyPatcher
-from ._signals import _Waker
+from ._signals import _IWaker, _Waker
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
@@ -77,7 +77,7 @@ def _signalGlue():
     reactor main loop which makes our signal handling work with glib's signal
     handling.
     """
-    from gi import _ossighelper as signalGlue  # type: ignore[import]
+    from gi import _ossighelper as signalGlue
 
     patcher = MonkeyPatcher()
     patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
@@ -129,7 +129,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     # Install a waker that knows it needs to call C{_simulate} in order to run
     # callbacks queued from a thread:
-    def _wakerFactory(self) -> GlibWaker:
+    def _wakerFactory(self) -> _IWaker:
         return GlibWaker(self)
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:

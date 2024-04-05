@@ -65,7 +65,7 @@ Type alias containing all types that can be flattened by L{flatten()}.
 
 # The maximum number of bytes to synchronously accumulate in the flattener
 # buffer before delivering them onwards.
-BUFFER_SIZE = 2 ** 16
+BUFFER_SIZE = 2**16
 
 
 def escapeForContent(data: Union[bytes, str]) -> bytes:

@@ -10,7 +10,7 @@ from json import dumps, loads
 from typing import IO, Any, AnyStr, Dict, Iterable, Optional, Union, cast
 from uuid import UUID
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 
 from twisted.python.failure import Failure
 from ._file import FileLogObserver
@@ -110,7 +110,7 @@ def objectSaveHook(pythonObject: object) -> JSONDict:
         supports, a specially-formatted dictionary; otherwise, a marker
         dictionary indicating that it could not be serialized.
     """
-    for (predicate, uuid, saver, loader) in classInfo:
+    for predicate, uuid, saver, loader in classInfo:
         if predicate(pythonObject):
             result = saver(pythonObject)
             result["__class_uuid__"] = str(uuid)

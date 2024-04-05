@@ -7,6 +7,7 @@ import errno
 import os
 import sys
 import warnings
+from typing import AnyStr
 
 try:
     import grp as _grp
@@ -39,7 +40,6 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    cast,
 )
 
 from incremental import Version
@@ -182,7 +182,7 @@ class InsensitiveDict(MutableMapping[str, _T]):
             yield v[1]
 
     def iteritems(self):
-        for (k, v) in self.data.values():
+        for k, v in self.data.values():
             yield self._doPreserve(k), v
 
     _notFound = object()
@@ -287,7 +287,9 @@ def addPluginDir():
     sys.path.extend(getPluginDirs())
 
 
-def sibpath(path, sibling):
+def sibpath(
+    path: os.PathLike[AnyStr] | AnyStr, sibling: os.PathLike[AnyStr] | AnyStr
+) -> AnyStr:
     """
     Return the path to a sibling of a file in the filesystem.
 
@@ -556,7 +558,6 @@ class IntervalDifferential:
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
-
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
@@ -626,10 +627,8 @@ class FancyStrMixin:
             if isinstance(attr, str):
                 r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
-                attr = cast(Tuple[str, Callable[[Any], str]], attr)
                 r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
-                attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
         r.append(">")
         return "".join(r)
@@ -681,7 +680,6 @@ if _initgroups is None:
 
         Underlying platform support require to manipulate groups is missing.
         """
-
 
 else:
 

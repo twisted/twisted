@@ -5,15 +5,19 @@
 TCP support for IOCP reactor
 """
 
+from __future__ import annotations
+
 import errno
 import socket
 import struct
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from zope.interface import classImplements, implementer
 
 from twisted.internet import address, defer, error, interfaces, main
 from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.interfaces import IProtocol
 from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import (
     ERROR_CONNECTION_REFUSED,
@@ -42,6 +46,9 @@ except ImportError:
 else:
     _startTLS = __startTLS
 
+if TYPE_CHECKING:
+    # Circular import only to describe a type.
+    from twisted.internet.iocpreactor.reactor import IOCPReactor
 
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
@@ -345,7 +352,15 @@ class Server(Connection):
 
     _tlsClientDefault = False
 
-    def __init__(self, sock, protocol, clientAddr, serverAddr, sessionno, reactor):
+    def __init__(
+        self,
+        sock: socket.socket,
+        protocol: IProtocol,
+        clientAddr: Union[IPv4Address, IPv6Address],
+        serverAddr: Union[IPv4Address, IPv6Address],
+        sessionno: int,
+        reactor: IOCPReactor,
+    ):
         """
         Server(sock, protocol, client, server, sessionno)
 
@@ -397,7 +412,6 @@ class Connector(TCPConnector):
 
 @implementer(interfaces.IListeningPort)
 class Port(_SocketCloser, _LogOwner):
-
     connected = False
     disconnected = False
     disconnecting = False

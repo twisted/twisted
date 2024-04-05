@@ -196,7 +196,7 @@ class _IteratorBuffer:
         self.write = write
         self.iterator = iter(iterable)
         if memoryBufferSize is None:
-            memoryBufferSize = 2 ** 16
+            memoryBufferSize = 2**16
         self.memoryBufferSize = memoryBufferSize
 
     def __iter__(self):

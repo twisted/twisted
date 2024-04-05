@@ -654,6 +654,7 @@ class DistTrialRunnerTests(TestCase):
         If there is an unexpected exception running the test suite then it is
         re-raised by L{DistTrialRunner.run}.
         """
+
         # Give it a broken worker pool factory.  There's no exception handling
         # for such an error in the implementation..
         class BrokenFactory(Exception):
@@ -692,7 +693,7 @@ class FunctionalTests(TestCase):
         a.callback("result")
         assert_that(self.successResultOf(d), none())
 
-    def test_sequence(self):
+    def test_sequence(self) -> None:
         """
         ``sequence`` accepts two awaitables and returns an awaitable that waits
         for the first one to complete and then completes with the result of
@@ -706,7 +707,7 @@ class FunctionalTests(TestCase):
         a.callback("hello")
         assert_that(self.successResultOf(c), equal_to(42))
 
-    def test_iterateWhile(self):
+    def test_iterateWhile(self) -> None:
         """
         ``iterateWhile`` executes the actions from its factory until the predicate
         does not match an action result.

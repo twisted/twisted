@@ -80,7 +80,6 @@ shouldSkip = (
 
 
 class TestSSHSessionForUnixConchUser(unittest.TestCase):
-
     skip = shouldSkip
 
     def testExecCommandEnvironment(self) -> None:

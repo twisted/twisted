@@ -5,11 +5,11 @@ repos:
     hooks:
       - id: isort
 
-  - repo: https://github.com/psf/black
-    rev: 21.7b0
+  # See https://black.readthedocs.io/en/stable/integrations/source_version_control.html
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 23.9.1
     hooks:
       - id: black
-        additional_dependencies: ['click<8.1']
 
   - repo: https://github.com/PyCQA/flake8
     rev: 6.1.0
