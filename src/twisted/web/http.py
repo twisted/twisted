@@ -109,7 +109,7 @@ import tempfile
 import time
 import warnings
 from email import message_from_bytes
-from email.message import EmailMessage
+from email.message import EmailMessage, Message
 from io import BytesIO
 from typing import AnyStr, Callable, Dict, List, Optional, Tuple
 from urllib.parse import (
@@ -253,11 +253,16 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     if not msg.is_multipart():
         raise _MultiPartParseException("Not a multipart.")
 
-    for part in msg.get_payload():
-        name = part.get_param("name", header="content-disposition")
+    part: Message
+    # "per Python docs, a list of Message objects when is_multipart() is True,
+    # or a string when is_multipart() is False"
+    for part in msg.get_payload():  # type:ignore[assignment]
+        name: str | None = part.get_param(
+            "name", header="content-disposition"
+        )  # type:ignore[assignment]
         if not name:
             continue
-        payload = part.get_payload(decode=True)
+        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
         result[name.encode("utf8")] = [payload]
     return result
 
