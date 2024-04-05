@@ -6,14 +6,17 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
+from __future__ import annotations
 
 import datetime
 import itertools
 import sys
+from dataclasses import dataclass
 from unittest import skipIf
 
 from zope.interface import implementer
 
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
@@ -153,7 +156,58 @@ def makeCertificate(**kw):
     return keypair, certificate
 
 
-def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
+oneDay = datetime.timedelta(1, 0, 0)
+
+
+@dataclass
+class TestingAuthority:
+    name: x509.Name
+    cert: x509.Certificate
+    key: RSAPrivateKey
+
+    @classmethod
+    def create(
+        cls, aroundTimestamp: datetime.datetime = datetime.datetime.today()
+    ) -> TestingAuthority:
+        commonNameForCA = x509.Name(
+            [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
+        )
+        privateKeyForCA = rsa.generate_private_key(
+            public_exponent=65537, key_size=4096, backend=default_backend()
+        )
+        publicKeyForCA = privateKeyForCA.public_key()
+        caCertificate = (
+            x509.CertificateBuilder()
+            .subject_name(commonNameForCA)
+            .issuer_name(commonNameForCA)
+            .not_valid_before(aroundTimestamp - oneDay)
+            .not_valid_after(aroundTimestamp + oneDay)
+            .serial_number(x509.random_serial_number())
+            .public_key(publicKeyForCA)
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=9),
+                critical=True,
+            )
+            .sign(
+                private_key=privateKeyForCA,
+                algorithm=hashes.SHA256(),
+                backend=default_backend(),
+            )
+        )
+
+        return TestingAuthority(commonNameForCA, caCertificate, privateKeyForCA)
+
+    def authoritize(self, builder: x509.CertificateBuilder) -> x509.Certificate:
+        return builder.issuer_name(self.name).sign(
+            private_key=self.key,
+            algorithm=hashes.SHA256(),
+            backend=default_backend(),
+        )
+
+
+def certificatesForAuthorityAndServer(
+    serviceIdentity: str = "example.com",
+) -> tuple[sslverify.Certificate, sslverify.PrivateCertificate]:
     """
     Create a self-signed CA certificate and server certificate signed by the
     CA.
@@ -166,40 +220,15 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
     @rtype: L{tuple} of (L{sslverify.Certificate},
         L{sslverify.PrivateCertificate})
     """
-    commonNameForCA = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
-    )
+    authority = TestingAuthority.create()
     commonNameForServer = x509.Name(
         [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example Server")]
     )
-    oneDay = datetime.timedelta(1, 0, 0)
-    privateKeyForCA = rsa.generate_private_key(
-        public_exponent=65537, key_size=4096, backend=default_backend()
-    )
-    publicKeyForCA = privateKeyForCA.public_key()
-    caCertificate = (
-        x509.CertificateBuilder()
-        .subject_name(commonNameForCA)
-        .issuer_name(commonNameForCA)
-        .not_valid_before(datetime.datetime.today() - oneDay)
-        .not_valid_after(datetime.datetime.today() + oneDay)
-        .serial_number(x509.random_serial_number())
-        .public_key(publicKeyForCA)
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=9),
-            critical=True,
-        )
-        .sign(
-            private_key=privateKeyForCA,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
-        )
-    )
-
     privateKeyForServer = rsa.generate_private_key(
         public_exponent=65537, key_size=4096, backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+    subjectAlternativeNames: list[x509.IPAddress | x509.DNSName]
 
     try:
         ipAddress = ipaddress.ip_address(serviceIdentity)
@@ -210,10 +239,9 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
     else:
         subjectAlternativeNames = [x509.IPAddress(ipAddress)]
 
-    serverCertificate = (
+    serverBuilder = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
-        .issuer_name(commonNameForCA)
         .not_valid_before(datetime.datetime.today() - oneDay)
         .not_valid_after(datetime.datetime.today() + oneDay)
         .serial_number(x509.random_serial_number())
@@ -226,13 +254,11 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
             x509.SubjectAlternativeName(subjectAlternativeNames),
             critical=True,
         )
-        .sign(
-            private_key=privateKeyForCA,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
-        )
     )
-    caSelfCert = sslverify.Certificate.loadPEM(caCertificate.public_bytes(Encoding.PEM))
+    serverCertificate = authority.authoritize(serverBuilder)
+    caSelfCert = sslverify.Certificate.loadPEM(
+        authority.cert.public_bytes(Encoding.PEM)
+    )
     serverCert = sslverify.PrivateCertificate.loadPEM(
         b"\n".join(
             [
