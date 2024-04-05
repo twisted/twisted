@@ -99,13 +99,17 @@ class ServerNameIndictionConfiguration:
             candidate = self.contextLookup(name)
             if candidate is None:
                 if name is not None:
+                    # coverage v
                     segments = name.split(b".")
                     segments[0] = b"*"
                     wildcardName = b".".join(segments)
                     candidate = self.contextLookup(wildcardName)
+                    # coverage ^
 
             if candidate is None:
+                # coverage v
                 raise KeyError(f"no certificate for domain {name!r}")
+                # coverage ^
 
             contextSetupHook(candidate)
             return candidate
