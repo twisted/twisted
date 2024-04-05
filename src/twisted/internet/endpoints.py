@@ -17,7 +17,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Optional, Sequence, Type
+from typing import Any, Callable, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -68,7 +68,7 @@ from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from OpenSSL.SSL import Context, Error as SSLError
+    from OpenSSL.SSL import TLS_METHOD, Context, Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -2304,9 +2304,11 @@ def _parseClientTLS(
             trustRoot=_parseTrustRootPath(trustRoots),
             clientCertificate=_privateCertFromPaths(certificate, privateKey),
         ),
-        clientFromString(reactor, endpoint)
-        if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
+        (
+            clientFromString(reactor, endpoint)
+            if endpoint is not None
+            else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress)
+        ),
     )
 
 
@@ -2345,6 +2347,30 @@ class _TLSClientEndpointParser:
         return _parseClientTLS(reactor, *args, **kwargs)
 
 
+def _sniLookup(
+    log: Logger, path: FilePath[str]
+) -> Callable[[Optional[bytes]], Optional[Context]]:
+    certMap: dict[str, CertificateOptions]
+
+    def doReload() -> None:
+        nonlocal certMap
+        certMap = PEMObjects.fromDirectory(path).inferDomainMapping()
+
+    def lookup(name: Optional[bytes], shouldReload: bool = True) -> Optional[Context]:
+        name = next(iter(certMap.keys()), "").encode() if name is None else name
+        if (options := certMap.get(name.decode())) is not None:
+            return options.getContext()
+        if not shouldReload:
+            return Context(TLS_METHOD)
+        msg = "could not find domain {name}, re-loading {path}"
+        log.error(msg, name=name, path=path)
+        doReload()
+        return lookup(name, False)
+
+    doReload()
+    return lookup
+
+
 @implementer(IPlugin, IStreamServerEndpointStringParser)
 class _TLSServerEndpointParser:
     """
@@ -2366,32 +2392,11 @@ class _TLSServerEndpointParser:
         Actual parsing method, with detailed signature breaking out all
         parameters.
         """
-        subEndpoint = TCP6ServerEndpoint(reactor, int(port), int(backlog), interface)
-        certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
-
-        def lookup(name: Optional[bytes]) -> Optional[Context]:
-            nonlocal certMap
-            if name is None:
-                allNames = list(certMap.keys())
-                name = allNames[0].encode() if allNames else b""
-            options = certMap.get(name.decode())
-            if options is None:
-                self._log.error(
-                    "could not find domain {name}, re-loading {path}",
-                    name=name,
-                    path=path,
-                )
-                certMap = PEMObjects.fromDirectory(FilePath(path)).inferDomainMapping()
-                options = certMap.get(name.decode())
-                if options is None:
-                    from OpenSSL.SSL import TLS_METHOD
-
-                    return Context(TLS_METHOD)
-            ctx = options.getContext()
-            return ctx
-
-        contextFactory = ServerNameIndictionConfiguration(lookup)
-        return TLSServerEndpoint(subEndpoint, contextFactory)
+        p = FilePath(path)
+        return TLSServerEndpoint(
+            TCP6ServerEndpoint(reactor, int(port), int(backlog), interface),
+            ServerNameIndictionConfiguration(_sniLookup(self._log, p)),
+        )
 
     def parseStreamServer(
         self, reactor: IReactorCore, *args: Any, **kwargs: Any
