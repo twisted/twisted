@@ -68,14 +68,19 @@ class SNIConnectionCreator(object):
 
 @implementer(IOpenSSLServerConnectionCreatorFactory)
 class ServerNameIndictionConfiguration:
-    """ """
+    """
+    L{ServerNameIndictionConfiguration} is an
+    L{IOpenSSLServerConnectionCreatorFactory} that creates server connections
+    according to a lookup function that can translate a server name specified
+    by a client into a L{Context}.
+    """
 
     def __init__(
         self, contextLookup: Callable[[Optional[bytes]], Optional[Context]]
     ) -> None:
         """
         Initialize a L{ServerNameIndictionConfiguration} with a callable that
-        can do a lookup for a L{Context}.
+        can do a lookup for a L{Context} based on an indicated server name.
         """
         self.contextLookup = contextLookup
 
@@ -84,7 +89,11 @@ class ServerNameIndictionConfiguration:
         connectionSetupHook: Callable[[Connection], None],
         contextSetupHook: Callable[[Context], None],
     ) -> IOpenSSLServerConnectionCreator:
-        """ """
+        """
+        Create an L{SNIConnectionCreator} configured with the C{contextLookup}
+        passed to this L{ServerNameIndictionConfiguration} when it was
+        constructed.
+        """
 
         def lookupAndSetup(name: Optional[bytes]) -> Context:
             candidate = self.contextLookup(name)
