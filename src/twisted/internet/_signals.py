@@ -49,9 +49,7 @@ from typing_extensions import Protocol, TypeAlias
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
 from twisted.python.runtime import platformType
-
-if platformType == "posix":
-    from . import fdesc, process
+from . import fdesc, process
 
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
