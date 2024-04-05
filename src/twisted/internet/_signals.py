@@ -49,7 +49,15 @@ from typing_extensions import Protocol, TypeAlias
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
 from twisted.python.runtime import platformType
-from . import fdesc, process
+from . import fdesc
+
+if platformType == "posix":
+    from .process import reapAllProcesses
+else:
+
+    def reapAllProcesses() -> None:
+        "Do nothing on Windows."
+
 
 SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
 
@@ -230,7 +238,7 @@ class _ChildSignalHandling:
         # This should only happen if someone used spawnProcess
         # before calling reactor.run (and the process also exited
         # already).
-        process.reapAllProcesses()
+        reapAllProcesses()
 
     def uninstall(self) -> None:
         """
@@ -409,7 +417,7 @@ class _UnixWaker(_FDWaker):
 if platformType == "posix":
     _Waker = _UnixWaker
 else:
-    # Primarily Windows and Jython.
+    # Windows, and possibly other platforms without signals support
     _Waker = _SocketWaker  # type: ignore[misc,assignment]
 
 
@@ -440,4 +448,4 @@ class _SIGCHLDWaker(_FDWaker):
         method.
         """
         super().doRead()
-        process.reapAllProcesses()
+        reapAllProcesses()
