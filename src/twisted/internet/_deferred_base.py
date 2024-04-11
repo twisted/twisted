@@ -1,52 +1,110 @@
-import cython
+import os
 
-import inspect
+try:
+    import cython
+except ImportError:
+
+    class cython:
+        # Match real module's behavior in interpreted mode when it is
+        # installed.
+        compiled = False
+
+        @staticmethod
+        def declare(type, **kwargs):
+            return {bool: False, int: 0, object: None}[type]
+
+        @staticmethod
+        def cclass(klass):
+            return klass
+
+        ccall = cclass
+        cfunc = cclass
+
+        bint = bool
+        int = int
+        object = object
+
+
 import traceback
-import warnings
-from abc import ABC, abstractmethod
-from asyncio import AbstractEventLoop, Future, iscoroutine
-from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
-from functools import wraps
-from sys import exc_info, implementation
-from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
+from types import MappingProxyType
 from typing import (
-    TYPE_CHECKING,
     Any,
-    Awaitable,
     Callable,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
     List,
     Mapping,
-    NoReturn,
     Optional,
-    Sequence,
     Tuple,
-    Type,
-    TypeVar,
     Union,
-    cast,
-    overload,
 )
 
-import attr
-from incremental import Version
-from typing_extensions import Concatenate, Literal, ParamSpec, Self
+from typing_extensions import Literal
 
-from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
-from twisted.python import lockfile
-from twisted.python.compat import _PYPY, cmp, comparable
-from twisted.python.deprecate import deprecated, warnAboutFunction
-from twisted.python.failure import Failure, _extraneous
+from twisted.python.deprecate import warnAboutFunction
+from twisted.python.failure import Failure
+from ._deferred_shared import DebugInfo, AlreadyCalledError, CancelledError
 
-from .defer import _NONE_KWARGS, AlreadyCalledError, NotACoroutineError, _NO_RESULT, _CONTINUE, _Sentinel, CancelledError, _cancelledToTimedOutError, passthru, _failthru, DebugInfo, _cancellableInlineCallbacks, _SelfResultT
+log = Logger()
+
+
+class _Sentinel(Enum):
+    """
+    @cvar _NO_RESULT:
+        The result used to represent the fact that there is no result.
+        B{Never ever ever use this as an actual result for a Deferred}.
+        You have been warned.
+    @cvar _CONTINUE:
+        A marker left in L{Deferred.callback}s to indicate a Deferred chain.
+        Always accompanied by a Deferred instance in the args tuple pointing at
+        the Deferred which is chained to the Deferred which has this marker.
+    """
+
+    _NO_RESULT = object()
+    _CONTINUE = object()
+
+
+# Cache these values for use without the extra lookup in deferred hot code paths
+_NO_RESULT = _Sentinel._NO_RESULT
+_CONTINUE = _Sentinel._CONTINUE
+
+
+# type note: this should be Callable[[object, ...], object] but mypy doesn't allow.
+#     Callable[[object], object] is next best, but disallows valid callback signatures
+DeferredCallback = Callable[..., object]
+# type note: this should be Callable[[Failure, ...], object] but mypy doesn't allow.
+#     Callable[[Failure], object] is next best, but disallows valid callback signatures
+DeferredErrback = Callable[..., object]
+
+_CallbackOrderedArguments = Tuple[object, ...]
+_CallbackKeywordArguments = Mapping[str, object]
+_CallbackChain = Tuple[
+    Tuple[
+        Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
+        _CallbackOrderedArguments,
+        _CallbackKeywordArguments,
+    ],
+    Tuple[
+        Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
+        _CallbackOrderedArguments,
+        _CallbackKeywordArguments,
+    ],
+]
+
+_NONE_KWARGS: _CallbackKeywordArguments = MappingProxyType({})
+
+
+def _failthru(arg: Failure) -> Failure:
+    return arg
+
+
+@cython.cfunc
+def passthru(arg: object) -> object:
+    return arg
+
 
 @cython.cclass
-class CDeferred:
+class _DeferredBase:
     """
     This is a callback which will be put off until later.
 
@@ -98,14 +156,11 @@ class CDeferred:
 
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
-    debug = cython.declare(cython.bint, visibility="public")
+    debug = False
 
     _chainedTo = cython.declare(object, visibility="public")
 
-    def __class_getitem__(cls, item):
-        return cls
-
-    def __init__(self, canceller: Optional[Callable[["Deferred[Any]"], None]] = None):
+    def __init__(self, canceller=None):
         """
         Initialize a L{Deferred}.
 
@@ -136,7 +191,6 @@ class CDeferred:
         self._debugInfo = None
         self._suppressAlreadyCalled = False
         self._runningCallbacks = False
-        self.debug = False
         self._chainedTo = None
 
         if self.debug:
@@ -245,69 +299,7 @@ class CDeferred:
 
     # END way too many overloads
 
-    def addTimeout(
-        self,
-        timeout: float,
-        clock,
-        onTimeoutCancel: None,
-    ):
-        """
-        Time out this L{Deferred} by scheduling it to be cancelled after
-        C{timeout} seconds.
-
-        The timeout encompasses all the callbacks and errbacks added to this
-        L{defer.Deferred} before the call to L{addTimeout}, and none added
-        after the call.
-
-        If this L{Deferred} gets timed out, it errbacks with a L{TimeoutError},
-        unless a cancelable function was passed to its initialization or unless
-        a different C{onTimeoutCancel} callable is provided.
-
-        @param timeout: number of seconds to wait before timing out this
-            L{Deferred}
-        @param clock: The object which will be used to schedule the timeout.
-        @param onTimeoutCancel: A callable which is called immediately after
-            this L{Deferred} times out, and not if this L{Deferred} is
-            otherwise cancelled before the timeout. It takes an arbitrary
-            value, which is the value of this L{Deferred} at that exact point
-            in time (probably a L{CancelledError} L{Failure}), and the
-            C{timeout}.  The default callable (if C{None} is provided) will
-            translate a L{CancelledError} L{Failure} into a L{TimeoutError}.
-
-        @return: C{self}.
-
-        @since: 16.5
-        """
-
-        timedOut = [False]
-
-        def timeItOut():
-            timedOut[0] = True
-            self.cancel()
-
-        delayedCall = clock.callLater(timeout, timeItOut)
-
-        def convertCancelled(result):
-            # if C{deferred} was timed out, call the translation function,
-            # if provided, otherwise just use L{cancelledToTimedOutError}
-            if timedOut[0]:
-                toCall = onTimeoutCancel or _cancelledToTimedOutError
-                return toCall(result, timeout)
-            return result
-
-        def cancelTimeout(result: _T) -> _T:
-            # stop the pending call to cancel the deferred if it's been fired
-            if delayedCall.active():
-                delayedCall.cancel()
-            return result
-
-        # Note: Mypy cannot infer this type, apparently thanks to the ambiguity
-        # of _SelfResultT / _NextResultT both being unbound.  Explicitly
-        # annotating it seems to do the trick though.
-        converted = self.addBoth(convertCancelled)
-        return converted.addBoth(cancelTimeout)
-
-    def chainDeferred(self, d: "Deferred[_SelfResultT]"):
+    def chainDeferred(self, d):
         """
         Chain another L{Deferred} to this L{Deferred}.
 
@@ -335,7 +327,7 @@ class CDeferred:
         return self.addCallbacks(d.callback, d.errback)
 
     @cython.ccall
-    def callback(self, result: Union[_SelfResultT, Failure]):
+    def callback(self, result):
         """
         Run all success callbacks that have been added to this L{Deferred}.
 
@@ -440,7 +432,7 @@ class CDeferred:
                 # There was no canceller, or the canceller didn't call
                 # callback or errback.
                 self.errback(Failure(CancelledError()))
-        elif isinstance(self.result, CDeferred):
+        elif isinstance(self.result, _DeferredBase):
             # Waiting for another deferred -- cancel it instead.
             self.result.cancel()
 
@@ -515,7 +507,7 @@ class CDeferred:
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain: List[Deferred[Any]] = [self]
+        chain = [self]
 
         while chain:
             current = chain[-1]
@@ -582,13 +574,13 @@ class CDeferred:
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
                 else:
-                    if isinstance(current.result, CDeferred):
+                    if isinstance(current.result, _DeferredBase):
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         resultResult = getattr(current.result, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
-                            or isinstance(resultResult, CDeferred)
+                            or isinstance(resultResult, _DeferredBase)
                             or current.result.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
@@ -629,187 +621,3 @@ class CDeferred:
                 # This Deferred is done, pop it from the chain and move back up
                 # to the Deferred which supplied us with our result.
                 chain.pop()
-
-    def __str__(self) -> str:
-        """
-        Return a string representation of this L{Deferred}.
-        """
-        cname = self.__class__.__name__
-        result = getattr(self, "result", _NO_RESULT)
-        myID = id(self)
-        if self._chainedTo is not None:
-            result = f" waiting on Deferred at 0x{id(self._chainedTo):x}"
-        elif result is _NO_RESULT:
-            result = ""
-        else:
-            result = f" current result: {result!r}"
-        return f"<{cname} at 0x{myID:x}{result}>"
-
-    __repr__ = __str__
-
-    def __iter__(self) -> "Deferred[_SelfResultT]":
-        return self
-
-    @_extraneous
-    def send(self, value: object = None) -> "Deferred[_SelfResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
-
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            raise result.value
-        else:
-            raise StopIteration(result)
-
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _SelfResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _SelfResultT]:
-        return self.__iter__()  # type: ignore[return-value]
-
-    __next__ = send
-
-    def asFuture(self, loop: AbstractEventLoop) -> "Future[_SelfResultT]":
-        """
-        Adapt this L{Deferred} into a L{Future} which is bound to C{loop}.
-
-        @note: converting a L{Deferred} to an L{Future} consumes both
-            its result and its errors, so this method implicitly converts
-            C{self} into a L{Deferred} firing with L{None}, regardless of what
-            its result previously would have been.
-
-        @since: Twisted 17.5.0
-
-        @param loop: The L{asyncio} event loop to bind the L{Future} to.
-
-        @return: A L{Future} which will fire when the L{Deferred} fires.
-        """
-        future = loop.create_future()
-
-        def checkCancel(futureAgain: "Future[_SelfResultT]"):
-            if futureAgain.cancelled():
-                self.cancel()
-
-        def maybeFail(failure: Failure):
-            if not future.cancelled():
-                future.set_exception(failure.value)
-
-        def maybeSucceed(result: object):
-            if not future.cancelled():
-                future.set_result(result)
-
-        self.addCallbacks(maybeSucceed, maybeFail)
-        future.add_done_callback(checkCancel)
-
-        return future
-
-    @classmethod
-    def fromFuture(cls, future: "Future[_SelfResultT]") -> "Deferred[_SelfResultT]":
-        """
-        Adapt a L{Future} to a L{Deferred}.
-
-        @note: This creates a L{Deferred} from a L{Future}, I{not} from
-            a C{coroutine}; in other words, you will need to call
-            L{asyncio.ensure_future}, L{asyncio.loop.create_task} or create an
-            L{asyncio.Task} yourself to get from a C{coroutine} to a
-            L{Future} if what you have is an awaitable coroutine and
-            not a L{Future}.  (The length of this list of techniques is
-            exactly why we have left it to the caller!)
-
-        @since: Twisted 17.5.0
-
-        @param future: The L{Future} to adapt.
-
-        @return: A L{Deferred} which will fire when the L{Future} fires.
-        """
-
-        def adapt(result: Future[_SelfResultT]):
-            try:
-                extracted: _SelfResultT | Failure = result.result()
-            except BaseException:
-                extracted = Failure()
-            actual.callback(extracted)
-
-        futureCancel = object()
-
-        def cancel(reself: Deferred[object]):
-            future.cancel()
-            reself.callback(futureCancel)
-
-        self = cls(cancel)
-        actual = self
-
-        def uncancel(
-            result: _SelfResultT,
-        ) -> Union[_SelfResultT, Deferred[_SelfResultT]]:
-            if result is futureCancel:
-                nonlocal actual
-                actual = CDeferred()
-                return actual
-            return result
-
-        self.addCallback(uncancel)
-        future.add_done_callback(adapt)
-
-        return self
-
-    @classmethod
-    def fromCoroutine(
-        cls,
-        coro: Union[
-            Coroutine[Deferred[Any], Any, _T],
-            Generator[Deferred[Any], Any, _T],
-        ],
-    ) -> "Deferred[_T]":
-        """
-        Schedule the execution of a coroutine that awaits on L{Deferred}s,
-        wrapping it in a L{Deferred} that will fire on success/failure of the
-        coroutine.
-
-        Coroutine functions return a coroutine object, similar to how
-        generators work. This function turns that coroutine into a Deferred,
-        meaning that it can be used in regular Twisted code. For example::
-
-            import treq
-            from twisted.internet.defer import Deferred
-            from twisted.internet.task import react
-
-            async def crawl(pages):
-                results = {}
-                for page in pages:
-                    results[page] = await treq.content(await treq.get(page))
-                return results
-
-            def main(reactor):
-                pages = [
-                    "http://localhost:8080"
-                ]
-                d = Deferred.fromCoroutine(crawl(pages))
-                d.addCallback(print)
-                return d
-
-            react(main)
-
-        @since: Twisted 21.2.0
-
-        @param coro: The coroutine object to schedule.
-
-        @raise ValueError: If C{coro} is not a coroutine or generator.
-        """
-        # asyncio.iscoroutine <3.12 identifies generators as coroutines, too.
-        # for >=3.12 we need to check isgenerator also
-        # see https://github.com/python/cpython/issues/102748
-        if iscoroutine(coro) or inspect.isgenerator(coro):
-            return _cancellableInlineCallbacks(coro)
-        raise NotACoroutineError(f"{coro!r} is not a coroutine")
