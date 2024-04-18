@@ -13,13 +13,14 @@ Examples:
  - memory:admin:asdf:user:lkj
  - unix
 """
-
+from __future__ import annotations
 
 import sys
-from typing import Optional, Sequence, Type
+from typing import Iterable, Optional, Sequence, Type
 
 from zope.interface import Attribute, Interface
 
+from twisted.cred.checkers import ICredentialsChecker
 from twisted.plugin import getPlugins
 from twisted.python import usage
 
@@ -47,7 +48,7 @@ class ICheckerFactory(Interface):
         "A list of credentials interfaces that this factory will support."
     )
 
-    def generateChecker(argstring):
+    def generateChecker(argstring: str) -> ICredentialsChecker:
         """
         Return an L{twisted.cred.checkers.ICredentialsChecker} provider using the supplied
         argument string.
@@ -86,14 +87,14 @@ class UnsupportedInterfaces(StrcredException):
 notSupportedWarning = "WARNING: This authType is not supported by " "this application."
 
 
-def findCheckerFactories():
+def findCheckerFactories() -> Iterable[ICheckerFactory]:
     """
     Find all objects that implement L{ICheckerFactory}.
     """
     return getPlugins(ICheckerFactory)
 
 
-def findCheckerFactory(authType):
+def findCheckerFactory(authType: str) -> ICheckerFactory:
     """
     Find the first checker factory that supports the given authType.
     """
@@ -103,7 +104,7 @@ def findCheckerFactory(authType):
     raise InvalidAuthType(authType)
 
 
-def makeChecker(description):
+def makeChecker(description: str) -> ICredentialsChecker:
     """
     Returns an L{twisted.cred.checkers.ICredentialsChecker} based on the
     contents of a descriptive string. Similar to

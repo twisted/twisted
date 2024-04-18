@@ -7,15 +7,15 @@ Things likely to be used by writers of unit tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 import inspect
 import warnings
-from typing import Callable, List
+from typing import Any, Callable, List, TypeVar
 
 from zope.interface import implementer
 
-from typing_extensions import ParamSpec
+from typing_extensions import NoReturn, ParamSpec
 
 # We can't import reactor at module-level because this code runs before trial
 # installs a user-specified reactor, installing the default reactor and
@@ -25,6 +25,7 @@ from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
+_E = TypeVar("_E", bound=BaseException)
 _P = ParamSpec("_P")
 
 _wait_is_running: List[None] = []
@@ -58,21 +59,23 @@ class TestCase(SynchronousTestCase):
         """
         super().__init__(methodName)
 
-    def assertFailure(self, deferred, *expectedFailures):
+    def assertFailure(
+        self, deferred: defer.Deferred[Any], *expectedFailures: type[BaseException]
+    ) -> defer.Deferred[_E]:
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
         Returns the original Deferred with callbacks added. You will need
         to return this Deferred from your test case.
         """
 
-        def _cb(ignore):
+        def _cb(ignore: object) -> NoReturn:
             raise self.failureException(
                 f"did not catch an error, instead got {ignore!r}"
             )
 
-        def _eb(failure):
+        def _eb(failure: failure.Failure) -> _E:
             if failure.check(*expectedFailures):
-                return failure.value
+                return failure.value  # type: ignore[no-any-return]
             else:
                 output = "\nExpected: {!r}\nGot:\n{}".format(
                     expectedFailures, str(failure)
