@@ -5,6 +5,7 @@
 """
 Interfaces used by the PROXY protocol modules.
 """
+from typing import Tuple, Union
 
 import zope.interface
 
@@ -27,13 +28,12 @@ class IProxyInfo(zope.interface.Interface):
     )
 
 
-
 class IProxyParser(zope.interface.Interface):
     """
     Streaming parser that handles PROXY protocol headers.
     """
 
-    def feed(self, data):
+    def feed(data: bytes) -> Union[Tuple[IProxyInfo, bytes], Tuple[None, None]]:
         """
         Consume a chunk of data and attempt to parse it.
 
@@ -48,8 +48,7 @@ class IProxyParser(zope.interface.Interface):
             invalid PROXY header.
         """
 
-
-    def parse(self, line):
+    def parse(line: bytes) -> IProxyInfo:
         """
         Parse a bytestring as a full PROXY protocol header line.
 

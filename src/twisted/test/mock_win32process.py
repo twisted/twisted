@@ -10,21 +10,24 @@ CreateProcess(...) will spawn a process, and always return a PID of 42.
 """
 
 import win32process
+
 GetExitCodeProcess = win32process.GetExitCodeProcess
 STARTUPINFO = win32process.STARTUPINFO
 
 STARTF_USESTDHANDLES = win32process.STARTF_USESTDHANDLES
 
 
-def CreateProcess(appName,
-                  cmdline,
-                  procSecurity,
-                  threadSecurity,
-                  inheritHandles,
-                  newEnvironment,
-                  env,
-                  workingDir,
-                  startupInfo):
+def CreateProcess(
+    appName,
+    cmdline,
+    procSecurity,
+    threadSecurity,
+    inheritHandles,
+    newEnvironment,
+    env,
+    workingDir,
+    startupInfo,
+):
     """
     This function mocks the generated pid aspect of the win32.CreateProcess
     function.
@@ -35,14 +38,15 @@ def CreateProcess(appName,
     """
 
     hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(
-                      appName,
-                      cmdline,
-                      procSecurity,
-                      threadSecurity,
-                      inheritHandles,
-                      newEnvironment,
-                      env,
-                      workingDir,
-                      startupInfo)
+        appName,
+        cmdline,
+        procSecurity,
+        threadSecurity,
+        inheritHandles,
+        newEnvironment,
+        env,
+        workingDir,
+        startupInfo,
+    )
     dwPid = 42
     return (hProcess, hThread, dwPid, dwTid)

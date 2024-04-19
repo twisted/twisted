@@ -6,9 +6,9 @@ Tests for L{twisted.runner.procmontap}.
 """
 
 from twisted.python.usage import UsageError
-from twisted.trial import unittest
-from twisted.runner.procmon import ProcessMonitor
 from twisted.runner import procmontap as tap
+from twisted.runner.procmon import ProcessMonitor
+from twisted.trial import unittest
 
 
 class ProcessMonitorTapTests(unittest.TestCase):
@@ -17,71 +17,65 @@ class ProcessMonitorTapTests(unittest.TestCase):
     method.
     """
 
-    def test_commandLineRequired(self):
+    def test_commandLineRequired(self) -> None:
         """
         The command line arguments must be provided.
         """
         opt = tap.Options()
         self.assertRaises(UsageError, opt.parseOptions, [])
 
-
-    def test_threshold(self):
+    def test_threshold(self) -> None:
         """
         The threshold option is recognised as a parameter and coerced to
         float.
         """
         opt = tap.Options()
-        opt.parseOptions(['--threshold', '7.5', 'foo'])
-        self.assertEqual(opt['threshold'], 7.5)
+        opt.parseOptions(["--threshold", "7.5", "foo"])
+        self.assertEqual(opt["threshold"], 7.5)
 
-
-    def test_killTime(self):
+    def test_killTime(self) -> None:
         """
         The killtime option is recognised as a parameter and coerced to float.
         """
         opt = tap.Options()
-        opt.parseOptions(['--killtime', '7.5', 'foo'])
-        self.assertEqual(opt['killtime'], 7.5)
+        opt.parseOptions(["--killtime", "7.5", "foo"])
+        self.assertEqual(opt["killtime"], 7.5)
 
-
-    def test_minRestartDelay(self):
+    def test_minRestartDelay(self) -> None:
         """
         The minrestartdelay option is recognised as a parameter and coerced to
         float.
         """
         opt = tap.Options()
-        opt.parseOptions(['--minrestartdelay', '7.5', 'foo'])
-        self.assertEqual(opt['minrestartdelay'], 7.5)
+        opt.parseOptions(["--minrestartdelay", "7.5", "foo"])
+        self.assertEqual(opt["minrestartdelay"], 7.5)
 
-
-    def test_maxRestartDelay(self):
+    def test_maxRestartDelay(self) -> None:
         """
         The maxrestartdelay option is recognised as a parameter and coerced to
         float.
         """
         opt = tap.Options()
-        opt.parseOptions(['--maxrestartdelay', '7.5', 'foo'])
-        self.assertEqual(opt['maxrestartdelay'], 7.5)
+        opt.parseOptions(["--maxrestartdelay", "7.5", "foo"])
+        self.assertEqual(opt["maxrestartdelay"], 7.5)
 
-
-    def test_parameterDefaults(self):
+    def test_parameterDefaults(self) -> None:
         """
         The parameters all have default values
         """
         opt = tap.Options()
-        opt.parseOptions(['foo'])
-        self.assertEqual(opt['threshold'], 1)
-        self.assertEqual(opt['killtime'], 5)
-        self.assertEqual(opt['minrestartdelay'], 1)
-        self.assertEqual(opt['maxrestartdelay'], 3600)
+        opt.parseOptions(["foo"])
+        self.assertEqual(opt["threshold"], 1)
+        self.assertEqual(opt["killtime"], 5)
+        self.assertEqual(opt["minrestartdelay"], 1)
+        self.assertEqual(opt["maxrestartdelay"], 3600)
 
-
-    def test_makeService(self):
+    def test_makeService(self) -> None:
         """
         The command line gets added as a process to the ProcessMontor.
         """
         opt = tap.Options()
-        opt.parseOptions(['ping', '-c', '3', '8.8.8.8'])
+        opt.parseOptions(["ping", "-c", "3", "8.8.8.8"])
         s = tap.makeService(opt)
         self.assertIsInstance(s, ProcessMonitor)
-        self.assertIn('ping -c 3 8.8.8.8', s.processes)
+        self.assertIn("ping -c 3 8.8.8.8", s.processes)

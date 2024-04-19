@@ -5,76 +5,84 @@
 Tests for L{twisted.conch.client.knownhosts}.
 """
 
-from __future__ import absolute_import, division
 
 import os
-from binascii import Error as BinasciiError, b2a_base64, a2b_base64
+from binascii import Error as BinasciiError, a2b_base64, b2a_base64
+from unittest import skipIf
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import networkString
-from twisted.python.reflect import requireModule
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred
+from twisted.conch.error import HostKeyChanged, InvalidEntry, UserRejectedKey
 from twisted.conch.interfaces import IKnownHostEntry
-from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
+from twisted.internet.defer import Deferred
+from twisted.python.compat import networkString
+from twisted.python.filepath import FilePath
+from twisted.python.reflect import requireModule
 from twisted.test.testutils import ComparisonTestsMixin
+from twisted.trial.unittest import TestCase
 
-if requireModule('cryptography') and requireModule('pyasn1'):
-    from twisted.conch.ssh.keys import Key, BadKeyError
-    from twisted.conch.client.knownhosts import \
-        PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
+if requireModule("cryptography"):
     from twisted.conch.client import default
+    from twisted.conch.client.knownhosts import (
+        ConsoleUI,
+        HashedEntry,
+        KnownHostsFile,
+        PlainEntry,
+        UnparsedEntry,
+    )
+    from twisted.conch.ssh.keys import BadKeyError, Key
     from twisted.conch.test import keydata
 else:
-    skip = "cryptography and PyASN1 required for twisted.conch.knownhosts."
-
-
+    skip = "cryptography required for twisted.conch.knownhosts."
 
 
 sampleEncodedKey = (
-   b'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
-   b'tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm'
-   b'YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC'
-   b'dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd'
-   b'4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk'
-   b'6iIaw==')
+    b"AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y"
+    b"tNvue4Riqv/SVkPRNwMb7eWH29SviXaBxUhYyzKkDoNUq3rTNnH1Vnif6d6X4JCrUb5d3W+Dm"
+    b"YClyJrZ5HgD/hUpdSkTRqdbQ2TrvSAxRacj+vHHT4F4dm1bJSewm3B2D8HVOoi/CbVh3dsIiC"
+    b"dp8VltdZx4qYVfYe2LwVINCbAa3d3tj9ma7RVfw3OH2Mfb+toLd1N5tBQFb7oqTt2nC6I/6Bd"
+    b"4JwPUld+IEitw/suElq/AIJVQXXujeyiZlea90HE65U2mF1ytr17HTAIT2ySokJWyuBANGACk"
+    b"6iIaw=="
+)
 
 otherSampleEncodedKey = (
-   b'AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf'
-   b'WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E'
-   b'lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8=')
+    b"AAAAB3NzaC1yc2EAAAABIwAAAIEAwaeCZd3UCuPXhX39+/p9qO028jTF76DMVd9mPvYVDVXuf"
+    b"WckKZauF7+0b7qm+ChT7kan6BzRVo4++gCVNfAlMzLysSt3ylmOR48tFpAfygg9UCX3DjHz0E"
+    b"lOOUKh3iifc9aUShD0OPaK3pR5JJ8jfiBfzSYWt/hDi/iZ4igsSs8="
+)
 
 thirdSampleEncodedKey = (
-  b'AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw'
-  b'7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho'
-  b'/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2'
-  b'aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY'
-  b'343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ'
-  b'==')
+    b"AAAAB3NzaC1yc2EAAAABIwAAAQEAl/TQakPkePlnwCBRPitIVUTg6Z8VzN1en+DGkyo/evkmLw"
+    b"7o4NWR5qbysk9A9jXW332nxnEuAnbcCam9SHe1su1liVfyIK0+3bdn0YRB0sXIbNEtMs2LtCho"
+    b"/aV3cXPS+Cf1yut3wvIpaRnAzXxuKPCTXQ7/y0IXa8TwkRBH58OJa3RqfQ/NsSp5SAfdsrHyH2"
+    b"aitiVKm2jfbTKzSEqOQG/zq4J9GXTkq61gZugory/Tvl5/yPgSnOR6C9jVOMHf27ZPoRtyj9SY"
+    b"343Hd2QHiIE0KPZJEgCynKeWoKz8v6eTSK8n4rBnaqWdp8MnGZK1WGy05MguXbyCDuTC8AmJXQ"
+    b"=="
+)
 
 ecdsaSampleEncodedKey = (
-   b'AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60'
-   b'SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4=')
+    b"AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIFwh3/zBANyPPIE60"
+    b"SMMfdKMYo3OvfvzGLZphzuKrzSt0q4uF+/iYqtYiHhryAwU/fDWlUQ9kck9f+IlpsNtY4="
+)
 
 sampleKey = a2b_base64(sampleEncodedKey)
 otherSampleKey = a2b_base64(otherSampleEncodedKey)
 thirdSampleKey = a2b_base64(thirdSampleEncodedKey)
-ecdsaSampleKey =  a2b_base64(ecdsaSampleEncodedKey)
+ecdsaSampleKey = a2b_base64(ecdsaSampleEncodedKey)
 
-samplePlaintextLine = (
-    b"www.twistedmatrix.com ssh-rsa " + sampleEncodedKey + b"\n")
+samplePlaintextLine = b"www.twistedmatrix.com ssh-rsa " + sampleEncodedKey + b"\n"
 
-otherSamplePlaintextLine = (
-    b"divmod.com ssh-rsa " + otherSampleEncodedKey + b"\n")
+otherSamplePlaintextLine = b"divmod.com ssh-rsa " + otherSampleEncodedKey + b"\n"
 
 sampleHostIPLine = (
-    b"www.twistedmatrix.com,198.49.126.131 ssh-rsa " + sampleEncodedKey + b"\n")
+    b"www.twistedmatrix.com,198.49.126.131 ssh-rsa " + sampleEncodedKey + b"\n"
+)
 
 sampleHashedLine = (
-    b"|1|gJbSEPBG9ZSBoZpHNtZBD1bHKBA=|bQv+0Xa0dByrwkA1EB0E7Xop/Fo= ssh-rsa " +
-    sampleEncodedKey + b"\n")
+    b"|1|gJbSEPBG9ZSBoZpHNtZBD1bHKBA=|bQv+0Xa0dByrwkA1EB0E7Xop/Fo= ssh-rsa "
+    + sampleEncodedKey
+    + b"\n"
+)
 
 
 class EntryTestsMixin:
@@ -93,7 +101,6 @@ class EntryTestsMixin:
         """
         verifyObject(IKnownHostEntry, self.entry)
 
-
     def test_fromString(self):
         """
         Constructing a plain text entry from an unhashed known_hosts entry will
@@ -107,7 +114,6 @@ class EntryTestsMixin:
         self.assertEqual(entry.publicKey, Key.fromString(sampleKey))
         self.assertEqual(entry.keyType, b"ssh-rsa")
 
-
     def test_matchesKey(self):
         """
         L{IKnownHostEntry.matchesKey} checks to see if an entry matches a given
@@ -115,13 +121,8 @@ class EntryTestsMixin:
         """
         twistedmatrixDotCom = Key.fromString(sampleKey)
         divmodDotCom = Key.fromString(otherSampleKey)
-        self.assertEqual(
-            True,
-            self.entry.matchesKey(twistedmatrixDotCom))
-        self.assertEqual(
-            False,
-            self.entry.matchesKey(divmodDotCom))
-
+        self.assertEqual(True, self.entry.matchesKey(twistedmatrixDotCom))
+        self.assertEqual(False, self.entry.matchesKey(divmodDotCom))
 
     def test_matchesHost(self):
         """
@@ -132,11 +133,11 @@ class EntryTestsMixin:
         self.assertFalse(self.entry.matchesHost(b"www.divmod.com"))
 
 
-
 class PlainEntryTests(EntryTestsMixin, TestCase):
     """
     Test cases for L{PlainEntry}.
     """
+
     plaintextLine = samplePlaintextLine
     hostIPLine = sampleHostIPLine
 
@@ -146,7 +147,6 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         """
         self.entry = PlainEntry.fromString(self.plaintextLine)
 
-
     def test_matchesHostIP(self):
         """
         A "hostname,ip" formatted line will match both the host and the IP.
@@ -155,7 +155,6 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         self.assertTrue(self.entry.matchesHost(b"198.49.126.131"))
         self.test_matchesHost()
 
-
     def test_toString(self):
         """
         L{PlainEntry.toString} generates the serialized OpenSSL format string
@@ -163,9 +162,7 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         """
         self.assertEqual(self.entry.toString(), self.plaintextLine.rstrip(b"\n"))
         multiHostEntry = PlainEntry.fromString(self.hostIPLine)
-        self.assertEqual(multiHostEntry.toString(),
-                         self.hostIPLine.rstrip(b"\n"))
-
+        self.assertEqual(multiHostEntry.toString(), self.hostIPLine.rstrip(b"\n"))
 
 
 class PlainTextWithCommentTests(PlainEntryTests):
@@ -177,7 +174,6 @@ class PlainTextWithCommentTests(PlainEntryTests):
     hostIPLine = sampleHostIPLine[:-1] + b" text following host/IP line\n"
 
 
-
 class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
     """
     Tests for L{HashedEntry}.
@@ -187,6 +183,7 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
     comma-separated lists.  (If you hash the IP and host together you can't
     tell if you've got the key already for one or the other.)
     """
+
     hashedLine = sampleHashedLine
 
     def setUp(self):
@@ -196,14 +193,12 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
         """
         self.entry = HashedEntry.fromString(self.hashedLine)
 
-
     def test_toString(self):
         """
         L{HashedEntry.toString} generates the serialized OpenSSL format string
         for the entry, sans the newline.
         """
         self.assertEqual(self.entry.toString(), self.hashedLine.rstrip(b"\n"))
-
 
     def test_equality(self):
         """
@@ -217,46 +212,45 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
         keyType = networkString(publicKey.type())
         comment = b"hello, world"
 
-        entry = HashedEntry(
-            hostSalt, hostHash, keyType, publicKey, comment)
-        duplicate = HashedEntry(
-            hostSalt, hostHash, keyType, publicKey, comment)
+        entry = HashedEntry(hostSalt, hostHash, keyType, publicKey, comment)
+        duplicate = HashedEntry(hostSalt, hostHash, keyType, publicKey, comment)
 
         # Vary the host salt
         self.assertNormalEqualityImplementation(
-            entry, duplicate,
-            HashedEntry(
-                hostSalt[::-1], hostHash, keyType, publicKey,
-                comment))
+            entry,
+            duplicate,
+            HashedEntry(hostSalt[::-1], hostHash, keyType, publicKey, comment),
+        )
 
         # Vary the host hash
         self.assertNormalEqualityImplementation(
-            entry, duplicate,
-            HashedEntry(
-                hostSalt, hostHash[::-1], keyType, publicKey,
-                comment))
+            entry,
+            duplicate,
+            HashedEntry(hostSalt, hostHash[::-1], keyType, publicKey, comment),
+        )
 
         # Vary the key type
         self.assertNormalEqualityImplementation(
-            entry, duplicate,
-            HashedEntry(
-                hostSalt, hostHash, keyType[::-1], publicKey,
-                comment))
+            entry,
+            duplicate,
+            HashedEntry(hostSalt, hostHash, keyType[::-1], publicKey, comment),
+        )
 
         # Vary the key
         self.assertNormalEqualityImplementation(
-            entry, duplicate,
+            entry,
+            duplicate,
             HashedEntry(
-                hostSalt, hostHash, keyType,
-                Key.fromString(otherSampleKey), comment))
+                hostSalt, hostHash, keyType, Key.fromString(otherSampleKey), comment
+            ),
+        )
 
         # Vary the comment
         self.assertNormalEqualityImplementation(
-            entry, duplicate,
-            HashedEntry(
-                hostSalt, hostHash, keyType, publicKey,
-                comment[::-1]))
-
+            entry,
+            duplicate,
+            HashedEntry(hostSalt, hostHash, keyType, publicKey, comment[::-1]),
+        )
 
 
 class HashedEntryWithCommentTests(HashedEntryTests):
@@ -267,26 +261,23 @@ class HashedEntryWithCommentTests(HashedEntryTests):
     hashedLine = sampleHashedLine[:-1] + b" plain text comment.\n"
 
 
-
 class UnparsedEntryTests(TestCase, EntryTestsMixin):
     """
     Tests for L{UnparsedEntry}
     """
+
     def setUp(self):
         """
         Set up the 'entry' to be an unparsed entry for some random text.
         """
         self.entry = UnparsedEntry(b"    This is a bogus entry.  \n")
 
-
     def test_fromString(self):
         """
         Creating an L{UnparsedEntry} should simply record the string it was
         passed.
         """
-        self.assertEqual(b"    This is a bogus entry.  \n",
-                         self.entry._string)
-
+        self.assertEqual(b"    This is a bogus entry.  \n", self.entry._string)
 
     def test_matchesHost(self):
         """
@@ -294,13 +285,11 @@ class UnparsedEntryTests(TestCase, EntryTestsMixin):
         """
         self.assertFalse(self.entry.matchesHost(b"www.twistedmatrix.com"))
 
-
     def test_matchesKey(self):
         """
         An unparsed entry can't match any keys.
         """
         self.assertFalse(self.entry.matchesKey(Key.fromString(sampleKey)))
-
 
     def test_toString(self):
         """
@@ -308,7 +297,6 @@ class UnparsedEntryTests(TestCase, EntryTestsMixin):
         newline.
         """
         self.assertEqual(b"    This is a bogus entry.  ", self.entry.toString())
-
 
 
 class ParseErrorTests(TestCase):
@@ -328,23 +316,24 @@ class ParseErrorTests(TestCase):
         """
         self.assertRaises(InvalidEntry, cls.fromString, b"invalid")
 
-
     def notBase64Test(self, cls):
         """
         If the key is not base64, C{fromString} should raise L{BinasciiError}.
         """
         self.assertRaises(BinasciiError, cls.fromString, b"x x x")
 
-
     def badKeyTest(self, cls, prefix):
         """
         If the key portion of the entry is valid base64, but is not actually an
         SSH key, C{fromString} should raise L{BadKeyError}.
         """
-        self.assertRaises(BadKeyError, cls.fromString, b' '.join(
-                [prefix, b"ssh-rsa", b2a_base64(
-                    b"Hey, this isn't an SSH key!").strip()]))
-
+        self.assertRaises(
+            BadKeyError,
+            cls.fromString,
+            b" ".join(
+                [prefix, b"ssh-rsa", b2a_base64(b"Hey, this isn't an SSH key!").strip()]
+            ),
+        )
 
     def test_invalidPlainEntry(self):
         """
@@ -352,7 +341,6 @@ class ParseErrorTests(TestCase):
         entry, L{PlainEntry.fromString} should raise L{InvalidEntry}.
         """
         self.invalidEntryTest(PlainEntry)
-
 
     def test_invalidHashedEntry(self):
         """
@@ -362,9 +350,9 @@ class ParseErrorTests(TestCase):
         """
         self.invalidEntryTest(HashedEntry)
         a, b, c = sampleHashedLine.split()
-        self.assertRaises(InvalidEntry, HashedEntry.fromString, b' '.join(
-                [a + b"||", b, c]))
-
+        self.assertRaises(
+            InvalidEntry, HashedEntry.fromString, b" ".join([a + b"||", b, c])
+        )
 
     def test_plainNotBase64(self):
         """
@@ -372,7 +360,6 @@ class ParseErrorTests(TestCase):
         C{fromString} should raise L{BinasciiError}.
         """
         self.notBase64Test(PlainEntry)
-
 
     def test_hashedNotBase64(self):
         """
@@ -383,19 +370,20 @@ class ParseErrorTests(TestCase):
         a, b, c = sampleHashedLine.split()
         # Salt not valid base64.
         self.assertRaises(
-            BinasciiError, HashedEntry.fromString,
-            b' '.join([b"|1|x|" + b2a_base64(b"stuff").strip(), b, c]))
+            BinasciiError,
+            HashedEntry.fromString,
+            b" ".join([b"|1|x|" + b2a_base64(b"stuff").strip(), b, c]),
+        )
         # Host hash not valid base64.
         self.assertRaises(
-            BinasciiError, HashedEntry.fromString,
-            b' '.join(
-                [HashedEntry.MAGIC + b2a_base64(b"stuff").strip() + b"|x",
-            b, c]))
+            BinasciiError,
+            HashedEntry.fromString,
+            b" ".join([HashedEntry.MAGIC + b2a_base64(b"stuff").strip() + b"|x", b, c]),
+        )
         # Neither salt nor hash valid base64.
         self.assertRaises(
-            BinasciiError, HashedEntry.fromString,
-            b' '.join([b"|1|x|x", b, c]))
-
+            BinasciiError, HashedEntry.fromString, b" ".join([b"|1|x|x", b, c])
+        )
 
     def test_hashedBadKey(self):
         """
@@ -405,14 +393,12 @@ class ParseErrorTests(TestCase):
         a, b, c = sampleHashedLine.split()
         self.badKeyTest(HashedEntry, a)
 
-
     def test_plainBadKey(self):
         """
         If the key portion of the entry is valid base64, but is not actually an
         SSH key, C{PlainEntry.fromString} should raise L{BadKeyError}.
         """
         self.badKeyTest(PlainEntry, b"hostname")
-
 
 
 class KnownHostsDatabaseTests(TestCase):
@@ -428,18 +414,21 @@ class KnownHostsDatabaseTests(TestCase):
         fp.setContent(content)
         return fp
 
-
-    def loadSampleHostsFile(self, content=(
-            sampleHashedLine + otherSamplePlaintextLine +
-            b"\n# That was a blank line.\n"
+    def loadSampleHostsFile(
+        self,
+        content=(
+            sampleHashedLine
+            + otherSamplePlaintextLine
+            + b"\n# That was a blank line.\n"
             b"This is just unparseable.\n"
-            b"|1|This also unparseable.\n")):
+            b"|1|This also unparseable.\n"
+        ),
+    ):
         """
         Return a sample hosts file, with keys for www.twistedmatrix.com and
         divmod.com present.
         """
         return KnownHostsFile.fromPath(self.pathWithContent(content))
-
 
     def test_readOnlySavePath(self):
         """
@@ -452,7 +441,6 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertRaises(AttributeError, setattr, hostsFile, "savePath", new)
         self.assertEqual(path, hostsFile.savePath)
 
-
     def test_defaultInitializerIgnoresExisting(self):
         """
         The default initializer for L{KnownHostsFile} disregards any existing
@@ -460,7 +448,6 @@ class KnownHostsDatabaseTests(TestCase):
         """
         hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
         self.assertEqual([], list(hostsFile.iterentries()))
-
 
     def test_defaultInitializerClobbersExisting(self):
         """
@@ -470,14 +457,12 @@ class KnownHostsDatabaseTests(TestCase):
         """
         path = self.pathWithContent(sampleHashedLine)
         hostsFile = KnownHostsFile(path)
-        entry = hostsFile.addHostKey(
-            b"www.example.com", Key.fromString(otherSampleKey))
+        entry = hostsFile.addHostKey(b"www.example.com", Key.fromString(otherSampleKey))
         hostsFile.save()
         # Check KnownHostsFile to see what it thinks the state is
         self.assertEqual([entry], list(hostsFile.iterentries()))
         # And also directly check the underlying file itself
         self.assertEqual(entry.toString() + b"\n", path.getContent())
-
 
     def test_saveResetsClobberState(self):
         """
@@ -487,14 +472,15 @@ class KnownHostsDatabaseTests(TestCase):
         """
         hostsFile = KnownHostsFile(self.pathWithContent(sampleHashedLine))
         preSave = hostsFile.addHostKey(
-            b"www.example.com", Key.fromString(otherSampleKey))
+            b"www.example.com", Key.fromString(otherSampleKey)
+        )
         hostsFile.save()
         postSave = hostsFile.addHostKey(
-            b"another.example.com", Key.fromString(thirdSampleKey))
+            b"another.example.com", Key.fromString(thirdSampleKey)
+        )
         hostsFile.save()
 
         self.assertEqual([preSave, postSave], list(hostsFile.iterentries()))
-
 
     def test_loadFromPath(self):
         """
@@ -505,7 +491,6 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         self.assertEqual(6, len(list(hostsFile.iterentries())))
 
-
     def test_iterentriesUnsaved(self):
         """
         If the save path for a L{KnownHostsFile} does not exist,
@@ -515,19 +500,17 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile.addHostKey(b"www.example.com", Key.fromString(sampleKey))
         self.assertEqual(1, len(list(hostsFile.iterentries())))
 
-
     def test_verifyHashedEntry(self):
         """
         Loading a L{KnownHostsFile} from a path containing a single valid
         L{HashedEntry} entry will result in a L{KnownHostsFile} object
         with one L{IKnownHostEntry} provider.
         """
-        hostsFile = self.loadSampleHostsFile((sampleHashedLine))
+        hostsFile = self.loadSampleHostsFile(sampleHashedLine)
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], HashedEntry)
         self.assertTrue(entries[0].matchesHost(b"www.twistedmatrix.com"))
         self.assertEqual(1, len(entries))
-
 
     def test_verifyPlainEntry(self):
         """
@@ -535,12 +518,11 @@ class KnownHostsDatabaseTests(TestCase):
         L{PlainEntry} entry will result in a L{KnownHostsFile} object
         with one L{IKnownHostEntry} provider.
         """
-        hostsFile = self.loadSampleHostsFile((otherSamplePlaintextLine))
+        hostsFile = self.loadSampleHostsFile(otherSamplePlaintextLine)
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], PlainEntry)
         self.assertTrue(entries[0].matchesHost(b"divmod.com"))
         self.assertEqual(1, len(entries))
-
 
     def test_verifyUnparsedEntry(self):
         """
@@ -548,12 +530,11 @@ class KnownHostsDatabaseTests(TestCase):
         result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
         object.
         """
-        hostsFile = self.loadSampleHostsFile((b"\n"))
+        hostsFile = self.loadSampleHostsFile(b"\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"")
         self.assertEqual(1, len(entries))
-
 
     def test_verifyUnparsedComment(self):
         """
@@ -561,23 +542,21 @@ class KnownHostsDatabaseTests(TestCase):
         result in a L{KnownHostsFile} object containing a L{UnparsedEntry}
         object.
         """
-        hostsFile = self.loadSampleHostsFile((b"# That was a blank line.\n"))
+        hostsFile = self.loadSampleHostsFile(b"# That was a blank line.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"# That was a blank line.")
-
 
     def test_verifyUnparsableLine(self):
         """
         Loading a L{KnownHostsFile} from a path that contains an unparseable
         line will be represented as an L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile((b"This is just unparseable.\n"))
+        hostsFile = self.loadSampleHostsFile(b"This is just unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"This is just unparseable.")
         self.assertEqual(1, len(entries))
-
 
     def test_verifyUnparsableEncryptionMarker(self):
         """
@@ -585,12 +564,11 @@ class KnownHostsDatabaseTests(TestCase):
         that starts with an encryption marker will be represented as an
         L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile((b"|1|This is unparseable.\n"))
+        hostsFile = self.loadSampleHostsFile(b"|1|This is unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
         self.assertEqual(entries[0].toString(), b"|1|This is unparseable.")
         self.assertEqual(1, len(entries))
-
 
     def test_loadNonExistent(self):
         """
@@ -605,7 +583,6 @@ class KnownHostsDatabaseTests(TestCase):
         knownHostsFile.save()
         self.assertTrue(FilePath(pn).exists())
 
-
     def test_loadNonExistentParent(self):
         """
         Loading a L{KnownHostsFile} from a path whose parent directory does not
@@ -619,30 +596,33 @@ class KnownHostsDatabaseTests(TestCase):
         knownHostsPath.restat(False)
         self.assertTrue(knownHostsPath.exists())
 
-
     def test_savingAddsEntry(self):
         """
         L{KnownHostsFile.save} will write out a new file with any entries
         that have been added.
         """
-        path = self.pathWithContent(sampleHashedLine +
-                                    otherSamplePlaintextLine)
+        path = self.pathWithContent(sampleHashedLine + otherSamplePlaintextLine)
         knownHostsFile = KnownHostsFile.fromPath(path)
-        newEntry = knownHostsFile.addHostKey(b"some.example.com",
-            Key.fromString(thirdSampleKey))
+        newEntry = knownHostsFile.addHostKey(
+            b"some.example.com", Key.fromString(thirdSampleKey)
+        )
         expectedContent = (
-            sampleHashedLine +
-            otherSamplePlaintextLine + HashedEntry.MAGIC +
-            b2a_base64(newEntry._hostSalt).strip() + b"|" +
-            b2a_base64(newEntry._hostHash).strip() + b" ssh-rsa " +
-            thirdSampleEncodedKey + b"\n")
+            sampleHashedLine
+            + otherSamplePlaintextLine
+            + HashedEntry.MAGIC
+            + b2a_base64(newEntry._hostSalt).strip()
+            + b"|"
+            + b2a_base64(newEntry._hostHash).strip()
+            + b" ssh-rsa "
+            + thirdSampleEncodedKey
+            + b"\n"
+        )
 
         # Sanity check, let's make sure the base64 API being used for the test
         # isn't inserting spurious newlines.
         self.assertEqual(3, expectedContent.count(b"\n"))
         knownHostsFile.save()
         self.assertEqual(expectedContent, path.getContent())
-
 
     def test_savingAvoidsDuplication(self):
         """
@@ -652,14 +632,12 @@ class KnownHostsDatabaseTests(TestCase):
         """
         path = FilePath(self.mktemp())
         knownHosts = KnownHostsFile(path)
-        entry = knownHosts.addHostKey(
-            b"some.example.com", Key.fromString(sampleKey))
+        entry = knownHosts.addHostKey(b"some.example.com", Key.fromString(sampleKey))
         knownHosts.save()
         knownHosts.save()
 
         knownHosts = KnownHostsFile.fromPath(path)
         self.assertEqual([entry], list(knownHosts.iterentries()))
-
 
     def test_savingsPreservesExisting(self):
         """
@@ -683,13 +661,16 @@ class KnownHostsDatabaseTests(TestCase):
 
         # Check that all three host/key pairs are present.
         knownHosts = KnownHostsFile.fromPath(path)
-        self.assertEqual([True, True, True], [
+        self.assertEqual(
+            [True, True, True],
+            [
                 knownHosts.hasHostKey(
-                    b"www.twistedmatrix.com", Key.fromString(sampleKey)),
-                knownHosts.hasHostKey(
-                    b"divmod.com", Key.fromString(otherSampleKey)),
-                knownHosts.hasHostKey(b"brandnew.example.com", key)])
-
+                    b"www.twistedmatrix.com", Key.fromString(sampleKey)
+                ),
+                knownHosts.hasHostKey(b"divmod.com", Key.fromString(otherSampleKey)),
+                knownHosts.hasHostKey(b"brandnew.example.com", key),
+            ],
+        )
 
     def test_hasPresentKey(self):
         """
@@ -697,9 +678,9 @@ class KnownHostsDatabaseTests(TestCase):
         hostname is present and matches the expected key.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertTrue(hostsFile.hasHostKey(
-                b"www.twistedmatrix.com", Key.fromString(sampleKey)))
-
+        self.assertTrue(
+            hostsFile.hasHostKey(b"www.twistedmatrix.com", Key.fromString(sampleKey))
+        )
 
     def test_notPresentKey(self):
         """
@@ -707,13 +688,17 @@ class KnownHostsDatabaseTests(TestCase):
         hostname is not present.
         """
         hostsFile = self.loadSampleHostsFile()
-        self.assertFalse(hostsFile.hasHostKey(
-                b"non-existent.example.com", Key.fromString(sampleKey)))
-        self.assertTrue(hostsFile.hasHostKey(
-                b"www.twistedmatrix.com", Key.fromString(sampleKey)))
-        self.assertFalse(hostsFile.hasHostKey(
-                b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey)))
-
+        self.assertFalse(
+            hostsFile.hasHostKey(b"non-existent.example.com", Key.fromString(sampleKey))
+        )
+        self.assertTrue(
+            hostsFile.hasHostKey(b"www.twistedmatrix.com", Key.fromString(sampleKey))
+        )
+        self.assertFalse(
+            hostsFile.hasHostKey(
+                b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey)
+            )
+        )
 
     def test_hasLaterAddedKey(self):
         """
@@ -726,9 +711,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         with hostsFile.savePath.open("a") as hostsFileObj:
             hostsFileObj.write(entry.toString() + b"\n")
-        self.assertEqual(
-            True, hostsFile.hasHostKey(b"brandnew.example.com", key))
-
+        self.assertEqual(True, hostsFile.hasHostKey(b"brandnew.example.com", key))
 
     def test_savedEntryHasKeyMismatch(self):
         """
@@ -740,12 +723,14 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         entries = list(hostsFile.iterentries())
         exception = self.assertRaises(
-            HostKeyChanged, hostsFile.hasHostKey,
-            b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
+            HostKeyChanged,
+            hostsFile.hasHostKey,
+            b"www.twistedmatrix.com",
+            Key.fromString(otherSampleKey),
+        )
         self.assertEqual(exception.offendingEntry, entries[0])
         self.assertEqual(exception.lineno, 1)
         self.assertEqual(exception.path, hostsFile.savePath)
-
 
     def test_savedEntryAfterAddHasKeyMismatch(self):
         """
@@ -756,14 +741,15 @@ class KnownHostsDatabaseTests(TestCase):
         match the expected host key.
         """
         hostsFile = self.loadSampleHostsFile()
-        hostsFile.addHostKey(
-            b"www.example.com", Key.fromString(otherSampleKey))
+        hostsFile.addHostKey(b"www.example.com", Key.fromString(otherSampleKey))
         exception = self.assertRaises(
-            HostKeyChanged, hostsFile.hasHostKey,
-            b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
+            HostKeyChanged,
+            hostsFile.hasHostKey,
+            b"www.twistedmatrix.com",
+            Key.fromString(otherSampleKey),
+        )
         self.assertEqual(exception.lineno, 1)
         self.assertEqual(exception.path, hostsFile.savePath)
-
 
     def test_unsavedEntryHasKeyMismatch(self):
         """
@@ -774,15 +760,16 @@ class KnownHostsDatabaseTests(TestCase):
         fact that the entry exists only in memory).
         """
         hostsFile = KnownHostsFile(FilePath(self.mktemp()))
-        entry = hostsFile.addHostKey(
-            b"www.example.com", Key.fromString(otherSampleKey))
+        entry = hostsFile.addHostKey(b"www.example.com", Key.fromString(otherSampleKey))
         exception = self.assertRaises(
-            HostKeyChanged, hostsFile.hasHostKey,
-            b"www.example.com", Key.fromString(thirdSampleKey))
+            HostKeyChanged,
+            hostsFile.hasHostKey,
+            b"www.example.com",
+            Key.fromString(thirdSampleKey),
+        )
         self.assertEqual(exception.offendingEntry, entry)
         self.assertIsNone(exception.lineno)
         self.assertIsNone(exception.path)
-
 
     def test_addHostKey(self):
         """
@@ -791,21 +778,17 @@ class KnownHostsDatabaseTests(TestCase):
         """
         hostsFile = self.loadSampleHostsFile()
         aKey = Key.fromString(thirdSampleKey)
-        self.assertEqual(False,
-                         hostsFile.hasHostKey(b"somewhere.example.com", aKey))
+        self.assertEqual(False, hostsFile.hasHostKey(b"somewhere.example.com", aKey))
         newEntry = hostsFile.addHostKey(b"somewhere.example.com", aKey)
 
         # The code in OpenSSH requires host salts to be 20 characters long.
         # This is the required length of a SHA-1 HMAC hash, so it's just a
         # sanity check.
         self.assertEqual(20, len(newEntry._hostSalt))
-        self.assertEqual(True,
-                         newEntry.matchesHost(b"somewhere.example.com"))
+        self.assertEqual(True, newEntry.matchesHost(b"somewhere.example.com"))
         self.assertEqual(newEntry.keyType, b"ssh-rsa")
         self.assertEqual(aKey, newEntry.publicKey)
-        self.assertEqual(True,
-                         hostsFile.hasHostKey(b"somewhere.example.com", aKey))
-
+        self.assertEqual(True, hostsFile.hasHostKey(b"somewhere.example.com", aKey))
 
     def test_randomSalts(self):
         """
@@ -816,8 +799,8 @@ class KnownHostsDatabaseTests(TestCase):
         aKey = Key.fromString(thirdSampleKey)
         self.assertNotEqual(
             hostsFile.addHostKey(b"somewhere.example.com", aKey)._hostSalt,
-            hostsFile.addHostKey(b"somewhere-else.example.com", aKey)._hostSalt)
-
+            hostsFile.addHostKey(b"somewhere-else.example.com", aKey)._hostSalt,
+        )
 
     def test_verifyValidKey(self):
         """
@@ -827,12 +810,12 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         hostsFile.addHostKey(b"1.2.3.4", Key.fromString(sampleKey))
         ui = FakeUI()
-        d = hostsFile.verifyHostKey(ui, b"www.twistedmatrix.com", b"1.2.3.4",
-                                    Key.fromString(sampleKey))
+        d = hostsFile.verifyHostKey(
+            ui, b"www.twistedmatrix.com", b"1.2.3.4", Key.fromString(sampleKey)
+        )
         l = []
         d.addCallback(l.append)
         self.assertEqual(l, [True])
-
 
     def test_verifyInvalidKey(self):
         """
@@ -843,10 +826,8 @@ class KnownHostsDatabaseTests(TestCase):
         wrongKey = Key.fromString(thirdSampleKey)
         ui = FakeUI()
         hostsFile.addHostKey(b"1.2.3.4", Key.fromString(sampleKey))
-        d = hostsFile.verifyHostKey(
-            ui, b"www.twistedmatrix.com", b"1.2.3.4", wrongKey)
+        d = hostsFile.verifyHostKey(ui, b"www.twistedmatrix.com", b"1.2.3.4", wrongKey)
         return self.assertFailure(d, HostKeyChanged)
-
 
     def verifyNonPresentKey(self):
         """
@@ -864,7 +845,8 @@ class KnownHostsDatabaseTests(TestCase):
         ui = FakeUI()
         l = []
         d = hostsFile.verifyHostKey(
-            ui, b"sample-host.example.com", b"4.3.2.1", absentKey)
+            ui, b"sample-host.example.com", b"4.3.2.1", absentKey
+        )
         d.addBoth(l.append)
         self.assertEqual([], l)
         self.assertEqual(
@@ -873,9 +855,9 @@ class KnownHostsDatabaseTests(TestCase):
             b"can't be established.\n"
             b"RSA key fingerprint is "
             b"SHA256:mS7mDBGhewdzJkaKRkx+wMjUdZb/GzvgcdoYjX5Js9I=.\n"
-            b"Are you sure you want to continue connecting (yes/no)? ")
+            b"Are you sure you want to continue connecting (yes/no)? ",
+        )
         return ui, l, hostsFile
-
 
     def test_verifyNonPresentKey_Yes(self):
         """
@@ -888,13 +870,14 @@ class KnownHostsDatabaseTests(TestCase):
         self.assertEqual([True], l)
         reloaded = KnownHostsFile.fromPath(knownHostsFile.savePath)
         self.assertEqual(
-            True,
-            reloaded.hasHostKey(b"4.3.2.1", Key.fromString(thirdSampleKey)))
+            True, reloaded.hasHostKey(b"4.3.2.1", Key.fromString(thirdSampleKey))
+        )
         self.assertEqual(
             True,
-            reloaded.hasHostKey(b"sample-host.example.com",
-                                Key.fromString(thirdSampleKey)))
-
+            reloaded.hasHostKey(
+                b"sample-host.example.com", Key.fromString(thirdSampleKey)
+            ),
+        )
 
     def test_verifyNonPresentKey_No(self):
         """
@@ -907,7 +890,6 @@ class KnownHostsDatabaseTests(TestCase):
         ui.promptDeferred.callback(False)
         l[0].trap(UserRejectedKey)
 
-
     def test_verifyNonPresentECKey(self):
         """
         Set up a test to verify an ECDSA key that isn't present.
@@ -915,17 +897,16 @@ class KnownHostsDatabaseTests(TestCase):
         of the verifyHostKey call, and the sample L{KnownHostsFile} being used.
         """
         ecObj = Key._fromECComponents(
-            x=keydata.ECDatanistp256['x'],
-            y=keydata.ECDatanistp256['y'],
-            privateValue=keydata.ECDatanistp256['privateValue'],
-            curve=keydata.ECDatanistp256['curve']
+            x=keydata.ECDatanistp256["x"],
+            y=keydata.ECDatanistp256["y"],
+            privateValue=keydata.ECDatanistp256["privateValue"],
+            curve=keydata.ECDatanistp256["curve"],
         )
 
         hostsFile = self.loadSampleHostsFile()
         ui = FakeUI()
         l = []
-        d = hostsFile.verifyHostKey(
-            ui, b"sample-host.example.com", b"4.3.2.1", ecObj)
+        d = hostsFile.verifyHostKey(ui, b"sample-host.example.com", b"4.3.2.1", ecObj)
         d.addBoth(l.append)
         self.assertEqual([], l)
         self.assertEqual(
@@ -934,8 +915,8 @@ class KnownHostsDatabaseTests(TestCase):
             b"can't be established.\n"
             b"ECDSA key fingerprint is "
             b"SHA256:fJnSpgCcYoYYsaBbnWj1YBghGh/QTDgfe4w4U5M5tEo=.\n"
-            b"Are you sure you want to continue connecting (yes/no)? ")
-
+            b"Are you sure you want to continue connecting (yes/no)? ",
+        )
 
     def test_verifyHostIPMismatch(self):
         """
@@ -946,10 +927,8 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile = self.loadSampleHostsFile()
         wrongKey = Key.fromString(thirdSampleKey)
         ui = FakeUI()
-        d = hostsFile.verifyHostKey(
-            ui, b"www.twistedmatrix.com", b"4.3.2.1", wrongKey)
+        d = hostsFile.verifyHostKey(ui, b"www.twistedmatrix.com", b"4.3.2.1", wrongKey)
         return self.assertFailure(d, HostKeyChanged)
-
 
     def test_verifyKeyForHostAndIP(self):
         """
@@ -960,16 +939,20 @@ class KnownHostsDatabaseTests(TestCase):
         ui = FakeUI()
         hostsFile = self.loadSampleHostsFile()
         expectedKey = Key.fromString(sampleKey)
-        hostsFile.verifyHostKey(
-            ui, b"www.twistedmatrix.com", b"5.4.3.2", expectedKey)
+        hostsFile.verifyHostKey(ui, b"www.twistedmatrix.com", b"5.4.3.2", expectedKey)
         self.assertEqual(
-            True, KnownHostsFile.fromPath(hostsFile.savePath).hasHostKey(
-                b"5.4.3.2", expectedKey))
+            True,
+            KnownHostsFile.fromPath(hostsFile.savePath).hasHostKey(
+                b"5.4.3.2", expectedKey
+            ),
+        )
         self.assertEqual(
-            ["Warning: Permanently added the RSA host key for IP address "
-             "'5.4.3.2' to the list of known hosts."],
-            ui.userWarnings)
-
+            [
+                "Warning: Permanently added the RSA host key for IP address "
+                "'5.4.3.2' to the list of known hosts."
+            ],
+            ui.userWarnings,
+        )
 
     def test_getHostKeyAlgorithms(self):
         """
@@ -977,21 +960,17 @@ class KnownHostsDatabaseTests(TestCase):
         host in the known_hosts file.
         """
         hostsFile = self.loadSampleHostsFile()
-        hostsFile.addHostKey(
-            b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
-        hostsFile.addHostKey(
-            b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey))
+        hostsFile.addHostKey(b"www.twistedmatrix.com", Key.fromString(otherSampleKey))
+        hostsFile.addHostKey(b"www.twistedmatrix.com", Key.fromString(ecdsaSampleKey))
         hostsFile.save()
         options = {}
-        options['known-hosts'] = hostsFile.savePath.path
-        algorithms = default.getHostKeyAlgorithms(
-                         b"www.twistedmatrix.com", options)
-        expectedAlgorithms = [b'ssh-rsa', b'ecdsa-sha2-nistp256']
+        options["known-hosts"] = hostsFile.savePath.path
+        algorithms = default.getHostKeyAlgorithms(b"www.twistedmatrix.com", options)
+        expectedAlgorithms = [b"ssh-rsa", b"ecdsa-sha2-nistp256"]
         self.assertEqual(algorithms, expectedAlgorithms)
 
 
-
-class FakeFile(object):
+class FakeFile:
     """
     A fake file-like object that acts enough like a file for
     L{ConsoleUI.prompt}.
@@ -1002,22 +981,19 @@ class FakeFile(object):
         self.outchunks = []
         self.closed = False
 
-
     def readline(self):
         """
         Return a line from the 'inlines' list.
         """
         return self.inlines.pop(0)
 
-
     def write(self, chunk):
         """
         Append the given item to the 'outchunks' list.
         """
         if self.closed:
-            raise IOError("the file was closed")
+            raise OSError("the file was closed")
         self.outchunks.append(chunk)
-
 
     def close(self):
         """
@@ -1025,7 +1001,6 @@ class FakeFile(object):
         closed.
         """
         self.closed = True
-
 
 
 class ConsoleUITests(TestCase):
@@ -1040,13 +1015,11 @@ class ConsoleUITests(TestCase):
         self.fakeFile = FakeFile()
         self.ui = ConsoleUI(self.openFile)
 
-
     def openFile(self):
         """
         Return the current fake file.
         """
         return self.fakeFile
-
 
     def newFile(self, lines):
         """
@@ -1056,14 +1029,13 @@ class ConsoleUITests(TestCase):
         self.fakeFile = FakeFile()
         self.fakeFile.inlines = lines
 
-
     def test_promptYes(self):
         """
         L{ConsoleUI.prompt} writes a message to the console, then reads a line.
         If that line is 'yes', then it returns a L{Deferred} that fires with
         True.
         """
-        for okYes in [b'yes', b'Yes', b'yes\n']:
+        for okYes in [b"yes", b"Yes", b"yes\n"]:
             self.newFile([okYes])
             l = []
             self.ui.prompt("Hello, world!").addCallback(l.append)
@@ -1071,21 +1043,19 @@ class ConsoleUITests(TestCase):
             self.assertEqual([True], l)
             self.assertTrue(self.fakeFile.closed)
 
-
     def test_promptNo(self):
         """
         L{ConsoleUI.prompt} writes a message to the console, then reads a line.
         If that line is 'no', then it returns a L{Deferred} that fires with
         False.
         """
-        for okNo in [b'no', b'No', b'no\n']:
+        for okNo in [b"no", b"No", b"no\n"]:
             self.newFile([okNo])
             l = []
             self.ui.prompt("Goodbye, world!").addCallback(l.append)
             self.assertEqual(["Goodbye, world!"], self.fakeFile.outchunks)
             self.assertEqual([False], l)
             self.assertTrue(self.fakeFile.closed)
-
 
     def test_promptRepeatedly(self):
         """
@@ -1094,35 +1064,37 @@ class ConsoleUITests(TestCase):
         'yes' or 'no'" until it gets a 'yes' or a 'no', at which point it
         returns a Deferred that answers either True or False.
         """
-        self.newFile([b'what', b'uh', b'okay', b'yes'])
+        self.newFile([b"what", b"uh", b"okay", b"yes"])
         l = []
         self.ui.prompt(b"Please say something useful.").addCallback(l.append)
         self.assertEqual([True], l)
-        self.assertEqual(self.fakeFile.outchunks,
-                         [b"Please say something useful."] +
-                         [b"Please type 'yes' or 'no': "] * 3)
+        self.assertEqual(
+            self.fakeFile.outchunks,
+            [b"Please say something useful."] + [b"Please type 'yes' or 'no': "] * 3,
+        )
         self.assertTrue(self.fakeFile.closed)
-        self.newFile([b'blah', b'stuff', b'feh', b'no'])
+        self.newFile([b"blah", b"stuff", b"feh", b"no"])
         l = []
         self.ui.prompt(b"Please say something negative.").addCallback(l.append)
         self.assertEqual([False], l)
-        self.assertEqual(self.fakeFile.outchunks,
-                         [b"Please say something negative."] +
-                         [b"Please type 'yes' or 'no': "] * 3)
+        self.assertEqual(
+            self.fakeFile.outchunks,
+            [b"Please say something negative."] + [b"Please type 'yes' or 'no': "] * 3,
+        )
         self.assertTrue(self.fakeFile.closed)
-
 
     def test_promptOpenFailed(self):
         """
         If the C{opener} passed to L{ConsoleUI} raises an exception, that
         exception will fail the L{Deferred} returned from L{ConsoleUI.prompt}.
         """
+
         def raiseIt():
-            raise IOError()
+            raise OSError()
+
         ui = ConsoleUI(raiseIt)
         d = ui.prompt("This is a test.")
         return self.assertFailure(d, IOError)
-
 
     def test_warn(self):
         """
@@ -1132,20 +1104,20 @@ class ConsoleUITests(TestCase):
         self.assertEqual(["Test message."], self.fakeFile.outchunks)
         self.assertTrue(self.fakeFile.closed)
 
-
     def test_warnOpenFailed(self):
         """
         L{ConsoleUI.warn} should log a traceback if the output can't be opened.
         """
+
         def raiseIt():
             1 / 0
+
         ui = ConsoleUI(raiseIt)
         ui.warn("This message never makes it.")
         self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
 
 
-
-class FakeUI(object):
+class FakeUI:
     """
     A fake UI object, adhering to the interface expected by
     L{KnownHostsFile.verifyHostKey}
@@ -1162,7 +1134,6 @@ class FakeUI(object):
         self.promptDeferred = None
         self.promptText = None
 
-
     def prompt(self, text):
         """
         Issue the user an interactive prompt, which they can accept or deny.
@@ -1171,7 +1142,6 @@ class FakeUI(object):
         self.promptDeferred = Deferred()
         return self.promptDeferred
 
-
     def warn(self, text):
         """
         Issue a non-interactive warning to the user.
@@ -1179,14 +1149,14 @@ class FakeUI(object):
         self.userWarnings.append(text)
 
 
-
-class FakeObject(object):
+class FakeObject:
     """
     A fake object that can have some attributes.  Used to fake
     L{SSHClientTransport} and L{SSHClientFactory}.
     """
 
 
+@skipIf(not FilePath("/dev/tty").exists(), "Platform lacks /dev/tty")
 class DefaultAPITests(TestCase):
     """
     The API in L{twisted.conch.client.default.verifyHostKey} is the integration
@@ -1200,9 +1170,8 @@ class DefaultAPITests(TestCase):
         """
         self.assertEqual(fname, "/dev/tty")
         self.assertEqual(mode, "r+b")
-        self.assertEqual(kwargs['buffering'], 0)
+        self.assertEqual(kwargs["buffering"], 0)
         return self.fakeFile
-
 
     def setUp(self):
         """
@@ -1220,10 +1189,9 @@ class DefaultAPITests(TestCase):
         self.fakeTransport = FakeObject()
         self.fakeTransport.factory = FakeObject()
         self.options = self.fakeTransport.factory.options = {
-            'host': b"exists.example.com",
-            'known-hosts': self.hostsOption
-            }
-
+            "host": b"exists.example.com",
+            "known-hosts": self.hostsOption,
+        }
 
     def test_verifyOKKey(self):
         """
@@ -1232,10 +1200,10 @@ class DefaultAPITests(TestCase):
         known_hosts file it is supposed to check.
         """
         l = []
-        default.verifyHostKey(self.fakeTransport, b"4.3.2.1", sampleKey,
-                              b"I don't care.").addCallback(l.append)
+        default.verifyHostKey(
+            self.fakeTransport, b"4.3.2.1", sampleKey, b"I don't care."
+        ).addCallback(l.append)
         self.assertEqual([1], l)
-
 
     def replaceHome(self, tempHome):
         """
@@ -1247,15 +1215,16 @@ class DefaultAPITests(TestCase):
 
         @type tempHome: L{str}
         """
-        oldHome = os.environ.get('HOME')
+        oldHome = os.environ.get("HOME")
+
         def cleanupHome():
             if oldHome is None:
-                del os.environ['HOME']
+                del os.environ["HOME"]
             else:
-                os.environ['HOME'] = oldHome
-        self.addCleanup(cleanupHome)
-        os.environ['HOME'] = tempHome
+                os.environ["HOME"] = oldHome
 
+        self.addCleanup(cleanupHome)
+        os.environ["HOME"] = tempHome
 
     def test_noKnownHostsOption(self):
         """
@@ -1270,11 +1239,11 @@ class DefaultAPITests(TestCase):
         hostsNonOption.parent().makedirs()
         FilePath(oldHostsOption).moveTo(hostsNonOption)
         self.replaceHome(tmpdir)
-        self.options['known-hosts'] = None
-        default.verifyHostKey(self.fakeTransport, b"4.3.2.1", sampleKey,
-                              b"I don't care.").addCallback(l.append)
+        self.options["known-hosts"] = None
+        default.verifyHostKey(
+            self.fakeTransport, b"4.3.2.1", sampleKey, b"I don't care."
+        ).addCallback(l.append)
         self.assertEqual([1], l)
-
 
     def test_verifyHostButNotIP(self):
         """
@@ -1284,37 +1253,43 @@ class DefaultAPITests(TestCase):
         IP address.
         """
         l = []
-        default.verifyHostKey(self.fakeTransport, b"8.7.6.5", sampleKey,
-                              b"Fingerprint not required.").addCallback(l.append)
+        default.verifyHostKey(
+            self.fakeTransport, b"8.7.6.5", sampleKey, b"Fingerprint not required."
+        ).addCallback(l.append)
         self.assertEqual(
-            ["Warning: Permanently added the RSA host key for IP address "
-            "'8.7.6.5' to the list of known hosts."],
-            self.fakeFile.outchunks)
+            [
+                "Warning: Permanently added the RSA host key for IP address "
+                "'8.7.6.5' to the list of known hosts."
+            ],
+            self.fakeFile.outchunks,
+        )
         self.assertEqual([1], l)
         knownHostsFile = KnownHostsFile.fromPath(FilePath(self.hostsOption))
-        self.assertTrue(knownHostsFile.hasHostKey(b"8.7.6.5",
-                                             Key.fromString(sampleKey)))
-
+        self.assertTrue(
+            knownHostsFile.hasHostKey(b"8.7.6.5", Key.fromString(sampleKey))
+        )
 
     def test_verifyQuestion(self):
         """
         L{default.verifyHostKey} should return a L{Default} which fires with
         C{0} when passed an unknown host that the user refuses to acknowledge.
         """
-        self.fakeTransport.factory.options['host'] = b'fake.example.com'
+        self.fakeTransport.factory.options["host"] = b"fake.example.com"
         self.fakeFile.inlines.append(b"no")
         d = default.verifyHostKey(
-            self.fakeTransport, b"9.8.7.6", otherSampleKey,
-            b"No fingerprint!")
+            self.fakeTransport, b"9.8.7.6", otherSampleKey, b"No fingerprint!"
+        )
         self.assertEqual(
-            [b"The authenticity of host 'fake.example.com (9.8.7.6)' "
-             b"can't be established.\n"
-             b"RSA key fingerprint is "
-             b"SHA256:vD0YydsNIUYJa7yLZl3tIL8h0vZvQ8G+HPG7JLmQV0s=.\n"
-             b"Are you sure you want to continue connecting (yes/no)? "],
-             self.fakeFile.outchunks)
+            [
+                b"The authenticity of host 'fake.example.com (9.8.7.6)' "
+                b"can't be established.\n"
+                b"RSA key fingerprint is "
+                b"SHA256:vD0YydsNIUYJa7yLZl3tIL8h0vZvQ8G+HPG7JLmQV0s=.\n"
+                b"Are you sure you want to continue connecting (yes/no)? "
+            ],
+            self.fakeFile.outchunks,
+        )
         return self.assertFailure(d, UserRejectedKey)
-
 
     def test_verifyBadKey(self):
         """
@@ -1322,10 +1297,9 @@ class DefaultAPITests(TestCase):
         L{HostKeyChanged} if the host key is incorrect.
         """
         d = default.verifyHostKey(
-            self.fakeTransport, b"4.3.2.1", otherSampleKey,
-            "Again, not required.")
+            self.fakeTransport, b"4.3.2.1", otherSampleKey, "Again, not required."
+        )
         return self.assertFailure(d, HostKeyChanged)
-
 
     def test_inKnownHosts(self):
         """
@@ -1334,10 +1308,11 @@ class DefaultAPITests(TestCase):
         """
         host = self.hashedEntries[b"4.3.2.1"].toString().split()[0]
         r = default.isInKnownHosts(
-            host, Key.fromString(sampleKey).blob(),
-            {"known-hosts": FilePath(self.hostsOption).path})
+            host,
+            Key.fromString(sampleKey).blob(),
+            {"known-hosts": FilePath(self.hostsOption).path},
+        )
         self.assertEqual(1, r)
-
 
     def test_notInKnownHosts(self):
         """
@@ -1345,10 +1320,9 @@ class DefaultAPITests(TestCase):
         is not in the known hosts file.
         """
         r = default.isInKnownHosts(
-            "not.there", b"irrelevant",
-            {"known-hosts": FilePath(self.hostsOption).path})
+            "not.there", b"irrelevant", {"known-hosts": FilePath(self.hostsOption).path}
+        )
         self.assertEqual(0, r)
-
 
     def test_inKnownHostsKeyChanged(self):
         """
@@ -1357,6 +1331,8 @@ class DefaultAPITests(TestCase):
         """
         host = self.hashedEntries[b"4.3.2.1"].toString().split()[0]
         r = default.isInKnownHosts(
-            host, Key.fromString(otherSampleKey).blob(),
-            {"known-hosts": FilePath(self.hostsOption).path})
+            host,
+            Key.fromString(otherSampleKey).blob(),
+            {"known-hosts": FilePath(self.hostsOption).path},
+        )
         self.assertEqual(2, r)

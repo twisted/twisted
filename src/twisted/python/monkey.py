@@ -3,10 +3,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
 
-
-class MonkeyPatcher(object):
+class MonkeyPatcher:
     """
     Cover up attributes with new objects. Neat for monkey-patching things for
     unit-testing purposes.
@@ -21,7 +19,6 @@ class MonkeyPatcher(object):
         for patch in patches:
             self.addPatch(*patch)
 
-
     def addPatch(self, obj, name, value):
         """
         Add a patch so that the attribute C{name} on C{obj} will be assigned to
@@ -30,7 +27,6 @@ class MonkeyPatcher(object):
         You can restore the original values with a call to restore().
         """
         self._patchesToApply.append((obj, name, value))
-
 
     def _alreadyPatched(self, obj, name):
         """
@@ -42,7 +38,6 @@ class MonkeyPatcher(object):
                 return True
         return False
 
-
     def patch(self):
         """
         Apply all of the patches that have been specified with L{addPatch}.
@@ -53,6 +48,7 @@ class MonkeyPatcher(object):
                 self._originals.append((obj, name, getattr(obj, name)))
             setattr(obj, name, value)
 
+    __enter__ = patch
 
     def restore(self):
         """
@@ -62,6 +58,8 @@ class MonkeyPatcher(object):
             obj, name, value = self._originals.pop()
             setattr(obj, name, value)
 
+    def __exit__(self, excType=None, excValue=None, excTraceback=None):
+        self.restore()
 
     def runWithPatches(self, f, *args, **kw):
         """

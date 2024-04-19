@@ -16,47 +16,46 @@ eg
     172.0.2.1
 """
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
 from twisted.names import client, dns, error, server
 
 
-
-class DynamicResolver(object):
+class DynamicResolver:
     """
     A resolver which calculates the answers to certain queries based on the
     query type and name.
     """
-    _pattern = 'workstation'
-    _network = '172.0.2'
+
+    _pattern = "workstation"
+    _network = "172.0.2"
 
     def _dynamicResponseRequired(self, query):
         """
         Check the query to determine if a dynamic response is required.
         """
         if query.type == dns.A:
-            labels = query.name.name.split('.')
+            labels = query.name.name.split(".")
             if labels[0].startswith(self._pattern):
                 return True
 
         return False
-
 
     def _doDynamicResponse(self, query):
         """
         Calculate the response to a query.
         """
         name = query.name.name
-        labels = name.split('.')
+        labels = name.split(".")
         parts = labels[0].split(self._pattern)
         lastOctet = int(parts[1])
         answer = dns.RRHeader(
             name=name,
-            payload=dns.Record_A(address=b'%s.%s' % (self._network, lastOctet)))
+            payload=dns.Record_A(address=b"%s.%s" % (self._network, lastOctet)),
+        )
         answers = [answer]
         authority = []
         additional = []
         return answers, authority, additional
-
 
     def query(self, query, timeout=None):
         """
@@ -69,13 +68,12 @@ class DynamicResolver(object):
             return defer.fail(error.DomainError())
 
 
-
 def main():
     """
     Run the server.
     """
     factory = server.DNSServerFactory(
-        clients=[DynamicResolver(), client.Resolver(resolv='/etc/resolv.conf')]
+        clients=[DynamicResolver(), client.Resolver(resolv="/etc/resolv.conf")]
     )
 
     protocol = dns.DNSDatagramProtocol(controller=factory)
@@ -86,6 +84,5 @@ def main():
     reactor.run()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

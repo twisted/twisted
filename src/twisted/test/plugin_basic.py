@@ -14,17 +14,15 @@ from twisted.plugin import IPlugin
 from twisted.test.test_plugin import ITestPlugin, ITestPlugin2
 
 
-
 @provider(ITestPlugin, IPlugin)
 class TestPlugin:
     """
     A plugin used solely for testing purposes.
     """
 
-    def test1():
+    @staticmethod
+    def test1() -> None:
         pass
-    test1 = staticmethod(test1)
-
 
 
 @provider(ITestPlugin2, IPlugin)
@@ -33,10 +31,9 @@ class AnotherTestPlugin:
     Another plugin used solely for testing purposes.
     """
 
-    def test():
+    @staticmethod
+    def test() -> None:
         pass
-    test = staticmethod(test)
-
 
 
 @provider(ITestPlugin2, IPlugin)
@@ -45,7 +42,6 @@ class ThirdTestPlugin:
     Another plugin used solely for testing purposes.
     """
 
-    def test():
+    @staticmethod
+    def test() -> None:
         pass
-    test = staticmethod(test)
-

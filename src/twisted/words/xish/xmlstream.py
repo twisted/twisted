@@ -31,11 +31,12 @@ Maintainer: Ralph Meijer
 @type STREAM_START_EVENT: L{str}.
 """
 
-from __future__ import absolute_import, division
 
-from twisted.python import failure
-from twisted.python.compat import intern, unicode
+from sys import intern
+from typing import Type
+
 from twisted.internet import protocol
+from twisted.python import failure
 from twisted.words.xish import domish, utility
 
 STREAM_CONNECTED_EVENT = intern("//event/stream/connected")
@@ -43,14 +44,16 @@ STREAM_START_EVENT = intern("//event/stream/start")
 STREAM_END_EVENT = intern("//event/stream/end")
 STREAM_ERROR_EVENT = intern("//event/stream/error")
 
+
 class XmlStream(protocol.Protocol, utility.EventDispatcher):
-    """ Generic Streaming XML protocol handler.
+    """Generic Streaming XML protocol handler.
 
     This protocol handler will parse incoming data as XML and dispatch events
     accordingly. Incoming stanzas can be handled by registering observers using
     XPath-like expressions that are matched against each stanza. See
     L{utility.EventDispatcher} for details.
     """
+
     def __init__(self):
         utility.EventDispatcher.__init__(self)
         self.stream = None
@@ -58,7 +61,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.rawDataInFn = None
 
     def _initializeStream(self):
-        """ Sets up XML Parser. """
+        """Sets up XML Parser."""
         self.stream = domish.elementStream()
         self.stream.DocumentStartEvent = self.onDocumentStart
         self.stream.ElementEvent = self.onElement
@@ -71,7 +74,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ### --------------------------------------------------------------
 
     def connectionMade(self):
-        """ Called when a connection is made.
+        """Called when a connection is made.
 
         Sets up the XML parser and dispatches the L{STREAM_CONNECTED_EVENT}
         event indicating the connection has been established.
@@ -80,7 +83,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.dispatch(self, STREAM_CONNECTED_EVENT)
 
     def dataReceived(self, data):
-        """ Called whenever data is received.
+        """Called whenever data is received.
 
         Passes the data to the XML parser. This can result in calls to the
         DOM handlers. If a parse error occurs, the L{STREAM_ERROR_EVENT} event
@@ -96,7 +99,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
             self.transport.loseConnection()
 
     def connectionLost(self, reason):
-        """ Called when the connection is shut down.
+        """Called when the connection is shut down.
 
         Dispatches the L{STREAM_END_EVENT}.
         """
@@ -110,14 +113,14 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ### --------------------------------------------------------------
 
     def onDocumentStart(self, rootElement):
-        """ Called whenever the start tag of a root element has been received.
+        """Called whenever the start tag of a root element has been received.
 
         Dispatches the L{STREAM_START_EVENT}.
         """
         self.dispatch(self, STREAM_START_EVENT)
 
     def onElement(self, element):
-        """ Called whenever a direct child element of the root element has
+        """Called whenever a direct child element of the root element has
         been received.
 
         Dispatches the received element.
@@ -125,22 +128,22 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.dispatch(element)
 
     def onDocumentEnd(self):
-        """ Called whenever the end tag of the root element has been received.
+        """Called whenever the end tag of the root element has been received.
 
         Closes the connection. This causes C{connectionLost} being called.
         """
         self.transport.loseConnection()
 
     def setDispatchFn(self, fn):
-        """ Set another function to handle elements. """
+        """Set another function to handle elements."""
         self.stream.ElementEvent = fn
 
     def resetDispatchFn(self):
-        """ Set the default function (C{onElement}) to handle elements. """
+        """Set the default function (C{onElement}) to handle elements."""
         self.stream.ElementEvent = self.onElement
 
     def send(self, obj):
-        """ Send data over the stream.
+        """Send data over the stream.
 
         Sends the given C{obj} over the connection. C{obj} may be instances of
         L{domish.Element}, C{unicode} and C{str}. The first two will be
@@ -158,8 +161,8 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         if domish.IElement.providedBy(obj):
             obj = obj.toXml()
 
-        if isinstance(obj, unicode):
-            obj = obj.encode('utf-8')
+        if isinstance(obj, str):
+            obj = obj.encode("utf-8")
 
         if self.rawDataOutFn:
             self.rawDataOutFn(obj)
@@ -167,8 +170,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.transport.write(obj)
 
 
-
-class BootstrapMixin(object):
+class BootstrapMixin:
     """
     XmlStream factory mixin to install bootstrap event observers.
 
@@ -190,7 +192,6 @@ class BootstrapMixin(object):
     def __init__(self):
         self.bootstraps = []
 
-
     def installBootstraps(self, dispatcher):
         """
         Install registered bootstrap observers.
@@ -200,7 +201,6 @@ class BootstrapMixin(object):
         """
         for event, fn in self.bootstraps:
             dispatcher.addObserver(event, fn)
-
 
     def addBootstrap(self, event, fn):
         """
@@ -212,7 +212,6 @@ class BootstrapMixin(object):
         """
         self.bootstraps.append((event, fn))
 
-
     def removeBootstrap(self, event, fn):
         """
         Remove a bootstrap event handler.
@@ -222,7 +221,6 @@ class BootstrapMixin(object):
         @param fn: The registered observer callable.
         """
         self.bootstraps.remove((event, fn))
-
 
 
 class XmlStreamFactoryMixin(BootstrapMixin):
@@ -243,7 +241,6 @@ class XmlStreamFactoryMixin(BootstrapMixin):
         self.args = args
         self.kwargs = kwargs
 
-
     def buildProtocol(self, addr):
         """
         Create an instance of XmlStream.
@@ -257,14 +254,12 @@ class XmlStreamFactoryMixin(BootstrapMixin):
         return xs
 
 
-
-class XmlStreamFactory(XmlStreamFactoryMixin,
-                       protocol.ReconnectingClientFactory):
+class XmlStreamFactory(XmlStreamFactoryMixin, protocol.ReconnectingClientFactory):
     """
     Factory for XmlStream protocol objects as a reconnection client.
     """
 
-    protocol = XmlStream
+    protocol: "Type[protocol.Protocol]" = XmlStream
 
     def buildProtocol(self, addr):
         """

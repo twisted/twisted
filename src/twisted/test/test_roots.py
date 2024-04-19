@@ -1,14 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
-from twisted.trial import unittest
 from twisted.python import roots
+from twisted.trial import unittest
+
 
 class RootsTests(unittest.TestCase):
-
-    def testExceptions(self):
+    def testExceptions(self) -> None:
         request = roots.Request()
         try:
             request.write(b"blah")
@@ -23,14 +22,12 @@ class RootsTests(unittest.TestCase):
         else:
             self.fail()
 
-    def testCollection(self):
+    def testCollection(self) -> None:
         collection = roots.Collection()
-        collection.putEntity("x", 'test')
-        self.assertEqual(collection.getStaticEntity("x"),
-                             'test')
+        collection.putEntity("x", "test")
+        self.assertEqual(collection.getStaticEntity("x"), "test")
         collection.delEntity("x")
-        self.assertEqual(collection.getStaticEntity('x'),
-                             None)
+        self.assertEqual(collection.getStaticEntity("x"), None)
         try:
             collection.storeEntity("x", None)
         except NotImplementedError:
@@ -44,20 +41,18 @@ class RootsTests(unittest.TestCase):
         else:
             self.fail()
 
-    def testConstrained(self):
+    def testConstrained(self) -> None:
         class const(roots.Constrained):
-            def nameConstraint(self, name):
-                return (name == 'x')
+            def nameConstraint(self, name: str) -> bool:
+                return name == "x"
+
         c = const()
-        self.assertIsNone(c.putEntity('x', 'test'))
-        self.assertRaises(roots.ConstraintViolation,
-                              c.putEntity, 'y', 'test')
+        self.assertIsNone(c.putEntity("x", "test"))
+        self.assertRaises(roots.ConstraintViolation, c.putEntity, "y", "test")
 
-
-    def testHomogenous(self):
+    def testHomogenous(self) -> None:
         h = roots.Homogenous()
         h.entityType = int
-        h.putEntity('a', 1)
-        self.assertEqual(h.getStaticEntity('a'),1 )
-        self.assertRaises(roots.ConstraintViolation,
-                              h.putEntity, 'x', 'y')
+        h.putEntity("a", 1)
+        self.assertEqual(h.getStaticEntity("a"), 1)
+        self.assertRaises(roots.ConstraintViolation, h.putEntity, "x", "y")

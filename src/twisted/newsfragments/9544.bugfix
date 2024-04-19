@@ -1,1 +1,0 @@
-twisted.enterprise.adbapi.ConnectionPool.connect now logs only the dbapiName and not the connection arguments, which may contain credentials

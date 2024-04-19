@@ -10,15 +10,15 @@ To mark a method, function, or class as being deprecated do this::
     from incremental import Version
     from twisted.python.deprecate import deprecated
 
-    @deprecated(Version("Twisted", 8, 0, 0))
+    @deprecated(Version("Twisted", 22, 10, 0))
     def badAPI(self, first, second):
         '''
         Docstring for badAPI.
         '''
         ...
 
-    @deprecated(Version("Twisted", 16, 0, 0))
-    class BadClass(object):
+    @deprecated(Version("Twisted", 22, 10, 0))
+    class BadClass:
         '''
         Docstring for BadClass.
         '''
@@ -32,9 +32,9 @@ To deprecate properties you can use::
     from incremental import Version
     from twisted.python.deprecate import deprecatedProperty
 
-    class OtherwiseUndeprecatedClass(object):
+    class OtherwiseUndeprecatedClass:
 
-        @deprecatedProperty(Version('Twisted', 16, 0, 0))
+        @deprecatedProperty(Version("Twisted", 22, 10, 0))
         def badProperty(self):
             '''
             Docstring for badProperty.
@@ -54,7 +54,7 @@ To mark module-level attributes as being deprecated you can use::
     ...
 
     deprecatedModuleAttribute(
-        Version("Twisted", 8, 0, 0),
+        Version("Twisted", 22, 10, 0),
         "Use goodAttribute instead.",
         "your.full.module.name",
         "badAttribute")
@@ -64,38 +64,54 @@ the attributes being deprecated are in the same module as the
 L{deprecatedModuleAttribute} call is being made from, the C{__name__} global
 can be used as the C{moduleName} parameter.
 
+
+To mark an optional, keyword parameter of a function or method as deprecated
+without deprecating the function itself, you can use::
+
+    @deprecatedKeywordParameter(Version("Twisted", 22, 10, 0), "baz")
+    def someFunction(foo, bar=0, baz=None):
+        ...
+
 See also L{incremental.Version}.
 
 @type DEPRECATION_WARNING_FORMAT: C{str}
 @var DEPRECATION_WARNING_FORMAT: The default deprecation warning string format
     to use when one is not provided by the user.
 """
-
-from __future__ import division, absolute_import
+from __future__ import annotations
 
 __all__ = [
-    'deprecated',
-    'deprecatedProperty',
-    'getDeprecationWarningString',
-    'getWarningMethod',
-    'setWarningMethod',
-    'deprecatedModuleAttribute',
-    ]
+    "deprecated",
+    "deprecatedProperty",
+    "getDeprecationWarningString",
+    "getWarningMethod",
+    "setWarningMethod",
+    "deprecatedModuleAttribute",
+    "deprecatedKeywordParameter",
+]
 
 
-import sys, inspect
-from warnings import warn, warn_explicit
+import inspect
+import sys
 from dis import findlinestarts
 from functools import wraps
+from types import ModuleType
+from typing import Any, Callable, Dict, Optional, TypeVar, cast
+from warnings import warn, warn_explicit
 
-from incremental import getVersionString
-from twisted.python.compat import _PY3
+from incremental import Version, getVersionString
+from typing_extensions import ParamSpec
 
-DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+DEPRECATION_WARNING_FORMAT = "%(fqpn)s was deprecated in %(version)s"
 
 # Notionally, part of twisted.python.reflect, but defining it there causes a
 # cyclic dependency between this module and that module.  Define it here,
 # instead, and let reflect import it to re-expose to the public.
+
+
 def _fullyQualifiedName(obj):
     """
     Return the fully qualified name of a module, class, method or function.
@@ -111,22 +127,16 @@ def _fullyQualifiedName(obj):
 
     if inspect.isclass(obj) or inspect.isfunction(obj):
         moduleName = obj.__module__
-        return "%s.%s" % (moduleName, name)
+        return f"{moduleName}.{name}"
     elif inspect.ismethod(obj):
-        try:
-            cls = obj.im_class
-        except AttributeError:
-            # Python 3 eliminates im_class, substitutes __module__ and
-            # __qualname__ to provide similar information.
-            return "%s.%s" % (obj.__module__, obj.__qualname__)
-        else:
-            className = _fullyQualifiedName(cls)
-            return "%s.%s" % (className, name)
+        return f"{obj.__module__}.{obj.__qualname__}"
     return name
+
+
 # Try to keep it looking like something in twisted.python.reflect.
-_fullyQualifiedName.__module__ = 'twisted.python.reflect'
-_fullyQualifiedName.__name__ = 'fullyQualifiedName'
-_fullyQualifiedName.__qualname__ = 'fullyQualifiedName'
+_fullyQualifiedName.__module__ = "twisted.python.reflect"
+_fullyQualifiedName.__name__ = "fullyQualifiedName"
+_fullyQualifiedName.__qualname__ = "fullyQualifiedName"
 
 
 def _getReplacementString(replacement):
@@ -141,8 +151,7 @@ def _getReplacementString(replacement):
     """
     if callable(replacement):
         replacement = _fullyQualifiedName(replacement)
-    return "please use %s instead" % (replacement,)
-
+    return f"please use {replacement} instead"
 
 
 def _getDeprecationDocstring(version, replacement=None):
@@ -159,11 +168,10 @@ def _getDeprecationDocstring(version, replacement=None):
     @return: a string like "Deprecated in Twisted 27.2.0; please use
         twisted.timestream.tachyon.flux instead."
     """
-    doc = "Deprecated in %s" % (getVersionString(version),)
+    doc = f"Deprecated in {getVersionString(version)}"
     if replacement:
-        doc = "%s; %s" % (doc, _getReplacementString(replacement))
+        doc = f"{doc}; {_getReplacementString(replacement)}"
     return doc + "."
-
 
 
 def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
@@ -193,18 +201,15 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
     """
     if format is None:
         format = DEPRECATION_WARNING_FORMAT
-    warningString = format % {
-        'fqpn': fqpn,
-        'version': getVersionString(version)}
+    warningString = format % {"fqpn": fqpn, "version": getVersionString(version)}
     if replacement:
-        warningString = "%s; %s" % (
-            warningString, _getReplacementString(replacement))
+        warningString = "{}; {}".format(
+            warningString, _getReplacementString(replacement)
+        )
     return warningString
 
 
-
-def getDeprecationWarningString(callableThing, version, format=None,
-                                replacement=None):
+def getDeprecationWarningString(callableThing, version, format=None, replacement=None):
     """
     Return a string indicating that the callable was deprecated in the given
     version.
@@ -213,18 +218,13 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @param callableThing: Callable object to be deprecated
 
     @type version: L{incremental.Version}
-    @param version: Version that C{callableThing} was deprecated in
+    @param version: Version that C{callableThing} was deprecated in.
 
     @type format: C{str}
     @param format: A user-provided format to interpolate warning values into,
         or L{DEPRECATION_WARNING_FORMAT
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if L{None} is
         given
-
-    @param callableThing: A callable to be deprecated.
-
-    @param version: The L{incremental.Version} that the callable
-        was deprecated in.
 
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
@@ -235,8 +235,8 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @rtype: C{str}
     """
     return _getDeprecationWarningString(
-        _fullyQualifiedName(callableThing), version, format, replacement)
-
+        _fullyQualifiedName(callableThing), version, format, replacement
+    )
 
 
 def _appendToDocstring(thingWithDoc, textToAppend):
@@ -256,17 +256,16 @@ def _appendToDocstring(thingWithDoc, textToAppend):
     if len(docstringLines) == 0:
         docstringLines.append(textToAppend)
     elif len(docstringLines) == 1:
-        docstringLines.extend(['', textToAppend, ''])
+        docstringLines.extend(["", textToAppend, ""])
     else:
         spaces = docstringLines.pop()
-        docstringLines.extend(['',
-                               spaces + textToAppend,
-                               spaces])
-    thingWithDoc.__doc__ = '\n'.join(docstringLines)
+        docstringLines.extend(["", spaces + textToAppend, spaces])
+    thingWithDoc.__doc__ = "\n".join(docstringLines)
 
 
-
-def deprecated(version, replacement=None):
+def deprecated(
+    version: Version, replacement: str | Callable[..., object] | None = None
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """
     Return a decorator that marks callables as deprecated. To deprecate a
     property, see L{deprecatedProperty}.
@@ -277,36 +276,32 @@ def deprecated(version, replacement=None):
         with this version, having it set as its C{deprecatedVersion}
         attribute.
 
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
-
     @param replacement: what should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
     @type replacement: C{str} or callable
     """
-    def deprecationDecorator(function):
+
+    def deprecationDecorator(function: Callable[_P, _R]) -> Callable[_P, _R]:
         """
         Decorator that marks C{function} as deprecated.
         """
         warningString = getDeprecationWarningString(
-            function, version, None, replacement)
+            function, version, None, replacement
+        )
 
         @wraps(function)
-        def deprecatedFunction(*args, **kwargs):
-            warn(
-                warningString,
-                DeprecationWarning,
-                stacklevel=2)
+        def deprecatedFunction(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+            warn(warningString, DeprecationWarning, stacklevel=2)
             return function(*args, **kwargs)
 
-        _appendToDocstring(deprecatedFunction,
-                           _getDeprecationDocstring(version, replacement))
-        deprecatedFunction.deprecatedVersion = version
+        _appendToDocstring(
+            deprecatedFunction, _getDeprecationDocstring(version, replacement)
+        )
+        deprecatedFunction.deprecatedVersion = version  # type: ignore[attr-defined]
         return deprecatedFunction
 
     return deprecationDecorator
-
 
 
 def deprecatedProperty(version, replacement=None):
@@ -319,9 +314,6 @@ def deprecatedProperty(version, replacement=None):
         having been deprecated.  The decorated function will be annotated
         with this version, having it set as its C{deprecatedVersion}
         attribute.
-
-    @param version: the version that the callable was deprecated in.
-    @type version: L{incremental.Version}
 
     @param replacement: what should be used in place of the callable.
         Either pass in a string, which will be inserted into the warning
@@ -344,52 +336,37 @@ def deprecatedProperty(version, replacement=None):
             @wraps(function)
             def deprecatedFunction(*args, **kwargs):
                 warn(
-                    self.warningString,
+                    self.warningString,  # type: ignore[attr-defined]
                     DeprecationWarning,
-                    stacklevel=2)
+                    stacklevel=2,
+                )
                 return function(*args, **kwargs)
-            return deprecatedFunction
 
+            return deprecatedFunction
 
         def setter(self, function):
             return property.setter(self, self._deprecatedWrapper(function))
 
-
     def deprecationDecorator(function):
-        if _PY3:
-            warningString = getDeprecationWarningString(
-                function, version, None, replacement)
-        else:
-            # Because Python 2 sucks, we need to implement our own here -- lack
-            # of __qualname__ means that we kinda have to stack walk. It maybe
-            # probably works. Probably. -Amber
-            functionName = function.__name__
-            className = inspect.stack()[1][3]  # wow hax
-            moduleName = function.__module__
-
-            fqdn = "%s.%s.%s" % (moduleName, className, functionName)
-
-            warningString = _getDeprecationWarningString(
-                fqdn, version, None, replacement)
+        warningString = getDeprecationWarningString(
+            function, version, None, replacement
+        )
 
         @wraps(function)
         def deprecatedFunction(*args, **kwargs):
-            warn(
-                warningString,
-                DeprecationWarning,
-                stacklevel=2)
+            warn(warningString, DeprecationWarning, stacklevel=2)
             return function(*args, **kwargs)
 
-        _appendToDocstring(deprecatedFunction,
-                           _getDeprecationDocstring(version, replacement))
-        deprecatedFunction.deprecatedVersion = version
+        _appendToDocstring(
+            deprecatedFunction, _getDeprecationDocstring(version, replacement)
+        )
+        deprecatedFunction.deprecatedVersion = version  # type: ignore[attr-defined]
 
         result = _DeprecatedProperty(deprecatedFunction)
-        result.warningString = warningString
+        result.warningString = warningString  # type: ignore[attr-defined]
         return result
 
     return deprecationDecorator
-
 
 
 def getWarningMethod():
@@ -397,7 +374,6 @@ def getWarningMethod():
     Return the warning method currently used to record deprecation warnings.
     """
     return warn
-
 
 
 def setWarningMethod(newMethod):
@@ -411,8 +387,7 @@ def setWarningMethod(newMethod):
     warn = newMethod
 
 
-
-class _InternalState(object):
+class _InternalState:
     """
     An L{_InternalState} is a helper object for a L{_ModuleProxy}, so that it
     can easily access its own attributes, bypassing its logic for delegating to
@@ -420,22 +395,18 @@ class _InternalState(object):
 
     @ivar proxy: a L{_ModuleProxy}
     """
-    def __init__(self, proxy):
-        object.__setattr__(self, 'proxy', proxy)
 
+    def __init__(self, proxy):
+        object.__setattr__(self, "proxy", proxy)
 
     def __getattribute__(self, name):
-        return object.__getattribute__(object.__getattribute__(self, 'proxy'),
-                                       name)
-
+        return object.__getattribute__(object.__getattribute__(self, "proxy"), name)
 
     def __setattr__(self, name, value):
-        return object.__setattr__(object.__getattribute__(self, 'proxy'),
-                                  name, value)
+        return object.__setattr__(object.__getattribute__(self, "proxy"), name, value)
 
 
-
-class _ModuleProxy(object):
+class _ModuleProxy:
     """
     Python module wrapper to hook module-level attribute access.
 
@@ -462,21 +433,20 @@ class _ModuleProxy(object):
         cases.
     @type _lastWasPath: C{bool}
     """
+
     def __init__(self, module):
         state = _InternalState(self)
         state._module = module
         state._deprecatedAttributes = {}
         state._lastWasPath = False
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Get a string containing the type of the module proxy and a
         representation of the wrapped module object.
         """
         state = _InternalState(self)
-        return '<%s module=%r>' % (type(self).__name__, state._module)
-
+        return f"<{type(self).__name__} module={state._module!r}>"
 
     def __setattr__(self, name, value):
         """
@@ -485,7 +455,6 @@ class _ModuleProxy(object):
         state = _InternalState(self)
         state._lastWasPath = False
         setattr(state._module, name, value)
-
 
     def __getattribute__(self, name):
         """
@@ -510,15 +479,14 @@ class _ModuleProxy(object):
             # Otherwise, just retrieve the underlying value directly; it's not
             # deprecated, there's no warning to issue.
             value = getattr(state._module, name)
-        if name == '__path__':
+        if name == "__path__":
             state._lastWasPath = True
         else:
             state._lastWasPath = False
         return value
 
 
-
-class _DeprecatedAttribute(object):
+class _DeprecatedAttribute:
     """
     Wrapper for deprecated attributes.
 
@@ -538,16 +506,16 @@ class _DeprecatedAttribute(object):
     @type message: C{str}
     @ivar message: Deprecation message
     """
+
     def __init__(self, module, name, version, message):
         """
         Initialise a deprecated name wrapper.
         """
         self.module = module
         self.__name__ = name
-        self.fqpn = module.__name__ + '.' + name
+        self.fqpn = module.__name__ + "." + name
         self.version = version
         self.message = message
-
 
     def get(self):
         """
@@ -558,11 +526,11 @@ class _DeprecatedAttribute(object):
         # will come back again when it's not an AttributeError and we can emit
         # the warning then.
         result = getattr(self.module, self.__name__)
-        message = _getDeprecationWarningString(self.fqpn, self.version,
-            DEPRECATION_WARNING_FORMAT + ': ' + self.message)
+        message = _getDeprecationWarningString(
+            self.fqpn, self.version, DEPRECATION_WARNING_FORMAT + ": " + self.message
+        )
         warn(message, DeprecationWarning, stacklevel=3)
         return result
-
 
 
 def _deprecateAttribute(proxy, name, version, message):
@@ -581,14 +549,12 @@ def _deprecateAttribute(proxy, name, version, message):
     @type message: C{str}
     @param message: Deprecation message
     """
-    _module = object.__getattribute__(proxy, '_module')
+    _module = object.__getattribute__(proxy, "_module")
     attr = _DeprecatedAttribute(_module, name, version, message)
     # Add a deprecated attribute marker for this module's attribute. When this
     # attribute is accessed via _ModuleProxy a warning is emitted.
-    _deprecatedAttributes = object.__getattribute__(
-        proxy, '_deprecatedAttributes')
+    _deprecatedAttributes = object.__getattribute__(proxy, "_deprecatedAttributes")
     _deprecatedAttributes[name] = attr
-
 
 
 def deprecatedModuleAttribute(version, message, moduleName, name):
@@ -612,7 +578,7 @@ def deprecatedModuleAttribute(version, message, moduleName, name):
     """
     module = sys.modules[moduleName]
     if not isinstance(module, _ModuleProxy):
-        module = _ModuleProxy(module)
+        module = cast(ModuleType, _ModuleProxy(module))
         sys.modules[moduleName] = module
 
     _deprecateAttribute(module, name, version, message)
@@ -626,7 +592,7 @@ def warnAboutFunction(offender, warningString):
     from L{warnings.warn} in that it is not limited to deprecating the behavior
     of a function currently on the call stack.
 
-    @param function: The function that is being deprecated.
+    @param offender: The function that is being deprecated.
 
     @param warningString: The string that should be emitted by this warning.
     @type warningString: C{str}
@@ -635,22 +601,23 @@ def warnAboutFunction(offender, warningString):
     """
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
+    # In Python 3.13 line numbers returned by findlinestarts
+    # can be None for bytecode that does not map to source
+    # lines.
     offenderModule = sys.modules[offender.__module__]
-    filename = inspect.getabsfile(offenderModule)
-    lineStarts = list(findlinestarts(offender.__code__))
-    lastLineNo = lineStarts[-1][1]
-    globals = offender.__globals__
-
-    kwargs = dict(
+    warn_explicit(
+        warningString,
         category=DeprecationWarning,
-        filename=filename,
-        lineno=lastLineNo,
+        filename=inspect.getabsfile(offenderModule),
+        lineno=max(
+            lineNumber
+            for _, lineNumber in findlinestarts(offender.__code__)
+            if lineNumber is not None
+        ),
         module=offenderModule.__name__,
-        registry=globals.setdefault("__warningregistry__", {}),
-        module_globals=None)
-
-    warn_explicit(warningString, **kwargs)
-
+        registry=offender.__globals__.setdefault("__warningregistry__", {}),
+        module_globals=None,
+    )
 
 
 def _passedArgSpec(argspec, positional, keyword):
@@ -672,7 +639,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}
+    result: Dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}
@@ -680,7 +647,7 @@ def _passedArgSpec(argspec, positional, keyword):
         if argspec.varargs is None:
             raise TypeError("Too many arguments.")
         else:
-            result[argspec.varargs] = positional[len(argspec.args):]
+            result[argspec.varargs] = positional[len(argspec.args) :]
     for name, value in zip(argspec.args, positional):
         result[name] = value
     for name, value in keyword.items():
@@ -693,7 +660,6 @@ def _passedArgSpec(argspec, positional, keyword):
         else:
             raise TypeError("no such param")
     return result
-
 
 
 def _passedSignature(signature, positional, keyword):
@@ -718,7 +684,7 @@ def _passedSignature(signature, positional, keyword):
     result = {}
     kwargs = None
     numPositional = 0
-    for (n, (name, param)) in enumerate(signature.parameters.items()):
+    for n, (name, param) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
             result[name] = positional[n:]
@@ -726,20 +692,21 @@ def _passedSignature(signature, positional, keyword):
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
             # Variable keyword args, for example: **my_kwargs
             kwargs = result[name] = {}
-        elif param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            inspect.Parameter.POSITIONAL_ONLY):
+        elif param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.POSITIONAL_ONLY,
+        ):
             if n < len(positional):
                 result[name] = positional[n]
                 numPositional += 1
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
             if name not in keyword:
                 if param.default == inspect.Parameter.empty:
-                    raise TypeError("missing keyword arg {}".format(name))
+                    raise TypeError(f"missing keyword arg {name}")
                 else:
                     result[name] = param.default
         else:
-            raise TypeError("'{}' parameter is invalid kind: {}".format(
-                                 name, param.kind))
+            raise TypeError(f"'{name}' parameter is invalid kind: {param.kind}")
 
     if len(positional) > numPositional:
         raise TypeError("Too many arguments.")
@@ -753,7 +720,6 @@ def _passedSignature(signature, positional, keyword):
         else:
             raise TypeError("no such param")
     return result
-
 
 
 def _mutuallyExclusiveArguments(argumentPairs):
@@ -773,22 +739,89 @@ def _mutuallyExclusiveArguments(argumentPairs):
 
     @rtype: 1-argument callable taking a callable and returning a callable.
     """
+
     def wrapper(wrappee):
-        if getattr(inspect, "signature", None):
-            # Python 3
-            spec = inspect.signature(wrappee)
-            _passed = _passedSignature
-        else:
-            # Python 2
-            spec = inspect.getargspec(wrappee)
-            _passed = _passedArgSpec
+        spec = inspect.signature(wrappee)
+        _passed = _passedSignature
 
         @wraps(wrappee)
         def wrapped(*args, **kwargs):
             arguments = _passed(spec, args, kwargs)
             for this, that in argumentPairs:
                 if this in arguments and that in arguments:
-                    raise TypeError("nope")
+                    raise TypeError(
+                        ("The %r and %r arguments to %s " "are mutually exclusive.")
+                        % (this, that, _fullyQualifiedName(wrappee))
+                    )
             return wrappee(*args, **kwargs)
+
         return wrapped
+
+    return wrapper
+
+
+_Tc = TypeVar("_Tc", bound=Callable[..., Any])
+
+
+def deprecatedKeywordParameter(
+    version: Version, name: str, replacement: Optional[str] = None
+) -> Callable[[_Tc], _Tc]:
+    """
+    Return a decorator that marks a keyword parameter of a callable
+    as deprecated. A warning will be emitted if a caller supplies
+    a value for the parameter, whether the caller uses a keyword or
+    positional syntax.
+
+    @type version: L{incremental.Version}
+    @param version: The version in which the parameter will be marked as
+        having been deprecated.
+
+    @type name: L{str}
+    @param name: The name of the deprecated parameter.
+
+    @type replacement: L{str}
+    @param replacement: Optional text indicating what should be used in
+        place of the deprecated parameter.
+
+    @since: Twisted 21.2.0
+    """
+
+    def wrapper(wrappee: _Tc) -> _Tc:
+        warningString = _getDeprecationWarningString(
+            f"The {name!r} parameter to {_fullyQualifiedName(wrappee)}",
+            version,
+            replacement=replacement,
+        )
+
+        doc = "The {!r} parameter was deprecated in {}".format(
+            name,
+            getVersionString(version),
+        )
+        if replacement:
+            doc = doc + "; " + _getReplacementString(replacement)
+        doc += "."
+
+        params = inspect.signature(wrappee).parameters
+        if (
+            name in params
+            and params[name].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+        ):
+            parameterIndex = list(params).index(name)
+
+            def checkDeprecatedParameter(*args, **kwargs):
+                if len(args) > parameterIndex or name in kwargs:
+                    warn(warningString, DeprecationWarning, stacklevel=2)
+                return wrappee(*args, **kwargs)
+
+        else:
+
+            def checkDeprecatedParameter(*args, **kwargs):
+                if name in kwargs:
+                    warn(warningString, DeprecationWarning, stacklevel=2)
+                return wrappee(*args, **kwargs)
+
+        decorated = cast(_Tc, wraps(wrappee)(checkDeprecatedParameter))
+        _appendToDocstring(decorated, doc)
+        return decorated
+
     return wrapper

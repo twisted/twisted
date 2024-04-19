@@ -2,30 +2,32 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
-from twisted.python import log
-from twisted.application import app, service, internet
+import os
+import sys
+
 from twisted import copyright
-import sys, os
-
+from twisted.application import app, internet, service
+from twisted.python import log
 
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "(for backwards compatibility)."],
-                ]
+    optFlags = [
+        ["nodaemon", "n", "(for backwards compatibility)."],
+    ]
 
     def opt_version(self):
         """
         Print version information and exit.
         """
-        print('twistd (the Twisted Windows runner) {}'.format(copyright.version),
-              file=self.stdout)
+        print(
+            f"twistd (the Twisted Windows runner) {copyright.version}",
+            file=self.stdout,
+        )
         print(copyright.copyright, file=self.stdout)
         sys.exit()
-
 
 
 class WindowsApplicationRunner(app.ApplicationRunner):
@@ -40,15 +42,14 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         """
         self.oldstdout = sys.stdout
         self.oldstderr = sys.stderr
-        os.chdir(self.config['rundir'])
-
+        os.chdir(self.config["rundir"])
 
     def postApplication(self):
         """
         Start the application and run the reactor.
         """
         service.IService(self.application).privilegedStartService()
-        app.startApplication(self.application, not self.config['no_save'])
-        app.startApplication(internet.TimerService(0.1, lambda:None), 0)
+        app.startApplication(self.application, not self.config["no_save"])
+        app.startApplication(internet.TimerService(0.1, lambda: None), 0)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         log.msg("Server Shut Down.")

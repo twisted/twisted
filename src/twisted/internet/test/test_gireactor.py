@@ -2,43 +2,57 @@
 # See LICENSE for details.
 
 """
-GI/GTK3 reactor tests.
+GObject Introspection reactor tests; i.e. `gireactor` module for gio/glib/gtk
+integration.
 """
+from __future__ import annotations
 
-from __future__ import division, absolute_import, print_function
+from unittest import skipIf
 
-import sys, os
 try:
-    from twisted.internet import gireactor
     from gi.repository import Gio
 except ImportError:
-    gireactor = None
-    gtk3reactor = None
+    giImported = False
+    gtkVersion = None
 else:
-    # gtk3reactor may be unavailable even if gireactor is available; in
-    # particular in pygobject 3.4/gtk 3.6, when no X11 DISPLAY is found.
-    try:
-        from twisted.internet import gtk3reactor
-    except ImportError:
-        gtk3reactor = None
-    else:
-        from gi.repository import Gtk
+    giImported = True
+    # If we can import Gio, we ought to be able to import our reactor.
+    from os import environ
 
-from twisted.python.filepath import FilePath
-from twisted.python.runtime import platform
-from twisted.internet.defer import Deferred
+    from gi import get_required_version, require_version
+
+    from twisted.internet import gireactor
+
+    def requireEach(someVersion: str) -> str:
+        try:
+            require_version("Gtk", someVersion)
+        except ValueError as ve:
+            return str(ve)
+        else:
+            return ""
+
+    errorMessage = ", ".join(
+        requireEach(version)
+        for version in environ.get("TWISTED_TEST_GTK_VERSION", "4.0,3.0").split(",")
+    )
+
+    actualVersion = get_required_version("Gtk")
+    gtkVersion = actualVersion if actualVersion is not None else errorMessage
+
+
 from twisted.internet.error import ReactorAlreadyRunning
-from twisted.internet.protocol import ProcessProtocol
-from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.test.test_twisted import SetAsideModule
-from twisted.internet.interfaces import IReactorProcess
-from twisted.python.compat import _PY3
+from twisted.trial.unittest import SkipTest, TestCase
 
 # Skip all tests if gi is unavailable:
-if gireactor is None:
-    skip = "gtk3/gi not importable"
+if not giImported:
+    skip = "GObject Introspection `gi` module not importable"
 
+noGtkSkip = (gtkVersion is None) or (gtkVersion not in ("3.0", "4.0"))
+noGtkMessage = f"Unknown GTK version: {repr(gtkVersion)}"
+
+if not noGtkSkip:
+    from gi.repository import Gtk
 
 
 class GApplicationRegistrationTests(ReactorBuilder, TestCase):
@@ -50,7 +64,12 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
     reactor-running infrastructure, but don't need its test-creation
     functionality.
     """
-    def runReactor(self, app, reactor):
+
+    def runReactor(  # type: ignore[override]
+        self,
+        app: Gio.Application,
+        reactor: gireactor.GIReactor,
+    ) -> None:
         """
         Register the app, run the reactor, make sure app was activated, and
         that reactor was running, and that reactor can be stopped.
@@ -59,13 +78,16 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
             raise SkipTest("Version of PyGObject is too old.")
 
         result = []
-        def stop():
+
+        def stop() -> None:
             result.append("stopped")
             reactor.stop()
-        def activate(widget):
+
+        def activate(widget: object) -> None:
             result.append("activated")
             reactor.callLater(0, stop)
-        app.connect('activate', activate)
+
+        app.connect("activate", activate)
 
         # We want reactor.stop() to *always* stop the event loop, even if
         # someone has called hold() on the application and never done the
@@ -77,181 +99,118 @@ class GApplicationRegistrationTests(ReactorBuilder, TestCase):
         ReactorBuilder.runReactor(self, reactor)
         self.assertEqual(result, ["activated", "stopped"])
 
-
-    def test_gApplicationActivate(self):
+    def test_gApplicationActivate(self) -> None:
         """
         L{Gio.Application} instances can be registered with a gireactor.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
-            application_id='com.twistedmatrix.trial.gireactor',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
+            application_id="com.twistedmatrix.trial.gireactor",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
 
         self.runReactor(app, reactor)
 
+    @skipIf(noGtkSkip, noGtkMessage)
+    def test_gtkAliases(self) -> None:
+        """
+        L{twisted.internet.gtk3reactor} is now just a set of compatibility
+        aliases for L{twisted.internet.GIReactor}.
+        """
+        from twisted.internet.gtk3reactor import (
+            Gtk3Reactor,
+            PortableGtk3Reactor,
+            install,
+        )
 
-    def test_gtkApplicationActivate(self):
+        self.assertIs(Gtk3Reactor, gireactor.GIReactor)
+        self.assertIs(PortableGtk3Reactor, gireactor.PortableGIReactor)
+        self.assertIs(install, gireactor.install)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 1)
+        self.assertIn(
+            "twisted.internet.gtk3reactor was deprecated", warnings[0]["message"]
+        )
+
+    @skipIf(noGtkSkip, noGtkMessage)
+    def test_gtkApplicationActivate(self) -> None:
         """
         L{Gtk.Application} instances can be registered with a gtk3reactor.
         """
-        reactor = gtk3reactor.Gtk3Reactor()
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = gireactor.GIReactor
+        reactor = self.buildReactor()
         app = Gtk.Application(
-            application_id='com.twistedmatrix.trial.gtk3reactor',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
-
+            application_id="com.twistedmatrix.trial.gtk3reactor",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
         self.runReactor(app, reactor)
 
-    if gtk3reactor is None:
-        test_gtkApplicationActivate.skip = (
-            "Gtk unavailable (may require running with X11 DISPLAY env set)")
-
-
-    def test_portable(self):
+    def test_portable(self) -> None:
         """
         L{gireactor.PortableGIReactor} doesn't support application
         registration at this time.
         """
-        reactor = gireactor.PortableGIReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = gireactor.PortableGIReactor
+        reactor = self.buildReactor()
         app = Gio.Application(
-            application_id='com.twistedmatrix.trial.gireactor',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
-        self.assertRaises(NotImplementedError,
-                          reactor.registerGApplication, app)
+            application_id="com.twistedmatrix.trial.gireactor",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
+        self.assertRaises(NotImplementedError, reactor.registerGApplication, app)
 
-
-    def test_noQuit(self):
+    def test_noQuit(self) -> None:
         """
         Older versions of PyGObject lack C{Application.quit}, and so won't
         allow registration.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         # An app with no "quit" method:
         app = object()
         exc = self.assertRaises(RuntimeError, reactor.registerGApplication, app)
-        self.assertTrue(exc.args[0].startswith(
-                "Application registration is not"))
+        self.assertTrue(exc.args[0].startswith("Application registration is not"))
 
-
-    def test_cantRegisterAfterRun(self):
+    def test_cantRegisterAfterRun(self) -> None:
         """
         It is not possible to register a C{Application} after the reactor has
         already started.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
-            application_id='com.twistedmatrix.trial.gireactor',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
+            application_id="com.twistedmatrix.trial.gireactor",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
 
-        def tryRegister():
-            exc = self.assertRaises(ReactorAlreadyRunning,
-                                    reactor.registerGApplication, app)
-            self.assertEqual(exc.args[0],
-                             "Can't register application after reactor was started.")
+        def tryRegister() -> None:
+            exc = self.assertRaises(
+                ReactorAlreadyRunning, reactor.registerGApplication, app
+            )
+            self.assertEqual(
+                exc.args[0], "Can't register application after reactor was started."
+            )
             reactor.stop()
+
         reactor.callLater(0, tryRegister)
         ReactorBuilder.runReactor(self, reactor)
 
-
-    def test_cantRegisterTwice(self):
+    def test_cantRegisterTwice(self) -> None:
         """
         It is not possible to register more than one C{Application}.
         """
-        reactor = gireactor.GIReactor(useGtk=False)
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.reactorFactory = lambda: gireactor.GIReactor(useGtk=False)
+        reactor = self.buildReactor()
         app = Gio.Application(
-            application_id='com.twistedmatrix.trial.gireactor',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
+            application_id="com.twistedmatrix.trial.gireactor",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
         reactor.registerGApplication(app)
         app2 = Gio.Application(
-            application_id='com.twistedmatrix.trial.gireactor2',
-            flags=Gio.ApplicationFlags.FLAGS_NONE)
-        exc = self.assertRaises(RuntimeError,
-                                    reactor.registerGApplication, app2)
-        self.assertEqual(exc.args[0],
-                         "Can't register more than one application instance.")
-
-
-
-class PygtkCompatibilityTests(TestCase):
-    """
-    pygtk imports are either prevented, or a compatibility layer is used if
-    possible.
-    """
-    def test_noCompatibilityLayer(self):
-        """
-        If no compatibility layer is present, imports of gobject and friends
-        are disallowed.
-
-        We do this by running a process where we make sure gi.pygtkcompat
-        isn't present.
-        """
-        if _PY3:
-            raise SkipTest("Python3 always has the compatibility layer.")
-
-        from twisted.internet import reactor
-        if not IReactorProcess.providedBy(reactor):
-            raise SkipTest("No process support available in this reactor.")
-
-        result = Deferred()
-        class Stdout(ProcessProtocol):
-            data = b""
-
-            def errReceived(self, err):
-                print(err)
-
-            def outReceived(self, data):
-                self.data += data
-
-            def processExited(self, reason):
-                result.callback(self.data)
-
-        path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
-        pyExe = FilePath(sys.executable)._asBytesPath()
-        # Pass in a PYTHONPATH that is the test runner's os.path, to make sure
-        # we're running from a checkout
-        reactor.spawnProcess(Stdout(), pyExe, [pyExe, path],
-                             env={"PYTHONPATH": ":".join(sys.path)})
-        result.addCallback(self.assertEqual, b"success")
-        return result
-
-
-    def test_compatibilityLayer(self):
-        """
-        If compatibility layer is present, importing gobject uses the gi
-        compatibility layer.
-        """
-        if "gi.pygtkcompat" not in sys.modules:
-            raise SkipTest("This version of gi doesn't include pygtkcompat.")
-        import gobject
-        self.assertTrue(gobject.__name__.startswith("gi."))
-
-
-
-class Gtk3ReactorTests(TestCase):
-    """
-    Tests for L{gtk3reactor}.
-    """
-
-    def test_requiresDISPLAY(self):
-        """
-        On X11, L{gtk3reactor} is unimportable if the C{DISPLAY} environment
-        variable is not set.
-        """
-        display = os.environ.get("DISPLAY", None)
-        if display is not None:
-            self.addCleanup(os.environ.__setitem__, "DISPLAY", display)
-            del os.environ["DISPLAY"]
-        with SetAsideModule("twisted.internet.gtk3reactor"):
-            exc = self.assertRaises(ImportError,
-                                    __import__, "twisted.internet.gtk3reactor")
-            self.assertEqual(
-                exc.args[0],
-                "Gtk3 requires X11, and no DISPLAY environment variable is set")
-
-    if platform.getType() != "posix" or platform.isMacOSX():
-        test_requiresDISPLAY.skip = "This test is only relevant when using X11"
+            application_id="com.twistedmatrix.trial.gireactor2",
+            flags=Gio.ApplicationFlags.FLAGS_NONE,
+        )
+        exc = self.assertRaises(RuntimeError, reactor.registerGApplication, app2)
+        self.assertEqual(
+            exc.args[0], "Can't register more than one application instance."
+        )

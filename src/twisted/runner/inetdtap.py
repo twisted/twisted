@@ -10,15 +10,17 @@ invoke other programs to handle incoming sockets.
 This is a useful thing as a "networking swiss army knife" tool, like netcat.
 """
 
-import pwd, grp, socket
+import grp
+import pwd
+import socket
 
-from twisted.runner import inetd, inetdconf
-from twisted.python import log, usage
-from twisted.internet.protocol import ServerFactory
 from twisted.application import internet, service as appservice
+from twisted.internet.protocol import ServerFactory
+from twisted.python import log, usage
+from twisted.runner import inetd, inetdconf
 
 # Protocol map
-protocolDict = {'tcp': socket.IPPROTO_TCP, 'udp': socket.IPPROTO_UDP}
+protocolDict = {"tcp": socket.IPPROTO_TCP, "udp": socket.IPPROTO_UDP}
 
 
 class Options(usage.Options):
@@ -34,35 +36,33 @@ class Options(usage.Options):
     """
 
     optParameters = [
-        ['rpc', 'r', '/etc/rpc', 'DEPRECATED. RPC procedure table file'],
-        ['file', 'f', '/etc/inetd.conf', 'Service configuration file']
+        ["rpc", "r", "/etc/rpc", "DEPRECATED. RPC procedure table file"],
+        ["file", "f", "/etc/inetd.conf", "Service configuration file"],
     ]
 
-    optFlags = [['nointernal', 'i', "Don't run internal services"]]
+    optFlags = [["nointernal", "i", "Don't run internal services"]]
 
-    compData = usage.Completions(
-        optActions={"file": usage.CompleteFiles('*.conf')}
-        )
-
+    compData = usage.Completions(optActions={"file": usage.CompleteFiles("*.conf")})
 
 
 def makeService(config):
     s = appservice.MultiService()
     conf = inetdconf.InetdConf()
-    with open(config['file']) as f:
+    with open(config["file"]) as f:
         conf.parseFile(f)
 
     for service in conf.services:
         protocol = service.protocol
 
-        if service.protocol.startswith('rpc/'):
-            log.msg('Skipping rpc service due to lack of rpc support')
+        if service.protocol.startswith("rpc/"):
+            log.msg("Skipping rpc service due to lack of rpc support")
             continue
 
-        if (protocol, service.socketType) not in [('tcp', 'stream'),
-                                                  ('udp', 'dgram')]:
-            log.msg('Skipping unsupported type/protocol: %s/%s'
-                    % (service.socketType, service.protocol))
+        if (protocol, service.socketType) not in [("tcp", "stream"), ("udp", "dgram")]:
+            log.msg(
+                "Skipping unsupported type/protocol: %s/%s"
+                % (service.socketType, service.protocol)
+            )
             continue
 
         # Convert the username into a uid (if necessary)
@@ -72,7 +72,7 @@ def makeService(config):
             try:
                 service.user = pwd.getpwnam(service.user)[2]
             except KeyError:
-                log.msg('Unknown user: ' + service.user)
+                log.msg("Unknown user: " + service.user)
                 continue
 
         # Convert the group name into a gid (if necessary)
@@ -86,24 +86,24 @@ def makeService(config):
                 try:
                     service.group = grp.getgrnam(service.group)[2]
                 except KeyError:
-                    log.msg('Unknown group: ' + service.group)
+                    log.msg("Unknown group: " + service.group)
                     continue
 
-        if service.program == 'internal':
-            if config['nointernal']:
+        if service.program == "internal":
+            if config["nointernal"]:
                 continue
 
             # Internal services can use a standard ServerFactory
             if service.name not in inetd.internalProtocols:
-                log.msg('Unknown internal service: ' + service.name)
+                log.msg("Unknown internal service: " + service.name)
                 continue
             factory = ServerFactory()
             factory.protocol = inetd.internalProtocols[service.name]
         else:
             factory = inetd.InetdFactory(service)
 
-        if protocol == 'tcp':
+        if protocol == "tcp":
             internet.TCPServer(service.port, factory).setServiceParent(s)
-        elif protocol == 'udp':
+        elif protocol == "udp":
             raise RuntimeError("not supporting UDP")
     return s

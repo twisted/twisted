@@ -19,13 +19,12 @@ tls_alpn_npn_server.py from the directory that contains this example.
 It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
 """
-from __future__ import print_function
 
-from twisted.internet import ssl, protocol, endpoints, task, defer
+from twisted.internet import defer, endpoints, protocol, ssl, task
 from twisted.python.filepath import FilePath
 
 # The hostname the remote server to contact.
-TARGET_HOST = u'localhost'
+TARGET_HOST = "localhost"
 
 # The port to contact.
 TARGET_PORT = 8080
@@ -40,7 +39,7 @@ TARGET_PORT = 8080
 # ambiguity about text encodings.
 # Try changing this list by adding, removing, and reordering protocols to see
 # how it affects the result.
-ACCEPTABLE_PROTOCOLS = [b'h2', b'http/1.1']
+ACCEPTABLE_PROTOCOLS = [b"h2", b"http/1.1"]
 
 # Some safe initial data to send. This data is specific to HTTP/2: it is part
 # of the HTTP/2 client preface (see RFC 7540 Section 3.5). This is used to
@@ -52,11 +51,11 @@ ACCEPTABLE_PROTOCOLS = [b'h2', b'http/1.1']
 # handshake is done. Instead, we wait for one that is implicitly after the
 # TLS handshake is done: dataReceived. To trigger the remote peer to send data,
 # we send some ourselves.
-TLS_TRIGGER_DATA = b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
+TLS_TRIGGER_DATA = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
 
 def main(reactor):
-    certData = FilePath('server-cert.pem').getContent()
+    certData = FilePath("server-cert.pem").getContent()
     serverCertificate = ssl.Certificate.loadPEM(certData)
     options = ssl.optionsForClientTLS(
         hostname=TARGET_HOST,
@@ -81,7 +80,7 @@ def main(reactor):
             # the TLS handshake is over. This is generally *not* in the call to
             # connectionMade, but instead only when we've received some data
             # back.
-            print('Next protocol is: {}'.format(self.transport.negotiatedProtocol))
+            print(f"Next protocol is: {self.transport.negotiatedProtocol}")
             self.transport.loseConnection()
 
             # If this is the first data write, we can tell the reactor we're
@@ -94,19 +93,15 @@ def main(reactor):
             # If we haven't received any data, an error occurred. Otherwise,
             # we lost the connection on purpose.
             if self.complete is not None:
-                print("Connection lost due to error {}".format(reason))
+                print(f"Connection lost due to error {reason}")
                 self.complete.callback(None)
             else:
                 print("Connection closed cleanly")
 
     return endpoints.connectProtocol(
-        endpoints.SSL4ClientEndpoint(
-            reactor,
-            TARGET_HOST,
-            TARGET_PORT,
-            options
-        ),
-        BasicH2Request()
+        endpoints.SSL4ClientEndpoint(reactor, TARGET_HOST, TARGET_PORT, options),
+        BasicH2Request(),
     ).addCallback(lambda protocol: protocol.complete)
+
 
 task.react(main)

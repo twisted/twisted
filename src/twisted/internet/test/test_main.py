@@ -5,13 +5,11 @@
 Tests for L{twisted.internet.main}.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.trial import unittest
 from twisted.internet.error import ReactorAlreadyInstalledError
 from twisted.internet.main import installReactor
-
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 
 class InstallReactorTests(unittest.SynchronousTestCase):
@@ -19,7 +17,7 @@ class InstallReactorTests(unittest.SynchronousTestCase):
     Tests for L{installReactor}.
     """
 
-    def test_installReactor(self):
+    def test_installReactor(self) -> None:
         """
         L{installReactor} installs a new reactor if none is present.
         """
@@ -27,24 +25,21 @@ class InstallReactorTests(unittest.SynchronousTestCase):
             newReactor = object()
             installReactor(newReactor)
             from twisted.internet import reactor
+
             self.assertIs(newReactor, reactor)
 
-
-    def test_alreadyInstalled(self):
+    def test_alreadyInstalled(self) -> None:
         """
         If a reactor is already installed, L{installReactor} raises
         L{ReactorAlreadyInstalledError}.
         """
         with NoReactor():
             installReactor(object())
-            self.assertRaises(ReactorAlreadyInstalledError, installReactor,
-                              object())
+            self.assertRaises(ReactorAlreadyInstalledError, installReactor, object())
 
-
-    def test_errorIsAnAssertionError(self):
+    def test_errorIsAnAssertionError(self) -> None:
         """
         For backwards compatibility, L{ReactorAlreadyInstalledError} is an
         L{AssertionError}.
         """
-        self.assertTrue(issubclass(ReactorAlreadyInstalledError,
-                        AssertionError))
+        self.assertTrue(issubclass(ReactorAlreadyInstalledError, AssertionError))

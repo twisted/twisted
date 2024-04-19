@@ -5,64 +5,73 @@
 """
 Implementation module for the I{cftp} command.
 """
-from __future__ import division, print_function
-import os, sys, getpass, struct, tty, fcntl, stat
-import fnmatch, pwd, glob
+import fcntl
+import fnmatch
+import getpass
+import glob
+import os
+import pwd
+import stat
+import struct
+import sys
+import tty
+from typing import List, Optional, TextIO, Union
 
 from twisted.conch.client import connect, default, options
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import channel, filetransfer
+from twisted.conch.ssh import channel, common, connection, filetransfer
+from twisted.internet import defer, reactor, stdio, utils
 from twisted.protocols import basic
-from twisted.python.compat import _PY3, unicode
-from twisted.internet import reactor, stdio, defer, utils
-from twisted.python import log, usage, failure
+from twisted.python import failure, log, usage
 from twisted.python.filepath import FilePath
 
-class ClientOptions(options.ConchOptions):
 
+class ClientOptions(options.ConchOptions):
     synopsis = """Usage:   cftp [options] [user@]host
          cftp [options] [user@]host[:dir[/]]
          cftp [options] [user@]host[:file [localfile]]
 """
-    longdesc = ("cftp is a client for logging into a remote machine and "
-                "executing commands to send and receive file information")
+    longdesc = (
+        "cftp is a client for logging into a remote machine and "
+        "executing commands to send and receive file information"
+    )
 
-    optParameters = [
-                    ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],
-                    ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
-                    ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
-                    ['subsystem', 's', 'sftp', 'Subsystem/server program to connect to.']]
+    optParameters: List[List[Optional[Union[str, int]]]] = [
+        ["buffersize", "B", 32768, "Size of the buffer to use for sending/receiving."],
+        ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
+        ["requests", "R", 5, "Number of requests to make before waiting for a reply."],
+        ["subsystem", "s", "sftp", "Subsystem/server program to connect to."],
+    ]
 
     compData = usage.Completions(
-        descriptions={
-            "buffersize": "Size of send/receive buffer (default: 32768)"},
-        extraActions=[usage.CompleteUserAtHost(),
-                      usage.CompleteFiles(descr="local file")])
+        descriptions={"buffersize": "Size of send/receive buffer (default: 32768)"},
+        extraActions=[
+            usage.CompleteUserAtHost(),
+            usage.CompleteFiles(descr="local file"),
+        ],
+    )
 
     def parseArgs(self, host, localPath=None):
-        self['remotePath'] = ''
-        if ':' in host:
-            host, self['remotePath'] = host.split(':', 1)
-            self['remotePath'].rstrip('/')
-        self['host'] = host
-        self['localPath'] = localPath
+        self["remotePath"] = ""
+        if ":" in host:
+            host, self["remotePath"] = host.split(":", 1)
+            self["remotePath"].rstrip("/")
+        self["host"] = host
+        self["localPath"] = localPath
+
 
 def run():
-#    import hotshot
-#    prof = hotshot.Profile('cftp.prof')
-#    prof.start()
     args = sys.argv[1:]
-    if '-l' in args: # cvs is an idiot
-        i = args.index('-l')
-        args = args[i:i+2]+args
-        del args[i+2:i+4]
+    if "-l" in args:  # cvs is an idiot
+        i = args.index("-l")
+        args = args[i : i + 2] + args
+        del args[i + 2 : i + 4]
     options = ClientOptions()
     try:
         options.parseOptions(args)
     except usage.UsageError as u:
-        print('ERROR: %s' % u)
+        print("ERROR: %s" % u)
         sys.exit(1)
-    if options['log']:
+    if options["log"]:
         realout = sys.stdout
         log.startLogging(sys.stderr)
         sys.stdout = realout
@@ -70,100 +79,102 @@ def run():
         log.discardLogs()
     doConnect(options)
     reactor.run()
-#    prof.stop()
-#    prof.close()
+
 
 def handleError():
     global exitStatus
     exitStatus = 2
     try:
         reactor.stop()
-    except: pass
+    except BaseException:
+        pass
     log.err(failure.Failure())
     raise
 
+
 def doConnect(options):
-#    log.deferr = handleError # HACK
-    if '@' in options['host']:
-        options['user'], options['host'] = options['host'].split('@',1)
-    host = options['host']
-    if not options['user']:
-        options['user'] = getpass.getuser()
-    if not options['port']:
-        options['port'] = 22
+    if "@" in options["host"]:
+        options["user"], options["host"] = options["host"].split("@", 1)
+    host = options["host"]
+    if not options["user"]:
+        options["user"] = getpass.getuser()
+    if not options["port"]:
+        options["port"] = 22
     else:
-        options['port'] = int(options['port'])
-    host = options['host']
-    port = options['port']
+        options["port"] = int(options["port"])
+    host = options["host"]
+    port = options["port"]
     conn = SSHConnection()
     conn.options = options
     vhk = default.verifyHostKey
-    uao = default.SSHUserAuthClient(options['user'], options, conn)
+    uao = default.SSHUserAuthClient(options["user"], options, conn)
     connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
 
+
 def _ebExit(f):
-    #global exitStatus
-    if hasattr(f.value, 'value'):
+    if hasattr(f.value, "value"):
         s = f.value.value
     else:
         s = str(f)
     print(s)
-    #exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()
-    except: pass
+    except BaseException:
+        pass
 
-def _ignore(*args): pass
+
+def _ignore(*args):
+    pass
+
 
 class FileWrapper:
-
     def __init__(self, f):
         self.f = f
         self.total = 0.0
-        f.seek(0, 2) # seek to the end
+        f.seek(0, 2)  # seek to the end
         self.size = f.tell()
 
     def __getattr__(self, attr):
         return getattr(self.f, attr)
 
-class StdioClient(basic.LineReceiver):
 
+class StdioClient(basic.LineReceiver):
     _pwd = pwd
 
-    ps = 'cftp> '
-    delimiter = b'\n'
+    ps = "cftp> "
+    delimiter = b"\n"
 
     reactor = reactor
 
-    def __init__(self, client, f = None):
+    def __init__(self, client, f=None):
         self.client = client
-        self.currentDirectory = ''
+        self.currentDirectory = ""
         self.file = f
         self.useProgressBar = (not f and 1) or 0
 
     def connectionMade(self):
-        self.client.realPath('').addCallback(self._cbSetCurDir)
+        self.client.realPath("").addCallback(self._cbSetCurDir)
 
     def _cbSetCurDir(self, path):
         self.currentDirectory = path
         self._newLine()
 
     def _writeToTransport(self, msg):
-        if isinstance(msg, unicode):
+        if isinstance(msg, str):
             msg = msg.encode("utf-8")
         return self.transport.write(msg)
 
     def lineReceived(self, line):
         if self.client.transport.localClosed:
             return
-        if _PY3 and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
-        log.msg('got line %s' % line)
+        log.msg("got line %s" % line)
         line = line.lstrip()
         if not line:
             self._newLine()
             return
-        if self.file and line.startswith('-'):
+        if self.file and line.startswith("-"):
             self.ignoreErrors = 1
             line = line[1:]
         else:
@@ -173,20 +184,19 @@ class StdioClient(basic.LineReceiver):
             d.addCallback(self._cbCommand)
             d.addErrback(self._ebCommand)
 
-
     def _dispatchCommand(self, line):
-        if ' ' in line:
-            command, rest = line.split(' ', 1)
+        if " " in line:
+            command, rest = line.split(" ", 1)
             rest = rest.lstrip()
         else:
-            command, rest = line, ''
-        if command.startswith('!'): # command
+            command, rest = line, ""
+        if command.startswith("!"):  # command
             f = self.cmd_EXEC
-            rest = (command[1:] + ' ' + rest).strip()
+            rest = (command[1:] + " " + rest).strip()
         else:
             command = command.upper()
-            log.msg('looking up cmd %s' % command)
-            f = getattr(self, 'cmd_%s' % command, None)
+            log.msg("looking up cmd %s" % command)
+            f = getattr(self, "cmd_%s" % command, None)
         if f is not None:
             return defer.maybeDeferred(f, rest)
         else:
@@ -198,7 +208,7 @@ class StdioClient(basic.LineReceiver):
         log.msg(f)
         e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
         if e == NotImplementedError:
-            self._writeToTransport(self.cmd_HELP(''))
+            self._writeToTransport(self.cmd_HELP(""))
         elif e == filetransfer.SFTPError:
             errMsg = "remote error %i: %s\n" % (f.value.code, f.value.message)
             self._writeToTransport(errMsg)
@@ -221,11 +231,11 @@ class StdioClient(basic.LineReceiver):
 
     def _cbCommand(self, result):
         if result is not None:
-            if isinstance(result, unicode):
+            if isinstance(result, str):
                 result = result.encode("utf-8")
             self._writeToTransport(result)
-            if not result.endswith(b'\n'):
-                self._writeToTransport(b'\n')
+            if not result.endswith(b"\n"):
+                self._writeToTransport(b"\n")
         self._newLine()
 
     def _ebCommand(self, f):
@@ -236,9 +246,9 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_CD(self, path):
         path, rest = self._getFilename(path)
-        if not path.endswith('/'):
-            path += '/'
-        newPath = path and os.path.join(self.currentDirectory, path) or ''
+        if not path.endswith("/"):
+            path += "/"
+        newPath = path and os.path.join(self.currentDirectory, path) or ""
         d = self.client.openDirectory(newPath)
         d.addCallback(self._cbCd)
         d.addErrback(self._ebCommand)
@@ -265,7 +275,7 @@ class StdioClient(basic.LineReceiver):
         mod, rest = rest.split(None, 1)
         path, rest = self._getFilename(rest)
         mod = int(mod, 8)
-        d = self.client.setAttrs(path, {'permissions':mod})
+        d = self.client.setAttrs(path, {"permissions": mod})
         d.addCallback(_ignore)
         return d
 
@@ -279,21 +289,21 @@ class StdioClient(basic.LineReceiver):
 
     def _cbSetUsrGrp(self, attrs, path, usr=None, grp=None):
         new = {}
-        new['uid'] = (usr is not None) and usr or attrs['uid']
-        new['gid'] = (grp is not None) and grp or attrs['gid']
+        new["uid"] = (usr is not None) and usr or attrs["uid"]
+        new["gid"] = (grp is not None) and grp or attrs["gid"]
         d = self.client.setAttrs(path, new)
         d.addCallback(_ignore)
         return d
 
     def cmd_GET(self, rest):
         remote, rest = self._getFilename(rest)
-        if '*' in remote or '?' in remote: # wildcard
+        if "*" in remote or "?" in remote:  # wildcard
             if rest:
                 local, rest = self._getFilename(rest)
                 if not os.path.isdir(local):
                     return "Wildcard get with non-directory target."
             else:
-                local = b''
+                local = b""
             d = self._remoteGlob(remote)
             d.addCallback(self._cbGetMultiple, local)
             return d
@@ -302,7 +312,7 @@ class StdioClient(basic.LineReceiver):
         else:
             local = os.path.split(remote)[1]
         log.msg((remote, local))
-        lf = open(local, 'wb', 0)
+        lf = open(local, "wb", 0)
         path = FilePath(self.currentDirectory).child(remote)
         d = self.client.openFile(path.path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -310,7 +320,6 @@ class StdioClient(basic.LineReceiver):
         return d
 
     def _cbGetMultiple(self, files, local):
-        #if self._useProgressBar: # one at a time
         # XXX this can be optimized for times w/o progress bar
         return self._cbGetMultipleNext(None, files, local)
 
@@ -319,12 +328,12 @@ class StdioClient(basic.LineReceiver):
             self._printFailure(res)
         elif res:
             self._writeToTransport(res)
-            if not res.endswith('\n'):
-                self._writeToTransport('\n')
+            if not res.endswith("\n"):
+                self._writeToTransport("\n")
         if not files:
             return
         f = files.pop(0)[0]
-        lf = open(os.path.join(local, os.path.split(f)[1]), 'wb', 0)
+        lf = open(os.path.join(local, os.path.split(f)[1]), "wb", 0)
         path = FilePath(self.currentDirectory).child(f)
         d = self.client.openFile(path.path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
@@ -340,19 +349,19 @@ class StdioClient(basic.LineReceiver):
         return rf.getAttrs().addCallback(self._cbGetFileSize, rf, lf)
 
     def _cbGetFileSize(self, attrs, rf, lf):
-        if not stat.S_ISREG(attrs['permissions']):
+        if not stat.S_ISREG(attrs["permissions"]):
             rf.close()
             lf.close()
             return "Can't get non-regular file: %s" % rf.name
-        rf.size = attrs['size']
-        bufferSize = self.client.transport.conn.options['buffersize']
-        numRequests = self.client.transport.conn.options['requests']
+        rf.size = attrs["size"]
+        bufferSize = self.client.transport.conn.options["buffersize"]
+        numRequests = self.client.transport.conn.options["requests"]
         rf.total = 0.0
         dList = []
         chunks = []
         startTime = self.reactor.seconds()
         for i in range(numRequests):
-            d = self._cbGetRead('', rf, lf, chunks, 0, bufferSize, startTime)
+            d = self._cbGetRead("", rf, lf, chunks, 0, bufferSize, startTime)
             dList.append(d)
         dl = defer.DeferredList(dList, fireOnOneErrback=1)
         dl.addCallback(self._cbGetDone, rf, lf)
@@ -361,32 +370,31 @@ class StdioClient(basic.LineReceiver):
     def _getNextChunk(self, chunks):
         end = 0
         for chunk in chunks:
-            if end == 'eof':
-                return # nothing more to get
+            if end == "eof":
+                return  # nothing more to get
             if end != chunk[0]:
                 i = chunks.index(chunk)
                 chunks.insert(i, (end, chunk[0]))
                 return (end, chunk[0] - end)
             end = chunk[1]
-        bufSize = int(self.client.transport.conn.options['buffersize'])
+        bufSize = int(self.client.transport.conn.options["buffersize"])
         chunks.append((end, end + bufSize))
         return (end, bufSize)
 
     def _cbGetRead(self, data, rf, lf, chunks, start, size, startTime):
         if data and isinstance(data, failure.Failure):
-            log.msg('get read err: %s' % data)
+            log.msg("get read err: %s" % data)
             reason = data
             reason.trap(EOFError)
             i = chunks.index((start, start + size))
             del chunks[i]
-            chunks.insert(i, (start, 'eof'))
+            chunks.insert(i, (start, "eof"))
         elif data:
-            log.msg('get read data: %i' % len(data))
+            log.msg("get read data: %i" % len(data))
             lf.seek(start)
             lf.write(data)
             if len(data) != size:
-                log.msg('got less than we asked for: %i < %i' %
-                        (len(data), size))
+                log.msg("got less than we asked for: %i < %i" % (len(data), size))
                 i = chunks.index((start, start + size))
                 del chunks[i]
                 chunks.insert(i, (start, start + len(data)))
@@ -398,19 +406,18 @@ class StdioClient(basic.LineReceiver):
             return
         else:
             start, length = chunk
-        log.msg('asking for %i -> %i' % (start, start+length))
+        log.msg("asking for %i -> %i" % (start, start + length))
         d = rf.readChunk(start, length)
         d.addBoth(self._cbGetRead, rf, lf, chunks, start, length, startTime)
         return d
 
     def _cbGetDone(self, ignored, rf, lf):
-        log.msg('get done')
+        log.msg("get done")
         rf.close()
         lf.close()
         if self.useProgressBar:
-            self._writeToTransport('\n')
-        return "Transferred %s to %s" % (rf.name, lf.name)
-
+            self._writeToTransport("\n")
+        return f"Transferred {rf.name} to {lf.name}"
 
     def cmd_PUT(self, rest):
         """
@@ -426,12 +433,12 @@ class StdioClient(basic.LineReceiver):
 
         # FIXME: https://twistedmatrix.com/trac/ticket/7241
         # Use a better check for globbing expression.
-        if '*' in local or '?' in local:
+        if "*" in local or "?" in local:
             if rest:
                 remote, rest = self._getFilename(rest)
                 remote = os.path.join(self.currentDirectory, remote)
             else:
-                remote = ''
+                remote = ""
 
             files = glob.glob(local)
             return self._putMultipleFiles(files, remote)
@@ -442,7 +449,6 @@ class StdioClient(basic.LineReceiver):
             else:
                 remote = os.path.split(local)[1]
             return self._putSingleFile(local, remote)
-
 
     def _putSingleFile(self, local, remote):
         """
@@ -459,7 +465,6 @@ class StdioClient(basic.LineReceiver):
         """
         return self._cbPutMultipleNext(None, [local], remote, single=True)
 
-
     def _putMultipleFiles(self, files, remote):
         """
         Perform an upload for a list of local files.
@@ -475,9 +480,7 @@ class StdioClient(basic.LineReceiver):
         """
         return self._cbPutMultipleNext(None, files, remote)
 
-
-    def _cbPutMultipleNext(
-            self, previousResult, files, remotePath, single=False):
+    def _cbPutMultipleNext(self, previousResult, files, remotePath, single=False):
         """
         Perform an upload for the next file in the list of local files.
 
@@ -500,18 +503,18 @@ class StdioClient(basic.LineReceiver):
         if isinstance(previousResult, failure.Failure):
             self._printFailure(previousResult)
         elif previousResult:
-            if isinstance(previousResult, unicode):
+            if isinstance(previousResult, str):
                 previousResult = previousResult.encode("utf-8")
             self._writeToTransport(previousResult)
-            if not previousResult.endswith(b'\n'):
-                self._writeToTransport(b'\n')
+            if not previousResult.endswith(b"\n"):
+                self._writeToTransport(b"\n")
 
         currentFile = None
         while files and not currentFile:
             try:
                 currentFile = files.pop(0)
-                localStream = open(currentFile, 'rb')
-            except:
+                localStream = open(currentFile, "rb")
+            except BaseException:
                 self._printFailure(failure.Failure())
                 currentFile = None
 
@@ -530,7 +533,6 @@ class StdioClient(basic.LineReceiver):
         d.addBoth(self._cbPutMultipleNext, files, remotePath)
         return d
 
-
     def _putRemoteFile(self, localStream, remotePath):
         """
         Do an upload request.
@@ -544,19 +546,14 @@ class StdioClient(basic.LineReceiver):
         @return: A deferred which fires when transfer is done.
         """
         remote = os.path.join(self.currentDirectory, remotePath)
-        flags = (
-            filetransfer.FXF_WRITE |
-            filetransfer.FXF_CREAT |
-            filetransfer.FXF_TRUNC
-            )
+        flags = filetransfer.FXF_WRITE | filetransfer.FXF_CREAT | filetransfer.FXF_TRUNC
         d = self.client.openFile(remote, flags, {})
         d.addCallback(self._cbPutOpenFile, localStream)
         d.addErrback(self._ebCloseLf, localStream)
         return d
 
-
     def _cbPutOpenFile(self, rf, lf):
-        numRequests = self.client.transport.conn.options['requests']
+        numRequests = self.client.transport.conn.options["requests"]
         if self.useProgressBar:
             lf = FileWrapper(lf)
         dList = []
@@ -589,8 +586,8 @@ class StdioClient(basic.LineReceiver):
         lf.close()
         rf.close()
         if self.useProgressBar:
-            self._writeToTransport('\n')
-        return 'Transferred %s to %s' % (lf.name, rf.name)
+            self._writeToTransport("\n")
+        return f"Transferred {lf.name} to {rf.name}"
 
     def cmd_LCD(self, path):
         os.chdir(path)
@@ -599,8 +596,8 @@ class StdioClient(basic.LineReceiver):
         linkpath, rest = self._getFilename(rest)
         targetpath, rest = self._getFilename(rest)
         linkpath, targetpath = map(
-                lambda x: os.path.join(self.currentDirectory, x),
-                (linkpath, targetpath))
+            lambda x: os.path.join(self.currentDirectory, x), (linkpath, targetpath)
+        )
         return self.client.makeLink(linkpath, targetpath).addCallback(_ignore)
 
     def cmd_LS(self, rest):
@@ -611,17 +608,17 @@ class StdioClient(basic.LineReceiver):
         # ls some_glob_string   current directory, globbed for that string
         options = []
         rest = rest.split()
-        while rest and rest[0] and rest[0][0] == '-':
+        while rest and rest[0] and rest[0][0] == "-":
             opts = rest.pop(0)[1:]
             for o in opts:
-                if o == 'l':
-                    options.append('verbose')
-                elif o == 'a':
-                    options.append('all')
-        rest = ' '.join(rest)
+                if o == "l":
+                    options.append("verbose")
+                elif o == "a":
+                    options.append("all")
+        rest = " ".join(rest)
         path, rest = self._getFilename(rest)
         if not path:
-            fullPath = self.currentDirectory + '/'
+            fullPath = self.currentDirectory + "/"
         else:
             fullPath = os.path.join(self.currentDirectory, path)
         d = self._remoteGlob(fullPath)
@@ -630,16 +627,16 @@ class StdioClient(basic.LineReceiver):
 
     def _cbDisplayFiles(self, files, options):
         files.sort()
-        if 'all' not in options:
-            files = [f for f in files if not f[0].startswith(b'.')]
-        if 'verbose' in options:
+        if "all" not in options:
+            files = [f for f in files if not f[0].startswith(b".")]
+        if "verbose" in options:
             lines = [f[1] for f in files]
         else:
             lines = [f[0] for f in files]
         if not lines:
             return None
         else:
-            return b'\n'.join(lines)
+            return b"\n".join(lines)
 
     def cmd_MKDIR(self, path):
         path, rest = self._getFilename(path)
@@ -665,9 +662,9 @@ class StdioClient(basic.LineReceiver):
     def cmd_RENAME(self, rest):
         oldpath, rest = self._getFilename(rest)
         newpath, rest = self._getFilename(rest)
-        oldpath, newpath = map (
-                lambda x: os.path.join(self.currentDirectory, x),
-                (oldpath, newpath))
+        oldpath, newpath = map(
+            lambda x: os.path.join(self.currentDirectory, x), (oldpath, newpath)
+        )
         return self.client.renameFile(oldpath, newpath).addCallback(_ignore)
 
     def cmd_EXIT(self, ignored):
@@ -677,7 +674,7 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_VERSION(self, ignored):
         version = "SFTP version %i" % self.client.version
-        if isinstance(version, unicode):
+        if isinstance(version, str):
             version = version.encode("utf-8")
         return version
 
@@ -725,9 +722,9 @@ version                         Print the SFTP version.
         """
         shell = self._pwd.getpwnam(getpass.getuser())[6]
         if not shell:
-            shell = '/bin/sh'
+            shell = "/bin/sh"
         if rest:
-            cmds = ['-c', rest]
+            cmds = ["-c", rest]
             return utils.getProcessOutput(shell, cmds, errortoo=1)
         else:
             os.system(shell)
@@ -735,16 +732,16 @@ version                         Print the SFTP version.
     # accessory functions
 
     def _remoteGlob(self, fullPath):
-        log.msg('looking up %s' % fullPath)
+        log.msg("looking up %s" % fullPath)
         head, tail = os.path.split(fullPath)
-        if '*' in tail or '?' in tail:
+        if "*" in tail or "?" in tail:
             glob = 1
         else:
             glob = 0
-        if tail and not glob: # could be file or directory
+        if tail and not glob:  # could be file or directory
             # try directory first
             d = self.client.openDirectory(fullPath)
-            d.addCallback(self._cbOpenList, '')
+            d.addCallback(self._cbOpenList, "")
             d.addErrback(self._ebNotADirectory, head, tail)
         else:
             d = self.client.openDirectory(head)
@@ -762,51 +759,49 @@ version                         Print the SFTP version.
         d.addCallback(self._cbOpenList, glob)
         return d
 
-    def _cbReadFile(self, files, l, directory, glob):
+    def _cbReadFile(self, files, matchedFiles, directory, glob):
         if not isinstance(files, failure.Failure):
             if glob:
-                if _PY3:
-                    glob = glob.encode("utf-8")
-                l.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
+                glob = glob.encode("utf-8")
+                matchedFiles.extend([f for f in files if fnmatch.fnmatch(f[0], glob)])
             else:
-                l.extend(files)
+                matchedFiles.extend(files)
             d = directory.read()
-            d.addBoth(self._cbReadFile, l, directory, glob)
+            d.addBoth(self._cbReadFile, matchedFiles, directory, glob)
             return d
         else:
             reason = files
             reason.trap(EOFError)
             directory.close()
-            return l
+            return matchedFiles
 
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50, 'PB'),
-            (1<<40, 'TB'),
-            (1<<30, 'GB'),
-            (1<<20, 'MB'),
-            (1<<10, 'kB'),
-            (1, 'B')
-            ]
+            (1 << 50, "PB"),
+            (1 << 40, "TB"),
+            (1 << 30, "GB"),
+            (1 << 20, "MB"),
+            (1 << 10, "kB"),
+            (1, "B"),
+        ]
 
         for factor, suffix in _abbrevs:
             if size > factor:
                 break
-        return '%.1f' % (size/factor) + suffix
+        return "%.1f" % (size / factor) + suffix
 
     def _abbrevTime(self, t):
-        if t > 3600: # 1 hour
+        if t > 3600:  # 1 hour
             hours = int(t / 3600)
-            t -= (3600 * hours)
+            t -= 3600 * hours
             mins = int(t / 60)
-            t -= (60 * mins)
+            t -= 60 * mins
             return "%i:%02i:%02i" % (hours, mins, t)
         else:
-            mins = int(t/60)
-            t -= (60 * mins)
+            mins = int(t / 60)
+            t -= 60 * mins
             return "%02i:%02i" % (mins, t)
-
 
     def _printProgressBar(self, f, startTime):
         """
@@ -824,9 +819,8 @@ version                         Print the SFTP version.
         diff = self.reactor.seconds() - startTime
         total = f.total
         try:
-            winSize = struct.unpack('4H',
-                fcntl.ioctl(0, tty.TIOCGWINSZ, '12345679'))
-        except IOError:
+            winSize = struct.unpack("4H", fcntl.ioctl(0, tty.TIOCGWINSZ, "12345679"))
+        except OSError:
             winSize = [None, 80]
         if diff == 0.0:
             speed = 0.0
@@ -841,14 +835,15 @@ version                         Print the SFTP version.
             percentage = (total / f.size) * 100
         else:
             percentage = 100
-        back = '%3i%% %s %sps %s ' % (percentage,
-                                      self._abbrevSize(total),
-                                      self._abbrevSize(speed),
-                                      self._abbrevTime(timeLeft))
-        spaces = (winSize[1] - (len(front) + len(back) + 1)) * ' '
-        command = '\r%s%s%s' % (front, spaces, back)
+        back = "%3i%% %s %sps %s " % (
+            percentage,
+            self._abbrevSize(total),
+            self._abbrevSize(speed),
+            self._abbrevTime(timeLeft),
+        )
+        spaces = (winSize[1] - (len(front) + len(back) + 1)) * " "
+        command = f"\r{front}{spaces}{back}"
         self._writeToTransport(command)
-
 
     def _getFilename(self, line):
         """
@@ -863,19 +858,19 @@ version                         Print the SFTP version.
         """
         line = line.strip()
         if not line:
-            return '', ''
-        if line[0] in '\'"':
+            return "", ""
+        if line[0] in "'\"":
             ret = []
             line = list(line)
             try:
-                for i in range(1,len(line)):
+                for i in range(1, len(line)):
                     c = line[i]
                     if c == line[0]:
-                        return ''.join(ret), ''.join(line[i+1:]).lstrip()
-                    elif c == '\\': # quoted character
+                        return "".join(ret), "".join(line[i + 1 :]).lstrip()
+                    elif c == "\\":  # quoted character
                         del line[i]
-                        if line[i] not in '\'"\\':
-                            raise IndexError("bad quote: \\%s" % (line[i],))
+                        if line[i] not in "'\"\\":
+                            raise IndexError(f"bad quote: \\{line[i]}")
                         ret.append(line[i])
                     else:
                         ret.append(line[i])
@@ -883,28 +878,32 @@ version                         Print the SFTP version.
                 raise IndexError("unterminated quote")
         ret = line.split(None, 1)
         if len(ret) == 1:
-            return ret[0], ''
+            return ret[0], ""
         else:
             return ret[0], ret[1]
 
-setattr(StdioClient, 'cmd_?', StdioClient.cmd_HELP)
+
+setattr(StdioClient, "cmd_?", StdioClient.cmd_HELP)
+
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         self.openChannel(SSHSession())
 
-class SSHSession(channel.SSHChannel):
 
-    name = b'session'
+class SSHSession(channel.SSHChannel):
+    name: bytes = b"session"
+    stderr: TextIO = sys.stderr
 
     def channelOpen(self, foo):
-        log.msg('session %s open' % self.id)
-        if self.conn.options['subsystem'].startswith('/'):
-            request = 'exec'
+        log.msg("session %s open" % self.id)
+        if self.conn.options["subsystem"].startswith("/"):
+            request = "exec"
         else:
-            request = 'subsystem'
-        d = self.conn.sendRequest(self, request, \
-            common.NS(self.conn.options['subsystem']), wantReply=1)
+            request = "subsystem"
+        d = self.conn.sendRequest(
+            self, request, common.NS(self.conn.options["subsystem"]), wantReply=1
+        )
         d.addCallback(self._cbSubsystem)
         d.addErrback(_ebExit)
 
@@ -913,30 +912,83 @@ class SSHSession(channel.SSHChannel):
         self.client.makeConnection(self)
         self.dataReceived = self.client.dataReceived
         f = None
-        if self.conn.options['batchfile']:
-            fn = self.conn.options['batchfile']
-            if fn != '-':
+        if self.conn.options["batchfile"]:
+            fn = self.conn.options["batchfile"]
+            if fn != "-":
                 f = open(fn)
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
-    def extReceived(self, t, data):
-        if t==connection.EXTENDED_DATA_STDERR:
-            log.msg('got %s stderr data' % len(data))
-            sys.stderr.write(data)
-            sys.stderr.flush()
+    def extReceived(self, t: int, data: bytes) -> None:
+        if t == connection.EXTENDED_DATA_STDERR:
+            log.msg("got %s stderr data" % len(data))
+            # RFC 4251
+            # ========
+            # Strings are also used to store text.  In that case, US-ASCII is
+            # used for internal names, and ISO-10646 UTF-8 for text that might
+            # be displayed to the user.  The terminating null character SHOULD
+            # NOT normally be stored in the string.  For example: the US-ASCII
+            # string "testing" is represented as 00 00 00 07 t e s t i n g.
+            # The UTF-8 mapping does not alter the encoding of US-ASCII
+            # characters.
+            #
+            # RFC 4254
+            # ========
+            # Additionally, some channels can transfer several types of data.  An
+            # example of this is stderr data from interactive sessions.  Such data
+            # can be passed with SSH_MSG_CHANNEL_EXTENDED_DATA messages, where a
+            # separate integer specifies the type of data.  The available types and
+            # their interpretation depend on the type of channel.
+            #
+            #    byte      SSH_MSG_CHANNEL_EXTENDED_DATA
+            #    uint32    recipient channel
+            #    uint32    data_type_code
+            #    string    data
+            #
+            # Data sent with these messages consumes the same window as ordinary
+            # data.
+            #
+            # Currently, only the following type is defined.  Note that the value
+            # for the 'data_type_code' is given in decimal format for readability,
+            # but the values are actually uint32 values.
+            #
+            #             Symbolic name                  data_type_code
+            #             -------------                  --------------
+            #           SSH_EXTENDED_DATA_STDERR               1
+            #
+            # (end of RFC quotations)
+            #
+            # Here we decode the stderr bytes as UTF-8 and handle errors by
+            # representing undecodeable bytes with a certain escape scheme.
+            # There is no guarantee that the peer is sending UTF-8 encoded
+            # bytes but if they are not it is complex to determine what
+            # encoding they _are_ sending.  The standard says nothing about
+            # how these bytes should be decoded because the standard probably
+            # doesn't think they should be decoded at all - just handle them
+            # as bytes!  However, our stderr is a text-mode file so we *must*
+            # decode them to be able to write them out at all.  And even if we
+            # had a binary-mode file we would still /probably/ want to write
+            # bytes in a *known* encoding to it.
+            #
+            # Perhaps in the future we can somehow inspect LANG or LC_* in the
+            # remote execution environment (but I'm not sure how) and use that
+            # as a hint about which encoding to use for decoding here.
+            # Meanwhile, UTF-8 is the de facto universal interoperable
+            # encoding so: use it.
+            self.stderr.write(data.decode("utf-8", "backslashreplace"))
+            self.stderr.flush()
 
     def eofReceived(self):
-        log.msg('got eof')
+        log.msg("got eof")
         self.stdio.loseWriteConnection()
 
     def closeReceived(self):
-        log.msg('remote side closed %s' % self)
+        log.msg("remote side closed %s" % self)
         self.conn.sendClose(self)
 
     def closed(self):
         try:
             reactor.stop()
-        except:
+        except BaseException:
             pass
 
     def stopWriting(self):
@@ -945,5 +997,6 @@ class SSHSession(channel.SSHChannel):
     def startWriting(self):
         self.stdio.resumeProducing()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()

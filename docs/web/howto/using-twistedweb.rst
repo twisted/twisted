@@ -47,7 +47,7 @@ Main Concepts
   creating ``HTTPChannel`` instances to parse the HTTP request,
   and begin the object lookup process. They contain the root Resource,
   the resource which represents the URL ``/`` on the site.
-- :ref:`Resource <web-howto-using-twistedweb-resources>` objects represent a single URL segment. The :api:`twisted.web.resource.IResource <IResource>` interface describes the methods a Resource object must implement in order to participate in the object publishing process.
+- :ref:`Resource <web-howto-using-twistedweb-resources>` objects represent a single URL segment. The :py:class:`IResource <twisted.web.resource.IResource>` interface describes the methods a Resource object must implement in order to participate in the object publishing process.
 - :ref:`Resource trees <web-howto-using-twistedweb-trees>` are arrangements of Resource objects into a Resource tree. Starting at the root Resource object, the tree of Resource objects defines the URLs which will be valid.
 - :ref:`.rpy scripts <web-howto-using-twistedweb-rpys>` are python scripts which the twisted.web static file server will execute, much like a CGI. However, unlike CGI they must create a Resource object which will be rendered when the URL is visited.
 - :ref:`Resource rendering <web-howto-using-twistedweb-rendering>` occurs when Twisted Web locates a leaf Resource object. A Resource can either return an html string or write to the request object.
@@ -111,7 +111,7 @@ site:
     class Simple(resource.Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     site = server.Site(Simple())
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
@@ -183,7 +183,8 @@ Here is a simple Resource object:
             return Resource.getChild(self, name, request)
 
         def render_GET(self, request):
-            return "Hello, world! I am located at %r." % (request.prepath,)
+            output = "Hello, world! I am located at {}.".format(request.prepath)
+            return output.encode("utf8")
 
     resource = Hello()
 
@@ -213,8 +214,8 @@ Resources can be arranged in trees using ``putChild`` . ``putChild`` puts a Reso
 
 
     root = Hello()
-    root.putChild('fred', Hello())
-    root.putChild('bob', Hello())
+    root.putChild(b'fred', Hello())
+    root.putChild(b'bob', Hello())
 
 
 
@@ -271,7 +272,7 @@ An ``.rpy`` script must define a variable, ``resource`` , which is the Resource 
 
     class MyResource(Resource):
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = MyResource()
 
@@ -331,7 +332,7 @@ Resource rendering occurs when Twisted Web locates a leaf Resource object to han
 
 
 - Return a string
-- Call ``request.write("stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
+- Call ``request.write(b"stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
 - Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write("stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
 
 
@@ -340,7 +341,7 @@ Resource rendering occurs when Twisted Web locates a leaf Resource object to han
 
 
 
-The :api:`twisted.web.resource.Resource <Resource>`
+The :py:class:`Resource <twisted.web.resource.Resource>`
 class, which is usually what one's Resource classes subclass, has a
 convenient default implementation
 of ``render`` . It will call a method
@@ -348,7 +349,7 @@ named ``self.render_METHOD``
 where "METHOD" is whatever HTTP method was used to request this
 resource. Examples: request_GET, request_POST, request_HEAD, and so
 on. It is recommended that you have your resource classes
-subclass :api:`twisted.web.resource.Resource <Resource>`
+subclass :py:class:`Resource <twisted.web.resource.Resource>`
 and implement ``render_METHOD`` methods as
 opposed to ``render`` itself. Note that for
 certain resources, ``request_POST = request_GET`` may be desirable in case one wants to process
@@ -366,13 +367,13 @@ Request encoders
 
 
 
-When using a :api:`twisted.web.resource.Resource <Resource>` ,
+When using a :py:class:`Resource <twisted.web.resource.Resource>` ,
 one can specify wrap it using a
-:api:`twisted.web.resource.EncodingResourceWrapper <EncodingResourceWrapper>`
+:py:class:`EncodingResourceWrapper <twisted.web.resource.EncodingResourceWrapper>`
 and passing a list of encoder factories.  The encoder factories are
 called when a request is processed and potentially return an encoder.
 By default twisted provides
-:api:`twisted.web.server.GzipEncoderFactory <GzipEncoderFactory>` which
+:py:class:`GzipEncoderFactory <twisted.web.server.GzipEncoderFactory>` which
 manages standard gzip compression. You can use it this way:
 
 
@@ -389,7 +390,7 @@ manages standard gzip compression. You can use it this way:
     class Simple(Resource):
         isLeaf = True
         def render_GET(self, request):
-            return "<html>Hello, world!</html>"
+            return b"<html>Hello, world!</html>"
 
     resource = Simple()
     wrapped = EncodingResourceWrapper(resource, [GzipEncoderFactory()])
@@ -465,7 +466,7 @@ between clients and other servers.
 
 
 
-Twisted supports two main proxy variants: a :api:`twisted.web.proxy.Proxy <Proxy>` and a :api:`twisted.web.proxy.ReverseProxy <ReverseProxy>` .
+Twisted supports two main proxy variants: a :py:class:`Proxy <twisted.web.proxy.Proxy>` and a :py:class:`ReverseProxy <twisted.web.proxy.ReverseProxy>` .
 
 
 
@@ -513,14 +514,14 @@ all requests will go through this proxy.
 
 
 
-:api:`twisted.web.proxy.Proxy <Proxy>` inherits
-from :api:`twisted.web.http.HTTPChannel <http.HTTPChannel>` . Each client
-request to the proxy generates a :api:`twisted.web.proxy.ProxyRequest <ProxyRequest>` from the proxy to the destination
+:py:class:`Proxy <twisted.web.proxy.Proxy>` inherits
+from :py:class:`http.HTTPChannel <twisted.web.http.HTTPChannel>` . Each client
+request to the proxy generates a :py:class:`ProxyRequest <twisted.web.proxy.ProxyRequest>` from the proxy to the destination
 server on behalf of the client. ``ProxyRequest`` uses
-a :api:`twisted.web.proxy.ProxyClientFactory <ProxyClientFactory>` to create
-an instance of the :api:`twisted.web.proxy.ProxyClient <ProxyClient>`
+a :py:class:`ProxyClientFactory <twisted.web.proxy.ProxyClientFactory>` to create
+an instance of the :py:class:`ProxyClient <twisted.web.proxy.ProxyClient>`
 protocol for the connection. ``ProxyClient`` inherits
-from :api:`twisted.web.http.HTTPClient <http.HTTPClient>` . Subclass ``ProxyRequest`` to
+from :py:class:`http.HTTPClient <twisted.web.http.HTTPClient>` . Subclass ``ProxyRequest`` to
 customize the way requests are processed or logged.
 
 
@@ -575,11 +576,11 @@ family:
 
 
 
-Like ``Proxy`` , :api:`twisted.web.proxy.ReverseProxy <ReverseProxy>` inherits
+Like ``Proxy`` , :py:class:`ReverseProxy <twisted.web.proxy.ReverseProxy>` inherits
 from ``http.HTTPChannel`` . Each client request to the reverse proxy
-generates a :api:`twisted.web.proxy.ReverseProxyRequest <ReverseProxyRequest>` to the destination
-server. Like ``ProxyRequest`` , :api:`twisted.web.proxy.ReverseProxyRequest <ReverseProxyRequest>` uses a :api:`twisted.web.proxy.ProxyClientFactory <ProxyClientFactory>` to create an instance of
-the :api:`twisted.web.proxy.ProxyClient <ProxyClient>` protocol for
+generates a :py:class:`ReverseProxyRequest <twisted.web.proxy.ReverseProxyRequest>` to the destination
+server. Like ``ProxyRequest`` , :py:class:`ReverseProxyRequest <twisted.web.proxy.ReverseProxyRequest>` uses a :py:class:`ProxyClientFactory <twisted.web.proxy.ProxyClientFactory>` to create an instance of
+the :py:class:`ProxyClient <twisted.web.proxy.ProxyClient>` protocol for
 the connection.
 
 
@@ -603,7 +604,7 @@ variable called application. Usually,
 the ``twisted.application.strports.service`` function will be used to build a
 service instance that will be used to make the application listen on a TCP port
 (80, in case direct web serving is desired), with the listener being
-a :api:`twisted.web.server.Site <twisted.web.server.Site>` . The resulting file
+a :py:class:`twisted.web.server.Site` . The resulting file
 can then be run with ``twistd -y`` . Alternatively a reactor object can be used directly to make
 a runnable script.
 
@@ -667,7 +668,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server
 
     root = static.File("/var/www/htdocs")
-    root.putChild("doc", static.File("/usr/share/doc"))
+    root.putChild(b"doc", static.File("/usr/share/doc"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()
@@ -683,7 +684,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     from twisted.web import static, server, twcgi
 
     root = static.File("/var/www/htdocs")
-    root.putChild("cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
+    root.putChild(b"cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 80)
     endpoint.listen(server.Site(root))
     reactor.run()
@@ -769,7 +770,7 @@ exists.
 There is a small set of known mime types and encodings which augment the default mime types provided by the Python standard library `mimetypes`.
 You can always modify the content type and encoding mappings by manipulating the instance variables.
 
-For example to recognize WOFF File Format 2.0 and set the right Content-Type header you can modify the `contentTypes` member of an instance::
+For example to recognize WOFF File Format 2.0 and set the right Content-Type header you can modify the `contentTypes` member of an instance:
 
 .. code-block:: python
 
@@ -889,7 +890,7 @@ use the full power of Python. Here are some simple examples:
     with open("/etc/web/ports") as f:
         for num in map(int, f.read().split()):
             serviceCollection.addCollection(
-                strports.service("tcp:%d" % num, site)
+                strports.service("tcp:{}".format(num), site)
             )
 
 
@@ -1011,7 +1012,7 @@ Resource Scripts
 
 
 
-A Resource script is a Python file ending with the extension ``.rpy`` , which is required to create an instance of a (subclass of a) :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` .
+A Resource script is a Python file ending with the extension ``.rpy`` , which is required to create an instance of a (subclass of a) :py:class:`twisted.web.resource.Resource` .
 
 
 
@@ -1024,7 +1025,7 @@ Resource scripts have 3 special variables:
 
 
 - ``__file__`` : The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.
-- ``registry`` : An object of class :api:`twisted.web.static.Registry <static.Registry>` . It can be used to access and set persistent data keyed by a class.
+- ``registry`` : An object of class :py:class:`static.Registry <twisted.web.static.Registry>` . It can be used to access and set persistent data keyed by a class.
 - ``resource`` : The variable which must be defined by the script and set to the resource instance that will be used to render the page.
 
 
@@ -1043,7 +1044,7 @@ A very simple Resource Script might look like:
     from twisted.web import resource
     class MyGreatResource(resource.Resource):
         def render_GET(self, request):
-            return "<html>foo</html>"
+            return b"<html>foo</html>"
 
     resource = MyGreatResource()
 
@@ -1071,7 +1072,8 @@ persistent data, might look like:
     class MyResource(resource.Resource):
         def render_GET(self, request):
             counter.increment()
-            return "you are visitor %d" % counter.getValue()
+            output = "you are visitor {}".format(counter.getValue())
+            return output.encode("utf8")
 
     resource = MyResource()
 
@@ -1130,7 +1132,7 @@ Spreadable Web Servers
 
 
 
-One of the most interesting applications of Twisted Web is the distributed webserver; multiple servers can all answer requests on the same port, using the :api:`twisted.spread <twisted.spread>` package for "spreadable" computing.  In two different directories, run the commands:
+One of the most interesting applications of Twisted Web is the distributed webserver; multiple servers can all answer requests on the same port, using the :py:mod:`twisted.spread` package for "spreadable" computing.  In two different directories, run the commands:
 
 
 
@@ -1250,7 +1252,7 @@ your helloworld module/package, which might look like this:
     def application(environ, start_response):
         """Basic WSGI Application"""
         start_response('200 OK', [('Content-type','text/plain')])
-        return ['Hello World!']
+        return [b'Hello World!']
 
 
 
@@ -1289,7 +1291,7 @@ for a site, in the following tac file:
     def application(environ, start_response):
         """A basic WSGI application"""
         start_response('200 OK', [('Content-type','text/plain')])
-        return ['Hello World!']
+        return [b'Hello World!']
 
     # Create the WSGI resource
     wsgiAppAsResource = WSGIResource(reactor, wsgiThreadPool, application)
@@ -1414,9 +1416,9 @@ Here is an example for Twisted Web's reverse proxy:
 
     from twisted.application import internet, service, strports
     from twisted.web import proxy, server, vhost
-    vhostName = 'example.com'
+    vhostName = b'example.com'
     reverseProxy = proxy.ReverseProxyResource('internal', 8538,
-                                              '/vhost.rpy/http/'+vhostName+'/')
+                                              b'/vhost.rpy/http/'+vhostName+b'/')
     root = vhost.NameVirtualHost()
     root.addHost(vhostName, reverseProxy)
     site = server.Site(root)
@@ -1435,16 +1437,16 @@ Rewriting URLs
 
 
 Sometimes it is convenient to modify the content of
-the :api:`twisted.web.server.Request <Request>` object
+the :py:class:`Request <twisted.web.server.Request>` object
 before passing it on. Because this is most often used to rewrite
 either the URL, the similarity to Apache's ``mod_rewrite``
-has inspired the :api:`twisted.web.rewrite <twisted.web.rewrite>`
+has inspired the :py:mod:`twisted.web.rewrite`
 module. Using this module is done via wrapping a resource with
-a :api:`twisted.web.rewrite.RewriterResource <twisted.web.rewrite.RewriterResource>` which
+a :py:class:`twisted.web.rewrite.RewriterResource` which
 then has rewrite rules. Rewrite rules are functions which accept a
 request object, and possible modify it. After all rewrite rules run,
 the child resolution chain continues as if the wrapped resource,
-rather than the :api:`twisted.web.rewrite.RewriterResource <RewriterResource>` , was the child.
+rather than the :py:class:`RewriterResource <twisted.web.rewrite.RewriterResource>` , was the child.
 
 
 
@@ -1466,7 +1468,7 @@ itself:
 
 This causes the URL ``/~foo/bar.html`` to be treated
 like ``/users/foo/bar.html`` . If done after setting
-default's ``users`` child to a :api:`twisted.web.distrib.UserDirectory <distrib.UserDirectory>` , it gives a
+default's ``users`` child to a :py:class:`distrib.UserDirectory <twisted.web.distrib.UserDirectory>` , it gives a
 configuration similar to the classical configuration of web server,
 common since the first NCSA servers.
 
@@ -1498,7 +1500,7 @@ Here is an example which does that:
     class ExampleResource(Resource):
 
         def render_GET(self, request):
-            request.write("hello world")
+            request.write(b"hello world")
             d = request.notifyFinish()
             d.addCallback(lambda _: println("finished normally"))
             d.addErrback(println, "error")
@@ -1523,8 +1525,8 @@ As-Is Serving
 
 
 Sometimes, you want to be able to send headers and status
-directly. While you can do this with a :api:`twisted.web.script.ResourceScript <ResourceScript>` , an easier way is to
-use :api:`twisted.web.static.ASISProcessor <ASISProcessor>` .
+directly. While you can do this with a :py:func:`ResourceScript <twisted.web.script.ResourceScript>` , an easier way is to
+use :py:class:`ASISProcessor <twisted.web.static.ASISProcessor>` .
 Use it by, for example, adding it as a processor for
 the ``.asis`` extension. Here is a sample file:
 

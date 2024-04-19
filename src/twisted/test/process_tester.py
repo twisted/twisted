@@ -1,27 +1,18 @@
 """Test program for processes."""
 
-import sys, os
-
-# Twisted is unimportable from this file, so just do the PY3 check manually
-if sys.version_info < (3, 0):
-    _PY3 = False
-else:
-    _PY3 = True
+import os
+import sys
 
 test_file_match = "process_test.log.*"
 test_file = "process_test.log.%d" % os.getpid()
 
-def main():
-    f = open(test_file, 'wb')
 
-    if _PY3:
-        stdin = sys.stdin.buffer
-        stderr = sys.stderr.buffer
-        stdout = sys.stdout.buffer
-    else:
-        stdin = sys.stdin
-        stdout = sys.stdout
-        stderr = sys.stderr
+def main() -> None:
+    f = open(test_file, "wb")
+
+    stdin = sys.stdin.buffer
+    stderr = sys.stderr.buffer
+    stdout = sys.stdout.buffer
 
     # stage 1
     b = stdin.read(4)
@@ -49,5 +40,5 @@ def main():
     sys.exit(23)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

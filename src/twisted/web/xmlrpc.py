@@ -11,34 +11,24 @@ Maintainer: Itamar Shtull-Trauring
 @type Fault: L{xmlrpclib.Fault}
 """
 
-from __future__ import division, absolute_import
-
-from twisted.python.compat import _PY3, intToBytes, nativeString, urllib_parse
-from twisted.python.compat import unicode
 
 # System Imports
 import base64
-if _PY3:
-    import xmlrpc.client as xmlrpclib
-else:
-    import xmlrpclib
+import xmlrpc.client as xmlrpclib
+from urllib.parse import urlparse
+from xmlrpc.client import Binary, Boolean, DateTime, Fault
+
+from twisted.internet import defer, error, protocol
+from twisted.logger import Logger
+from twisted.python import failure, reflect
+from twisted.python.compat import nativeString
 
 # Sibling Imports
-from twisted.web import resource, server, http
-from twisted.internet import defer, protocol, reactor
-from twisted.python import reflect, failure
-from twisted.logger import Logger
+from twisted.web import http, resource, server
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001
 FAILURE = 8002
-
-
-# Useful so people don't need to import xmlrpclib directly
-Fault = xmlrpclib.Fault
-Binary = xmlrpclib.Binary
-Boolean = xmlrpclib.Boolean
-DateTime = xmlrpclib.DateTime
 
 
 def withRequest(f):
@@ -58,7 +48,6 @@ def withRequest(f):
     """
     f.withRequest = True
     return f
-
 
 
 class NoSuchFunction(Fault):
@@ -85,14 +74,13 @@ class Handler:
     """
 
     def __init__(self, resource, *args):
-        self.resource = resource # the XML-RPC resource we are connected to
+        self.resource = resource  # the XML-RPC resource we are connected to
         self.result = defer.Deferred()
         self.run(*args)
 
     def run(self, *args):
         # event driven equivalent of 'raise UnimplementedError'
-        self.result.errback(
-            NotImplementedError("Implement run() in subclasses"))
+        self.result.errback(NotImplementedError("Implement run() in subclasses"))
 
 
 class XMLRPC(resource.Resource):
@@ -124,8 +112,8 @@ class XMLRPC(resource.Resource):
     FAILURE = 8002
 
     isLeaf = 1
-    separator = '.'
-    allowedMethods = (b'POST',)
+    separator = "."
+    allowedMethods = (b"POST",)
     _log = Logger()
 
     def __init__(self, allowNone=False, useDateTime=False):
@@ -134,10 +122,8 @@ class XMLRPC(resource.Resource):
         self.allowNone = allowNone
         self.useDateTime = useDateTime
 
-
     def __setattr__(self, name, value):
         self.__dict__[name] = value
-
 
     def putSubHandler(self, prefix, handler):
         self.subHandlers[prefix] = handler
@@ -152,10 +138,11 @@ class XMLRPC(resource.Resource):
         request.content.seek(0, 0)
         request.setHeader(b"content-type", b"text/xml; charset=utf-8")
         try:
-            args, functionPath = xmlrpclib.loads(request.content.read(),
-                use_datetime=self.useDateTime)
+            args, functionPath = xmlrpclib.loads(
+                request.content.read(), use_datetime=self.useDateTime
+            )
         except Exception as e:
-            f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
+            f = Fault(self.FAILURE, f"Can't deserialize input: {e}")
             self._cbRender(f, request)
         else:
             try:
@@ -168,14 +155,13 @@ class XMLRPC(resource.Resource):
                 # Deferred should be written out and Request.finish called.
                 responseFailed = []
                 request.notifyFinish().addErrback(responseFailed.append)
-                if getattr(function, 'withRequest', False):
+                if getattr(function, "withRequest", False):
                     d = defer.maybeDeferred(function, request, *args)
                 else:
                     d = defer.maybeDeferred(function, *args)
                 d.addErrback(self._ebRender)
                 d.addCallback(self._cbRender, request, responseFailed)
         return server.NOT_DONE_YET
-
 
     def _cbRender(self, result, request, responseFailed=None):
         if responseFailed:
@@ -188,29 +174,27 @@ class XMLRPC(resource.Resource):
         try:
             try:
                 content = xmlrpclib.dumps(
-                    result, methodresponse=True,
-                    allow_none=self.allowNone)
+                    result, methodresponse=True, allow_none=self.allowNone
+                )
             except Exception as e:
-                f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
-                content = xmlrpclib.dumps(f, methodresponse=True,
-                                          allow_none=self.allowNone)
+                f = Fault(self.FAILURE, f"Can't serialize output: {e}")
+                content = xmlrpclib.dumps(
+                    f, methodresponse=True, allow_none=self.allowNone
+                )
 
-            if isinstance(content, unicode):
-                content = content.encode('utf8')
-            request.setHeader(
-                b"content-length", intToBytes(len(content)))
+            if isinstance(content, str):
+                content = content.encode("utf8")
+            request.setHeader(b"content-length", b"%d" % (len(content),))
             request.write(content)
-        except:
-            self._log.failure('')
+        except Exception:
+            self._log.failure("")
         request.finish()
-
 
     def _ebRender(self, failure):
         if isinstance(failure.value, Fault):
             return failure.value
-        self._log.failure('', failure)
+        self._log.failure("", failure)
         return Fault(self.FAILURE, "error")
-
 
     def lookupProcedure(self, procedurePath):
         """
@@ -236,17 +220,18 @@ class XMLRPC(resource.Resource):
             prefix, procedurePath = procedurePath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
             if handler is None:
-                raise NoSuchFunction(self.NOT_FOUND,
-                    "no such subHandler %s" % prefix)
+                raise NoSuchFunction(self.NOT_FOUND, "no such subHandler %s" % prefix)
             return handler.lookupProcedure(procedurePath)
 
         f = getattr(self, "xmlrpc_%s" % procedurePath, None)
         if not f:
-            raise NoSuchFunction(self.NOT_FOUND,
-                "procedure %s not found" % procedurePath)
+            raise NoSuchFunction(
+                self.NOT_FOUND, "procedure %s not found" % procedurePath
+            )
         elif not callable(f):
-            raise NoSuchFunction(self.NOT_FOUND,
-                "procedure %s not callable" % procedurePath)
+            raise NoSuchFunction(
+                self.NOT_FOUND, "procedure %s not callable" % procedurePath
+            )
         else:
             return f
 
@@ -256,7 +241,7 @@ class XMLRPC(resource.Resource):
 
         @since: 11.1
         """
-        return reflect.prefixedMethodNames(self.__class__, 'xmlrpc_')
+        return reflect.prefixedMethodNames(self.__class__, "xmlrpc_")
 
 
 class XMLRPCIntrospection(XMLRPC):
@@ -287,26 +272,28 @@ class XMLRPCIntrospection(XMLRPC):
         Return a list of the method names implemented by this server.
         """
         functions = []
-        todo = [(self._xmlrpc_parent, '')]
+        todo = [(self._xmlrpc_parent, "")]
         while todo:
             obj, prefix = todo.pop(0)
             functions.extend([prefix + name for name in obj.listProcedures()])
-            todo.extend([ (obj.getSubHandler(name),
-                           prefix + name + obj.separator)
-                          for name in obj.getSubHandlerPrefixes() ])
+            todo.extend(
+                [
+                    (obj.getSubHandler(name), prefix + name + obj.separator)
+                    for name in obj.getSubHandlerPrefixes()
+                ]
+            )
         return functions
 
-    xmlrpc_listMethods.signature = [['array']]
+    xmlrpc_listMethods.signature = [["array"]]  # type: ignore[attr-defined]
 
     def xmlrpc_methodHelp(self, method):
         """
         Return a documentation string describing the use of the given method.
         """
         method = self._xmlrpc_parent.lookupProcedure(method)
-        return (getattr(method, 'help', None)
-                or getattr(method, '__doc__', None) or '')
+        return getattr(method, "help", None) or getattr(method, "__doc__", None) or ""
 
-    xmlrpc_methodHelp.signature = [['string', 'string']]
+    xmlrpc_methodHelp.signature = [["string", "string"]]  # type: ignore[attr-defined]
 
     def xmlrpc_methodSignature(self, method):
         """
@@ -318,41 +305,43 @@ class XMLRPCIntrospection(XMLRPC):
         string is returned.
         """
         method = self._xmlrpc_parent.lookupProcedure(method)
-        return getattr(method, 'signature', None) or ''
+        return getattr(method, "signature", None) or ""
 
-    xmlrpc_methodSignature.signature = [['array', 'string'],
-                                        ['string', 'string']]
+    xmlrpc_methodSignature.signature = [  # type: ignore[attr-defined]
+        ["array", "string"],
+        ["string", "string"],
+    ]
 
 
 def addIntrospection(xmlrpc):
     """
     Add Introspection support to an XMLRPC server.
 
-    @param parent: the XMLRPC server to add Introspection support to.
-    @type parent: L{XMLRPC}
+    @param xmlrpc: the XMLRPC server to add Introspection support to.
+    @type xmlrpc: L{XMLRPC}
     """
-    xmlrpc.putSubHandler('system', XMLRPCIntrospection(xmlrpc))
+    xmlrpc.putSubHandler("system", XMLRPCIntrospection(xmlrpc))
 
 
 class QueryProtocol(http.HTTPClient):
     def connectionMade(self):
         self._response = None
-        self.sendCommand(b'POST', self.factory.path)
-        self.sendHeader(b'User-Agent', b'Twisted/XMLRPClib')
-        self.sendHeader(b'Host', self.factory.host)
-        self.sendHeader(b'Content-type', b'text/xml; charset=utf-8')
+        self.sendCommand(b"POST", self.factory.path)
+        self.sendHeader(b"User-Agent", b"Twisted/XMLRPClib")
+        self.sendHeader(b"Host", self.factory.host)
+        self.sendHeader(b"Content-type", b"text/xml; charset=utf-8")
         payload = self.factory.payload
-        self.sendHeader(b'Content-length', intToBytes(len(payload)))
+        self.sendHeader(b"Content-length", b"%d" % (len(payload),))
 
         if self.factory.user:
-            auth = b':'.join([self.factory.user, self.factory.password])
-            authHeader = b''.join([b'Basic ', base64.b64encode(auth)])
-            self.sendHeader(b'Authorization', authHeader)
+            auth = b":".join([self.factory.user, self.factory.password])
+            authHeader = b"".join([b"Basic ", base64.b64encode(auth)])
+            self.sendHeader(b"Authorization", authHeader)
         self.endHeaders()
         self.transport.write(payload)
 
     def handleStatus(self, version, status, message):
-        if status != b'200':
+        if status != b"200":
             self.factory.badStatus(status, message)
 
     def handleResponse(self, contents):
@@ -373,6 +362,9 @@ class QueryProtocol(http.HTTPClient):
         If we have a full response from the server, then parse it and fired a
         Deferred with the return value or C{Fault} that the server gave us.
         """
+        if not reason.check(error.ConnectionDone, error.ConnectionLost):
+            # for example, ssl.SSL.Error
+            self.factory.clientConnectionLost(None, reason)
         http.HTTPClient.connectionLost(self, reason)
         if self._response is not None:
             response, self._response = self._response, None
@@ -387,7 +379,7 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class _QueryFactory(protocol.ClientFactory):
+class QueryFactory(protocol.ClientFactory):
     """
     XML-RPC Client Factory
 
@@ -414,8 +406,18 @@ class _QueryFactory(protocol.ClientFactory):
     deferred = None
     protocol = QueryProtocol
 
-    def __init__(self, path, host, method, user=None, password=None,
-                 allowNone=False, args=(), canceller=None, useDateTime=False):
+    def __init__(
+        self,
+        path,
+        host,
+        method,
+        user=None,
+        password=None,
+        allowNone=False,
+        args=(),
+        canceller=None,
+        useDateTime=False,
+    ):
         """
         @param method: The name of the method to call.
         @type method: C{str}
@@ -434,10 +436,12 @@ class _QueryFactory(protocol.ClientFactory):
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method,
-            xmlrpclib.dumps(args, allow_none=allowNone))
-        if isinstance(self.payload, unicode):
-            self.payload = self.payload.encode('utf8')
+        self.payload = payloadTemplate % (
+            method,
+            xmlrpclib.dumps(args, allow_none=allowNone),
+        )
+        if isinstance(self.payload, str):
+            self.payload = self.payload.encode("utf8")
         self.deferred = defer.Deferred(canceller)
         self.useDateTime = useDateTime
 
@@ -445,9 +449,8 @@ class _QueryFactory(protocol.ClientFactory):
         if not self.deferred:
             return
         try:
-            response = xmlrpclib.loads(contents,
-                use_datetime=self.useDateTime)[0][0]
-        except:
+            response = xmlrpclib.loads(contents, use_datetime=self.useDateTime)[0][0]
+        except BaseException:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
         else:
@@ -464,7 +467,6 @@ class _QueryFactory(protocol.ClientFactory):
     def badStatus(self, status, message):
         deferred, self.deferred = self.deferred, None
         deferred.errback(ValueError(status, message))
-
 
 
 class Proxy:
@@ -505,13 +507,28 @@ class Proxy:
     @ivar _reactor: The reactor used to create connections.
     @type _reactor: Object providing L{twisted.internet.interfaces.IReactorTCP}
 
-    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Mainly
-        useful for tests.
+    @ivar queryFactory: Object returning a factory for XML-RPC protocol. Use
+        this for testing, or to manipulate the XML-RPC parsing behavior. For
+        example, you may set this to a custom "debugging" factory object that
+        reimplements C{parseResponse} in order to log the raw XML-RPC contents
+        from the server before continuing on with parsing. Another possibility
+        is to implement your own XML-RPC marshaller here to handle non-standard
+        XML-RPC traffic.
+    @type queryFactory: L{twisted.web.xmlrpc.QueryFactory}
     """
-    queryFactory = _QueryFactory
 
-    def __init__(self, url, user=None, password=None, allowNone=False,
-                 useDateTime=False, connectTimeout=30.0, reactor=reactor):
+    queryFactory = QueryFactory
+
+    def __init__(
+        self,
+        url,
+        user=None,
+        password=None,
+        allowNone=False,
+        useDateTime=False,
+        connectTimeout=30.0,
+        reactor=None,
+    ):
         """
         @param url: The URL to which to post method calls.  Calls will be made
             over SSL if the scheme is HTTPS.  If netloc contains username or
@@ -520,28 +537,30 @@ class Proxy:
         @type url: L{bytes}
 
         """
-        scheme, netloc, path, params, query, fragment = urllib_parse.urlparse(
-            url)
-        netlocParts = netloc.split(b'@')
+        if reactor is None:
+            from twisted.internet import reactor
+
+        scheme, netloc, path, params, query, fragment = urlparse(url)
+        netlocParts = netloc.split(b"@")
         if len(netlocParts) == 2:
-            userpass = netlocParts.pop(0).split(b':')
+            userpass = netlocParts.pop(0).split(b":")
             self.user = userpass.pop(0)
             try:
                 self.password = userpass.pop(0)
-            except:
+            except BaseException:
                 self.password = None
         else:
             self.user = self.password = None
-        hostport = netlocParts[0].split(b':')
+        hostport = netlocParts[0].split(b":")
         self.host = hostport.pop(0)
         try:
             self.port = int(hostport.pop(0))
-        except:
+        except BaseException:
             self.port = None
         self.path = path
-        if self.path in [b'', None]:
-            self.path = b'/'
-        self.secure = (scheme == b'https')
+        if self.path in [b"", None]:
+            self.path = b"/"
+        self.secure = scheme == b"https"
         if user is not None:
             self.user = user
         if password is not None:
@@ -550,7 +569,6 @@ class Proxy:
         self.useDateTime = useDateTime
         self.connectTimeout = connectTimeout
         self._reactor = reactor
-
 
     def callRemote(self, method, *args):
         """
@@ -565,27 +583,51 @@ class Proxy:
             connection is closed and the deferred will fire with a
             L{defer.CancelledError}.
         """
+
         def cancel(d):
             factory.deferred = None
             connector.disconnect()
+
         factory = self.queryFactory(
-            self.path, self.host, method, self.user,
-            self.password, self.allowNone, args, cancel, self.useDateTime)
+            self.path,
+            self.host,
+            method,
+            self.user,
+            self.password,
+            self.allowNone,
+            args,
+            cancel,
+            self.useDateTime,
+        )
 
         if self.secure:
             from twisted.internet import ssl
+
+            contextFactory = ssl.optionsForClientTLS(hostname=nativeString(self.host))
             connector = self._reactor.connectSSL(
-                nativeString(self.host), self.port or 443,
-                factory, ssl.ClientContextFactory(),
-                timeout=self.connectTimeout)
+                nativeString(self.host),
+                self.port or 443,
+                factory,
+                contextFactory,
+                timeout=self.connectTimeout,
+            )
         else:
             connector = self._reactor.connectTCP(
-                nativeString(self.host), self.port or 80, factory,
-                timeout=self.connectTimeout)
+                nativeString(self.host),
+                self.port or 80,
+                factory,
+                timeout=self.connectTimeout,
+            )
         return factory.deferred
 
 
 __all__ = [
-    "XMLRPC", "Handler", "NoSuchFunction", "Proxy",
-
-    "Fault", "Binary", "Boolean", "DateTime"]
+    "XMLRPC",
+    "Handler",
+    "NoSuchFunction",
+    "Proxy",
+    "Fault",
+    "Binary",
+    "Boolean",
+    "DateTime",
+]

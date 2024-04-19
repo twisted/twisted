@@ -1,1 +1,0 @@
-twisted.web.client.Request and twisted.web.client.HTTPClient were both vulnerable to header injection attacks.  They now replace linear whitespace ('\r', '\n', and '\r\n') with a single space.

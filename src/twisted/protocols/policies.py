@@ -8,17 +8,18 @@ Resource limiting policies.
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
 
-from __future__ import division, absolute_import
 
 # system imports
 import sys
+from typing import Optional, Type
 
 from zope.interface import directlyProvides, providedBy
 
-# twisted imports
-from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
-from twisted.internet import error
+from twisted.internet import error, interfaces
 from twisted.internet.interfaces import ILoggingContext
+
+# twisted imports
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
 
@@ -32,8 +33,7 @@ def _wrappedLogPrefix(wrapper, wrapped):
         logPrefix = wrapped.logPrefix()
     else:
         logPrefix = wrapped.__class__.__name__
-    return "%s (%s)" % (logPrefix, wrapper.__class__.__name__)
-
+    return f"{logPrefix} ({wrapper.__class__.__name__})"
 
 
 class ProtocolWrapper(Protocol):
@@ -50,10 +50,11 @@ class ProtocolWrapper(Protocol):
 
     disconnecting = 0
 
-    def __init__(self, factory, wrappedProtocol):
+    def __init__(
+        self, factory: "WrappingFactory", wrappedProtocol: interfaces.IProtocol
+    ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
-
 
     def logPrefix(self):
         """
@@ -61,7 +62,6 @@ class ProtocolWrapper(Protocol):
         the current one.
         """
         return _wrappedLogPrefix(self, self.wrappedProtocol)
-
 
     def makeConnection(self, transport):
         """
@@ -74,51 +74,40 @@ class ProtocolWrapper(Protocol):
         self.factory.registerProtocol(self)
         self.wrappedProtocol.makeConnection(self)
 
-
     # Transport relaying
 
     def write(self, data):
         self.transport.write(data)
 
-
     def writeSequence(self, data):
         self.transport.writeSequence(data)
-
 
     def loseConnection(self):
         self.disconnecting = 1
         self.transport.loseConnection()
 
-
     def getPeer(self):
         return self.transport.getPeer()
-
 
     def getHost(self):
         return self.transport.getHost()
 
-
     def registerProducer(self, producer, streaming):
         self.transport.registerProducer(producer, streaming)
-
 
     def unregisterProducer(self):
         self.transport.unregisterProducer()
 
-
     def stopConsuming(self):
         self.transport.stopConsuming()
 
-
     def __getattr__(self, name):
         return getattr(self.transport, name)
-
 
     # Protocol relaying
 
     def dataReceived(self, data):
         self.wrappedProtocol.dataReceived(data)
-
 
     def connectionLost(self, reason):
         self.factory.unregisterProtocol(self)
@@ -133,12 +122,11 @@ class WrappingFactory(ClientFactory):
     Wraps a factory and its protocols, and keeps track of them.
     """
 
-    protocol = ProtocolWrapper
+    protocol: Type[Protocol] = ProtocolWrapper
 
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
-
 
     def logPrefix(self):
         """
@@ -146,32 +134,25 @@ class WrappingFactory(ClientFactory):
         """
         return _wrappedLogPrefix(self, self.wrappedFactory)
 
-
     def doStart(self):
         self.wrappedFactory.doStart()
         ClientFactory.doStart(self)
-
 
     def doStop(self):
         self.wrappedFactory.doStop()
         ClientFactory.doStop(self)
 
-
     def startedConnecting(self, connector):
         self.wrappedFactory.startedConnecting(connector)
-
 
     def clientConnectionFailed(self, connector, reason):
         self.wrappedFactory.clientConnectionFailed(connector, reason)
 
-
     def clientConnectionLost(self, connector, reason):
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
-
     def buildProtocol(self, addr):
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
-
 
     def registerProtocol(self, p):
         """
@@ -179,13 +160,11 @@ class WrappingFactory(ClientFactory):
         """
         self.protocols[p] = 1
 
-
     def unregisterProtocol(self, p):
         """
         Called by protocols when they go away.
         """
         del self.protocols[p]
-
 
 
 class ThrottlingProtocol(ProtocolWrapper):
@@ -199,44 +178,35 @@ class ThrottlingProtocol(ProtocolWrapper):
         self.factory.registerWritten(len(data))
         ProtocolWrapper.write(self, data)
 
-
     def writeSequence(self, seq):
         self.factory.registerWritten(sum(map(len, seq)))
         ProtocolWrapper.writeSequence(self, seq)
-
 
     def dataReceived(self, data):
         self.factory.registerRead(len(data))
         ProtocolWrapper.dataReceived(self, data)
 
-
     def registerProducer(self, producer, streaming):
         self.producer = producer
         ProtocolWrapper.registerProducer(self, producer, streaming)
-
 
     def unregisterProducer(self):
         del self.producer
         ProtocolWrapper.unregisterProducer(self)
 
-
     def throttleReads(self):
         self.transport.pauseProducing()
 
-
     def unthrottleReads(self):
         self.transport.resumeProducing()
-
 
     def throttleWrites(self):
         if hasattr(self, "producer"):
             self.producer.pauseProducing()
 
-
     def unthrottleWrites(self):
         if hasattr(self, "producer"):
             self.producer.resumeProducing()
-
 
 
 class ThrottlingFactory(WrappingFactory):
@@ -249,20 +219,24 @@ class ThrottlingFactory(WrappingFactory):
 
     protocol = ThrottlingProtocol
 
-    def __init__(self, wrappedFactory, maxConnectionCount=sys.maxsize,
-                 readLimit=None, writeLimit=None):
+    def __init__(
+        self,
+        wrappedFactory,
+        maxConnectionCount=sys.maxsize,
+        readLimit=None,
+        writeLimit=None,
+    ):
         WrappingFactory.__init__(self, wrappedFactory)
         self.connectionCount = 0
         self.maxConnectionCount = maxConnectionCount
-        self.readLimit = readLimit # max bytes we should read per second
-        self.writeLimit = writeLimit # max bytes we should write per second
+        self.readLimit = readLimit  # max bytes we should read per second
+        self.writeLimit = writeLimit  # max bytes we should write per second
         self.readThisSecond = 0
         self.writtenThisSecond = 0
         self.unthrottleReadsID = None
         self.checkReadBandwidthID = None
         self.unthrottleWritesID = None
         self.checkWriteBandwidthID = None
-
 
     def callLater(self, period, func):
         """
@@ -271,8 +245,8 @@ class ThrottlingFactory(WrappingFactory):
         for test purpose.
         """
         from twisted.internet import reactor
-        return reactor.callLater(period, func)
 
+        return reactor.callLater(period, func)
 
     def registerWritten(self, length):
         """
@@ -280,13 +254,11 @@ class ThrottlingFactory(WrappingFactory):
         """
         self.writtenThisSecond += length
 
-
     def registerRead(self, length):
         """
         Called by protocol to tell us more bytes were read.
         """
         self.readThisSecond += length
-
 
     def checkReadBandwidth(self):
         """
@@ -295,22 +267,20 @@ class ThrottlingFactory(WrappingFactory):
         if self.readThisSecond > self.readLimit:
             self.throttleReads()
             throttleTime = (float(self.readThisSecond) / self.readLimit) - 1.0
-            self.unthrottleReadsID = self.callLater(throttleTime,
-                                                    self.unthrottleReads)
+            self.unthrottleReadsID = self.callLater(throttleTime, self.unthrottleReads)
         self.readThisSecond = 0
         self.checkReadBandwidthID = self.callLater(1, self.checkReadBandwidth)
-
 
     def checkWriteBandwidth(self):
         if self.writtenThisSecond > self.writeLimit:
             self.throttleWrites()
             throttleTime = (float(self.writtenThisSecond) / self.writeLimit) - 1.0
-            self.unthrottleWritesID = self.callLater(throttleTime,
-                                                        self.unthrottleWrites)
+            self.unthrottleWritesID = self.callLater(
+                throttleTime, self.unthrottleWrites
+            )
         # reset for next round
         self.writtenThisSecond = 0
         self.checkWriteBandwidthID = self.callLater(1, self.checkWriteBandwidth)
-
 
     def throttleReads(self):
         """
@@ -319,7 +289,6 @@ class ThrottlingFactory(WrappingFactory):
         log.msg("Throttling reads on %s" % self)
         for p in self.protocols.keys():
             p.throttleReads()
-
 
     def unthrottleReads(self):
         """
@@ -330,7 +299,6 @@ class ThrottlingFactory(WrappingFactory):
         for p in self.protocols.keys():
             p.unthrottleReads()
 
-
     def throttleWrites(self):
         """
         Throttle writes on all protocols.
@@ -338,7 +306,6 @@ class ThrottlingFactory(WrappingFactory):
         log.msg("Throttling writes on %s" % self)
         for p in self.protocols.keys():
             p.throttleWrites()
-
 
     def unthrottleWrites(self):
         """
@@ -348,7 +315,6 @@ class ThrottlingFactory(WrappingFactory):
         log.msg("Stopped throttling writes on %s" % self)
         for p in self.protocols.keys():
             p.unthrottleWrites()
-
 
     def buildProtocol(self, addr):
         if self.connectionCount == 0:
@@ -364,7 +330,6 @@ class ThrottlingFactory(WrappingFactory):
             log.msg("Max connection count reached!")
             return None
 
-
     def unregisterProtocol(self, p):
         WrappingFactory.unregisterProtocol(self, p)
         self.connectionCount -= 1
@@ -379,25 +344,21 @@ class ThrottlingFactory(WrappingFactory):
                 self.checkWriteBandwidthID.cancel()
 
 
-
 class SpewingProtocol(ProtocolWrapper):
     def dataReceived(self, data):
         log.msg("Received: %r" % data)
-        ProtocolWrapper.dataReceived(self,data)
+        ProtocolWrapper.dataReceived(self, data)
 
     def write(self, data):
         log.msg("Sending: %r" % data)
-        ProtocolWrapper.write(self,data)
-
+        ProtocolWrapper.write(self, data)
 
 
 class SpewingFactory(WrappingFactory):
     protocol = SpewingProtocol
 
 
-
 class LimitConnectionsByPeer(WrappingFactory):
-
     maxConnectionsPerPeer = 5
 
     def startFactory(self):
@@ -431,15 +392,15 @@ class LimitTotalConnectionsFactory(ServerFactory):
         connectionLimit is exceeded.  If L{None} (the default value), excess
         connections will be closed immediately.
     """
+
     connectionCount = 0
     connectionLimit = None
-    overflowProtocol = None
+    overflowProtocol: Optional[Type[Protocol]] = None
 
     def buildProtocol(self, addr):
-        if (self.connectionLimit is None or
-            self.connectionCount < self.connectionLimit):
-                # Build the normal protocol
-                wrappedProtocol = self.protocol()
+        if self.connectionLimit is None or self.connectionCount < self.connectionLimit:
+            # Build the normal protocol
+            wrappedProtocol = self.protocol()
         elif self.overflowProtocol is None:
             # Just drop the connection
             return None
@@ -457,7 +418,6 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     def unregisterProtocol(self, p):
         self.connectionCount -= 1
-
 
 
 class TimeoutProtocol(ProtocolWrapper):
@@ -479,7 +439,6 @@ class TimeoutProtocol(ProtocolWrapper):
         self.timeoutPeriod = None
         self.setTimeout(timeoutPeriod)
 
-
     def setTimeout(self, timeoutPeriod=None):
         """
         Set a timeout.
@@ -492,8 +451,9 @@ class TimeoutProtocol(ProtocolWrapper):
         self.cancelTimeout()
         self.timeoutPeriod = timeoutPeriod
         if timeoutPeriod is not None:
-            self.timeoutCall = self.factory.callLater(self.timeoutPeriod, self.timeoutFunc)
-
+            self.timeoutCall = self.factory.callLater(
+                self.timeoutPeriod, self.timeoutFunc
+            )
 
     def cancelTimeout(self):
         """
@@ -509,7 +469,6 @@ class TimeoutProtocol(ProtocolWrapper):
                 pass
             self.timeoutCall = None
 
-
     def resetTimeout(self):
         """
         Reset the timeout, usually because some activity just happened.
@@ -517,26 +476,21 @@ class TimeoutProtocol(ProtocolWrapper):
         if self.timeoutCall:
             self.timeoutCall.reset(self.timeoutPeriod)
 
-
     def write(self, data):
         self.resetTimeout()
         ProtocolWrapper.write(self, data)
-
 
     def writeSequence(self, seq):
         self.resetTimeout()
         ProtocolWrapper.writeSequence(self, seq)
 
-
     def dataReceived(self, data):
         self.resetTimeout()
         ProtocolWrapper.dataReceived(self, data)
 
-
     def connectionLost(self, reason):
         self.cancelTimeout()
         ProtocolWrapper.connectionLost(self, reason)
-
 
     def timeoutFunc(self):
         """
@@ -548,23 +502,23 @@ class TimeoutProtocol(ProtocolWrapper):
         self.loseConnection()
 
 
-
 class TimeoutFactory(WrappingFactory):
     """
     Factory for TimeoutWrapper.
     """
+
     protocol = TimeoutProtocol
 
-
-    def __init__(self, wrappedFactory, timeoutPeriod=30*60):
+    def __init__(self, wrappedFactory, timeoutPeriod=30 * 60):
         self.timeoutPeriod = timeoutPeriod
         WrappingFactory.__init__(self, wrappedFactory)
 
-
     def buildProtocol(self, addr):
-        return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
-                             timeoutPeriod=self.timeoutPeriod)
-
+        return self.protocol(
+            self,
+            self.wrappedFactory.buildProtocol(addr),
+            timeoutPeriod=self.timeoutPeriod,
+        )
 
     def callLater(self, period, func):
         """
@@ -573,14 +527,12 @@ class TimeoutFactory(WrappingFactory):
         for test purpose.
         """
         from twisted.internet import reactor
+
         return reactor.callLater(period, func)
 
 
-
 class TrafficLoggingProtocol(ProtocolWrapper):
-
-    def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None,
-                 number=0):
+    def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None, number=0):
         """
         @param factory: factory which created this protocol.
         @type factory: L{protocol.Factory}.
@@ -598,49 +550,40 @@ class TrafficLoggingProtocol(ProtocolWrapper):
         self.lengthLimit = lengthLimit
         self._number = number
 
-
     def _log(self, line):
-        self.logfile.write(line + '\n')
+        self.logfile.write(line + "\n")
         self.logfile.flush()
-
 
     def _mungeData(self, data):
         if self.lengthLimit and len(data) > self.lengthLimit:
-            data = data[:self.lengthLimit - 12] + '<... elided>'
+            data = data[: self.lengthLimit - 12] + "<... elided>"
         return data
-
 
     # IProtocol
     def connectionMade(self):
-        self._log('*')
+        self._log("*")
         return ProtocolWrapper.connectionMade(self)
 
-
     def dataReceived(self, data):
-        self._log('C %d: %r' % (self._number, self._mungeData(data)))
+        self._log("C %d: %r" % (self._number, self._mungeData(data)))
         return ProtocolWrapper.dataReceived(self, data)
 
-
     def connectionLost(self, reason):
-        self._log('C %d: %r' % (self._number, reason))
+        self._log("C %d: %r" % (self._number, reason))
         return ProtocolWrapper.connectionLost(self, reason)
-
 
     # ITransport
     def write(self, data):
-        self._log('S %d: %r' % (self._number, self._mungeData(data)))
+        self._log("S %d: %r" % (self._number, self._mungeData(data)))
         return ProtocolWrapper.write(self, data)
 
-
     def writeSequence(self, iovec):
-        self._log('SV %d: %r' % (self._number, [self._mungeData(d) for d in iovec]))
+        self._log("SV %d: %r" % (self._number, [self._mungeData(d) for d in iovec]))
         return ProtocolWrapper.writeSequence(self, iovec)
 
-
     def loseConnection(self):
-        self._log('S %d: *' % (self._number,))
+        self._log("S %d: *" % (self._number,))
         return ProtocolWrapper.loseConnection(self)
-
 
 
 class TrafficLoggingFactory(WrappingFactory):
@@ -653,24 +596,25 @@ class TrafficLoggingFactory(WrappingFactory):
         self.lengthLimit = lengthLimit
         WrappingFactory.__init__(self, wrappedFactory)
 
-
     def open(self, name):
-        return open(name, 'w')
-
+        return open(name, "w")
 
     def buildProtocol(self, addr):
         self._counter += 1
-        logfile = self.open(self.logfilePrefix + '-' + str(self._counter))
-        return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
-                             logfile, self.lengthLimit, self._counter)
-
+        logfile = self.open(self.logfilePrefix + "-" + str(self._counter))
+        return self.protocol(
+            self,
+            self.wrappedFactory.buildProtocol(addr),
+            logfile,
+            self.lengthLimit,
+            self._counter,
+        )
 
     def resetCounter(self):
         """
         Reset the value of the counter used to identify connections.
         """
         self._counter = 0
-
 
 
 class TimeoutMixin:
@@ -683,7 +627,8 @@ class TimeoutMixin:
 
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
-    timeOut = None
+
+    timeOut: Optional[int] = None
 
     __timeoutCall = None
 
@@ -694,8 +639,8 @@ class TimeoutMixin:
         for test purpose.
         """
         from twisted.internet import reactor
-        return reactor.callLater(period, func)
 
+        return reactor.callLater(period, func)
 
     def resetTimeout(self):
         """

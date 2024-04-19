@@ -2,91 +2,78 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
-
+__all__ = [
+    "seconds",
+    "shortPythonVersion",
+    "Platform",
+    "platform",
+    "platformType",
+]
 import os
 import sys
-import time
 import warnings
+from time import time as seconds
+from typing import Optional
 
-from twisted.python._oldstyle import _oldStyle
 
-
-
-def shortPythonVersion():
+def shortPythonVersion() -> str:
     """
     Returns the Python version as a dot-separated string.
     """
     return "%s.%s.%s" % sys.version_info[:3]
 
 
-
 knownPlatforms = {
-    'nt': 'win32',
-    'ce': 'win32',
-    'posix': 'posix',
-    'java': 'java',
-    'org.python.modules.os': 'java',
-    }
+    "nt": "win32",
+    "ce": "win32",
+    "posix": "posix",
+    "java": "java",
+    "org.python.modules.os": "java",
+}
 
 
-
-_timeFunctions = {
-    #'win32': time.clock,
-    'win32': time.time,
-    }
-
-
-
-@_oldStyle
 class Platform:
     """
     Gives us information about the platform we're running on.
     """
 
-    type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    type: Optional[str] = knownPlatforms.get(os.name)
+    seconds = staticmethod(seconds)
     _platform = sys.platform
 
-    def __init__(self, name=None, platform=None):
+    def __init__(
+        self, name: Optional[str] = None, platform: Optional[str] = None
+    ) -> None:
         if name is not None:
             self.type = knownPlatforms.get(name)
-            self.seconds = _timeFunctions.get(self.type, time.time)
         if platform is not None:
             self._platform = platform
 
-
-    def isKnown(self):
+    def isKnown(self) -> bool:
         """
         Do we know about this platform?
 
         @return: Boolean indicating whether this is a known platform or not.
-        @rtype: C{bool}
         """
         return self.type != None
 
-
-    def getType(self):
+    def getType(self) -> Optional[str]:
         """
         Get platform type.
 
         @return: Either 'posix', 'win32' or 'java'
-        @rtype: C{str}
         """
         return self.type
 
-
-    def isMacOSX(self):
+    def isMacOSX(self) -> bool:
         """
         Check if current platform is macOS.
 
         @return: C{True} if the current platform has been detected as macOS.
-        @rtype: C{bool}
         """
         return self._platform == "darwin"
 
-
-    def isWinNT(self):
+    def isWinNT(self) -> bool:
         """
         Are we running in Windows NT?
 
@@ -95,56 +82,46 @@ class Platform:
 
         @return: C{True} if the current platform has been detected as
             Windows NT.
-        @rtype: C{bool}
         """
         warnings.warn(
-                "twisted.python.runtime.Platform.isWinNT was deprecated in "
-                "Twisted 13.0. Use Platform.isWindows instead.",
-                DeprecationWarning, stacklevel=2)
+            "twisted.python.runtime.Platform.isWinNT was deprecated in "
+            "Twisted 13.0. Use Platform.isWindows instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.isWindows()
 
-
-    def isWindows(self):
+    def isWindows(self) -> bool:
         """
         Are we running in Windows?
 
         @return: C{True} if the current platform has been detected as
             Windows.
-        @rtype: C{bool}
         """
-        return self.getType() == 'win32'
+        return self.getType() == "win32"
 
-
-    def isVista(self):
+    def isVista(self) -> bool:
         """
         Check if current platform is Windows Vista or Windows Server 2008.
 
         @return: C{True} if the current platform has been detected as Vista
-        @rtype: C{bool}
         """
-        if getattr(sys, "getwindowsversion", None) is not None:
-            return sys.getwindowsversion()[0] == 6
-        else:
-            return False
+        return sys.platform == "win32" and sys.getwindowsversion().major == 6
 
-
-    def isLinux(self):
+    def isLinux(self) -> bool:
         """
         Check if current platform is Linux.
 
         @return: C{True} if the current platform has been detected as Linux.
-        @rtype: C{bool}
         """
         return self._platform.startswith("linux")
 
-
-    def isDocker(self, _initCGroupLocation="/proc/1/cgroup"):
+    def isDocker(self, _initCGroupLocation: str = "/proc/1/cgroup") -> bool:
         """
         Check if the current platform is Linux in a Docker container.
 
         @return: C{True} if the current platform has been detected as Linux
             inside a Docker container.
-        @rtype: C{bool}
         """
         if not self.isLinux():
             return False
@@ -156,8 +133,9 @@ class Platform:
         if initCGroups.exists():
             # The cgroups file looks like "2:cpu:/". The third element will
             # begin with /docker if it is inside a Docker container.
-            controlGroups = [x.split(b":")
-                             for x in initCGroups.getContent().split(b"\n")]
+            controlGroups = [
+                x.split(b":") for x in initCGroups.getContent().split(b"\n")
+            ]
 
             for group in controlGroups:
                 if len(group) == 3 and group[2].startswith(b"/docker/"):
@@ -166,14 +144,12 @@ class Platform:
 
         return False
 
-
-    def _supportsSymlinks(self):
+    def _supportsSymlinks(self) -> bool:
         """
         Check for symlink support usable for Twisted's purposes.
 
         @return: C{True} if symlinks are supported on the current platform,
                  otherwise C{False}.
-        @rtype: L{bool}
         """
         if self.isWindows():
             # We do the isWindows() check as newer Pythons support the symlink
@@ -193,22 +169,20 @@ class Platform:
             else:
                 return True
 
-
-    def supportsThreads(self):
+    def supportsThreads(self) -> bool:
         """
         Can threads be created?
 
         @return: C{True} if the threads are supported on the current platform.
-        @rtype: C{bool}
         """
         try:
             import threading
-            return threading is not None # shh pyflakes
+
+            return threading is not None  # shh pyflakes
         except ImportError:
             return False
 
-
-    def supportsINotify(self):
+    def supportsINotify(self) -> bool:
         """
         Return C{True} if we can use the inotify API on this platform.
 
@@ -217,9 +191,6 @@ class Platform:
         try:
             from twisted.python._inotify import INotifyError, init
         except ImportError:
-            return False
-
-        if self.isDocker():
             return False
 
         try:
@@ -231,4 +202,3 @@ class Platform:
 
 platform = Platform()
 platformType = platform.getType()
-seconds = platform.seconds

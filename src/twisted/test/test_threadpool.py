@@ -5,23 +5,19 @@
 Tests for L{twisted.python.threadpool}
 """
 
-from __future__ import division, absolute_import
 
+import gc
 import pickle
+import threading
 import time
 import weakref
-import gc
-import threading
 
-from twisted.python.compat import range
-
-from twisted.trial import unittest
-from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
+from twisted.python import context, failure, threadable, threadpool
+from twisted.trial import unittest
 
 
-
-class Synchronization(object):
+class Synchronization:
     failures = 0
 
     def __init__(self, N, waiting):
@@ -57,9 +53,7 @@ class Synchronization(object):
     synchronized = ["run"]
 
 
-
 threadable.synchronize(Synchronization)
-
 
 
 class ThreadPoolTests(unittest.SynchronousTestCase):
@@ -73,7 +67,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         """
         return 5  # Really should be order of magnitude less
 
-
     def _waitForLock(self, lock):
         items = range(1000000)
         for i in items:
@@ -83,7 +76,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         else:
             self.fail("A long time passed without succeeding")
 
-
     def test_attributes(self):
         """
         L{ThreadPool.min} and L{ThreadPool.max} are set to the values passed to
@@ -92,7 +84,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         pool = threadpool.ThreadPool(12, 22)
         self.assertEqual(pool.min, 12)
         self.assertEqual(pool.max, 22)
-
 
     def test_start(self):
         """
@@ -109,7 +100,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.addCleanup(pool.stop)
         self.assertEqual(len(pool.threads), 3)
 
-
     def test_adjustingWhenPoolStopped(self):
         """
         L{ThreadPool.adjustPoolsize} only modifies the pool size and does not
@@ -120,7 +110,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         pool.stop()
         pool.adjustPoolsize(2)
         self.assertEqual(len(pool.threads), 0)
-
 
     def test_threadCreationArguments(self):
         """
@@ -141,7 +130,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             pass
 
         # weakref needs an object subclass
-        class Dumb(object):
+        class Dumb:
             pass
 
         # And here's the unique object
@@ -163,7 +152,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         gc.collect()
         self.assertIsNone(uniqueRef())
         self.assertIsNone(workerRef())
-
 
     def test_threadCreationArgumentsCallInThreadWithCallback(self):
         """
@@ -192,8 +180,8 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             # not held on to by callInThreadWithCallback after it is complete
             gc.collect()
             onResultWait.wait(self.getTimeout())
-            refdict['workerRef'] = workerRef()
-            refdict['uniqueRef'] = uniqueRef()
+            refdict["workerRef"] = workerRef()
+            refdict["uniqueRef"] = uniqueRef()
             onResultDone.set()
             resultRef.append(weakref.ref(result))
 
@@ -202,7 +190,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             return Dumb()
 
         # weakref needs an object subclass
-        class Dumb(object):
+        class Dumb:
             pass
 
         # And here's the unique object
@@ -239,7 +227,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # The callback shouldn't have been able to resolve the references.
         self.assertEqual(list(refdict.values()), [None, None])
 
-
     def test_persistence(self):
         """
         Threadpools can be pickled and unpickled, which should preserve the
@@ -255,7 +242,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         self.assertEqual(copy.min, 7)
         self.assertEqual(copy.max, 20)
-
 
     def _threadpoolTest(self, method):
         """
@@ -281,24 +267,20 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         self._waitForLock(waiting)
 
-        self.assertFalse(
-            actor.failures,
-            "run() re-entered {} times".format(actor.failures))
-
+        self.assertFalse(actor.failures, f"run() re-entered {actor.failures} times")
 
     def test_callInThread(self):
         """
         Call C{_threadpoolTest} with C{callInThread}.
         """
-        return self._threadpoolTest(
-            lambda tp, actor: tp.callInThread(actor.run))
-
+        return self._threadpoolTest(lambda tp, actor: tp.callInThread(actor.run))
 
     def test_callInThreadException(self):
         """
         L{ThreadPool.callInThread} logs exceptions raised by the callable it
         is passed.
         """
+
         class NewError(Exception):
             pass
 
@@ -312,7 +294,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         errors = self.flushLoggedErrors(NewError)
         self.assertEqual(len(errors), 1)
-
 
     def test_callInThreadWithCallback(self):
         """
@@ -342,13 +323,13 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertTrue(results[0])
         self.assertEqual(results[1], "test")
 
-
     def test_callInThreadWithCallbackExceptionInCallback(self):
         """
         L{ThreadPool.callInThreadWithCallback} calls C{onResult} with a
         two-tuple of C{(False, failure)} where C{failure} represents the
         exception raised by the callable supplied.
         """
+
         class NewError(Exception):
             pass
 
@@ -378,12 +359,12 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertIsInstance(results[1], failure.Failure)
         self.assertTrue(issubclass(results[1].type, NewError))
 
-
     def test_callInThreadWithCallbackExceptionInOnResult(self):
         """
         L{ThreadPool.callInThreadWithCallback} logs the exception raised by
         C{onResult}.
         """
+
         class NewError(Exception):
             pass
 
@@ -413,7 +394,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertTrue(results[0])
         self.assertIsNone(results[1])
 
-
     def test_callbackThread(self):
         """
         L{ThreadPool.callInThreadWithCallback} calls the function it is
@@ -424,11 +404,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
             event.set()
 
         def func():
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)
@@ -439,7 +419,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(threadIds), 2)
         self.assertEqual(threadIds[0], threadIds[1])
 
-
     def test_callbackContext(self):
         """
         The context L{ThreadPool.callInThreadWithCallback} is invoked in is
@@ -447,7 +426,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         invoked in.
         """
         myctx = context.theContextTracker.currentContext().contexts[-1]
-        myctx['testing'] = 'this must be present'
+        myctx["testing"] = "this must be present"
 
         contexts = []
 
@@ -473,7 +452,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(myctx, contexts[0])
         self.assertEqual(myctx, contexts[1])
 
-
     def test_existingWork(self):
         """
         Work added to the threadpool before its start should be executed once
@@ -491,7 +469,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             self._waitForLock(waiter)
         finally:
             tp.stop()
-
 
     def test_workerStateTransition(self):
         """
@@ -530,10 +507,15 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
 
+    def test_q(self) -> None:
+        """
+        There is a property '_queue' for legacy purposes
+        """
+        pool = threadpool.ThreadPool(0, 1)
+        self.assertEqual(pool._queue.qsize(), 0)
 
 
 class RaceConditionTests(unittest.SynchronousTestCase):
-
     def setUp(self):
         self.threadpool = threadpool.ThreadPool(0, 10)
         self.event = threading.Event()
@@ -545,13 +527,11 @@ class RaceConditionTests(unittest.SynchronousTestCase):
 
         self.addCleanup(done)
 
-
     def getTimeout(self):
         """
         A reasonable number of seconds to time out.
         """
         return 5
-
 
     def test_synchronization(self):
         """
@@ -580,10 +560,7 @@ class RaceConditionTests(unittest.SynchronousTestCase):
         self.event.wait(timeout)
         if not self.event.isSet():
             self.event.set()
-            self.fail(
-                "'set' did not run in thread; timed out waiting on 'wait'."
-            )
-
+            self.fail("'set' did not run in thread; timed out waiting on 'wait'.")
 
 
 class MemoryPool(threadpool.ThreadPool):
@@ -615,7 +592,6 @@ class MemoryPool(threadpool.ThreadPool):
         self._newWorker = newWorker
         threadpool.ThreadPool.__init__(self, *args, **kwargs)
 
-
     def _pool(self, currentLimit, threadFactory):
         """
         Override testing hook to create a deterministic threadpool.
@@ -629,23 +605,25 @@ class MemoryPool(threadpool.ThreadPool):
         @return: a L{Team} backed by the coordinator and worker passed to
             L{MemoryPool.__init__}.
         """
+
         def respectLimit():
             # The expression in this method copied and pasted from
             # twisted.threads._pool, which is unfortunately bound up
             # with lots of actual-threading stuff.
             stats = team.statistics()
-            if ((stats.busyWorkerCount +
-                 stats.idleWorkerCount) >= currentLimit()):
+            if (stats.busyWorkerCount + stats.idleWorkerCount) >= currentLimit():
                 return None
             return self._newWorker()
-        team = Team(coordinator=self._coordinator,
-                    createWorker=respectLimit,
-                    logException=self._failTest)
+
+        team = Team(
+            coordinator=self._coordinator,
+            createWorker=respectLimit,
+            logException=self._failTest,
+        )
         return team
 
 
-
-class PoolHelper(object):
+class PoolHelper:
     """
     A L{PoolHelper} constructs a L{threadpool.ThreadPool} that doesn't actually
     use threads, by using the internal interfaces in L{twisted._threads}.
@@ -680,9 +658,9 @@ class PoolHelper(object):
             self.workers.append(createMemoryWorker())
             return self.workers[-1][0]
 
-        self.threadpool = MemoryPool(coordinator, testCase.fail, newWorker,
-                                     *args, **kwargs)
-
+        self.threadpool = MemoryPool(
+            coordinator, testCase.fail, newWorker, *args, **kwargs
+        )
 
     def performAllCoordination(self):
         """
@@ -691,7 +669,6 @@ class PoolHelper(object):
         """
         while self.performCoordination():
             pass
-
 
 
 class MemoryBackedTests(unittest.SynchronousTestCase):
@@ -715,7 +692,6 @@ class MemoryBackedTests(unittest.SynchronousTestCase):
         helper.threadpool.start()
         helper.performAllCoordination()
         self.assertEqual(len(helper.workers), n)
-
 
     def test_tooMuchWorkBeforeStarting(self):
         """

@@ -6,14 +6,14 @@
 HTML rendering of Python source.
 """
 
-from twisted.python.compat import _tokenize, escape
+import keyword
+import tokenize
+from html import escape
+from typing import List
 
-import tokenize, keyword
 from . import reflect
-from twisted.python._oldstyle import _oldStyle
 
 
-@_oldStyle
 class TokenPrinter:
     """
     Format a stream of tokens and intermediate whitespace, for pretty-printing.
@@ -29,7 +29,6 @@ class TokenPrinter:
         """
         self.writer = writer
 
-
     def printtoken(self, type, token, sCoordinates, eCoordinates, line):
         if hasattr(tokenize, "ENCODING") and type == tokenize.ENCODING:
             self.encoding = token
@@ -41,48 +40,47 @@ class TokenPrinter:
         (srow, scol) = sCoordinates
         (erow, ecol) = eCoordinates
         if self.currentLine < srow:
-            self.writer(b'\n' * (srow-self.currentLine))
+            self.writer(b"\n" * (srow - self.currentLine))
             self.currentLine, self.currentCol = srow, 0
-        self.writer(b' ' * (scol-self.currentCol))
+        self.writer(b" " * (scol - self.currentCol))
         if self.lastIdentifier:
             type = "identifier"
             self.parameters = 1
         elif type == tokenize.NAME:
             if keyword.iskeyword(token):
-                type = 'keyword'
+                type = "keyword"
             else:
                 if self.parameters:
-                    type = 'parameter'
+                    type = "parameter"
                 else:
-                    type = 'variable'
+                    type = "variable"
         else:
-            type = tokenize.tok_name.get(type).lower()
+            type = tokenize.tok_name.get(type)
+            assert type is not None
+            type = type.lower()
         self.writer(token, type)
         self.currentCol = ecol
-        self.currentLine += token.count(b'\n')
+        self.currentLine += token.count(b"\n")
         if self.currentLine != erow:
             self.currentCol = 0
-        self.lastIdentifier = token in (b'def', b'class')
-        if token == b':':
+        self.lastIdentifier = token in (b"def", b"class")
+        if token == b":":
             self.parameters = 0
 
 
-
-@_oldStyle
 class HTMLWriter:
     """
     Write the stream of tokens and whitespace from L{TokenPrinter}, formating
     tokens as HTML spans.
     """
 
-    noSpan = []
+    noSpan: List[str] = []
 
     def __init__(self, writer):
         self.writer = writer
-        noSpan = []
+        noSpan: List[str] = []
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
-
 
     def write(self, token, type=None):
         if isinstance(token, bytes):
@@ -93,9 +91,12 @@ class HTMLWriter:
             self.writer(token)
         else:
             self.writer(
-                b'<span class="py-src-' + type.encode("utf-8") + b'">' +
-                token + b'</span>')
-
+                b'<span class="py-src-'
+                + type.encode("utf-8")
+                + b'">'
+                + token
+                + b"</span>"
+            )
 
 
 class SmallerHTMLWriter(HTMLWriter):
@@ -104,28 +105,29 @@ class SmallerHTMLWriter(HTMLWriter):
 
     Results in much smaller HTML output.
     """
+
     noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
 
 
-
 def filter(inp, out, writer=HTMLWriter):
-    out.write(b'<pre>')
+    out.write(b"<pre>")
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
-        for token in _tokenize(inp.readline):
+        for token in tokenize.tokenize(inp.readline):
             (tokenType, string, start, end, line) = token
             printer(tokenType, string, start, end, line)
     except tokenize.TokenError:
         pass
-    out.write(b'</pre>\n')
-
+    out.write(b"</pre>\n")
 
 
 def main():
     import sys
+
     stdout = getattr(sys.stdout, "buffer", sys.stdout)
     with open(sys.argv[1], "rb") as f:
         filter(f, stdout)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

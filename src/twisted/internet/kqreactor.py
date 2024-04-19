@@ -16,31 +16,39 @@ connections, listeners or connectors are added)::
    kqreactor.install()
 """
 
-from __future__ import division, absolute_import
-
 import errno
 import select
 
-from select import KQ_FILTER_READ, KQ_FILTER_WRITE
-from select import KQ_EV_DELETE, KQ_EV_ADD, KQ_EV_EOF
-
-from zope.interface import implementer, declarations, Interface, Attribute
+from zope.interface import Attribute, Interface, declarations, implementer
 
 from twisted.internet import main, posixbase
-from twisted.internet.interfaces import IReactorFDSet, IReactorDaemonize
-from twisted.python import log, failure
+from twisted.internet.interfaces import IReactorDaemonize, IReactorFDSet
+from twisted.python import failure, log
 
+try:
+    # This is to keep mypy from complaining
+    # We don't use type: ignore[attr-defined] on import, because mypy only complains
+    # on on some platforms, and then the unused ignore is an issue if the undefined
+    # attribute isn't.
+    KQ_EV_ADD = getattr(select, "KQ_EV_ADD")
+    KQ_EV_DELETE = getattr(select, "KQ_EV_DELETE")
+    KQ_EV_EOF = getattr(select, "KQ_EV_EOF")
+    KQ_FILTER_READ = getattr(select, "KQ_FILTER_READ")
+    KQ_FILTER_WRITE = getattr(select, "KQ_FILTER_WRITE")
+except AttributeError as e:
+    raise ImportError(e)
 
 
 class _IKQueue(Interface):
     """
     An interface for KQueue implementations.
     """
+
     kqueue = Attribute("An implementation of kqueue(2).")
     kevent = Attribute("An implementation of kevent(2).")
 
-declarations.directlyProvides(select, _IKQueue)
 
+declarations.directlyProvides(select, _IKQueue)
 
 
 @implementer(IReactorFDSet, IReactorDaemonize)
@@ -90,7 +98,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
         self._selectables = {}
         posixbase.PosixReactorBase.__init__(self)
 
-
     def _updateRegistration(self, fd, filter, op):
         """
         Private method for changing kqueue registration on a given FD
@@ -98,7 +105,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
         returns nothing.
         """
         self._kq.control([self._impl.kevent(fd, filter, op)], 0, 0)
-
 
     def beforeDaemonize(self):
         """
@@ -116,7 +122,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
         self._kq.close()
         self._kq = None
 
-
     def afterDaemonize(self):
         """
         Implement L{IReactorDaemonize.afterDaemonize}.
@@ -130,7 +135,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
             self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
         for fd in self._writes:
             self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
-
 
     def addReader(self, reader):
         """
@@ -146,7 +150,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 self._selectables[fd] = reader
                 self._reads.add(fd)
 
-
     def addWriter(self, writer):
         """
         Implement L{IReactorFDSet.addWriter}.
@@ -161,7 +164,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 self._selectables[fd] = writer
                 self._writes.add(fd)
 
-
     def removeReader(self, reader):
         """
         Implement L{IReactorFDSet.removeReader}.
@@ -169,7 +171,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         wasLost = False
         try:
             fd = reader.fileno()
-        except:
+        except BaseException:
             fd = -1
         if fd == -1:
             for fd, fdes in self._selectables.items():
@@ -188,7 +190,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 except OSError:
                     pass
 
-
     def removeWriter(self, writer):
         """
         Implement L{IReactorFDSet.removeWriter}.
@@ -196,7 +197,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         wasLost = False
         try:
             fd = writer.fileno()
-        except:
+        except BaseException:
             fd = -1
         if fd == -1:
             for fd, fdes in self._selectables.items():
@@ -215,15 +216,14 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 except OSError:
                     pass
 
-
     def removeAll(self):
         """
         Implement L{IReactorFDSet.removeAll}.
         """
         return self._removeAll(
             [self._selectables[fd] for fd in self._reads],
-            [self._selectables[fd] for fd in self._writes])
-
+            [self._selectables[fd] for fd in self._writes],
+        )
 
     def getReaders(self):
         """
@@ -231,13 +231,11 @@ class KQueueReactor(posixbase.PosixReactorBase):
         """
         return [self._selectables[fd] for fd in self._reads]
 
-
     def getWriters(self):
         """
         Implement L{IReactorFDSet.getWriters}.
         """
         return [self._selectables[fd] for fd in self._writes]
-
 
     def doKEvent(self, timeout):
         """
@@ -269,7 +267,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
             else:
                 log.callWithLogger(selectable, _drdw, selectable, fd, event)
 
-
     def _doWriteOrRead(self, selectable, fd, event):
         """
         Private method called when a FD is ready for reading, writing or was
@@ -278,7 +275,11 @@ class KQueueReactor(posixbase.PosixReactorBase):
         why = None
         inRead = False
         (filter, flags, data, fflags) = (
-            event.filter, event.flags, event.data, event.fflags)
+            event.filter,
+            event.flags,
+            event.data,
+            event.fflags,
+        )
 
         if flags & KQ_EV_EOF and data and fflags:
             why = main.CONNECTION_LOST
@@ -294,18 +295,20 @@ class KQueueReactor(posixbase.PosixReactorBase):
                     if filter == KQ_FILTER_WRITE:
                         inRead = False
                         why = selectable.doWrite()
-            except:
+            except BaseException:
                 # Any exception from application code gets logged and will
                 # cause us to disconnect the selectable.
                 why = failure.Failure()
-                log.err(why, "An exception was raised from application code" \
-                             " while processing a reactor selectable")
+                log.err(
+                    why,
+                    "An exception was raised from application code"
+                    " while processing a reactor selectable",
+                )
 
         if why:
             self._disconnectSelectable(selectable, why, inRead)
 
     doIteration = doKEvent
-
 
 
 def install():
@@ -314,6 +317,7 @@ def install():
     """
     p = KQueueReactor()
     from twisted.internet.main import installReactor
+
     installReactor(p)
 
 

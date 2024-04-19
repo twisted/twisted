@@ -5,22 +5,19 @@
 Test cases for L{twisted.names.srvconnect}.
 """
 
-from __future__ import absolute_import, division
 
 import random
 
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
-
 from twisted.internet import defer, protocol
 from twisted.internet.error import DNSLookupError, ServiceNameUnknownError
 from twisted.internet.interfaces import IConnector
+from twisted.internet.testing import MemoryReactor
 from twisted.names import client, dns, srvconnect
 from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
-from twisted.python.compat import nativeString
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.trial import unittest
 
 
 class FakeResolver(ResolverBase):
@@ -52,17 +49,16 @@ class FakeResolver(ResolverBase):
             return defer.fail(self.failure)
 
 
-
 class DummyFactory(protocol.ClientFactory):
     """
     Dummy client factory that stores the reason of connection failure.
     """
+
     def __init__(self):
         self.reason = None
 
     def clientConnectionFailed(self, connector, reason):
         self.reason = reason
-
 
 
 class SRVConnectorTests(unittest.TestCase):
@@ -71,14 +67,14 @@ class SRVConnectorTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.patch(client, 'theResolver', FakeResolver())
+        self.patch(client, "theResolver", FakeResolver())
         self.reactor = MemoryReactor()
         self.factory = DummyFactory()
-        self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-server',
-                                                 'example.org', self.factory)
+        self.connector = srvconnect.SRVConnector(
+            self.reactor, "xmpp-server", "example.org", self.factory
+        )
         self.randIntArgs = []
         self.randIntResults = []
-
 
     def _randint(self, min, max):
         """
@@ -99,41 +95,38 @@ class SRVConnectorTests(unittest.TestCase):
         self.randIntArgs.append((min, max))
         return self.randIntResults.pop(0)
 
-
     def test_interface(self):
         """
         L{srvconnect.SRVConnector} implements L{IConnector}.
         """
         verifyObject(IConnector, self.connector)
 
-
     def test_SRVPresent(self):
         """
         Test connectTCP gets called with the address from the SRV record.
         """
-        payload = dns.Record_SRV(port=6269, target='host.example.org', ttl=60)
-        client.theResolver.results = [dns.RRHeader(name='example.org',
-                                                   type=dns.SRV,
-                                                   cls=dns.IN, ttl=60,
-                                                   payload=payload)]
+        payload = dns.Record_SRV(port=6269, target="host.example.org", ttl=60)
+        client.theResolver.results = [
+            dns.RRHeader(
+                name="example.org", type=dns.SRV, cls=dns.IN, ttl=60, payload=payload
+            )
+        ]
         self.connector.connect()
 
         self.assertIsNone(self.factory.reason)
-        self.assertEqual(
-            self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
-
+        self.assertEqual(self.reactor.tcpClients.pop()[:2], ("host.example.org", 6269))
 
     def test_SRVNotPresent(self):
         """
         Test connectTCP gets called with fallback parameters on NXDOMAIN.
         """
-        client.theResolver.failure = DNSNameError('example.org')
+        client.theResolver.failure = DNSNameError(b"example.org")
         self.connector.connect()
 
         self.assertIsNone(self.factory.reason)
         self.assertEqual(
-            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
-
+            self.reactor.tcpClients.pop()[:2], ("example.org", "xmpp-server")
+        )
 
     def test_SRVNoResult(self):
         """
@@ -144,70 +137,71 @@ class SRVConnectorTests(unittest.TestCase):
 
         self.assertIsNone(self.factory.reason)
         self.assertEqual(
-            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
-
+            self.reactor.tcpClients.pop()[:2], ("example.org", "xmpp-server")
+        )
 
     def test_SRVNoResultUnknownServiceDefaultPort(self):
         """
         connectTCP gets called with default port if the service is not defined.
         """
-        self.connector = srvconnect.SRVConnector(self.reactor,
-                                                 'thisbetternotexist',
-                                                 'example.org', self.factory,
-                                                 defaultPort=5222)
+        self.connector = srvconnect.SRVConnector(
+            self.reactor,
+            "thisbetternotexist",
+            "example.org",
+            self.factory,
+            defaultPort=5222,
+        )
 
         client.theResolver.failure = ServiceNameUnknownError()
         self.connector.connect()
 
         self.assertIsNone(self.factory.reason)
-        self.assertEqual(
-            self.reactor.tcpClients.pop()[:2], ('example.org', 5222))
-
+        self.assertEqual(self.reactor.tcpClients.pop()[:2], ("example.org", 5222))
 
     def test_SRVNoResultUnknownServiceNoDefaultPort(self):
         """
         Connect fails on no result, unknown service and no default port.
         """
-        self.connector = srvconnect.SRVConnector(self.reactor,
-                                                 'thisbetternotexist',
-                                                 'example.org', self.factory)
+        self.connector = srvconnect.SRVConnector(
+            self.reactor, "thisbetternotexist", "example.org", self.factory
+        )
 
         client.theResolver.failure = ServiceNameUnknownError()
         self.connector.connect()
 
         self.assertTrue(self.factory.reason.check(ServiceNameUnknownError))
 
-
     def test_SRVBadResult(self):
         """
         Test connectTCP gets called with fallback parameters on bad result.
         """
-        client.theResolver.results = [dns.RRHeader(name='example.org',
-                                                   type=dns.CNAME,
-                                                   cls=dns.IN, ttl=60,
-                                                   payload=None)]
+        client.theResolver.results = [
+            dns.RRHeader(
+                name="example.org", type=dns.CNAME, cls=dns.IN, ttl=60, payload=None
+            )
+        ]
         self.connector.connect()
 
         self.assertIsNone(self.factory.reason)
         self.assertEqual(
-            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
-
+            self.reactor.tcpClients.pop()[:2], ("example.org", "xmpp-server")
+        )
 
     def test_SRVNoService(self):
         """
         Test that connecting fails when no service is present.
         """
-        payload = dns.Record_SRV(port=5269, target=b'.', ttl=60)
-        client.theResolver.results = [dns.RRHeader(name='example.org',
-                                                   type=dns.SRV,
-                                                   cls=dns.IN, ttl=60,
-                                                   payload=payload)]
+        payload = dns.Record_SRV(port=5269, target=b".", ttl=60)
+        client.theResolver.results = [
+            dns.RRHeader(
+                name="example.org", type=dns.SRV, cls=dns.IN, ttl=60, payload=payload
+            )
+        ]
         self.connector.connect()
 
         self.assertIsNotNone(self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
-
 
     def test_SRVLookupName(self):
         """
@@ -217,8 +211,7 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.connect()
 
         name = client.theResolver.lookups[-1][0]
-        self.assertEqual(nativeString('_xmpp-server._tcp.example.org'), name)
-
+        self.assertEqual(b"_xmpp-server._tcp.example.org", name)
 
     def test_unicodeDomain(self):
         """
@@ -226,10 +219,9 @@ class SRVConnectorTests(unittest.TestCase):
         C{idna} encoding.
         """
         self.connector = srvconnect.SRVConnector(
-            self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
-            self.factory)
-        self.assertEqual('xn--chec-9oa.example.org', self.connector.domain)
-
+            self.reactor, "xmpp-client", "\u00e9chec.example.org", self.factory
+        )
+        self.assertEqual(b"xn--chec-9oa.example.org", self.connector.domain)
 
     def test_pickServerWeights(self):
         """
@@ -239,12 +231,12 @@ class SRVConnectorTests(unittest.TestCase):
         preparing fake L{random.randint} results and checking the values it was
         called with.
         """
-        record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
-        record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
+        record1 = dns.Record_SRV(10, 10, 5222, "host1.example.org")
+        record2 = dns.Record_SRV(10, 20, 5222, "host2.example.org")
 
         self.connector.orderedServers = [record1, record2]
         self.connector.servers = []
-        self.patch(random, 'randint', self._randint)
+        self.patch(random, "randint", self._randint)
 
         # 1st round
         self.randIntResults = [11, 0]
@@ -264,40 +256,34 @@ class SRVConnectorTests(unittest.TestCase):
         self.connector.pickServer()
         self.assertEqual(self.randIntArgs[3], (0, 20))
 
-
     def test_pickServerSamePriorities(self):
         """
         Two records with equal priorities compare on weight (ascending).
         """
-        record1 = dns.Record_SRV(10, 10, 5222, 'host1.example.org')
-        record2 = dns.Record_SRV(10, 20, 5222, 'host2.example.org')
+        record1 = dns.Record_SRV(10, 10, 5222, "host1.example.org")
+        record2 = dns.Record_SRV(10, 20, 5222, "host2.example.org")
 
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
-        self.patch(random, 'randint', self._randint)
+        self.patch(random, "randint", self._randint)
         self.randIntResults = [0, 0]
 
-        self.assertEqual(('host1.example.org', 5222),
-                         self.connector.pickServer())
+        self.assertEqual(("host1.example.org", 5222), self.connector.pickServer())
 
-        self.assertEqual(('host2.example.org', 5222),
-                         self.connector.pickServer())
-
+        self.assertEqual(("host2.example.org", 5222), self.connector.pickServer())
 
     def test_srvDifferentPriorities(self):
         """
         Two records with differing priorities compare on priority (ascending).
         """
-        record1 = dns.Record_SRV(10, 0, 5222, 'host1.example.org')
-        record2 = dns.Record_SRV(20, 0, 5222, 'host2.example.org')
+        record1 = dns.Record_SRV(10, 0, 5222, "host1.example.org")
+        record2 = dns.Record_SRV(20, 0, 5222, "host2.example.org")
 
         self.connector.orderedServers = [record2, record1]
         self.connector.servers = []
-        self.patch(random, 'randint', self._randint)
+        self.patch(random, "randint", self._randint)
         self.randIntResults = [0, 0]
 
-        self.assertEqual(('host1.example.org', 5222),
-                         self.connector.pickServer())
+        self.assertEqual(("host1.example.org", 5222), self.connector.pickServer())
 
-        self.assertEqual(('host2.example.org', 5222),
-                         self.connector.pickServer())
+        self.assertEqual(("host2.example.org", 5222), self.connector.pickServer())

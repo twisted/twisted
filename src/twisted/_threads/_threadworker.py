@@ -6,17 +6,19 @@
 Implementation of an L{IWorker} based on native threads and queues.
 """
 
-from __future__ import absolute_import, division, print_function
+
+from typing import Callable
 
 from zope.interface import implementer
-from ._ithreads import IExclusiveWorker
-from ._convenience import Quit
 
+from ._convenience import Quit
+from ._ithreads import IExclusiveWorker
 
 _stop = object()
 
+
 @implementer(IExclusiveWorker)
-class ThreadWorker(object):
+class ThreadWorker:
     """
     An L{IExclusiveWorker} implemented based on a single thread and a queue.
 
@@ -37,17 +39,18 @@ class ThreadWorker(object):
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
             C{startThread}.
-        @param queue: L{Queue}
+        @type queue: L{Queue}
         """
         self._q = queue
         self._hasQuit = Quit()
+
         def work():
             for task in iter(queue.get, _stop):
                 task()
+
         startThread(work)
 
-
-    def do(self, task):
+    def do(self, task: Callable[[], None]) -> None:
         """
         Perform the given task on the thread owned by this L{ThreadWorker}.
 
@@ -55,7 +58,6 @@ class ThreadWorker(object):
         """
         self._hasQuit.check()
         self._q.put(task)
-
 
     def quit(self):
         """
@@ -67,9 +69,8 @@ class ThreadWorker(object):
         self._q.put(_stop)
 
 
-
 @implementer(IExclusiveWorker)
-class LockWorker(object):
+class LockWorker:
     """
     An L{IWorker} implemented based on a mutual-exclusion lock.
     """
@@ -87,8 +88,7 @@ class LockWorker(object):
         self._lock = lock
         self._local = local
 
-
-    def do(self, work):
+    def do(self, work: Callable[[], None]) -> None:
         """
         Do the given work on this thread, with the mutex acquired.  If this is
         called re-entrantly, return and wait for the outer invocation to do the
@@ -113,11 +113,9 @@ class LockWorker(object):
         else:
             working.append(work)
 
-
     def quit(self):
         """
         Quit this L{LockWorker}.
         """
         self._quit.set()
         self._lock = None
-

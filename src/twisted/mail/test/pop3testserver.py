@@ -4,12 +4,12 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
+import sys
+
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
-from twisted.internet import reactor
-import sys
 
 USER = "test"
 PASS = "twisted"
@@ -31,12 +31,7 @@ SLOW_GREETING = False
 """Commands"""
 CONNECTION_MADE = b"+OK POP3 localhost v2003.83 server ready"
 
-CAPABILITIES = [
-b"TOP",
-b"LOGIN-DELAY 180",
-b"USER",
-b"SASL LOGIN"
-]
+CAPABILITIES = [b"TOP", b"LOGIN-DELAY 180", b"USER", b"SASL LOGIN"]
 
 CAPABILITIES_SSL = b"STLS"
 CAPABILITIES_UIDL = b"UIDL"
@@ -56,24 +51,20 @@ CAP_START = b"+OK Capability list follows:"
 
 
 class POP3TestServer(basic.LineReceiver):
-    def __init__(self, contextFactory = None):
+    def __init__(self, contextFactory=None):
         self.loggedIn = False
         self.caps = None
         self.tmpUser = None
         self.ctx = contextFactory
 
-
     def sendSTATResp(self, req):
         self.sendLine(STAT)
-
 
     def sendUIDLResp(self, req):
         self.sendLine(UIDL)
 
-
     def sendLISTResp(self, req):
         self.sendLine(LIST)
-
 
     def sendCapabilities(self):
         if self.caps is None:
@@ -87,11 +78,10 @@ class POP3TestServer(basic.LineReceiver):
 
         for cap in CAPABILITIES:
             self.caps.append(cap)
-        resp = b'\r\n'.join(self.caps)
-        resp += b'\r\n.'
+        resp = b"\r\n".join(self.caps)
+        resp += b"\r\n."
 
         self.sendLine(resp)
-
 
     def connectionMade(self):
         if DENY_CONNECTION:
@@ -104,10 +94,8 @@ class POP3TestServer(basic.LineReceiver):
         else:
             self.sendGreeting()
 
-
     def sendGreeting(self):
         self.sendLine(CONNECTION_MADE)
-
 
     def lineReceived(self, line):
         """Error Conditions"""
@@ -141,7 +129,7 @@ class POP3TestServer(basic.LineReceiver):
             try:
                 self.tmpUser = line.split(" ")[1]
                 resp = VALID_RESPONSE
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)
@@ -158,7 +146,7 @@ class POP3TestServer(basic.LineReceiver):
                     self.loggedIn = True
                 else:
                     resp = AUTH_DECLINED
-            except:
+            except BaseException:
                 resp = AUTH_DECLINED
 
             self.sendLine(resp)
@@ -196,30 +184,15 @@ class POP3TestServer(basic.LineReceiver):
 
             self.sendLine(UIDL)
 
-
     def startTLS(self):
-        if self.ctx is None:
-            self.getContext()
-
         if SSL_SUPPORT and self.ctx is not None:
-            self.sendLine(b'+OK Begin TLS negotiation now')
+            self.sendLine(b"+OK Begin TLS negotiation now")
             self.transport.startTLS(self.ctx)
         else:
-            self.sendLine(b'-ERR TLS not available')
-
+            self.sendLine(b"-ERR TLS not available")
 
     def disconnect(self):
         self.transport.loseConnection()
-
-
-    def getContext(self):
-        try:
-            from twisted.internet import ssl
-        except ImportError:
-           self.ctx = None
-        else:
-            self.ctx = ssl.ClientContextFactory()
-            self.ctx.method = ssl.SSL.TLSv1_METHOD
 
 
 usage = """popServer.py [arg] (default is Standard POP Server with no messages)
@@ -237,69 +210,68 @@ to_deferred - Do not return a response on a 'Select' request. This
 slow - Wait 20 seconds after the connection is made to return a Server Greeting
 """
 
+
 def printMessage(msg):
     print("Server Starting in %s mode" % msg)
 
 
-
 def processArg(arg):
-
-    if arg.lower() == 'no_ssl':
+    if arg.lower() == "no_ssl":
         global SSL_SUPPORT
         SSL_SUPPORT = False
         printMessage("NON-SSL")
 
-    elif arg.lower() == 'no_uidl':
+    elif arg.lower() == "no_uidl":
         global UIDL_SUPPORT
         UIDL_SUPPORT = False
         printMessage("NON-UIDL")
 
-    elif arg.lower() == 'bad_resp':
+    elif arg.lower() == "bad_resp":
         global INVALID_SERVER_RESPONSE
         INVALID_SERVER_RESPONSE = True
         printMessage("Invalid Server Response")
 
-    elif arg.lower() == 'bad_cap_resp':
+    elif arg.lower() == "bad_cap_resp":
         global INVALID_CAPABILITY_RESPONSE
         INVALID_CAPABILITY_RESPONSE = True
         printMessage("Invalid Capability Response")
 
-    elif arg.lower() == 'bad_login_resp':
+    elif arg.lower() == "bad_login_resp":
         global INVALID_LOGIN_RESPONSE
         INVALID_LOGIN_RESPONSE = True
         printMessage("Invalid Capability Response")
 
-    elif arg.lower() == 'deny':
+    elif arg.lower() == "deny":
         global DENY_CONNECTION
         DENY_CONNECTION = True
         printMessage("Deny Connection")
 
-    elif arg.lower() == 'drop':
+    elif arg.lower() == "drop":
         global DROP_CONNECTION
         DROP_CONNECTION = True
         printMessage("Drop Connection")
 
-    elif arg.lower() == 'bad_tls':
+    elif arg.lower() == "bad_tls":
         global BAD_TLS_RESPONSE
         BAD_TLS_RESPONSE = True
         printMessage("Bad TLS Response")
 
-    elif arg.lower() == 'timeout':
+    elif arg.lower() == "timeout":
         global TIMEOUT_RESPONSE
         TIMEOUT_RESPONSE = True
         printMessage("Timeout Response")
 
-    elif arg.lower() == 'to_deferred':
+    elif arg.lower() == "to_deferred":
         global TIMEOUT_DEFERRED
         TIMEOUT_DEFERRED = True
         printMessage("Timeout Deferred Response")
 
-    elif arg.lower() == 'slow':
+    elif arg.lower() == "slow":
         global SLOW_GREETING
         SLOW_GREETING = True
         printMessage("Slow Greeting")
 
-    elif arg.lower() == '--help':
+    elif arg.lower() == "--help":
         print(usage)
         sys.exit()
 
@@ -307,8 +279,8 @@ def processArg(arg):
         print(usage)
         sys.exit()
 
-def main():
 
+def main():
     if len(sys.argv) < 2:
         printMessage("POP3 with no messages")
     else:
@@ -322,5 +294,6 @@ def main():
     reactor.listenTCP(PORT, f)
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -6,15 +6,15 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
-from __future__ import division, absolute_import
 
-import os, traceback
+import os
+import traceback
+from io import StringIO
 
 from twisted import copyright
+from twisted.python.compat import execfile, networkString
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, NativeStringIO, _PY3
-from twisted.web import http, server, static, resource, util
-
+from twisted.web import http, resource, server, static, util
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
@@ -26,10 +26,12 @@ resource = mygreatresource.MyGreatResource()
 </pre>
 """
 
+
 class AlreadyCached(Exception):
     """
     This exception is raised when a path has already been cached.
     """
+
 
 class CacheScanner:
     def __init__(self, path, registry):
@@ -46,7 +48,9 @@ class CacheScanner:
     def recache(self):
         self.doCache = 1
 
-noRsrc = resource.ErrorPage(500, "Whoops! Internal Error", rpyNoResource)
+
+noRsrc = resource._UnsafeErrorPage(500, "Whoops! Internal Error", rpyNoResource)
+
 
 def ResourceScript(path, registry):
     """
@@ -55,40 +59,42 @@ def ResourceScript(path, registry):
     renderred.
     """
     cs = CacheScanner(path, registry)
-    glob = {'__file__': _coerceToFilesystemEncoding("", path),
-            'resource': noRsrc,
-            'registry': registry,
-            'cache': cs.cache,
-            'recache': cs.recache}
+    glob = {
+        "__file__": _coerceToFilesystemEncoding("", path),
+        "resource": noRsrc,
+        "registry": registry,
+        "cache": cs.cache,
+        "recache": cs.recache,
+    }
     try:
         execfile(path, glob, glob)
     except AlreadyCached as ac:
         return ac.args[0]
-    rsrc = glob['resource']
+    rsrc = glob["resource"]
     if cs.doCache and rsrc is not noRsrc:
         registry.cachePath(path, rsrc)
     return rsrc
 
 
-
 def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
-    glob = {'__file__': _coerceToFilesystemEncoding("", path),
-            'resource': resource.ErrorPage(500, "Whoops! Internal Error",
-                                           rpyNoResource),
-            'registry': registry}
+    glob = {
+        "__file__": _coerceToFilesystemEncoding("", path),
+        "resource": resource._UnsafeErrorPage(
+            500, "Whoops! Internal Error", rpyNoResource
+        ),
+        "registry": registry,
+    }
 
     with open(path) as f:  # Not closed by quixote as of 2.9.1
         e = ptl_compile.compile_template(f, path)
     code = compile(e, "<source>", "exec")
     eval(code, glob, glob)
-    return glob['resource']
-
+    return glob["resource"]
 
 
 class ResourceScriptWrapper(resource.Resource):
-
     def __init__(self, path, registry=None):
         resource.Resource.__init__(self)
         self.path = path
@@ -101,7 +107,6 @@ class ResourceScriptWrapper(resource.Resource):
     def getChildWithDefault(self, path, request):
         res = ResourceScript(self.path, self.registry)
         return res.getChildWithDefault(path, request)
-
 
 
 class ResourceScriptDirectory(resource.Resource):
@@ -117,6 +122,7 @@ class ResourceScriptDirectory(resource.Resource):
     @ivar registry: A L{static.Registry} instance which will be used to decide
         how to interpret scripts found as children of this resource.
     """
+
     def __init__(self, pathname, registry=None):
         resource.Resource.__init__(self)
         self.path = pathname
@@ -129,11 +135,10 @@ class ResourceScriptDirectory(resource.Resource):
             return ResourceScriptDirectory(fn, self.registry)
         if os.path.exists(fn):
             return ResourceScript(fn, self.registry)
-        return resource.NoResource()
+        return resource._UnsafeNoResource()
 
     def render(self, request):
-        return resource.NoResource().render(request)
-
+        return resource._UnsafeNoResource().render(request)
 
 
 class PythonScript(resource.Resource):
@@ -143,6 +148,7 @@ class PythonScript(resource.Resource):
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
     """
+
     isLeaf = True
 
     def __init__(self, filename, registry):
@@ -161,22 +167,27 @@ class PythonScript(resource.Resource):
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
-        namespace = {'request': request,
-                     '__file__': _coerceToFilesystemEncoding("", self.filename),
-                     'registry': self.registry}
+        request.setHeader(
+            b"x-powered-by", networkString("Twisted/%s" % copyright.version)
+        )
+        namespace = {
+            "request": request,
+            "__file__": _coerceToFilesystemEncoding("", self.filename),
+            "registry": self.registry,
+        }
         try:
             execfile(self.filename, namespace, namespace)
-        except IOError as e:
-            if e.errno == 2: #file not found
+        except OSError as e:
+            if e.errno == 2:  # file not found
                 request.setResponseCode(http.NOT_FOUND)
-                request.write(resource.NoResource("File not found.").render(request))
-        except:
-            io = NativeStringIO()
+                request.write(
+                    resource._UnsafeNoResource("File not found.").render(request)
+                )
+        except BaseException:
+            io = StringIO()
             traceback.print_exc(file=io)
             output = util._PRE(io.getvalue())
-            if _PY3:
-                output = output.encode("utf8")
+            output = output.encode("utf8")
             request.write(output)
         request.finish()
         return server.NOT_DONE_YET

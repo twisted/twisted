@@ -10,54 +10,49 @@ from twisted.trial import unittest
 from twisted.words import xmpproutertap as tap
 from twisted.words.protocols.jabber import component
 
-class XMPPRouterTapTests(unittest.TestCase):
 
-    def test_port(self):
+class XMPPRouterTapTests(unittest.TestCase):
+    def test_port(self) -> None:
         """
         The port option is recognised as a parameter.
         """
         opt = tap.Options()
-        opt.parseOptions(['--port', '7001'])
-        self.assertEqual(opt['port'], '7001')
+        opt.parseOptions(["--port", "7001"])
+        self.assertEqual(opt["port"], "7001")
 
-
-    def test_portDefault(self):
+    def test_portDefault(self) -> None:
         """
         The port option has '5347' as default value
         """
         opt = tap.Options()
         opt.parseOptions([])
-        self.assertEqual(opt['port'], 'tcp:5347:interface=127.0.0.1')
+        self.assertEqual(opt["port"], "tcp:5347:interface=127.0.0.1")
 
-
-    def test_secret(self):
+    def test_secret(self) -> None:
         """
         The secret option is recognised as a parameter.
         """
         opt = tap.Options()
-        opt.parseOptions(['--secret', 'hushhush'])
-        self.assertEqual(opt['secret'], 'hushhush')
+        opt.parseOptions(["--secret", "hushhush"])
+        self.assertEqual(opt["secret"], "hushhush")
 
-
-    def test_secretDefault(self):
+    def test_secretDefault(self) -> None:
         """
         The secret option has 'secret' as default value
         """
         opt = tap.Options()
         opt.parseOptions([])
-        self.assertEqual(opt['secret'], 'secret')
+        self.assertEqual(opt["secret"], "secret")
 
-
-    def test_verbose(self):
+    def test_verbose(self) -> None:
         """
         The verbose option is recognised as a flag.
         """
         opt = tap.Options()
-        opt.parseOptions(['--verbose'])
-        self.assertTrue(opt['verbose'])
+        opt.parseOptions(["--verbose"])
+        self.assertTrue(opt["verbose"])
 
-
-    def test_makeService(self):
+    def test_makeService(self) -> None:
         """
         The service gets set up with a router and factory.
         """
@@ -65,20 +60,19 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions([])
         s = tap.makeService(opt)
         self.assertIsInstance(s, internet.StreamServerEndpointService)
-        self.assertEqual('127.0.0.1', s.endpoint._interface)
+        self.assertEqual("127.0.0.1", s.endpoint._interface)
         self.assertEqual(5347, s.endpoint._port)
         factory = s.factory
         self.assertIsInstance(factory, component.XMPPComponentServerFactory)
         self.assertIsInstance(factory.router, component.Router)
-        self.assertEqual('secret', factory.secret)
+        self.assertEqual("secret", factory.secret)
         self.assertFalse(factory.logTraffic)
 
-
-    def test_makeServiceVerbose(self):
+    def test_makeServiceVerbose(self) -> None:
         """
         The verbose flag enables traffic logging.
         """
         opt = tap.Options()
-        opt.parseOptions(['--verbose'])
+        opt.parseOptions(["--verbose"])
         s = tap.makeService(opt)
         self.assertTrue(s.factory.logTraffic)

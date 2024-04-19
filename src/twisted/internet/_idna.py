@@ -7,7 +7,8 @@ Shared interface to IDNA encoding and decoding, using the C{idna} PyPI package
 if available, otherwise the stdlib implementation.
 """
 
-def _idnaBytes(text):
+
+def _idnaBytes(text: str) -> bytes:
     """
     Convert some text typed by a human into some ASCII bytes.
 
@@ -30,8 +31,7 @@ def _idnaBytes(text):
         return idna.encode(text)
 
 
-
-def _idnaText(octets):
+def _idnaText(octets: bytes) -> str:
     """
     Convert some IDNA-encoded octets into some human-readable text.
 
@@ -49,6 +49,3 @@ def _idnaText(octets):
         return octets.decode("idna")
     else:
         return idna.decode(octets)
-
-
-

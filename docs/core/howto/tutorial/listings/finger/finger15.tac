@@ -1,26 +1,29 @@
 # Read from file, announce on the web!
+import html
+
 from twisted.application import service, strports
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.web import resource, server, static
-import cgi
+
 
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
         d = self.factory.getUser(user)
 
         def onError(err):
-            return b'Internal error in server'
+            return b"Internal error in server"
+
         d.addErrback(onError)
 
         def writeResponse(message):
-            self.transport.write(message + b'\r\n')
+            self.transport.write(message + b"\r\n")
             self.transport.loseConnection()
+
         d.addCallback(writeResponse)
 
 
 class FingerResource(resource.Resource):
-
     def __init__(self, users):
         self.users = users
         resource.Resource.__init__(self)
@@ -36,14 +39,14 @@ class FingerResource(resource.Resource):
             messagevalue = messagevalue.decode("ascii")
         if username:
             username = username.decode("ascii")
-        username = cgi.escape(username)
+        username = html.escape(username)
         if messagevalue is not None:
-            messagevalue = cgi.escape(messagevalue)
-            text = '<h1>{}</h1><p>{}</p>'.format(username, messagevalue)
+            messagevalue = html.escape(messagevalue)
+            text = f"<h1>{username}</h1><p>{messagevalue}</p>"
         else:
-            text = '<h1>{}</h1><p>No such user</p>'.format(username)
+            text = f"<h1>{username}</h1><p>No such user</p>"
         text = text.encode("ascii")
-        return static.Data(text, 'text/html')
+        return static.Data(text, "text/html")
 
 
 class FingerService(service.Service):
@@ -55,7 +58,7 @@ class FingerService(service.Service):
         self.users.clear()
         with open(self.filename, "rb") as f:
             for line in f:
-                user, status = line.split(b':', 1)
+                user, status = line.split(b":", 1)
                 user = user.strip()
                 status = status.strip()
                 self.users[user] = status
@@ -83,11 +86,11 @@ class FingerService(service.Service):
         self.call.cancel()
 
 
-application = service.Application('finger', uid=1, gid=1)
-f = FingerService('/etc/users')
+application = service.Application("finger", uid=1, gid=1)
+f = FingerService("/etc/users")
 serviceCollection = service.IServiceCollection(application)
 f.setServiceParent(serviceCollection)
-strports.service("tcp:79", f.getFingerFactory()
-                   ).setServiceParent(serviceCollection)
-strports.service("tcp:8000", server.Site(f.getResource())
-                   ).setServiceParent(serviceCollection)
+strports.service("tcp:79", f.getFingerFactory()).setServiceParent(serviceCollection)
+strports.service("tcp:8000", server.Site(f.getResource())).setServiceParent(
+    serviceCollection
+)

@@ -7,13 +7,11 @@ An incremental approach to unzipping files.  This allows you to unzip a little
 bit of a file at a time, which means you can report progress as a file unzips.
 """
 
-import zipfile
 import os.path
-import zlib
 import struct
+import zipfile
+import zlib
 
-
-_fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
 
 class ChunkingZipFile(zipfile.ZipFile):
     """
@@ -28,22 +26,20 @@ class ChunkingZipFile(zipfile.ZipFile):
         if self.mode not in ("r", "a"):
             raise RuntimeError('read() requires mode "r" or "a"')
         if not self.fp:
-            raise RuntimeError(
-                "Attempt to read ZIP archive that was already closed")
+            raise RuntimeError("Attempt to read ZIP archive that was already closed")
         zinfo = self.getinfo(name)
 
         self.fp.seek(zinfo.header_offset, 0)
 
-        fheader = self.fp.read(_fileHeaderSize)
+        fheader = self.fp.read(zipfile.sizeFileHeader)
         if fheader[0:4] != zipfile.stringFileHeader:
-            raise zipfile.BadZipfile("Bad magic number for file header")
+            raise zipfile.BadZipFile("Bad magic number for file header")
 
         fheader = struct.unpack(zipfile.structFileHeader, fheader)
         fname = self.fp.read(fheader[zipfile._FH_FILENAME_LENGTH])
 
         if fheader[zipfile._FH_EXTRA_FIELD_LENGTH]:
             self.fp.read(fheader[zipfile._FH_EXTRA_FIELD_LENGTH])
-
 
         if zinfo.flag_bits & 0x800:
             # UTF-8 filename
@@ -52,22 +48,23 @@ class ChunkingZipFile(zipfile.ZipFile):
             fname_str = fname.decode("cp437")
 
         if fname_str != zinfo.orig_filename:
-            raise zipfile.BadZipfile(
-                'File name in directory "%s" and header "%s" differ.' % (
-                    zinfo.orig_filename, fname_str))
+            raise zipfile.BadZipFile(
+                'File name in directory "%s" and header "%s" differ.'
+                % (zinfo.orig_filename, fname_str)
+            )
 
         if zinfo.compress_type == zipfile.ZIP_STORED:
             return ZipFileEntry(self, zinfo.compress_size)
         elif zinfo.compress_type == zipfile.ZIP_DEFLATED:
             return DeflatedZipFileEntry(self, zinfo.compress_size)
         else:
-            raise zipfile.BadZipfile(
-                "Unsupported compression method %d for file %s" %
-                    (zinfo.compress_type, name))
+            raise zipfile.BadZipFile(
+                "Unsupported compression method %d for file %s"
+                % (zinfo.compress_type, name)
+            )
 
 
-
-class _FileEntry(object):
+class _FileEntry:
     """
     Abstract superclass of both compressed and uncompressed variants of
     file-like objects within a zip archive.
@@ -90,6 +87,7 @@ class _FileEntry(object):
     please.
     @type finished: L{int}
     """
+
     def __init__(self, chunkingZipFile, length):
         """
         Create a L{_FileEntry} from a L{ChunkingZipFile}.
@@ -100,13 +98,11 @@ class _FileEntry(object):
         self.finished = 0
         self.closed = False
 
-
     def isatty(self):
         """
         Returns false because zip files should not be ttys
         """
         return False
-
 
     def close(self):
         """
@@ -116,18 +112,16 @@ class _FileEntry(object):
         self.finished = 1
         del self.fp
 
-
     def readline(self):
         """
         Read a line.
         """
         line = b""
-        for byte in iter(lambda : self.read(1), b""):
+        for byte in iter(lambda: self.read(1), b""):
             line += byte
             if byte == b"\n":
                 break
         return line
-
 
     def __next__(self):
         """
@@ -142,13 +136,11 @@ class _FileEntry(object):
     # Iterators on Python 2 use next(), not __next__()
     next = __next__
 
-
     def readlines(self):
         """
         Returns a list of all the lines
         """
         return list(self)
-
 
     def xreadlines(self):
         """
@@ -156,21 +148,17 @@ class _FileEntry(object):
         """
         return self
 
-
     def __iter__(self):
         """
         Returns an iterator (so self)
         """
         return self
 
-
     def __enter__(self):
         return self
 
-
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-
 
 
 class ZipFileEntry(_FileEntry):
@@ -182,23 +170,19 @@ class ZipFileEntry(_FileEntry):
         _FileEntry.__init__(self, chunkingZipFile, length)
         self.readBytes = 0
 
-
     def tell(self):
         return self.readBytes
-
 
     def read(self, n=None):
         if n is None:
             n = self.length - self.readBytes
         if n == 0 or self.finished:
-            return b''
-        data = self.chunkingZipFile.fp.read(
-            min(n, self.length - self.readBytes))
+            return b""
+        data = self.chunkingZipFile.fp.read(min(n, self.length - self.readBytes))
         self.readBytes += len(data)
-        if self.readBytes == self.length or len(data) <  n:
+        if self.readBytes == self.length or len(data) < n:
             self.finished = 1
         return data
-
 
 
 class DeflatedZipFileEntry(_FileEntry):
@@ -213,20 +197,21 @@ class DeflatedZipFileEntry(_FileEntry):
         self.decomp = zlib.decompressobj(-15)
         self.buffer = b""
 
-
     def tell(self):
         return self.returnedBytes
-
 
     def read(self, n=None):
         if self.finished:
             return b""
         if n is None:
-            result = [self.buffer,]
+            result = [
+                self.buffer,
+            ]
             result.append(
                 self.decomp.decompress(
-                    self.chunkingZipFile.fp.read(
-                        self.length - self.readBytes)))
+                    self.chunkingZipFile.fp.read(self.length - self.readBytes)
+                )
+            )
             result.append(self.decomp.decompress(b"Z"))
             result.append(self.decomp.flush())
             self.buffer = b""
@@ -237,12 +222,13 @@ class DeflatedZipFileEntry(_FileEntry):
         else:
             while len(self.buffer) < n:
                 data = self.chunkingZipFile.fp.read(
-                    min(n, 1024, self.length - self.readBytes))
+                    min(n, 1024, self.length - self.readBytes)
+                )
                 self.readBytes += len(data)
                 if not data:
-                    result = (self.buffer
-                              + self.decomp.decompress(b"Z")
-                              + self.decomp.flush())
+                    result = (
+                        self.buffer + self.decomp.decompress(b"Z") + self.decomp.flush()
+                    )
                     self.finished = 1
                     self.buffer = b""
                     self.returnedBytes += len(result)
@@ -253,7 +239,6 @@ class DeflatedZipFileEntry(_FileEntry):
             self.buffer = self.buffer[n:]
             self.returnedBytes += len(result)
             return result
-
 
 
 DIR_BIT = 16
@@ -288,9 +273,7 @@ def countFileChunks(zipinfo, chunksize):
     return count or 1
 
 
-
-def unzipIterChunky(filename, directory='.', overwrite=0,
-                    chunksize=4096):
+def unzipIterChunky(filename, directory=".", overwrite=0, chunksize=4096):
     """
     Return a generator for the zipfile.  This implementation will yield after
     every chunksize uncompressed bytes, or at the end of a file, whichever
@@ -298,7 +281,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
 
     The value it yields is the number of chunks left to unzip.
     """
-    czf = ChunkingZipFile(filename, 'r')
+    czf = ChunkingZipFile(filename, "r")
     if not os.path.exists(directory):
         os.makedirs(directory)
     remaining = countZipFileChunks(filename, chunksize)
@@ -325,7 +308,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
                 if info.file_size == 0:
                     remaining -= 1
                     yield remaining
-                with open(f, 'wb') as outfile:
+                with open(f, "wb") as outfile:
                     while fp.tell() < info.file_size:
                         hunk = fp.read(chunksize)
                         outfile.write(hunk)
