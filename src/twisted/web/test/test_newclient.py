@@ -705,7 +705,22 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(protocol.response.length, 1)
         self.assertEqual(protocol.state, BODY)
 
-    def test_negativeContentLength(self):
+    def test_contentLengthTooPositive(self):
+        """
+        If the I{Content-Length} header contains anything other than digits
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: +1\r\n\r\n",
+        )
+
+    def test_contentLengthNegative(self):
         """
         If the I{Content-Length} header has a negative value
         L{HTTPClientParser.dataReceived} raises L{ValueError} to

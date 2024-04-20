@@ -640,6 +640,27 @@ def _ensureValidURI(uri):
     raise ValueError(f"Invalid URI {uri!r}")
 
 
+def _decint(data: bytes) -> int:
+    """
+    Parse a decimal integer of the form C{1*DIGIT}, i.e. consisting only of
+    decimal digits. The integer may be embedded in whitespace (space and
+    horizontal tab). This differs from the built-in L{int()} function by
+    disallowing a leading C{+} character and various forms of whitespace
+    (note that we sanitize linear whitespace in header values in
+    L{twisted.web.http_headers.Headers}).
+
+    @param data: Value to parse.
+
+    @returns: A non-negative integer.
+
+    @raises ValueError: When I{value} contains non-decimal characters.
+    """
+    data = data.strip(b" \t")
+    if not data.isdigit():
+        raise ValueError(f"Value contains non-decimal digits: {data!r}")
+    return int(data)
+
+
 def _contentLength(connHeaders: Headers) -> Optional[int]:
     """
     Parse the I{Content-Length} connection header.
@@ -677,7 +698,7 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
 
     if b"," in fieldValues:
         # Duplicates of the form b'42, 42' are allowed.
-        values = {int(v.strip()) for v in fieldValues.split(b",")}
+        values = {_decint(v) for v in fieldValues.split(b",")}
         if len(values) != 1:
             # "HTTP Message Splitting" or "HTTP Response Smuggling"
             # potentially happening.  Or it's just a buggy server.
@@ -686,7 +707,7 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
             )
         [value] = values
     else:
-        value = int(fieldValues.strip())
+        value = _decint(fieldValues)
 
     if value >= 0:
         return value
