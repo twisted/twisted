@@ -708,10 +708,7 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
         [value] = values
     else:
         value = _decint(fieldValues)
-
-    if value >= 0:
-        return value
-    raise ValueError(f"Negative Content-Length header value: {fieldValues!r}")
+    return value
 
 
 @implementer(IClientRequest)
