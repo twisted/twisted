@@ -27,6 +27,7 @@ Various other classes in this module support this usage:
 """
 
 import re
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -200,6 +201,10 @@ class HTTPParser(LineReceiver):
 
     @ivar headers: All of the non-connection control message headers yet
         received.
+
+    @ivar connHeaders: All of the connection control message headers yet
+        received. See L{CONNECTION_CONTROL_HEADERS} and
+        L{isConnectionControlHeader}.
 
     @ivar state: State indicator for the response parsing state machine.  One
         of C{STATUS}, C{HEADER}, C{BODY}, C{DONE}.
@@ -496,36 +501,9 @@ class HTTPClientParser(HTTPParser):
                 # allow the transfer decoder to set the response object's
                 # length attribute.
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders(b"content-length")
-                # Parsing of content length headers for multiple field
-                # values as supplemental feature. See Iss. #9064
-                if isinstance(contentLengthHeaders, list):
-                    for field_value in contentLengthHeaders:
-                        # split field value byte string when comma separated
-                        # byte string can be b'1, 2' for example when parsed
-                        # from header
-                        if b"," in field_value:
-                            # given found b',', split and reset content
-                            # length header with field values list
-                            field_value_items = field_value.split(b",")
-                            field_value_items = [x.strip() for x in field_value_items]
-                            self.connHeaders.setRawHeaders(
-                                b"content-length", field_value_items
-                            )
-                    contentLengthHeaders = self.connHeaders.getRawHeaders(
-                        b"content-length"
-                    )
-                if contentLengthHeaders is None:
-                    contentLength = None
-                elif len(set(contentLengthHeaders)) == 1:
-                    contentLength = int(contentLengthHeaders[0])
+                contentLength = _contentLength(self.connHeaders)
+                if contentLength is not None:
                     self.response.length = contentLength
-                else:
-                    # "HTTP Message Splitting" or "HTTP Response Smuggling"
-                    # potentially happening.  Or it's just a buggy server.
-                    raise ValueError(
-                        "Too many Content-Length headers; " "response is invalid"
-                    )
 
                 if contentLength == 0:
                     self._finished(self.clearLineBuffer())
@@ -606,7 +584,7 @@ _VALID_METHOD = re.compile(
                 b"~",
                 b"\x30-\x39",
                 b"\x41-\x5a",
-                b"\x61-\x7A",
+                b"\x61-\x7a",
             ),
         ),
     ),
@@ -660,6 +638,59 @@ def _ensureValidURI(uri):
     if _VALID_URI.match(uri):
         return uri
     raise ValueError(f"Invalid URI {uri!r}")
+
+
+def _contentLength(connHeaders: Headers) -> Optional[int]:
+    """
+    Parse the I{Content-Length} connection header.
+
+    Two forms of duplicates are permitted. Header repetition:
+
+        Content-Length: 42
+        Content-Length: 42
+
+    And field value repetition:
+
+        Content-Length: 42, 42
+
+    Duplicates are only permitted if they have the same decimal value
+    (so C{7, 007} are also permitted).
+
+    @param connHeaders: Connection headers per L{HTTPParser.connHeaders}
+
+    @returns: A non-negative number of octets, or L{None} when there is
+        no I{Content-Length} header.
+
+    @raises ValueError: when there are conflicting headers, a header value
+        isn't an integer, or a header value is negative.
+
+    @see: U{https://datatracker.ietf.org/doc/html/rfc9110#section-8.6}
+    """
+    headers = connHeaders.getRawHeaders(b"content-length")
+    if headers is None:
+        return None
+
+    if len(headers) > 1:
+        fieldValues = b",".join(headers)
+    else:
+        [fieldValues] = headers
+
+    if b"," in fieldValues:
+        # Duplicates of the form b'42, 42' are allowed.
+        values = {int(v.strip()) for v in fieldValues.split(b",")}
+        if len(values) != 1:
+            # "HTTP Message Splitting" or "HTTP Response Smuggling"
+            # potentially happening.  Or it's just a buggy server.
+            raise ValueError(
+                f"Invalid response: conflicting Content-Length headers: {fieldValues!r}"
+            )
+        [value] = values
+    else:
+        value = int(fieldValues.strip())
+
+    if value >= 0:
+        return value
+    raise ValueError(f"Negative Content-Length header value: {fieldValues!r}")
 
 
 @implementer(IClientRequest)

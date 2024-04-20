@@ -678,7 +678,7 @@ class HTTPClientParserTests(TestCase):
         """
         If a response includes multiple, distinct I{Content-Length} header
         field-values, L{HTTPClientParser.dataReceived} raises L{ValueError} to
-        indicate that the response is invalid and the transport is now unusable
+        indicate that the response is invalid and the transport is now unusable.
         """
         protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
 
@@ -693,16 +693,32 @@ class HTTPClientParserTests(TestCase):
         """
         If a response includes multiple, equal I{Content-Length} header
         field-values, L{HTTPClientParser.dataReceived} successfully handles and
-        passes single content-length header for body processing
+        passes single content-length header for body processing. Field-values
+        are considered equal by parsed decimal value.
         """
         protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
 
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(
-            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 1\r\n" b"\r\n"
+            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 001\r\n" b"\r\n"
         )
         self.assertEqual(protocol.response.length, 1)
         self.assertEqual(protocol.state, BODY)
+
+    def test_negativeContentLength(self):
+        """
+        If the I{Content-Length} header has a negative value
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\n",
+        )
 
     def test_extraBytesPassedBack(self):
         """
