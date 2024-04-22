@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_defer -*-
+# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -2181,62 +2181,51 @@ def inlineCallbacks(
     f: Callable[_P, Generator[Deferred[Any], Any, _T]]
 ) -> Callable[_P, Deferred[_T]]:
     """
-    L{inlineCallbacks} helps you write L{Deferred}-using code that looks like a
-    regular sequential function. For example::
+    L{inlineCallbacks} helps you write L{Deferred}-using code using coroutines.
+    For example::
+
+        @inlineCallbacks
+        async def thingummy():
+            thing = await makeSomeRequestResultingInADeferred()
+            return thing  # the result! hoorj!
+
+    When you call anything that results in a L{Deferred} or coroutine, you
+    can simply C{await} it; the function will resume when the C{await}ed thing
+    results in a value (which becomes the value of the C{await} expression) or
+    exception (which is raised at the point of the C{await} expression).  Any
+    object that isn't a L{Deferred} or coroutine will pass through C{await}, in
+    the matter of L{maybeDeferred}.
+
+    An L{inlineCallbacks}-decorated function always returns a L{Deferred}.
+    A C{return} statement callbacks the deferred. C{raise} errbacks it, as does
+    an unhandled exception. The deferred will callback with L{None} if it
+    executes without returning.
+
+    Cancelling the L{Deferred} returned by your L{inlineCallbacks}
+    function before it causes C{CancelledError} to be raised from the
+    C{await}ed L{Deferred} that has been cancelled if that C{Deferred} does not
+    otherwise suppress it.
+
+    For compatibility with code written before introduction of coroutine
+    function syntax (C{async def}) in Python 3.7, L{inlineCallbacks} can also
+    decorate generator functions. For example::
 
         @inlineCallbacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
-            print(thing)  # the result! hoorj!
+            return thing
 
-    When you call anything that results in a L{Deferred}, you can simply yield it;
-    your generator will automatically be resumed when the Deferred's result is
-    available. The generator will be sent the result of the L{Deferred} with the
-    'send' method on generators, or if the result was a failure, 'throw'.
+    This functions just like C{async def}, but you use C{yield} instead of
+    C{await}.
 
-    Things that are not L{Deferred}s may also be yielded, and your generator
-    will be resumed with the same object sent back. This means C{yield}
-    performs an operation roughly equivalent to L{maybeDeferred}.
-
-    Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
-    will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of L{None}.
-
-    Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
-    If you believe the thing you'd like to return could be a L{Deferred}, do
-    this::
-
-        result = yield result
-        returnValue(result)
-
-    The L{Deferred} returned from your deferred generator may errback if your
-    generator raised an exception::
-
-        @inlineCallbacks
-        def thingummy():
-            thing = yield makeSomeRequestResultingInDeferred()
-            if thing == 'I love Twisted':
-                # will become the result of the Deferred
-                returnValue('TWISTED IS GREAT!')
-            else:
-                # will trigger an errback
-                raise Exception('DESTROY ALL LIFE')
-
-    It is possible to use the C{return} statement instead of L{returnValue}::
+    For compatibility with code written before introduction of generator
+    return in Python 3.5, the L{returnValue} function may be used instead of
+    the C{return} statement::
 
         @inlineCallbacks
         def loadData(url):
             response = yield makeRequest(url)
-            return json.loads(response)
-
-    You can cancel the L{Deferred} returned from your L{inlineCallbacks}
-    generator before it is fired by your generator completing (either by
-    reaching its end, a C{return} statement, or by calling L{returnValue}).
-    A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
-    has been cancelled if that C{Deferred} does not otherwise suppress it.
+            returnValue(json.loads(response))
     """
 
     @wraps(f)
@@ -2248,9 +2237,9 @@ def inlineCallbacks(
                 "inlineCallbacks requires %r to produce a generator; instead"
                 "caught returnValue being used in a non-generator" % (f,)
             )
-        if not isinstance(gen, GeneratorType):
+        if not isinstance(gen, GeneratorType) and not iscoroutine(gen):
             raise TypeError(
-                "inlineCallbacks requires %r to produce a generator; "
+                "inlineCallbacks requires %r to produce a generator or coroutine; "
                 "instead got %r" % (f, gen)
             )
         return _cancellableInlineCallbacks(gen)
