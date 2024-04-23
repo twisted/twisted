@@ -2425,12 +2425,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._maybeChooseTransferDecoder(header, data):
             return False
 
-        reqHeaders = self.requests[-1].requestHeaders
-        values = reqHeaders.getRawHeaders(header)
-        if values is not None:
-            values.append(data)
-        else:
-            reqHeaders.setRawHeaders(header, [data])
+        self.requests[-1].requestHeaders.addRawHeader(header, data)
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
