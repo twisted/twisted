@@ -379,13 +379,13 @@ def timegm(year, month, day, hour, minute, second):
     return seconds
 
 
-def stringToDatetime(dateString):
+def stringToDatetime(dateString: bytes) -> int:
     """
     Convert an HTTP date string (one of three formats) to seconds since epoch.
 
     @type dateString: C{bytes}
     """
-    parts = nativeString(dateString).split()
+    parts = dateString.decode("ascii").split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
