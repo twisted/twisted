@@ -28,7 +28,7 @@ from incremental import Version
 
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecated
 from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
@@ -355,6 +355,10 @@ class _UnsafeErrorPage(Resource):
         return self
 
 
+@deprecated(
+    Version("Twisted", 22, 10, 0),
+    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
+)
 class _UnsafeNoResource(_UnsafeErrorPage):
     """
     L{_UnsafeNoResource}, publicly available via the deprecated alias
@@ -369,6 +373,10 @@ class _UnsafeNoResource(_UnsafeErrorPage):
         _UnsafeErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
 
 
+@deprecated(
+    Version("Twisted", 22, 10, 0),
+    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
+)
 class _UnsafeForbiddenResource(_UnsafeErrorPage):
     """
     L{_UnsafeForbiddenResource}, publicly available via the deprecated alias
@@ -384,30 +392,12 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
 
 
 # Deliberately undocumented public aliases. See GHSA-vg46-2rrj-3647.
-ErrorPage = _UnsafeErrorPage
-NoResource = _UnsafeNoResource
-ForbiddenResource = _UnsafeForbiddenResource
-
-deprecatedModuleAttribute(
+ErrorPage = deprecated(
     Version("Twisted", 22, 10, 0),
     "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
-    __name__,
-    "ErrorPage",
-)
-
-deprecatedModuleAttribute(
-    Version("Twisted", 22, 10, 0),
-    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
-    __name__,
-    "NoResource",
-)
-
-deprecatedModuleAttribute(
-    Version("Twisted", 22, 10, 0),
-    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
-    __name__,
-    "ForbiddenResource",
-)
+)(_UnsafeErrorPage)
+NoResource = _UnsafeNoResource
+ForbiddenResource = _UnsafeForbiddenResource
 
 
 class _IEncodingResource(Interface):
