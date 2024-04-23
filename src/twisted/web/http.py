@@ -2498,8 +2498,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self._networkProducer.pauseProducing()
             return
 
-        self.resetTimeout()
-
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
