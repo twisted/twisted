@@ -2271,13 +2271,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         self._networkProducer.registerProducer(self, True)
 
+    def dataReceived(self, data):
+        self.resetTimeout()
+        basic.LineReceiver.dataReceived(self, data)
+
     def lineReceived(self, line):
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        self.resetTimeout()
-
         self._receivedHeaderSize += len(line)
         if self._receivedHeaderSize > self.totalHeadersSize:
             self._respondToBadRequestAndDisconnect()
@@ -3141,11 +3143,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         using.
         """
         if self._negotiatedProtocol is None:
-            try:
-                negotiatedProtocol = self._channel.transport.negotiatedProtocol
-            except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b"http/1.1"
+            negotiatedProtocol = getattr(
+                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+            )
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b"http/1.1"
