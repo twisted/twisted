@@ -51,23 +51,6 @@ __all__ = [
     "GzipEncoderFactory",
 ]
 
-
-# backwards compatibility
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.datetimeToString instead",
-    "twisted.web.server",
-    "date_time_string",
-)
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.stringToDatetime instead",
-    "twisted.web.server",
-    "string_date_time",
-)
-date_time_string = http.datetimeToString
-string_date_time = http.stringToDatetime
-
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
 
