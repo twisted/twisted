@@ -461,7 +461,7 @@ class KnownHostsFile:
         """
         hhk = defer.execute(self.hasHostKey, hostname, key)
 
-        def gotHasKey(result):
+        def gotHasKey(result: bool) -> bool | Deferred[bool]:
             if result:
                 if not self.hasHostKey(ip, key):
                     addMessage = (
