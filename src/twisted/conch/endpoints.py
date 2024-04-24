@@ -6,7 +6,13 @@
 Endpoint implementations of various SSH interactions.
 """
 
-__all__ = ["AuthenticationFailed", "SSHCommandAddress", "SSHCommandClientEndpoint"]
+from __future__ import annotations
+
+__all__ = [
+    "AuthenticationFailed",
+    "SSHCommandAddress",
+    "SSHCommandClientEndpoint",
+]
 
 import signal
 from io import BytesIO
