@@ -34,6 +34,7 @@ if requireModule("cryptography"):
     from twisted.conch.ssh.keys import BadKeyError, Key
     from twisted.conch.test import keydata
 else:
+    ConsoleUI = object  # type:ignore
     skip = "cryptography required for twisted.conch.knownhosts."
 
 
