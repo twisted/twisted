@@ -5,6 +5,7 @@
 Tests for L{twisted.conch.client.knownhosts}.
 """
 
+from __future__ import annotations
 
 import os
 from binascii import Error as BinasciiError, a2b_base64, b2a_base64
