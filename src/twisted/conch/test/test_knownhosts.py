@@ -95,7 +95,9 @@ class EntryTestsMixin:
     www.twistedmatrix.com and an RSA key of sampleKey.
     """
 
-    def test_providesInterface(self):
+    entry: IKnownHostEntry
+
+    def test_providesInterface(self) -> None:
         """
         The given entry should provide IKnownHostEntry.
         """
@@ -141,13 +143,13 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
     plaintextLine = samplePlaintextLine
     hostIPLine = sampleHostIPLine
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Set 'entry' to a sample plain-text entry with sampleKey as its key.
         """
         self.entry = PlainEntry.fromString(self.plaintextLine)
 
-    def test_matchesHostIP(self):
+    def test_matchesHostIP(self) -> None:
         """
         A "hostname,ip" formatted line will match both the host and the IP.
         """
@@ -155,7 +157,7 @@ class PlainEntryTests(EntryTestsMixin, TestCase):
         self.assertTrue(self.entry.matchesHost(b"198.49.126.131"))
         self.test_matchesHost()
 
-    def test_toString(self):
+    def test_toString(self) -> None:
         """
         L{PlainEntry.toString} generates the serialized OpenSSL format string
         for the entry, sans newline.
@@ -186,21 +188,21 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
 
     hashedLine = sampleHashedLine
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Set 'entry' to a sample hashed entry for twistedmatrix.com with
         sampleKey as its key.
         """
         self.entry = HashedEntry.fromString(self.hashedLine)
 
-    def test_toString(self):
+    def test_toString(self) -> None:
         """
         L{HashedEntry.toString} generates the serialized OpenSSL format string
         for the entry, sans the newline.
         """
         self.assertEqual(self.entry.toString(), self.hashedLine.rstrip(b"\n"))
 
-    def test_equality(self):
+    def test_equality(self) -> None:
         """
         Two L{HashedEntry} instances compare equal if and only if they represent
         the same host and key in exactly the same way: the host salt, host hash,
@@ -266,32 +268,32 @@ class UnparsedEntryTests(TestCase, EntryTestsMixin):
     Tests for L{UnparsedEntry}
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Set up the 'entry' to be an unparsed entry for some random text.
         """
         self.entry = UnparsedEntry(b"    This is a bogus entry.  \n")
 
-    def test_fromString(self):
+    def test_fromString(self) -> None:
         """
         Creating an L{UnparsedEntry} should simply record the string it was
         passed.
         """
-        self.assertEqual(b"    This is a bogus entry.  \n", self.entry._string)
+        self.assertEqual(b"    This is a bogus entry.  ", self.entry.toString())
 
-    def test_matchesHost(self):
+    def test_matchesHost(self) -> None:
         """
         An unparsed entry can't match any hosts.
         """
         self.assertFalse(self.entry.matchesHost(b"www.twistedmatrix.com"))
 
-    def test_matchesKey(self):
+    def test_matchesKey(self) -> None:
         """
         An unparsed entry can't match any keys.
         """
         self.assertFalse(self.entry.matchesKey(Key.fromString(sampleKey)))
 
-    def test_toString(self):
+    def test_toString(self) -> None:
         """
         L{UnparsedEntry.toString} returns its input string, sans trailing
         newline.
@@ -309,20 +311,20 @@ class ParseErrorTests(TestCase):
     L{twisted.conch.ssh.keys} modules.
     """
 
-    def invalidEntryTest(self, cls):
+    def invalidEntryTest(self, cls: type[HashedEntry | PlainEntry]) -> None:
         """
         If there are fewer than three elements, C{fromString} should raise
         L{InvalidEntry}.
         """
         self.assertRaises(InvalidEntry, cls.fromString, b"invalid")
 
-    def notBase64Test(self, cls):
+    def notBase64Test(self, cls: type[HashedEntry | PlainEntry]) -> None:
         """
         If the key is not base64, C{fromString} should raise L{BinasciiError}.
         """
         self.assertRaises(BinasciiError, cls.fromString, b"x x x")
 
-    def badKeyTest(self, cls, prefix):
+    def badKeyTest(self, cls: type[HashedEntry | PlainEntry], prefix: bytes) -> None:
         """
         If the key portion of the entry is valid base64, but is not actually an
         SSH key, C{fromString} should raise L{BadKeyError}.
@@ -335,14 +337,14 @@ class ParseErrorTests(TestCase):
             ),
         )
 
-    def test_invalidPlainEntry(self):
+    def test_invalidPlainEntry(self) -> None:
         """
         If there are fewer than three whitespace-separated elements in an
         entry, L{PlainEntry.fromString} should raise L{InvalidEntry}.
         """
         self.invalidEntryTest(PlainEntry)
 
-    def test_invalidHashedEntry(self):
+    def test_invalidHashedEntry(self) -> None:
         """
         If there are fewer than three whitespace-separated elements in an
         entry, or the hostname salt/hash portion has more than two elements,
@@ -354,14 +356,14 @@ class ParseErrorTests(TestCase):
             InvalidEntry, HashedEntry.fromString, b" ".join([a + b"||", b, c])
         )
 
-    def test_plainNotBase64(self):
+    def test_plainNotBase64(self) -> None:
         """
         If the key portion of a plain entry is not decodable as base64,
         C{fromString} should raise L{BinasciiError}.
         """
         self.notBase64Test(PlainEntry)
 
-    def test_hashedNotBase64(self):
+    def test_hashedNotBase64(self) -> None:
         """
         If the key, host salt, or host hash portion of a hashed entry is not
         encoded, it will raise L{BinasciiError}.
@@ -385,7 +387,7 @@ class ParseErrorTests(TestCase):
             BinasciiError, HashedEntry.fromString, b" ".join([b"|1|x|x", b, c])
         )
 
-    def test_hashedBadKey(self):
+    def test_hashedBadKey(self) -> None:
         """
         If the key portion of the entry is valid base64, but is not actually an
         SSH key, C{HashedEntry.fromString} should raise L{BadKeyError}.
@@ -393,7 +395,7 @@ class ParseErrorTests(TestCase):
         a, b, c = sampleHashedLine.split()
         self.badKeyTest(HashedEntry, a)
 
-    def test_plainBadKey(self):
+    def test_plainBadKey(self) -> None:
         """
         If the key portion of the entry is valid base64, but is not actually an
         SSH key, C{PlainEntry.fromString} should raise L{BadKeyError}.
@@ -406,7 +408,7 @@ class KnownHostsDatabaseTests(TestCase):
     Tests for L{KnownHostsFile}.
     """
 
-    def pathWithContent(self, content):
+    def pathWithContent(self, content: bytes) -> FilePath[str]:
         """
         Return a FilePath with the given initial content.
         """
@@ -416,14 +418,14 @@ class KnownHostsDatabaseTests(TestCase):
 
     def loadSampleHostsFile(
         self,
-        content=(
+        content: bytes = (
             sampleHashedLine
             + otherSamplePlaintextLine
             + b"\n# That was a blank line.\n"
             b"This is just unparseable.\n"
             b"|1|This also unparseable.\n"
         ),
-    ):
+    ) -> KnownHostsFile:
         """
         Return a sample hosts file, with keys for www.twistedmatrix.com and
         divmod.com present.
@@ -930,7 +932,7 @@ class KnownHostsDatabaseTests(TestCase):
         d = hostsFile.verifyHostKey(ui, b"www.twistedmatrix.com", b"4.3.2.1", wrongKey)
         return self.assertFailure(d, HostKeyChanged)
 
-    def test_verifyKeyForHostAndIP(self):
+    def test_verifyKeyForHostAndIP(self) -> None:
         """
         Verifying a key where the hostname is present but the IP is not should
         result in the key being added for the IP and the user being warned
@@ -948,13 +950,13 @@ class KnownHostsDatabaseTests(TestCase):
         )
         self.assertEqual(
             [
-                "Warning: Permanently added the RSA host key for IP address "
-                "'5.4.3.2' to the list of known hosts."
+                b"Warning: Permanently added the RSA host key for IP address "
+                b"'5.4.3.2' to the list of known hosts.\n"
             ],
             ui.userWarnings,
         )
 
-    def test_getHostKeyAlgorithms(self):
+    def test_getHostKeyAlgorithms(self) -> None:
         """
         For a given host, get the host key algorithms for that
         host in the known_hosts file.
@@ -1117,7 +1119,7 @@ class ConsoleUITests(TestCase):
         self.assertEqual(len(self.flushLoggedErrors(ZeroDivisionError)), 1)
 
 
-class FakeUI:
+class FakeUI(ConsoleUI):
     """
     A fake UI object, adhering to the interface expected by
     L{KnownHostsFile.verifyHostKey}
@@ -1129,12 +1131,12 @@ class FakeUI:
     @ivar promptText: the last input provided to 'prompt'.
     """
 
-    def __init__(self):
-        self.userWarnings = []
-        self.promptDeferred = None
-        self.promptText = None
+    def __init__(self) -> None:
+        self.userWarnings: list[bytes] = []
+        self.promptDeferred: Deferred[bool] | None = None
+        self.promptText: bytes | None = None
 
-    def prompt(self, text):
+    def prompt(self, text: bytes) -> Deferred[bool]:
         """
         Issue the user an interactive prompt, which they can accept or deny.
         """
@@ -1142,7 +1144,7 @@ class FakeUI:
         self.promptDeferred = Deferred()
         return self.promptDeferred
 
-    def warn(self, text):
+    def warn(self, text: bytes) -> None:
         """
         Issue a non-interactive warning to the user.
         """
@@ -1258,8 +1260,8 @@ class DefaultAPITests(TestCase):
         ).addCallback(l.append)
         self.assertEqual(
             [
-                "Warning: Permanently added the RSA host key for IP address "
-                "'8.7.6.5' to the list of known hosts."
+                b"Warning: Permanently added the RSA host key for IP address "
+                b"'8.7.6.5' to the list of known hosts.\n"
             ],
             self.fakeFile.outchunks,
         )
