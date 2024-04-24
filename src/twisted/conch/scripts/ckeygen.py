@@ -154,7 +154,7 @@ def generateDSAkey(options):
     from cryptography.hazmat.primitives.asymmetric import dsa
 
     if not options["bits"]:
-        options["bits"] = 1024
+        options["bits"] = 2048
     keyPrimitive = dsa.generate_private_key(
         key_size=int(options["bits"]),
         backend=default_backend(),
