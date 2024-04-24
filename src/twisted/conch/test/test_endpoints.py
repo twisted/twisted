@@ -7,6 +7,7 @@ Tests for L{twisted.conch.endpoints}.
 
 import os.path
 from errno import ENOSYS
+from io import BytesIO
 from struct import pack
 
 from zope.interface import implementer
@@ -52,7 +53,6 @@ if requireModule("cryptography"):
         _ExistingConnectionHelper,
         _ISSHConnectionCreator,
         _NewConnectionHelper,
-        _ReadFile,
     )
     from twisted.conch.ssh import common
     from twisted.conch.ssh.agent import SSHAgentServer
@@ -1457,8 +1457,8 @@ class _PTYPath:
 
         @return: A L{_ReadFile} instance
         """
-        if mode == "rb+":
-            return _ReadFile(self.contents)
+        if mode == "r+":
+            return BytesIO(self.contents)
         raise OSError(ENOSYS, "Function not implemented")
 
 
