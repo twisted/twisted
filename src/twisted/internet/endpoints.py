@@ -1382,6 +1382,7 @@ def _parseSSL(
     privateKey="server.pem",
     certKey=None,
     sslmethod=None,
+    cipher=None,
     interface="",
     backlog=50,
     extraCertChain=None,
@@ -1466,6 +1467,10 @@ def _parseSSL(
         dhParameters=dhParameters,
         **kw,
     )
+
+    if cipher:
+        if isinstance(cipher, str):
+            cf.getContext().set_cipher_list(str.encode(cipher.replace(",", ":")))
     return ((int(port), factory, cf), {"interface": interface, "backlog": int(backlog)})
 
 
