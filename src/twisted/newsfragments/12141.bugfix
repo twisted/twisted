@@ -1,0 +1,1 @@
+twisted.conch.client.knownhosts.KnownHostsFile.verifyHostKey no longer logs an exception when automatically adding an IP address host key, which means the interactive `conch` command-line no longer will either.
