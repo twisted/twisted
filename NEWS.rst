@@ -3873,7 +3873,7 @@ Twisted Core 15.4.0 (2015-09-04)
 ================================
 
 This is the last Twisted release where Python 2.6 is supported, on any
-platform. 
+platform.
 
 Features
 --------
@@ -4417,6 +4417,7 @@ Twisted Core 15.0.0 (2015-01-24)
 
 Features
 --------
+ - twisted.internet.endpoints adding support for cipher in `serverFromString`(#12134)
  - twisted.internet.protocol.ClientFactory (and subclasses) may now
    return None from buildProtocol to immediately close the connection.
    (#710)
