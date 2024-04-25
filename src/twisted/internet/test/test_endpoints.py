@@ -7,6 +7,8 @@ L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
 
+from __future__ import annotations
+
 from errno import EPERM
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
