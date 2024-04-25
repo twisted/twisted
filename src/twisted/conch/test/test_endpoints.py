@@ -9,6 +9,7 @@ import os.path
 from errno import ENOSYS
 from io import BytesIO
 from struct import pack
+from typing import IO
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass, verifyObject
@@ -1435,30 +1436,39 @@ class ExistingConnectionHelperTests(TestCase):
         helper.cleanupConnection(object(), True)
 
 
+class _WriteDiscarder(BytesIO):
+    def write(self, data: object, /) -> int:
+        """
+        Discard writes because we are emulating a console object, where they'd
+        go to the screen, not back into the buffer to be read like an a+ file.
+        """
+        return 0
+
+
 class _PTYPath:
     """
     A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
     certain contents.
     """
 
-    def __init__(self, contents):
+    def __init__(self, contents: bytes) -> None:
         """
         @param contents: L{bytes} which will be the contents of the
             L{_ReadFile} this path can open.
         """
         self.contents = contents
 
-    def open(self, mode):
+    def open(self, mode: str) -> IO[bytes]:
         """
-        If the mode is r+, return a L{_ReadFile} with the contents given to
-        this path's initializer.
+        If the mode is r+, return a file with the given contents as a line.
 
         @raise OSError: If the mode is unsupported.
 
-        @return: A L{_ReadFile} instance
+        @return: a buffer of the given contents, which will discard any writes
+            given to it.
         """
         if mode == "r+":
-            return BytesIO(self.contents)
+            return _WriteDiscarder(self.contents)
         raise OSError(ENOSYS, "Function not implemented")
 
 
