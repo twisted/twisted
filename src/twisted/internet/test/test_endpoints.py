@@ -3266,13 +3266,11 @@ class ServerStringTests(unittest.TestCase):
         The colon (:) from the OpenSSL format is replaced with a comma (,).
         """
         reactor = object()
-        server = (
-            endpoints.serverFromString(
-                reactor,
-                "ssl:1234:backlog=12:privateKey=%s:"
-                "certKey=%s:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ALL,!ADH,"
-                % (escapedPEMPathName, escapedPEMPathName),
-            ),
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:1234:backlog=12:privateKey=%s:"
+            "certKey=%s:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ALL,!ADH,"
+            % (escapedPEMPathName, escapedPEMPathName),
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
