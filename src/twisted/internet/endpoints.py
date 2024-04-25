@@ -1415,7 +1415,7 @@ def _parseSSL(
         constant in C{OpenSSL.SSL}.
     @type sslmethod: C{str}
 
-    @param cipher: A string containing a list of cipher values, formatted as comma-separated values, 
+    @param cipher: A string containing a list of cipher values, formatted as comma-separated values,
                     These values can be obtained from the OpenSSL documentation at
                     https://www.openssl.org/docs/man1.0.2/man1/ciphers.html.
                     This parameter is optional and can be used to restrict the ciphers supported by your server.
