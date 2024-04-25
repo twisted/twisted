@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import cached_property
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from zope.interface import implementer
 
@@ -31,21 +32,38 @@ from twisted.python.filepath import FilePath
 
 
 @implementer(IOpenSSLServerConnectionCreator)
+@dataclass
 class SNIConnectionCreator(object):
-    def __init__(
-        self,
-        contextLookup: Callable[[Union[bytes, None]], Context],
-        connectionSetupHook: Callable[[Connection], None],
-    ):
-        self.contextLookup = contextLookup
-        self.connectionSetupHook = connectionSetupHook
+    _configForSNI: ServerNameIndictionConfiguration
+    _connectionSetupHook: Callable[[Connection], None]
+    _contextSetupHook: Callable[[Context], None]
+
+    def _lookupContext(self, name: Optional[bytes]) -> Context:
+        ctxLookup = self._configForSNI._contextLookup
+        candidate = ctxLookup(name)
+        if candidate is None:
+            if name is not None:
+                # coverage v
+                segments = name.split(b".")
+                segments[0] = b"*"
+                wildcardName = b".".join(segments)
+                candidate = ctxLookup(wildcardName)
+                # coverage ^
+
+        if candidate is None:
+            # coverage v
+            raise KeyError(f"no certificate for domain {name!r}")
+            # coverage ^
+
+        self._contextSetupHook(candidate)
+        return candidate
 
     @cached_property
     def defaultContext(self) -> Context:
-        defaultContext = self.contextLookup(None)
+        defaultContext = self._lookupContext(None)
 
         def selectContext(connection: Connection) -> None:
-            connection.set_context(self.contextLookup(connection.get_servername()))
+            connection.set_context(self._lookupContext(connection.get_servername()))
 
         defaultContext.set_tlsext_servername_callback(selectContext)
         return defaultContext
@@ -62,11 +80,12 @@ class SNIConnectionCreator(object):
         @return: a newly-created connection.
         """
         newConnection = Connection(self.defaultContext)
-        self.connectionSetupHook(newConnection)
+        self._connectionSetupHook(newConnection)
         return newConnection
 
 
 @implementer(IOpenSSLServerConnectionCreatorFactory)
+@dataclass
 class ServerNameIndictionConfiguration:
     """
     L{ServerNameIndictionConfiguration} is an
@@ -75,14 +94,7 @@ class ServerNameIndictionConfiguration:
     by a client into a L{Context}.
     """
 
-    def __init__(
-        self, contextLookup: Callable[[Optional[bytes]], Optional[Context]]
-    ) -> None:
-        """
-        Initialize a L{ServerNameIndictionConfiguration} with a callable that
-        can do a lookup for a L{Context} based on an indicated server name.
-        """
-        self.contextLookup = contextLookup
+    _contextLookup: Callable[[Optional[bytes]], Optional[Context]]
 
     def createServerCreator(
         self,
@@ -94,27 +106,7 @@ class ServerNameIndictionConfiguration:
         passed to this L{ServerNameIndictionConfiguration} when it was
         constructed.
         """
-
-        def lookupAndSetup(name: Optional[bytes]) -> Context:
-            candidate = self.contextLookup(name)
-            if candidate is None:
-                if name is not None:
-                    # coverage v
-                    segments = name.split(b".")
-                    segments[0] = b"*"
-                    wildcardName = b".".join(segments)
-                    candidate = self.contextLookup(wildcardName)
-                    # coverage ^
-
-            if candidate is None:
-                # coverage v
-                raise KeyError(f"no certificate for domain {name!r}")
-                # coverage ^
-
-            contextSetupHook(candidate)
-            return candidate
-
-        return SNIConnectionCreator(lookupAndSetup, connectionSetupHook)
+        return SNIConnectionCreator(self, connectionSetupHook, contextSetupHook)
 
 
 @implementer(IStreamServerEndpoint)

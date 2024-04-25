@@ -63,7 +63,10 @@ from twisted.internet.testing import (
 from twisted.logger import ILogObserver, Logger, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
-from twisted.protocols._sni import ServerNameIndictionConfiguration
+from twisted.protocols._sni import (
+    ServerNameIndictionConfiguration,
+    SNIConnectionCreator,
+)
 from twisted.python import log
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
@@ -2954,7 +2957,16 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             def __eq__(iself, other: object) -> bool:
                 assert isinstance(other, TLSMemoryBIOFactory)
                 self.assertIs(other.wrappedFactory, factory)
-                self.assertEqual(other._creatorCallable, snic.serverConnectionForTLS)
+
+                # This is a very unfortunate white-box test, but I just want to
+                # look at the *value* of the SNI configuration; given that
+                # OpenSSL hides everything internally I can't verify that we
+                # build a correct-looking connection, so instead we have to do
+                # this:
+                sorryAboutThis = other._creatorCallable.__self__  # type:ignore
+                assert isinstance(sorryAboutThis, SNIConnectionCreator)
+                self.assertIs(sorryAboutThis._configForSNI, snic)
+
                 return True
 
         return (
