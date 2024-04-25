@@ -6,7 +6,6 @@ Tests for L{twisted.conch.endpoints}.
 """
 
 import os.path
-from errno import ENOSYS
 from io import BytesIO
 from struct import pack
 from typing import IO
@@ -1462,14 +1461,11 @@ class _PTYPath:
         """
         If the mode is r+, return a file with the given contents as a line.
 
-        @raise OSError: If the mode is unsupported.
-
         @return: a buffer of the given contents, which will discard any writes
             given to it.
         """
-        if mode == "r+":
-            return _WriteDiscarder(self.contents)
-        raise OSError(ENOSYS, "Function not implemented")
+        assert mode == "r+"
+        return _WriteDiscarder(self.contents)
 
 
 class NewConnectionHelperTests(TestCase):
