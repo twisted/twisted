@@ -3271,7 +3271,6 @@ class ServerStringTests(unittest.TestCase):
                 reactor,
                 "ssl:1234:backlog=12:privateKey=%s:"
                 "certKey=%s:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ALL,!ADH,"
-                "@STRENGTH,+RSA,-DSA,SHA1+DES"
                 % (escapedPEMPathName, escapedPEMPathName),
             ),
         )
