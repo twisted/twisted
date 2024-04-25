@@ -1472,8 +1472,8 @@ def _parseSSL(
     )
 
     if cipher:
-        cipher_bytes = cipher.replace(",", ":").encode("ascii")
-        cf.getContext().set_cipher_list(cipher_bytes)
+        cipherBytes = cipher.replace(",", ":").encode("ascii")
+        cf.getContext().set_cipher_list(cipherBytes)
     return ((int(port), factory, cf), {"interface": interface, "backlog": int(backlog)})
 
 
