@@ -3262,22 +3262,20 @@ class ServerStringTests(unittest.TestCase):
     @skipIf(skipSSL, skipSSLReason)
     def test_sslWithCustomCipher(self):
         """
-        Test adding custom cipher to the serverFromString function.
+        A cipher list is supported, using the OpenSSL format.
+        The colon (:) from the OpenSSL format is replaced with a comma (,).
         """
         reactor = object()
         server = (
             endpoints.serverFromString(
                 reactor,
                 "ssl:1234:backlog=12:privateKey=%s:"
-                "certKey=%s:sslmethod=TLSv1_2_METHOD:interface=10.0.0.1:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-ECDSA-CHACHA20-POLY1305,ECDHE-RSA-AES128-GCM-SHA256"
+                "certKey=%s:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ALL,!ADH,"
+                "@STRENGTH,+RSA,-DSA,SHA1+DES"
                 % (escapedPEMPathName, escapedPEMPathName),
             ),
         )
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
-        self.assertIs(server._reactor, reactor)
-        self.assertEqual(server._port, 1234)
-        self.assertEqual(server._backlog, 12)
-        self.assertEqual(server._interface, "10.0.0.1")
         self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)

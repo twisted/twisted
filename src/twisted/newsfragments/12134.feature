@@ -1,0 +1,1 @@
+Added support for `cipher` in `serverFromString` function

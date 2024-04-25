@@ -4417,7 +4417,6 @@ Twisted Core 15.0.0 (2015-01-24)
 
 Features
 --------
- - twisted.internet.endpoints adding support for cipher in `serverFromString`(#12134)
  - twisted.internet.protocol.ClientFactory (and subclasses) may now
    return None from buildProtocol to immediately close the connection.
    (#710)
