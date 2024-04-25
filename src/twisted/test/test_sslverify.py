@@ -16,7 +16,6 @@ from unittest import skipIf
 
 from zope.interface import implementer
 
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
@@ -47,7 +46,10 @@ if requireModule("OpenSSL"):
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.asymmetric.rsa import (
+        RSAPrivateKey,
+        generate_private_key,
+    )
     from cryptography.hazmat.primitives.serialization import (
         Encoding,
         NoEncryption,
@@ -172,7 +174,7 @@ class TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = rsa.generate_private_key(
+        privateKeyForCA = generate_private_key(
             public_exponent=65537, key_size=4096, backend=default_backend()
         )
         publicKeyForCA = privateKeyForCA.public_key()
@@ -224,7 +226,7 @@ def certificatesForAuthorityAndServer(
     commonNameForServer = x509.Name(
         [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example Server")]
     )
-    privateKeyForServer = rsa.generate_private_key(
+    privateKeyForServer = generate_private_key(
         public_exponent=65537, key_size=4096, backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()

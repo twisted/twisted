@@ -64,10 +64,6 @@ from twisted.internet.testing import (
 from twisted.logger import ILogObserver, Logger, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
-from twisted.protocols._sni import (
-    ServerNameIndictionConfiguration,
-    SNIConnectionCreator,
-)
 from twisted.python import log
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
@@ -114,6 +110,10 @@ try:
         KeyPair,
         PrivateCertificate,
         optionsForClientTLS,
+    )
+    from twisted.protocols._sni import (
+        ServerNameIndictionConfiguration,
+        SNIConnectionCreator,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
     from twisted.test.test_sslverify import (
