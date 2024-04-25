@@ -3873,7 +3873,7 @@ Twisted Core 15.4.0 (2015-09-04)
 ================================
 
 This is the last Twisted release where Python 2.6 is supported, on any
-platform.
+platform. 
 
 Features
 --------
