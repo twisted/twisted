@@ -601,7 +601,7 @@ class ConsoleUI:
                     answer = f.readline().strip().lower()
                     if answer == b"yes":
                         return True
-                    elif answer == b"no":
+                    elif answer in {b"no", b""}:
                         return False
                     else:
                         f.write(b"Please type 'yes' or 'no': ")
