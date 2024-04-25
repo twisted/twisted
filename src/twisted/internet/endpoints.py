@@ -12,6 +12,7 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
+from __future__ import annotations
 
 import os
 import re
