@@ -614,7 +614,6 @@ class ConsoleUI:
         to the console.
 
         @param text: Some information the user is to be made aware of.
-        @type text: L{bytes}
         """
         try:
             with closing(self.opener()) as f:
