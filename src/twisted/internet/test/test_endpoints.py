@@ -53,7 +53,6 @@ from twisted.internet.interfaces import (
     ITransport,
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol
-from twisted.internet.ssl import optionsForClientTLS
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.internet.testing import (
@@ -77,7 +76,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
 from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial import unittest
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
@@ -115,9 +113,13 @@ try:
         DiffieHellmanParameters,
         KeyPair,
         PrivateCertificate,
+        optionsForClientTLS,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from twisted.test.test_sslverify import makeCertificate
+    from twisted.test.test_sslverify import (
+        certificatesForAuthorityAndServer,
+        makeCertificate,
+    )
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
