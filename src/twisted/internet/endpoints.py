@@ -18,7 +18,7 @@ import os
 import re
 import socket
 import warnings
-from typing import Any, Callable, Optional, Sequence, Type
+from typing import Any, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -69,7 +69,7 @@ from twisted.python.systemd import ListenFDs
 from ._idna import _idnaBytes, _idnaText
 
 try:
-    from OpenSSL.SSL import TLS_METHOD, Context, Error as SSLError
+    from OpenSSL.SSL import Error as SSLError
 except ImportError:
     TLSMemoryBIOFactory = None
 else:
@@ -82,9 +82,9 @@ else:
         trustRootFromCertificates,
     )
     from twisted.protocols._sni import (
-        PEMObjects,
         ServerNameIndictionConfiguration,
         TLSServerEndpoint,
+        autoReloadingDirectoryOfPEMs,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
 
@@ -2348,37 +2348,12 @@ class _TLSClientEndpointParser:
         return _parseClientTLS(reactor, *args, **kwargs)
 
 
-def _sniLookup(
-    log: Logger, path: FilePath[str]
-) -> Callable[[Optional[bytes]], Optional[Context]]:
-    certMap: dict[str, CertificateOptions]
-
-    def doReload() -> None:
-        nonlocal certMap
-        certMap = PEMObjects.fromDirectory(path).inferDomainMapping()
-
-    def lookup(name: Optional[bytes], shouldReload: bool = True) -> Optional[Context]:
-        name = next(iter(certMap.keys()), "").encode() if name is None else name
-        if (options := certMap.get(name.decode())) is not None:
-            return options.getContext()
-        if not shouldReload:
-            return Context(TLS_METHOD)
-        msg = "could not find domain {name}, re-loading {path}"
-        log.error(msg, name=name, path=path)
-        doReload()
-        return lookup(name, False)
-
-    doReload()
-    return lookup
-
-
 @implementer(IPlugin, IStreamServerEndpointStringParser)
 class _TLSServerEndpointParser:
     """
     TLS server endpoint parser.
     """
 
-    _log = Logger()
     prefix: str = "tls"
 
     def _actualParseStreamServer(
@@ -2396,7 +2371,7 @@ class _TLSServerEndpointParser:
         p = FilePath(path)
         return TLSServerEndpoint(
             TCP6ServerEndpoint(reactor, int(port), int(backlog), interface),
-            ServerNameIndictionConfiguration(_sniLookup(self._log, p)),
+            ServerNameIndictionConfiguration(autoReloadingDirectoryOfPEMs(p)),
         )
 
     def parseStreamServer(

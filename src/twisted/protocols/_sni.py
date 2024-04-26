@@ -7,9 +7,10 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 from zope.interface import implementer
 
 from OpenSSL.crypto import FILETYPE_PEM
-from OpenSSL.SSL import Connection, Context
+from OpenSSL.SSL import TLS_METHOD, Connection, Context
 
 import attr
+from cryptography.x509 import DNSName, ExtensionOID, load_pem_x509_certificate
 
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
@@ -26,9 +27,12 @@ from twisted.internet.ssl import (
     KeyPair,
     PrivateCertificate,
 )
+from twisted.logger import Logger
 from twisted.protocols._tls_legacy import SomeConnectionCreator
 from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 from twisted.python.filepath import FilePath
+
+log = Logger()
 
 
 @implementer(IOpenSSLServerConnectionCreator)
@@ -125,16 +129,68 @@ class TLSServerEndpoint(object):
 
 def _getSubjectAltNames(c: Certificate) -> List[str]:
     """
-    get all the SAN names for a given cert
+    Get all the DNSName SANs for a given certificate.
     """
-    from cryptography.x509 import DNSName, ExtensionOID, load_pem_x509_certificate
-
     return [
         value
         for extension in load_pem_x509_certificate(c.dumpPEM()).extensions
         if extension.oid == ExtensionOID.SUBJECT_ALTERNATIVE_NAME
         for value in extension.value.get_values_for_type(DNSName)
     ]
+
+
+def autoReloadingDirectoryOfPEMs(
+    path: FilePath[str],
+) -> Callable[[Optional[bytes]], Optional[Context]]:
+    """
+    Construct a callable that can look up a HTTPS certificate based on their
+    DNS names, by inspecting a directory full of PEM objects.  When
+    encountering a lookup failure, the directory will be reloaded, so that if
+    new certificates are added they will be picked up.
+    """
+    # TODO: some flaws with this approach
+
+    """
+        1. too much re-scanning; re-reading full file contents for every single
+           certificate even if only one has changed.  a mtime/length cache
+           would be a good place to start with this
+
+        2. too trusting; we get a network request for a billion certificate
+           names per second, we go ahead and do a bunch of work every single
+           time (and, see point 1, re-scan and re-parse every single file)
+
+        3. not *enough* re-scanning on the happy path; if certificates go
+           stale, we just let them sit there until we get an unknown hostname
+
+        4. we don't look at notAfter/notBefore, so if we find multiple certs,
+           we may end up using the wrong one
+
+    this should probably just be scrapped for the time being in favor of
+    directly supporting the certbot 'live' layout, since that only needs to
+    care about 2 paths per servername, .../{host}/fullchain.pem and
+    .../{host}/privkey.pem.  then we can use mtime/size checks to re-load them
+    periodically.
+    """
+
+    certMap: dict[str, CertificateOptions]
+
+    def doReload() -> None:
+        nonlocal certMap
+        certMap = PEMObjects.fromDirectory(path).inferDomainMapping()
+
+    def lookup(name: Optional[bytes], shouldReload: bool = True) -> Optional[Context]:
+        name = next(iter(certMap.keys()), "").encode() if name is None else name
+        if (options := certMap.get(name.decode())) is not None:
+            return options.getContext()
+        if not shouldReload:
+            return Context(TLS_METHOD)
+        msg = "could not find domain {name}, re-loading {path}"
+        log.error(msg, name=name, path=path)
+        doReload()
+        return lookup(name, False)
+
+    doReload()
+    return lookup
 
 
 @attr.s(auto_attribs=True)

@@ -61,7 +61,7 @@ from twisted.internet.testing import (
     StringTransport,
     StringTransportWithDisconnection,
 )
-from twisted.logger import ILogObserver, Logger, globalLogPublisher
+from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
 from twisted.python import log
@@ -2952,10 +2952,10 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         """
         address = IPv6Address("TCP", "::", 0)
 
-        from twisted.internet.endpoints import _sniLookup
+        from twisted.internet.endpoints import autoReloadingDirectoryOfPEMs
 
         fp = FilePath(self.mktemp())
-        snic = ServerNameIndictionConfiguration(_sniLookup(Logger(), fp))
+        snic = ServerNameIndictionConfiguration(autoReloadingDirectoryOfPEMs(fp))
 
         class FactoryChecker:
             def __eq__(iself, other: object) -> bool:
