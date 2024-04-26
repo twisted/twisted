@@ -88,6 +88,9 @@ class SNIConnectionCreator(object):
         return newConnection
 
 
+LookerUpper = Callable[[Optional[bytes]], Optional[Context]]
+
+
 @implementer(IOpenSSLServerConnectionCreatorFactory)
 @dataclass
 class ServerNameIndictionConfiguration:
@@ -98,7 +101,7 @@ class ServerNameIndictionConfiguration:
     by a client into a L{Context}.
     """
 
-    _contextLookup: Callable[[Optional[bytes]], Optional[Context]]
+    _contextLookup: LookerUpper
 
     def createServerCreator(
         self,
@@ -141,7 +144,7 @@ def _getSubjectAltNames(c: Certificate) -> List[str]:
 
 def autoReloadingDirectoryOfPEMs(
     path: FilePath[str],
-) -> Callable[[Optional[bytes]], Optional[Context]]:
+) -> LookerUpper:
     """
     Construct a callable that can look up a HTTPS certificate based on their
     DNS names, by inspecting a directory full of PEM objects.  When
