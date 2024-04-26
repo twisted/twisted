@@ -168,11 +168,6 @@ def autoReloadingDirectoryOfPEMs(
         4. we don't look at notAfter/notBefore, so if we find multiple certs,
            we may end up using the wrong one
 
-    this should probably just be scrapped for the time being in favor of
-    directly supporting the certbot 'live' layout, since that only needs to
-    care about 2 paths per servername, .../{host}/fullchain.pem and
-    .../{host}/privkey.pem.  then we can use mtime/size checks to re-load them
-    periodically.
     """
 
     certMap: dict[str, CertificateOptions]
