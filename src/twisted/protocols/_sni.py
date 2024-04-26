@@ -142,9 +142,7 @@ def _getSubjectAltNames(c: Certificate) -> List[str]:
     ]
 
 
-def autoReloadingDirectoryOfPEMs(
-    path: FilePath[str],
-) -> LookerUpper:
+def autoReloadingDirectoryOfPEMs(path: FilePath[str]) -> LookerUpper:
     """
     Construct a callable that can look up a HTTPS certificate based on their
     DNS names, by inspecting a directory full of PEM objects.  When
