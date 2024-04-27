@@ -3268,13 +3268,34 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ALL,!ADH"
+            "ssl:1234:privateKey=%s:"
+            "certKey=%s:cipher=ALL,!ADH,@STRENGTH,+RSA,-DSA,SHA1+DES"
             % (escapedPEMPathName, escapedPEMPathName),
         )
+
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
+
+    @skipIf(skipSSL, skipSSLReason)
+    def test_sslInvalidCustomCipher(self):
+        """
+        A cipher list is supported, using the OpenSSL format.
+        The colon (:) from the OpenSSL format is replaced with a comma (,).
+        """
+        reactor = object()
+        with self.assertRaises(Exception) as context:
+            server = endpoints.serverFromString(
+                reactor,
+                "ssl:1234:privateKey=%s:"
+                "certKey=%s:cipher=bla, blah"
+                % (escapedPEMPathName, escapedPEMPathName),
+            )
+
+            self.assertTrue("Invalid cipher list passed" in str(context.exception))
+            self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+            ctx = server._sslContextFactory.getContext()
+            self.assertIsInstance(ctx, ContextType)
 
     def test_unix(self):
         """
