@@ -22,8 +22,6 @@ from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
 
-import OpenSSL
-
 from constantly import NamedConstant, Names
 from incremental import Version
 
@@ -1479,7 +1477,7 @@ def _parseSSL(
         try:
             cipherBytes = cipher.replace(",", ":").encode("ascii")
             cf.getContext().set_cipher_list(cipherBytes)
-        except OpenSSL.SSL.Error:
+        except SSLError:
             raise Exception("Invalid cipher list passed")
 
     return ((int(port), factory, cf), {"interface": interface, "backlog": int(backlog)})
