@@ -3286,17 +3286,13 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         with self.assertRaises(Exception) as context:
-            server = endpoints.serverFromString(
+            endpoints.serverFromString(
                 reactor,
                 "ssl:1234:privateKey=%s:"
                 "certKey=%s:cipher=bla, blah"
                 % (escapedPEMPathName, escapedPEMPathName),
             )
-
             self.assertTrue("Invalid cipher list passed" in str(context.exception))
-            self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
-            ctx = server._sslContextFactory.getContext()
-            self.assertIsInstance(ctx, ContextType)
 
     def test_unix(self):
         """
