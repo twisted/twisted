@@ -122,7 +122,6 @@ osx-platform = [
 gtk-platform = [
     "twisted[all-non-platform]",
     "pygobject",
-    "pyopenssl",
 ]
 
 mypy = [

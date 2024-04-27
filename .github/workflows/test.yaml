@@ -243,7 +243,7 @@ jobs:
     - name: Install dependencies
       run: |
         openssl version
-        python -m pip install --upgrade pip tox~=3.0 coverage
+        python -m pip install --upgrade pip tox~=3.0 coverage pyopenssl
 
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
