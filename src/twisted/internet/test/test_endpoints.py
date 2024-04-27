@@ -3264,6 +3264,7 @@ class ServerStringTests(unittest.TestCase):
         """
         A cipher list is supported, using the OpenSSL format.
         The colon (:) from the OpenSSL format is replaced with a comma (,).
+        Limitations to the test -> Not checked the ciphers returned.
         """
         reactor = object()
         server = endpoints.serverFromString(
