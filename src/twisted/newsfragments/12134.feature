@@ -1,1 +1,1 @@
-Added support for `cipher` in `serverFromString` function
+twisted.internet.endpoint.serverFromString now supports defining a cipher list. 
