@@ -1786,7 +1786,7 @@ def serverFromString(reactor, description):
     string as below::
 
         serverFromString(
-            reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem:cipher=ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256"
+            reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem:cipher=ALL,!ADH,@STRENGTH,+RSA,-DSA,SHA1+DES"
         )
 
     You may escape colons in arguments with a backslash, which you will need to
