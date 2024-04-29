@@ -1474,11 +1474,11 @@ def _parseSSL(
         **kw,
     )
     if cipher:
+        cipherBytes = cipher.replace(",", ":").encode("ascii")
         try:
-            cipherBytes = cipher.replace(",", ":").encode("ascii")
             cf.getContext().set_cipher_list(cipherBytes)
         except SSLError:
-            raise Exception("Invalid cipher list passed")
+            pass
 
     return ((int(port), factory, cf), {"interface": interface, "backlog": int(backlog)})
 

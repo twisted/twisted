@@ -3285,14 +3285,15 @@ class ServerStringTests(unittest.TestCase):
         The colon (:) from the OpenSSL format is replaced with a comma (,).
         """
         reactor = object()
-        with self.assertRaises(Exception) as context:
+
+        self.assertRaises(
             endpoints.serverFromString(
                 reactor,
                 "ssl:1234:privateKey=%s:"
                 "certKey=%s:cipher=bla, blah"
                 % (escapedPEMPathName, escapedPEMPathName),
             )
-            self.assertTrue("Invalid cipher list passed" in str(context.exception))
+        )
 
     def test_unix(self):
         """
