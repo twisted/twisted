@@ -3264,7 +3264,7 @@ class ServerStringTests(unittest.TestCase):
         """
         A cipher list is supported, using the OpenSSL format.
         The colon (:) from the OpenSSL format is replaced with a comma (,).
-        
+
         This test does not provides much functionality coverage as there is no API to retrieve the current configured ciper list.
         Testing this functionality requires doing a TLS handshake.
         """
