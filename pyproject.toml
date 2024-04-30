@@ -67,6 +67,7 @@ dev-release = [
 
 # All the extra tools used to help with the development process.
 dev = [
+    "twisted[test]",
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
