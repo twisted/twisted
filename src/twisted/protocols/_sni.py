@@ -174,7 +174,7 @@ def autoReloadingDirectoryOfPEMs(path: FilePath[str]) -> LookerUpper:
         nonlocal certMap
         certMap = PEMObjects.fromDirectory(path).inferDomainMapping()
 
-    def lookup(name: Optional[bytes], shouldReload: bool = True) -> Optional[Context]:
+    def lookup(name: Optional[bytes], shouldReload: bool = True) -> Context:
         name = next(iter(certMap.keys()), "").encode() if name is None else name
         if (options := certMap.get(name.decode())) is not None:
             return options.getContext()
