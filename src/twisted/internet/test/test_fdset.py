@@ -355,7 +355,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
 
         client, server = self._connectedPair()
 
-        class Victim(FileDescriptor):
+        class Victim(CustomFileDescriptor):
             """
             This L{FileDescriptor} will have its socket closed out from under it
             and another socket will take its place.  It will raise a
@@ -363,12 +363,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
             objects remember whether they have been closed), so as long as the
             reactor calls the C{fileno} method the problem will be detected.
             """
-
-            def fileno(self) -> int:
-                return server.fileno()
-
-            def doRead(self) -> None:
-                raise Exception("Victim.doRead should never be called")
 
             def connectionLost(self, reason: Failure) -> None:
                 """
@@ -378,7 +372,13 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
                 """
                 reactor.stop()
 
-        reactor.addReader(Victim())
+        reactor.addReader(
+            Victim(
+                reactor,
+                self.makeFailer("Victim.doRead should never be called"),
+                filenoCB=server.fileno,
+            )
+        )
 
         # Arrange for the socket to be replaced at some unspecified time.
         # Significantly, this will not be while any I/O processing code is on
