@@ -57,7 +57,7 @@ __all__ = [
     Version("Twisted", 12, 1, 0),
     "twisted.web.http.datetimeToString",
 )
-def date_time_string(dt: int) -> bytes:
+def date_time_string(dt):
     return http.datetimeToString(dt)
 
 
@@ -65,7 +65,7 @@ def date_time_string(dt: int) -> bytes:
     Version("Twisted", 12, 1, 0),
     "twisted.web.http.stringToDatetime",
 )
-def string_date_time(dts: bytes) -> int:
+def string_date_time(dts):
     return http.stringToDatetime(dts)
 
 
