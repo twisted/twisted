@@ -253,8 +253,6 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         providers and all registered L{IWriteDescriptor} providers and returns
         them.
         """
-        reactor = self.buildReactor()
-
         reactor, fd, server = self._simpleSetup(
             readCallback=self.makeFailer("doRead should not be called"),
             writeCallback=self.makeFailer("doWrite should not be called"),
