@@ -20,24 +20,6 @@ from OpenSSL.SSL import VERIFY_FAIL_IF_NO_PEER_CERT, VERIFY_PEER, Connection
 import attr
 from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
-from service_identity import VerificationError
-
-try:
-    from service_identity.hazmat import (
-        DNS_ID,
-        IPAddress_ID,
-        ServiceID,
-        verify_service_identity,
-    )
-except ImportError:
-    from service_identity.common import (  # type:ignore[import-not-found,no-redef]
-        DNS_ID,
-        IPAddress_ID,
-        ServiceID,
-        verify_service_identity,
-    )
-
-from service_identity.pyopenssl import extract_patterns
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
@@ -56,6 +38,14 @@ from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
+from ._service_identity import (
+    DNS_ID,
+    IPAddress_ID,
+    ServiceID,
+    VerificationError,
+    extract_patterns,
+    verify_service_identity,
+)
 
 if TYPE_CHECKING:
     from twisted.protocols.tls import TLSMemoryBIOProtocol
