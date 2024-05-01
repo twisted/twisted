@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar, Union
 
 from zope.interface import Interface, implementer
 
@@ -1138,7 +1138,7 @@ def _makeVerifyCallback(
 
 def optionsForClientTLS(
     hostname: str,
-    trustRoot: Optional[IOpenSSLTrustRoot] = None,
+    trustRoot: Optional[Union[IOpenSSLTrustRoot, Certificate]] = None,
     clientCertificate: Optional[PrivateCertificate] = None,
     acceptableProtocols: Optional[List[bytes]] = None,
     *,

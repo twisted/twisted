@@ -1080,7 +1080,7 @@ class TLSMemoryBIOTests(TestCase):
         disconnectDeferred.addCallback(disconnected)
         return disconnectDeferred
 
-    def test_noCircularReferences(self):
+    def test_noCircularReferences(self) -> None:
         """
         TLSMemoryBIOProtocol doesn't leave circular references that keep
         it in memory after connection is closed.
