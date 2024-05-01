@@ -284,6 +284,10 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         reactor = self.buildReactor()
         read, write = self._connectedPair()
         descriptor = RemovingDescriptor(reactor, read, write)
+        self.assertEqual(descriptor.calls, [])
+        self.assertEqual(descriptor.fileno(), read.fileno())
+        self.assertEqual(len(descriptor.calls), 1)
+        del descriptor.calls[:]
         reactor.callWhenRunning(descriptor.start)
         self.runReactor(reactor)
         self.assertEqual(descriptor.calls, [])
