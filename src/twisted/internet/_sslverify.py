@@ -1088,18 +1088,13 @@ class ClientTLSOptions:
         # as host names according to the RFCs
         if self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
-
-        connection.set_verify(
-            VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT,
-            _makeVerifyCallback(
-                tlsProtocol, self._hostnameIsDnsName, self._hostnameASCII
-            ),
-        )
+        callback = _verifyCB(tlsProtocol, self._hostnameIsDnsName, self._hostnameASCII)
+        connection.set_verify(VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT, callback)
         self._configureConnection(connection)
         return connection
 
 
-def _makeVerifyCallback(
+def _verifyCB(
     tlsProtocol: TLSMemoryBIOProtocol, hostIsDNS: bool, hostnameASCII: str
 ) -> Callable[[Connection, X509, int, int, bool], bool]:
     svcid: ServiceID
