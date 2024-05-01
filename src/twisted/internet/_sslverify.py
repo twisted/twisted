@@ -21,12 +21,22 @@ import attr
 from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 from service_identity import VerificationError
-from service_identity.hazmat import (
-    DNS_ID,
-    IPAddress_ID,
-    ServiceID,
-    verify_service_identity,
-)
+
+try:
+    from service_identity.hazmat import (
+        DNS_ID,
+        IPAddress_ID,
+        ServiceID,
+        verify_service_identity,
+    )
+except ImportError:
+    from service_identity.common import (  # type:ignore[import-not-found,no-redef]
+        DNS_ID,
+        IPAddress_ID,
+        ServiceID,
+        verify_service_identity,
+    )
+
 from service_identity.pyopenssl import extract_patterns
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
