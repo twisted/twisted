@@ -267,7 +267,8 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         descriptor has been removed from the reactor.
         """
         reactor = self.buildReactor()
-        descriptor = RemovingDescriptor(reactor)
+        read, write = self._connectedPair()
+        descriptor = RemovingDescriptor(reactor, read, write)
         reactor.callWhenRunning(descriptor.start)
         self.runReactor(reactor)
         self.assertEqual(descriptor.calls, [])
@@ -414,12 +415,15 @@ class RemovingDescriptor:
         C{fileno} when C{insideReactor} is false.
     """
 
-    def __init__(self, reactor: IReactorFDSet) -> None:
+    def __init__(
+        self, reactor: IReactorFDSet, read: socket.socket, write: socket.socket
+    ) -> None:
         self.reactor = reactor
         self.stopper = IReactorCore(reactor)
         self.insideReactor = False
         self.calls: list[list[FrameSummary]] = []
-        self.read, self.write = socketpair()
+        self.read = read
+        self.write = write
 
     def start(self) -> None:
         self.insideReactor = True
