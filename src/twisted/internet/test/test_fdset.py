@@ -26,7 +26,7 @@ from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import FailTest, SkipTest
 
 if TYPE_CHECKING:
     from twisted.trial.unittest import SynchronousTestCase as CheckAsTest
@@ -130,17 +130,35 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         self.runReactor(reactor)
         # Nothing to assert, just be glad we got this far.
 
+    def makeFailer(self, message: str) -> Callable[[], None]:
+        """
+        Create a callable that will fail the test with a specified message.
+        """
+
+        def fail() -> None:
+            self.fail(message)
+
+        return fail
+
+    def test_makeFailer(self) -> None:
+        """
+        Ensure that the failure-test checker is called.
+        """
+        message = "a sample message to fail with"
+        f = self.makeFailer(message)
+        with self.assertRaises(FailTest) as ft:
+            f()
+        self.assertIn(message, str(ft.exception))
+
     def test_removeReader(self) -> None:
         """
         L{reactor.removeReader()} accepts an L{IReadDescriptor} provider
         previously passed to C{reactor.addReader()} and causes it to no longer
         be monitored for input events.
         """
-
-        def fail() -> None:
-            self.fail("doRead should not be called")
-
-        reactor, fd, server = self._simpleSetup(fail)
+        reactor, fd, server = self._simpleSetup(
+            self.makeFailer("doRead should not be called")
+        )
         reactor.addReader(fd)
         reactor.removeReader(fd)
         server.sendall(b"x")
@@ -207,12 +225,9 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         previously passed to C{reactor.addWriter()} and causes it to no longer
         be monitored for outputability.
         """
-
-        def fail() -> None:
-            self.fail("doWrite should not be called")
-
-        reactor, fd, server = self._simpleSetup(writeCallback=fail)
-
+        reactor, fd, server = self._simpleSetup(
+            writeCallback=self.makeFailer("doWrite should not be called")
+        )
         reactor.addWriter(fd)
         reactor.removeWriter(fd)
         clock = IReactorTime(reactor)
@@ -241,8 +256,8 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         reactor = self.buildReactor()
 
         reactor, fd, server = self._simpleSetup(
-            readCallback=lambda: self.fail("doRead should not be called"),
-            writeCallback=lambda: self.fail("doWrite should not be called"),
+            readCallback=self.makeFailer("doRead should not be called"),
+            writeCallback=self.makeFailer("doWrite should not be called"),
         )
 
         reactor.addReader(fd)
