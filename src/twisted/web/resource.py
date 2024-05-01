@@ -294,15 +294,9 @@ def _computeAllowedMethods(resource):
     return allowedMethods
 
 
-class _UnsafeErrorPage(Resource):
+class _UnsafeErrorPageBase(Resource):
     """
-    L{_UnsafeErrorPage}, publicly available via the deprecated alias
-    C{ErrorPage}, is a resource which responds with a particular
-    (parameterized) status and a body consisting of HTML containing some
-    descriptive text.  This is useful for rendering simple error pages.
-
-    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
-    L{twisted.web.pages.errorPage} instead.
+    Base class for deprecated error page resources.
 
     @ivar template: A native string which will have a dictionary interpolated
         into it to generate the response body.  The dictionary has the following
@@ -355,11 +349,26 @@ class _UnsafeErrorPage(Resource):
         return self
 
 
-@deprecated(
-    Version("Twisted", 22, 10, 0),
-    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
-)
-class _UnsafeNoResource(_UnsafeErrorPage):
+class _UnsafeErrorPage(_UnsafeErrorPageBase):
+    """
+    L{_UnsafeErrorPage}, publicly available via the deprecated alias
+    C{ErrorPage}, is a resource which responds with a particular
+    (parameterized) status and a body consisting of HTML containing some
+    descriptive text.  This is useful for rendering simple error pages.
+
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
+    L{twisted.web.pages.errorPage} instead.
+    """
+
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
+    )
+    def __init__(self, status, brief, detail):
+        _UnsafeErrorPageBase.__init__(self, status, brief, detail)
+
+
+class _UnsafeNoResource(_UnsafeErrorPageBase):
     """
     L{_UnsafeNoResource}, publicly available via the deprecated alias
     C{NoResource}, is a specialization of L{_UnsafeErrorPage} which
@@ -369,15 +378,15 @@ class _UnsafeNoResource(_UnsafeErrorPage):
     L{twisted.web.pages.notFound} instead.
     """
 
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
+    )
     def __init__(self, message="Sorry. No luck finding that resource."):
-        _UnsafeErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
+        _UnsafeErrorPageBase.__init__(self, NOT_FOUND, "No Such Resource", message)
 
 
-@deprecated(
-    Version("Twisted", 22, 10, 0),
-    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
-)
-class _UnsafeForbiddenResource(_UnsafeErrorPage):
+class _UnsafeForbiddenResource(_UnsafeErrorPageBase):
     """
     L{_UnsafeForbiddenResource}, publicly available via the deprecated alias
     C{ForbiddenResource} is a specialization of L{_UnsafeErrorPage} which
@@ -387,15 +396,16 @@ class _UnsafeForbiddenResource(_UnsafeErrorPage):
     L{twisted.web.pages.forbidden} instead.
     """
 
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
+    )
     def __init__(self, message="Sorry, resource is forbidden."):
-        _UnsafeErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+        _UnsafeErrorPageBase.__init__(self, FORBIDDEN, "Forbidden Resource", message)
 
 
 # Deliberately undocumented public aliases. See GHSA-vg46-2rrj-3647.
-ErrorPage = deprecated(
-    Version("Twisted", 22, 10, 0),
-    "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
-)(_UnsafeErrorPage)
+ErrorPage = _UnsafeErrorPage
 NoResource = _UnsafeNoResource
 ForbiddenResource = _UnsafeForbiddenResource
 
