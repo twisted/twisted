@@ -1915,35 +1915,39 @@ class OpenSSLDiffieHellmanParameters:
         return cls(filePath)
 
 
-def _setAcceptableProtocols(context, acceptableProtocols):
+def _setAcceptableProtocols(
+    context: SSL.Context, acceptableProtocols: list[bytes]
+) -> None:
     """
     Called to set up the L{OpenSSL.SSL.Context} for doing NPN and/or ALPN
     negotiation.
 
-    @param context: The context which is set up.
-    @type context: L{OpenSSL.SSL.Context}
+    @param context: The context which is being set up.
 
     @param acceptableProtocols: The protocols this peer is willing to speak
         after the TLS negotiation has completed, advertised over both ALPN and
-        NPN. If this argument is specified, and no overlap can be found with
-        the other peer, the connection will fail to be established. If the
+        NPN.  If this argument is specified, and no overlap can be found with
+        the other peer, the connection will fail to be established.  If the
         remote peer does not offer NPN or ALPN, the connection will be
-        established, but no protocol wil be negotiated. Protocols earlier in
+        established, but no protocol wil be negotiated.  Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: L{list} of L{bytes}
     """
 
-    def protoSelectCallback(conn, protocols):
-        """
-        NPN client-side and ALPN server-side callback used to select
-        the next protocol. Prefers protocols found earlier in
-        C{_acceptableProtocols}.
+    # If we don't actually have protocols to negotiate, don't set anything up.
+    # Depending on OpenSSL version, failing some of the selection callbacks can
+    # cause the handshake to fail, which is presumably not what was intended
+    # here.
+    if not acceptableProtocols:
+        return
 
-        @param conn: The context which is set up.
-        @type conn: L{OpenSSL.SSL.Connection}
+    def protoSelectCallback(conn: Connection, protocols: list[bytes]) -> bytes:
+        """
+        NPN client-side and ALPN server-side callback used to select the next
+        protocol.  Prefers protocols found earlier in C{_acceptableProtocols}.
+
+        @param conn: The L{Connection} that is being established.
 
         @param conn: Protocols advertised by the other side.
-        @type conn: L{list} of L{bytes}
         """
         overlap = set(protocols) & set(acceptableProtocols)
 
@@ -1953,18 +1957,11 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         else:
             return b""
 
-    # If we don't actually have protocols to negotiate, don't set anything up.
-    # Depending on OpenSSL version, failing some of the selection callbacks can
-    # cause the handshake to fail, which is presumably not what was intended
-    # here.
-    if not acceptableProtocols:
-        return
-
     supported = protocolNegotiationMechanisms()
 
     if supported & ProtocolNegotiationSupport.NPN:
 
-        def npnAdvertiseCallback(conn):
+        def npnAdvertiseCallback(conn: Connection) -> list[bytes]:
             return acceptableProtocols
 
         context.set_npn_advertise_callback(npnAdvertiseCallback)
