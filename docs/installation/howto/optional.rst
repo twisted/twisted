@@ -35,11 +35,9 @@ The following optional dependencies are supported:
 
   * `cryptography`_
 
-* **soap** - the `SOAPpy`_ package to work with SOAP.
-
 * **serial** - the `pyserial`_ package to work with serial data.
 
-* **all-non-platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **all-non-platform** - installs **tls**, **conch**, and **serial** options.
 
 * **macos-platform** - **all-non-platform** options and `pyobjc`_ to work with Objective-C apis.
 
@@ -61,7 +59,6 @@ The following optional dependencies are supported:
 .. _pyOpenSSL: https://pypi.python.org/pypi/pyOpenSSL
 .. _service_identity: https://pypi.python.org/pypi/service_identity
 .. _cryptography: https://pypi.python.org/pypi/cryptography
-.. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial
 .. _pyobjc: https://pypi.python.org/pypi/pyobjc
 .. _pywin32: https://pypi.python.org/pypi/pywin32
