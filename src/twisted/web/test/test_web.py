@@ -1794,7 +1794,7 @@ class ServerAttributesTests(unittest.TestCase):
         twisted.web.server.date_time_string should not be used; instead use
         twisted.web.http.datetimeToString directly
         """
-        server.date_time_string
+        server.date_time_string(10)
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedAttributeDateTimeString]
         )
@@ -1805,7 +1805,7 @@ class ServerAttributesTests(unittest.TestCase):
             warnings[0]["message"],
             (
                 "twisted.web.server.date_time_string was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.datetimeToString instead"
+                "12.1.0; please use twisted.web.http.datetimeToString instead"
             ),
         )
 
@@ -1814,7 +1814,7 @@ class ServerAttributesTests(unittest.TestCase):
         twisted.web.server.string_date_time should not be used; instead use
         twisted.web.http.stringToDatetime directly
         """
-        server.string_date_time
+        server.string_date_time(b"Thursday, 29-Sep-16 17:15:29 GMT")
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedAttributeStringDateTime]
         )
@@ -1825,7 +1825,7 @@ class ServerAttributesTests(unittest.TestCase):
             warnings[0]["message"],
             (
                 "twisted.web.server.string_date_time was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.stringToDatetime instead"
+                "12.1.0; please use twisted.web.http.stringToDatetime instead"
             ),
         )
 
