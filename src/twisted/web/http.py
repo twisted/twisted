@@ -379,7 +379,7 @@ def timegm(year, month, day, hour, minute, second):
     return seconds
 
 
-def stringToDatetime(dateString: bytes) -> int:
+def stringToDatetime(dateString):
     """
     Convert an HTTP date string (one of three formats) to seconds since epoch.
 
@@ -412,7 +412,7 @@ def stringToDatetime(dateString: bytes) -> int:
         # Two digit year, yucko.
         day, month, year = parts[1].split("-")
         time = parts[2]
-        year = int(year)
+        year = year
         if year < 69:
             year = year + 2000
         elif year < 100:
