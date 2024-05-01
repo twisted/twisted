@@ -81,6 +81,15 @@ class CustomFileDescriptor(FileDescriptor):
         return self.filenoCB()
 
 
+def noop() -> None:
+    """
+    Do-nothing callable. Stub for testing.
+    """
+
+
+noop()  # Exercise for coverage, since it may never be called below.
+
+
 class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
     """
     Builder defining tests relating to L{IReactorFDSet}.
@@ -99,8 +108,8 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
 
     def _simpleSetup(
         self,
-        readCallback: Callable[[], None] = lambda: None,
-        writeCallback: Callable[[], None] = lambda: None,
+        readCallback: Callable[[], None] = noop,
+        writeCallback: Callable[[], None] = noop,
     ) -> tuple[IReactorFDSet, FileDescriptor, socket.socket]:
         reactor = self.buildReactor()
 
@@ -264,10 +273,12 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         server.sendall(b"x")
 
         removed = reactor.removeAll()
+        core = IReactorCore(reactor)
+        clock = IReactorTime(reactor)
 
         # Give the reactor two timed event passes to notice that there's I/O
         # (if it is incorrectly watching for I/O).
-        reactor.callLater(0, reactor.callLater, 0, reactor.stop)
+        clock.callLater(0, clock.callLater, 0, core.stop)
 
         self.runReactor(reactor)
         # Getting here means the right thing happened probably.
