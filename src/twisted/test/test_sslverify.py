@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import datetime
 import itertools
-import sys
 from dataclasses import dataclass
 from unittest import skipIf
 
@@ -28,7 +27,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.reflect import requireModule
 from twisted.test.iosim import connectedServerAndClient
-from twisted.test.test_twisted import SetAsideModule
 from twisted.trial import util
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 
@@ -2045,7 +2043,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         clientPresentsCertificate=False,
         validClientCertificate=True,
         serverVerifies=False,
-        buggyInfoCallback=False,
         fakePlatformTrust=False,
         useDefaultTrust=False,
     ):
@@ -2082,11 +2079,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         @param serverVerifies: Should the server verify the client's
             certificate?  Defaults to 'no'.
         @type serverVerifies: L{bool}
-
-        @param buggyInfoCallback: Should we patch the implementation so that
-            the C{info_callback} passed to OpenSSL to have a bug and raise an
-            exception (L{ZeroDivisionError})?  Defaults to 'no'.
-        @type buggyInfoCallback: L{bool}
 
         @param fakePlatformTrust: Should we fake the platformTrust to be the
             same as our fake server certificate authority, so that we can test
@@ -2126,23 +2118,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
             serverCA, otherServer = certificatesForAuthorityAndServer(serverHostname)
-        if buggyInfoCallback:
-
-            def broken(*a, **k):
-                """
-                Raise an exception.
-
-                @param a: Arguments for an C{info_callback}
-
-                @param k: Keyword arguments for an C{info_callback}
-                """
-                1 / 0
-
-            self.patch(
-                sslverify.ClientTLSOptions,
-                "_identityVerifyingInfoCallback",
-                broken,
-            )
 
         signature = {"hostname": clientHostname}
         if passClientCert:
@@ -2394,61 +2369,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         sErr = sWrapped.lostReason
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
-
-    def test_fallback(self):
-        """
-        L{sslverify.simpleVerifyHostname} checks string equality on the
-        commonName of a connection's certificate's subject, doing nothing if it
-        matches and raising L{VerificationError} if it doesn't.
-        """
-        name = "something.example.com"
-
-        class Connection:
-            def get_peer_certificate(self):
-                """
-                Fake of L{OpenSSL.SSL.Connection.get_peer_certificate}.
-
-                @return: A certificate with a known common name.
-                @rtype: L{OpenSSL.crypto.X509}
-                """
-                cert = X509()
-                cert.get_subject().commonName = name
-                return cert
-
-        conn = Connection()
-        self.assertIs(
-            sslverify.simpleVerifyHostname(conn, "something.example.com"), None
-        )
-        self.assertRaises(
-            sslverify.SimpleVerificationError,
-            sslverify.simpleVerifyHostname,
-            conn,
-            "nonsense",
-        )
-
-    def test_surpriseFromInfoCallback(self):
-        """
-        pyOpenSSL isn't always so great about reporting errors.  If one occurs
-        in the verification info callback, it should be logged and the
-        connection should be shut down (if possible, anyway; the app_data could
-        be clobbered but there's no point testing for that).
-        """
-        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            "correct-host.example.com",
-            "correct-host.example.com",
-            buggyInfoCallback=True,
-        )
-
-        self.assertEqual(cWrapped.data, b"")
-        self.assertEqual(sWrapped.data, b"")
-
-        cErr = cWrapped.lostReason.value
-        sErr = sWrapped.lostReason.value
-
-        self.assertIsInstance(cErr, ZeroDivisionError)
-        self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
-        errors = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertTrue(errors)
 
 
 def negotiateProtocol(serverProtocols, clientProtocols, clientOptions=None):
@@ -3424,76 +3344,3 @@ class KeyPairTests(TestCase):
 
         certPEM = noTrailingNewlineKeyPemPath.getContent()
         ssl.Certificate.loadPEM(certPEM)
-
-
-class SelectVerifyImplementationTests(SynchronousTestCase):
-    """
-    Tests for L{_selectVerifyImplementation}.
-    """
-
-    if skipSSL:
-        skip = skipSSL
-
-    def test_dependencyMissing(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            result = sslverify._selectVerifyImplementation()
-            expected = (
-                sslverify.simpleVerifyHostname,
-                sslverify.simpleVerifyIPAddress,
-                sslverify.SimpleVerificationError,
-            )
-            self.assertEqual(expected, result)
-
-    test_dependencyMissing.suppress = [  # type: ignore[attr-defined]
-        util.suppress(
-            message=(
-                "You do not have a working installation of the "
-                "service_identity module"
-            ),
-        ),
-    ]
-
-    def test_dependencyMissingWarning(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        of the exact error.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            sslverify._selectVerifyImplementation()
-
-        [warning] = list(
-            warning
-            for warning in self.flushWarnings()
-            if warning["category"] == UserWarning
-        )
-
-        expectedMessage = (
-            "You do not have a working installation of the "
-            "service_identity module: "
-            "'import of service_identity halted; None in sys.modules'.  "
-            "Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> "
-            "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module, Twisted can perform only"
-            " rudimentary TLS client hostname verification.  Many valid "
-            "certificate/hostname mappings may be rejected."
-        )
-
-        self.assertEqual(warning["message"], expectedMessage)
-        # Make sure we're abusing the warning system to a sufficient
-        # degree: there is no filename or line number that makes sense for
-        # this warning to "blame" for the problem.  It is a system
-        # misconfiguration.  So the location information should be blank
-        # (or as blank as we can make it).
-        self.assertEqual(warning["filename"], "")
-        self.assertEqual(warning["lineno"], 0)

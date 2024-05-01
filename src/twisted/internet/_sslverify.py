@@ -14,10 +14,20 @@ from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
+from OpenSSL.crypto import X509
+from OpenSSL.SSL import VERIFY_FAIL_IF_NO_PEER_CERT, VERIFY_PEER, Connection
 
 import attr
 from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
+from service_identity import VerificationError
+from service_identity.hazmat import (
+    DNS_ID,
+    IPAddress_ID,
+    ServiceID,
+    verify_service_identity,
+)
+from service_identity.pyopenssl import extract_patterns
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
@@ -29,12 +39,15 @@ from twisted.internet.interfaces import (
     IOpenSSLClientConnectionCreatorFactory,
     IOpenSSLContextFactory,
 )
-from twisted.python import log, util
+from twisted.logger import Logger
+from twisted.python import util
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
+
+_log = Logger()
 
 
 class TLSVersion(Names):
@@ -85,52 +98,6 @@ def _getExcludedTLSProtocols(oldest, newest):
     return excludedVersions
 
 
-class SimpleVerificationError(Exception):
-    """
-    Not a very useful verification error.
-    """
-
-
-def simpleVerifyHostname(connection, hostname):
-    """
-    Check only the common name in the certificate presented by the peer and
-    only for an exact match.
-
-    This is to provide I{something} in the way of hostname verification to
-    users who haven't installed C{service_identity}. This check is overly
-    strict, relies on a deprecated TLS feature (you're supposed to ignore the
-    commonName if the subjectAlternativeName extensions are present, I
-    believe), and lots of valid certificates will fail.
-
-    @param connection: the OpenSSL connection to verify.
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: The hostname expected by the user.
-    @type hostname: L{unicode}
-
-    @raise twisted.internet.ssl.VerificationError: if the common name and
-        hostname don't match.
-    """
-    commonName = connection.get_peer_certificate().get_subject().commonName
-    if commonName != hostname:
-        raise SimpleVerificationError(repr(commonName) + "!=" + repr(hostname))
-
-
-def simpleVerifyIPAddress(connection, hostname):
-    """
-    Always fails validation of IP addresses
-
-    @param connection: the OpenSSL connection to verify.
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: The hostname expected by the user.
-    @type hostname: L{unicode}
-
-    @raise twisted.internet.ssl.VerificationError: Always raised
-    """
-    raise SimpleVerificationError("Cannot verify certificate IP addresses")
-
-
 def _usablePyOpenSSL(version):
     """
     Check pyOpenSSL version string whether we can use it for host verification.
@@ -142,46 +109,6 @@ def _usablePyOpenSSL(version):
     """
     major, minor = (int(part) for part in version.split(".")[:2])
     return (major, minor) >= (0, 12)
-
-
-def _selectVerifyImplementation():
-    """
-    Determine if C{service_identity} is installed. If so, use it. If not, use
-    simplistic and incorrect checking as implemented in
-    L{simpleVerifyHostname}.
-
-    @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
-    @rtype: L{tuple}
-    """
-
-    whatsWrong = (
-        "Without the service_identity module, Twisted can perform only "
-        "rudimentary TLS client hostname verification.  Many valid "
-        "certificate/hostname mappings may be rejected."
-    )
-
-    try:
-        from service_identity import VerificationError
-        from service_identity.pyopenssl import verify_hostname, verify_ip_address
-
-        return verify_hostname, verify_ip_address, VerificationError
-    except ImportError as e:
-        warnings.warn_explicit(
-            "You do not have a working installation of the "
-            "service_identity module: '" + str(e) + "'.  "
-            "Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> and make "
-            "sure all of its dependencies are satisfied.  " + whatsWrong,
-            # Unfortunately the lineno is required.
-            category=UserWarning,
-            filename="",
-            lineno=0,
-        )
-
-    return simpleVerifyHostname, simpleVerifyIPAddress, SimpleVerificationError
-
-
-verifyHostname, verifyIPAddress, VerificationError = _selectVerifyImplementation()
 
 
 class ProtocolNegotiationSupport(Flags):
@@ -1043,38 +970,6 @@ def platformTrust():
     return OpenSSLDefaultPaths()
 
 
-def _tolerateErrors(wrapped):
-    """
-    Wrap up an C{info_callback} for pyOpenSSL so that if something goes wrong
-    the error is immediately logged and the connection is dropped if possible.
-
-    This wrapper exists because some versions of pyOpenSSL don't handle errors
-    from callbacks at I{all}, and those which do write tracebacks directly to
-    stderr rather than to a supplied logging system.  This reports unexpected
-    errors to the Twisted logging system.
-
-    Also, this terminates the connection immediately if possible because if
-    you've got bugs in your verification logic it's much safer to just give up.
-
-    @param wrapped: A valid C{info_callback} for pyOpenSSL.
-    @type wrapped: L{callable}
-
-    @return: A valid C{info_callback} for pyOpenSSL that handles any errors in
-        C{wrapped}.
-    @rtype: L{callable}
-    """
-
-    def infoCallback(connection, where, ret):
-        try:
-            return wrapped(connection, where, ret)
-        except BaseException:
-            f = Failure()
-            log.err(f, "Error during info_callback")
-            connection.get_app_data().failVerification(f)
-
-    return infoCallback
-
-
 @implementer(
     IOpenSSLClientConnectionCreatorFactory,
     IOpenSSLClientConnectionCreator,
@@ -1165,12 +1060,6 @@ class ClientTLSOptions:
         """
         Create a TLS connection for a client.
 
-        @note: This will call C{set_app_data} on its connection.  If you're
-            delegating to this implementation of this method, don't ever call
-            C{set_app_data} or C{set_info_callback} on the returned connection,
-            or you'll break the implementation of various features of this
-            class.
-
         @param tlsProtocol: the TLS protocol initiating the connection.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
 
@@ -1179,49 +1068,45 @@ class ClientTLSOptions:
         """
         if self._ctx is None:
             self._ctx = self._createContext()
-            # Note: remember client options for testing.  See
-            # twisted.internet.test.test_endpoints.tlsHostnameFromEndpoint
-            self._ctx._clientOptions = self
-            self._ctx.set_info_callback(
-                _tolerateErrors(self._identityVerifyingInfoCallback)
-            )
             self._configureContext(self._ctx)
         context = self._ctx
         connection = SSL.Connection(context, None)
-        connection.set_app_data(tlsProtocol)
-        self._configureConnection(connection)
-        return connection
-
-    def _identityVerifyingInfoCallback(self, connection, where, ret):
-        """
-        U{info_callback
-        <http://pythonhosted.org/pyOpenSSL/api/ssl.html#OpenSSL.SSL.Context.set_info_callback>
-        } for pyOpenSSL that verifies the hostname in the presented certificate
-        matches the one passed to this L{ClientTLSOptions}.
-
-        @param connection: the connection which is handshaking.
-        @type connection: L{OpenSSL.SSL.Connection}
-
-        @param where: flags indicating progress through a TLS handshake.
-        @type where: L{int}
-
-        @param ret: ignored
-        @type ret: ignored
-        """
         # Literal IPv4 and IPv6 addresses are not permitted
         # as host names according to the RFCs
-        if where & SSL.SSL_CB_HANDSHAKE_START and self._hostnameIsDnsName:
+        if self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
-        elif where & SSL.SSL_CB_HANDSHAKE_DONE:
+
+        def verifyCallback(
+            conn: Connection, cert: X509, err: int, depth: int, ok: bool
+        ) -> bool:
             try:
-                if self._hostnameIsDnsName:
-                    verifyHostname(connection, self._hostnameASCII)
-                else:
-                    verifyIPAddress(connection, self._hostnameASCII)
-            except VerificationError:
-                f = Failure()
-                transport = connection.get_app_data()
-                transport.failVerification(f)
+                if depth != 0:
+                    # We are only verifying the leaf certificate.
+                    return ok
+                if not ok:
+                    return False
+                try:
+                    svcid: ServiceID
+                    if self._hostnameIsDnsName:
+                        svcid = DNS_ID(self._hostnameASCII)
+                    else:
+                        svcid = IPAddress_ID(self._hostnameASCII)
+                    verify_service_identity(
+                        cert_patterns=extract_patterns(cert),
+                        obligatory_ids=[svcid],
+                        optional_ids=[],
+                    )
+                    return True
+                except VerificationError:
+                    f = Failure()
+                    tlsProtocol.failVerification(f)
+            except BaseException:
+                _log.failure("while verifying certificate")
+            return False
+
+        connection.set_verify(VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback)
+        self._configureConnection(connection)
+        return connection
 
 
 def optionsForClientTLS(

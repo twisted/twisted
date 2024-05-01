@@ -102,7 +102,6 @@ try:
         TLSv1_2_METHOD,
     )
 
-    from twisted.internet._sslverify import ClientTLSOptions
     from twisted.internet.ssl import (
         Certificate,
         CertificateOptions,
@@ -4379,20 +4378,18 @@ def tlsHostnameFromEndpoint(
 
     @param tlsEndpoint: The result of calling L{wrapClientTLS}.
 
-    @return: the ASCII encoded str hostname.
+    @return: the IDNA-decoded str hostname.
     """
     tlsMemoryBIOFactory: TLSMemoryBIOFactory = tlsEndpoint._wrapperFactory(
         Factory.forProtocol(Protocol)
     )
     protocol = tlsMemoryBIOFactory.buildProtocol(None)
-    connection = tlsMemoryBIOFactory._creatorCallable(protocol)
-    context = connection.get_context()
-
-    options: ClientTLSOptions = context._clientOptions
-    # See twisted.internet._sslverify.ClientTLSOptions.clientConnectionForTLS
-    # for the place where this attribute is set.
-
-    return options._hostname
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+        protocol
+    ).get_servername()
+    assert tlsExtServerNameBytes is not None
+    hostname = tlsExtServerNameBytes.decode("idna")
+    return hostname
 
 
 @skipIf(skipSSL, skipSSLReason)
