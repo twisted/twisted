@@ -26,6 +26,7 @@ class ErrorPageTests(TestCase):
     Tests for L{_UnafeErrorPage}, L{_UnsafeNoResource}, and
     L{_UnsafeForbiddenResource}.
     """
+
     def test_deprecatedErrorPage(self) -> None:
         """
         The public C{twisted.web.resource.ErrorPage} alias for the
