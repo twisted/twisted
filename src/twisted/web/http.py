@@ -412,7 +412,7 @@ def stringToDatetime(dateString):
         # Two digit year, yucko.
         day, month, year = parts[1].split("-")
         time = parts[2]
-        year = year
+        year = int(year)
         if year < 69:
             year = year + 2000
         elif year < 100:
