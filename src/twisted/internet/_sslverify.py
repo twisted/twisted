@@ -8,7 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -56,6 +56,9 @@ from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from ._idna import _idnaBytes
+
+if TYPE_CHECKING:
+    from twisted.protocols.tls import TLSMemoryBIOProtocol
 
 _log = Logger()
 
@@ -1066,7 +1069,7 @@ class ClientTLSOptions:
             connectionSetupHook,
         )
 
-    def clientConnectionForTLS(self, tlsProtocol):
+    def clientConnectionForTLS(self, tlsProtocol: TLSMemoryBIOProtocol) -> Connection:
         """
         Create a TLS connection for a client.
 
@@ -1086,37 +1089,51 @@ class ClientTLSOptions:
         if self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
 
-        def verifyCallback(
-            conn: Connection, cert: X509, err: int, depth: int, ok: bool
-        ) -> bool:
-            try:
-                if depth != 0:
-                    # We are only verifying the leaf certificate.
-                    return ok
-                if not ok:
-                    return False
-                try:
-                    svcid: ServiceID
-                    if self._hostnameIsDnsName:
-                        svcid = DNS_ID(self._hostnameASCII)
-                    else:
-                        svcid = IPAddress_ID(self._hostnameASCII)
-                    verify_service_identity(
-                        cert_patterns=extract_patterns(cert),
-                        obligatory_ids=[svcid],
-                        optional_ids=[],
-                    )
-                    return True
-                except VerificationError:
-                    f = Failure()
-                    tlsProtocol.failVerification(f)
-            except BaseException:
-                _log.failure("while verifying certificate")
-            return False
-
-        connection.set_verify(VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback)
+        connection.set_verify(
+            VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT,
+            _makeVerifyCallback(
+                tlsProtocol, self._hostnameIsDnsName, self._hostnameASCII
+            ),
+        )
         self._configureConnection(connection)
         return connection
+
+
+def _makeVerifyCallback(
+    tlsProtocol: TLSMemoryBIOProtocol, hostIsDNS: bool, hostnameASCII: str
+) -> Callable[[Connection, X509, int, int, bool], bool]:
+    svcid: ServiceID
+    if hostIsDNS:
+        svcid = DNS_ID(hostnameASCII)
+    else:
+        svcid = IPAddress_ID(hostnameASCII)
+
+    weakProtoRef: TLSMemoryBIOProtocol | None = tlsProtocol
+
+    def verifyCallback(
+        conn: Connection, cert: X509, err: int, depth: int, ok: bool
+    ) -> bool:
+        nonlocal weakProtoRef
+        try:
+            if depth != 0:
+                # We are only verifying the leaf certificate.
+                return ok
+            if not ok:
+                return False
+            try:
+                verify_service_identity(extract_patterns(cert), [svcid], [])
+                return True
+            except VerificationError:
+                f = Failure()
+                assert weakProtoRef is not None
+                weakProtoRef.failVerification(f)
+        except BaseException:
+            _log.failure("while verifying certificate")
+        # Ensure that no reference remains to the protocol.
+        weakProtoRef = None
+        return False
+
+    return verifyCallback
 
 
 def optionsForClientTLS(
