@@ -1113,17 +1113,16 @@ def _makeVerifyCallback(
     def verifyCallback(
         conn: Connection, cert: X509, err: int, depth: int, ok: bool
     ) -> bool:
+        ourVerifyResult = ok
         nonlocal weakProtoRef
         try:
             if depth != 0:
                 # We are only verifying the leaf certificate.
-                return ok
-            if not ok:
-                return False
+                return ourVerifyResult
             try:
                 verify_service_identity(extract_patterns(cert), [svcid], [])
-                return True
             except VerificationError:
+                ourVerifyResult = False
                 f = Failure()
                 assert weakProtoRef is not None
                 weakProtoRef.failVerification(f)
@@ -1131,7 +1130,7 @@ def _makeVerifyCallback(
             _log.failure("while verifying certificate")
         # Ensure that no reference remains to the protocol.
         weakProtoRef = None
-        return False
+        return ourVerifyResult
 
     return verifyCallback
 
