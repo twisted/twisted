@@ -1059,7 +1059,7 @@ class H2Stream:
             self._producerProducing = False
 
     # Methods called by the consumer (usually an IRequest).
-    def writeHeaders(self, version, code, reason, headers):
+    def writeHeadersObject(self, version, code, reason, headers):
         """
         Called by the consumer to write headers to the stream.
 
@@ -1073,12 +1073,15 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type headers: Any iterable of two-tuples of L{bytes}, representing header
-            names and header values.
+        @type headers: L{twisted.web.http_headers.Headers}
         """
-        self._conn.writeHeaders(version, code, reason, headers, self.streamID)
-
-    writeHeadersPresanitized = writeHeaders
+        self._conn.writeHeaders(
+            version,
+            code,
+            reason,
+            [(k, v) for (k, values) in headers.getAllRawHeaders() for v in values],
+            self.streamID,
+        )
 
     def requestDone(self, request):
         """
