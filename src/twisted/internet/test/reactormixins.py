@@ -342,6 +342,11 @@ class ReactorBuilder:
         timedOut = []
 
         def stop():
+            print(
+                f"""
+            waking up to stop reactor for timeout at {time.time()}, for {self.id()}
+            """
+            )
             timedOut.append(None)
             reactor.stop()
 

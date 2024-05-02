@@ -14,6 +14,7 @@ from __future__ import annotations
 __all__ = ["install", "CFReactor"]
 
 import sys
+import time
 
 from zope.interface import implementer
 
@@ -503,6 +504,11 @@ class CFReactor(PosixReactorBase):
             # If the reactor is not running (e.g. we are scheduling callLater
             # calls before starting the reactor) we should not be scheduling
             # CFRunLoopTimers against the global CFRunLoop.
+            print(
+                """
+            _scheduleSimulate early-out due to un-started reactor
+            """
+            )
             return
 
         timeout = 0.0 if force else self.timeout()
@@ -542,7 +548,17 @@ class CFReactor(PosixReactorBase):
         """
         PosixReactorBase.crash(self)
         if not self._inCFLoop:
+            print(
+                f"""
+            skipping CFRunLoopStop at {time.time()}
+            """
+            )
             return
+        print(
+            f"""
+        calling CFRunLoopStop at {time.time()}
+        """
+        )
         CFRunLoopStop(self._cfrunloop)
 
     def iterate(self, delay=0):

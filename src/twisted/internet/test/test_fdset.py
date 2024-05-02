@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import socket
+import time
 import traceback
 from traceback import FrameSummary
 from typing import TYPE_CHECKING, Callable
@@ -97,6 +98,14 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
 
     requiredInterfaces = [IReactorFDSet]
 
+    def noisyCallStop(self, core: IReactorCore) -> None:
+        print(
+            f"""
+        {self.id()} calling reactor.stop() at {time.time()}
+        """
+        )
+        core.stop()
+
     def _connectedPair(self) -> tuple[socket.socket, socket.socket]:
         """
         Return the two sockets which make up a new TCP connection.
@@ -129,7 +138,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
 
         def removeAndStop() -> None:
             reactor.removeReader(clientfd)
-            IReactorCore(reactor).stop()
+            self.noisyCallStop(IReactorCore(reactor))
 
         reactor, clientfd, server = self._simpleSetup(removeAndStop)
         reactor.addReader(clientfd)
@@ -190,7 +199,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
 
         def removeAndStop() -> None:
             reactor.removeWriter(fd)
-            core.stop()
+            self.noisyCallStop(core)
 
         reactor, fd, server = self._simpleSetup(writeCallback=removeAndStop)
         core = IReactorCore(reactor)
@@ -292,7 +301,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         """
         reactor = self.buildReactor()
         read, write = self._connectedPair()
-        descriptor = RemovingDescriptor(reactor, read, write)
+        descriptor = RemovingDescriptor(self, reactor, read, write)
         self.assertEqual(descriptor.calls, [])
         self.assertEqual(descriptor.fileno(), read.fileno())
         self.assertEqual(len(descriptor.calls), 1)
@@ -309,6 +318,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
         reactor = self.buildReactor()
 
         client, server = self._connectedPair()
+        testCase = self
 
         class DisappearingDescriptor(FileDescriptor):
             _fileno = server.fileno()
@@ -324,7 +334,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
                 client.sendall(b"y")
 
             def connectionLost(self, reason: Failure) -> None:
-                reactor.stop()
+                testCase.noisyCallStop(reactor)
 
         descriptor = DisappearingDescriptor(reactor)
         reactor.addReader(descriptor)
@@ -363,6 +373,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
             raise SkipTest(f"{name!r} cannot detect lost file descriptors")
 
         client, server = self._connectedPair()
+        testCase = self
 
         class Victim(CustomFileDescriptor):
             """
@@ -379,7 +390,7 @@ class ReactorFDSetTestsBuilder(ReactorBuilder, CheckAsTest):
                 file descriptor.  When that happens, stop the reactor so the
                 test ends.
                 """
-                reactor.stop()
+                testCase.noisyCallStop(reactor)
 
         reactor.addReader(
             Victim(
@@ -444,9 +455,14 @@ class RemovingDescriptor:
     """
 
     def __init__(
-        self, reactor: IReactorFDSet, read: socket.socket, write: socket.socket
+        self,
+        testCase: ReactorFDSetTestsBuilder,
+        reactor: IReactorFDSet,
+        read: socket.socket,
+        write: socket.socket,
     ) -> None:
         self.reactor = reactor
+        self.testCase = testCase
         self.stopper = IReactorCore(reactor)
         self.insideReactor = False
         self.calls: list[list[FrameSummary]] = []
@@ -464,7 +480,7 @@ class RemovingDescriptor:
     def doRead(self) -> None:
         self.reactor.removeReader(self)
         self.insideReactor = False
-        self.stopper.stop()
+        self.testCase.noisyCallStop(IReactorCore(self.reactor))
         self.read.close()
         self.write.close()
 
