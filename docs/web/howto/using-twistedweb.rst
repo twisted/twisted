@@ -552,7 +552,7 @@ Here is an example of a basic reverse proxy:
     from twisted.internet import reactor, endpoints
     from twisted.web import proxy, server
 
-    site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, ''))
+    site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, b''))
     endpoint = endpoints.TCP4ServerEndpoint(reactor, 8080)
     endpoint.listen(site)
     reactor.run()
