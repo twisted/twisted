@@ -1,0 +1,1 @@
+Request.setResponseCode no longer validates the types of inputs; we encourage you to use a type checker like mypy to catch these sort of errors.
