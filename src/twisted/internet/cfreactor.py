@@ -47,6 +47,7 @@ from CoreFoundation import (
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
+from twisted.logger import Logger
 from twisted.python import log
 
 # We know that we're going to run on macOS so we can just pick the
@@ -54,6 +55,7 @@ from twisted.python import log
 # so lets more things get type checked.
 from ._signals import _UnixWaker
 
+_log = Logger()
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
@@ -517,10 +519,13 @@ class CFReactor(PosixReactorBase):
 
         fireDate = CFAbsoluteTimeGetCurrent() + timeout
 
-        def simulate(cftimer, extra):
-            self._currentSimulator = None
-            self.runUntilCurrent()
-            self._scheduleSimulate()
+        def simulate(cftimer: object, extra: object) -> None:
+            try:
+                self._currentSimulator = None
+                self.runUntilCurrent()
+                self._scheduleSimulate()
+            except BaseException:
+                _log.failure("while running CoreFoundation simulate timer")
 
         c = self._currentSimulator = CFRunLoopTimerCreate(
             kCFAllocatorDefault, fireDate, 0, 0, 0, simulate, None
