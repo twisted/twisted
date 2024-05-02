@@ -25,15 +25,12 @@ from urllib.parse import quote as _quote
 
 from zope.interface import implementer
 
-from incremental import Version
-
 from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.logger import Logger
 from twisted.python import components, failure, reflect
 from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecated
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
@@ -50,24 +47,6 @@ __all__ = [
     "NOT_DONE_YET",
     "GzipEncoderFactory",
 ]
-
-
-# backwards compatibility
-@deprecated(
-    Version("Twisted", 12, 1, 0),
-    "twisted.web.http.datetimeToString",
-)
-def date_time_string(dt):
-    return http.datetimeToString(dt)
-
-
-@deprecated(
-    Version("Twisted", 12, 1, 0),
-    "twisted.web.http.stringToDatetime",
-)
-def string_date_time(dts):
-    return http.stringToDatetime(dts)
-
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
