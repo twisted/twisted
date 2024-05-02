@@ -1078,6 +1078,8 @@ class H2Stream:
         """
         self._conn.writeHeaders(version, code, reason, headers, self.streamID)
 
+    writeHeadersPresanitized = writeHeaders
+
     def requestDone(self, request):
         """
         Called by a consumer to clean up whatever permanent state is in use.

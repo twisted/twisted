@@ -1228,14 +1228,14 @@ class Request:
             if self.etag is not None:
                 self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
+            if self.cookies:
+                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
+
             for name, values in self.responseHeaders.getAllRawHeaders():
                 for value in values:
                     headers.append((name, value))
 
-            for cookie in self.cookies:
-                headers.append((b"Set-Cookie", cookie))
-
-            self.channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeadersPresanitized(version, code, reason, headers)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -2639,6 +2639,39 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
+
+        @param version: The HTTP version in use.
+        @type version: L{bytes}
+
+        @param code: The HTTP status code to write.
+        @type code: L{bytes}
+
+        @param reason: The HTTP reason phrase to write.
+        @type reason: L{bytes}
+
+        @param headers: The headers to write to the transport.
+        @type headers: Any iterable of two-tuples of L{bytes}, representing header
+            names and header values.
+        """
+        sanitizedHeaders = Headers()
+        for name, value in headers:
+            sanitizedHeaders.addRawHeader(name, value)
+
+        responseLine = version + b" " + code + b" " + reason + b"\r\n"
+        headerSequence = [responseLine]
+        headerSequence.extend(
+            name + b": " + value + b"\r\n"
+            for name, values in sanitizedHeaders.getAllRawHeaders()
+            for value in values
+        )
+        headerSequence.append(b"\r\n")
+        self.transport.writeSequence(headerSequence)
+
+    def writeHeadersPresanitized(self, version, code, reason, headers):
+        """
+        Called by L{Request} objects to write a complete set of HTTP
+        headers to a transport that are already trusted to be sanitized and not
+        subject to injection attacks.
 
         @param version: The HTTP version in use.
         @type version: L{bytes}

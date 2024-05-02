@@ -124,6 +124,8 @@ class DummyChannel:
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
 
+    writeHeadersPresanitized = writeHeaders
+
     def getPeer(self):
         return self.transport.getPeer()
 
