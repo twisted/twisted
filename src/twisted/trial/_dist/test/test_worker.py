@@ -6,7 +6,7 @@ Test for distributed trial worker side.
 """
 
 import os
-from io import BytesIO, StringIO
+from io import StringIO
 from typing import Type
 from unittest import TestCase as PyUnitTestCase
 
@@ -382,11 +382,11 @@ class LocalWorkerTests(TestCase):
         localWorker = self.tidyLocalWorker(
             SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
-        localWorker._outLog = BytesIO()
+        localWorker._outLog = StringIO()
         localWorker.childDataReceived(4, b"foo")
         localWorker.childDataReceived(1, b"bar")
         self.assertEqual(b"foo", localWorker._ampProtocol.dataString)
-        self.assertEqual(b"bar", localWorker._outLog.getvalue())
+        self.assertEqual("bar", localWorker._outLog.getvalue())
 
     def test_newlineStyle(self):
         """
@@ -422,10 +422,10 @@ class LocalWorkerTests(TestCase):
         localWorker = self.tidyLocalWorker(
             SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
-        localWorker._outLog = BytesIO()
+        localWorker._outLog = StringIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.outReceived(data)
-        self.assertEqual(data, localWorker._outLog.getvalue())
+        self.assertEqual(data.decode(), localWorker._outLog.getvalue())
 
     def test_errReceived(self):
         """
@@ -435,10 +435,10 @@ class LocalWorkerTests(TestCase):
         localWorker = self.tidyLocalWorker(
             SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
-        localWorker._errLog = BytesIO()
+        localWorker._errLog = StringIO()
         data = b"The quick brown fox jumps over the lazy dog"
         localWorker.errReceived(data)
-        self.assertEqual(data, localWorker._errLog.getvalue())
+        self.assertEqual(data.decode(), localWorker._errLog.getvalue())
 
     def test_write(self):
         """
