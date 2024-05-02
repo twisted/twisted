@@ -183,7 +183,7 @@ class WorkerPool:
         @return: A list of C{quantity} C{LocalWorker} instances.
         """
         return [
-            LocalWorker(protocol, workingDirectory.child(str(x)), logFile)
+            LocalWorker(x, protocol, workingDirectory.child(str(x)), logFile)
             for x, protocol in enumerate(protocols)
         ]
 

@@ -352,7 +352,7 @@ class LocalWorkerTests(TestCase):
         protocol is connected to a transport.
         """
         worker = LocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+            9, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
         )
         self.failureResultOf(worker.exit(), NotRunning)
 
@@ -362,7 +362,7 @@ class LocalWorkerTests(TestCase):
         protocol is disconnected from its transport.
         """
         worker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
+            1, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), StringIO()
         )
         worker.processEnded(Failure(ProcessDone(0)))
         # Since we're not calling exit until after the process has ended, it
@@ -380,7 +380,7 @@ class LocalWorkerTests(TestCase):
         C{ProcessProtocol.childDataReceived}.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+            2, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._outLog = StringIO()
         localWorker.childDataReceived(4, b"foo")
@@ -398,7 +398,7 @@ class LocalWorkerTests(TestCase):
         logPath = tempDir.child("test.log")
 
         with open(logPath.path, "wt", encoding="utf-8") as logFile:
-            worker = LocalWorker(amp, tempDir, logFile)
+            worker = LocalWorker(8, amp, tempDir, logFile)
             worker.makeConnection(FakeTransport())
             # self.addCleanup(worker._outLog.close)
             # self.addCleanup(worker._errLog.close)
@@ -420,7 +420,7 @@ class LocalWorkerTests(TestCase):
         file.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+            3, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._outLog = StringIO()
         data = b"The quick brown fox jumps over the lazy dog"
@@ -433,7 +433,7 @@ class LocalWorkerTests(TestCase):
         file.
         """
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+            4, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker._errLog = StringIO()
         data = b"The quick brown fox jumps over the lazy dog"
@@ -479,7 +479,7 @@ class LocalWorkerTests(TestCase):
         """
 
         localWorker = self.tidyLocalWorker(
-            SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
+            5, SpyDataLocalWorkerAMP(), FilePath(self.mktemp()), "test.log"
         )
         localWorker.connectionLost(None)
         # self.assertTrue(localWorker._outLog.closed)
@@ -492,7 +492,7 @@ class LocalWorkerTests(TestCase):
         """
         transport = FakeTransport()
         protocol = SpyDataLocalWorkerAMP()
-        localWorker = LocalWorker(protocol, FilePath(self.mktemp()), "test.log")
+        localWorker = LocalWorker(7, protocol, FilePath(self.mktemp()), "test.log")
         localWorker.makeConnection(transport)
         localWorker.processEnded(Failure(ProcessDone(0)))
         # self.assertTrue(localWorker._outLog.closed)
@@ -528,5 +528,5 @@ class LocalWorkerTests(TestCase):
 
         protocol = SpyDataLocalWorkerAMP()
         protocol.callRemote = failCallRemote
-        self.tidyLocalWorker(protocol, FilePath(self.mktemp()), "test.log")
+        self.tidyLocalWorker(6, protocol, FilePath(self.mktemp()), "test.log")
         self.assertEqual([], self.flushLoggedErrors(RuntimeError))
