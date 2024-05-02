@@ -385,7 +385,7 @@ def stringToDatetime(dateString):
 
     @type dateString: C{bytes}
     """
-    parts = nativeString(dateString).split()
+    parts = dateString.decode("ascii").split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
@@ -1363,19 +1363,15 @@ class Request:
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code, message=None):
+    def setResponseCode(self, code: int, message: Optional[bytes] = None) -> None:
         """
         Set the HTTP response code.
 
         @type code: L{int}
         @type message: L{bytes}
         """
-        if not isinstance(code, int):
-            raise TypeError("HTTP response code must be int or long")
         self.code = code
-        if message:
-            if not isinstance(message, bytes):
-                raise TypeError("HTTP response status message must be bytes")
+        if message is not None:
             self.code_message = message
         else:
             self.code_message = RESPONSES.get(code, b"Unknown Status")
@@ -2275,13 +2271,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         self._networkProducer.registerProducer(self, True)
 
+    def dataReceived(self, data):
+        self.resetTimeout()
+        basic.LineReceiver.dataReceived(self, data)
+
     def lineReceived(self, line):
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        self.resetTimeout()
-
         self._receivedHeaderSize += len(line)
         if self._receivedHeaderSize > self.totalHeadersSize:
             self._respondToBadRequestAndDisconnect()
@@ -2427,12 +2425,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._maybeChooseTransferDecoder(header, data):
             return False
 
-        reqHeaders = self.requests[-1].requestHeaders
-        values = reqHeaders.getRawHeaders(header)
-        if values is not None:
-            values.append(data)
-        else:
-            reqHeaders.setRawHeaders(header, [data])
+        self.requests[-1].requestHeaders.addRawHeader(header, data)
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
@@ -2504,8 +2497,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-
-        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
@@ -3145,11 +3136,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         using.
         """
         if self._negotiatedProtocol is None:
-            try:
-                negotiatedProtocol = self._channel.transport.negotiatedProtocol
-            except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b"http/1.1"
+            negotiatedProtocol = getattr(
+                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+            )
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b"http/1.1"
