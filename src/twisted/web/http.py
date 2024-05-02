@@ -2654,9 +2654,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type headers: Any iterable of two-tuples of L{bytes}, representing header
             names and header values.
         """
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(name + b": " + value + b"\r\n" for name, value in headers)
+        headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
+        for name, value in headers:
+            headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
 
