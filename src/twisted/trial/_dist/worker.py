@@ -413,8 +413,10 @@ class LocalWorker(ProcessProtocol):
         """
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
         self._logDirectory.makedirs(ignoreExistingDirectory=True)
-        self._outLog = self._logDirectory.child("out.log").open("w")
-        self._errLog = self._logDirectory.child("err.log").open("w")
+        from sys import stderr, stdout
+
+        self._outLog = stdout  # self._logDirectory.child("out.log").open("w")
+        self._errLog = stderr  # self._logDirectory.child("err.log").open("w")
         self._ampProtocol.setTestStream(self._logFile)
         d = self._ampProtocol.callRemote(
             workercommands.Start,
@@ -429,8 +431,8 @@ class LocalWorker(ProcessProtocol):
         On connection lost, close the log files that we're managing for stdin
         and stdout.
         """
-        self._outLog.close()
-        self._errLog.close()
+        # self._outLog.close()
+        # self._errLog.close()
         self.transport = None
 
     def processEnded(self, reason: Failure) -> None:
@@ -447,13 +449,13 @@ class LocalWorker(ProcessProtocol):
         Send data received from stdout to log.
         """
 
-        self._outLog.write(data)
+        self._outLog.write(data.decode())
 
     def errReceived(self, data):
         """
         Write error data to log.
         """
-        self._errLog.write(data)
+        self._errLog.write(data.decode())
 
     def childDataReceived(self, childFD, data):
         """
