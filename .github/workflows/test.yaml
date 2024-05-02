@@ -61,7 +61,7 @@ jobs:
       # Trial distributed jobs enabled to speed up the CI jobs.
       # On Windows, we don't yet enable distributed tests as is not yet
       # supported.
-      TRIAL_ARGS: "${{ matrix.trial-args || '-j 4' }}"
+      TRIAL_ARGS: "${{ matrix.trial-args || '' }}"
     strategy:
       fail-fast: false
       # The matrix is designed to not expand into any job.
