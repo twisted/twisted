@@ -151,14 +151,14 @@ jobs:
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+            runs-on: 'macos-14'
+            job-name: 'macos-14-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
           # Newest macOS and newest Python supported versions.
           - python-version: '3.12'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+            runs-on: 'macos-14'
+            job-name: 'macos-14-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
