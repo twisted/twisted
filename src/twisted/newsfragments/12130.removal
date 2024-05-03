@@ -1,0 +1,1 @@
+twisted.conch.manhole.ManholeInterpreter.write, twisted.conch.manhole.ManholeInterpreter.addOutput, twisted.mail.imap4.IMAP4Server.sendUntaggedResponse `async` argument, deprecated since 18.9.0, has been removed.

@@ -6,11 +6,19 @@
 Endpoint implementations of various SSH interactions.
 """
 
-__all__ = ["AuthenticationFailed", "SSHCommandAddress", "SSHCommandClientEndpoint"]
+from __future__ import annotations
+
+__all__ = [
+    "AuthenticationFailed",
+    "SSHCommandAddress",
+    "SSHCommandClientEndpoint",
+]
 
 import signal
+from io import BytesIO
 from os.path import expanduser
 from struct import unpack
+from typing import IO, Any
 
 from zope.interface import Interface, implementer
 
@@ -689,44 +697,6 @@ class SSHCommandClientEndpoint:
         return commandConnected
 
 
-class _ReadFile:
-    """
-    A weakly file-like object which can be used with L{KnownHostsFile} to
-    respond in the negative to all prompts for decisions.
-    """
-
-    def __init__(self, contents):
-        """
-        @param contents: L{bytes} which will be returned from every C{readline}
-            call.
-        """
-        self._contents = contents
-
-    def write(self, data):
-        """
-        No-op.
-
-        @param data: ignored
-        """
-
-    def readline(self, count=-1):
-        """
-        Always give back the byte string that this L{_ReadFile} was initialized
-        with.
-
-        @param count: ignored
-
-        @return: A fixed byte-string.
-        @rtype: L{bytes}
-        """
-        return self._contents
-
-    def close(self):
-        """
-        No-op.
-        """
-
-
 @implementer(_ISSHConnectionCreator)
 class _NewConnectionHelper:
     """
@@ -739,17 +709,17 @@ class _NewConnectionHelper:
 
     def __init__(
         self,
-        reactor,
-        hostname,
-        port,
-        command,
-        username,
-        keys,
-        password,
-        agentEndpoint,
-        knownHosts,
-        ui,
-        tty=FilePath(b"/dev/tty"),
+        reactor: Any,
+        hostname: str,
+        port: int,
+        command: str,
+        username: str,
+        keys: str,
+        password: str,
+        agentEndpoint: str,
+        knownHosts: str | None,
+        ui: ConsoleUI | None,
+        tty: FilePath[bytes] | FilePath[str] = FilePath(b"/dev/tty"),
     ):
         """
         @param tty: The path of the tty device to use in case C{ui} is L{None}.
@@ -773,9 +743,9 @@ class _NewConnectionHelper:
         if ui is None:
             ui = ConsoleUI(self._opener)
         self.ui = ui
-        self.tty = tty
+        self.tty: FilePath[bytes] | FilePath[str] = tty
 
-    def _opener(self):
+    def _opener(self) -> IO[bytes]:
         """
         Open the tty if possible, otherwise give back a file-like object from
         which C{b"no"} can be read.
@@ -783,11 +753,11 @@ class _NewConnectionHelper:
         For use as the opener argument to L{ConsoleUI}.
         """
         try:
-            return self.tty.open("rb+")
+            return self.tty.open("r+")
         except BaseException:
             # Give back a file-like object from which can be read a byte string
             # that KnownHostsFile recognizes as rejecting some option (b"no").
-            return _ReadFile(b"no")
+            return BytesIO(b"no")
 
     @classmethod
     def _knownHosts(cls):

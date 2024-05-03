@@ -603,7 +603,9 @@ class ZshArgumentsGenerator:
         obj = getattr(self.options, "opt_%s" % longMangled, None)
         if obj is not None:
             descr = descrFromDoc(obj)
-            if descr is not None:
+            # On Python3.13 we have an empty string instead of None,
+            # for missing description.
+            if descr:
                 return descr
 
         return longname  # we really ought to have a good description to use
