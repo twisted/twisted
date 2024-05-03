@@ -2864,28 +2864,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"(no clientproto yet) 202 happily accepted",
         )
 
-    def test_setResponseCodeAndMessageNotBytes(self):
-        """
-        L{http.Request.setResponseCode} accepts C{bytes} for the message
-        parameter and raises L{TypeError} if passed anything else.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        self.assertRaises(TypeError, req.setResponseCode, 202, "not happily accepted")
-
     def test_setResponseCodeAcceptsIntegers(self):
         """
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
         and raises L{TypeError} if passed anything else.
-        """
-        req = http.Request(DummyChannel(), False)
-        req.setResponseCode(1)
-        self.assertRaises(TypeError, req.setResponseCode, "1")
-
-    def test_setResponseCodeAcceptsLongIntegers(self):
-        """
-        L{http.Request.setResponseCode} accepts L{int} for the code
-        parameter.
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)

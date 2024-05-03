@@ -80,7 +80,6 @@ from twisted.mail.interfaces import (
 from twisted.protocols import basic, policies
 from twisted.python import log, text
 from twisted.python.compat import (
-    _get_async_param,
     _matchingString,
     iterbytes,
     nativeString,
@@ -1076,8 +1075,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def sendNegativeResponse(self, tag=None, message=b""):
         self._respond(b"NO", tag, message)
 
-    def sendUntaggedResponse(self, message, isAsync=None, **kwargs):
-        isAsync = _get_async_param(isAsync, **kwargs)
+    def sendUntaggedResponse(self, message, isAsync=None):
         if not isAsync or (self.blocked is None):
             self._respond(message, None, None)
         else:
